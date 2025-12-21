@@ -1,0 +1,976 @@
+Skip to content
+
+You said:
+I go to bar mitzvahs and stuff and buy [eplple tacky gifts and its tough to find gifts, and say in 10 years that girl/boy is not going to get much or be excited about it. eg someone gave me 150 in bonds in 2008 its woth like 175 today... nothing. if instaed i got a share of something itd be worth much more. i am thinking there should be a platform for gift giving shares or something. wdyt? kinda like you  nknow you have awedding so you set a registry... 
+ChatGPT said:
+
+Thought for 8s
+The core idea is strong: most bar mitzvah gifts are either disposable or cash that gets spent, and bonds often do not feel meaningful relative to how long the kid holds them. “Gift an asset” feels closer to what people intend when they give.
+
+Where it already exists (and why it still feels unsolved)
+
+You can already “gift stock” in a few ways (custodial brokerage accounts, UGMA/UTMA, some broker features, 529 contributions).
+
+But the experience is usually not registry-like: it is clunky, not built for groups, not built for events, and not built for “aunt/uncle checkout in 30 seconds.”
+
+If you build it as an event registry + checkout layer, you can make it feel like a modern gift product instead of a finance task.
+
+The hard parts (the ones that decide if this is real)
+
+Minor ownership and custody
+A 13-year-old generally cannot directly own brokerage assets without a custodian structure (UGMA/UTMA, custodial trust, or parent-controlled account). Your UX must route through the parent/guardian.
+
+Regulatory perimeter
+The moment you facilitate buying securities, moving money, or holding assets, you are in broker-dealer and custody territory. The simplest path is usually to partner with a regulated brokerage/custodian and be an “introducing” or “front-end” layer. You still need KYC/AML, identity, fraud controls, disclosures, and a compliance program.
+
+Taxes and reporting
+Gifted securities have cost-basis rules, and dividends/1099s land somewhere. You need a clean story: who receives tax forms, how basis is tracked, what happens on sale, etc.
+
+“I do not want to pick a stock” problem
+Many gift-givers will freeze if you ask them to choose AAPL vs TSLA. You want simple defaults.
+
+A product shape that can work
+Think “registry for long-term gifts,” with three rails:
+
+Rail A: Simple default baskets (high conversion)
+
+“S&P 500 gift” (or total market)
+
+“Tech basket,” “Healthcare basket,” “Israel basket,” etc.
+
+Age-based glide path option (more conservative as they near college), similar to a 529 feel, but in brokerage form
+
+Rail B: Pick a specific stock (for the people who want it)
+
+Let the kid choose 5 companies they like, and gift-givers can pick one
+
+Or “gift a slice of any public company”
+
+Rail C: 529 contributions (the cleanest legal/tax option)
+
+A 529 “registry link” is conceptually perfect for bar mitzvahs
+
+It is also an easier compliance story than securities in many cases
+
+You can offer both: “Investing gift” or “Education gift”
+
+What makes it meaningfully better than “just send money”
+
+Group gifting: 10 relatives can jointly fund one basket
+
+Scheduled gifts: “$25 every birthday for 10 years” (recurring)
+
+Digital keepsake: a printable card with what was gifted, the date, and a simple “if held, this could become X” visualization (with clear disclaimers)
+
+Lockup or guardrails: parent can restrict selling until age 18 or until a milestone (optional, and must be structured correctly)
+
+A “message + memory” layer: people want sentiment, not just a transaction receipt
+
+Why your bonds example is a good wedge
+It is easy to explain in one line: bonds preserve money, ownership in productive businesses compounds.
+You just need to avoid sounding like you are promising returns. Keep it framed as “long-term ownership” and “historically equities have outpaced inflation,” not “this will be worth X.”
+
+Go-to-market that fits the behavior
+
+Start with a niche: bar/bat mitzvahs and Jewish communities are actually a good wedge because registries are common, family networks are strong, and the pain is real.
+
+Then expand to: birthdays, graduations, newborn gifts, weddings.
+
+A practical MVP path
+
+Step 1: Event page + registry UX (no brokerage yet)
+Let parents create a registry and choose “targets” (index basket, 529, specific stocks). Collect pledges and money into a managed flow that ultimately lands in the correct account.
+
+Step 2: Partner rails
+Integrate with a brokerage/custodian partner for the actual execution and custody. You stay focused on onboarding, registry UX, payments, receipts, and sharing.
+
+Step 3: Growth loops
+Every event becomes distribution: “Send gift” link spreads to 50 people.
+
+Monetization that is realistic
+
+A small checkout fee paid by the gift-giver (like a registry fee) or
+
+A subscription for families who want ongoing contributions and multiple “funds” for each child or
+
+Referral/affiliate economics through the brokerage partner (if allowed and structured properly)
+
+Big risk to avoid
+Do not position this as “buy stocks, get rich.” Position it as “give ownership, build a future gift,” and offer conservative defaults (index funds, 529). Also, make it dead simple for non-finance people.
+
+If you want the quickest version that feels like a real product: build “Registry + pooled gifting + index basket default + 529 option + printable card.” That is the highest signal, lowest complexity starting point.
+
+You said:
+expand. amke this a perfec5 billion dollar idea
+ChatGPT said:
+The $5B version of this idea
+Make gifting an asset as normal as gifting cash, but with the ease of a wedding registry and the emotional feel of a card. The product is not “stock gifting.” The product is “future-proof gifting.”
+
+If you do this right, you become the default gifting layer for major life events, with recurring contributions that last years.
+
+1) Category definition
+Registry for long-term gifts.
+Instead of: cash, Judaica, gadgets, bonds.
+You give: ownership, education funding, and future milestones.
+
+This wins because it sits at the intersection of:
+
+gifting (high frequency, high virality)
+
+life events (time-bound urgency, social pressure)
+
+compounding contributions (recurring revenue)
+
+parents as long-term customers (multi-child, multi-event)
+
+2) The wedge that actually works
+Start with one event type where the problem is obvious and the social graph is tight.
+
+Wedge: Bar/Bat mitzvah registry
+
+Everyone is already giving money.
+
+People want to give something “meaningful.”
+
+Families have lots of attendees (30 to 200).
+
+Gifts are often “held” for years, which fits investing.
+
+Then expand to:
+
+newborn and baby naming
+
+birthdays (recurring gifts)
+
+graduations
+
+weddings
+
+“first job” and “first apartment” funds
+
+3) Product: what the user experiences
+For parents (registry creator)
+Create a “Gift Fund” for the child with a name, photo, and story.
+
+Choose default gift options (simple presets).
+
+Set rules:
+
+who can contribute
+
+whether gifts are locked until 18 (optional, depends on structure)
+
+whether the child can choose companies (fun) but parents approve
+
+For gift-givers (checkout in 30 seconds)
+Click link.
+
+Choose:
+
+$36, $54, $100, $180, $360 presets
+
+one-time or recurring (birthday every year)
+
+Choose what you are gifting:
+
+“Total Market” (default)
+
+“S&P 500”
+
+“Education fund”
+
+“Pick from the kid’s favorites” (5 logos)
+
+Add a message.
+
+Pay with Apple Pay, card, ACH.
+
+Immediately get a digital card you can text, print, or bring to the event.
+
+For the kid (the magic)
+A simple “ownership dashboard”:
+
+“You own pieces of these companies/funds”
+
+“Here’s who gifted what, with notes”
+
+“Milestones unlocked” (first $1k, first dividend, 18th birthday)
+
+This is not a trading app. It is a “gift vault.”
+
+4) Offer rails: three products, one registry
+You want maximum conversion across different comfort levels.
+
+Rail A: Default index gifting (highest conversion)
+Most people do not want to pick stocks.
+
+Total Market
+
+S&P 500
+
+“Balanced” (stock + bonds)
+
+Age-based glide path (optional)
+
+Rail B: “Kid picks companies” (highest emotional appeal)
+Let the kid choose 5–10 brands they recognize. Gift-givers choose one.
+
+This increases purchase confidence and fun.
+
+You still strongly recommend index defaults.
+
+Rail C: Education gifting (cleanest for many families)
+529 contributions integrated into the same registry
+
+“Pick education” is a safe option for conservative relatives
+
+This tri-rail setup is how you capture nearly everyone.
+
+5) The critical unlock: group gifting and recurring
+Group gifting
+“10 relatives funded one meaningful gift.”
+
+One goal card: “Fund $2,000 towards their future”
+
+Progress bar
+
+Names and notes
+
+Recurring gifting
+This is the difference between a cute product and a massive business.
+
+“Gift $18/month for 24 months”
+
+“Every birthday, automatically”
+
+“Every Rosh Hashanah / graduation anniversary / etc.”
+
+Recurring turns a one-time event into a multi-year customer.
+
+6) Business model that can scale to billions
+You do not want to be a broker. You want to be the gifting layer.
+
+Revenue streams:
+
+Contribution fee (gift-giver)
+
+Example: 2.0% fee capped at $10, or flat $3.99
+
+Optional: “Cover fees” toggle
+
+Family subscription
+
+$5–$15/month to manage multiple kids, multiple funds, milestones, recurring gifts, and premium cards.
+
+This can become a “family finance memory book.”
+
+Partner economics
+
+Brokerage/custodian referral revenue (structured compliantly)
+
+529 program referral economics
+
+Cards, prints, keepsakes (high-margin add-ons)
+
+B2B distribution
+
+Synagogues, schools, event planners, venues
+
+Premium “community gifting portal”
+
+The long-term goal: millions of families on subscription plus billions in annual contributions moving through your rails.
+
+7) Regulatory reality: how to make it real
+If you directly handle securities execution and custody, it gets heavy fast.
+
+A scalable approach:
+
+Partner with a regulated custodian/brokerage for the actual account, custody, and trading.
+
+You are the registry, payments, identity workflow, receipts, gifting UX, and customer relationship.
+
+You will still need:
+
+KYC/AML workflows (especially for parents)
+
+fraud controls and chargeback management
+
+disclosures, tax handling clarity, and support
+
+But you avoid becoming a full broker-dealer.
+
+Also, for minors:
+
+You typically route into custodial structures (UGMA/UTMA or similar) or parent-owned accounts with “beneficiary tagging” depending on the partner’s capabilities.
+
+8) Moat: why you win and stay winning
+This space can be copied. Your moat must be multi-layered.
+
+Moat A: Distribution loops
+Every registry is a viral distribution event:
+
+One family invites 50–200 gift-givers.
+
+Many gift-givers later become parents and create their own registry.
+
+Moat B: Emotional lock-in
+Your app becomes a permanent memory system:
+
+notes from grandparents
+
+“first dividend”
+
+milestone timeline
+
+annual recap
+
+It becomes hard to move because it is sentimental, not just financial.
+
+Moat C: Compounding networks
+Synagogues, schools, parent groups become channels.
+
+Event planners recommend you by default.
+
+Moat D: Product surface area
+Once you own the “gift fund,” you can expand:
+
+multiple goals (education, first car, wedding)
+
+recurring family contributions
+
+family gifting circles
+
+“grandparent mode”
+
+This becomes the default family long-term gift infrastructure.
+
+9) The UX that makes this explode
+Most finance products fail because they feel like paperwork.
+
+Non-negotiables:
+
+Gift-giver checkout: under 60 seconds
+
+Apple Pay first
+
+No finance jargon
+
+Gift cards that feel premium and personal
+
+A default option that requires zero decision-making
+
+Default is everything:
+
+“Total Market Gift” should be the one-tap choice.
+
+The stock-picker option is secondary.
+
+10) Go-to-market plan
+Phase 1: Community wedge (0 to 10k families)
+Partner with a handful of synagogues and Jewish schools.
+
+Offer a “community code” that removes fees or adds a premium card.
+
+Launch with a few case-study families and screenshots.
+
+Phase 2: Events platform expansion (10k to 250k families)
+SEO: “bar mitzvah gift registry”, “bat mitzvah gift ideas”, “gift stock for kids”, “529 registry”
+
+Influencers: parent creators, Jewish creators, personal finance creators
+
+Partnerships: event venues, photographers, planners
+
+Phase 3: Mass market (250k to millions)
+Newborn gifting becomes the second big engine.
+
+Corporate gifting: employees can gift to coworkers’ baby funds.
+
+“Group gift” becomes a standard group text link.
+
+11) Metrics that define product-market fit
+You will know you have a winner when:
+
+30%+ of gift-givers choose recurring or return within 12 months
+
+average registry raises $2k+ with strong conversion
+
+a large percent of new registries come from previous gift-givers
+
+support volume stays low (meaning the UX is simple)
+
+12) Roadmap: what to build first (fast, real MVP)
+MVP (60–90 days)
+registry pages
+
+simple rails: index fund gift + 529 option
+
+Apple Pay checkout
+
+digital card generator and printable PDF
+
+“thank you” automation
+
+basic dashboard: gift history, total raised
+
+V2
+“kid picks brands” option
+
+group gifting goals and progress bars
+
+recurring gifting
+
+milestone timeline
+
+V3
+family subscription
+
+multiple funds per kid
+
+community portals and partner dashboards
+
+13) What a $5B outcome can look like (one plausible shape)
+This category can get huge if you drive recurring and multi-event usage.
+
+A realistic path to $5B valuation is something like:
+
+2M families on platform
+
+meaningful percent on subscription
+
+billions in annual contribution volume through checkout
+
+strong retention because families keep using it across multiple kids and events
+
+You are effectively building “Stripe for life-event gifting,” focused on long-term assets.
+
+14) The name of the game: positioning
+Do not position it as “beat bonds” or “pick winning stocks.”
+
+Position it as:
+
+“Give a future-proof gift”
+
+“A registry for meaningful gifts that grow with them”
+
+“Turn one-time gifting into something they will thank you for in 10 years”
+
+If you want, I can draft:
+
+a one-page pitch deck outline (problem, wedge, product, model, moat)
+
+the exact onboarding flow screens and copy (parent, gift-giver, kid)
+
+a partner strategy checklist for a brokerage/529 integration without becoming the broker yourself
+
+You said:
+okay not just jews though like that was just an idea - also consdier brand look feel ux ui ease and so on . people need to realllly love this 
+ChatGPT said:
+Broaden the wedge beyond any community
+You want “life-event gifting” as the category, with vertical templates that make setup instant:
+
+Core events (universal)
+
+Baby / newborn
+
+Birthday (with recurring gifts as default)
+
+Graduation
+
+Wedding
+
+First home / first apartment
+
+“Just because” (Godparent, aunt/uncle, mentor)
+
+Optional templates
+
+Bar/bat mitzvah (keep it as one template, not the brand)
+
+Quinceañera
+
+Sweet 16
+
+Confirmation
+
+Eagle Scout
+
+Sports team fundraiser
+
+Classroom fund (teacher link)
+
+Your product is the same underneath. The event template changes the copy, visuals, and default gift options.
+
+The brand promise that makes people care
+People do not love “investing.” They love:
+
+giving something meaningful
+
+feeling like the gift has a story
+
+being proud of what they gave
+
+getting thanked in a satisfying way
+
+So the brand should feel like:
+modern registry + premium card + sentimental scrapbook
+Not a fintech app.
+
+Positioning options that are broad:
+
+“Gifts that grow up with them.”
+
+“Make a gift they will still have in 10 years.”
+
+“Turn a moment into a head start.”
+
+Avoid anything that sounds like promising returns. This is about long-term ownership and milestones.
+
+Make the product feel effortless for non-finance people
+Golden rule
+A gift-giver must finish in under 60 seconds, with zero finance decisions required.
+
+Default gift button
+The primary CTA is always something like:
+Gift $100 to their Future Fund
+No ticker symbols. No charts. No jargon.
+
+If someone wants to choose specifics, that is secondary.
+
+UX architecture that people love
+1) Parent creates the registry in 3 steps
+Step 1: Pick a template
+Baby, Birthday, Graduation, Wedding, etc.
+
+Step 2: Pick the gift menu (simple)
+Choose 2 to 4 options max:
+
+Future Fund (broad market default)
+
+Education Fund (529 option)
+
+Dream Fund (goal-based, like “first car”)
+
+“Pick from their favorites” (optional list of brands)
+
+Step 3: Share link
+Done. No long setup. No complex settings upfront.
+
+Advanced settings live behind “Customize.”
+
+2) Gift-giver flow that feels like checkout, not onboarding
+Screen A: Choose amount
+Buttons: $25 / $50 / $100 / $180 / Custom
+Toggle: One-time or Recurring (default off, but presented clearly)
+
+Screen B: Choose gift type
+
+Future Fund (recommended)
+
+Education Fund
+
+Favorites (optional)
+
+Screen C: Message + name
+Short message box, from field, optional “show publicly.”
+
+Screen D: Pay
+Apple Pay, Google Pay, card, ACH.
+
+Screen E: Your gift card
+A beautiful digital card appears instantly with:
+
+recipient name
+
+amount
+
+your message
+
+QR code to view the card
+
+optional “Print” version
+
+3) Recipient experience that is emotional, not financial
+The recipient sees:
+
+“People who helped build your fund”
+
+messages
+
+milestones
+
+a simple “what you own” view if applicable, but kept lightweight
+
+This should feel like a memory book with a balance, not a brokerage dashboard.
+
+Brand look and feel
+Design vibe
+Clean, premium, warm
+
+Big whitespace, friendly type, soft corners
+
+Rich photography or subtle illustration
+
+Minimal charts, no trading UI patterns
+
+Visual system
+A set of “event themes” (Baby, Birthday, Graduation, Wedding) with unique color palettes
+
+Card designs that look like high-end stationery
+
+Subtle motion: confetti on success, progress bar fills, card flip animation
+
+Tone
+Human
+
+Simple
+
+Slightly sentimental
+
+Never hype-y
+
+Words to avoid:
+
+“crush the market”
+
+“guaranteed”
+
+“best returns”
+
+“get rich”
+
+Words to use:
+
+“head start”
+
+“future”
+
+“milestone”
+
+“grow over time”
+
+“meaningful”
+
+The “why people love it” features
+1) Group gifting that feels like teamwork
+One gift goal card:
+
+“Help fund their first car”
+
+progress bar
+
+list of contributors with notes
+
+optional anonymity
+
+This turns gifting into participation, not a transaction.
+
+2) “Thank you” that is built-in and satisfying
+After the event:
+
+parents can tap “Send thank yous”
+
+recipients can record a 15-second thank-you video
+
+automated thank-you cards that include the message thread and a photo from the event
+
+This is a huge emotional retention loop.
+
+3) Recurring as a normal option
+Make recurring feel like “being there over time.”
+
+“Every birthday”
+
+“Every month for a year”
+
+“Every holiday season”
+
+Even if only a minority pick it, it changes the business.
+
+4) Milestones that create delight
+First $500
+
+First $1,000
+
+First year anniversary
+
+“You have 25 people in your corner”
+
+Age 16, 18, 21 triggers
+
+Milestones are how you keep it fun and sticky.
+
+Reduce decision anxiety with a smart default
+Most people do not want to pick assets. Your default should be:
+
+“Future Fund” (broad diversified index style option)
+
+“Education Fund” (529) as the conservative alternative
+
+If someone asks “what should I pick,” the UI should reassure them:
+
+Recommended choice highlighted
+
+1 sentence explanation
+
+“Learn more” link for those who care
+
+Trust, safety, and legitimacy signals
+To be loved, this must feel safe:
+
+Clear “Who controls the account?” explanation (parent/guardian for minors)
+
+Clear “Fees and how it works” screen
+
+Receipts and confirmations that look professional
+
+Support that feels human
+
+Fraud prevention (gift-giver confidence)
+
+Also: keep the investment language conservative and disclosure-forward.
+
+What to build first to nail love, not just function
+If you want the “people rave about it” MVP, prioritize:
+
+Stunning registry pages and themes
+
+60-second Apple Pay checkout
+
+Beautiful digital cards (textable + printable)
+
+Group gifting goals + progress bars
+
+Thank-you automation
+
+All the complex finance surface area can come later, behind a partner integration.
+
+A concrete homepage concept
+Headline: Gifts they will still have in 10 years
+Subhead: Create a registry for future-focused gifts. Friends and family contribute in seconds.
+Primary CTA: Create a Registry
+Secondary CTA: Send a Gift
+
+Then show:
+
+Event templates
+
+Card previews
+
+“How it works” in 3 steps
+
+Trust and custody explanation in plain English
+
+If you want, I can produce:
+
+A complete IA + screen-by-screen UX spec (parent, gift-giver, recipient).
+
+A brand kit direction: typography, colors, card themes, motion guidelines, icon style.
+
+Copy system: headlines, microcopy, error states, and the “explain it like I’m not finance-y” disclosures.
+
+You said:
+whats the name
+ChatGPT said:
+
+Thought for 2m 6s
+Recommended name: Trellis
+
+Why it fits this product:
+
+Means “support for growth” without sounding like finance.
+
+Works for every occasion (birthday, graduation, wedding, new baby, holiday).
+
+Short, memorable, premium-friendly. Easy to design a logo and app icon around.
+
+Leaves room for sub-products and features: Trellis Registry, Trellis Cards, Trellis Vault, Trellis Moments, Trellis Family.
+
+Names to avoid (already heavily used in adjacent spaces)
+
+Honeyfund (wedding cash registry) 
+App Store
+
+Bright Funds (corporate giving platform) 
+WebCatalog
+
+Keepsake (event photo-sharing app) 
+Google Play
+
+Givestack (existing product) 
+app.givestack.com
+
+Gift Up (gift card product) 
+Gift Up!
+
+Wishing Well (cash registry apps) 
+wishingwellapp.com.au
+
+Share a Wish (wishlist/registry app) 
+App Store
+
+Plus existing “stock gifting” options like GiveAshare and kids investing gift apps like EarlyBird 
+giveashare.com
++1
+
+Shortlist if you want alternatives in the same vibe
+
+Tendry
+
+Rooted
+
+Bloomary
+
+Grovelet
+
+Nurtur
+
+Sproutly
+
+Hearthly
+
+Keeplight
+
+Everleaf
+
+Seednote
+
+If you use Trellis, the clean positioning line that usually lands best is:
+
+“Gifts that grow.”
+
+You said:
+gifts that grow is good. i like everleaf, seednote, tender, and nurture
+ChatGPT said:
+
+Thought for 24s
+Quick take on the four names
+Everleaf
+Pros
+
+Premium, calm, natural.
+
+Pairs perfectly with “Gifts that grow.”
+
+Big issue
+
+“Everleaf” is already a known non-alcoholic aperitif brand (and broadly used in commerce), which increases trademark and SEO friction. 
+Everleaf Drinks
++2
+drinksint.com
++2
+
+Verdict
+
+Best sound and vibe, but highest collision risk.
+
+Seednote
+Pros
+
+On-theme, memorable, strongly “growth” coded.
+
+Big issue
+
+“SeedNOTE” is already used as a product name in startup legal/financing (convertible note docs). That is a real, established usage and will create brand confusion in search and potentially in trademarks. 
+SeedLegals
++1
+
+Verdict
+
+Strong conceptually, but likely messy.
+
+Tendry (assuming you mean Tendry, not Tender)
+Pros
+
+Feels warm and modern.
+
+Very on-brand for nurturing, growing, tending.
+
+More ownable than the others if it is not already heavily used in your category.
+
+Watch-outs
+
+Similar-looking names exist (example: “Tendryl”), so you would need to validate trademark and domains carefully. 
+Tendryl
+
+Verdict
+
+Best balance of brandability and ownability among your four.
+
+Nurture
+Pros
+
+Clear meaning, friendly.
+
+Big issue
+
+Extremely common across categories, including existing apps. That makes SEO and trademark clearance harder. 
+nurture.is
++2
+Google Play
++2
+
+Verdict
+
+Too crowded.
+
+Recommendation
+If you want the name that most likely becomes a loved consumer brand without constant confusion:
+
+Pick: Tendry
+Tagline: Gifts that grow.
+
+Then build a tight brand system around it:
+
+Tendry Registry (create an event page)
+
+Tendry Card (beautiful digital and printable card)
+
+Tendry Fund (the default gift option)
+
+Tendry Milestones (the “love” layer)
+
+If you still want to pursue Everleaf because you love it, consider using it as a product name under a more unique parent brand, since Everleaf is already strong in another market. 
+Everleaf Drinks
++1
+
+What “people really love” looks like in brand and UX
+Brand personality
+Premium stationery meets modern registry.
+
+Warm, not cutesy.
+
+Zero finance vibes on first impression.
+
+Visual direction
+Soft neutrals plus one signature accent color.
+
+Large type, lots of whitespace.
+
+Card-first visuals (the card is the hero asset everywhere).
+
+UX principles
+Gift checkout in under 60 seconds.
+
+Default choice is one tap (no tickers, no jargon).
+
+Delight moments: instant card reveal, subtle confetti, progress bar fill, thank-you flow.
+
+Next step (practical)
+Before you fall in love with any name, do a fast clearance pass:
+
+USPTO trademark database search for the name in relevant classes. 
+USPTO
+
+Domain and social handle availability.
+
+If you pick one of the four right now, Tendry is the one I would bet on.
+
+If you w
+
+
+
+
+
+No file chosenNo file chosen
+ChatGPT can make mistakes. Check important info.
+ChatGPT is still generating a response...
