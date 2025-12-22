@@ -1,0 +1,52 @@
+yes. also consdier the following: Both. Make “new by default,” and “connect existing” as an advanced option.
+
+Default: parents open a new account in your platform
+
+Best for the mainstream gifting UX because it is predictable and instant.
+
+If the recipient is a minor
+
+Parents open a custodial account (UGMA/UTMA-style) and act as custodian until age of majority. These are irrevocable gifts to the child and must be used for the child’s benefit. Fidelity+2Vanguard+2
+
+This becomes your standard “kid gifting” pathway.
+
+If the recipient is 18+
+
+They open their own brokerage account in-product and gifts land there.
+
+Advanced: connect an existing brokerage account
+
+This is for people who already invest and want everything consolidated.
+
+You support 2 connection types:
+
+1) “Transfer in-kind” the holdings (move assets without selling)
+
+Use ACATS/in-kind transfer patterns so the recipient can move their existing positions into the brokerage rail you use, preserving the holdings. FINRA describes the ACATS transfer process starting with a Transfer Initiation Form (TIF). FINRA+2NerdWallet+2
+
+2) “Gift shares” directly to an external brokerage
+
+Some brokerages offer forms and flows specifically for gifting shares to accounts at other firms. Fidelity+1
+For certain transfers, “DTC” style broker-to-broker instructions are commonly used (you see this in standard transfer instruction documents). CURE Childhood Cancer+1
+
+In your UX this is: “Already have an account? Send gifts there instead.”
+
+How you present it in the product
+
+On the event setup screen, parents pick one:
+
+Recommended: “Create a new Grow Account for [Child]” (custodial if minor)
+
+“Use my child’s existing brokerage” (connect, verify ownership, then route gifts)
+
+“Let me decide later” (gifts accrue as Seed, auto-invests after a rule)
+
+Why “new by default” wins
+
+Less friction for guests (no “where should I send this?” problem).
+
+Fewer edge-case failures (account mismatches, transfer delays).
+
+Cleaner brand promise: every gift becomes ownership immediately.
+
+Then you add “connect existing” once you have strong traction, because it is valuable but operationally heavier.
