@@ -2,10 +2,12 @@ import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ArrowRight, TrendingUp, ShieldCheck, Heart } from "lucide-react";
+import { ArrowRight, TrendingUp, ShieldCheck, Heart, Sparkles, Star } from "lucide-react";
 import heroImage from "@assets/generated_images/golden_tree_growing_from_digital_foundation.png";
 import giftCardImage from "@assets/generated_images/premium_stock_gift_card_on_marble.png";
 import { motion } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function Home() {
   return (
@@ -30,12 +32,12 @@ export default function Home() {
               </p>
               <div className="flex flex-col gap-4 sm:flex-row">
                 <Link href="/create">
-                  <Button size="lg" className="h-12 px-8 text-lg shadow-lg shadow-primary/20">
+                  <Button size="lg" className="h-12 px-8 text-lg shadow-lg shadow-primary/20 font-bold">
                     Create a Registry
                   </Button>
                 </Link>
                 <Link href="/registry">
-                  <Button variant="outline" size="lg" className="h-12 px-8 text-lg">
+                  <Button variant="outline" size="lg" className="h-12 px-8 text-lg font-bold">
                     Find a Registry
                   </Button>
                 </Link>
@@ -88,16 +90,117 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Social Proof / Partners */}
-      <section className="border-y bg-muted/30 py-12">
-        <div className="container mx-auto px-4 text-center">
-          <p className="mb-8 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Perfect for every milestone
-          </p>
-          <div className="flex flex-wrap justify-center gap-8 opacity-60 md:gap-16">
-            {["Bar Mitzvahs", "Birthdays", "Graduations", "Weddings", "Newborns"].map((item) => (
-              <span key={item} className="text-xl font-serif font-medium text-primary">{item}</span>
-            ))}
+      {/* Pricing Section */}
+      <section className="py-24 bg-muted/30 border-y" id="pricing">
+        <div className="container mx-auto px-4">
+          <div className="mb-16 text-center max-w-2xl mx-auto">
+            <h2 className="mb-4 font-serif text-3xl font-bold text-primary md:text-4xl">
+              Simple, Transparent Pricing
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Always free to create an event. Choose the plan that fits your celebration.
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
+            {/* Free Plan */}
+            <Card className="flex flex-col border-none shadow-sm">
+              <CardHeader>
+                <CardTitle className="font-serif text-2xl">Standard</CardTitle>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold">$0</span>
+                  <span className="text-muted-foreground">/event</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">Perfect for smaller milestones.</p>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> Standard Giver Fee (2.9% + $0.30)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> Basic Grow Baskets
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> Event Page & QR Code
+                  </li>
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Link href="/create" className="w-full">
+                  <Button variant="outline" className="w-full">Get Started</Button>
+                </Link>
+              </CardFooter>
+            </Card>
+
+            {/* Plus Plan */}
+            <Card className="flex flex-col border-2 border-primary shadow-xl relative transform md:-translate-y-4">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
+                Most Popular
+              </div>
+              <CardHeader>
+                <CardTitle className="font-serif text-2xl">Plus</CardTitle>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold">$49</span>
+                  <span className="text-muted-foreground">/event</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">Make it fee-free for your guests.</p>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-center gap-2 font-bold text-primary">
+                    <Sparkles className="h-4 w-4 text-secondary" /> Fee-free gifts (up to $7.5k)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> Premium Grow Baskets
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> Auto Thank-You Drafts
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> Seednote™ Keepsakes
+                  </li>
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Link href="/create" className="w-full">
+                  <Button className="w-full font-bold">Upgrade to Plus</Button>
+                </Link>
+              </CardFooter>
+            </Card>
+
+            {/* Family Plan */}
+            <Card className="flex flex-col border-none shadow-sm">
+              <CardHeader>
+                <CardTitle className="font-serif text-2xl">Family</CardTitle>
+                <div className="mt-4">
+                  <span className="text-4xl font-bold">$99</span>
+                  <span className="text-muted-foreground">/year</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">Unlimited growth for all your children.</p>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> Up to 6 events per year
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> Fee-free gifts (up to $15k/yr)
+                  </li>
+                  <li className="flex items-center gap-2 font-bold text-primary">
+                    <Star className="h-4 w-4 text-secondary" /> Household Dashboard
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> All Plus features included
+                  </li>
+                </ul>
+              </CardContent>
+              <CardFooter>
+                <Link href="/create" className="w-full">
+                  <Button variant="outline" className="w-full">Choose Family</Button>
+                </Link>
+              </CardFooter>
+            </Card>
           </div>
         </div>
       </section>
@@ -188,5 +291,25 @@ export default function Home() {
 
       <Footer />
     </div>
+  );
+}
+
+function CheckCircle(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
   );
 }

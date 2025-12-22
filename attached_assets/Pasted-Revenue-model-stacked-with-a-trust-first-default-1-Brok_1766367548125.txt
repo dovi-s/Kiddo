@@ -1,0 +1,317 @@
+Revenue model (stacked, with a “trust-first” default)
+1) Brokerage/clearing economics (primary engine)
+
+If you run gifts through a broker-dealer/custodian partner, you can monetize via the standard brokerage revenue streams, while keeping pricing simple for users.
+
+Securities lending / fully paid lending programs (where permitted and disclosed)
+
+Cash sweep yield on uninvested cash (short windows still matter at scale)
+
+Interchange on debit card (optional feature later)
+
+Rebates / revenue share from your brokerage stack (varies by partner and product configuration)
+
+This is how consumer brokerages typically make money without charging explicit trading fees. (Exact availability depends on your partner and regulatory setup, but the pattern is proven.)
+
+2) Event “gift processing” fee (simple, transparent)
+
+Two clean ways:
+
+Option A: Giver pays fee
+
+Example: “$100 gift + $2.50 processing”
+
+Works because it maps to how wedding registries and ticketing already feel.
+
+Option B: Host absorbs fee
+
+Parents/couple cover fees so guests see a clean gift amount.
+
+You can also offer “fee-free events” as a paid upgrade (see subscriptions).
+
+3) Subscription tiers for hosts (parents/couples)
+
+Subscription is not required for gifting; it upgrades the experience.
+
+Free host
+
+Event page + basic basket + thank-you export
+
+Plus ($8–$15/mo or $49/event)
+
+Fee-free gifts (or reduced fees)
+
+Premium baskets (curated goals, smarter defaults)
+
+Advanced privacy controls
+
+Auto thank-you drafts + address collection
+
+Multiple events per year
+
+Family ($99/yr)
+
+Multiple kids/events
+
+Household dashboard
+
+Recurring contributions (allow grandparents to “subscribe” $25/mo)
+
+4) Premium “Baskets” and partner distribution
+
+You can create themed portfolios (index-based, age-based, conservative) and earn:
+
+Advisory/program fees (only if you offer advice via an RIA structure), or
+
+Model marketplace revenue share (third-party model providers pay to be listed)
+
+If you do anything that looks like personalized advice, you will likely need an RIA path; if baskets are generic, rules-based, and disclosed, it is simpler.
+
+5) Gift add-ons (high-margin)
+
+Digital + physical keepsake pack (printed “Seednote,” framed certificate, etc.)
+
+Video message bundle
+
+Premium card designs
+
+Memory capsule (messages/photos associated with each gift)
+
+This keeps the emotional “gift” part strong without making it feel like you are upselling finance.
+
+6) B2B channel revenue (big scaling lever)
+
+Sell to:
+
+Event venues and planners (affiliate bounties)
+
+Synagogues/churches/schools (fundraising + celebrations)
+
+Employer perks (company-funded baby gifts, milestones)
+
+College savings consultants
+
+Offer rev-share: “X% of processing” or “$Y per activated household.”
+
+Recommended pricing posture (so people don’t feel nickeled)
+
+Always free to receive gifts
+
+Small transparent fee on the giver (default)
+
+Subscription removes/reduces fees + adds premium event tools
+
+Back-end brokerage economics power the unit economics
+
+Example unit economics (rough, but realistic structure)
+
+Assume an average event:
+
+35 gifts
+
+$120 average gift
+
+$4,200 total inflow
+
+If you charge:
+
+2.2% + $0.30 processing (blended, like typical card economics), and you keep ~1.0% net after card costs + partner fees
+=> ~$42 net per event
+
+Then add:
+
+15% of hosts upgrade to $49/event “Plus”
+=> +$7.35 blended per event
+
+Then back-end brokerage economics on retained assets:
+
+If 60% stays invested long-term and you earn a small annualized take-rate via partner rev share
+=> becomes meaningful at scale.
+
+What not to do
+
+Don’t take a hidden spread without being explicit.
+
+Don’t make the core feel like “cash registry with a stock logo.”
+
+Don’t force subscriptions to do basic gifting. Package 1: Consumer-simple (fastest to market)
+
+Goal: frictionless gifting, minimal choices, clear fee, no subscriptions required.
+
+Pricing
+
+For guests (default)
+
+Card/Apple Pay gift: 2.9% + $0.30 per gift (standard “processing” pattern)
+
+ACH gift: $0.75 flat (optional rail; can be “free” later)
+
+For hosts (parents/couple)
+
+$0 to create an event and receive gifts
+
+What they get
+
+Event page + QR
+
+1 default “Grow Basket”
+
+Thank-you list export (names, amounts, messages)
+
+Seed mode optional (gift now, invest later)
+
+Why this works
+
+Matches mental model of donating/registries.
+
+You do not need to sell anything to the host to grow.
+
+When to ship
+
+Day 1. This is your v1 pricing.
+
+When to change it
+
+After you consistently see:
+
+High completion rates (guest checkout conversion strong)
+
+Low refund disputes
+
+Recipients actually invest (not just hold as cash)
+
+At that point you can add Package 2.
+
+Package 2: Premium-heavy (monetize hosts, remove guest friction)
+
+Goal: make people love it, reduce guest fee friction, and turn hosts into recurring customers (multiple life events).
+
+Pricing
+
+Host plans
+
+Plus
+
+$49 per event (wedding, bar mitzvah, graduation, baby shower)
+
+Includes: “Fee-free gifts” on that event up to $7,500 total gifts
+
+After $7,500: host pays 0.75% (keeps you covered)
+
+Family
+
+$99 per year
+
+Up to 6 events/year
+
+“Fee-free gifts” up to $15,000 per year, then 0.75% host-paid
+
+Guests
+
+If event is “Fee-free,” guest sees $0 processing
+
+Otherwise guest pays standard 2.9% + $0.30
+
+What Plus and Family include (things people actually value)
+
+Premium baskets (more options + better defaults)
+
+Auto thank-you drafts + address collection
+
+Gift privacy controls (hide amounts publicly, show only to host)
+
+“Auto-invest rule” (ex: invest Seeds into default basket after 14 days)
+
+Keepsake templates (printable card, “Seednote” PDF)
+
+When to introduce it
+
+Once you have:
+
+A meaningful number of repeat events per household, or
+
+Strong word-of-mouth with hosts asking “can I cover fees for guests?”
+
+This is typically after product-market fit signals, not before.
+
+Package 3: B2B-led (distribution + volume economics)
+
+Goal: sell “event gifting as a service” to organizations that want a modern default for celebrations, and let them subsidize fees.
+
+Target customers
+
+Venues and event planners
+
+Schools, alumni associations
+
+Religious organizations (all types)
+
+Employers (milestones: baby, marriage, anniversaries)
+
+Fundraising groups (separate flow, but same rails)
+
+Pricing options (pick one per vertical)
+
+Option A: Platform subscription
+
+$499 per year per organization
+
+Includes 25 events/year
+
+Additional events: $10/event
+
+Gifts: guests pay standard fees unless the org subsidizes
+
+Option B: Subsidized “fee-free” bundles
+
+Org prepays $1,000
+
+You cover guest fees up to $35,000 in gift volume (example cap)
+
+Over cap: org pays 0.75%
+
+Option C: Per-event licensing
+
+$29 per event billed to the org
+
+Guest fees remain standard
+
+Referral economics (if you want a channel program)
+
+Event planner gets $10 per activated event plus 10% of host upgrades
+
+Venue gets $250 per 100 activated events (volume kicker)
+
+Employer gets custom pricing, but target $5 to $15 per employee event depending on activation
+
+When to introduce it
+
+After v1 proves:
+
+The gifting flow works reliably
+
+Support load is manageable
+
+Your compliance and operational rails are stable
+
+Then B2B becomes a growth engine.
+
+Recommended rollout sequence
+
+Launch with Package 1 (consumer-simple, guest-paid fee)
+
+Add Plus $49/event once hosts request “make it fee-free for guests”
+
+Add Family $99/year once you see repeat events per household
+
+Add B2B once reliability and support are under control
+
+Concrete “default pricing” to put on the site (simple and clean)
+
+“Create an event: Free”
+
+“Guests can gift in seconds”
+
+“Processing: 2.9% + $0.30 per gift”
+
+“Want fee-free gifts? $49 per event”
