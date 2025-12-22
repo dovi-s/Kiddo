@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { TrendingUp, GraduationCap, Building2, Globe, DollarSign } from "lucide-react";
+import { TrendingUp, GraduationCap, Building2, Globe, DollarSign, ShieldCheck, Zap } from "lucide-react";
 import { useState } from "react";
 import { toast } from "@/hooks/use-toast";
 
@@ -17,11 +17,22 @@ const REGISTRY_DATA = {
   name: "Leo's Bar Mitzvah",
   date: "May 24, 2025",
   recipient: "Leo",
-  photo: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=300&auto=format&fit=crop", // Stock photo of a kid
+  photo: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=300&auto=format&fit=crop",
   description: "Help Leo build his future! Instead of gadgets that break, we're asking for contributions to his long-term savings and education.",
 };
 
 const GIFT_OPTIONS = [
+  {
+    id: "basket-growth",
+    title: "Core Growth Basket",
+    ticker: "BASKET",
+    type: "Grow Basket",
+    risk: "Medium",
+    description: "A diversified mix of broad index ETFs. Best for long-term compounding.",
+    icon: Zap,
+    color: "bg-secondary/10 text-secondary-foreground",
+    isRecommended: true
+  },
   {
     id: "sp500",
     title: "S&P 500 Fund",
@@ -35,7 +46,7 @@ const GIFT_OPTIONS = [
   {
     id: "college",
     title: "College 529 Plan",
-    ticker: "EDU",
+    ticker: "529",
     type: "Education",
     risk: "Low",
     description: "Tax-advantaged savings specifically for future tuition and books.",
@@ -43,14 +54,14 @@ const GIFT_OPTIONS = [
     color: "bg-green-100 text-green-700",
   },
   {
-    id: "tech",
-    title: "Future Tech Basket",
-    ticker: "QQQ",
-    type: "ETF",
-    risk: "High",
-    description: "Invest in the companies building tomorrow (Apple, Microsoft, Nvidia).",
-    icon: Globe,
-    color: "bg-purple-100 text-purple-700",
+    id: "seed",
+    title: "Future Seed",
+    ticker: "SEED",
+    type: "Hybrid",
+    risk: "Variable",
+    description: "You give the capital, Leo chooses the position later. Zero friction gifting.",
+    icon: DollarSign,
+    color: "bg-amber-100 text-amber-700",
   },
   {
     id: "apple",
@@ -58,19 +69,9 @@ const GIFT_OPTIONS = [
     ticker: "AAPL",
     type: "Stock",
     risk: "Medium",
-    description: "Ownership in the company that makes the iPhone.",
+    description: "Direct ownership in the world's leading technology innovator.",
     icon: Building2,
     color: "bg-gray-100 text-gray-700",
-  },
-  {
-    id: "disney",
-    title: "Disney",
-    ticker: "DIS",
-    type: "Stock",
-    risk: "Medium",
-    description: "The magic kingdom. Movies, parks, and entertainment.",
-    icon: Building2,
-    color: "bg-indigo-100 text-indigo-700",
   },
   {
     id: "israel",
@@ -78,13 +79,11 @@ const GIFT_OPTIONS = [
     ticker: "BOND",
     type: "Bond",
     risk: "Low",
-    description: "Support the nation and earn steady interest.",
+    description: "Support the nation and earn steady interest for his future.",
     icon: ShieldCheck,
     color: "bg-orange-100 text-orange-700",
   },
 ];
-
-import { ShieldCheck } from "lucide-react";
 
 export default function Registry() {
   return (
@@ -115,9 +114,10 @@ export default function Registry() {
           <Tabs defaultValue="all" className="w-full">
             <div className="flex justify-center mb-8">
               <TabsList className="bg-muted/50">
-                <TabsTrigger value="all">All Gifts</TabsTrigger>
-                <TabsTrigger value="stocks">Stocks</TabsTrigger>
-                <TabsTrigger value="education">Education</TabsTrigger>
+                <TabsTrigger value="all">All Modes</TabsTrigger>
+                <TabsTrigger value="baskets">Baskets</TabsTrigger>
+                <TabsTrigger value="stocks">Direct Shares</TabsTrigger>
+                <TabsTrigger value="seed">Seed Gifts</TabsTrigger>
               </TabsList>
             </div>
 
@@ -129,6 +129,14 @@ export default function Registry() {
               </div>
             </TabsContent>
             
+            <TabsContent value="baskets" className="mt-0">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {GIFT_OPTIONS.filter(g => g.type === "Grow Basket").map((gift) => (
+                  <GiftCard key={gift.id} gift={gift} recipient={REGISTRY_DATA.recipient} />
+                ))}
+              </div>
+            </TabsContent>
+
             <TabsContent value="stocks" className="mt-0">
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {GIFT_OPTIONS.filter(g => g.type === "Stock" || g.type === "ETF").map((gift) => (
@@ -137,9 +145,9 @@ export default function Registry() {
               </div>
             </TabsContent>
 
-             <TabsContent value="education" className="mt-0">
+            <TabsContent value="seed" className="mt-0">
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {GIFT_OPTIONS.filter(g => g.type === "Education").map((gift) => (
+                {GIFT_OPTIONS.filter(g => g.type === "Hybrid" || g.type === "Education").map((gift) => (
                   <GiftCard key={gift.id} gift={gift} recipient={REGISTRY_DATA.recipient} />
                 ))}
               </div>
@@ -159,15 +167,20 @@ function GiftCard({ gift, recipient }: { gift: any, recipient: string }) {
 
   const handleGift = () => {
     toast({
-      title: "Gift Sent!",
-      description: `You successfully gifted $${amount} of ${gift.title} to ${recipient}.`,
+      title: "Investment Initialized!",
+      description: `Your $${amount} contribution will convert to ${gift.type === 'Hybrid' ? 'shares once selected' : 'fractional shares'} for ${recipient}.`,
     });
     setIsOpen(false);
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <Card className="overflow-hidden transition-all hover:shadow-lg border-border/50 group">
+      <Card className={`overflow-hidden transition-all hover:shadow-lg border-border/50 group relative ${gift.isRecommended ? 'border-secondary/50 ring-1 ring-secondary/20' : ''}`}>
+        {gift.isRecommended && (
+          <div className="absolute top-0 right-0 bg-secondary px-3 py-1 text-[10px] font-bold text-secondary-foreground uppercase tracking-wider rounded-bl-lg">
+            Recommended
+          </div>
+        )}
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between mb-2">
             <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${gift.color}`}>
@@ -179,12 +192,12 @@ function GiftCard({ gift, recipient }: { gift: any, recipient: string }) {
           <CardDescription>{gift.type} • {gift.risk} Risk</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">{gift.description}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{gift.description}</p>
         </CardContent>
         <CardFooter className="bg-muted/30 p-4">
           <DialogTrigger asChild>
             <Button className="w-full font-semibold group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-              Gift {gift.ticker}
+              Gift {gift.type === 'Grow Basket' ? 'to Basket' : gift.type === 'Hybrid' ? 'Seed Capital' : 'Shares'}
             </Button>
           </DialogTrigger>
         </CardFooter>
@@ -192,14 +205,16 @@ function GiftCard({ gift, recipient }: { gift: any, recipient: string }) {
 
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="font-serif text-2xl">Gift {gift.title}</DialogTitle>
+          <DialogTitle className="font-serif text-2xl">Gift to {gift.title}</DialogTitle>
           <DialogDescription>
-            Your gift will be invested in {gift.title} for {recipient}'s future.
+            {gift.type === 'Hybrid' 
+              ? "Your gift will be held as seed capital until Leo selects a position."
+              : `Your gift will convert to fractional shares of ${gift.title} for ${recipient}'s future.`}
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
           <div className="grid gap-2">
-            <Label>Select Amount</Label>
+            <Label>Select Contribution Amount</Label>
             <div className="grid grid-cols-3 gap-2">
               {["54", "100", "180"].map((val) => (
                 <Button 
@@ -223,13 +238,18 @@ function GiftCard({ gift, recipient }: { gift: any, recipient: string }) {
           </div>
           
           <div className="grid gap-2">
-            <Label>Leave a note</Label>
-            <Textarea placeholder={`Mazel Tov ${recipient}! investing in your future...`} />
+            <Label>Message for {recipient}</Label>
+            <Textarea placeholder={`Mazel Tov ${recipient}! Investing in your growth...`} />
           </div>
         </div>
-        <div className="flex justify-end gap-3">
+        <Card className="bg-muted/50 border-none">
+          <CardContent className="p-4 text-xs text-muted-foreground">
+            <p><strong>Note:</strong> This is a gift of ownership. Recipient will receive a receipt for approximately { (Number(amount) / 250).toFixed(4) } fractional shares based on current market estimates.</p>
+          </CardContent>
+        </Card>
+        <div className="flex justify-end gap-3 pt-2">
           <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-          <Button onClick={handleGift} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
+          <Button onClick={handleGift} className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-bold">
             Confirm Gift
           </Button>
         </div>

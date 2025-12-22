@@ -1,0 +1,131 @@
+some thoughts to consider: “Registry” is the UX people already understand, but the underlying gift is an investment position (shares or fractional shares), not a cash transfer.
+
+Guests give dollars. Your platform turns those dollars into fractional shares (or holds them briefly as “uninvested cash” until the recipient picks what to buy). Fractional-share mechanics are already a standard pattern at major providers. Schwab Brokerage+2Stockpile+2
+
+What exactly am I gifting?
+
+You support 3 modes (all on the same event page):
+
+1) Gift a specific stock or ETF (most literal “share gift”)
+
+Guest picks: “$75 of Apple” or “$150 of VTI” (or “1 share of X” where possible).
+
+Recipient ends up owning fractional/whole shares in their brokerage account.
+
+This is how existing “gift stock” flows work: either fractional share purchase or a transfer of shares between accounts, depending on provider. Schwab Brokerage+2Fidelity+2
+
+2) Gift into a “Grow Basket” (best default for most people)
+
+Recipient sets a default basket for the event, examples:
+
+“Core Growth” (broad index ETF)
+
+“College Seed” (age-based or simple index)
+
+“Home Down Payment” (more conservative mix)
+Guests just choose an amount. The platform invests into that basket automatically, so it never feels like cash.
+
+3) Hybrid: gift now, recipient decides later (solves the “I don’t want to pick stocks” problem)
+
+Guest gives $100 as “Seed.”
+
+Seed converts into shares once the recipient chooses their default (or after a set rule like “auto-invest into Core Growth after 14 days”).
+This preserves the “not cash” feel while removing decision friction for the giver.
+
+Stock gifting products already use “gift card converts into fractional shares when redeemed” as a model. Stockpile+2Stockpile+2
+
+How the registry works (weddings, birthdays, graduations, bar mitzvahs, baby showers, anything)
+
+Recipient setup (2 minutes)
+
+Create event page (name, date, photo, short “why this”).
+
+Choose default gift type:
+
+Specific ticker list (optional)
+
+Basket (recommended)
+
+Seed (recipient decides later)
+
+Optional goals: “$5,000 toward future” + milestones.
+
+Share link or QR.
+
+Giver flow (under 30 seconds)
+
+Search event or open link.
+
+Pick amount.
+
+Pick “what it becomes” (stock, basket, or seed).
+
+Pay (Apple Pay, card).
+
+Add message.
+
+They receive a clean receipt showing what was purchased (example: “$100 -> 0.43 shares of VTI at closing price”), which makes it feel real.
+
+Recipient receives
+
+A dashboard showing:
+
+Total received
+
+Contributions list (for thank-yous)
+
+Holdings view (shares, performance, history)
+
+Optionally: “Do not show performance to guests” (privacy)
+
+The “not cash” rule (but keep an escape hatch)
+
+Make “cash out” either:
+
+Not available by default (strong stance), or
+
+Available only into a linked bank after a cooling-off period, or
+
+Available only for certain buckets (ex: “Honeymoon fund” is cash, “Everleaf portfolio” is shares)
+
+This keeps the brand promise intact while avoiding edge-case frustration.
+
+How this works mechanically (real-world rails)
+
+There are a few viable ways, and you can support more than one:
+
+Partner with a brokerage/custodian and open accounts (the cleanest “platform” version)
+
+Recipient gets a brokerage (or custodial) account inside your product.
+
+Gifts become fractional shares.
+
+This mirrors what large brokerages already enable (fractional share purchase, gifting flows). Schwab Brokerage+1
+
+Broker-to-broker share transfer (for sophisticated users)
+
+Gift-giver transfers shares they already own.
+
+Many brokerages support “transfer shares as a gift” workflows. Fidelity+1
+
+Gift-code model that converts to shares (fastest to launch)
+
+Similar to stock gift cards converting to fractional shares on redemption. Stockpile+2Stockpile Help Center+2
+
+Important constraints you design around (so it doesn’t get weird)
+
+Minors: you need custodial accounts (UGMA/UTMA style) or a dedicated minor flow.
+
+Taxes: gifting shares has established rules (annual exclusion thresholds, cost basis transfer to recipient, etc.). Your product should present this as “FYI” not a tax lesson. Kiplinger+1
+
+Volatility: you must set expectations clearly: “This can go up or down.”
+
+Trust: receipts, provenance, “where the money went,” and extremely clear status (pending, invested, transferred).
+
+The crisp version of the idea
+
+A registry where every gift becomes ownership.
+
+Guests can gift a specific share, a curated basket, or “seed” that converts into shares.
+
+Recipient gets an event page, progress, thank-you tracking, and a real holdings account.
