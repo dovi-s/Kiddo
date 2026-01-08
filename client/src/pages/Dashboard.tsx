@@ -102,43 +102,26 @@ export default function Dashboard() {
                 {!showFull ? "Let's set up your account." : "18 contributors · Active"}
               </p>
             </div>
-            <div className="flex items-center gap-1">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            {currentPlan === "free" ? (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="hover:bg-foreground/5"
-                  onClick={() => setShowInvite(true)}
+                  variant="outline" 
+                  size="sm" 
+                  className="text-xs"
+                  onClick={() => setShowUpgrade(true)}
                 >
-                  <UserPlus className="h-4 w-4" />
+                  <Crown className="h-3 w-3 mr-1" /> Upgrade
                 </Button>
               </motion.div>
-              <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
-                <Button variant="ghost" size="icon" className="hover:bg-foreground/5">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
-              {currentPlan === "free" ? (
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="ml-1 text-xs"
-                    onClick={() => setShowUpgrade(true)}
-                  >
-                    <Crown className="h-3 w-3 mr-1" /> Upgrade
-                  </Button>
-                </motion.div>
-              ) : (
-                <span className={`ml-2 text-xs px-2 py-1 rounded-full ${
-                  currentPlan === "plus" 
-                    ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" 
-                    : "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300"
-                }`}>
-                  {currentPlan === "plus" ? "Plus" : "Family"}
-                </span>
-              )}
-            </div>
+            ) : (
+              <span className={`text-xs px-2 py-1 rounded-full ${
+                currentPlan === "plus" 
+                  ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" 
+                  : "bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300"
+              }`}>
+                {currentPlan === "plus" ? "Plus" : "Family"}
+              </span>
+            )}
           </div>
 
           {/* Onboarding */}
