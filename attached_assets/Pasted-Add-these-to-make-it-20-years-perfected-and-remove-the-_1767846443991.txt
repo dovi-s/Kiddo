@@ -1,0 +1,367 @@
+Add these to make it “20 years perfected” and remove the stuff people hate
+1) The single most important rule
+
+Never make the contributor think.
+One default button: Contribute to their Future Fund.
+Everything else is a secondary link.
+
+If you do only one thing right, do this.
+
+Product improvements that remove friction and complaints
+2) “Explain it in one sentence” everywhere
+
+Every page needs a one-line explainer that changes by context.
+
+Examples
+
+Moment page: “A modern way to give a gift that lasts.”
+
+Checkout: “Your contribution becomes a long-term fund, managed by the family.”
+
+Receipt: “You contributed $180. It will be invested into the Future Fund by end of day.”
+
+No jargon. No “portfolio” unless behind “Learn more.”
+
+3) Remove the awkwardness with tasteful defaults
+
+People hate anything that feels like “donate to my kid.”
+
+Make it feel like premium etiquette:
+
+“If you were thinking of giving a gift, this is the easiest way.”
+
+“No gifts required. If you want to contribute, it takes under a minute.”
+
+Add a setting in the Moment editor:
+
+Tone: “Celebration” vs “Low-key”
+This changes copy automatically.
+
+4) The “Trust strip” (conversion-critical)
+
+A small strip under the main CTA on public pages:
+
+“No account required”
+
+“Pay with Apple Pay”
+
+“Secure checkout”
+
+“Clear receipt”
+
+Then a “How it works” drawer:
+
+Who owns it
+
+When it invests
+
+Refund policy (simple)
+
+Support
+
+People need legitimacy in 10 seconds.
+
+5) Make timing and status bulletproof
+
+This is where finance products feel sketchy.
+
+Every contribution has visible status with plain language:
+
+Paid
+
+Pending investment (invests by end of day)
+
+Invested
+
+Held as Seed
+
+If you batch trades, you must commit to a simple SLA and show it everywhere.
+
+6) Introduce “Seed” as the universal failsafe
+
+Seed solves:
+
+brokerage KYC delays
+
+user indecision
+
+“I want to ask later”
+
+operational risk
+
+But do not let Seed become “cash registry.”
+If Seed is selected:
+
+show a clear “Investing rule” (default: auto-invest into Future Fund after 14 days unless guardian changes)
+
+7) Goal cards are the social engine
+
+Every Moment gets an optional Goal Card by default. This is what people share in group texts.
+
+Goal Card includes:
+
+goal title (College head start, First car, Future Fund)
+
+progress bar
+
+“Share to group chat” button
+
+contributor list optional
+
+This converts indecision into coordination.
+
+8) Thank-you system that people actually love
+
+This is a major reason people abandon registries.
+
+Make it feel like magic:
+
+auto draft thank-yous from the contributor message
+
+one-click send
+
+“send all” option
+
+printable export for handwritten notes
+
+optional short video thank-you
+
+Also: show “Thank-you completion” as a progress bar. People like finishing.
+
+Brand and UX that feels like a real category leader
+9) Card-first system (the core artifact)
+
+Your product is the card, not the dashboard.
+
+Requirements
+
+Card reveal after checkout
+
+“Add to Apple Wallet” later
+
+Print fold card that looks like stationery
+
+Shareable link with the card view
+
+Every share should look expensive.
+
+10) Premium themes without being “cute”
+
+Theme system must be restrained:
+
+neutral base
+
+subtle accent
+
+no gradients that scream startup
+
+no illustrations that feel childish
+
+Themes should feel like:
+
+high-end wedding invitation
+
+premium stationery
+
+modern museum catalog
+
+11) Copy rules that prevent cringe
+
+Hard rules for all public copy:
+
+no hype
+
+no “build wealth”
+
+no return talk
+
+no finance jargon
+
+no guilt language
+
+Preferred words:
+
+gift, contribute, head start, future, milestone, in their corner
+
+Avoid:
+
+invest now, outperform, growth, guaranteed, passive income
+
+Advanced features that increase conversion without complexity
+12) Smart amount presets by template
+
+People hate thinking about “how much is normal.”
+
+Each template has culturally neutral defaults plus optional “customize.”
+
+Examples
+
+Birthday: 25, 50, 100, 150
+
+Wedding: 100, 150, 250, 500
+
+Bar mitzvah: 54, 100, 180, 360 (only when that template is chosen)
+
+Also allow “Host recommended” badge.
+
+13) Two privacy modes
+
+People hate public money.
+
+Privacy controls:
+
+Public: show names only, hide amounts
+
+Private: show nothing publicly, only host sees details
+
+Contributor option: “hide my name”
+
+Default should be conservative.
+
+14) Receipts that remove anxiety
+
+The receipt should be extremely clear and professional:
+
+amount
+
+fee
+
+net amount
+
+where it goes (Future Fund or Seed)
+
+when it invests
+
+refund policy link
+
+support link
+
+This reduces chargebacks.
+
+15) A unified “moment builder” that is fast
+
+Make Moment creation feel like Notion, not a bank form.
+
+Moment builder features:
+
+live preview
+
+template switcher
+
+theme switcher
+
+share assets auto-generated
+
+OG preview auto-generated
+
+QR download
+
+print-ready PDF
+
+16) Performance is part of the brand
+
+Targets:
+
+Public page loads under 1.5s on mobile
+
+Checkout ready under 1s after clicking contribute
+
+Card reveal under 1s after payment success
+
+A slow gift checkout kills conversion.
+
+The “20-year perfected” failure-proofing
+17) The top complaints you must design out
+
+“I don’t get it”
+Fix: one sentence explainer + default CTA.
+
+“Do I need an account”
+Fix: no contributor accounts, trust strip.
+
+“Where did my money go”
+Fix: status timeline + receipt clarity.
+
+“This feels like asking for donations”
+Fix: tone modes + tasteful copy.
+
+“I forgot to send thank-yous”
+Fix: thank-you center + reminders + drafts.
+
+“Fees feel sneaky”
+Fix: simple service fee and drawer.
+
+“Why is it complicated to share”
+Fix: QR + link + print + wallet in one share drawer.
+
+“It looks like a finance app”
+Fix: card-first, memory-book recipient view.
+
+“Perfected” conversion layout for the public Moment page
+
+Above the fold, mobile-first:
+
+Photo + name
+
+Headline: “A gift they will still have in 10 years”
+
+One-liner explainer
+
+Primary CTA: “Contribute”
+
+Trust strip (no account, Apple Pay, secure, receipt)
+
+Preset amounts grid
+
+Optional recurring toggle (collapsed by default)
+
+Message preview (what the card will look like)
+
+Then below:
+
+Goal card
+
+Messages preview (if enabled)
+
+How it works drawer
+
+Support link
+
+Footer
+
+Add one big “this becomes a platform” layer (without clutter)
+18) Household becomes the long-term system
+
+Once a family creates Everleaf, they should never leave.
+
+Household features:
+
+multiple profiles
+
+one permanent link per profile
+
+many Moment pages per profile
+
+recurring contributors
+
+annual recap email (“Ari’s year in gifts”)
+
+milestones
+
+That is the retention and multi-year compounding.
+
+Final “builder-ready” additions to your spec
+
+Add these sections to your handoff document:
+
+Design tokens (colors, type scales, radius, shadows, spacing)
+
+Component library list (buttons, cards, drawers, toast, skeleton, amount picker, share drawer, trust strip)
+
+Public page performance budget (bundle size targets, image rules, caching)
+
+Copy library (headlines, one-liners, drawer text, error states)
+
+State machine diagrams for Contribution and Brokerage statuses
+
+Template JSON schema defining presets, default goal, theme options, tone mode

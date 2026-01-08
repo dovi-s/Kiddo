@@ -1,0 +1,1245 @@
+Everleaf build packet
+
+Everything below is written so a builder can implement web + mobile without guessing. It covers product, UX, data, backend, integrations, analytics, and edge cases.
+
+Product definition
+What Everleaf is
+
+Everleaf is a gifting layer for long term assets, delivered through beautiful shareable pages.
+
+People do not “send money.” They contribute to a recipient’s fund through a Moment Page (birthday, bar mitzvah, graduation, wedding, baby, etc). The fund is backed by a real account (embedded brokerage partner) and can auto-invest into a simple default option.
+
+Two primary entry products
+
+Always-on funds
+A permanent giving link for a child or individual (works year-round).
+
+Moment Pages
+Event-specific pages that feel like premium registry pages and create natural sharing.
+
+Both map to the same underlying fund(s).
+
+Users and roles
+Roles
+
+Contributor
+Pays, leaves message, no account required.
+
+Owner
+Logged-in primary user. Can be a parent, guardian, or an adult individual.
+
+Guardian
+Owner who controls a minor’s profile and fund.
+
+Recipient
+The child or adult beneficiary. May have limited access.
+
+Org admin
+For organizations and venues (later phase).
+
+Internal admin
+Everleaf team for support, fraud, ops.
+
+Account types
+
+Household account
+One login managing multiple Profiles (kids plus self).
+
+Personal account
+One login for self.
+
+Core objects
+Profile
+
+Represents a beneficiary. Can be minor or adult.
+
+Examples
+
+Ari (minor)
+
+Me (adult)
+
+A Profile can have multiple Funds and multiple Moment Pages.
+
+Fund
+
+Where contributions ultimately land.
+
+Fund types in phases
+Phase 1
+
+Future Fund (auto-invest default basket)
+
+Seed (hold then invest)
+
+Phase 2
+
+Favorites (guardian-approved list, optional)
+
+Phase 3
+
+Education Fund (529 rail, separate integration)
+
+Moment Page
+
+Shareable page with its own theme, copy, preset amounts, and thank-you styling.
+
+It always maps to a single Fund destination (Future or Seed), plus optional secondary options.
+
+Each Moment Page has its own
+
+URL slug
+
+QR code
+
+preview image (Open Graph)
+
+thank-you template style
+
+printable card style
+
+Information architecture
+Logged-out
+
+Landing
+
+How it works
+
+Pricing
+
+Trust and safety
+
+Support
+
+Sign in
+
+Create account
+
+Public Moment Page
+
+Public Always-on Fund Page (Profile page or Fund page)
+
+Receipt page (optional, contributor view)
+
+Logged-in owner
+
+Home
+
+Profiles list
+
+Recent contributions
+
+Pending thank-yous
+
+Active recurring contributions
+
+Profile
+
+Overview
+
+Funds
+
+Moment Pages
+
+Contributors
+
+Thank you
+
+Settings
+
+Fund
+
+Balance summary
+
+Contribution timeline
+
+Allocation (simple)
+
+Activity states (pending, invested, held)
+
+Recurring management
+
+Moment Page editor
+
+Template picker
+
+Theme and design
+
+Story and images
+
+Preset amounts
+
+Goal card
+
+Share assets (QR, print, link)
+
+Thank you center
+
+Drafts
+
+Address capture
+
+Send flow (email, print export)
+
+Status tracking
+
+Billing and plan
+
+Security
+
+Notifications
+
+Recipient view
+
+Timeline
+
+Messages
+
+Milestones
+
+Total balance
+
+Optional holdings tab (hidden by default for minors)
+
+Design system
+Brand traits
+
+Sophisticated
+
+Trustworthy
+
+Calm
+
+No hype
+
+No investing jargon on primary flows
+
+Typography
+
+Primary: Inter (web and mobile)
+
+Weights: 400, 500, 600
+
+Color approach
+
+Neutral base with one signature accent
+
+Event themes can add a second accent but should remain restrained
+
+Avoid neon or playful fintech palettes
+
+Example palette (builder-ready)
+
+Ink 950: #0B0F19
+
+Ink 800: #1A2233
+
+Ink 600: #475569
+
+Ink 400: #94A3B8
+
+Mist 200: #E2E8F0
+
+Mist 100: #F1F5F9
+
+Paper: #FFFFFF
+
+Accent Evergreen: #1F7A5A
+
+Accent Deep: #14523D
+
+Success: #16A34A
+
+Warning: #D97706
+
+Danger: #DC2626
+
+UI primitives
+
+Buttons: primary, secondary, ghost, destructive
+
+Inputs: text, amount, selector, toggle
+
+Cards: elevated, bordered
+
+Modals and drawers: fee breakdown, trust drawer, share drawer
+
+Toasts: success, error
+
+Skeleton loaders
+
+Empty states
+
+Motion
+
+Card reveal animation after checkout
+
+Goal progress fill
+
+Confetti microburst optional and subtle
+
+Accessibility
+
+WCAG AA targets
+
+Keyboard navigation on web
+
+Screen reader labels for QR and share actions
+
+Reduced motion support
+
+Templates and themes
+Default templates
+
+Always-on fund
+
+Birthday
+
+Bar mitzvah and bat mitzvah
+
+Baby and newborn
+
+Graduation
+
+Wedding
+
+First home
+
+Just because
+
+Each template defines
+
+hero headline and subhead copy
+
+default preset amounts
+
+default goal label
+
+matching thank-you design
+
+matching printable card design
+
+Key flows
+Flow A create account
+
+Choose personal or household
+
+Email and password or magic link
+
+Phone optional for SMS receipts and thank you sending
+
+Basic info
+
+Create first Profile
+
+Flow B create Profile
+
+Inputs
+
+Name
+
+Birthday or age range
+
+Relationship (optional)
+
+Photo
+
+Minor yes or no
+
+If minor
+
+Guardian details required
+
+Custodial account disclosure surface
+
+Flow C connect or create brokerage account
+
+Abstraction layer so you can swap providers later.
+
+Modes
+
+Embedded create account (default)
+
+Connect existing account (later phase)
+
+Seed-only mode (fallback if brokerage creation fails or user defers)
+
+Requirements
+
+KYC identity collection for Owner or Guardian
+
+Minor custodial structure mapping
+
+Status states and retries
+
+Account states
+
+Not started
+
+In progress
+
+Needs action
+
+Approved
+
+Rejected
+
+Restricted
+
+Flow D create Fund
+
+Fund options are intentionally dumbed down.
+
+Future Fund
+
+Recommended
+
+One sentence description
+
+Simple risk label, conservative wording
+
+Seed
+
+Hold gifts as Seed until guardian invests
+
+Optional favorites
+
+Guardian curated list, no ticker search in v1
+
+Flow E create Moment Page
+
+Pick template
+
+Choose theme variant
+
+Add event date and location optional
+
+Add short story
+
+Set preset amounts
+
+Configure goal card
+
+Configure gift options shown to contributors
+
+Generate share assets
+
+Share assets
+
+Link
+
+QR
+
+Printable fold card
+
+Apple Wallet pass optional later
+
+Social preview image
+
+Flow F contributor gift
+
+Non-negotiables
+
+No account required
+
+Apple Pay and Google Pay first
+
+One screen per decision
+
+Steps
+
+Amount
+
+Presets and custom
+
+Optional recurring toggle with presets
+
+Gift destination
+
+Future Fund recommended
+
+Seed
+
+Favorites optional
+
+Message
+
+From name
+
+Optional hide name
+
+Optional show message publicly
+
+Pay
+
+Apple Pay, Google Pay, card
+
+ACH option, recommended above threshold
+
+Success
+
+Card reveal
+
+Download print
+
+Share via text and email
+
+Receipt display
+
+Flow G thank you
+
+Owner sees a task list.
+
+Not thanked
+
+Draft ready
+
+Sent
+
+Draft generation
+
+Use contributor message as context
+
+Short, human tone
+
+Allow one click send
+
+Address capture
+
+Optional on checkout
+
+Must be tasteful and clearly labeled
+
+Sending
+
+Email
+
+Export CSV for print
+
+Optional SMS for quick thanks
+
+Flow H recipient access
+
+For minors
+
+View-only
+
+No withdrawal
+
+Optional hide performance details
+
+For adults
+
+View and download statements
+
+Optional ability to withdraw or transfer depending on brokerage capabilities
+
+Payments and fees
+Payment options
+
+Card including Apple Pay and Google Pay
+
+ACH for larger gifts
+
+Fee presentation
+
+Single line item called Service fee, with a drawer showing breakdown
+
+Processing portion
+
+Everleaf portion
+Keep it simple and trust-forward.
+
+Fee toggle
+
+Guests pay fees (default)
+
+Host covers fees (optional on Free, promoted on Plus and Family)
+
+Refund rules
+
+Before trade execution, full refund possible
+
+After execution, refund becomes complex and should be handled as policy, likely not offered in most cases except fraud or error
+This must be reflected in disclosures and in how quickly you batch trades.
+
+Brokerage integration architecture
+Required capabilities
+
+Create and manage accounts
+
+Custodial accounts for minors
+
+Fractional shares and ETFs
+
+Money movement in and out
+
+Batch order placement
+
+Activity and positions reporting
+
+Statements and tax docs
+
+Abstraction
+
+Build a Brokerage Service in your backend with provider adapters.
+
+Interface methods
+
+createAccount(profileId)
+
+getAccountStatus(profileId)
+
+createDeposit(accountId, amount, source)
+
+placeOrders(accountId, orderPlan)
+
+getPositions(accountId)
+
+getActivity(accountId)
+
+getStatements(accountId)
+
+Trade batching strategy
+
+To reduce costs and complexity:
+
+contributions collected in a pending state
+
+orders placed on a schedule, for example daily, or once pending total exceeds a threshold
+
+communicate expected investment timing clearly on receipts
+
+Data model
+Core tables
+
+Users
+
+id
+
+email
+
+phone
+
+role
+
+createdAt
+
+Households
+
+id
+
+ownerUserId
+
+Profiles
+
+id
+
+householdId
+
+type (minor, adult)
+
+displayName
+
+photoUrl
+
+dob optional
+
+guardianUserId
+
+Funds
+
+id
+
+profileId
+
+type (future, seed, favorites, education)
+
+status
+
+defaultOptionId
+
+createdAt
+
+MomentPages
+
+id
+
+profileId
+
+fundId
+
+template
+
+slug
+
+themeId
+
+headline
+
+story
+
+eventDate optional
+
+presets json
+
+goal json
+
+shareQrUrl
+
+ogImageUrl
+
+isActive
+
+Contributions
+
+id
+
+momentPageId
+
+fundId
+
+contributorName
+
+contributorEmail optional
+
+contributorPhone optional
+
+amount
+
+feeAmount
+
+netAmount
+
+paymentMethod
+
+paymentStatus
+
+brokerageStatus
+
+isRecurring
+
+recurringPlanId optional
+
+message
+
+visibilityFlags
+
+createdAt
+
+RecurringPlans
+
+id
+
+fundId
+
+contributorIdentity
+
+cadence
+
+amount
+
+status
+
+startDate
+
+nextChargeDate
+
+paymentMethodToken
+
+ThankYous
+
+id
+
+contributionId
+
+draftText
+
+status
+
+sentAt
+
+channel
+
+addressId optional
+
+Addresses
+
+id
+
+name
+
+line1
+
+line2
+
+city
+
+state
+
+zip
+
+country
+
+BrokerageAccounts
+
+id
+
+profileId
+
+provider
+
+providerAccountId
+
+status
+
+lastSyncAt
+
+BrokerageActivity
+
+id
+
+providerActivityId
+
+accountId
+
+type
+
+amount
+
+timestamp
+
+raw json
+
+AuditLog
+
+id
+
+actorUserId
+
+action
+
+entityType
+
+entityId
+
+metadata
+
+createdAt
+
+SupportTickets
+
+id
+
+userId
+
+subject
+
+status
+
+metadata
+
+Backend services
+Services
+
+Auth service
+
+Profile service
+
+Fund service
+
+Moment service
+
+Payment service
+
+Brokerage service
+
+Contribution service
+
+Thank-you service
+
+Notification service
+
+Analytics service
+
+Admin service
+
+Key state machines
+
+Contribution paymentStatus
+
+created
+
+payment_pending
+
+paid
+
+failed
+
+refunded
+
+disputed
+
+Contribution brokerageStatus
+
+not_started
+
+pending_batch
+
+deposit_submitted
+
+invested
+
+held_seed
+
+failed
+
+Thank-you status
+
+not_ready
+
+draft_ready
+
+sent
+
+Brokerage account status
+
+not_started
+
+pending
+
+needs_action
+
+active
+
+restricted
+
+closed
+
+Frontend screens
+Marketing site
+
+Landing
+
+How it works
+
+Templates gallery
+
+Pricing
+
+Trust and safety
+
+FAQ
+
+Support
+
+App web
+
+Sign up and sign in
+
+Home
+
+Profile detail
+
+Fund detail
+
+Moment list
+
+Create moment wizard
+
+Share drawer
+
+Contributors list
+
+Thank you center
+
+Billing
+
+Settings
+
+Mobile app
+
+Same core, optimized for:
+
+scanning QR
+
+gifting quickly
+
+viewing moments and messages
+
+sending thank-yous
+
+recipient view
+
+Copy system
+Primary CTAs
+
+Create a fund
+
+Create a moment
+
+Share
+
+Contribute
+
+Send thanks
+
+Recommended default labels
+
+Future Fund
+
+Seed
+
+Favorites (optional)
+
+Contributors
+
+Moment
+
+Trust drawer content
+
+Who owns this account
+
+Who controls it for minors
+
+When gifts invest
+
+Fees in plain language
+
+Support link
+
+Analytics events
+Activation and viral loop tracking
+
+signup_started
+
+signup_completed
+
+profile_created
+
+brokerage_flow_started
+
+brokerage_flow_completed
+
+fund_created
+
+moment_created
+
+moment_shared
+
+contribution_started
+
+contribution_completed
+
+recurring_selected
+
+thank_you_sent
+
+Key metric definitions
+
+Time to first contribution
+
+Contributors per moment in 14 days
+
+Percent of moments with recurring
+
+Repeat contributor rate within 12 months
+
+New creators who were prior contributors
+
+Fraud and risk controls
+Controls
+
+Velocity limits on cards
+
+Suspicious IP and device fingerprinting
+
+Manual review queue for high-risk contributions
+
+Clear descriptor on statements
+
+Receipts immediately
+
+Delayed investment batch window to allow rapid refunds before trading
+
+Dispute playbook
+
+Evidence pack includes receipt, page visited, contributor confirmations, and logs
+
+Chargeback response automation
+
+Admin and ops
+Admin console requirements
+
+Search user, profile, contribution
+
+View contribution timeline and statuses
+
+Refund pre-investment
+
+Toggle moment active
+
+Resend receipt
+
+Mark thank-you sent
+
+Manual KYC status view
+
+Export data for accounting
+
+Compliance surfaces
+Must-have user-facing disclosures
+
+Gifts can go up or down
+
+Investing timing, pending status
+
+Custodial account control for minors
+
+Fee explanation
+
+Refund policy aligned to investment execution
+
+Keep disclosures short with a link to full terms.
+
+Notifications
+Required
+
+Contributor receipt email
+
+Contributor card link
+
+Owner new contribution notification
+
+Owner recurring contribution notification
+
+Thank-you reminder
+
+Optional
+
+SMS receipts
+
+Recipient milestone notifications
+
+Technical stack recommendation
+Web
+
+Next.js
+
+TypeScript
+
+Tailwind
+
+Server actions or API routes
+
+SSR for public pages
+
+Image generation for Open Graph previews
+
+Mobile
+
+React Native or Flutter
+
+Deep links for moment pages
+
+QR scanner
+
+Backend
+
+Node or Python service layer
+
+Postgres
+
+Redis for rate limiting and jobs
+
+Queue for brokerage batching and notifications
+
+Integrations
+
+Stripe for payments
+
+Brokerage provider adapter
+
+Email provider
+
+SMS provider
+
+Analytics provider
+
+Build milestones
+Milestone 1 MVP public gifting
+
+Public moment pages
+
+Payments
+
+Receipts
+
+Card reveal
+
+Owner dashboard basic
+
+Seed mode only (optional fallback)
+
+Milestone 2 embedded brokerage
+
+Account creation in-flow
+
+Auto-invest Future Fund
+
+Batch trading engine
+
+Positions and activity sync
+
+Milestone 3 love features
+
+Templates library
+
+Premium themes
+
+Thank-you automation
+
+Group goal card
+
+Recurring presets
+
+Milestone 4 household scale
+
+Multiple profiles
+
+Family plan
+
+More templates
+
+Recipient view enhancements
+
+Acceptance criteria checklists
+Contributor checkout
+
+No account required
+
+Under 60 seconds for first time user
+
+Apple Pay visible and functional
+
+Receipt delivered
+
+Card reveal view loads fast
+
+Owner experience
+
+Create profile and moment without confusion
+
+Share assets generated correctly
+
+Contributions list accurate and filterable
+
+Thank-you workflow reduces work, not adds
+
+Brokerage integration
+
+Statuses visible and understandable
+
+Pending and invested states communicated clearly
+
+Failures recover with retry paths

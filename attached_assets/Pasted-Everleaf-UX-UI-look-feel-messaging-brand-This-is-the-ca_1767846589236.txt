@@ -1,0 +1,465 @@
+Everleaf UX/UI, look/feel, messaging, brand
+
+This is the “category leader” direction: premium, calm, simple, instantly trusted, high conversion.
+
+Brand positioning
+The promise
+
+A modern way to give a gift that lasts.
+
+Not “investing.” Not “returns.” Not “stocks.”
+Everleaf is a gifting product with asset rails underneath.
+
+Category name you should own
+
+Future gifting
+or
+Long-term gifting
+
+The 10-second explanation
+
+“Create a page for your kid or event.”
+
+“Friends and family contribute in under a minute.”
+
+“It becomes a long-term fund.”
+
+That is it.
+
+Brand voice and copy rules
+Voice
+
+Clear
+
+Calm
+
+Premium
+
+Human
+
+Slightly warm, never cute
+
+Hard rules
+
+No hype language
+
+No promises
+
+No finance jargon in primary flows
+
+No guilt framing (“support my kid” vibes)
+
+Word choices
+
+Use:
+
+gift, contribute, head start, future, milestone, keep, grow over time, in their corner
+
+Avoid:
+
+invest now, outperform, crush, returns, portfolio, wealth, passive income
+
+Copy patterns that convert
+
+One-line microcopy under every important control
+
+Short sentences, no stacked paragraphs
+
+“Learn more” drawers for anything nuanced
+
+Visual identity direction
+Overall vibe
+
+Premium stationery + modern registry + calm product design
+
+Think: elegant invitation, not fintech dashboard.
+
+Visual system pillars
+
+Card-first
+
+Whitespace and restraint
+
+One accent color
+
+Templates feel like invitation suites
+
+No charts above the fold
+
+Typography
+
+Primary: Inter
+
+Scale: fewer sizes, bigger headlines, calmer body
+
+Numbers: tabular for amounts
+
+Recommended sizes (web)
+
+H1 44/52
+
+H2 28/36
+
+Body 16/24
+
+Small 13/18
+
+Colors
+
+Neutral base
+
+Ink text
+
+Soft background
+
+One signature accent for CTAs
+
+Subtle template accents per event
+
+Guideline
+
+80% neutral
+
+15% ink and gray UI
+
+5% accent
+
+Shapes
+
+Soft corners, not bubbly
+
+Radius 12–16 for cards
+
+Buttons 12–14
+
+Inputs 12
+
+Imagery
+
+Real photography when possible
+
+Otherwise abstract textures (paper, linen, subtle grain)
+
+No cartoon illustrations
+
+Iconography
+
+Simple, thin, consistent stroke
+
+Minimal use
+
+Prefer labels over icons
+
+UX principles that make it feel perfected
+1) “No decisions unless you ask”
+
+Primary public flow: amount, message, pay.
+
+Anything else is:
+
+an optional secondary step
+
+or behind a drawer
+
+2) The trust loop is visible but not loud
+
+Trust is not a big banner. It is a quiet strip and a drawer.
+
+Trust strip items:
+
+No account required
+
+Apple Pay
+
+Instant receipt
+
+Secure checkout
+
+Then “How it works” drawer with plain language.
+
+3) Always show “what happens next”
+
+Every step shows the next expected thing.
+
+Examples:
+
+“Invests by end of day”
+
+“Held as Seed until guardian invests”
+
+“You can edit your message later”
+
+4) Make gifting feel like sending a premium card
+
+The success state should feel like “I nailed it.”
+
+Card reveal
+
+Share to text
+
+Print card
+
+Done
+
+No finance screens after payment.
+
+Information architecture that stays simple
+Two entry points on homepage
+
+Create a fund
+
+Send a gift
+
+Most users should hit “Send a gift” first.
+
+Navigation
+
+Marketing site: minimal
+
+How it works
+
+Templates
+
+Pricing
+
+Trust
+
+Sign in
+
+Inside app: simple
+
+Home
+
+Profiles
+
+Moments
+
+Thank you
+
+Settings
+
+No finance nav words.
+
+Page-level UX/UI requirements
+Public Moment Page (highest conversion)
+
+Above the fold:
+
+Recipient photo + name
+
+One-line headline
+
+One sentence explainer
+
+Amount grid
+
+Apple Pay button visible immediately
+
+Small trust strip
+
+Message field (collapsed until after amount)
+
+Below the fold:
+
+Goal card (optional)
+
+How it works drawer
+
+FAQ (3 questions max)
+
+Support link
+
+Amount grid design
+
+2x3 grid on mobile
+
+Large tappable buttons
+
+Show “Host recommended” badge
+
+One “Custom” option
+
+Recurring (do it right)
+
+Recurring is a toggle that expands, with 3 presets only.
+Label it socially:
+
+“Be in their corner over time”
+
+Checkout experience
+
+Single page if possible
+
+No multi-step progress unless necessary
+
+Apple Pay takes priority
+
+If card, keep it minimal
+
+Fees shown as one line with a drawer
+
+Success screen
+
+This is where you win love.
+
+“Your card is ready”
+
+Card reveal
+
+Buttons: Text, Email, Print
+
+“View receipt”
+
+“Edit message” for 10 minutes (reduces regret)
+
+Recipient view (memory book)
+
+Tabs:
+
+Messages
+
+Milestones
+
+Fund total
+
+Optional: Holdings (hidden behind “Details”)
+
+No charts by default. Use milestones.
+
+Owner dashboard
+
+Home shows:
+
+Total raised across profiles
+
+Pending thank-yous
+
+Active moments
+
+Recurring contributions
+
+Everything task-oriented, not finance-oriented.
+
+Templates and “invitation suite” system
+Template includes
+
+Page theme
+
+Card design
+
+Thank-you design
+
+Print fold card design
+
+Share preview image
+
+A template should feel like a cohesive set.
+
+Theme behavior
+
+Theme changes:
+
+accent color
+
+background texture
+
+typography pairing (still Inter, but weight and spacing change)
+
+photo framing style
+
+Never change layout drastically. Layout consistency improves conversion.
+
+Microinteractions that make it feel advanced
+
+Amount button press has subtle haptic on mobile
+
+Goal progress bar animates on contribution completion
+
+Card reveal uses smooth easing and subtle shadow
+
+Skeletons are tasteful and match layout
+
+Inline validation, never error dumps
+
+Accessibility and polish standards
+
+Contrast AA
+
+Touch targets 44px
+
+Reduced motion option
+
+Form labels and helper text
+
+Clear focus rings
+
+Loading states everywhere a network call exists
+
+Messaging architecture
+Homepage message hierarchy
+
+Headline: “A gift they’ll still have in 10 years.”
+
+Subhead: “Create a page. Friends and family contribute in under a minute.”
+
+Proof: trust strip + “How it works”
+
+Templates preview
+
+Card preview carousel
+
+Pricing
+
+Trust page content
+
+Who holds the account
+
+How minors work
+
+Timing and refunds
+
+Security
+
+Support
+
+This page should read like a premium product, not legalese.
+
+“Perfected” design tokens (builder-ready starter set)
+
+Spacing
+
+4, 8, 12, 16, 24, 32, 48, 64
+
+Radii
+
+12 default
+
+16 for hero cards
+
+999 for pills
+
+Shadows
+
+One soft shadow style only, no harsh drops
+
+Borders
+
+1px Mist 200
+
+Focus ring in Accent at 20% opacity
+
+Conversion optimizations that matter
+
+No contributor login
+
+Apple Pay always visible
+
+Remove ticker symbols from public flows
+
+Default “Future Fund” highlighted
+
+Short, reassuring helper text
+
+Fast performance
+
+Beautiful card success state
