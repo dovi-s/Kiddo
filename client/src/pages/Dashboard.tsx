@@ -344,66 +344,58 @@ export default function Dashboard() {
                 transition={{ duration: 0.5 }}
                 className="space-y-8"
               >
-                {/* Value */}
-                <div className="text-center py-10">
-                  <motion.p 
+                {/* Value - Hero Section */}
+                <div className="text-center py-12 relative">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1, duration: 0.6 }}
+                  >
+                    <p className="text-sm font-medium text-muted-foreground mb-2 tracking-wide uppercase">Total Balance</p>
+                    <p className="text-6xl font-light text-foreground tracking-tighter">
+                      <AnimatedValue value={4250} />
+                    </p>
+                  </motion.div>
+                  <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="text-5xl font-semibold text-foreground tracking-tight"
+                    transition={{ delay: 0.4 }}
+                    className="inline-flex items-center gap-2 mt-4 px-4 py-2 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30"
                   >
-                    <AnimatedValue value={4250} />
-                  </motion.p>
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="flex items-center justify-center gap-2 mt-3"
-                  >
-                    <TrendingUp className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-600 font-medium">+$472 (12.5%)</span>
-                    <span className="text-sm text-muted-foreground">all time</span>
+                    <TrendingUp className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">+$472</span>
+                    <span className="text-sm text-emerald-600/70 dark:text-emerald-400/70">(12.5% all time)</span>
                   </motion.div>
                 </div>
 
-                {/* Quick actions */}
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { icon: ExternalLink, label: "Preview", href: `/moment?name=${encodeURIComponent(profileName)}` },
-                    { icon: Copy, label: copied ? "Copied!" : "Copy link", onClick: handleCopy },
-                    { icon: QrCode, label: "QR code", onClick: () => setShowQR(true) },
-                  ].map((action, i) => (
-                    <motion.div 
-                      key={i}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 + i * 0.1 }}
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      {action.href ? (
-                        <Link href={action.href}>
-                          <Card className="border hover:border-foreground/20 hover:bg-foreground/[0.02] transition-all cursor-pointer">
-                            <CardContent className="p-4 text-center">
-                              <action.icon className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
-                              <p className="text-sm font-medium">{action.label}</p>
-                            </CardContent>
-                          </Card>
-                        </Link>
-                      ) : (
-                        <Card 
-                          className="border hover:border-foreground/20 hover:bg-foreground/[0.02] transition-all cursor-pointer"
-                          onClick={action.onClick}
-                        >
-                          <CardContent className="p-4 text-center">
-                            <action.icon className={`h-5 w-5 mx-auto mb-2 ${action.label === "Copied!" ? "text-green-600" : "text-muted-foreground"}`} />
-                            <p className="text-sm font-medium">{action.label}</p>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
+                {/* Quick actions - Refined */}
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="flex justify-center gap-1 p-1 bg-muted/50 rounded-xl w-fit mx-auto"
+                >
+                  <Link href={`/moment?name=${encodeURIComponent(profileName)}`}>
+                    <button className="px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-background transition-colors flex items-center gap-2">
+                      <ExternalLink className="h-4 w-4" />
+                      Preview
+                    </button>
+                  </Link>
+                  <button 
+                    className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${copied ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-background'}`}
+                    onClick={handleCopy}
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    {copied ? "Copied" : "Copy link"}
+                  </button>
+                  <button 
+                    className="px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-background transition-colors flex items-center gap-2"
+                    onClick={() => setShowQR(true)}
+                  >
+                    <QrCode className="h-4 w-4" />
+                    QR code
+                  </button>
+                </motion.div>
 
                 {/* Fund with Event Pages */}
                 <motion.div
@@ -411,114 +403,99 @@ export default function Dashboard() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.35 }}
                 >
-                  {/* Fund Card */}
-                  <Card className="border overflow-hidden">
-                    <CardContent className="p-0">
-                      {/* Fund Header */}
-                      <div className="p-4 border-b bg-foreground/[0.02]">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-lg font-semibold text-emerald-700 dark:text-emerald-300">
-                              {profileName.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-semibold">{profileName}'s Fund</p>
-                              <p className="text-xs text-muted-foreground">18 contributors · $4,250 total</p>
-                            </div>
+                  {/* Fund Card - Refined */}
+                  <div className="rounded-2xl border bg-card overflow-hidden">
+                    {/* Fund Header */}
+                    <div className="p-5 border-b">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-xl font-semibold text-white shadow-lg shadow-emerald-500/20">
+                            {profileName.charAt(0)}
                           </div>
-                          <div className="text-right">
-                            <p className="text-lg font-semibold">$4,250</p>
-                            <p className="text-xs text-emerald-600">+12.5%</p>
+                          <div>
+                            <h2 className="text-lg font-semibold tracking-tight">{profileName}'s Fund</h2>
+                            <p className="text-sm text-muted-foreground">18 contributors</p>
                           </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-semibold tracking-tight">$4,250</p>
+                          <p className="text-sm text-emerald-600 font-medium">+12.5%</p>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Event Pages within this Fund */}
-                      <div className="p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Event Pages</p>
-                          <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setShowPageSetup(true)}>
-                            <Plus className="h-3 w-3 mr-1" /> Add event
-                          </Button>
-                        </div>
-                        <div className="space-y-2">
+                    {/* Event Pages within this Fund */}
+                    <div className="p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-foreground">Events</h3>
+                        <button 
+                          className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                          onClick={() => setShowPageSetup(true)}
+                        >
+                          <Plus className="h-4 w-4" /> Add
+                        </button>
+                      </div>
+                        <div className="space-y-1">
                           {/* Always-on page */}
-                          <div className="group flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors">
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-lg bg-foreground/5 flex items-center justify-center">
-                                <Sparkles className="h-4 w-4 text-muted-foreground" />
+                          <Link href={`/moment?name=${encodeURIComponent(profileName)}`}>
+                            <div className="group flex items-center justify-between p-3 -mx-2 rounded-xl hover:bg-muted/50 transition-all cursor-pointer">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-100 to-violet-50 dark:from-violet-900/40 dark:to-violet-900/20 flex items-center justify-center">
+                                  <Sparkles className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                                </div>
+                                <div>
+                                  <p className="font-medium">Always Open</p>
+                                  <p className="text-sm text-muted-foreground">$2,180 from 12 gifts</p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="text-sm font-medium">Always Open</p>
-                                <p className="text-xs text-muted-foreground">$2,180 · 12 gifts</p>
+                              <div className="flex items-center gap-3">
+                                <button 
+                                  className="opacity-0 group-hover:opacity-100 p-2 hover:bg-background rounded-lg transition-all"
+                                  onClick={(e) => { e.preventDefault(); setShowQR(true); }}
+                                >
+                                  <QrCode className="h-4 w-4 text-muted-foreground" />
+                                </button>
+                                <div className="h-2 w-2 rounded-full bg-emerald-500" />
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div className="hidden group-hover:flex items-center gap-1">
-                                <Link href={`/moment?name=${encodeURIComponent(profileName)}`}>
-                                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
-                                    <ExternalLink className="h-3 w-3 mr-1" /> View
-                                  </Button>
-                                </Link>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setShowQR(true)}>
-                                  <QrCode className="h-3 w-3 mr-1" /> Share
-                                </Button>
-                              </div>
-                              <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Live</span>
-                            </div>
-                          </div>
+                          </Link>
 
                           {/* Birthday event */}
-                          <div className="group flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors">
+                          <div className="group flex items-center justify-between p-3 -mx-2 rounded-xl hover:bg-muted/50 transition-all cursor-pointer">
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-sm">
+                              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-pink-100 to-pink-50 dark:from-pink-900/40 dark:to-pink-900/20 flex items-center justify-center text-lg">
                                 🎂
                               </div>
                               <div>
-                                <p className="text-sm font-medium">5th Birthday</p>
-                                <p className="text-xs text-muted-foreground">$1,420 · 8 gifts · Dec 2025</p>
+                                <p className="font-medium">5th Birthday</p>
+                                <p className="text-sm text-muted-foreground">$1,420 from 8 gifts</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div className="hidden group-hover:flex items-center gap-1">
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => {}}>
-                                  <ExternalLink className="h-3 w-3 mr-1" /> View
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setShowQR(true)}>
-                                  <QrCode className="h-3 w-3 mr-1" /> Share
-                                </Button>
-                              </div>
-                              <span className="text-xs px-2 py-1 rounded-full bg-foreground/10 text-muted-foreground">Closed</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-muted-foreground">Dec 2025</span>
+                              <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
                             </div>
                           </div>
 
                           {/* Upcoming event */}
-                          <div className="group flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors">
+                          <div className="group flex items-center justify-between p-3 -mx-2 rounded-xl hover:bg-muted/50 transition-all cursor-pointer">
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-sm">
+                              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 flex items-center justify-center text-lg">
                                 🎓
                               </div>
                               <div>
-                                <p className="text-sm font-medium">Kindergarten Graduation</p>
-                                <p className="text-xs text-muted-foreground">$650 · 4 gifts · May 2026</p>
+                                <p className="font-medium">Kindergarten Graduation</p>
+                                <p className="text-sm text-muted-foreground">$650 from 4 gifts</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <div className="hidden group-hover:flex items-center gap-1">
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => {}}>
-                                  <ExternalLink className="h-3 w-3 mr-1" /> View
-                                </Button>
-                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setShowQR(true)}>
-                                  <QrCode className="h-3 w-3 mr-1" /> Share
-                                </Button>
-                              </div>
-                              <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">Upcoming</span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-amber-600 font-medium">May 2026</span>
+                              <div className="h-2 w-2 rounded-full bg-amber-500" />
                             </div>
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                  </div>
 
                   {/* Second Fund - Family plan only */}
                   {currentPlan === "family" && (
@@ -578,85 +555,80 @@ export default function Dashboard() {
                   )}
                 </motion.div>
 
-                {/* Holdings */}
+                {/* Holdings - Refined */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold tracking-tight">Holdings</h2>
-                    <span className="text-xs text-muted-foreground">Future Fund · Auto-managed</span>
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h2 className="text-lg font-semibold tracking-tight">Holdings</h2>
+                      <p className="text-sm text-muted-foreground">Auto-managed portfolio</p>
+                    </div>
                   </div>
-                  <Card className="border overflow-hidden">
-                    <CardContent className="p-0 divide-y">
-                      {HOLDINGS.map((h, i) => (
-                        <motion.div 
-                          key={i}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 0.5 + i * 0.05 }}
-                          className="flex items-center justify-between p-4 hover:bg-foreground/[0.02] transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-foreground/5 flex items-center justify-center text-xs font-medium text-muted-foreground">
-                              {h.percent}%
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">{h.name}</p>
-                              <p className="text-xs text-muted-foreground">{h.ticker}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm font-medium">${h.value.toLocaleString()}</p>
-                            <p className={`text-xs ${h.change !== "—" ? "text-green-600" : "text-muted-foreground"}`}>
-                              {h.change}
-                            </p>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </CardContent>
-                  </Card>
+                  <div className="grid grid-cols-2 gap-3">
+                    {HOLDINGS.map((h, i) => (
+                      <motion.div 
+                        key={i}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5 + i * 0.08 }}
+                        className="p-4 rounded-xl border bg-card hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">{h.ticker}</span>
+                          <span className="text-xs text-muted-foreground">{h.percent}%</span>
+                        </div>
+                        <p className="text-xl font-semibold tracking-tight">${h.value.toLocaleString()}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <p className="text-sm text-muted-foreground truncate pr-2">{h.name}</p>
+                          {h.change !== "—" && (
+                            <span className="text-xs text-emerald-600 font-medium">{h.change}</span>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </motion.div>
 
-                {/* Contributions */}
+                {/* Contributions - Refined */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 }}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold tracking-tight">Recent gifts</h2>
+                  <div className="flex items-center justify-between mb-5">
+                    <div>
+                      <h2 className="text-lg font-semibold tracking-tight">Recent Gifts</h2>
+                      <p className="text-sm text-muted-foreground">From family & friends</p>
+                    </div>
                     <Link href={`/moment?name=${encodeURIComponent(profileName)}`}>
-                      <Button variant="ghost" size="sm" className="text-xs">View all</Button>
+                      <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">View all</button>
                     </Link>
                   </div>
-                  <div className="space-y-3">
+                  <div className="rounded-xl border bg-card divide-y overflow-hidden">
                     {contributions.map((c, i) => (
                       <motion.div
                         key={i}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.7 + i * 0.1 }}
-                        whileHover={{ x: 2 }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.7 + i * 0.08 }}
+                        className="p-4 flex items-center justify-between hover:bg-muted/30 transition-colors"
                       >
-                        <Card className="border hover:border-foreground/20 transition-colors">
-                          <CardContent className="p-4 flex items-start justify-between">
-                            <div className="flex items-start gap-3">
-                              <div className="h-9 w-9 rounded-full bg-foreground/5 flex items-center justify-center text-sm font-medium shrink-0">
-                                {c.from.charAt(0)}
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-medium">{c.from}</p>
-                                  <span className="text-xs text-muted-foreground">{c.time}</span>
-                                </div>
-                                <p className="text-sm text-muted-foreground mt-0.5">{c.message}</p>
-                              </div>
-                            </div>
-                            <p className="text-sm font-semibold">${c.amount}</p>
-                          </CardContent>
-                        </Card>
+                        <div className="flex items-center gap-4">
+                          <div className="h-11 w-11 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center text-sm font-semibold shrink-0">
+                            {c.from.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium">{c.from}</p>
+                            <p className="text-sm text-muted-foreground">{c.message}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-semibold">${c.amount}</p>
+                          <p className="text-xs text-muted-foreground">{c.time}</p>
+                        </div>
                       </motion.div>
                     ))}
                   </div>
