@@ -1,0 +1,101 @@
+1) What “broker-dealer of record” means in your product
+
+For an Everleaf-created investing account:
+
+Broker-dealer of record (BD): the entity responsible for brokerage services, KYC/AML, trading permissions, regulatory obligations.
+
+Clearing/custody: the entity that holds customer assets, clears trades, issues statements and tax forms (often the same as the BD in clearing models).
+
+Everleaf: the product layer, not the BD (in the model you want).
+
+Users connecting to Schwab/Fidelity is a different product path (and should be optional later).
+
+2) The best setup for Everleaf (lock this in)
+Default: Embedded account powered by an Apex-based program (B)
+
+This is the “best” for conversion and UX.
+
+You pick one of these program structures:
+
+Option 1: Apex is both BD + clearing/custody
+
+Apex Clearing Corporation is the BD of record and also clearing/custody.
+
+Your app copy can say brokerage services are provided by Apex, clearing/custody by Apex.
+
+This is the simplest vendor graph.
+
+Option 2: Introducing broker-dealer + Apex clearing (common too)
+
+A separate introducing BD is the broker of record.
+
+Apex clears/custodies.
+
+More parties, sometimes better feature flexibility, sometimes better support structures.
+
+Which is “best” depends on: minors support, account types, APIs, minimums, and operational burden. But for you, the key is: pick one embedded stack and standardize the default experience.
+
+3) Should people be able to connect “the obvious brokers”?
+
+Eventually, yes, but not as the core.
+
+Why “connect Schwab/Fidelity” as the default is a mistake
+
+Account linking + verification adds friction
+
+Transfers are slow and fail often
+
+It breaks instant “gift card reveal” and immediate confirmation
+
+It increases support volume and disputes
+
+The right version of “connect” (C) later
+
+Add “Advanced: consolidate”:
+
+Transfer your Everleaf holdings out to Schwab/Fidelity (ACATS)
+
+Or transfer an external account into Everleaf (ACATS)
+That gives power users an escape hatch without destroying your conversion funnel.
+
+4) What you should decide now (minimal, critical decisions)
+
+If you want a $5B company, decide these 4 things and build everything around them:
+
+Default rail: Embedded account inside Everleaf (yes).
+
+Account types you support day 1: Adult + custodial for minors (UGMA/UTMA style).
+
+Asset menu day 1: Basket-first (Future Fund), Education option, Favorites optional.
+
+Connect external brokers day 1: No (only later as transfer/consolidation).
+
+5) “What’s best?” Decision rule
+
+Pick the embedded brokerage program that gives you:
+
+fast KYC that works well on mobile
+
+custodial/minor accounts support
+
+fractional shares + ETFs
+
+predictable pricing (no brutal minimums) or minimums you can afford
+
+clean API for account status + holdings + activity
+
+responsive support escalation path
+
+The “best” is the one that lets you ship a seamless flow and not get killed by minimums/support.
+
+6) What you need to do next
+
+You need to pick the default structure and then your copy and pricing become real.
+
+If you’re still unsure, lock the product stance anyway:
+
+Everleaf creates a new account by default.
+
+External brokerage connections come later and are framed as transfers.
+
+Then you evaluate partners based on the decision rule above.

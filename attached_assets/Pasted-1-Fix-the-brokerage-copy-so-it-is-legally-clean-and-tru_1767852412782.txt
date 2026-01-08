@@ -1,0 +1,113 @@
+1) Fix the brokerage copy so it is legally clean and trust-building
+
+Your current line implies Everleaf is the brokerage. Replace with:
+
+“Open an Everleaf investing account.”
+
+“Brokerage services provided by [Broker-Dealer Legal Name], Member FINRA/SIPC.”
+
+“Clearing and custody provided by Apex Clearing Corporation, Member FINRA/SIPC.”
+
+“SIPC protects against brokerage failure, not market losses (up to $500k including $250k cash).”
+
+Do not use “SIPC insured” alone.
+
+2) Lock the product architecture: B as default, C as later transfer
+
+Default: embedded account inside Everleaf for the recipient (kid custodial or adult).
+
+Later: “Already have a brokerage?” as transfer/consolidate (ACATS), not “gift directly into Schwab.”
+
+3) Pricing must be recut to include non-Stripe costs
+
+You need a model that explicitly budgets for:
+
+brokerage/clearing program fees + minimums
+
+KYC/IDV costs
+
+ACH costs/returns
+
+chargebacks/fraud loss reserve
+
+support per account and per event
+
+If you do not model broker minimums, you can be “profitable on paper” and still lose money.
+
+4) Change plan positioning to remove confusion about who pays fees
+
+Add a clear toggle at event creation:
+
+Default (Free): guests pay processing
+
+Optional (Host-paid): host can cover fees per gift (but requires Plus/Family or per-event add-on)
+
+This reduces friction and makes “Plus” feel instantly valuable.
+
+5) Add one missing product primitive: “Always-on Fund” + “Event Pages”
+
+Your structure should be:
+
+Household account
+
+Child Fund (always-on link)
+
+Event pages (Bar mitzvah, Birthday, Graduation) that all route into the same fund
+
+Adult Fund (optional)
+
+This matches how families actually behave and avoids “new account per event.”
+
+6) Make “Seed mode” operationally real
+
+Define one rule and ship it:
+
+“Seed gifts auto-invest into the default basket after X days unless parent changes it.”
+
+If Seed can sit forever, you create support and compliance headaches.
+
+7) Add a single “trust drawer” on every gifting page
+
+One expandable section with:
+
+where money sits before investing
+
+when it invests
+
+who controls it (parent for minors)
+
+refunds policy (before trade vs after trade)
+
+fees shown plainly
+
+This will lift conversion and reduce support.
+
+8) Define “refund and dispute logic” up front
+
+You need deterministic rules:
+
+before trade executes: refundable
+
+after trade executes: refund becomes sell + settle (or not allowed)
+Also set a fraud/chargeback reserve in the model.
+
+9) Track one activation metric (“7 friends in 10 days” equivalent)
+
+Pick one and instrument it:
+
+“Event created → 3 gifts received within 72 hours”
+or
+
+“First gift completed in under 60 seconds”
+This becomes your PMF signal.
+
+10) Decide your “asset menu” defaults
+
+Do not ship a long list.
+
+Default: Future Fund (broad index style basket)
+
+Option: Education (529 or education-themed basket)
+
+Option: Favorites (optional, secondary)
+Keep tickers hidden behind “advanced.”

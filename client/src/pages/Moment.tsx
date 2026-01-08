@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Leaf, DollarSign, Check, ArrowLeft, Shield, Zap, Clock, ChevronDown, Share2, MessageSquare, Printer, TrendingUp, Search, Star, Gift } from "lucide-react";
+import { Leaf, DollarSign, Check, ArrowLeft, Shield, Zap, Clock, ChevronDown, Share2, MessageSquare, Printer, TrendingUp, Search, Star, Gift, Users } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -238,29 +238,72 @@ export default function Moment() {
                 </CardContent>
               </Card>
 
-              {/* How it works */}
+              {/* Trust drawer */}
               <Collapsible open={showHow} onOpenChange={setShowHow}>
                 <CollapsibleTrigger asChild>
                   <button className="w-full flex items-center justify-between p-4 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    <span>How it works</span>
+                    <span className="flex items-center gap-2"><Shield className="h-4 w-4" /> How your gift is protected</span>
                     <ChevronDown className={`h-4 w-4 transition-transform ${showHow ? "rotate-180" : ""}`} />
                   </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <Card className="border-none shadow-sm mb-4">
-                    <CardContent className="p-5 space-y-4 text-sm text-muted-foreground">
-                      <div className="flex gap-3">
-                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">1</div>
-                        <p><strong>Fund contribution:</strong> Your gift goes to {recipientName}'s Future Fund and auto-invests into a diversified basket.</p>
+                    <CardContent className="p-5 space-y-4 text-sm">
+                      <div className="space-y-3">
+                        <div className="flex gap-3">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <Clock className="h-3 w-3 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">Where it sits</p>
+                            <p className="text-muted-foreground text-xs">Funds are held in {recipientName}'s brokerage account. Cash gifts auto-invest into the Future Fund within 3 business days.</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <TrendingUp className="h-3 w-3 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">When it invests</p>
+                            <p className="text-muted-foreground text-xs">Cash gifts invest automatically. Stock gifts are purchased and added to the portfolio within 1 business day.</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <Users className="h-3 w-3 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">Who controls it</p>
+                            <p className="text-muted-foreground text-xs">{recipientName}'s parent/guardian manages the account until {recipientName} reaches the age of majority (18-21 depending on state).</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <DollarSign className="h-3 w-3 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">Refunds</p>
+                            <p className="text-muted-foreground text-xs">Before trades execute: fully refundable. After trades execute: refunds are not available (shares belong to the recipient).</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <Shield className="h-3 w-3 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">Fees</p>
+                            <p className="text-muted-foreground text-xs">2.9% + $0.30 processing fee (shown at checkout). No hidden fees. SIPC protection up to $500k.</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex gap-3">
-                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">2</div>
-                        <p><strong>Stock gift:</strong> You can gift specific stocks (like Apple or Disney) directly to their portfolio.</p>
-                      </div>
-                      <div className="flex gap-3">
-                        <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">3</div>
-                        <p>You'll receive a receipt instantly. The family manages the account until {recipientName} turns 18/21.</p>
-                      </div>
+                      
+                      <p className="text-[10px] text-muted-foreground pt-2 border-t">
+                        Brokerage services provided by [Broker-Dealer], Member FINRA/SIPC. Clearing by Apex Clearing Corporation. Everleaf is a technology platform and is not a broker-dealer.
+                      </p>
                     </CardContent>
                   </Card>
                 </CollapsibleContent>
