@@ -6,9 +6,16 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, CreditCard, LogOut, Landmark, CheckCircle2, ExternalLink, TrendingUp, Sprout } from "lucide-react";
+import { User, Bell, Shield, CreditCard, LogOut, Landmark, CheckCircle2, ExternalLink, TrendingUp } from "lucide-react";
+import { useSearch } from "wouter";
 
 export default function Settings() {
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const accountType = params.get("type") || "child";
+  const profileName = decodeURIComponent(params.get("name") || "Ari");
+  const isPersonal = accountType === "personal";
+
   return (
     <div className="min-h-screen bg-background font-sans">
       <Nav />
@@ -39,12 +46,18 @@ export default function Settings() {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-muted-foreground text-xs">Account type</p>
-                    <p className="font-medium">Custodial (UTMA)</p>
+                    <p className="font-medium">{isPersonal ? "Personal" : "Custodial (UTMA)"}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-muted-foreground text-xs">Account number</p>
                     <p className="font-medium">••••4827</p>
                   </div>
+                  {!isPersonal && (
+                    <div className="p-3 rounded-lg bg-muted/50 col-span-2">
+                      <p className="text-muted-foreground text-xs">Beneficiary</p>
+                      <p className="font-medium">{profileName}</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -83,7 +96,7 @@ export default function Settings() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-sm">Email</Label>
-                <Input value="parent@example.com" disabled className="bg-muted/50" />
+                <Input value="you@example.com" disabled className="bg-muted/50" />
               </div>
               <div className="space-y-2">
                 <Label className="text-sm">Name</Label>
@@ -106,13 +119,15 @@ export default function Settings() {
                 </div>
                 <Switch defaultChecked />
               </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Show messages to recipient</p>
-                  <p className="text-xs text-muted-foreground">Let them see contributor notes</p>
+              {!isPersonal && (
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Show messages to {profileName}</p>
+                    <p className="text-xs text-muted-foreground">Let them see contributor notes</p>
+                  </div>
+                  <Switch defaultChecked />
                 </div>
-                <Switch defaultChecked />
-              </div>
+              )}
             </CardContent>
           </Card>
 

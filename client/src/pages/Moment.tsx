@@ -6,24 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Leaf, DollarSign, Check, ArrowLeft, Shield, Zap, Clock, ChevronDown, Share2, MessageSquare, Printer, TrendingUp, Sprout, Search, Star, Gift } from "lucide-react";
-import { Link } from "wouter";
+import { Leaf, DollarSign, Check, ArrowLeft, Shield, Zap, Clock, ChevronDown, Share2, MessageSquare, Printer, TrendingUp, Search, Star, Gift } from "lucide-react";
+import { Link, useSearch } from "wouter";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-
-const MOMENT = {
-  title: "Ari's Bar Mitzvah",
-  recipient: "Ari",
-  photo: "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?q=80&w=400&auto=format&fit=crop",
-  date: "May 24, 2025",
-  message: "A modern way to give a gift that lasts.",
-  goal: 5000,
-  raised: 4250,
-  contributors: 18,
-};
-
-const AMOUNTS = ["54", "100", "180", "360"];
 
 const POPULAR_STOCKS = [
   { symbol: "AAPL", name: "Apple", price: 178.50 },
@@ -34,10 +21,30 @@ const POPULAR_STOCKS = [
   { symbol: "MSFT", name: "Microsoft", price: 378.90 },
 ];
 
+const TEMPLATE_AMOUNTS: Record<string, string[]> = {
+  birthday: ["25", "50", "100", "150"],
+  graduation: ["50", "100", "200", "500"],
+  barmitzvah: ["54", "100", "180", "360"],
+  wedding: ["100", "150", "250", "500"],
+  baby: ["25", "50", "100", "250"],
+  general: ["25", "50", "100", "200"],
+};
+
 export default function Moment() {
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const recipientName = decodeURIComponent(params.get("name") || "Ari");
+  const eventTitle = decodeURIComponent(params.get("title") || `${recipientName}'s Celebration`);
+  const template = params.get("template") || "general";
+  
+  const amounts = TEMPLATE_AMOUNTS[template] || TEMPLATE_AMOUNTS.general;
+  const goal = 5000;
+  const raised = 4250;
+  const contributors = 18;
+
   const [step, setStep] = useState(0);
   const [giftType, setGiftType] = useState<"fund" | "stock">("fund");
-  const [amount, setAmount] = useState("100");
+  const [amount, setAmount] = useState(amounts[1]);
   const [customAmount, setCustomAmount] = useState("");
   const [selectedStock, setSelectedStock] = useState<typeof POPULAR_STOCKS[0] | null>(null);
   const [stockShares, setStockShares] = useState("1");
@@ -50,13 +57,13 @@ export default function Moment() {
     : selectedStock ? (Number(stockShares) * selectedStock.price).toFixed(2) : "0";
   const fee = (Number(finalAmount) * 0.029 + 0.30).toFixed(2);
   const total = (Number(finalAmount) + Number(fee)).toFixed(2);
-  const progress = (MOMENT.raised / MOMENT.goal) * 100;
+  const progress = (raised / goal) * 100;
 
   const handleConfirm = () => {
     const giftDesc = giftType === "stock" && selectedStock 
       ? `${stockShares} share${Number(stockShares) > 1 ? "s" : ""} of ${selectedStock.name}`
       : `$${finalAmount}`;
-    toast({ title: "Gift sent!", description: `You've contributed ${giftDesc} to ${MOMENT.recipient}'s future.` });
+    toast({ title: "Gift sent!", description: `You've contributed ${giftDesc} to ${recipientName}'s future.` });
     setStep(2);
   };
 
@@ -79,11 +86,11 @@ export default function Moment() {
             <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {/* Hero */}
               <div className="text-center mb-8">
-                <div className="mx-auto mb-4 h-24 w-24 overflow-hidden rounded-full border-4 border-card shadow-lg">
-                  <img src={MOMENT.photo} alt={MOMENT.recipient} className="h-full w-full object-cover" />
+                <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-3xl font-semibold text-primary">
+                  {recipientName.charAt(0)}
                 </div>
-                <h1 className="text-2xl font-semibold text-foreground mb-1">{MOMENT.title}</h1>
-                <p className="text-muted-foreground">{MOMENT.message}</p>
+                <h1 className="text-2xl font-semibold text-foreground mb-1">{eventTitle}</h1>
+                <p className="text-muted-foreground">A modern way to give a gift that lasts.</p>
               </div>
 
               {/* Gift type tabs */}
@@ -103,7 +110,7 @@ export default function Moment() {
                       <div className="space-y-3">
                         <Label className="text-sm font-medium text-muted-foreground">Select amount</Label>
                         <div className="grid grid-cols-4 gap-2">
-                          {AMOUNTS.map((val) => (
+                          {amounts.map((val) => (
                             <Button
                               key={val}
                               variant={amount === val && !customAmount ? "default" : "outline"}
@@ -222,10 +229,10 @@ export default function Moment() {
                 <CardContent className="p-5">
                   <div className="flex justify-between items-end mb-2">
                     <div>
-                      <p className="text-2xl font-semibold text-foreground">${MOMENT.raised.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">of ${MOMENT.goal.toLocaleString()} goal</p>
+                      <p className="text-2xl font-semibold text-foreground">${raised.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">of ${goal.toLocaleString()} goal</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{MOMENT.contributors} contributors</p>
+                    <p className="text-sm text-muted-foreground">{contributors} contributors</p>
                   </div>
                   <Progress value={progress} className="h-2" />
                 </CardContent>
@@ -244,7 +251,7 @@ export default function Moment() {
                     <CardContent className="p-5 space-y-4 text-sm text-muted-foreground">
                       <div className="flex gap-3">
                         <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">1</div>
-                        <p><strong>Fund contribution:</strong> Your gift goes to {MOMENT.recipient}'s Future Fund and auto-invests into a diversified basket.</p>
+                        <p><strong>Fund contribution:</strong> Your gift goes to {recipientName}'s Future Fund and auto-invests into a diversified basket.</p>
                       </div>
                       <div className="flex gap-3">
                         <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">2</div>
@@ -252,7 +259,7 @@ export default function Moment() {
                       </div>
                       <div className="flex gap-3">
                         <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">3</div>
-                        <p>You'll receive a receipt instantly. The family manages the account until {MOMENT.recipient} turns 18/21.</p>
+                        <p>You'll receive a receipt instantly. The family manages the account until {recipientName} turns 18/21.</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -291,7 +298,7 @@ export default function Moment() {
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm">Message (optional)</Label>
-                      <Textarea placeholder={`Mazel Tov, ${MOMENT.recipient}!`} value={message} onChange={(e) => setMessage(e.target.value)} rows={3} data-testid="input-message" />
+                      <Textarea placeholder={`Congratulations, ${recipientName}!`} value={message} onChange={(e) => setMessage(e.target.value)} rows={3} data-testid="input-message" />
                     </div>
                   </div>
 
@@ -334,8 +341,8 @@ export default function Moment() {
                     <p className="text-xl font-semibold text-foreground mb-1">Your card is ready</p>
                     <p className="text-muted-foreground">
                       {giftType === "stock" && selectedStock 
-                        ? `You gifted ${stockShares} ${selectedStock.name} share${Number(stockShares) > 1 ? "s" : ""} to ${MOMENT.recipient}.`
-                        : `You contributed $${finalAmount} to ${MOMENT.recipient}'s future.`
+                        ? `You gifted ${stockShares} ${selectedStock.name} share${Number(stockShares) > 1 ? "s" : ""} to ${recipientName}.`
+                        : `You contributed $${finalAmount} to ${recipientName}'s future.`
                       }
                     </p>
                   </div>
@@ -343,7 +350,7 @@ export default function Moment() {
                   {/* Card preview */}
                   <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 text-left border border-primary/10">
                     <p className="text-sm text-muted-foreground mb-2">From {giverName || "Anonymous"}</p>
-                    <p className="text-foreground">{message || `Mazel Tov, ${MOMENT.recipient}!`}</p>
+                    <p className="text-foreground">{message || `Congratulations, ${recipientName}!`}</p>
                     <p className="text-sm font-semibold text-primary mt-4">
                       {giftType === "stock" && selectedStock 
                         ? `${stockShares} ${selectedStock.symbol} share${Number(stockShares) > 1 ? "s" : ""} gifted`

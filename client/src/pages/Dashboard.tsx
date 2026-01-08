@@ -3,38 +3,11 @@ import { Nav } from "@/components/layout/Nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, QrCode, Copy, Users, Gift, MessageSquare, TrendingUp, Check, ExternalLink, PieChart, Shield, CheckCircle2, Clock, ArrowUpRight, ArrowRight, Landmark, Sparkles, Share2 } from "lucide-react";
+import { Plus, QrCode, Copy, Users, Gift, MessageSquare, TrendingUp, Check, ExternalLink, PieChart, Shield, CheckCircle2, Clock, ArrowUpRight, ArrowRight, Landmark, Sparkles, Share2, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Link, useSearch } from "wouter";
 import { motion } from "framer-motion";
-
-const ONBOARDING_STEPS = [
-  { id: "profile", label: "Create a profile", desc: "Set up a fund for your child", done: true, icon: CheckCircle2 },
-  { id: "brokerage", label: "Connect brokerage", desc: "Open a custodial account (2 min)", done: false, icon: Landmark, action: "/onboard", cta: "Connect now" },
-  { id: "moment", label: "Create your first Moment", desc: "Share a beautiful page for an event", done: false, icon: Sparkles, action: "/moment/new", cta: "Create Moment" },
-  { id: "share", label: "Share with family", desc: "Send your link to contributors", done: false, icon: Share2 },
-];
-
-const PROFILES = [
-  { id: "ari", name: "Ari", balance: 4250, contributors: 18, pendingThanks: 3, connected: true },
-];
-
-const MOMENTS = [
-  { id: "1", title: "Bar Mitzvah", date: "May 24, 2025", goal: 5000, raised: 4250, status: "Active" },
-];
-
-const CONTRIBUTIONS = [
-  { from: "Uncle Dave", amount: 180, message: "Mazel Tov! Watching you grow has been amazing.", status: "Invested" },
-  { from: "Grandma Ruth", amount: 500, message: "For your future, with all my love.", status: "Invested" },
-  { from: "The Cohens", amount: 100, message: "Here's to many more milestones!", status: "Pending" },
-];
-
-const THANK_YOUS = [
-  { to: "Uncle Dave", amount: 180, status: "Draft ready" },
-  { to: "Grandma Ruth", amount: 500, status: "Draft ready" },
-  { to: "The Cohens", amount: 100, status: "Not started" },
-];
 
 const HOLDINGS = [
   { name: "Total Stock Market", ticker: "VTI", value: 2125, allocation: 50, change: 12.4 },
@@ -44,20 +17,57 @@ const HOLDINGS = [
 ];
 
 const ACTIVITY = [
-  { type: "invested", desc: "Uncle Dave's $180 invested into Future Fund", time: "Today, 4:30 PM" },
-  { type: "invested", desc: "Grandma Ruth's $500 invested into Future Fund", time: "Yesterday" },
-  { type: "pending", desc: "The Cohens' $100 pending investment", time: "Today, 2:15 PM" },
+  { type: "invested", desc: "Contribution invested into Future Fund", time: "Today, 4:30 PM" },
+  { type: "invested", desc: "Contribution invested into Future Fund", time: "Yesterday" },
+  { type: "pending", desc: "New contribution pending investment", time: "Today, 2:15 PM" },
 ];
 
 export default function Dashboard() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const accountType = params.get("type") || "child";
-  const profileName = params.get("name") || (accountType === "personal" ? "Your" : "Ari");
+  const profileName = decodeURIComponent(params.get("name") || (accountType === "personal" ? "My Fund" : "Ari"));
+  const userEmail = decodeURIComponent(params.get("email") || "you@example.com");
   const isPersonal = accountType === "personal";
 
   const [isNewUser, setIsNewUser] = useState(true);
-  const [steps, setSteps] = useState(ONBOARDING_STEPS);
+  
+  const getOnboardingSteps = () => [
+    { 
+      id: "profile", 
+      label: "Create a profile", 
+      desc: isPersonal ? "Set up your personal fund" : `Set up ${profileName}'s fund`, 
+      done: true, 
+      icon: CheckCircle2 
+    },
+    { 
+      id: "brokerage", 
+      label: "Open brokerage", 
+      desc: isPersonal ? "Open a personal brokerage (2 min)" : "Open a custodial account (2 min)", 
+      done: false, 
+      icon: Landmark, 
+      action: `/onboard?type=${accountType}&name=${encodeURIComponent(profileName)}&email=${encodeURIComponent(userEmail)}`, 
+      cta: "Open now" 
+    },
+    { 
+      id: "moment", 
+      label: "Create your first Moment", 
+      desc: "Design a shareable page for an event", 
+      done: false, 
+      icon: Sparkles, 
+      action: "/moment/create", 
+      cta: "Create" 
+    },
+    { 
+      id: "share", 
+      label: "Share with contributors", 
+      desc: "Send your link to family and friends", 
+      done: false, 
+      icon: Share2 
+    },
+  ];
+
+  const [steps, setSteps] = useState(getOnboardingSteps());
   
   const completedSteps = steps.filter(s => s.done).length;
   const progress = (completedSteps / steps.length) * 100;
@@ -67,9 +77,25 @@ export default function Dashboard() {
     setSteps(steps.map(s => s.id === id ? { ...s, done: true } : s));
   };
 
+  const mockContributions = [
+    { from: "Uncle Dave", amount: 180, message: "Congrats! So proud of you.", status: "Invested" },
+    { from: "Grandma Ruth", amount: 500, message: "For your future, with all my love.", status: "Invested" },
+    { from: "The Cohens", amount: 100, message: "Here's to many more milestones!", status: "Pending" },
+  ];
+
+  const mockThankYous = [
+    { to: "Uncle Dave", amount: 180, status: "Draft ready" },
+    { to: "Grandma Ruth", amount: 500, status: "Draft ready" },
+    { to: "The Cohens", amount: 100, status: "Not started" },
+  ];
+
+  const mockMoments = [
+    { id: "1", title: isPersonal ? "My Birthday Fund" : `${profileName}'s Celebration`, date: "May 24, 2025", goal: 5000, raised: 4250, status: "Active" },
+  ];
+
   return (
     <div className="min-h-screen bg-background font-sans">
-      <Nav />
+      <Nav showDashboard accountType={accountType} profileName={profileName} />
       
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
@@ -81,13 +107,18 @@ export default function Dashboard() {
             <p className="text-muted-foreground text-sm">
               {isNewUser && completedSteps < 4 
                 ? "Let's get you set up in just a few steps." 
-                : "Manage your funds and thank your contributors."
+                : isPersonal ? "Manage your fund and contributions." : `Manage ${profileName}'s fund and thank your contributors.`
               }
             </p>
           </div>
-          <Link href="/create">
-            <Button size="sm"><Plus className="mr-2 h-4 w-4" /> Add profile</Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
+              <Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button>
+            </Link>
+            <Link href="/create">
+              <Button size="sm"><Plus className="mr-2 h-4 w-4" /> Add profile</Button>
+            </Link>
+          </div>
         </div>
 
         {/* Onboarding Checklist */}
@@ -107,7 +138,7 @@ export default function Dashboard() {
                 <Progress value={progress} className="h-1.5 mt-3" />
               </div>
               <CardContent className="p-0">
-                {steps.map((step, i) => (
+                {steps.map((step) => (
                   <div 
                     key={step.id} 
                     className={`flex items-center justify-between p-4 border-b last:border-b-0 ${step.done ? "bg-muted/30" : ""}`}
@@ -147,7 +178,7 @@ export default function Dashboard() {
                   <p className="text-sm text-muted-foreground mb-4">
                     {isPersonal ? "Open a personal brokerage" : "Open a custodial account"} in 2 minutes. SIPC insured.
                   </p>
-                  <Link href={`/onboard?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
+                  <Link href={`/onboard?type=${accountType}&name=${encodeURIComponent(profileName)}&email=${encodeURIComponent(userEmail)}`}>
                     <Button onClick={() => completeStep("brokerage")}>
                       Open brokerage <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
@@ -168,9 +199,10 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* Tasks - show after onboarding or if has activity */}
+        {/* Full Dashboard - after onboarding */}
         {(!isNewUser || completedSteps === 4) && (
           <>
+            {/* Tasks */}
             <Card className="border-none shadow-sm mb-8">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
@@ -189,29 +221,29 @@ export default function Dashboard() {
             </Card>
 
             {/* Profile Card */}
-            {PROFILES.map((profile) => (
-              <Card key={profile.id} className="border-none shadow-sm mb-6">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-xl font-semibold text-primary">
-                        {profile.name.charAt(0)}
-                      </div>
-                      <div>
-                        <CardTitle className="text-xl">{profile.name}'s Fund</CardTitle>
-                        <p className="text-sm text-muted-foreground">{profile.contributors} contributors</p>
-                      </div>
+            <Card className="border-none shadow-sm mb-6">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center text-xl font-semibold text-primary">
+                      {profileName.charAt(0)}
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-semibold text-foreground">${profile.balance.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground flex items-center justify-end gap-1">
-                        <TrendingUp className="h-3 w-3 text-primary" /> +12.5% all time
+                    <div>
+                      <CardTitle className="text-xl">{isPersonal ? "My Fund" : `${profileName}'s Fund`}</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {isPersonal ? "Personal brokerage" : "Custodial account"} • 18 contributors
                       </p>
                     </div>
                   </div>
-                </CardHeader>
-              </Card>
-            ))}
+                  <div className="text-right">
+                    <p className="text-2xl font-semibold text-foreground">$4,250</p>
+                    <p className="text-sm text-muted-foreground flex items-center justify-end gap-1">
+                      <TrendingUp className="h-3 w-3 text-primary" /> +12.5% all time
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
 
             {/* Tabs */}
             <Tabs defaultValue="holdings" className="space-y-6">
@@ -224,23 +256,23 @@ export default function Dashboard() {
 
               {/* Holdings Tab */}
               <TabsContent value="holdings" className="space-y-4">
-                {/* Brokerage Status */}
                 <Card className="border-none shadow-sm bg-primary/5 border-l-4 border-l-primary">
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-primary" />
                       <div>
                         <p className="font-medium text-foreground text-sm">Brokerage connected</p>
-                        <p className="text-xs text-muted-foreground">Custodial account via Apex Clearing • SIPC insured</p>
+                        <p className="text-xs text-muted-foreground">
+                          {isPersonal ? "Personal account" : "Custodial account"} via Apex Clearing • SIPC insured
+                        </p>
                       </div>
                     </div>
-                    <Link href="/settings#brokerage">
+                    <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}#brokerage`}>
                       <Button variant="ghost" size="sm">Manage</Button>
                     </Link>
                   </CardContent>
                 </Card>
 
-                {/* Allocation */}
                 <Card className="border-none shadow-sm">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
@@ -276,7 +308,6 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Quick info */}
                 <div className="grid grid-cols-3 gap-3">
                   <Card className="border-none shadow-sm">
                     <CardContent className="p-4 text-center">
@@ -298,7 +329,6 @@ export default function Dashboard() {
                   </Card>
                 </div>
 
-                {/* Recent Activity */}
                 <Card className="border-none shadow-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Recent activity</CardTitle>
@@ -320,7 +350,6 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Trust footer */}
                 <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-2">
                   <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> SIPC insured</span>
                   <span>•</span>
@@ -333,9 +362,11 @@ export default function Dashboard() {
               <TabsContent value="moments" className="space-y-4">
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-muted-foreground">Shareable pages for events</p>
-                  <Button size="sm"><Plus className="mr-2 h-4 w-4" /> New moment</Button>
+                  <Link href={`/moment/create?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
+                    <Button size="sm"><Plus className="mr-2 h-4 w-4" /> New moment</Button>
+                  </Link>
                 </div>
-                {MOMENTS.map((m) => (
+                {mockMoments.map((m) => (
                   <Card key={m.id} className="border-none shadow-sm">
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between mb-4">
@@ -355,7 +386,9 @@ export default function Dashboard() {
                       <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="flex-1"><QrCode className="mr-2 h-4 w-4" /> QR</Button>
                         <Button variant="outline" size="sm" className="flex-1"><Copy className="mr-2 h-4 w-4" /> Link</Button>
-                        <Button variant="outline" size="sm" className="flex-1"><ExternalLink className="mr-2 h-4 w-4" /> Preview</Button>
+                        <Link href={`/moment?name=${encodeURIComponent(profileName)}&title=${encodeURIComponent(m.title)}`}>
+                          <Button variant="outline" size="sm"><ExternalLink className="mr-2 h-4 w-4" /> Preview</Button>
+                        </Link>
                       </div>
                     </CardContent>
                   </Card>
@@ -363,8 +396,8 @@ export default function Dashboard() {
               </TabsContent>
 
               <TabsContent value="contributions" className="space-y-4">
-                <p className="text-sm text-muted-foreground">Recent contributions to Ari's fund</p>
-                {CONTRIBUTIONS.map((c, i) => (
+                <p className="text-sm text-muted-foreground">Recent contributions to {isPersonal ? "your" : `${profileName}'s`} fund</p>
+                {mockContributions.map((c, i) => (
                   <Card key={i} className="border-none shadow-sm">
                     <CardContent className="p-5 flex items-start justify-between gap-4">
                       <div className="flex gap-4">
@@ -399,7 +432,7 @@ export default function Dashboard() {
                   </div>
                   <Button size="sm">Send all drafts</Button>
                 </div>
-                {THANK_YOUS.map((t, i) => (
+                {mockThankYous.map((t, i) => (
                   <Card key={i} className="border-none shadow-sm">
                     <CardContent className="p-5 flex items-center justify-between">
                       <div className="flex items-center gap-4">

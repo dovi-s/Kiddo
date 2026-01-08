@@ -3,27 +3,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Heart, Users, Sparkles, Gift, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
-
-const RECIPIENT = {
-  name: "Ari",
-  totalValue: 4250,
-  contributors: 18,
-};
-
-const TIMELINE = [
-  { type: "gift", from: "Uncle Dave", amount: 180, message: "Mazel Tov! Watching you grow has been amazing." },
-  { type: "milestone", title: "First $4,000!" },
-  { type: "gift", from: "Grandma Ruth", amount: 500, message: "For your future, with all my love." },
-  { type: "gift", from: "The Cohens", amount: 100, message: "Here's to many more milestones!" },
-];
-
-const MILESTONES = [
-  { title: "First $1,000", done: true },
-  { title: "10 Contributors", done: true },
-  { title: "First $5,000", done: false },
-];
+import { useSearch } from "wouter";
 
 export default function Recipient() {
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const recipientName = decodeURIComponent(params.get("name") || "Ari");
+  const totalValue = Number(params.get("value")) || 4250;
+  const contributorCount = Number(params.get("contributors")) || 18;
+
+  const messages = [
+    { from: "Uncle Dave", amount: 180, message: "Congrats! So proud of you." },
+    { from: "Grandma Ruth", amount: 500, message: "For your future, with all my love." },
+    { from: "The Cohens", amount: 100, message: "Here's to many more milestones!" },
+    { from: "Aunt Lisa", amount: 200, message: "Can't wait to see all you accomplish!" },
+  ];
+
+  const milestones = [
+    { title: "First $1,000", done: true },
+    { title: "10 Contributors", done: true },
+    { title: "First $5,000", done: false },
+    { title: "25 Contributors", done: false },
+  ];
+
+  const people = ["Uncle Dave", "Grandma Ruth", "The Cohens", "Aunt Lisa", "The Goldbergs", "Cousin Jake", "Mom & Dad"];
+
   return (
     <div className="min-h-screen bg-background font-sans">
       <Nav />
@@ -32,16 +36,16 @@ export default function Recipient() {
         {/* Header */}
         <div className="text-center mb-10">
           <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-3xl font-semibold text-primary">
-            {RECIPIENT.name.charAt(0)}
+            {recipientName.charAt(0)}
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">{RECIPIENT.name}'s Future</h1>
-          <p className="text-muted-foreground text-sm mt-1">{RECIPIENT.contributors} people in your corner</p>
+          <h1 className="text-2xl font-semibold text-foreground">{recipientName}'s Future</h1>
+          <p className="text-muted-foreground text-sm mt-1">{contributorCount} people in your corner</p>
         </div>
 
         {/* Stats */}
         <Card className="border-none shadow-sm mb-8">
           <CardContent className="p-5 text-center">
-            <p className="text-3xl font-semibold text-foreground">${RECIPIENT.totalValue.toLocaleString()}</p>
+            <p className="text-3xl font-semibold text-foreground">${totalValue.toLocaleString()}</p>
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
               <TrendingUp className="h-3 w-3 text-primary" /> Growing over time
             </p>
@@ -57,7 +61,7 @@ export default function Recipient() {
           </TabsList>
 
           <TabsContent value="messages" className="space-y-3">
-            {TIMELINE.filter(t => t.type === "gift").map((item, i) => (
+            {messages.map((item, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
                 <Card className="border-none shadow-sm">
                   <CardContent className="p-4">
@@ -77,7 +81,7 @@ export default function Recipient() {
           </TabsContent>
 
           <TabsContent value="milestones" className="space-y-3">
-            {MILESTONES.map((m, i) => (
+            {milestones.map((m, i) => (
               <Card key={i} className="border-none shadow-sm">
                 <CardContent className="p-4 flex items-center gap-3">
                   <div className={`h-9 w-9 rounded-full flex items-center justify-center ${m.done ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
@@ -93,7 +97,7 @@ export default function Recipient() {
             <Card className="border-none shadow-sm">
               <CardContent className="p-4">
                 <div className="flex flex-wrap gap-2">
-                  {["Uncle Dave", "Grandma Ruth", "The Cohens", "Aunt Lisa", "The Goldbergs", "Cousin Jake"].map((name) => (
+                  {people.map((name) => (
                     <span key={name} className="inline-flex items-center gap-2 bg-muted rounded-full px-3 py-1.5 text-sm">
                       <span className="h-5 w-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-medium text-primary">
                         {name.charAt(0)}
