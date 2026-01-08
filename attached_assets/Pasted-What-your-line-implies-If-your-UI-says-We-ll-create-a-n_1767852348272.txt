@@ -1,0 +1,85 @@
+What your line implies
+
+If your UI says: “We’ll create a new brokerage account for you within Everleaf, powered by Apex Clearing. SIPC insured up to $500k,” that is the embedded brokerage model.
+
+In that model:
+
+Everleaf is not necessarily a broker-dealer.
+
+A regulated entity provides brokerage services.
+
+Apex Clearing Corporation is an SEC-registered broker-dealer and a FINRA + SIPC member (so it can be the brokerage services provider in some programs, and also the clearing/custody layer). 
+Apex Fintech Solutions
++1
+
+SIPC protection is about a brokerage firm failure and missing customer assets, up to $500k including $250k cash. It does not protect against market losses. 
+SIPC
++1
+
+Lock-in: the “correct” $5B setup
+Default (B): Embedded investing, Everleaf as the gifting layer
+
+Users open an Everleaf-powered brokerage account in your flow.
+
+Parent creates a Kid Fund (custodial structure for minors) or an adult fund.
+
+Givers do not open accounts. They just pay and leave a message.
+
+Gifts settle into the recipient’s Everleaf brokerage account and auto-invest per the chosen rail (Future Fund, Education, Favorites, Seed).
+
+Why this is the winning default
+
+Best conversion: no “go open a Schwab account and come back.”
+
+You control the end-to-end experience: checkout, card reveal, receipts, thank-you, recurring, milestones.
+
+Operationally consistent: fewer edge-case failures, fewer support tickets.
+
+Later (C): Connect existing accounts, but as “transfer/consolidate”
+
+The right version of C is:
+
+“Already have a brokerage? Transfer your Everleaf holdings out later” (ACATS), or
+
+“Consolidate an external account into Everleaf” (ACATS in).
+FINRA describes ACATS transfers starting with a Transfer Initiation Form (TIF). 
+finra.org
++1
+
+What you generally do not want early:
+
+“Send gifts directly to someone’s Fidelity/Schwab account.” That adds friction, verification complexity, delays, and it breaks the 60-second gift.
+
+The compliance truth in one paragraph
+
+Everleaf should be the front-end product + payments + gifting UX. A partner broker-dealer/clearing stack handles KYC/AML, custody, statements, trade execution, regulatory reporting. Apex’s own disclosures describe Apex Clearing as an SEC-registered broker-dealer, FINRA + SIPC member, and that securities products/services on their site are provided by Apex Clearing. 
+Apex Fintech Solutions
++1
+
+The exact copy pattern you should use (so you do not accidentally claim you are a broker)
+
+Use a disclosure block like:
+
+Brokerage services: Provided by [Broker-dealer legal name], Member FINRA/SIPC.
+
+Clearing and custody: Provided by Apex Clearing Corporation, Member FINRA/SIPC.
+
+Everleaf: Everleaf is a technology platform and is not a broker-dealer.
+
+Whether the broker-dealer of record is Apex itself or another entity depends on the specific program you sign, so keep it template-driven until you lock partners.
+
+Cost implications you should assume (high level)
+
+Even with embedded brokerage, you will have costs beyond Stripe, typically including:
+
+Brokerage/clearing program fees (often per account, per trade, or basis-point style program fees)
+
+ACH/wire costs and return risk
+
+KYC/AML and identity verification costs
+
+Customer support and disputes/chargebacks
+
+Statements, tax docs, regulatory reporting overhead
+
+That is why your pricing can’t just be “Stripe pass-through.” Stripe is only one line item.

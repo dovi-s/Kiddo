@@ -34,23 +34,35 @@ export default function Settings() {
                 <div className="flex items-center gap-3">
                   <CheckCircle2 className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="font-medium text-sm">Connected</p>
-                    <p className="text-xs text-muted-foreground">Apex Clearing • SIPC insured</p>
+                    <p className="font-medium text-sm">Account active</p>
+                    <p className="text-xs text-muted-foreground">Member FINRA/SIPC • Cleared by Apex</p>
                   </div>
                 </div>
                 <Badge variant="outline" className="text-primary border-primary/30">Active</Badge>
               </div>
+              
+              <p className="text-[10px] text-muted-foreground">
+                Brokerage services provided by [Broker-Dealer], Member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation. Everleaf is a technology platform and is not a broker-dealer.
+              </p>
 
               <div className="space-y-3">
                 <p className="text-sm font-medium text-muted-foreground">Account details</p>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-muted-foreground text-xs">Account type</p>
-                    <p className="font-medium">{isPersonal ? "Personal" : "Custodial (UTMA)"}</p>
+                    <p className="font-medium">{isPersonal ? "Individual brokerage" : "UTMA custodial"}</p>
                   </div>
                   <div className="p-3 rounded-lg bg-muted/50">
                     <p className="text-muted-foreground text-xs">Account number</p>
                     <p className="font-medium">••••4827</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <p className="text-muted-foreground text-xs">Clearing firm</p>
+                    <p className="font-medium">Apex Clearing Corp.</p>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50">
+                    <p className="text-muted-foreground text-xs">Protection</p>
+                    <p className="font-medium">SIPC up to $500k</p>
                   </div>
                   {!isPersonal && (
                     <div className="p-3 rounded-lg bg-muted/50 col-span-2">

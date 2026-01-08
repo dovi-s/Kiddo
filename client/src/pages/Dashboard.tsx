@@ -182,7 +182,7 @@ export default function Dashboard() {
                         <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs text-left">
-                        <p className="text-sm">We'll create a new {isPersonal ? "brokerage" : "UTMA custodial"} account for you within Everleaf, powered by Apex Clearing. SIPC insured up to $500k.</p>
+                        <p className="text-sm">Brokerage services provided by our partner broker-dealer, Member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation. SIPC protects against broker failure up to $500k.</p>
                       </TooltipContent>
                     </Tooltip>
                   </p>
@@ -279,7 +279,7 @@ export default function Dashboard() {
                               <HelpCircle className="h-3 w-3 text-muted-foreground" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs text-left">
-                              <p className="text-sm">Your {isPersonal ? "personal" : "UTMA custodial"} account is held within Everleaf, cleared by Apex Clearing Corporation. SIPC insured up to $500k.</p>
+                              <p className="text-sm">Brokerage services provided by our partner broker-dealer, Member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation. SIPC protects against broker failure up to $500k (not market losses).</p>
                             </TooltipContent>
                           </Tooltip>
                         </p>
@@ -372,12 +372,15 @@ export default function Dashboard() {
                 </Card>
 
                 <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-2">
-                  <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> SIPC insured</span>
+                  <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> Member SIPC</span>
                   <span>•</span>
-                  <span>Cleared by Apex</span>
+                  <span>Apex Clearing</span>
                   <span>•</span>
                   <span>256-bit encryption</span>
                 </div>
+                <p className="text-[10px] text-muted-foreground text-center pt-3 max-w-md mx-auto">
+                  Brokerage services provided by [Broker-Dealer], Member FINRA/SIPC. Clearing by Apex Clearing Corporation. Everleaf is a technology platform and is not a broker-dealer.
+                </p>
               </TabsContent>
 
               <TabsContent value="moments" className="space-y-4">
