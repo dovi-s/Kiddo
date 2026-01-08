@@ -1,0 +1,47 @@
+It is real, but it is not an automatic slam dunk. It can become big if you nail two things: (1) distribution loops, and (2) trust + simplicity.
+
+What is real about it
+
+The pain is real: people hate buying junk gifts, and cash feels generic. Parents do want an easy “always appropriate” link.
+
+Gifting has built-in virality: every event is a broadcast to 30 to 300 people. If the product is loved, that loop is strong.
+
+Recurring is a genuine unlock: grandparents and close relatives will do monthly or yearly gifts if it is effortless and feels meaningful.
+
+The “card + registry” wrapper is correct: most people will not engage with investing, but they will engage with a beautiful gift moment.
+
+What makes it hard
+
+Trust barrier is extreme. You are asking people to put money into a child’s future through a new brand. Any friction, any confusion, any weirdness kills conversion.
+
+Fintech operations are unforgiving. KYC, fraud, chargebacks, refunds, support, brokerage integration, account edge cases. This is not like shipping a normal SaaS.
+
+Unit economics only look great at scale. Early on, brokerage program minimums and support can hurt unless you keep the model lean.
+
+Competition exists. Not identical, but adjacent: 529 gift platforms, stock gift cards, custodial investing apps, wedding cash registries. You win on product experience and distribution, not novelty.
+
+What would make me bullish
+
+If you can prove these two behaviors quickly:
+
+Hosts reuse it (one kid’s fund used across multiple birthdays/events)
+
+Givers return (a giver uses Everleaf again within 12 months for another kid/event)
+
+If those are true, the loop is real and it can be massive.
+
+What would make me bearish
+
+If most gifts end up being treated like “cash” and not emotionally sticky
+
+If parents feel awkward sharing it
+
+If gift checkout conversion is not excellent because of trust or complexity
+
+If chargebacks/fraud/support are higher than you expect
+
+The honest conclusion
+
+This is a strong idea with a real wedge, and it has a path to being large. The reason it could be huge is the distribution loop built into life events plus recurring.
+
+But it only becomes a big company if you build it like a premium consumer product and run it like a serious fintech. The product has to feel inevitable, not “a clever app.”
