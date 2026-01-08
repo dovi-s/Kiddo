@@ -30,7 +30,9 @@ export default function Create() {
   function onSubmit() {
     setIsLoading(true);
     const type = form.getValues("profileType");
-    setTimeout(() => { setIsLoading(false); setLocation(`/onboard?type=${type}`); }, 1500);
+    const name = encodeURIComponent(form.getValues("profileName"));
+    const email = encodeURIComponent(form.getValues("email"));
+    setTimeout(() => { setIsLoading(false); setLocation(`/onboard?type=${type}&name=${name}&email=${email}`); }, 1500);
   }
 
   const profileType = form.watch("profileType");
