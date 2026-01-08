@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Leaf, DollarSign, Check, ArrowLeft, ChevronDown, Lock, Zap } from "lucide-react";
+import { Leaf, DollarSign, Check, ArrowLeft, ChevronDown, Lock, Zap, Eye, EyeOff, User } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Link, useSearch } from "wouter";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -42,6 +43,8 @@ export default function Moment() {
   const [customAmount, setCustomAmount] = useState("");
   const [message, setMessage] = useState("");
   const [giverName, setGiverName] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [hideAmount, setHideAmount] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -147,12 +150,53 @@ export default function Moment() {
                   <div className="space-y-3">
                     <Label className="text-sm text-muted-foreground">Your name</Label>
                     <Input 
-                      placeholder="First and last" 
+                      placeholder={isAnonymous ? "Anonymous" : "First and last"}
                       value={giverName} 
                       onChange={(e) => setGiverName(e.target.value)} 
                       className="h-12 transition-all focus:ring-2 focus:ring-foreground/10"
+                      disabled={isAnonymous}
                       data-testid="input-giver-name"
                     />
+                  </div>
+
+                  {/* Privacy options */}
+                  <div className="space-y-3 p-4 rounded-lg border bg-foreground/[0.02]">
+                    <motion.div 
+                      className="flex items-center justify-between"
+                      whileHover={{ x: 2 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">Give anonymously</p>
+                          <p className="text-xs text-muted-foreground">Your name won't be shown</p>
+                        </div>
+                      </div>
+                      <Switch 
+                        checked={isAnonymous} 
+                        onCheckedChange={setIsAnonymous}
+                        data-testid="switch-anonymous"
+                      />
+                    </motion.div>
+                    <motion.div 
+                      className="flex items-center justify-between"
+                      whileHover={{ x: 2 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <div className="flex items-center gap-3">
+                        {hideAmount ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                        <div>
+                          <p className="text-sm font-medium">Hide amount</p>
+                          <p className="text-xs text-muted-foreground">Only the family sees how much</p>
+                        </div>
+                      </div>
+                      <Switch 
+                        checked={hideAmount} 
+                        onCheckedChange={setHideAmount}
+                        data-testid="switch-hide-amount"
+                      />
+                    </motion.div>
                   </div>
 
                   <div className="space-y-3">
@@ -249,12 +293,19 @@ export default function Moment() {
                     <p className="text-muted-foreground text-xs">To</p>
                     <p className="font-medium">{recipientName}'s Fund</p>
                   </div>
-                  {giverName && (
-                    <div>
+                  <div>
                       <p className="text-muted-foreground text-xs">From</p>
-                      <p className="font-medium">{giverName}</p>
+                      <p className="font-medium">{isAnonymous ? "Anonymous" : (giverName || "You")}</p>
+                      {(isAnonymous || hideAmount) && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {isAnonymous && hideAmount 
+                            ? "Name and amount hidden from others"
+                            : isAnonymous 
+                              ? "Name hidden from others" 
+                              : "Amount hidden from others"}
+                        </p>
+                      )}
                     </div>
-                  )}
                   {message && (
                     <div>
                       <p className="text-muted-foreground text-xs">Message</p>
