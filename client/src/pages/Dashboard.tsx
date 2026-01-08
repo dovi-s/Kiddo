@@ -121,7 +121,9 @@ export default function Dashboard() {
                     <p className="text-xs text-muted-foreground">Custodial account via Apex Clearing • SIPC insured</p>
                   </div>
                 </div>
-                <Badge variant="outline" className="text-primary border-primary/30">Active</Badge>
+                <Link href="/settings#brokerage">
+                  <Button variant="ghost" size="sm">Manage</Button>
+                </Link>
               </CardContent>
             </Card>
 
