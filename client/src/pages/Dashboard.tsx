@@ -3,7 +3,7 @@ import { Nav } from "@/components/layout/Nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, QrCode, Copy, MessageSquare, Check, ArrowRight, Settings, ExternalLink, TrendingUp, UserPlus, X, Download } from "lucide-react";
+import { Plus, QrCode, Copy, MessageSquare, Check, ArrowRight, Settings, ExternalLink, TrendingUp, UserPlus, X, Download, Sparkles, Crown, Users } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
@@ -50,6 +50,8 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState<"free" | "plus" | "family">("free");
   const [inviteCopied, setInviteCopied] = useState(false);
   const [thankYousSent, setThankYousSent] = useState(false);
 
@@ -539,6 +541,51 @@ export default function Dashboard() {
                   )}
                 </AnimatePresence>
 
+                {/* Plan indicator & upgrade */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1 }}
+                >
+                  <Card className="border border-dashed">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                            currentPlan === "free" ? "bg-foreground/5" : 
+                            currentPlan === "plus" ? "bg-amber-100 dark:bg-amber-900/30" : 
+                            "bg-violet-100 dark:bg-violet-900/30"
+                          }`}>
+                            {currentPlan === "free" && <Sparkles className="h-4 w-4 text-muted-foreground" />}
+                            {currentPlan === "plus" && <Crown className="h-4 w-4 text-amber-600" />}
+                            {currentPlan === "family" && <Users className="h-4 w-4 text-violet-600" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">
+                              {currentPlan === "free" && "Free plan"}
+                              {currentPlan === "plus" && "Plus plan"}
+                              {currentPlan === "family" && "Family plan"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {currentPlan === "free" && "Guests pay ~3% fee"}
+                              {currentPlan === "plus" && "Zero fees for guests"}
+                              {currentPlan === "family" && "10 events/year · Zero fees"}
+                            </p>
+                          </div>
+                        </div>
+                        {currentPlan === "free" && (
+                          <Button variant="outline" size="sm" onClick={() => setShowUpgrade(true)}>
+                            Upgrade
+                          </Button>
+                        )}
+                        {currentPlan !== "free" && (
+                          <span className="text-xs text-muted-foreground">Active</span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
                 <p className="text-xs text-muted-foreground text-center pt-4">
                   Brokerage by [Broker-Dealer], Member FINRA/SIPC. Clearing by Apex.
                 </p>
@@ -636,6 +683,95 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground text-center">
               Print for your party or share directly
             </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade Modal */}
+      <Dialog open={showUpgrade} onOpenChange={setShowUpgrade}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold tracking-tight">Upgrade your plan</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Remove fees for your guests and unlock premium features.
+            </p>
+
+            {/* Plans */}
+            <div className="space-y-3">
+              {/* Plus */}
+              <motion.div 
+                whileHover={{ scale: 1.01 }}
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  currentPlan === "plus" ? "border-amber-500 bg-amber-50 dark:bg-amber-900/20" : "border-foreground hover:bg-foreground/[0.02]"
+                }`}
+                onClick={() => { setCurrentPlan("plus"); setShowUpgrade(false); }}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                      <Crown className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Plus</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">$99 per event</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-semibold">$99</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1.5">
+                  {["Zero fees for guests", "Premium thank-you cards", "Custom page branding", "Priority support"].map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <Check className="h-3.5 w-3.5 text-amber-600" />
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+
+              {/* Family */}
+              <motion.div 
+                whileHover={{ scale: 1.01 }}
+                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  currentPlan === "family" ? "border-violet-500 bg-violet-50 dark:bg-violet-900/20" : "border-muted hover:border-foreground/50 hover:bg-foreground/[0.02]"
+                }`}
+                onClick={() => { setCurrentPlan("family"); setShowUpgrade(false); }}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-violet-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Family</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">$199 per year</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-semibold">$199</p>
+                    <p className="text-xs text-muted-foreground">/year</p>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1.5">
+                  {["Everything in Plus", "Up to 10 events per year", "Multiple children", "One unified dashboard", "Family analytics"].map((f, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <Check className="h-3.5 w-3.5 text-violet-600" />
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Current plan note */}
+            {currentPlan === "free" && (
+              <p className="text-xs text-muted-foreground text-center pt-2">
+                Free plan: guests pay ~3% at checkout. You pay nothing.
+              </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
