@@ -1,8 +1,9 @@
 import { Link } from "wouter";
-import { Leaf, Menu, Settings, User } from "lucide-react";
+import { Leaf, Menu, Settings } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { motion } from "framer-motion";
 
 interface NavProps {
   showDashboard?: boolean;
@@ -14,45 +15,79 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-sm">
+    <motion.nav 
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-sm"
+    >
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2" data-testid="link-home">
-          <Leaf className="h-5 w-5 text-primary" />
-          <span className="font-semibold text-foreground">Everleaf</span>
+        <Link href="/" className="flex items-center gap-2 group" data-testid="link-home">
+          <motion.div whileHover={{ rotate: 10 }} transition={{ duration: 0.2 }}>
+            <Leaf className="h-5 w-5 text-primary" />
+          </motion.div>
+          <span className="font-semibold text-foreground tracking-tight">Everleaf</span>
         </Link>
 
         <div className="hidden md:flex md:items-center md:gap-6">
           {showDashboard ? (
             <>
-              <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName || "")}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link 
+                href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName || "")}`} 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
                 Dashboard
               </Link>
-              <Link href={`/recipient?name=${encodeURIComponent(profileName || "")}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link 
+                href={`/recipient?name=${encodeURIComponent(profileName || "")}`} 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
                 {accountType === "personal" ? "My View" : `${profileName}'s View`}
               </Link>
               <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName || "")}`}>
-                <Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button>
+                <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+                  <Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button>
+                </motion.div>
               </Link>
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="h-8 w-8 rounded-full bg-foreground text-background flex items-center justify-center text-sm font-medium"
+              >
                 {(profileName || "U").charAt(0)}
-              </div>
+              </motion.div>
             </>
           ) : (
             <>
-              <a href="/#how" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="/#how" 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group"
+              >
                 How it works
+                <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-foreground transition-all group-hover:w-full" />
               </a>
-              <a href="/#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a 
+                href="/#pricing" 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group"
+              >
                 Pricing
+                <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-foreground transition-all group-hover:w-full" />
               </a>
-              <Link href="/moment" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link 
+                href="/moment" 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group"
+              >
                 Send a gift
+                <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-foreground transition-all group-hover:w-full" />
               </Link>
               <Link href="/dashboard">
-                <Button variant="ghost" size="sm" data-testid="button-login">Log in</Button>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button variant="ghost" size="sm" data-testid="button-login">Log in</Button>
+                </motion.div>
               </Link>
               <Link href="/create">
-                <Button size="sm" data-testid="button-get-started">Get started</Button>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button size="sm" data-testid="button-get-started">Get started</Button>
+                </motion.div>
               </Link>
             </>
           )}
@@ -92,6 +127,6 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
           </SheetContent>
         </Sheet>
       </div>
-    </nav>
+    </motion.nav>
   );
 }

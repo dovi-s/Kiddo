@@ -1,5 +1,6 @@
 import { Leaf } from "lucide-react";
 import { Link } from "wouter";
+import { motion } from "framer-motion";
 
 export function Footer() {
   return (
@@ -8,10 +9,15 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-4">
           <div className="space-y-4">
             <Link href="/">
-              <a className="flex items-center gap-2">
-                <Leaf className="h-5 w-5 text-primary" />
-                <span className="font-semibold text-foreground">Everleaf</span>
-              </a>
+              <motion.a 
+                className="flex items-center gap-2 group"
+                whileHover={{ x: 2 }}
+              >
+                <motion.div whileHover={{ rotate: 10 }} transition={{ duration: 0.2 }}>
+                  <Leaf className="h-5 w-5 text-primary" />
+                </motion.div>
+                <span className="font-semibold text-foreground tracking-tight">Everleaf</span>
+              </motion.a>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[200px]">
               Gifts that grow.
@@ -21,27 +27,59 @@ export function Footer() {
           <div>
             <h4 className="text-sm font-medium mb-4 text-foreground">Product</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/create"><a className="hover:text-foreground transition-colors">Create a fund</a></Link></li>
-              <li><Link href="/moment"><a className="hover:text-foreground transition-colors">Send a gift</a></Link></li>
-              <li><a href="/#pricing" className="hover:text-foreground transition-colors">Pricing</a></li>
+              {[
+                { href: "/create", label: "Create a fund" },
+                { href: "/moment", label: "Send a gift" },
+                { href: "/#pricing", label: "Pricing" },
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link href={link.href}>
+                    <motion.a 
+                      className="hover:text-foreground transition-colors inline-block"
+                      whileHover={{ x: 2 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {link.label}
+                    </motion.a>
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-medium mb-4 text-foreground">Company</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground transition-colors">About</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Trust</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Support</a></li>
+              {["About", "Trust", "Support"].map((label) => (
+                <li key={label}>
+                  <motion.a 
+                    href="#" 
+                    className="hover:text-foreground transition-colors inline-block"
+                    whileHover={{ x: 2 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {label}
+                  </motion.a>
+                </li>
+              ))}
             </ul>
           </div>
 
           <div>
             <h4 className="text-sm font-medium mb-4 text-foreground">Legal</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground transition-colors">Terms</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Privacy</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Disclosures</a></li>
+              {["Terms", "Privacy", "Disclosures"].map((label) => (
+                <li key={label}>
+                  <motion.a 
+                    href="#" 
+                    className="hover:text-foreground transition-colors inline-block"
+                    whileHover={{ x: 2 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {label}
+                  </motion.a>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
