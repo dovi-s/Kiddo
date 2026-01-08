@@ -5,19 +5,26 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
-import Registry from "@/pages/Registry";
 import Dashboard from "@/pages/Dashboard";
 import Create from "@/pages/Create";
 import Give from "@/pages/Give";
+import Moment from "@/pages/Moment";
+import Recipient from "@/pages/Recipient";
+import Settings from "@/pages/Settings";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/registry" component={Registry} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/create" component={Create} />
       <Route path="/give" component={Give} />
+      <Route path="/give/:id" component={Give} />
+      <Route path="/moment" component={Moment} />
+      <Route path="/moment/:id" component={Moment} />
+      <Route path="/recipient" component={Recipient} />
+      <Route path="/recipient/:id" component={Recipient} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
