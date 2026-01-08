@@ -2,16 +2,14 @@ import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { useLocation } from "wouter";
-import { Loader2, User, Baby, TrendingUp, Sprout, ArrowRight, ShieldCheck } from "lucide-react";
+import { Loader2, User, Baby, TrendingUp, Sprout, ArrowRight, ShieldCheck, Check } from "lucide-react";
 import { useState } from "react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const formSchema = z.object({
   profileName: z.string().min(2, "Name is required"),
@@ -34,6 +32,9 @@ export default function Create() {
     setTimeout(() => { setIsLoading(false); setLocation("/dashboard"); }, 1500);
   }
 
+  const profileType = form.watch("profileType");
+  const fundType = form.watch("fundType");
+
   return (
     <div className="min-h-screen bg-muted/20 font-sans">
       <Nav />
@@ -53,26 +54,38 @@ export default function Create() {
                   render={({ field }) => (
                     <FormItem className="space-y-3">
                       <FormLabel className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Who is this for?</FormLabel>
-                      <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-2 gap-4">
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="child" className="sr-only peer" /></FormControl>
-                            <Label className="flex flex-col items-center justify-center w-full p-6 rounded-xl border-2 cursor-pointer peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 hover:border-primary/40 transition-all">
-                              <Baby className="h-8 w-8 mb-2 text-primary" />
-                              <span className="font-semibold">A Child</span>
-                              <span className="text-xs text-muted-foreground">Custodial account</span>
-                            </Label>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="personal" className="sr-only peer" /></FormControl>
-                            <Label className="flex flex-col items-center justify-center w-full p-6 rounded-xl border-2 cursor-pointer peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5 hover:border-primary/40 transition-all">
-                              <User className="h-8 w-8 mb-2 text-primary" />
-                              <span className="font-semibold">Myself</span>
-                              <span className="text-xs text-muted-foreground">Personal account</span>
-                            </Label>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
+                      <div className="grid grid-cols-2 gap-4">
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("child")}
+                          className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                            profileType === "child" 
+                              ? "border-primary bg-primary/5" 
+                              : "border-border hover:border-primary/40"
+                          }`}
+                          data-testid="button-profile-child"
+                        >
+                          <Baby className="h-8 w-8 mb-2 text-primary" />
+                          <span className="font-semibold text-foreground">A Child</span>
+                          <span className="text-xs text-muted-foreground">Custodial account</span>
+                          {profileType === "child" && <Check className="h-4 w-4 text-primary mt-2" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("personal")}
+                          className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 cursor-pointer transition-all ${
+                            profileType === "personal" 
+                              ? "border-primary bg-primary/5" 
+                              : "border-border hover:border-primary/40"
+                          }`}
+                          data-testid="button-profile-personal"
+                        >
+                          <User className="h-8 w-8 mb-2 text-primary" />
+                          <span className="font-semibold text-foreground">Myself</span>
+                          <span className="text-xs text-muted-foreground">Personal account</span>
+                          {profileType === "personal" && <Check className="h-4 w-4 text-primary mt-2" />}
+                        </button>
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -82,7 +95,7 @@ export default function Create() {
                   name="profileName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{form.watch("profileType") === "child" ? "Child's Name" : "Your Name"}</FormLabel>
+                      <FormLabel>{profileType === "child" ? "Child's Name" : "Your Name"}</FormLabel>
                       <FormControl><Input placeholder="First name" {...field} className="h-12" data-testid="input-profile-name" /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -94,7 +107,7 @@ export default function Create() {
                   name="guardianEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{form.watch("profileType") === "child" ? "Guardian Email" : "Your Email"}</FormLabel>
+                      <FormLabel>{profileType === "child" ? "Guardian Email" : "Your Email"}</FormLabel>
                       <FormControl><Input type="email" placeholder="you@example.com" {...field} className="h-12" data-testid="input-email" /></FormControl>
                       <FormMessage />
                     </FormItem>
@@ -107,27 +120,53 @@ export default function Create() {
                   render={({ field }) => (
                     <FormItem className="space-y-3">
                       <FormLabel className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Default Fund</FormLabel>
-                      <FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="space-y-3">
-                          <FormItem className="flex items-start space-x-4 space-y-0 rounded-xl border-2 p-4 cursor-pointer data-[state=checked]:border-primary data-[state=checked]:bg-primary/5 hover:border-primary/40 transition-all">
-                            <FormControl><RadioGroupItem value="future" className="mt-1" /></FormControl>
-                            <div className="space-y-1 flex-grow">
-                              <FormLabel className="font-semibold flex items-center gap-2">
-                                <TrendingUp className="h-4 w-4 text-primary" /> Future Fund
-                                <span className="text-[10px] font-bold uppercase text-primary bg-primary/10 px-2 py-0.5 rounded-full ml-2">Recommended</span>
-                              </FormLabel>
-                              <FormDescription>Gifts auto-invest into a diversified basket.</FormDescription>
-                            </div>
-                          </FormItem>
-                          <FormItem className="flex items-start space-x-4 space-y-0 rounded-xl border-2 p-4 cursor-pointer data-[state=checked]:border-primary data-[state=checked]:bg-primary/5 hover:border-primary/40 transition-all">
-                            <FormControl><RadioGroupItem value="seed" className="mt-1" /></FormControl>
-                            <div className="space-y-1 flex-grow">
-                              <FormLabel className="font-semibold flex items-center gap-2"><Sprout className="h-4 w-4 text-secondary" /> Seed</FormLabel>
-                              <FormDescription>Gifts are held. You decide where to invest later.</FormDescription>
-                            </div>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
+                      <div className="space-y-3">
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("future")}
+                          className={`w-full flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all text-left ${
+                            fundType === "future" 
+                              ? "border-primary bg-primary/5" 
+                              : "border-border hover:border-primary/40"
+                          }`}
+                          data-testid="button-fund-future"
+                        >
+                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
+                            fundType === "future" ? "bg-primary text-primary-foreground" : "bg-muted"
+                          }`}>
+                            <TrendingUp className="h-5 w-5" />
+                          </div>
+                          <div className="space-y-1 flex-grow">
+                            <p className="font-semibold flex items-center gap-2 text-foreground">
+                              Future Fund
+                              <span className="text-[10px] font-bold uppercase text-primary bg-primary/10 px-2 py-0.5 rounded-full">Recommended</span>
+                            </p>
+                            <p className="text-sm text-muted-foreground">Gifts auto-invest into a diversified basket.</p>
+                          </div>
+                          {fundType === "future" && <Check className="h-5 w-5 text-primary shrink-0" />}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => field.onChange("seed")}
+                          className={`w-full flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all text-left ${
+                            fundType === "seed" 
+                              ? "border-primary bg-primary/5" 
+                              : "border-border hover:border-primary/40"
+                          }`}
+                          data-testid="button-fund-seed"
+                        >
+                          <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
+                            fundType === "seed" ? "bg-primary text-primary-foreground" : "bg-muted"
+                          }`}>
+                            <Sprout className="h-5 w-5" />
+                          </div>
+                          <div className="space-y-1 flex-grow">
+                            <p className="font-semibold text-foreground">Seed</p>
+                            <p className="text-sm text-muted-foreground">Gifts are held. You decide where to invest later.</p>
+                          </div>
+                          {fundType === "seed" && <Check className="h-5 w-5 text-primary shrink-0" />}
+                        </button>
+                      </div>
                     </FormItem>
                   )}
                 />
