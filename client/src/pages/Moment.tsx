@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
-import { Leaf, DollarSign, Check, ArrowLeft, Shield, Zap, Clock, ChevronDown, Share2, MessageSquare, Printer } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Leaf, DollarSign, Check, ArrowLeft, Shield, Zap, Clock, ChevronDown, Share2, MessageSquare, Printer, TrendingUp, Sprout, Search, Star, Gift } from "lucide-react";
 import { Link } from "wouter";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,27 +25,43 @@ const MOMENT = {
 
 const AMOUNTS = ["54", "100", "180", "360"];
 
+const POPULAR_STOCKS = [
+  { symbol: "AAPL", name: "Apple", price: 178.50 },
+  { symbol: "DIS", name: "Disney", price: 112.30 },
+  { symbol: "COST", name: "Costco", price: 542.20 },
+  { symbol: "GOOGL", name: "Google", price: 141.80 },
+  { symbol: "AMZN", name: "Amazon", price: 178.25 },
+  { symbol: "MSFT", name: "Microsoft", price: 378.90 },
+];
+
 export default function Moment() {
   const [step, setStep] = useState(0);
+  const [giftType, setGiftType] = useState<"fund" | "stock">("fund");
   const [amount, setAmount] = useState("100");
   const [customAmount, setCustomAmount] = useState("");
+  const [selectedStock, setSelectedStock] = useState<typeof POPULAR_STOCKS[0] | null>(null);
+  const [stockShares, setStockShares] = useState("1");
   const [message, setMessage] = useState("");
   const [giverName, setGiverName] = useState("");
   const [showHow, setShowHow] = useState(false);
 
-  const finalAmount = customAmount || amount;
+  const finalAmount = giftType === "fund" 
+    ? (customAmount || amount) 
+    : selectedStock ? (Number(stockShares) * selectedStock.price).toFixed(2) : "0";
   const fee = (Number(finalAmount) * 0.029 + 0.30).toFixed(2);
   const total = (Number(finalAmount) + Number(fee)).toFixed(2);
   const progress = (MOMENT.raised / MOMENT.goal) * 100;
 
   const handleConfirm = () => {
-    toast({ title: "Gift sent!", description: `You've contributed $${finalAmount} to ${MOMENT.recipient}'s future.` });
+    const giftDesc = giftType === "stock" && selectedStock 
+      ? `${stockShares} share${Number(stockShares) > 1 ? "s" : ""} of ${selectedStock.name}`
+      : `$${finalAmount}`;
+    toast({ title: "Gift sent!", description: `You've contributed ${giftDesc} to ${MOMENT.recipient}'s future.` });
     setStep(2);
   };
 
   return (
     <div className="min-h-screen bg-background font-sans">
-      {/* Header */}
       <header className="p-4 border-b bg-card">
         <div className="container mx-auto flex justify-between items-center">
           <Link href="/">
@@ -69,38 +86,126 @@ export default function Moment() {
                 <p className="text-muted-foreground">{MOMENT.message}</p>
               </div>
 
-              {/* Amount selection */}
+              {/* Gift type tabs */}
               <Card className="border-none shadow-sm mb-4">
                 <CardContent className="p-6 space-y-5">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-muted-foreground">Select amount</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {AMOUNTS.map((val) => (
-                        <Button
-                          key={val}
-                          variant={amount === val && !customAmount ? "default" : "outline"}
-                          onClick={() => { setAmount(val); setCustomAmount(""); }}
-                          className="h-12 font-semibold"
-                          data-testid={`button-amount-${val}`}
-                        >
-                          ${val}
-                        </Button>
-                      ))}
-                    </div>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Custom amount"
-                        value={customAmount}
-                        onChange={(e) => setCustomAmount(e.target.value.replace(/[^0-9]/g, ""))}
-                        className="pl-9 h-12"
-                        data-testid="input-custom-amount"
-                      />
-                    </div>
-                  </div>
+                  <Tabs value={giftType} onValueChange={(v) => setGiftType(v as "fund" | "stock")}>
+                    <TabsList className="w-full grid grid-cols-2 mb-4">
+                      <TabsTrigger value="fund" className="text-sm">
+                        <TrendingUp className="mr-2 h-4 w-4" /> Contribute to Fund
+                      </TabsTrigger>
+                      <TabsTrigger value="stock" className="text-sm">
+                        <Gift className="mr-2 h-4 w-4" /> Gift a Stock
+                      </TabsTrigger>
+                    </TabsList>
 
-                  <Button onClick={() => setStep(1)} className="w-full h-12 text-base font-medium" data-testid="button-contribute">
-                    Contribute to {MOMENT.recipient}'s Future Fund
+                    <TabsContent value="fund" className="space-y-4">
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-muted-foreground">Select amount</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {AMOUNTS.map((val) => (
+                            <Button
+                              key={val}
+                              variant={amount === val && !customAmount ? "default" : "outline"}
+                              onClick={() => { setAmount(val); setCustomAmount(""); }}
+                              className="h-12 font-semibold"
+                              data-testid={`button-amount-${val}`}
+                            >
+                              ${val}
+                            </Button>
+                          ))}
+                        </div>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Custom amount"
+                            value={customAmount}
+                            onChange={(e) => setCustomAmount(e.target.value.replace(/[^0-9]/g, ""))}
+                            className="pl-9 h-12"
+                            data-testid="input-custom-amount"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/10">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-primary" />
+                          <div>
+                            <p className="text-sm font-medium">Future Fund</p>
+                            <p className="text-xs text-muted-foreground">Auto-invests into a diversified basket by end of day</p>
+                          </div>
+                        </div>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="stock" className="space-y-4">
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-muted-foreground">Choose a stock to gift</Label>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input placeholder="Search stocks..." className="pl-9 h-11" data-testid="input-search-stock" />
+                        </div>
+
+                        <p className="text-xs text-muted-foreground flex items-center gap-1"><Star className="h-3 w-3" /> Popular choices</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {POPULAR_STOCKS.map((stock) => (
+                            <button
+                              key={stock.symbol}
+                              onClick={() => setSelectedStock(stock)}
+                              className={`p-3 rounded-lg border text-left transition-all ${
+                                selectedStock?.symbol === stock.symbol
+                                  ? "border-primary bg-primary/5"
+                                  : "hover:border-primary/40"
+                              }`}
+                              data-testid={`button-stock-${stock.symbol}`}
+                            >
+                              <p className="font-semibold text-sm">{stock.symbol}</p>
+                              <p className="text-xs text-muted-foreground">{stock.name}</p>
+                              <p className="text-xs text-primary mt-1">${stock.price}</p>
+                            </button>
+                          ))}
+                        </div>
+
+                        {selectedStock && (
+                          <div className="space-y-2">
+                            <Label className="text-sm">Number of shares</Label>
+                            <div className="flex gap-2">
+                              {["1", "2", "5"].map((n) => (
+                                <Button
+                                  key={n}
+                                  variant={stockShares === n ? "default" : "outline"}
+                                  onClick={() => setStockShares(n)}
+                                  size="sm"
+                                >
+                                  {n} share{Number(n) > 1 ? "s" : ""}
+                                </Button>
+                              ))}
+                              <Input
+                                value={stockShares}
+                                onChange={(e) => setStockShares(e.target.value.replace(/[^0-9]/g, "") || "1")}
+                                className="w-20 h-9"
+                                data-testid="input-shares"
+                              />
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              = <span className="font-medium text-foreground">${(Number(stockShares) * selectedStock.price).toFixed(2)}</span>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+
+                  <Button 
+                    onClick={() => setStep(1)} 
+                    className="w-full h-12 text-base font-medium" 
+                    disabled={giftType === "stock" && !selectedStock}
+                    data-testid="button-contribute"
+                  >
+                    {giftType === "stock" && selectedStock 
+                      ? `Gift ${stockShares} ${selectedStock.symbol} share${Number(stockShares) > 1 ? "s" : ""}`
+                      : `Contribute $${customAmount || amount}`
+                    }
                   </Button>
 
                   {/* Trust strip */}
@@ -139,15 +244,15 @@ export default function Moment() {
                     <CardContent className="p-5 space-y-4 text-sm text-muted-foreground">
                       <div className="flex gap-3">
                         <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">1</div>
-                        <p>Your contribution goes directly to {MOMENT.recipient}'s fund, managed by the family.</p>
+                        <p><strong>Fund contribution:</strong> Your gift goes to {MOMENT.recipient}'s Future Fund and auto-invests into a diversified basket.</p>
                       </div>
                       <div className="flex gap-3">
                         <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">2</div>
-                        <p>It invests into a diversified Future Fund by end of day.</p>
+                        <p><strong>Stock gift:</strong> You can gift specific stocks (like Apple or Disney) directly to their portfolio.</p>
                       </div>
                       <div className="flex gap-3">
                         <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold text-primary shrink-0">3</div>
-                        <p>You'll receive a receipt instantly. Refunds available within 48 hours.</p>
+                        <p>You'll receive a receipt instantly. The family manages the account until {MOMENT.recipient} turns 18/21.</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -165,8 +270,18 @@ export default function Moment() {
               <Card className="border-none shadow-sm">
                 <CardContent className="p-6 space-y-5">
                   <div>
-                    <p className="font-semibold text-foreground mb-1">Contributing ${finalAmount}</p>
-                    <p className="text-sm text-muted-foreground">Your contribution becomes a long-term fund, managed by the family.</p>
+                    <p className="font-semibold text-foreground mb-1">
+                      {giftType === "stock" && selectedStock 
+                        ? `Gifting ${stockShares} ${selectedStock.name} share${Number(stockShares) > 1 ? "s" : ""}`
+                        : `Contributing $${finalAmount}`
+                      }
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {giftType === "stock" 
+                        ? "This stock will be added directly to their portfolio."
+                        : "Your contribution becomes part of their long-term fund."
+                      }
+                    </p>
                   </div>
 
                   <div className="space-y-4">
@@ -181,7 +296,12 @@ export default function Moment() {
                   </div>
 
                   <div className="rounded-lg bg-muted/50 p-4 space-y-2 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Gift</span><span className="font-medium">${finalAmount}</span></div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        {giftType === "stock" && selectedStock ? `${stockShares}x ${selectedStock.symbol}` : "Gift"}
+                      </span>
+                      <span className="font-medium">${finalAmount}</span>
+                    </div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Service fee</span><span className="font-medium">${fee}</span></div>
                     <hr className="border-border" />
                     <div className="flex justify-between"><span className="font-medium">Total</span><span className="font-semibold">${total}</span></div>
@@ -212,14 +332,24 @@ export default function Moment() {
                   
                   <div>
                     <p className="text-xl font-semibold text-foreground mb-1">Your card is ready</p>
-                    <p className="text-muted-foreground">You contributed ${finalAmount} to {MOMENT.recipient}'s future.</p>
+                    <p className="text-muted-foreground">
+                      {giftType === "stock" && selectedStock 
+                        ? `You gifted ${stockShares} ${selectedStock.name} share${Number(stockShares) > 1 ? "s" : ""} to ${MOMENT.recipient}.`
+                        : `You contributed $${finalAmount} to ${MOMENT.recipient}'s future.`
+                      }
+                    </p>
                   </div>
 
                   {/* Card preview */}
                   <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-6 text-left border border-primary/10">
                     <p className="text-sm text-muted-foreground mb-2">From {giverName || "Anonymous"}</p>
                     <p className="text-foreground">{message || `Mazel Tov, ${MOMENT.recipient}!`}</p>
-                    <p className="text-sm font-semibold text-primary mt-4">${finalAmount} contributed</p>
+                    <p className="text-sm font-semibold text-primary mt-4">
+                      {giftType === "stock" && selectedStock 
+                        ? `${stockShares} ${selectedStock.symbol} share${Number(stockShares) > 1 ? "s" : ""} gifted`
+                        : `$${finalAmount} contributed`
+                      }
+                    </p>
                   </div>
 
                   <div className="flex gap-2">

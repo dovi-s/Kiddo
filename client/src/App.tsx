@@ -11,6 +11,7 @@ import Give from "@/pages/Give";
 import Moment from "@/pages/Moment";
 import Recipient from "@/pages/Recipient";
 import Settings from "@/pages/Settings";
+import Onboard from "@/pages/Onboard";
 
 function Router() {
   return (
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/recipient" component={Recipient} />
       <Route path="/recipient/:id" component={Recipient} />
       <Route path="/settings" component={Settings} />
+      <Route path="/onboard" component={Onboard} />
       <Route component={NotFound} />
     </Switch>
   );

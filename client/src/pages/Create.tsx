@@ -29,7 +29,7 @@ export default function Create() {
 
   function onSubmit() {
     setIsLoading(true);
-    setTimeout(() => { setIsLoading(false); setLocation("/dashboard"); }, 1500);
+    setTimeout(() => { setIsLoading(false); setLocation("/onboard"); }, 1500);
   }
 
   const profileType = form.watch("profileType");
