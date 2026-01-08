@@ -427,7 +427,9 @@ export default function Dashboard() {
                                 <UserPlus className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                               </div>
                               <div>
-                                <p className="text-sm font-medium">Know someone planning a milestone?</p>
+                                <p className="text-sm font-medium">
+                                  {isPersonal ? "Know someone who'd benefit from Everleaf?" : "Know someone planning a milestone?"}
+                                </p>
                                 <p className="text-xs text-muted-foreground mt-0.5">Invite them to create a fund. You both get $10 in Everleaf credit.</p>
                               </div>
                             </div>
@@ -459,11 +461,16 @@ export default function Dashboard() {
       <Dialog open={showInvite} onOpenChange={setShowInvite}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold tracking-tight">Invite a parent</DialogTitle>
+            <DialogTitle className="text-lg font-semibold tracking-tight">
+              {isPersonal ? "Invite a friend" : "Invite a parent"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-6 pt-2">
             <p className="text-sm text-muted-foreground">
-              Know someone planning a birthday, graduation, or milestone? Send them Everleaf.
+              {isPersonal 
+                ? "Know someone who'd benefit from a long-term investment fund? Share Everleaf with them."
+                : "Know someone planning a birthday, graduation, or milestone? Send them Everleaf."
+              }
             </p>
 
             {/* Share link */}
