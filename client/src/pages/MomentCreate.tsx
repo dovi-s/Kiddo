@@ -260,27 +260,39 @@ export default function MomentCreate() {
 
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">Goal</Label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="grid grid-cols-5 gap-2">
                       {["500", "1000", "2500", "5000"].map((amt) => (
                         <Button
                           key={amt}
                           variant={goal === amt && !customGoal ? "default" : "outline"}
                           size="sm"
                           onClick={() => { setGoal(amt); setCustomGoal(""); }}
-                          className="h-9"
+                          className="h-10"
                         >
                           ${Number(amt).toLocaleString()}
                         </Button>
                       ))}
-                      <div className="flex-1 min-w-[100px]">
+                      <Button
+                        variant={goal === "custom" ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setGoal("custom")}
+                        className="h-10"
+                      >
+                        Custom
+                      </Button>
+                    </div>
+                    {goal === "custom" && (
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
                         <Input 
-                          placeholder="Custom" 
+                          placeholder="Enter amount" 
                           value={customGoal} 
-                          onChange={(e) => { setCustomGoal(e.target.value.replace(/[^0-9]/g, "")); setGoal("custom"); }}
-                          className="h-9"
+                          onChange={(e) => setCustomGoal(e.target.value.replace(/[^0-9]/g, ""))}
+                          className="h-11 pl-7 text-base"
+                          autoFocus
                         />
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   <div className="space-y-3">
