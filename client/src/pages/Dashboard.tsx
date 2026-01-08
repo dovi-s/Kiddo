@@ -45,6 +45,8 @@ export default function Dashboard() {
 
   const [showFull, setShowFull] = useState(false);
   const [brokerageOpen, setBrokerageOpen] = useState(false);
+  const [pageCreated, setPageCreated] = useState(false);
+  const [linkShared, setLinkShared] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showQR, setShowQR] = useState(false);
@@ -194,17 +196,49 @@ export default function Dashboard() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="flex items-center justify-between p-5 border rounded-lg opacity-60"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="h-8 w-8 rounded-full border flex items-center justify-center text-sm font-medium text-muted-foreground">
-                      3
+                  {brokerageOpen && !pageCreated ? (
+                    <div className="flex items-center justify-between p-5 border-2 border-foreground rounded-lg group hover:bg-foreground/[0.02] transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="h-8 w-8 rounded-full border-2 border-foreground flex items-center justify-center text-sm font-medium">
+                          3
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Create shareable page</p>
+                          <p className="text-xs text-muted-foreground">For events or always-on</p>
+                        </div>
+                      </div>
+                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                        <Button size="sm" onClick={() => setPageCreated(true)}>
+                          Create <ArrowRight className="ml-2 h-3 w-3" />
+                        </Button>
+                      </motion.div>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Create shareable page</p>
-                      <p className="text-xs text-muted-foreground">For events or always-on</p>
+                  ) : pageCreated ? (
+                    <div className="flex items-center justify-between p-5 border rounded-lg bg-foreground/[0.02]">
+                      <div className="flex items-center gap-4">
+                        <div className="h-8 w-8 rounded-full bg-foreground text-background flex items-center justify-center">
+                          <Check className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground line-through">Create shareable page</p>
+                          <p className="text-xs text-muted-foreground">everleaf.com/m/{profileName.toLowerCase().replace(/\s+/g, "-")}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-5 border rounded-lg opacity-60">
+                      <div className="flex items-center gap-4">
+                        <div className="h-8 w-8 rounded-full border flex items-center justify-center text-sm font-medium text-muted-foreground">
+                          3
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Create shareable page</p>
+                          <p className="text-xs text-muted-foreground">For events or always-on</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
 
                 {/* Step 4 */}
@@ -212,17 +246,59 @@ export default function Dashboard() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.4 }}
-                  className="flex items-center justify-between p-5 border rounded-lg opacity-60"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="h-8 w-8 rounded-full border flex items-center justify-center text-sm font-medium text-muted-foreground">
-                      4
+                  {pageCreated && !linkShared ? (
+                    <div className="flex items-center justify-between p-5 border-2 border-foreground rounded-lg group hover:bg-foreground/[0.02] transition-colors">
+                      <div className="flex items-center gap-4">
+                        <div className="h-8 w-8 rounded-full border-2 border-foreground flex items-center justify-center text-sm font-medium">
+                          4
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">Share with family</p>
+                          <p className="text-xs text-muted-foreground">Send your link</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button variant="outline" size="sm" onClick={() => setShowQR(true)}>
+                            <QrCode className="h-3 w-3 mr-2" /> QR
+                          </Button>
+                        </motion.div>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button size="sm" onClick={() => { handleCopy(); setLinkShared(true); }}>
+                            <Copy className="h-3 w-3 mr-2" /> Copy link
+                          </Button>
+                        </motion.div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Share with family</p>
-                      <p className="text-xs text-muted-foreground">Send your link</p>
+                  ) : linkShared ? (
+                    <div className="flex items-center justify-between p-5 border rounded-lg bg-foreground/[0.02]">
+                      <div className="flex items-center gap-4">
+                        <div className="h-8 w-8 rounded-full bg-foreground text-background flex items-center justify-center">
+                          <Check className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground line-through">Share with family</p>
+                          <p className="text-xs text-muted-foreground">Link copied!</p>
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowFull(true)}>
+                        Go to dashboard <ArrowRight className="ml-1 h-3 w-3" />
+                      </Button>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-5 border rounded-lg opacity-60">
+                      <div className="flex items-center gap-4">
+                        <div className="h-8 w-8 rounded-full border flex items-center justify-center text-sm font-medium text-muted-foreground">
+                          4
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Share with family</p>
+                          <p className="text-xs text-muted-foreground">Send your link</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
 
                 <motion.div 
