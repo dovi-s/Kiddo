@@ -1,10 +1,102 @@
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { Link } from "wouter";
 import { ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
+
+function GrowthCalculator() {
+  const [amount, setAmount] = useState(100);
+  const growth10 = Math.round(amount * Math.pow(1.07, 10));
+  const growth18 = Math.round(amount * Math.pow(1.07, 18));
+  
+  const maxHeight = 160;
+  const baseHeight = 40;
+  const height10 = baseHeight + ((growth10 / growth18) * (maxHeight - baseHeight));
+  const height18 = maxHeight;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5 }}
+      className="space-y-8"
+    >
+      {/* Slider */}
+      <div className="max-w-xs mx-auto space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Gift amount</span>
+          <motion.span 
+            key={amount}
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+            className="text-2xl font-semibold text-foreground"
+          >
+            ${amount}
+          </motion.span>
+        </div>
+        <Slider
+          value={[amount]}
+          onValueChange={(v) => setAmount(v[0])}
+          min={25}
+          max={500}
+          step={25}
+          className="w-full"
+        />
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>$25</span>
+          <span>$500</span>
+        </div>
+      </div>
+
+      {/* Bars */}
+      <div className="flex items-end justify-center gap-6 md:gap-10">
+        {[
+          { value: amount, label: "Today", height: baseHeight, color: "bg-emerald-100 dark:bg-emerald-900/30" },
+          { value: growth10, label: "10 years", height: height10, color: "bg-emerald-200 dark:bg-emerald-800/40" },
+          { value: growth18, label: "18 years", height: height18, color: "bg-emerald-300 dark:bg-emerald-700/50" },
+        ].map((bar, i) => (
+          <motion.div 
+            key={i}
+            className="text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: i * 0.1 }}
+          >
+            <motion.div 
+              className={`w-20 md:w-24 ${bar.color} rounded-t-lg flex items-end justify-center pb-3 transition-all duration-500 ease-out`}
+              style={{ height: bar.height }}
+              layout
+            >
+              <motion.span 
+                key={bar.value}
+                initial={{ opacity: 0.5 }}
+                animate={{ opacity: 1 }}
+                className="text-base font-semibold text-emerald-900 dark:text-emerald-100"
+              >
+                ${bar.value.toLocaleString()}
+              </motion.span>
+            </motion.div>
+            <p className="text-xs text-muted-foreground mt-2">{bar.label}</p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Multiplier */}
+      <motion.p 
+        key={growth18}
+        initial={{ opacity: 0.5 }}
+        animate={{ opacity: 1 }}
+        className="text-sm text-muted-foreground"
+      >
+        <span className="font-medium text-emerald-600 dark:text-emerald-400">{(growth18 / amount).toFixed(1)}×</span> growth over 18 years
+      </motion.p>
+    </motion.div>
+  );
+}
 
 function AnimatedNumber({ value, suffix = "" }: { value: number; suffix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -153,42 +245,19 @@ export default function Home() {
         </div>
       </section>
 
-      {/* The math */}
+      {/* The math - Interactive */}
       <section className="py-24 bg-card border-t">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <FadeIn>
               <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight mb-4">Time does the work.</h2>
-              <p className="text-muted-foreground mb-12">A birthday gift today becomes something real in the future.</p>
+              <p className="text-muted-foreground mb-12">See how a gift today becomes something real.</p>
             </FadeIn>
-            <div className="flex items-end justify-center gap-4 md:gap-8 mb-8">
-              {[
-                { height: "h-16", value: 500, label: "Today", opacity: "bg-foreground/10" },
-                { height: "h-28", value: 1200, label: "10 years", opacity: "bg-foreground/20" },
-                { height: "h-44", value: 2100, label: "18 years", opacity: "bg-foreground/30" },
-              ].map((bar, i) => (
-                <motion.div 
-                  key={i}
-                  className="text-center"
-                  initial={{ opacity: 0, scaleY: 0 }}
-                  whileInView={{ opacity: 1, scaleY: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.3 + i * 0.15, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                  style={{ originY: 1 }}
-                >
-                  <motion.div 
-                    className={`${bar.height} w-20 md:w-24 ${bar.opacity} rounded-t-lg flex items-end justify-center pb-2`}
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <span className="text-lg font-semibold text-foreground">${bar.value.toLocaleString()}</span>
-                  </motion.div>
-                  <p className="text-xs text-muted-foreground mt-2">{bar.label}</p>
-                </motion.div>
-              ))}
-            </div>
+            
+            <GrowthCalculator />
+            
             <FadeIn delay={0.6}>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto mt-8">
                 Hypothetical. 7% annual return. Past performance doesn't guarantee future results.
               </p>
             </FadeIn>
