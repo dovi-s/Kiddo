@@ -398,98 +398,147 @@ export default function Dashboard() {
                   ))}
                 </div>
 
-                {/* Active pages/moments */}
+                {/* Fund with Event Pages */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.35 }}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="font-semibold tracking-tight">Your pages</h2>
-                    <div className="flex items-center gap-2">
-                      {currentPlan === "family" && (
-                        <span className="text-xs text-muted-foreground">3 of 10 used</span>
-                      )}
-                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowPageSetup(true)}>
-                        <Plus className="h-3 w-3 mr-1" /> Add
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    {/* Main fund page */}
-                    <Link href={`/moment?name=${encodeURIComponent(profileName)}`}>
-                      <Card className="border hover:border-foreground/20 transition-colors cursor-pointer">
-                        <CardContent className="p-4 flex items-center justify-between">
+                  {/* Fund Card */}
+                  <Card className="border overflow-hidden">
+                    <CardContent className="p-0">
+                      {/* Fund Header */}
+                      <div className="p-4 border-b bg-foreground/[0.02]">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                            <div className="h-12 w-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-lg font-semibold text-emerald-700 dark:text-emerald-300">
                               {profileName.charAt(0)}
                             </div>
                             <div>
-                              <p className="text-sm font-medium">{pageTitle || `${profileName}'s Fund`}</p>
-                              <p className="text-xs text-muted-foreground">Active · 18 contributors</p>
+                              <p className="font-semibold">{profileName}'s Fund</p>
+                              <p className="text-xs text-muted-foreground">18 contributors · $4,250 total</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Live</span>
-                            <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                          <div className="text-right">
+                            <p className="text-lg font-semibold">$4,250</p>
+                            <p className="text-xs text-emerald-600">+12.5%</p>
                           </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
+                        </div>
+                      </div>
 
-                    {/* Additional pages for Plus/Family */}
-                    {currentPlan !== "free" && (
-                      <>
-                        <Card className="border hover:border-foreground/20 transition-colors cursor-pointer">
-                          <CardContent className="p-4 flex items-center justify-between">
+                      {/* Event Pages within this Fund */}
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Event Pages</p>
+                          <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setShowPageSetup(true)}>
+                            <Plus className="h-3 w-3 mr-1" /> Add event
+                          </Button>
+                        </div>
+                        <div className="space-y-2">
+                          {/* Always-on page */}
+                          <Link href={`/moment?name=${encodeURIComponent(profileName)}`}>
+                            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors cursor-pointer">
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-lg bg-foreground/5 flex items-center justify-center">
+                                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">Always Open</p>
+                                  <p className="text-xs text-muted-foreground">$2,180 · 12 gifts</p>
+                                </div>
+                              </div>
+                              <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Live</span>
+                            </div>
+                          </Link>
+
+                          {/* Birthday event */}
+                          <div className="flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors cursor-pointer">
                             <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-sm font-medium text-amber-700 dark:text-amber-300">
+                              <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-sm">
                                 🎂
                               </div>
                               <div>
-                                <p className="text-sm font-medium">{profileName}'s 6th Birthday</p>
-                                <p className="text-xs text-muted-foreground">Event · March 15, 2026</p>
+                                <p className="text-sm font-medium">5th Birthday</p>
+                                <p className="text-xs text-muted-foreground">$1,420 · 8 gifts · Dec 2025</p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">Upcoming</span>
-                              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          </CardContent>
-                        </Card>
+                            <span className="text-xs px-2 py-1 rounded-full bg-foreground/10 text-muted-foreground">Closed</span>
+                          </div>
 
-                        {currentPlan === "family" && (
-                          <Card className="border hover:border-foreground/20 transition-colors cursor-pointer">
-                            <CardContent className="p-4 flex items-center justify-between">
+                          {/* Upcoming event */}
+                          <div className="flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors cursor-pointer">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-sm">
+                                🎓
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">Kindergarten Graduation</p>
+                                <p className="text-xs text-muted-foreground">$650 · 4 gifts · May 2026</p>
+                              </div>
+                            </div>
+                            <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">Upcoming</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Second Fund - Family plan only */}
+                  {currentPlan === "family" && (
+                    <Card className="border overflow-hidden mt-4">
+                      <CardContent className="p-0">
+                        <div className="p-4 border-b bg-foreground/[0.02]">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="h-12 w-12 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-lg font-semibold text-violet-700 dark:text-violet-300">
+                                M
+                              </div>
+                              <div>
+                                <p className="font-semibold">Maya's Fund</p>
+                                <p className="text-xs text-muted-foreground">6 contributors · $1,850 total</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-semibold">$1,850</p>
+                              <p className="text-xs text-emerald-600">+8.2%</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Event Pages</p>
+                            <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setShowPageSetup(true)}>
+                              <Plus className="h-3 w-3 mr-1" /> Add event
+                            </Button>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors cursor-pointer">
                               <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-sm font-medium text-violet-700 dark:text-violet-300">
-                                  M
+                                <div className="h-8 w-8 rounded-lg bg-foreground/5 flex items-center justify-center">
+                                  <Sparkles className="h-4 w-4 text-muted-foreground" />
                                 </div>
                                 <div>
-                                  <p className="text-sm font-medium">Maya's Fund</p>
-                                  <p className="text-xs text-muted-foreground">Active · 6 contributors</p>
+                                  <p className="text-sm font-medium">Always Open</p>
+                                  <p className="text-xs text-muted-foreground">$1,850 · 6 gifts</p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Live</span>
-                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            </CardContent>
-                          </Card>
-                        )}
-                      </>
-                    )}
+                              <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Live</span>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                    {/* Add new prompt for free users */}
-                    {currentPlan === "free" && (
-                      <Card className="border border-dashed hover:border-foreground/30 transition-colors cursor-pointer" onClick={() => setShowPageSetup(true)}>
-                        <CardContent className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
-                          <Plus className="h-4 w-4" />
-                          <span className="text-sm">Create event page</span>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </div>
+                  {/* Add Fund - Family plan */}
+                  {currentPlan === "family" && (
+                    <Card className="border border-dashed mt-4 hover:border-foreground/30 transition-colors cursor-pointer">
+                      <CardContent className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
+                        <Plus className="h-4 w-4" />
+                        <span className="text-sm">Add another child's fund</span>
+                      </CardContent>
+                    </Card>
+                  )}
                 </motion.div>
 
                 {/* Holdings */}
