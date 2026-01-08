@@ -29,7 +29,8 @@ export default function Create() {
 
   function onSubmit() {
     setIsLoading(true);
-    setTimeout(() => { setIsLoading(false); setLocation("/onboard"); }, 1500);
+    const type = form.getValues("profileType");
+    setTimeout(() => { setIsLoading(false); setLocation(`/onboard?type=${type}`); }, 1500);
   }
 
   const profileType = form.watch("profileType");

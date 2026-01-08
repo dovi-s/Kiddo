@@ -4,18 +4,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Leaf, ArrowRight, ArrowLeft, Check, Shield, User, Calendar, MapPin, FileText, Loader2, CheckCircle2 } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { Leaf, ArrowRight, ArrowLeft, Check, Shield, User, Calendar, MapPin, FileText, Loader2, CheckCircle2, Baby } from "lucide-react";
+import { Link, useLocation, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 
-const STEPS = [
-  { id: "guardian", label: "Your info" },
-  { id: "child", label: "Child info" },
-  { id: "identity", label: "Verify identity" },
-  { id: "review", label: "Review" },
-];
-
 export default function Onboard() {
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const accountType = params.get("type") || "child";
+  const isPersonal = accountType === "personal";
+
+  const STEPS = isPersonal
+    ? [
+        { id: "personal", label: "Your info" },
+        { id: "identity", label: "Verify identity" },
+        { id: "review", label: "Review" },
+      ]
+    : [
+        { id: "guardian", label: "Your info" },
+        { id: "child", label: "Child info" },
+        { id: "identity", label: "Verify identity" },
+        { id: "review", label: "Review" },
+      ];
+
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [, setLocation] = useLocation();
@@ -33,6 +44,7 @@ export default function Onboard() {
   };
 
   const progress = ((step + 1) / STEPS.length) * 100;
+  const currentStepId = STEPS[step]?.id;
 
   return (
     <div className="min-h-screen bg-background font-sans">
@@ -44,7 +56,9 @@ export default function Onboard() {
               <span className="font-semibold">Everleaf</span>
             </a>
           </Link>
-          <p className="text-sm text-muted-foreground">Open custodial account</p>
+          <p className="text-sm text-muted-foreground">
+            {isPersonal ? "Open personal account" : "Open custodial account"}
+          </p>
         </div>
       </header>
 
@@ -60,16 +74,21 @@ export default function Onboard() {
         </div>
 
         <AnimatePresence mode="wait">
-          {step === 0 && (
-            <motion.div key="guardian" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+          {/* Personal or Guardian Info */}
+          {(currentStepId === "guardian" || currentStepId === "personal") && (
+            <motion.div key="info" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <Card className="border-none shadow-sm">
                 <CardContent className="p-6 space-y-5">
                   <div className="text-center mb-6">
                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                       <User className="h-6 w-6 text-primary" />
                     </div>
-                    <h2 className="text-xl font-semibold">Guardian information</h2>
-                    <p className="text-sm text-muted-foreground">Required to open a custodial account</p>
+                    <h2 className="text-xl font-semibold">
+                      {isPersonal ? "Your information" : "Guardian information"}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {isPersonal ? "Required to open your brokerage account" : "Required to open a custodial account"}
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
@@ -102,13 +121,14 @@ export default function Onboard() {
             </motion.div>
           )}
 
-          {step === 1 && (
+          {/* Child Info - only for custodial */}
+          {currentStepId === "child" && (
             <motion.div key="child" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <Card className="border-none shadow-sm">
                 <CardContent className="p-6 space-y-5">
                   <div className="text-center mb-6">
                     <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                      <Calendar className="h-6 w-6 text-primary" />
+                      <Baby className="h-6 w-6 text-primary" />
                     </div>
                     <h2 className="text-xl font-semibold">Child information</h2>
                     <p className="text-sm text-muted-foreground">The beneficiary of the custodial account</p>
@@ -149,7 +169,8 @@ export default function Onboard() {
             </motion.div>
           )}
 
-          {step === 2 && (
+          {/* Identity Verification */}
+          {currentStepId === "identity" && (
             <motion.div key="identity" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <Card className="border-none shadow-sm">
                 <CardContent className="p-6 space-y-5">
@@ -198,7 +219,8 @@ export default function Onboard() {
             </motion.div>
           )}
 
-          {step === 3 && (
+          {/* Review */}
+          {currentStepId === "review" && (
             <motion.div key="review" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <Card className="border-none shadow-sm">
                 <CardContent className="p-6 space-y-5">
@@ -207,25 +229,33 @@ export default function Onboard() {
                       <CheckCircle2 className="h-6 w-6 text-primary" />
                     </div>
                     <h2 className="text-xl font-semibold">Review & confirm</h2>
-                    <p className="text-sm text-muted-foreground">You're opening a UTMA custodial account</p>
+                    <p className="text-sm text-muted-foreground">
+                      {isPersonal ? "You're opening a personal brokerage account" : "You're opening a UTMA custodial account"}
+                    </p>
                   </div>
 
                   <div className="space-y-4">
                     <div className="p-4 rounded-xl bg-muted/50">
-                      <p className="text-xs text-muted-foreground mb-1">Guardian</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {isPersonal ? "Account holder" : "Guardian"}
+                      </p>
                       <p className="font-medium">Sarah Miller</p>
                       <p className="text-sm text-muted-foreground">sarah@example.com</p>
                     </div>
 
-                    <div className="p-4 rounded-xl bg-muted/50">
-                      <p className="text-xs text-muted-foreground mb-1">Beneficiary</p>
-                      <p className="font-medium">Ari Miller</p>
-                      <p className="text-sm text-muted-foreground">Minor (UTMA)</p>
-                    </div>
+                    {!isPersonal && (
+                      <div className="p-4 rounded-xl bg-muted/50">
+                        <p className="text-xs text-muted-foreground mb-1">Beneficiary</p>
+                        <p className="font-medium">Ari Miller</p>
+                        <p className="text-sm text-muted-foreground">Minor (UTMA)</p>
+                      </div>
+                    )}
 
                     <div className="p-4 rounded-xl bg-muted/50">
                       <p className="text-xs text-muted-foreground mb-1">Account type</p>
-                      <p className="font-medium">Custodial brokerage (UTMA)</p>
+                      <p className="font-medium">
+                        {isPersonal ? "Personal brokerage" : "Custodial brokerage (UTMA)"}
+                      </p>
                       <p className="text-sm text-muted-foreground">Cleared by Apex • SIPC insured</p>
                     </div>
                   </div>
@@ -234,7 +264,7 @@ export default function Onboard() {
                     <p>By continuing, you agree to:</p>
                     <ul className="space-y-1 ml-4 list-disc">
                       <li><a href="#" className="text-primary hover:underline">Account Agreement</a></li>
-                      <li><a href="#" className="text-primary hover:underline">UTMA Disclosure</a></li>
+                      {!isPersonal && <li><a href="#" className="text-primary hover:underline">UTMA Disclosure</a></li>}
                       <li><a href="#" className="text-primary hover:underline">Privacy Policy</a></li>
                     </ul>
                   </div>
