@@ -39,9 +39,9 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
             </>
           ) : (
             <>
-              <Link href="/#how" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <a href="/#how" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 How it works
-              </Link>
+              </a>
               <Link href="/moment" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Send a gift
               </Link>
@@ -77,7 +77,7 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                 </>
               ) : (
                 <>
-                  <Link href="/#how" onClick={() => setIsOpen(false)} className="font-medium">How it works</Link>
+                  <a href="/#how" onClick={() => setIsOpen(false)} className="font-medium">How it works</a>
                   <Link href="/moment" onClick={() => setIsOpen(false)} className="font-medium">Send a gift</Link>
                   <hr />
                   <Link href="/dashboard" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
