@@ -3,10 +3,11 @@ import { Nav } from "@/components/layout/Nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, QrCode, Copy, MessageSquare, Check, ArrowRight, Settings, ExternalLink, TrendingUp, UserPlus, X } from "lucide-react";
+import { Plus, QrCode, Copy, MessageSquare, Check, ArrowRight, Settings, ExternalLink, TrendingUp, UserPlus, X, Download } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
+import { QRCodeSVG } from "qrcode.react";
 
 const HOLDINGS = [
   { name: "Total Stock Market", ticker: "VTI", value: 2125, percent: 50, change: "+12.4%" },
@@ -46,10 +47,12 @@ export default function Dashboard() {
   const [brokerageOpen, setBrokerageOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showQR, setShowQR] = useState(false);
   const [inviteCopied, setInviteCopied] = useState(false);
   const [thankYousSent, setThankYousSent] = useState(false);
 
   const inviteLink = "everleaf.com/invite/abc123";
+  const momentLink = `https://everleaf.com/m/${encodeURIComponent(profileName.toLowerCase().replace(/\s+/g, "-"))}`;
 
   const handleCopy = () => {
     setCopied(true);
@@ -266,7 +269,7 @@ export default function Dashboard() {
                   {[
                     { icon: ExternalLink, label: "Preview", href: `/moment?name=${encodeURIComponent(profileName)}` },
                     { icon: Copy, label: copied ? "Copied!" : "Copy link", onClick: handleCopy },
-                    { icon: QrCode, label: "QR code" },
+                    { icon: QrCode, label: "QR code", onClick: () => setShowQR(true) },
                   ].map((action, i) => (
                     <motion.div 
                       key={i}
@@ -492,10 +495,14 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* QR placeholder */}
+            {/* QR code */}
             <div className="flex justify-center">
-              <div className="w-32 h-32 bg-foreground/[0.03] border rounded-lg flex items-center justify-center">
-                <QrCode className="h-16 w-16 text-muted-foreground/30" />
+              <div className="p-4 bg-white rounded-lg border">
+                <QRCodeSVG 
+                  value={`https://${inviteLink}`}
+                  size={120}
+                  level="M"
+                />
               </div>
             </div>
 
@@ -505,6 +512,42 @@ export default function Dashboard() {
                 You both get <span className="font-semibold">$10 in Everleaf credit</span> when their fund receives its first gift.
               </p>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Code Modal for sharing moment page */}
+      <Dialog open={showQR} onOpenChange={setShowQR}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold tracking-tight">Share {profileName}'s page</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-2">
+            <p className="text-sm text-muted-foreground text-center">
+              Scan to open the contribution page
+            </p>
+
+            {/* QR code */}
+            <div className="flex justify-center">
+              <div className="p-6 bg-white rounded-xl border shadow-sm">
+                <QRCodeSVG 
+                  value={momentLink}
+                  size={180}
+                  level="H"
+                  includeMargin={false}
+                />
+              </div>
+            </div>
+
+            {/* Link */}
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground break-all">{momentLink}</p>
+            </div>
+
+            {/* Download hint */}
+            <p className="text-xs text-muted-foreground text-center">
+              Screenshot to save, or print for your event
+            </p>
           </div>
         </DialogContent>
       </Dialog>
