@@ -32,7 +32,7 @@ export default function Create() {
     const type = form.getValues("profileType");
     const name = encodeURIComponent(form.getValues("profileName"));
     const email = encodeURIComponent(form.getValues("email"));
-    setTimeout(() => { setIsLoading(false); setLocation(`/onboard?type=${type}&name=${name}&email=${email}`); }, 1500);
+    setTimeout(() => { setIsLoading(false); setLocation(`/dashboard?type=${type}&name=${name}&email=${email}`); }, 1500);
   }
 
   const profileType = form.watch("profileType");

@@ -36,7 +36,7 @@ export default function Onboard() {
       setIsSubmitting(true);
       setTimeout(() => {
         setIsSubmitting(false);
-        setLocation("/dashboard");
+        setLocation(`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName)}`);
       }, 2000);
     } else {
       setStep(step + 1);

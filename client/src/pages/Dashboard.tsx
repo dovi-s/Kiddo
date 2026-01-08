@@ -3,10 +3,10 @@ import { Nav } from "@/components/layout/Nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, QrCode, Copy, Users, Gift, MessageSquare, TrendingUp, Check, ExternalLink, PieChart, Shield, CheckCircle2, Clock, ArrowUpRight, ArrowRight, Landmark, Sparkles, Share2, Circle } from "lucide-react";
+import { Plus, QrCode, Copy, Users, Gift, MessageSquare, TrendingUp, Check, ExternalLink, PieChart, Shield, CheckCircle2, Clock, ArrowUpRight, ArrowRight, Landmark, Sparkles, Share2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { motion } from "framer-motion";
 
 const ONBOARDING_STEPS = [
@@ -50,6 +50,12 @@ const ACTIVITY = [
 ];
 
 export default function Dashboard() {
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const accountType = params.get("type") || "child";
+  const profileName = params.get("name") || (accountType === "personal" ? "Your" : "Ari");
+  const isPersonal = accountType === "personal";
+
   const [isNewUser, setIsNewUser] = useState(true);
   const [steps, setSteps] = useState(ONBOARDING_STEPS);
   
@@ -137,11 +143,13 @@ export default function Dashboard() {
               <Card className="border-2 border-dashed border-primary/30 bg-primary/5 mb-8">
                 <CardContent className="p-6 text-center">
                   <Landmark className="h-10 w-10 text-primary mx-auto mb-3" />
-                  <p className="font-semibold text-foreground mb-1">Connect a brokerage to start receiving gifts</p>
-                  <p className="text-sm text-muted-foreground mb-4">Open a custodial account in 2 minutes. SIPC insured.</p>
-                  <Link href="/onboard">
+                  <p className="font-semibold text-foreground mb-1">Open a brokerage to start receiving gifts</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {isPersonal ? "Open a personal brokerage" : "Open a custodial account"} in 2 minutes. SIPC insured.
+                  </p>
+                  <Link href={`/onboard?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
                     <Button onClick={() => completeStep("brokerage")}>
-                      Connect brokerage <ArrowRight className="ml-2 h-4 w-4" />
+                      Open brokerage <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
                 </CardContent>
