@@ -1183,128 +1183,134 @@ export default function Dashboard() {
 
       {/* Beautiful Share Card Modal */}
       <Dialog open={showShareCard} onOpenChange={setShowShareCard}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
-          <div className="p-6 text-center">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="mb-4"
-            >
-              <span className="text-4xl">🎉</span>
-            </motion.div>
-            <h2 className="text-xl font-semibold mb-2">Your event page is ready!</h2>
-            <p className="text-sm text-muted-foreground mb-6">Share this beautiful card with friends and family</p>
-          </div>
-
-          {/* The Shareable Card */}
-          <div className="px-6 pb-6">
-            <div 
-              id="share-card"
-              className={`rounded-2xl overflow-hidden shadow-xl ${
-                selectedEventType === "birthday" ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-100" :
-                selectedEventType === "graduation" ? "bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-100" :
-                selectedEventType === "bar_mitzvah" ? "bg-gradient-to-br from-indigo-50 via-indigo-100 to-violet-100" :
-                selectedEventType === "wedding" ? "bg-gradient-to-br from-rose-50 via-rose-100 to-pink-100" :
-                selectedEventType === "baby" ? "bg-gradient-to-br from-yellow-50 via-amber-100 to-orange-100" :
-                selectedEventType === "baptism" ? "bg-gradient-to-br from-sky-50 via-sky-100 to-blue-100" :
-                selectedEventType === "quinceañera" ? "bg-gradient-to-br from-fuchsia-50 via-fuchsia-100 to-purple-100" :
-                selectedEventType === "holiday" ? "bg-gradient-to-br from-green-50 via-emerald-100 to-teal-100" :
-                "bg-gradient-to-br from-gray-50 via-gray-100 to-slate-100"
-              }`}
-            >
-              {/* Card Header */}
-              <div className="p-6 pb-4 text-center">
-                <span className="text-5xl block mb-4">
-                  {selectedEventType === "birthday" ? "🎂" :
-                   selectedEventType === "graduation" ? "🎓" :
-                   selectedEventType === "bar_mitzvah" ? "✡️" :
-                   selectedEventType === "wedding" ? "💒" :
-                   selectedEventType === "baby" ? "👶" :
-                   selectedEventType === "baptism" ? "✝️" :
-                   selectedEventType === "quinceañera" ? "👑" :
-                   selectedEventType === "holiday" ? "🎄" : "✨"}
-                </span>
-                <h3 className="text-2xl font-bold text-gray-900 mb-1">
-                  {pageTitle || `${profileName}'s ${
-                    selectedEventType === "birthday" ? "Birthday" :
-                    selectedEventType === "graduation" ? "Graduation" :
-                    selectedEventType === "bar_mitzvah" ? "Bar Mitzvah" :
-                    selectedEventType === "wedding" ? "Wedding" :
-                    selectedEventType === "baby" ? "Baby Shower" :
-                    selectedEventType === "baptism" ? "Baptism" :
-                    selectedEventType === "quinceañera" ? "Quinceañera" :
-                    selectedEventType === "holiday" ? "Holiday Gift" : "Special Day"
-                  }`}
-                </h3>
-                {eventDate && (
-                  <p className="text-sm text-gray-600">{new Date(eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                )}
+        <DialogContent className="max-w-sm p-0 overflow-hidden border-0 shadow-2xl">
+          {/* The Printable Card */}
+          <div 
+            id="share-card"
+            className="bg-white"
+          >
+            {/* Colored Header Band */}
+            <div className={`h-3 ${
+              selectedEventType === "birthday" ? "bg-gradient-to-r from-pink-400 to-rose-400" :
+              selectedEventType === "graduation" ? "bg-gradient-to-r from-blue-400 to-indigo-400" :
+              selectedEventType === "bar_mitzvah" ? "bg-gradient-to-r from-indigo-400 to-violet-400" :
+              selectedEventType === "wedding" ? "bg-gradient-to-r from-rose-300 to-pink-300" :
+              selectedEventType === "baby" ? "bg-gradient-to-r from-yellow-300 to-amber-300" :
+              selectedEventType === "baptism" ? "bg-gradient-to-r from-sky-300 to-blue-300" :
+              selectedEventType === "quinceañera" ? "bg-gradient-to-r from-fuchsia-400 to-purple-400" :
+              selectedEventType === "holiday" ? "bg-gradient-to-r from-green-400 to-emerald-400" :
+              "bg-gradient-to-r from-gray-300 to-slate-300"
+            }`} />
+            
+            {/* Content */}
+            <div className="p-8 text-center">
+              {/* Emoji */}
+              <div className="text-6xl mb-4">
+                {selectedEventType === "birthday" ? "🎂" :
+                 selectedEventType === "graduation" ? "🎓" :
+                 selectedEventType === "bar_mitzvah" ? "✡️" :
+                 selectedEventType === "wedding" ? "💒" :
+                 selectedEventType === "baby" ? "👶" :
+                 selectedEventType === "baptism" ? "✝️" :
+                 selectedEventType === "quinceañera" ? "👑" :
+                 selectedEventType === "holiday" ? "🎄" : "✨"}
               </div>
-
-              {/* QR Code Section */}
-              <div className="px-6 pb-6">
-                <div className="bg-white rounded-xl p-6 shadow-sm">
-                  <div className="flex justify-center mb-4">
-                    <QRCodeSVG 
-                      value={momentLink}
-                      size={140}
-                      level="H"
-                      includeMargin={false}
-                    />
-                  </div>
-                  <p className="text-center text-sm font-medium text-gray-900 mb-1">
-                    Scan to give a gift
-                  </p>
-                  <p className="text-center text-xs text-gray-500">
-                    Your gift becomes a long-term investment
-                  </p>
-                </div>
+              
+              {/* Title */}
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                {pageTitle || `${profileName}'s ${
+                  selectedEventType === "birthday" ? "Birthday" :
+                  selectedEventType === "graduation" ? "Graduation" :
+                  selectedEventType === "bar_mitzvah" ? "Bar Mitzvah" :
+                  selectedEventType === "wedding" ? "Wedding" :
+                  selectedEventType === "baby" ? "Baby Shower" :
+                  selectedEventType === "baptism" ? "Baptism" :
+                  selectedEventType === "quinceañera" ? "Quinceañera" :
+                  selectedEventType === "holiday" ? "Holiday Gift" : "Special Day"
+                }`}
+              </h2>
+              
+              {/* Date */}
+              {eventDate && (
+                <p className="text-gray-500 mb-6">
+                  {new Date(eventDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </p>
+              )}
+              {!eventDate && <div className="mb-6" />}
+              
+              {/* QR Code */}
+              <div className="inline-block p-4 bg-gray-50 rounded-2xl mb-4">
+                <QRCodeSVG 
+                  value={momentLink}
+                  size={160}
+                  level="H"
+                  includeMargin={false}
+                />
               </div>
-
-              {/* Footer */}
-              <div className="px-6 pb-6">
-                <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                  <span className="font-semibold text-gray-700">everleaf</span>
-                  <span>·</span>
-                  <span>Gifts that grow</span>
-                </div>
+              
+              {/* CTA */}
+              <p className="text-lg font-semibold text-gray-900 mb-1">
+                Scan to give a gift
+              </p>
+              <p className="text-sm text-gray-500 mb-6">
+                Gifts become investments that grow over time
+              </p>
+              
+              {/* Link */}
+              <div className="px-4 py-2 bg-gray-100 rounded-lg inline-block">
+                <p className="text-xs font-mono text-gray-600">
+                  everleaf.com/m/{profileName.toLowerCase().replace(/\s+/g, "-")}
+                </p>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="px-8 pb-6 text-center">
+              <div className="flex items-center justify-center gap-1.5 text-gray-400">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" />
+                </svg>
+                <span className="text-sm font-medium">everleaf</span>
               </div>
             </div>
           </div>
-
-          {/* Actions */}
-          <div className="p-6 pt-0 space-y-3">
+          
+          {/* Actions - outside printable area */}
+          <div className="p-4 bg-gray-50 border-t space-y-2">
             <div className="grid grid-cols-3 gap-2">
               <Button 
                 variant="outline" 
-                className="flex-col h-auto py-3"
+                size="sm"
+                className="bg-white"
                 onClick={() => {
                   navigator.clipboard.writeText(momentLink);
                   toast({ title: "Link copied!" });
                 }}
               >
-                <Copy className="h-4 w-4 mb-1" />
-                <span className="text-xs">Copy Link</span>
+                <Copy className="h-4 w-4 mr-1.5" />
+                Copy
               </Button>
               <Button 
                 variant="outline" 
-                className="flex-col h-auto py-3"
+                size="sm"
+                className="bg-white"
                 onClick={() => {
                   if (navigator.share) {
                     navigator.share({ title: pageTitle || `${profileName}'s Gift Fund`, url: momentLink });
                   }
                 }}
               >
-                <ExternalLink className="h-4 w-4 mb-1" />
-                <span className="text-xs">Share</span>
+                <ExternalLink className="h-4 w-4 mr-1.5" />
+                Share
               </Button>
               <Button 
                 variant="outline" 
-                className="flex-col h-auto py-3"
+                size="sm"
+                className="bg-white"
                 onClick={() => window.print()}
               >
-                <Download className="h-4 w-4 mb-1" />
-                <span className="text-xs">Print</span>
+                <Download className="h-4 w-4 mr-1.5" />
+                Print
               </Button>
             </div>
             <Button 
