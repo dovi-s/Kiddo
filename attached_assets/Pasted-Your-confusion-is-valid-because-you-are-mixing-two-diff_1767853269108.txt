@@ -1,0 +1,192 @@
+Your confusion is valid because you are mixing two different “numbers”:
+
+Gift volume (how much money moves through the platform)
+
+Everleaf revenue (what you keep)
+
+In your scenario, gift volume is huge ($100k/month), but your revenue is small because you are charging a small take rate and also waiving fees on paid events up to a cap.
+
+1) Re-stating your scenario in plain English
+
+1,000 gifts/month
+
+average gift $100
+
+so $100,000/month is contributed into funds
+
+5 events/month total
+
+80% of that volume is on Free
+
+Everleaf does not get to keep $100k. That money belongs to the recipients’ accounts.
+
+2) What Everleaf actually earns (with the model we locked)
+On Free
+
+You earn 1.5% platform fee (capped at $10 per gift) on the gift amount.
+
+Free gift volume: 80% of $100k = $80,000
+Everleaf revenue from Free gifts: 1.5% × $80,000 = $1,200/month
+
+Stripe’s 2.9% + $0.30 is paid by the giver as a processing fee. You do not keep it.
+
+On Plus (one paid event)
+
+Event volume: 20% of $100k = $20,000
+
+Plus plan fee: $79 per event
+
+Plus includes “waive platform fees” on the first $7,500 of that event.
+So you only charge the 0.75% platform fee on the amount above $7,500.
+
+Amount above cap: $20,000 − $7,500 = $12,500
+0.75% of that: $93.75
+
+Everleaf revenue from that Plus event:
+$79 + $93.75 = $172.75/month
+
+Total Everleaf revenue per month
+
+$1,200 + $172.75 = $1,372.75/month
+
+That’s the number I gave.
+
+3) Is that “enough”?
+
+For your scale goal, no. For this exact scenario, it is absolutely not enough.
+
+Why:
+
+1,000 gifts/month sounds big, but it is not big enough to support a heavy fintech stack.
+
+Your revenue per gift in this scenario is:
+
+$1,372.75 / 1,000 = $1.37 per gift on average.
+
+If your all-in variable cost per gift is even $0.50 to $1.00 once you include support, fraud, ID checks (amortized), and brokerage program fees, you are not building a durable margin.
+
+So either:
+
+your scenario is too small for this model, or
+
+the model needs more capture.
+
+4) The right target economics for a $5B version
+
+You want to be in a world where:
+
+Average revenue per gift: $2.50 to $5.00 blended
+
+or Average revenue per event: $75 to $200+ blended
+
+plus meaningful recurring + Family plan adoption
+
+Your scenario currently yields:
+
+Revenue per event: $1,372.75 / 5 = $275 per event total across all events, but that’s misleading because it’s spread over 1,000 gifts.
+
+Revenue per gift: $1.37
+
+5) How to fix it without hurting conversion
+
+You have 4 levers. Use 2, not all 4.
+
+Lever A: Increase platform fee slightly on Free
+
+Change Free platform fee from 1.5% cap $10 to:
+
+2.0% cap $12
+
+Impact on your scenario:
+Free revenue becomes 2.0% × $80,000 = $1,600 (up from $1,200)
+Net +$400/mo
+
+This is a small change and still feels fair.
+
+Lever B: Reprice Plus and Family upward (you underpriced them)
+
+Plus at $79/event is likely too low if you are delivering “fee-free for guests” tooling, premium templates, and support expectations.
+
+Suggested:
+
+Plus: $99 per event
+
+Family: $199 per year (or $149 if you want a softer entry)
+
+That’s where premium registry products live.
+
+Impact on your scenario:
+Plus plan goes from $79 to $99 = +$20/mo (small in your mix)
+Family doesn’t matter unless adoption increases.
+
+The real reason to raise price: in real life, paid adoption will be higher than 20% of volume if the value is real.
+
+Lever C: Tighten the “waiver cap” economics
+
+Waiving platform fees on the first $7,500 is generous.
+
+If you want safety:
+
+Plus waiver cap becomes $5,000 (instead of $7,500)
+
+Family waiver cap becomes $10,000/year (instead of $15,000)
+
+This increases revenue on large events while preserving the marketing promise.
+
+Lever D: Drive ACH usage for larger gifts
+
+This improves your economics because:
+
+fewer chargebacks,
+
+lower processing burden,
+
+better reliability.
+
+You do this via UX:
+
+“$250+? Save fees with bank transfer.”
+
+6) What I would lock as “best” right now
+
+If you want a safer, more profitable default without killing conversion:
+
+Free
+
+Platform fee: 2.0% cap $12
+
+Guests pay processing
+
+Plus
+
+$99 per event
+
+Platform fee waived up to $5,000
+
+Over cap: 1.0% platform fee
+
+Host covers processing when fee-free is enabled
+
+Family
+
+$199 per year
+
+Waived up to $10,000/year
+
+Over: 1.0%
+
+This gives you materially better revenue per gift and more insurance against brokerage minimums.
+
+7) The key point: your scenario is too small to judge $5B viability
+
+A $5B version is not “1,000 gifts/month.” It is:
+
+millions of gifts/month
+
+heavy recurring gifting
+
+multi-event households
+
+and either a subscription base or a meaningful take-rate
+
+In other words: the model works at scale, but you still need pricing that survives early-stage minimums and fixed costs.

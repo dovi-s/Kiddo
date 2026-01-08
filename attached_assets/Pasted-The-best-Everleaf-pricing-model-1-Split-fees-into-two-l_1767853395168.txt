@@ -1,0 +1,239 @@
+The best Everleaf pricing model
+1) Split fees into two lines everywhere
+
+At checkout, show two explicit line items:
+
+Card processing (pass-through, at cost)
+
+Everleaf service fee (your revenue)
+
+This solves the “are we making money?” confusion and builds trust.
+
+2) The core pricing engine
+A) Giver-paid (default, best conversion)
+Card / Apple Pay / Google Pay
+
+Card processing: pass-through (what Stripe charges you)
+
+Everleaf service fee: 2.0% (cap $12)
+
+Bank transfer (ACH)
+
+Bank transfer fee: small flat pass-through (or $0 if you subsidize later)
+
+Everleaf service fee: 1.0% (cap $12)
+
+Why this is the best default:
+
+Simple and transparent
+
+You are profitable on the core action (gifting)
+
+You naturally push larger gifts to ACH without forcing it
+
+B) Fee-free gifting (host chooses to cover)
+
+When “Fee-free for guests” is ON:
+
+Guest sees $0 fees
+
+Host pays:
+
+processing at cost
+
+Everleaf service fee depends on plan and caps (below)
+
+This is what hosts actually want for weddings and big events.
+
+3) Host plans that people understand and love
+Free
+
+$0
+
+Unlimited funds (Always-on Family Fund)
+
+Unlimited event pages (Birthday, Bar Mitzvah, Graduation, Wedding)
+
+Templates, QR, gift page, basic thank-you list
+
+Default: guests pay fees
+
+Optional: host can cover fees on a per-event basis (but no discounts)
+
+Free is your viral engine. It is also profitable because giver-paid gifts include your service fee.
+
+Plus (per event)
+
+$99 per event
+For one big milestone where hosts want a premium feel and fee-free guests.
+
+Includes:
+
+Fee-free for guests toggle
+
+Premium templates + matching thank-you cards
+
+Address capture
+
+Auto thank-you drafts
+
+Privacy controls (hide amounts publicly)
+
+Economics when fee-free is ON:
+
+Everleaf service fee waived on first $5,000 of gift volume
+
+After $5,000: 1.0% Everleaf service fee
+
+Host pays processing at cost the whole time
+
+Why this is the right shape:
+
+Hosts feel they “bought” the fee-free experience
+
+Your downside is capped
+
+Large events still generate margin
+
+Family (annual household)
+
+$199 per year
+For families with multiple kids and years of events.
+
+Includes:
+
+Up to 10 events/year
+
+Household dashboard (multiple kids)
+
+Recurring gifting management (grandparents love this)
+
+Everything in Plus
+
+Economics when fee-free is ON:
+
+Everleaf service fee waived on first $10,000/year gift volume
+
+After $10,000: 1.0% Everleaf service fee
+
+Host pays processing at cost
+
+Why Family is the $5B move:
+
+It turns “a one-time registry” into “the default gifting layer for life”
+
+4) Recurring gifts: the compounding machine
+
+Give recurring a small incentive that feels generous:
+
+If a gift is recurring, reduce Everleaf service fee by 0.5%
+
+Card recurring: 2.0% becomes 1.5%
+
+ACH recurring: 1.0% becomes 0.5%
+
+You will make more money long-term because recurring retention is the real moat.
+
+5) The “cashapp for stocks” idea: keep it out of v1
+
+Do not add peer-to-peer “pay friends in stock” early. It adds:
+
+heavy compliance edge cases
+
+fraud and chargebacks
+
+muddled positioning
+
+Everleaf wins by being the gifting and life-event layer, not general payments.
+
+6) Brokerage economics: treat as upside, not survival
+
+Do not build a model that requires brokerage revenue share to survive.
+
+Assume brokerage economics are upside:
+
+cash sweep revenue share
+
+referral or program revenue
+
+long-term AUM-linked take
+
+Great if you get it. Never rely on it early.
+
+7) The missing piece that makes this feel premium: “Gift Artifacts”
+
+People do not love finance. They love the gift feeling.
+
+Include:
+
+beautiful digital card reveal (always)
+
+printable folded card template (always)
+
+optional physical keepsake upsells (high-margin):
+
+Printed card mailed: $7.99
+
+Framed certificate: $29
+
+“Memory capsule” (photos + notes timeline): $19/event
+
+These do not hurt conversion because they happen after checkout.
+
+8) How this stays profitable at scale
+
+Your cost drivers at scale are:
+
+payments disputes and fraud
+
+support
+
+brokerage program minimums and servicing costs
+
+trade execution and batching logic
+
+This model protects you because:
+
+Free gifts always carry a service fee
+
+Fee-free gifts shift payment costs to hosts
+
+Waiver caps prevent runaway costs on paid plans
+
+Large events still generate service fee above caps
+
+9) The pricing page copy structure (clean, non-fintech)
+
+Use three cards, one sentence each:
+
+Free
+Create a fund in minutes. Guests cover fees.
+
+Plus
+$99 per event. Make gifting fee-free for guests.
+
+Family
+$199 per year. Multiple kids and milestones, one home base.
+
+Then one plain-language drawer:
+“How fees work”
+
+Card processing is pass-through.
+
+Everleaf service fee powers the platform, support, and gifting features.
+
+Hosts can choose fee-free for guests on Plus or Family.
+
+10) What I’d lock in now
+
+Giver-paid default
+
+Everleaf service fee: 2.0% cap $12 (card), 1.0% cap $12 (ACH)
+
+Plus: $99/event, waive to $5k, then 1.0%
+
+Family: $199/year, waive to $10k/year, then 1.0%
+
+Recurring: reduce Everleaf fee by 0.5%
+
+Brokerage revenue share treated as upside

@@ -151,10 +151,9 @@ export default function Home() {
                   <p className="text-sm text-muted-foreground mt-1">Guests pay fees at checkout</p>
                 </div>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Unlimited fund links</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Up to 3 event pages</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Basic templates + QR</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Thank-you export</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Unlimited funds + events</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Templates, QR, gift pages</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Thank-you list export</li>
                 </ul>
                 <Link href="/create">
                   <Button variant="outline" className="w-full">Get started</Button>
@@ -168,12 +167,12 @@ export default function Home() {
               <CardContent className="p-6 space-y-4">
                 <div>
                   <h3 className="font-semibold text-lg">Plus</h3>
-                  <p className="text-3xl font-semibold mt-2">$79 <span className="text-base font-normal text-muted-foreground">per event</span></p>
-                  <p className="text-sm text-muted-foreground mt-1">Guests pay $0 fees</p>
+                  <p className="text-3xl font-semibold mt-2">$99 <span className="text-base font-normal text-muted-foreground">per event</span></p>
+                  <p className="text-sm text-muted-foreground mt-1">Fee-free for guests</p>
                 </div>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Host covers processing</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Everleaf fee waived to $7,500</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Guests see $0 fees</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Service fee waived to $5k</li>
                   <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Premium templates + cards</li>
                   <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Auto thank-you drafts</li>
                 </ul>
@@ -188,14 +187,14 @@ export default function Home() {
               <CardContent className="p-6 space-y-4">
                 <div>
                   <h3 className="font-semibold text-lg">Family</h3>
-                  <p className="text-3xl font-semibold mt-2">$129 <span className="text-base font-normal text-muted-foreground">per year</span></p>
-                  <p className="text-sm text-muted-foreground mt-1">Guests pay $0 on all events</p>
+                  <p className="text-3xl font-semibold mt-2">$199 <span className="text-base font-normal text-muted-foreground">per year</span></p>
+                  <p className="text-sm text-muted-foreground mt-1">Multiple kids, one home base</p>
                 </div>
                 <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Up to 10 event pages/year</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Everleaf fee waived to $15k</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Up to 10 events/year</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Service fee waived to $10k/yr</li>
                   <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Household dashboard</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Multiple kids + funds</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Recurring gift management</li>
                 </ul>
                 <Link href="/create">
                   <Button variant="outline" className="w-full">Choose Family</Button>
@@ -204,9 +203,10 @@ export default function Home() {
             </Card>
           </div>
 
-          <p className="text-center text-xs text-muted-foreground mt-8 max-w-xl mx-auto">
-            Gift fees: Card 2.9% + $0.30 + 1.5% platform (capped $10). Bank transfer $1 + 1% (capped $10). Recurring gifts get reduced platform fees.
-          </p>
+          <div className="text-center text-xs text-muted-foreground mt-8 max-w-xl mx-auto space-y-1">
+            <p><strong>How fees work:</strong> Card processing is pass-through. Everleaf service fee powers the platform.</p>
+            <p>Card: processing + 2.0% service (cap $12). Bank: 1.0% service (cap $12). Recurring: −0.5%.</p>
+          </div>
         </div>
       </section>
 

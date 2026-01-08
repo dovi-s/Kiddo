@@ -176,7 +176,7 @@ export default function Settings() {
                   <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Current</span>
                 </div>
                 <p className="text-xs text-muted-foreground">Guests pay fees at checkout</p>
-                <p className="text-xs text-muted-foreground">2.9% + $0.30 (card) + 1.5% platform fee (capped at $10)</p>
+                <p className="text-xs text-muted-foreground">Card processing (pass-through) + 2.0% service fee (cap $12)</p>
               </div>
 
               <div className="space-y-3">
@@ -185,25 +185,26 @@ export default function Settings() {
                 <div className="p-4 rounded-xl border hover:border-primary/50 transition-colors">
                   <div className="flex items-center justify-between mb-1">
                     <p className="font-semibold text-sm">Plus</p>
-                    <p className="font-semibold text-sm">$79 <span className="text-muted-foreground font-normal text-xs">per event</span></p>
+                    <p className="font-semibold text-sm">$99 <span className="text-muted-foreground font-normal text-xs">per event</span></p>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2">Guests pay $0 fees. Premium templates. Auto thank-yous.</p>
+                  <p className="text-xs text-muted-foreground mb-2">Fee-free for guests. Premium templates. Auto thank-yous.</p>
                   <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• Guests see $0 fees</li>
+                    <li>• Service fee waived up to $5,000</li>
                     <li>• Host covers processing at cost</li>
-                    <li>• Everleaf fee waived up to $7,500</li>
                   </ul>
                 </div>
 
                 <div className="p-4 rounded-xl border hover:border-primary/50 transition-colors">
                   <div className="flex items-center justify-between mb-1">
                     <p className="font-semibold text-sm">Family</p>
-                    <p className="font-semibold text-sm">$129 <span className="text-muted-foreground font-normal text-xs">per year</span></p>
+                    <p className="font-semibold text-sm">$199 <span className="text-muted-foreground font-normal text-xs">per year</span></p>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2">Multiple kids and events. Guests pay $0 on all.</p>
+                  <p className="text-xs text-muted-foreground mb-2">Multiple kids, one home base. Fee-free on all events.</p>
                   <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• Up to 10 event pages per year</li>
-                    <li>• Everleaf fee waived up to $15,000/year</li>
-                    <li>• Household dashboard</li>
+                    <li>• Up to 10 events per year</li>
+                    <li>• Service fee waived up to $10,000/year</li>
+                    <li>• Household dashboard + recurring management</li>
                   </ul>
                 </div>
               </div>
