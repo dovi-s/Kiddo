@@ -165,68 +165,61 @@ export default function Home() {
       {/* Pricing */}
       <section className="py-24 border-t" id="pricing">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-4 text-center">Pricing</h2>
-            <p className="text-muted-foreground text-center mb-12">Free to create. Transparent fees.</p>
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-16 text-center">Pricing</h2>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card className="border shadow-none">
-                <CardContent className="p-6 space-y-4">
-                  <div>
-                    <h3 className="font-semibold">Free</h3>
-                    <p className="text-3xl font-semibold mt-2">$0</p>
-                    <p className="text-sm text-muted-foreground mt-1">Guests pay fees</p>
-                  </div>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Unlimited funds</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Unlimited events</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> All templates</li>
-                  </ul>
+            <div className="space-y-6">
+              {/* Free */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between p-6 border rounded-lg">
+                <div className="mb-4 md:mb-0">
+                  <h3 className="font-semibold text-lg">Free</h3>
+                  <p className="text-muted-foreground text-sm mt-1">Create unlimited funds. Share with anyone. Contributors pay a small fee at checkout.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <p className="text-2xl font-semibold">$0</p>
                   <Link href="/create">
-                    <Button variant="outline" className="w-full">Get started</Button>
+                    <Button variant="outline">Get started</Button>
                   </Link>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card className="border-2 border-foreground shadow-none">
-                <CardContent className="p-6 space-y-4">
-                  <div>
-                    <h3 className="font-semibold">Plus</h3>
-                    <p className="text-3xl font-semibold mt-2">$99</p>
-                    <p className="text-sm text-muted-foreground mt-1">per event · fee-free for guests</p>
+              {/* Plus */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between p-6 border-2 border-foreground rounded-lg">
+                <div className="mb-4 md:mb-0">
+                  <h3 className="font-semibold text-lg">Plus</h3>
+                  <p className="text-muted-foreground text-sm mt-1">For big events. You cover fees so guests contribute the full amount. Premium templates included.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-2xl font-semibold">$99</p>
+                    <p className="text-xs text-muted-foreground">per event</p>
                   </div>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Guests see $0</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Service fee waived to $5k</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Premium templates</li>
-                  </ul>
                   <Link href="/create">
-                    <Button className="w-full">Choose Plus</Button>
+                    <Button>Choose Plus</Button>
                   </Link>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card className="border shadow-none">
-                <CardContent className="p-6 space-y-4">
-                  <div>
-                    <h3 className="font-semibold">Family</h3>
-                    <p className="text-3xl font-semibold mt-2">$199</p>
-                    <p className="text-sm text-muted-foreground mt-1">per year · up to 10 events</p>
+              {/* Family */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between p-6 border rounded-lg">
+                <div className="mb-4 md:mb-0">
+                  <h3 className="font-semibold text-lg">Family</h3>
+                  <p className="text-muted-foreground text-sm mt-1">Multiple children, up to 10 events per year. One dashboard for the whole household.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-2xl font-semibold">$199</p>
+                    <p className="text-xs text-muted-foreground">per year</p>
                   </div>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Multiple children</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Household dashboard</li>
-                    <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Recurring gifts</li>
-                  </ul>
                   <Link href="/create">
-                    <Button variant="outline" className="w-full">Choose Family</Button>
+                    <Button variant="outline">Choose Family</Button>
                   </Link>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
-            <p className="text-center text-xs text-muted-foreground mt-8">
-              Card processing is pass-through. Everleaf service fee: 2% (cap $12). Bank transfer: 1% (cap $12).
+            <p className="text-center text-xs text-muted-foreground mt-10">
+              Free tier: guests pay ~3% at checkout. Plus/Family: you cover processing, we waive our fee on the first $5k–$10k.
             </p>
           </div>
         </div>
