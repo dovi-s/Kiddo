@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { Nav } from "@/components/layout/Nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Plus, QrCode, Copy, MessageSquare, Check, ArrowRight, Settings, ExternalLink, TrendingUp, UserPlus, X, Download, Sparkles, Crown, Users } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,7 +54,10 @@ export default function Dashboard() {
   const [showInvite, setShowInvite] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showPageSetup, setShowPageSetup] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<"free" | "plus" | "family">("free");
+  const [pageTitle, setPageTitle] = useState("");
+  const [pageMessage, setPageMessage] = useState("");
   const [inviteCopied, setInviteCopied] = useState(false);
   const [thankYousSent, setThankYousSent] = useState(false);
 
@@ -210,13 +216,11 @@ export default function Dashboard() {
                           <p className="text-xs text-muted-foreground">For events or always-on</p>
                         </div>
                       </div>
-                      <Link href={`/create?type=${accountType}&name=${encodeURIComponent(profileName)}&step=page`}>
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                          <Button size="sm">
-                            Create <ArrowRight className="ml-2 h-3 w-3" />
-                          </Button>
-                        </motion.div>
-                      </Link>
+                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                        <Button size="sm" onClick={() => setShowPageSetup(true)}>
+                          Set up <ArrowRight className="ml-2 h-3 w-3" />
+                        </Button>
+                      </motion.div>
                     </div>
                   ) : pageCreated ? (
                     <div className="flex items-center justify-between p-5 border rounded-lg bg-foreground/[0.02]">
@@ -683,6 +687,65 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground text-center">
               Print for your party or share directly
             </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Page Setup Modal */}
+      <Dialog open={showPageSetup} onOpenChange={setShowPageSetup}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold tracking-tight">Set up your page</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              Create a shareable page where friends and family can contribute.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5 pt-2">
+            <div className="space-y-2">
+              <Label className="text-sm">Page title</Label>
+              <Input 
+                placeholder={isPersonal ? "My Future Fund" : `${profileName}'s Birthday`}
+                value={pageTitle}
+                onChange={(e) => setPageTitle(e.target.value)}
+                className="h-11"
+              />
+              <p className="text-xs text-muted-foreground">
+                e.g., "Ari's 5th Birthday", "Graduation Fund", "Baby Shower"
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Welcome message <span className="text-muted-foreground">(optional)</span></Label>
+              <Textarea 
+                placeholder="A message for your guests..."
+                value={pageMessage}
+                onChange={(e) => setPageMessage(e.target.value)}
+                className="min-h-[80px] resize-none"
+              />
+            </div>
+
+            <div className="p-4 rounded-lg bg-foreground/[0.03] border">
+              <p className="text-xs text-muted-foreground mb-2">Your page will be at:</p>
+              <p className="text-sm font-mono text-foreground">
+                everleaf.com/m/{profileName.toLowerCase().replace(/\s+/g, "-")}
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" className="flex-1" onClick={() => setShowPageSetup(false)}>
+                Cancel
+              </Button>
+              <Button 
+                className="flex-1" 
+                onClick={() => { 
+                  setPageCreated(true); 
+                  setShowPageSetup(false);
+                  toast({ title: "Page created", description: "Your shareable page is ready." });
+                }}
+              >
+                Create page
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
