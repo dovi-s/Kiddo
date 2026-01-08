@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { Nav } from "@/components/layout/Nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, QrCode, Copy, MessageSquare, Check, ArrowRight, Settings, ExternalLink, TrendingUp } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, QrCode, Copy, MessageSquare, Check, ArrowRight, Settings, ExternalLink, TrendingUp, UserPlus, X } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "@/hooks/use-toast";
 
 const HOLDINGS = [
   { name: "Total Stock Market", ticker: "VTI", value: 2125, percent: 50, change: "+12.4%" },
@@ -43,10 +45,26 @@ export default function Dashboard() {
   const [showFull, setShowFull] = useState(false);
   const [brokerageOpen, setBrokerageOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [thankYousSent, setThankYousSent] = useState(false);
+
+  const inviteLink = "everleaf.com/invite/abc123";
 
   const handleCopy = () => {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleInviteCopy = () => {
+    setInviteCopied(true);
+    toast({ title: "Link copied", description: "Share it with someone planning a milestone." });
+    setTimeout(() => setInviteCopied(false), 2000);
+  };
+
+  const handleSendThankYous = () => {
+    setThankYousSent(true);
+    toast({ title: "Thank-yous sent", description: "Your contributors have been notified." });
   };
 
   const contributions = [
@@ -71,11 +89,23 @@ export default function Dashboard() {
                 {!showFull ? "Let's set up your account." : "18 contributors · Active"}
               </p>
             </div>
-            <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
-              <Button variant="ghost" size="icon" className="hover:bg-foreground/5">
-                <Settings className="h-4 w-4" />
-              </Button>
-            </Link>
+            <div className="flex items-center gap-1">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="hover:bg-foreground/5"
+                  onClick={() => setShowInvite(true)}
+                >
+                  <UserPlus className="h-4 w-4" />
+                </Button>
+              </motion.div>
+              <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
+                <Button variant="ghost" size="icon" className="hover:bg-foreground/5">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Onboarding */}
@@ -368,14 +398,53 @@ export default function Dashboard() {
                           <MessageSquare className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">3 thank-yous ready</p>
-                          <p className="text-xs text-muted-foreground">Drafts generated from messages</p>
+                          <p className="text-sm font-medium">{thankYousSent ? "Thank-yous sent" : "3 thank-yous ready"}</p>
+                          <p className="text-xs text-muted-foreground">{thankYousSent ? "Your contributors have been notified" : "Drafts generated from messages"}</p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Send all</Button>
+                      {!thankYousSent && (
+                        <Button variant="outline" size="sm" onClick={handleSendThankYous}>Send all</Button>
+                      )}
+                      {thankYousSent && <Check className="h-5 w-5 text-green-600" />}
                     </CardContent>
                   </Card>
                 </motion.div>
+
+                {/* Post thank-you invite prompt - only shows after sending */}
+                <AnimatePresence>
+                  {thankYousSent && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Card className="border border-dashed">
+                        <CardContent className="p-5">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3">
+                              <div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                                <UserPlus className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">Know someone planning a milestone?</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Invite them to create a fund. You both get $10 in Everleaf credit.</p>
+                              </div>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-xs"
+                              onClick={() => setShowInvite(true)}
+                            >
+                              Invite
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <p className="text-xs text-muted-foreground text-center pt-4">
                   Brokerage by [Broker-Dealer], Member FINRA/SIPC. Clearing by Apex.
@@ -385,6 +454,53 @@ export default function Dashboard() {
           </AnimatePresence>
         </motion.div>
       </main>
+
+      {/* Invite Modal */}
+      <Dialog open={showInvite} onOpenChange={setShowInvite}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold tracking-tight">Invite a parent</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Know someone planning a birthday, graduation, or milestone? Send them Everleaf.
+            </p>
+
+            {/* Share link */}
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">Your invite link</p>
+              <div className="flex gap-2">
+                <div className="flex-1 p-3 bg-foreground/[0.03] border rounded-md text-sm font-mono truncate">
+                  {inviteLink}
+                </div>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button 
+                    variant={inviteCopied ? "default" : "outline"} 
+                    size="icon"
+                    onClick={handleInviteCopy}
+                  >
+                    {inviteCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </motion.div>
+              </div>
+            </div>
+
+            {/* QR placeholder */}
+            <div className="flex justify-center">
+              <div className="w-32 h-32 bg-foreground/[0.03] border rounded-lg flex items-center justify-center">
+                <QrCode className="h-16 w-16 text-muted-foreground/30" />
+              </div>
+            </div>
+
+            {/* Incentive */}
+            <div className="p-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30">
+              <p className="text-sm text-emerald-800 dark:text-emerald-200 text-center">
+                You both get <span className="font-semibold">$10 in Everleaf credit</span> when their fund receives its first gift.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
