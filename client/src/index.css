@@ -40,42 +40,42 @@
 }
 
 :root {
-  /* Everleaf Design Tokens - Premium, Calm, Trusted */
-  --background: 210 20% 98%;  /* Paper */
-  --foreground: 220 25% 10%; /* Ink 950 */
+  /* Everleaf Design Tokens - Premium, Calm, Established */
+  --background: 40 20% 98%;  /* Warm paper */
+  --foreground: 220 15% 12%; /* Deep ink */
 
-  --card: 0 0% 100%;
-  --card-foreground: 220 25% 10%;
+  --card: 40 15% 99%;
+  --card-foreground: 220 15% 12%;
 
   /* Evergreen - Primary Accent */
-  --primary: 160 60% 30%;
+  --primary: 158 45% 28%;
   --primary-foreground: 0 0% 100%;
 
   /* Secondary - Soft */
-  --secondary: 210 15% 96%;
-  --secondary-foreground: 220 25% 10%;
+  --secondary: 40 10% 96%;
+  --secondary-foreground: 220 15% 12%;
 
   /* Muted */
-  --muted: 210 15% 96%;
-  --muted-foreground: 215 15% 45%;
+  --muted: 40 10% 96%;
+  --muted-foreground: 220 10% 46%;
 
   /* Accent */
-  --accent: 160 40% 95%;
-  --accent-foreground: 160 60% 25%;
+  --accent: 158 30% 94%;
+  --accent-foreground: 158 45% 24%;
 
   /* Destructive */
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
 
   /* Borders */
-  --border: 214 20% 91%;
-  --input: 214 20% 91%;
-  --ring: 160 60% 30%;
+  --border: 40 15% 90%;
+  --input: 40 15% 90%;
+  --ring: 158 45% 28%;
 
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 
   /* Chart */
-  --chart-1: 160 60% 30%;
+  --chart-1: 158 45% 28%;
   --chart-2: 35 90% 55%;
   --chart-3: 200 80% 50%;
   --chart-4: 280 65% 55%;
@@ -115,9 +115,16 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   h1, h2, h3, h4 {
     @apply tracking-tight font-semibold;
+    letter-spacing: -0.02em;
+  }
+  h1 {
+    letter-spacing: -0.03em;
   }
 }
 

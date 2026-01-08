@@ -43,13 +43,9 @@ export default function Create() {
       <Nav />
       
       <main className="container mx-auto px-4 py-12 max-w-md">
-        <div className="text-center mb-8">
+        <div className="text-center mb-10">
           <h1 className="text-2xl font-semibold text-foreground mb-2">Create a fund</h1>
-          <p className="text-muted-foreground mb-4">Set up in 2 minutes. Free to create.</p>
-          <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-primary" /> SIPC protected</span>
-            <span className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> No minimums</span>
-          </div>
+          <p className="text-muted-foreground">Two minutes. Free to start.</p>
         </div>
 
         <Card className="border-none shadow-sm">
