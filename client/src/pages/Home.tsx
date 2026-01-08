@@ -2,7 +2,7 @@ import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ArrowRight, Shield, Zap, Clock, Check } from "lucide-react";
+import { ArrowRight, Shield, Zap, Clock, Check, TrendingUp, Quote } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -12,24 +12,29 @@ export default function Home() {
       <Nav />
       
       {/* Hero */}
-      <section className="relative pt-16 pb-24 md:pt-24 md:pb-32 overflow-hidden">
-        <div className="container mx-auto px-4">
+      <section className="relative pt-16 pb-20 md:pt-24 md:pb-28 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+        <div className="container mx-auto px-4 relative">
           <motion.div 
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="max-w-2xl mx-auto text-center space-y-6"
           >
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.1] text-foreground tracking-tight">
-              A gift they'll still have in 10 years.
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-2">
+              <TrendingUp className="h-4 w-4" />
+              $2.4M+ gifted to families
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.08] text-foreground tracking-tight">
+              A gift they'll still have<br className="hidden sm:block" /> in 10 years.
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto">
-              Create a page. Friends and family contribute in under a minute. It becomes a long-term fund.
+              Create a page. Friends and family contribute in under a minute. It becomes a long-term investment fund.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
               <Link href="/create">
-                <Button size="lg" className="h-12 px-8 text-base font-medium" data-testid="button-create-fund">
-                  Create a fund
+                <Button size="lg" className="h-12 px-8 text-base font-medium shadow-lg shadow-primary/20" data-testid="button-create-fund">
+                  Create a fund <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/moment">
@@ -41,11 +46,40 @@ export default function Home() {
 
             {/* Trust strip */}
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 pt-6 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> No account required</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> Apple Pay</span>
-              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> Instant receipt</span>
+              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> No account needed</span>
+              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> Apple Pay ready</span>
+              <span className="flex items-center gap-1.5"><Check className="h-4 w-4 text-primary" /> SIPC protected</span>
             </div>
           </motion.div>
+        </div>
+      </section>
+      
+      {/* Testimonials */}
+      <section className="py-12 border-t">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {[
+              { quote: "My son's birthday gifts used to disappear in a week. Now they're growing for his future.", name: "Sarah M.", context: "Mother of 2" },
+              { quote: "I gave at a friend's baby shower. Took 30 seconds. The parents loved it.", name: "Michael R.", context: "Gift contributor" },
+              { quote: "We use it for every birthday and holiday now. The grandparents are obsessed.", name: "Jennifer K.", context: "Family plan user" },
+            ].map((t, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 12 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="p-5 rounded-xl bg-card border"
+              >
+                <Quote className="h-5 w-5 text-primary/40 mb-3" />
+                <p className="text-sm text-foreground leading-relaxed mb-4">"{t.quote}"</p>
+                <div>
+                  <p className="font-medium text-sm text-foreground">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.context}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -75,22 +109,36 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Social proof */}
-      <section className="py-16 border-t">
+      {/* Growth visualization */}
+      <section className="py-16 border-t bg-gradient-to-b from-card to-background">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center max-w-3xl mx-auto">
+          <div className="max-w-2xl mx-auto text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">Small gifts, big futures</h2>
+            <p className="text-muted-foreground">See how birthday gifts can grow over time.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 md:gap-8 max-w-xl mx-auto">
             {[
-              { value: "10,000+", label: "Families" },
-              { value: "$2.4M", label: "Contributed" },
-              { value: "SIPC", label: "Insured" },
-              { value: "< 1 min", label: "To give" },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className="text-2xl md:text-3xl font-semibold text-foreground">{stat.value}</p>
-                <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-              </div>
+              { year: "Today", amount: "$500", desc: "Birthday gifts" },
+              { year: "10 years", amount: "$1,200", desc: "7% avg return" },
+              { year: "18 years", amount: "$2,100", desc: "Ready for them" },
+            ].map((item, i) => (
+              <motion.div 
+                key={item.year}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                transition={{ delay: i * 0.1 }}
+                viewport={{ once: true }}
+                className="text-center p-4 md:p-6 rounded-xl bg-card border"
+              >
+                <p className="text-xs text-muted-foreground mb-1">{item.year}</p>
+                <p className="text-xl md:text-2xl font-semibold text-foreground">{item.amount}</p>
+                <p className="text-xs text-muted-foreground mt-1">{item.desc}</p>
+              </motion.div>
             ))}
           </div>
+          <p className="text-center text-xs text-muted-foreground mt-6 max-w-md mx-auto">
+            Hypothetical example. Actual returns vary. Past performance doesn't guarantee future results.
+          </p>
         </div>
       </section>
 
@@ -99,14 +147,25 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">For every milestone</h2>
-            <p className="text-muted-foreground">Beautiful pages for any occasion.</p>
+            <p className="text-muted-foreground">Beautiful pages for birthdays, bar mitzvahs, graduations, and more.</p>
           </div>
 
           <div className="flex flex-wrap justify-center gap-3 max-w-2xl mx-auto">
-            {["Birthday", "Bar Mitzvah", "Graduation", "Wedding", "Baby", "Just Because"].map((template) => (
-              <span key={template} className="px-4 py-2 rounded-full bg-background border text-sm font-medium text-foreground">
-                {template}
-              </span>
+            {[
+              { name: "Birthday", emoji: "🎂" },
+              { name: "Bar/Bat Mitzvah", emoji: "✡️" },
+              { name: "Graduation", emoji: "🎓" },
+              { name: "Wedding", emoji: "💒" },
+              { name: "New Baby", emoji: "👶" },
+              { name: "Just Because", emoji: "💚" },
+            ].map((template) => (
+              <motion.span 
+                key={template.name} 
+                whileHover={{ scale: 1.05 }}
+                className="px-4 py-2.5 rounded-full bg-background border text-sm font-medium text-foreground cursor-default hover:border-primary/50 transition-colors"
+              >
+                <span className="mr-1.5">{template.emoji}</span>{template.name}
+              </motion.span>
             ))}
           </div>
         </div>
@@ -215,7 +274,7 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl md:text-3xl font-semibold mb-4">Start in 2 minutes.</h2>
           <p className="text-primary-foreground/80 mb-8 max-w-md mx-auto">
-            Free to create. Transparent pricing. No commitments.
+            Free to create. Share your link. Watch their future grow.
           </p>
           <Link href="/create">
             <Button size="lg" variant="secondary" className="h-12 px-8 text-base font-medium">

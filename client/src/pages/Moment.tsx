@@ -86,11 +86,19 @@ export default function Moment() {
             <motion.div key="main" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {/* Hero */}
               <div className="text-center mb-8">
-                <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center text-3xl font-semibold text-primary">
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="mx-auto mb-4 h-20 w-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-3xl font-semibold text-primary shadow-lg shadow-primary/10"
+                >
                   {recipientName.charAt(0)}
-                </div>
+                </motion.div>
                 <h1 className="text-2xl font-semibold text-foreground mb-1">{eventTitle}</h1>
-                <p className="text-muted-foreground">A modern way to give a gift that lasts.</p>
+                <p className="text-muted-foreground">Give a gift that grows with them.</p>
+                <div className="flex items-center justify-center gap-4 mt-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><Shield className="h-3 w-3 text-primary" /> SIPC protected</span>
+                  <span className="flex items-center gap-1"><Zap className="h-3 w-3 text-primary" /> Under 60 seconds</span>
+                </div>
               </div>
 
               {/* Gift type tabs */}
@@ -375,9 +383,9 @@ export default function Moment() {
                     initial={{ scale: 0 }} 
                     animate={{ scale: 1 }} 
                     transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-                    className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center"
+                    className="mx-auto h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg shadow-primary/30"
                   >
-                    <Check className="h-8 w-8 text-primary" />
+                    <Check className="h-10 w-10 text-white" />
                   </motion.div>
                   
                   <div>
