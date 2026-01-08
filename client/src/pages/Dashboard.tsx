@@ -362,9 +362,8 @@ export default function Dashboard() {
                 </div>
 
                 {/* Quick actions */}
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   {[
-                    { icon: Plus, label: "New page", onClick: () => setShowPageSetup(true) },
                     { icon: ExternalLink, label: "Preview", href: `/moment?name=${encodeURIComponent(profileName)}` },
                     { icon: Copy, label: copied ? "Copied!" : "Copy link", onClick: handleCopy },
                     { icon: QrCode, label: "QR code", onClick: () => setShowQR(true) },
