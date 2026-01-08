@@ -111,10 +111,8 @@ export default function MomentCreate() {
       <Nav />
       
       <main className="container mx-auto px-4 py-8 max-w-lg">
-        <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
-          <a className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
-            <ArrowLeft className="h-4 w-4" /> Back to dashboard
-          </a>
+        <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName)}`} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
+          <ArrowLeft className="h-4 w-4" /> Back to dashboard
         </Link>
 
         <div className="mb-8">

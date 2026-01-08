@@ -16,23 +16,19 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-sm">
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
-        <Link href="/">
-          <a className="flex items-center gap-2" data-testid="link-home">
-            <Leaf className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-foreground">Everleaf</span>
-          </a>
+        <Link href="/" className="flex items-center gap-2" data-testid="link-home">
+          <Leaf className="h-5 w-5 text-primary" />
+          <span className="font-semibold text-foreground">Everleaf</span>
         </Link>
 
         <div className="hidden md:flex md:items-center md:gap-6">
           {showDashboard ? (
             <>
-              <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName || "")}`}>
-                <a className="text-sm text-muted-foreground hover:text-foreground transition-colors">Dashboard</a>
+              <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName || "")}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Dashboard
               </Link>
-              <Link href={`/recipient?name=${encodeURIComponent(profileName || "")}`}>
-                <a className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  {accountType === "personal" ? "My View" : `${profileName}'s View`}
-                </a>
+              <Link href={`/recipient?name=${encodeURIComponent(profileName || "")}`} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                {accountType === "personal" ? "My View" : `${profileName}'s View`}
               </Link>
               <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName || "")}`}>
                 <Button variant="ghost" size="icon"><Settings className="h-4 w-4" /></Button>
@@ -43,11 +39,11 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
             </>
           ) : (
             <>
-              <Link href="/#how">
-                <a className="text-sm text-muted-foreground hover:text-foreground transition-colors">How it works</a>
+              <Link href="/#how" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                How it works
               </Link>
-              <Link href="/moment">
-                <a className="text-sm text-muted-foreground hover:text-foreground transition-colors">Send a gift</a>
+              <Link href="/moment" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Send a gift
               </Link>
               <Link href="/dashboard">
                 <Button variant="ghost" size="sm" data-testid="button-login">Log in</Button>
@@ -69,24 +65,22 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
             <div className="flex flex-col gap-6 pt-10">
               {showDashboard ? (
                 <>
-                  <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName || "")}`}>
-                    <a onClick={() => setIsOpen(false)} className="font-medium">Dashboard</a>
+                  <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName || "")}`} onClick={() => setIsOpen(false)} className="font-medium">
+                    Dashboard
                   </Link>
-                  <Link href={`/recipient?name=${encodeURIComponent(profileName || "")}`}>
-                    <a onClick={() => setIsOpen(false)} className="font-medium">
-                      {accountType === "personal" ? "My View" : `${profileName}'s View`}
-                    </a>
+                  <Link href={`/recipient?name=${encodeURIComponent(profileName || "")}`} onClick={() => setIsOpen(false)} className="font-medium">
+                    {accountType === "personal" ? "My View" : `${profileName}'s View`}
                   </Link>
-                  <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName || "")}`}>
-                    <a onClick={() => setIsOpen(false)} className="font-medium">Settings</a>
+                  <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName || "")}`} onClick={() => setIsOpen(false)} className="font-medium">
+                    Settings
                   </Link>
                 </>
               ) : (
                 <>
-                  <Link href="/#how"><a onClick={() => setIsOpen(false)} className="font-medium">How it works</a></Link>
-                  <Link href="/moment"><a onClick={() => setIsOpen(false)} className="font-medium">Send a gift</a></Link>
+                  <Link href="/#how" onClick={() => setIsOpen(false)} className="font-medium">How it works</Link>
+                  <Link href="/moment" onClick={() => setIsOpen(false)} className="font-medium">Send a gift</Link>
                   <hr />
-                  <Link href="/dashboard"><a onClick={() => setIsOpen(false)} className="font-medium">Log in</a></Link>
+                  <Link href="/dashboard" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
                   <Link href="/create"><Button className="w-full" onClick={() => setIsOpen(false)}>Get started</Button></Link>
                 </>
               )}
