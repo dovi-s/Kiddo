@@ -359,8 +359,9 @@ export default function Dashboard() {
                 </div>
 
                 {/* Quick actions */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-4 gap-3">
                   {[
+                    { icon: Plus, label: "New page", onClick: () => setShowPageSetup(true) },
                     { icon: ExternalLink, label: "Preview", href: `/moment?name=${encodeURIComponent(profileName)}` },
                     { icon: Copy, label: copied ? "Copied!" : "Copy link", onClick: handleCopy },
                     { icon: QrCode, label: "QR code", onClick: () => setShowQR(true) },
@@ -396,6 +397,39 @@ export default function Dashboard() {
                     </motion.div>
                   ))}
                 </div>
+
+                {/* Active pages/moments */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.35 }}
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="font-semibold tracking-tight">Your pages</h2>
+                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowPageSetup(true)}>
+                      <Plus className="h-3 w-3 mr-1" /> Add
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <Card className="border hover:border-foreground/20 transition-colors cursor-pointer" onClick={() => {}}>
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                            {profileName.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{pageTitle || `${profileName}'s Fund`}</p>
+                            <p className="text-xs text-muted-foreground">Active · 18 contributors</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Live</span>
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </motion.div>
 
                 {/* Holdings */}
                 <motion.div
