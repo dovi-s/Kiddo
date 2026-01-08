@@ -296,7 +296,7 @@ export default function Moment() {
                           </div>
                           <div>
                             <p className="font-medium text-foreground">Fees</p>
-                            <p className="text-muted-foreground text-xs">2.9% + $0.30 processing fee (shown at checkout). No hidden fees. SIPC protection up to $500k.</p>
+                            <p className="text-muted-foreground text-xs">Card: 2.9% + $0.30 + 1.5% platform (capped $10). Bank transfer: $1 + 1% (capped $10). No hidden fees.</p>
                           </div>
                         </div>
                       </div>

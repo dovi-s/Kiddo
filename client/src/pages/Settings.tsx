@@ -169,14 +169,46 @@ export default function Settings() {
             <CardHeader className="pb-4">
               <CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-4 w-4" /> Plan</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">Free</p>
-                  <p className="text-xs text-muted-foreground">2.9% + $0.30 per contribution</p>
+            <CardContent className="space-y-4">
+              <div className="p-4 rounded-xl border-2 border-primary bg-primary/5">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-semibold text-sm">Free</p>
+                  <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Current</span>
                 </div>
-                <Button size="sm">Upgrade</Button>
+                <p className="text-xs text-muted-foreground">Guests pay fees at checkout</p>
+                <p className="text-xs text-muted-foreground">2.9% + $0.30 (card) + 1.5% platform fee (capped at $10)</p>
               </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-muted-foreground">Upgrade options</p>
+                
+                <div className="p-4 rounded-xl border hover:border-primary/50 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-semibold text-sm">Plus</p>
+                    <p className="font-semibold text-sm">$79 <span className="text-muted-foreground font-normal text-xs">per event</span></p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">Guests pay $0 fees. Premium templates. Auto thank-yous.</p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• Host covers processing at cost</li>
+                    <li>• Everleaf fee waived up to $7,500</li>
+                  </ul>
+                </div>
+
+                <div className="p-4 rounded-xl border hover:border-primary/50 transition-colors">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-semibold text-sm">Family</p>
+                    <p className="font-semibold text-sm">$129 <span className="text-muted-foreground font-normal text-xs">per year</span></p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-2">Multiple kids and events. Guests pay $0 on all.</p>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• Up to 10 event pages per year</li>
+                    <li>• Everleaf fee waived up to $15,000/year</li>
+                    <li>• Household dashboard</li>
+                  </ul>
+                </div>
+              </div>
+
+              <Button className="w-full">Upgrade Plan</Button>
             </CardContent>
           </Card>
 

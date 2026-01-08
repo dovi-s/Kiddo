@@ -1,0 +1,254 @@
+Below is a complete, locked pricing model that (1) is simple enough to convert, (2) stays fair to users, and (3) is designed to stay margin-positive even with brokerage stack costs.
+
+Everleaf pricing model
+A) Core primitives
+
+Everleaf has 3 money flows, and pricing must map to them:
+
+Gift (one-time or recurring) into a fund
+
+Host choice of who pays fees (guest vs host)
+
+Account layer (embedded brokerage account for the recipient; custodial for minors)
+
+Everything else (templates, thank-you, cards) sits on top.
+
+1) Gift fees (what the giver sees at checkout)
+Card / Apple Pay / Google Pay (default)
+
+Total fee shown to payer:
+2.9% + $0.30 (card processing) + Everleaf platform fee 1.5% (capped at $10)
+
+How it behaves:
+
+Small gifts: behaves like ~4.4% + $0.30
+
+Large gifts: Everleaf fee caps at $10, so effective % drops (processing still applies)
+
+Why this works:
+
+Simple, transparent
+
+Covers payment costs and leaves you margin on most gifts
+
+Cap prevents sticker shock on large card gifts
+
+Bank transfer (ACH) (recommended for $250+)
+
+Total fee shown to payer:
+$1.00 bank transfer + Everleaf platform fee 1.0% (capped at $10)
+
+Why this works:
+
+Dramatically cheaper for larger gifts
+
+Lower fraud/chargeback risk vs cards
+
+You still earn platform margin
+
+Recurring gifts (discounted to drive the $5B outcome)
+
+Recurring gifts get a lower Everleaf fee:
+
+Card recurring: Everleaf fee 1.0% (cap $10) instead of 1.5%
+
+ACH recurring: Everleaf fee 0.5% (cap $10) instead of 1.0%
+
+This creates a powerful adoption nudge without changing the core flow.
+
+2) Host plans (what parents or adults pay)
+Free
+
+$0 to create
+
+Guests pay standard gift fees at checkout
+
+Unlimited fund links (Always-on Fund)
+
+Up to 3 event pages per fund (Birthday, Bar Mitzvah, Graduation, etc.)
+
+Basic templates + QR
+
+Thank-you export
+
+Seed mode included
+
+This tier is always margin-positive because guests pay fees.
+
+Plus (per event)
+
+$79 per event
+Built for weddings and big milestones where hosts want “no fees for guests.”
+
+Includes:
+
+Host pays fees toggle ON (guests see $0 fees)
+
+Premium event templates + matching cards
+
+Auto thank-you drafts
+
+Privacy controls
+
+Keepsake templates (PDF)
+
+Fee rules when Host Pays is enabled:
+
+Host pays processing at cost (card fees or ACH fees)
+
+Everleaf platform fee becomes:
+
+0% Everleaf fee up to $7,500 gift volume per event
+
+0.75% Everleaf fee above $7,500 (still capped at $10 per gift)
+
+Why Plus is priced this way:
+
+Hosts are paying for guest experience + premium workflow
+
+Your downside is capped and controlled
+
+Above the cap you revert to a margin-producing take rate
+
+Family (annual household plan)
+
+$129 per year
+For households with multiple kids and multiple events.
+
+Includes:
+
+Up to 10 event pages per year across funds
+
+Host pays toggle included on all events
+
+Household dashboard (multiple kids)
+
+Recurring contribution management
+
+Premium templates and thank-you tools
+
+Fee rules when Host Pays is enabled:
+
+Host pays processing at cost
+
+Everleaf platform fee becomes:
+
+0% Everleaf fee up to $15,000 gift volume per year
+
+0.75% Everleaf fee above $15,000 (capped at $10 per gift)
+
+Why Family is the real business:
+
+You monetize the household relationship
+
+Multi-event LTV
+
+Recurring gifting becomes normal
+
+3) Optional add-ons (high margin, zero confusion)
+
+These should be visible only after the core gift is complete or on the host dashboard.
+
+For givers:
+
+Premium card designs: $2.99
+
+Printed card mailed: $7.99
+
+Framed “Seednote” certificate: $29
+
+For hosts:
+
+Address collection + thank-you send workflow: $9 per event (free in Plus/Family)
+
+Extra event page pack (if on Free): $19 (3 more event pages)
+
+4) B2B pricing (distribution engine)
+
+Organizations get bulk tools and support.
+
+Option A (simple):
+
+$499 per year includes 25 events
+
+Additional events: $15 per event
+
+Gifts follow Free rules unless org enables host-paid
+
+Option B (fee-subsidized):
+
+Org prepays a subsidy pool, and you bill processing at cost plus a negotiated platform fee
+
+5) Embedded brokerage account economics (how you avoid “we pay more than we earn”)
+
+This is the internal reality you price for.
+
+Your costs will include some mix of:
+
+KYC/AML and identity checks per account
+
+Account servicing costs (statements/tax docs)
+
+Trading/clearing costs per trade or per dollar
+
+Program minimums
+
+So Everleaf must guarantee margin from at least one of:
+
+gift take-rate (Free tier does this)
+
+household plan revenue (Family does this)
+
+event plan revenue (Plus does this)
+
+backend brokerage economics (upside, not required to survive)
+
+This pricing model ensures:
+
+Free is always contribution-margin positive
+
+Plus/Family are “fee-free for guests,” but only by shifting cost to host
+
+Caps limit your downside
+
+Above caps, you return to margin-producing fees
+
+6) The simplest customer-facing pricing page (what you publish)
+
+Free
+
+Create a fund: $0
+
+Guests pay standard fees at checkout
+
+Best for birthdays and everyday gifting
+
+Plus
+
+$79 per event
+
+Guests pay $0 fees
+
+Host covers processing
+
+Everleaf fee waived up to $7,500
+
+Family
+
+$129 per year
+
+Multiple kids and events
+
+Guests pay $0 fees on all events
+
+Everleaf fee waived up to $15,000 per year
+
+7) The one operational rule you must enforce
+
+If a gift is invested (trade executed), refunds are no longer instant. You need a clear rule:
+
+Refundable until trade execution
+
+After execution: reversal is sell + settlement timeline
+
+This reduces chargeback risk and support load.
