@@ -406,28 +406,89 @@ export default function Dashboard() {
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="font-semibold tracking-tight">Your pages</h2>
-                    <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowPageSetup(true)}>
-                      <Plus className="h-3 w-3 mr-1" /> Add
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {currentPlan === "family" && (
+                        <span className="text-xs text-muted-foreground">3 of 10 used</span>
+                      )}
+                      <Button variant="ghost" size="sm" className="text-xs" onClick={() => setShowPageSetup(true)}>
+                        <Plus className="h-3 w-3 mr-1" /> Add
+                      </Button>
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Card className="border hover:border-foreground/20 transition-colors cursor-pointer" onClick={() => {}}>
-                      <CardContent className="p-4 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                            {profileName.charAt(0)}
+                    {/* Main fund page */}
+                    <Link href={`/moment?name=${encodeURIComponent(profileName)}`}>
+                      <Card className="border hover:border-foreground/20 transition-colors cursor-pointer">
+                        <CardContent className="p-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                              {profileName.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{pageTitle || `${profileName}'s Fund`}</p>
+                              <p className="text-xs text-muted-foreground">Active · 18 contributors</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm font-medium">{pageTitle || `${profileName}'s Fund`}</p>
-                            <p className="text-xs text-muted-foreground">Active · 18 contributors</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Live</span>
+                            <ExternalLink className="h-4 w-4 text-muted-foreground" />
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Live</span>
-                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    </Link>
+
+                    {/* Additional pages for Plus/Family */}
+                    {currentPlan !== "free" && (
+                      <>
+                        <Card className="border hover:border-foreground/20 transition-colors cursor-pointer">
+                          <CardContent className="p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-sm font-medium text-amber-700 dark:text-amber-300">
+                                🎂
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">{profileName}'s 6th Birthday</p>
+                                <p className="text-xs text-muted-foreground">Event · March 15, 2026</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">Upcoming</span>
+                              <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {currentPlan === "family" && (
+                          <Card className="border hover:border-foreground/20 transition-colors cursor-pointer">
+                            <CardContent className="p-4 flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-sm font-medium text-violet-700 dark:text-violet-300">
+                                  M
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium">Maya's Fund</p>
+                                  <p className="text-xs text-muted-foreground">Active · 6 contributors</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Live</span>
+                                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+                      </>
+                    )}
+
+                    {/* Add new prompt for free users */}
+                    {currentPlan === "free" && (
+                      <Card className="border border-dashed hover:border-foreground/30 transition-colors cursor-pointer" onClick={() => setShowPageSetup(true)}>
+                        <CardContent className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
+                          <Plus className="h-4 w-4" />
+                          <span className="text-sm">Create event page</span>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 </motion.div>
 
