@@ -58,6 +58,7 @@ export default function Dashboard() {
   const [selectedEventType, setSelectedEventType] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventPhoto, setEventPhoto] = useState("");
+  const [showShareCard, setShowShareCard] = useState(false);
   const [showPageSetup, setShowPageSetup] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<"free" | "plus" | "family">("free");
   const [pageTitle, setPageTitle] = useState("");
@@ -1105,10 +1106,7 @@ export default function Dashboard() {
                       setPageCreated(true); 
                       setShowPageSetup(false);
                       setEventStep(1);
-                      toast({ 
-                        title: "Event page created! 🎉", 
-                        description: "Share it with friends and family." 
-                      });
+                      setShowShareCard(true);
                     }}
                   >
                     Create event page
@@ -1180,6 +1178,142 @@ export default function Dashboard() {
               </motion.div>
             )}
           </AnimatePresence>
+        </DialogContent>
+      </Dialog>
+
+      {/* Beautiful Share Card Modal */}
+      <Dialog open={showShareCard} onOpenChange={setShowShareCard}>
+        <DialogContent className="max-w-md p-0 overflow-hidden">
+          <div className="p-6 text-center">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="mb-4"
+            >
+              <span className="text-4xl">🎉</span>
+            </motion.div>
+            <h2 className="text-xl font-semibold mb-2">Your event page is ready!</h2>
+            <p className="text-sm text-muted-foreground mb-6">Share this beautiful card with friends and family</p>
+          </div>
+
+          {/* The Shareable Card */}
+          <div className="px-6 pb-6">
+            <div 
+              id="share-card"
+              className={`rounded-2xl overflow-hidden shadow-xl ${
+                selectedEventType === "birthday" ? "bg-gradient-to-br from-pink-50 via-pink-100 to-rose-100" :
+                selectedEventType === "graduation" ? "bg-gradient-to-br from-blue-50 via-blue-100 to-indigo-100" :
+                selectedEventType === "bar_mitzvah" ? "bg-gradient-to-br from-indigo-50 via-indigo-100 to-violet-100" :
+                selectedEventType === "wedding" ? "bg-gradient-to-br from-rose-50 via-rose-100 to-pink-100" :
+                selectedEventType === "baby" ? "bg-gradient-to-br from-yellow-50 via-amber-100 to-orange-100" :
+                selectedEventType === "baptism" ? "bg-gradient-to-br from-sky-50 via-sky-100 to-blue-100" :
+                selectedEventType === "quinceañera" ? "bg-gradient-to-br from-fuchsia-50 via-fuchsia-100 to-purple-100" :
+                selectedEventType === "holiday" ? "bg-gradient-to-br from-green-50 via-emerald-100 to-teal-100" :
+                "bg-gradient-to-br from-gray-50 via-gray-100 to-slate-100"
+              }`}
+            >
+              {/* Card Header */}
+              <div className="p-6 pb-4 text-center">
+                <span className="text-5xl block mb-4">
+                  {selectedEventType === "birthday" ? "🎂" :
+                   selectedEventType === "graduation" ? "🎓" :
+                   selectedEventType === "bar_mitzvah" ? "✡️" :
+                   selectedEventType === "wedding" ? "💒" :
+                   selectedEventType === "baby" ? "👶" :
+                   selectedEventType === "baptism" ? "✝️" :
+                   selectedEventType === "quinceañera" ? "👑" :
+                   selectedEventType === "holiday" ? "🎄" : "✨"}
+                </span>
+                <h3 className="text-2xl font-bold text-gray-900 mb-1">
+                  {pageTitle || `${profileName}'s ${
+                    selectedEventType === "birthday" ? "Birthday" :
+                    selectedEventType === "graduation" ? "Graduation" :
+                    selectedEventType === "bar_mitzvah" ? "Bar Mitzvah" :
+                    selectedEventType === "wedding" ? "Wedding" :
+                    selectedEventType === "baby" ? "Baby Shower" :
+                    selectedEventType === "baptism" ? "Baptism" :
+                    selectedEventType === "quinceañera" ? "Quinceañera" :
+                    selectedEventType === "holiday" ? "Holiday Gift" : "Special Day"
+                  }`}
+                </h3>
+                {eventDate && (
+                  <p className="text-sm text-gray-600">{new Date(eventDate).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                )}
+              </div>
+
+              {/* QR Code Section */}
+              <div className="px-6 pb-6">
+                <div className="bg-white rounded-xl p-6 shadow-sm">
+                  <div className="flex justify-center mb-4">
+                    <QRCodeSVG 
+                      value={momentLink}
+                      size={140}
+                      level="H"
+                      includeMargin={false}
+                    />
+                  </div>
+                  <p className="text-center text-sm font-medium text-gray-900 mb-1">
+                    Scan to give a gift
+                  </p>
+                  <p className="text-center text-xs text-gray-500">
+                    Your gift becomes a long-term investment
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 pb-6">
+                <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                  <span className="font-semibold text-gray-700">everleaf</span>
+                  <span>·</span>
+                  <span>Gifts that grow</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="p-6 pt-0 space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <Button 
+                variant="outline" 
+                className="flex-col h-auto py-3"
+                onClick={() => {
+                  navigator.clipboard.writeText(momentLink);
+                  toast({ title: "Link copied!" });
+                }}
+              >
+                <Copy className="h-4 w-4 mb-1" />
+                <span className="text-xs">Copy Link</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-col h-auto py-3"
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({ title: pageTitle || `${profileName}'s Gift Fund`, url: momentLink });
+                  }
+                }}
+              >
+                <ExternalLink className="h-4 w-4 mb-1" />
+                <span className="text-xs">Share</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="flex-col h-auto py-3"
+                onClick={() => window.print()}
+              >
+                <Download className="h-4 w-4 mb-1" />
+                <span className="text-xs">Print</span>
+              </Button>
+            </div>
+            <Button 
+              className="w-full" 
+              onClick={() => setShowShareCard(false)}
+            >
+              Done
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
