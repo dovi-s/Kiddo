@@ -133,6 +133,83 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Pricing */}
+      <section className="py-20 border-t bg-card" id="pricing">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">Simple pricing</h2>
+            <p className="text-muted-foreground">Free to create. Upgrade when you're ready.</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {/* Free */}
+            <Card className="border-none shadow-sm">
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <h3 className="font-semibold text-lg">Free</h3>
+                  <p className="text-3xl font-semibold mt-2">$0</p>
+                  <p className="text-sm text-muted-foreground mt-1">Guests pay fees at checkout</p>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Unlimited fund links</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Up to 3 event pages</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Basic templates + QR</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Thank-you export</li>
+                </ul>
+                <Link href="/create">
+                  <Button variant="outline" className="w-full">Get started</Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Plus */}
+            <Card className="border-2 border-primary shadow-sm relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full">Popular</div>
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <h3 className="font-semibold text-lg">Plus</h3>
+                  <p className="text-3xl font-semibold mt-2">$79 <span className="text-base font-normal text-muted-foreground">per event</span></p>
+                  <p className="text-sm text-muted-foreground mt-1">Guests pay $0 fees</p>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Host covers processing</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Everleaf fee waived to $7,500</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Premium templates + cards</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Auto thank-you drafts</li>
+                </ul>
+                <Link href="/create">
+                  <Button className="w-full">Choose Plus</Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Family */}
+            <Card className="border-none shadow-sm">
+              <CardContent className="p-6 space-y-4">
+                <div>
+                  <h3 className="font-semibold text-lg">Family</h3>
+                  <p className="text-3xl font-semibold mt-2">$129 <span className="text-base font-normal text-muted-foreground">per year</span></p>
+                  <p className="text-sm text-muted-foreground mt-1">Guests pay $0 on all events</p>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Up to 10 event pages/year</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Everleaf fee waived to $15k</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Household dashboard</li>
+                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Multiple kids + funds</li>
+                </ul>
+                <Link href="/create">
+                  <Button variant="outline" className="w-full">Choose Family</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+
+          <p className="text-center text-xs text-muted-foreground mt-8 max-w-xl mx-auto">
+            Gift fees: Card 2.9% + $0.30 + 1.5% platform (capped $10). Bank transfer $1 + 1% (capped $10). Recurring gifts get reduced platform fees.
+          </p>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-20 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 text-center">
