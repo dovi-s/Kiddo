@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Plus, QrCode, Copy, MessageSquare, Check, ArrowRight, Settings, ExternalLink, TrendingUp, UserPlus, X, Download, Sparkles, Crown, Users } from "lucide-react";
+import { Plus, QrCode, Copy, MessageSquare, Check, ArrowRight, Settings, ExternalLink, TrendingUp, UserPlus, X, Download, Sparkles, Crown, Users, Camera } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
@@ -54,6 +54,10 @@ export default function Dashboard() {
   const [showInvite, setShowInvite] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [eventStep, setEventStep] = useState(1);
+  const [selectedEventType, setSelectedEventType] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventPhoto, setEventPhoto] = useState("");
   const [showPageSetup, setShowPageSetup] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<"free" | "plus" | "family">("free");
   const [pageTitle, setPageTitle] = useState("");
@@ -837,62 +841,345 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Page Setup Modal */}
-      <Dialog open={showPageSetup} onOpenChange={setShowPageSetup}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold tracking-tight">Set up your page</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              Create a shareable page where friends and family can contribute.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-5 pt-2">
-            <div className="space-y-2">
-              <Label className="text-sm">Page title</Label>
-              <Input 
-                placeholder={isPersonal ? "My Future Fund" : `${profileName}'s Birthday`}
-                value={pageTitle}
-                onChange={(e) => setPageTitle(e.target.value)}
-                className="h-11"
-              />
-              <p className="text-xs text-muted-foreground">
-                e.g., "Ari's 5th Birthday", "Graduation Fund", "Baby Shower"
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm">Welcome message <span className="text-muted-foreground">(optional)</span></Label>
-              <Textarea 
-                placeholder="A message for your guests..."
-                value={pageMessage}
-                onChange={(e) => setPageMessage(e.target.value)}
-                className="min-h-[80px] resize-none"
-              />
-            </div>
-
-            <div className="p-4 rounded-lg bg-foreground/[0.03] border">
-              <p className="text-xs text-muted-foreground mb-2">Your page will be at:</p>
-              <p className="text-sm font-mono text-foreground">
-                everleaf.com/m/{profileName.toLowerCase().replace(/\s+/g, "-")}
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setShowPageSetup(false)}>
-                Cancel
-              </Button>
-              <Button 
-                className="flex-1" 
-                onClick={() => { 
-                  setPageCreated(true); 
-                  setShowPageSetup(false);
-                  toast({ title: "Page created", description: "Your shareable page is ready." });
-                }}
+      {/* Event Creation Modal - Multi-step */}
+      <Dialog open={showPageSetup} onOpenChange={(open) => { setShowPageSetup(open); if (!open) setEventStep(1); }}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden">
+          <AnimatePresence mode="wait">
+            {/* Step 1: Choose Event Type */}
+            {eventStep === 1 && (
+              <motion.div
+                key="step1"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="p-6"
               >
-                Create page
-              </Button>
-            </div>
-          </div>
+                <DialogHeader className="mb-6">
+                  <DialogTitle className="text-xl font-semibold tracking-tight">What's the occasion?</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    Pick an event type and we'll make it special
+                  </DialogDescription>
+                </DialogHeader>
+                
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { id: "birthday", emoji: "🎂", label: "Birthday", color: "bg-pink-100 dark:bg-pink-900/30 hover:bg-pink-200 dark:hover:bg-pink-900/50 border-pink-200 dark:border-pink-800" },
+                    { id: "graduation", emoji: "🎓", label: "Graduation", color: "bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 border-blue-200 dark:border-blue-800" },
+                    { id: "bar_mitzvah", emoji: "✡️", label: "Bar/Bat Mitzvah", color: "bg-indigo-100 dark:bg-indigo-900/30 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 border-indigo-200 dark:border-indigo-800" },
+                    { id: "wedding", emoji: "💒", label: "Wedding", color: "bg-rose-100 dark:bg-rose-900/30 hover:bg-rose-200 dark:hover:bg-rose-900/50 border-rose-200 dark:border-rose-800" },
+                    { id: "baby", emoji: "👶", label: "Baby Shower", color: "bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 border-yellow-200 dark:border-yellow-800" },
+                    { id: "baptism", emoji: "✝️", label: "Baptism", color: "bg-sky-100 dark:bg-sky-900/30 hover:bg-sky-200 dark:hover:bg-sky-900/50 border-sky-200 dark:border-sky-800" },
+                    { id: "quinceañera", emoji: "👑", label: "Quinceañera", color: "bg-fuchsia-100 dark:bg-fuchsia-900/30 hover:bg-fuchsia-200 dark:hover:bg-fuchsia-900/50 border-fuchsia-200 dark:border-fuchsia-800" },
+                    { id: "holiday", emoji: "🎄", label: "Holiday", color: "bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50 border-green-200 dark:border-green-800" },
+                    { id: "other", emoji: "✨", label: "Other", color: "bg-foreground/5 hover:bg-foreground/10 border-foreground/10" },
+                  ].map((event) => (
+                    <motion.button
+                      key={event.id}
+                      whileHover={{ scale: 1.03, y: -2 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => { setSelectedEventType(event.id); setEventStep(2); }}
+                      className={`p-4 rounded-xl border-2 transition-all text-center ${event.color} ${
+                        selectedEventType === event.id ? "ring-2 ring-foreground ring-offset-2" : ""
+                      }`}
+                    >
+                      <span className="text-2xl block mb-2">{event.emoji}</span>
+                      <span className="text-xs font-medium">{event.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
+
+                {currentPlan === "family" && (
+                  <div className="mt-6 pt-6 border-t">
+                    <button
+                      onClick={() => { setEventStep(4); }}
+                      className="w-full p-4 rounded-xl border-2 border-dashed hover:border-foreground/30 transition-colors text-center"
+                    >
+                      <Plus className="h-5 w-5 mx-auto mb-2 text-muted-foreground" />
+                      <span className="text-sm font-medium">Start a new fund for another child</span>
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Step 2: Customize Event */}
+            {eventStep === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+              >
+                {/* Header with theme color */}
+                <div className={`p-6 pb-4 ${
+                  selectedEventType === "birthday" ? "bg-gradient-to-br from-pink-100 to-pink-50 dark:from-pink-900/30 dark:to-pink-900/10" :
+                  selectedEventType === "graduation" ? "bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-900/10" :
+                  selectedEventType === "bar_mitzvah" ? "bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-indigo-900/30 dark:to-indigo-900/10" :
+                  selectedEventType === "wedding" ? "bg-gradient-to-br from-rose-100 to-rose-50 dark:from-rose-900/30 dark:to-rose-900/10" :
+                  selectedEventType === "baby" ? "bg-gradient-to-br from-yellow-100 to-yellow-50 dark:from-yellow-900/30 dark:to-yellow-900/10" :
+                  selectedEventType === "baptism" ? "bg-gradient-to-br from-sky-100 to-sky-50 dark:from-sky-900/30 dark:to-sky-900/10" :
+                  selectedEventType === "quinceañera" ? "bg-gradient-to-br from-fuchsia-100 to-fuchsia-50 dark:from-fuchsia-900/30 dark:to-fuchsia-900/10" :
+                  selectedEventType === "holiday" ? "bg-gradient-to-br from-green-100 to-green-50 dark:from-green-900/30 dark:to-green-900/10" :
+                  "bg-foreground/[0.03]"
+                }`}>
+                  <button 
+                    onClick={() => setEventStep(1)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-4 flex items-center gap-1"
+                  >
+                    <ArrowRight className="h-3 w-3 rotate-180" /> Back
+                  </button>
+                  <div className="flex items-center gap-3">
+                    <span className="text-4xl">
+                      {selectedEventType === "birthday" ? "🎂" :
+                       selectedEventType === "graduation" ? "🎓" :
+                       selectedEventType === "bar_mitzvah" ? "✡️" :
+                       selectedEventType === "wedding" ? "💒" :
+                       selectedEventType === "baby" ? "👶" :
+                       selectedEventType === "baptism" ? "✝️" :
+                       selectedEventType === "quinceañera" ? "👑" :
+                       selectedEventType === "holiday" ? "🎄" : "✨"}
+                    </span>
+                    <div>
+                      <h2 className="text-xl font-semibold">
+                        {selectedEventType === "birthday" ? "Birthday Party" :
+                         selectedEventType === "graduation" ? "Graduation" :
+                         selectedEventType === "bar_mitzvah" ? "Bar/Bat Mitzvah" :
+                         selectedEventType === "wedding" ? "Wedding" :
+                         selectedEventType === "baby" ? "Baby Shower" :
+                         selectedEventType === "baptism" ? "Baptism" :
+                         selectedEventType === "quinceañera" ? "Quinceañera" :
+                         selectedEventType === "holiday" ? "Holiday Gift" : "Special Occasion"}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">for {profileName}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-6 pt-4 space-y-5">
+                  {/* Event Title */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Event title</Label>
+                    <Input 
+                      placeholder={
+                        selectedEventType === "birthday" ? `${profileName}'s 6th Birthday` :
+                        selectedEventType === "graduation" ? `${profileName}'s Graduation` :
+                        selectedEventType === "bar_mitzvah" ? `${profileName}'s Bar Mitzvah` :
+                        selectedEventType === "wedding" ? `${profileName}'s Wedding` :
+                        selectedEventType === "baby" ? `${profileName}'s Baby Shower` :
+                        selectedEventType === "baptism" ? `${profileName}'s Baptism` :
+                        selectedEventType === "quinceañera" ? `${profileName}'s Quinceañera` :
+                        selectedEventType === "holiday" ? `${profileName}'s Holiday Fund` :
+                        `${profileName}'s Special Day`
+                      }
+                      value={pageTitle}
+                      onChange={(e) => setPageTitle(e.target.value)}
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  {/* Event Date */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Event date <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <Input 
+                      type="date"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      className="h-12"
+                    />
+                  </div>
+
+                  {/* Photo Upload */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Add a photo <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <div 
+                      className="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer hover:border-foreground/30 transition-colors"
+                      onClick={() => {}}
+                    >
+                      {eventPhoto ? (
+                        <div className="relative">
+                          <img src={eventPhoto} alt="Event" className="w-full h-32 object-cover rounded-lg" />
+                          <button 
+                            className="absolute top-2 right-2 h-6 w-6 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70"
+                            onClick={(e) => { e.stopPropagation(); setEventPhoto(""); }}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="h-10 w-10 rounded-full bg-foreground/5 flex items-center justify-center mx-auto mb-2">
+                            <Camera className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">Drop a photo or click to upload</p>
+                          <p className="text-xs text-muted-foreground mt-1">Makes your page feel personal</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <Button 
+                    className="w-full h-12 text-base" 
+                    onClick={() => setEventStep(3)}
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 3: Message & Finalize */}
+            {eventStep === 3 && (
+              <motion.div
+                key="step3"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="p-6"
+              >
+                <button 
+                  onClick={() => setEventStep(2)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-4 flex items-center gap-1"
+                >
+                  <ArrowRight className="h-3 w-3 rotate-180" /> Back
+                </button>
+
+                <DialogHeader className="mb-6">
+                  <DialogTitle className="text-xl font-semibold tracking-tight">Almost there!</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    Add a welcome message for your guests
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-5">
+                  {/* Welcome Message */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Message for guests</Label>
+                    <Textarea 
+                      placeholder={
+                        selectedEventType === "birthday" ? `Join us in celebrating ${profileName}'s special day! Your gift will grow with them for years to come.` :
+                        selectedEventType === "graduation" ? `${profileName} is graduating! Help launch their future with a gift that keeps growing.` :
+                        selectedEventType === "bar_mitzvah" ? `Mazel tov! Celebrate ${profileName}'s milestone with a meaningful gift for their future.` :
+                        selectedEventType === "wedding" ? `Celebrate our special day! Your gift will help us build our future together.` :
+                        selectedEventType === "baby" ? `Welcome baby! Give a gift that grows with our little one.` :
+                        `Thank you for being part of this special moment!`
+                      }
+                      value={pageMessage}
+                      onChange={(e) => setPageMessage(e.target.value)}
+                      className="min-h-[120px] resize-none text-base"
+                    />
+                  </div>
+
+                  {/* Preview card */}
+                  <div className="p-4 rounded-xl bg-foreground/[0.03] border">
+                    <p className="text-xs text-muted-foreground mb-3">Preview</p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">
+                        {selectedEventType === "birthday" ? "🎂" :
+                         selectedEventType === "graduation" ? "🎓" :
+                         selectedEventType === "bar_mitzvah" ? "✡️" :
+                         selectedEventType === "wedding" ? "💒" :
+                         selectedEventType === "baby" ? "👶" :
+                         selectedEventType === "baptism" ? "✝️" :
+                         selectedEventType === "quinceañera" ? "👑" :
+                         selectedEventType === "holiday" ? "🎄" : "✨"}
+                      </span>
+                      <div>
+                        <p className="font-semibold">{pageTitle || `${profileName}'s ${
+                          selectedEventType === "birthday" ? "Birthday" :
+                          selectedEventType === "graduation" ? "Graduation" :
+                          selectedEventType === "bar_mitzvah" ? "Bar Mitzvah" :
+                          selectedEventType === "wedding" ? "Wedding" :
+                          selectedEventType === "baby" ? "Baby Shower" :
+                          selectedEventType === "baptism" ? "Baptism" :
+                          selectedEventType === "quinceañera" ? "Quinceañera" :
+                          selectedEventType === "holiday" ? "Holiday Gift" : "Event"
+                        }`}</p>
+                        <p className="text-xs text-muted-foreground">everleaf.com/m/{profileName.toLowerCase().replace(/\s+/g, "-")}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button 
+                    className="w-full h-12 text-base" 
+                    onClick={() => { 
+                      setPageCreated(true); 
+                      setShowPageSetup(false);
+                      setEventStep(1);
+                      toast({ 
+                        title: "Event page created! 🎉", 
+                        description: "Share it with friends and family." 
+                      });
+                    }}
+                  >
+                    Create event page
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 4: New Fund (Family plan) */}
+            {eventStep === 4 && (
+              <motion.div
+                key="step4"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="p-6"
+              >
+                <button 
+                  onClick={() => setEventStep(1)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-4 flex items-center gap-1"
+                >
+                  <ArrowRight className="h-3 w-3 rotate-180" /> Back
+                </button>
+
+                <DialogHeader className="mb-6">
+                  <DialogTitle className="text-xl font-semibold tracking-tight">Start a new fund</DialogTitle>
+                  <DialogDescription className="text-sm text-muted-foreground">
+                    Create a separate investment account for another child
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-5">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Child's first name</Label>
+                    <Input 
+                      placeholder="e.g., Maya, Noah, Sofia"
+                      className="h-12 text-base"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Date of birth</Label>
+                    <Input 
+                      type="date"
+                      className="h-12"
+                    />
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-violet-50 dark:bg-violet-900/20 border border-violet-100 dark:border-violet-800/30">
+                    <p className="text-sm text-violet-800 dark:text-violet-200">
+                      This creates a new investment account with its own holdings. You're on <span className="font-semibold">Family plan</span> so this is included!
+                    </p>
+                  </div>
+
+                  <Button 
+                    className="w-full h-12 text-base" 
+                    onClick={() => { 
+                      setShowPageSetup(false);
+                      setEventStep(1);
+                      toast({ 
+                        title: "Fund created!", 
+                        description: "New investment account is ready." 
+                      });
+                    }}
+                  >
+                    Create fund
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </DialogContent>
       </Dialog>
 
