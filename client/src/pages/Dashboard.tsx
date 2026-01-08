@@ -443,23 +443,33 @@ export default function Dashboard() {
                         </div>
                         <div className="space-y-2">
                           {/* Always-on page */}
-                          <Link href={`/moment?name=${encodeURIComponent(profileName)}`}>
-                            <div className="flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors cursor-pointer">
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-lg bg-foreground/5 flex items-center justify-center">
-                                  <Sparkles className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-medium">Always Open</p>
-                                  <p className="text-xs text-muted-foreground">$2,180 · 12 gifts</p>
-                                </div>
+                          <div className="group flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors">
+                            <div className="flex items-center gap-3">
+                              <div className="h-8 w-8 rounded-lg bg-foreground/5 flex items-center justify-center">
+                                <Sparkles className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium">Always Open</p>
+                                <p className="text-xs text-muted-foreground">$2,180 · 12 gifts</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="hidden group-hover:flex items-center gap-1">
+                                <Link href={`/moment?name=${encodeURIComponent(profileName)}`}>
+                                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                                    <ExternalLink className="h-3 w-3 mr-1" /> View
+                                  </Button>
+                                </Link>
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setShowQR(true)}>
+                                  <QrCode className="h-3 w-3 mr-1" /> Share
+                                </Button>
                               </div>
                               <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">Live</span>
                             </div>
-                          </Link>
+                          </div>
 
                           {/* Birthday event */}
-                          <div className="flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors cursor-pointer">
+                          <div className="group flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-sm">
                                 🎂
@@ -469,11 +479,21 @@ export default function Dashboard() {
                                 <p className="text-xs text-muted-foreground">$1,420 · 8 gifts · Dec 2025</p>
                               </div>
                             </div>
-                            <span className="text-xs px-2 py-1 rounded-full bg-foreground/10 text-muted-foreground">Closed</span>
+                            <div className="flex items-center gap-2">
+                              <div className="hidden group-hover:flex items-center gap-1">
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => {}}>
+                                  <ExternalLink className="h-3 w-3 mr-1" /> View
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setShowQR(true)}>
+                                  <QrCode className="h-3 w-3 mr-1" /> Share
+                                </Button>
+                              </div>
+                              <span className="text-xs px-2 py-1 rounded-full bg-foreground/10 text-muted-foreground">Closed</span>
+                            </div>
                           </div>
 
                           {/* Upcoming event */}
-                          <div className="flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors cursor-pointer">
+                          <div className="group flex items-center justify-between p-3 rounded-lg hover:bg-foreground/[0.03] transition-colors">
                             <div className="flex items-center gap-3">
                               <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-sm">
                                 🎓
@@ -483,7 +503,17 @@ export default function Dashboard() {
                                 <p className="text-xs text-muted-foreground">$650 · 4 gifts · May 2026</p>
                               </div>
                             </div>
-                            <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">Upcoming</span>
+                            <div className="flex items-center gap-2">
+                              <div className="hidden group-hover:flex items-center gap-1">
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => {}}>
+                                  <ExternalLink className="h-3 w-3 mr-1" /> View
+                                </Button>
+                                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setShowQR(true)}>
+                                  <QrCode className="h-3 w-3 mr-1" /> Share
+                                </Button>
+                              </div>
+                              <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">Upcoming</span>
+                            </div>
                           </div>
                         </div>
                       </div>
