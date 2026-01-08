@@ -1,0 +1,326 @@
+1) Lock the product shape
+
+Everleaf is not “a registry.” It is a gift layer on top of a real account, with beautiful “moment pages” that people share.
+
+Entities (how the system is organized)
+
+Household (or Personal)
+
+One Everleaf login.
+
+Can contain multiple Profiles.
+
+Profile (who the money is for)
+
+Child profile (custodial)
+
+Adult profile (personal)
+
+Fund (where gifts land)
+
+Future Fund (default investing basket)
+
+Seed (hold, then invest)
+
+Later: Education Fund (529 rail), Separate because it is structurally different
+
+Moment Page (the thing you share)
+
+Bar mitzvah page, birthday page, graduation page, wedding page
+
+Each Moment Page points to the same underlying Fund, but has its own:
+
+design theme
+
+copy
+
+preset amounts
+
+goal card (optional)
+
+thank-you card style
+
+One QR per Moment Page
+
+That is correct. You can have one permanent QR for the Profile too, but Moments are what make it feel like a premium gift.
+
+2) User types and what to call them
+
+You need names that feel human and not fintech.
+
+Recommended terms
+
+Giver: “Contributor”
+
+Parent: “Guardian”
+
+Kid: “Recipient”
+
+Adult user: “Owner” (or just “Member”)
+
+Public audience: “Guests”
+
+In UI copy, “Contributor” reads well: “Contributors can give in under a minute.”
+
+3) The flows, end-to-end
+A) Guardian creates a child setup (2 to 4 minutes)
+
+Create Profile: “Ari”
+
+Choose Fund type:
+
+Future Fund (recommended): auto-invest gifts into a simple basket
+
+Seed: gifts collect, guardian invests later
+
+Brokerage step (embedded, inside Everleaf):
+
+For kids: custodial account flow (guardian is custodian)
+
+Create first Moment Page:
+
+Choose template: Bar mitzvah, Birthday, Baby, Graduation
+
+Pick theme + upload photo
+
+Set preset amounts (defaults suggested)
+
+Result: Guardian gets a link + QR + print-ready card.
+
+B) Contributor gives (goal: 30 to 60 seconds, no account)
+
+Open link or scan QR
+
+Pick amount (preset buttons + custom)
+
+Pick gift type (keep this minimal):
+
+Future Fund (recommended)
+
+Seed
+
+Optional advanced: “Pick from favorites” (brands list curated by guardian)
+
+Add message + from name
+
+Pay (Apple Pay, Google Pay, card, ACH)
+
+Instant “card reveal” with:
+
+message
+
+amount
+
+recipient name
+
+event theme
+
+option to text, email, print
+
+C) Recipient view (kid experience)
+
+This must not feel like a brokerage app.
+
+“People in your corner” timeline
+
+Messages and thank-you moments
+
+Milestones
+
+Simple total balance
+
+Optional “Holdings” tab later, behind a tap
+
+D) Guardian operations
+
+Contribution list with filters (by moment, by contributor)
+
+Thank-you workflow:
+
+address collection option
+
+auto-generated drafts based on the message
+
+matching thank-you card designs tied to the Moment template
+
+Recurring gifts management
+
+Privacy controls (hide amounts publicly, show only messages)
+
+4) Do contributors choose specific stocks?
+
+You can support it, but it cannot be the default.
+
+The right “dumbed down” offer menu
+
+Default menu (v1):
+
+Future Fund (basket, auto-invest, recommended)
+
+Seed (hold then invest)
+
+Optional (v2, only if you can keep it clean):
+
+Favorites (guardian-approved list of recognizable brands)
+This keeps emotional appeal without turning Everleaf into a trading surface.
+
+Avoid a full “search any ticker” experience early. It adds support burden, compliance surface, and decision paralysis.
+
+5) Should this also be “Cash App for stocks”?
+
+Not at launch.
+
+You have a much stronger wedge: life-event gifting + always-on kid funds.
+If you nail that, you can later add:
+
+“Send a gift” peer-to-peer as a gift, not as bill-splitting
+
+Example: “Congrats” gift, “thank you” gift, “housewarming” gift
+
+But do not position it as payments. Payments is a different battlefield and distracts from your strongest loop.
+
+6) Brokerage integration and “do we make money from bringing accounts?”
+
+You should assume two things at the same time:
+
+A) You must be profitable without brokerage kickbacks
+
+Partner economics are real, but you do not build a durable company by depending on them to cover your core costs.
+
+B) You can often earn partner economics if you drive assets and accounts
+
+Typical partner revenue sources can include:
+
+account opening bounties or referral economics
+
+revenue share tied to assets held or program participation (varies heavily by partner)
+
+cash sweep economics on uninvested balances
+
+securities lending participation (where applicable)
+
+Treat this as upside, not survival.
+
+The “best” integration choice
+
+Use an embedded investing partner so account opening happens inside Everleaf and gifts become real investments automatically.
+Do not send parents away to open accounts on a retail brokerage site if you want the seamless magic.
+
+7) Revenue model that matches “fair, simple, trusted”
+
+You need revenue in three layers.
+
+Layer 1: Service fee on gifts (primary, always on)
+
+One simple fee at checkout.
+
+Card is higher, ACH is lower.
+
+Host can choose guest-paid or host-paid.
+
+This is what funds the business safely from day one.
+
+Layer 2: Subscriptions (make people love you, increase conversion)
+
+Plus (per event) buys premium tools + lower service fee
+
+Family (annual) buys household + recurring + best fee rates
+
+Subscriptions should not mean you subsidize Stripe. They should reduce your platform fee and unlock premium workflows.
+
+Layer 3: Partner economics (upside)
+
+Account and AUM-related economics, where available.
+
+8) Brand and product feel (what “people love” actually means)
+
+Your north star is: premium stationery meets modern product.
+
+Non-negotiable brand behaviors
+
+Calm, minimal, confident
+
+No hype language, no performance talk
+
+Plain-English trust surfaces
+
+Card-first visuals everywhere
+
+UI principles
+
+One job per screen
+
+No jargon on the gifting path
+
+Defaults do the thinking
+
+Every page is shareable and print-ready
+
+Delight moments
+
+Card reveal animation
+
+Goal progress fill for group gifts
+
+Thank-you flow that feels like a product, not homework
+
+9) The simplest “big thing” IA
+
+Home
+
+My Profiles (Ari, Me)
+
+Profile
+
+Funds (Future Fund, Seed)
+
+Moments (Bar mitzvah, Birthday)
+
+Contributors
+
+Thank you
+
+Settings (privacy, recurring, preferences)
+
+Create Moment
+
+Template picker
+
+Theme
+
+Presets + goal
+
+Share
+
+10) What I would lock as v1 vs v2
+v1 (to win love fast)
+
+Embedded account opening for guardian and personal users
+
+Future Fund + Seed
+
+Moments with templates + premium cards + print
+
+No contributor accounts required
+
+Thank-you automation + address capture
+
+Goal card and group gifting link
+
+Clear receipts and status
+
+v2
+
+Favorites list option
+
+Recurring presets (“every birthday”, “monthly for a year”)
+
+Family dashboard improvements
+
+Better recipient education view (simple, visual, optional)
+
+v3
+
+529 rail
+
+Organization portals (schools, venues, employers)

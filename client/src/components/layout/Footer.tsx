@@ -1,57 +1,52 @@
-import { Gift } from "lucide-react";
+import { Leaf } from "lucide-react";
 import { Link } from "wouter";
 
 export function Footer() {
   return (
-    <footer className="border-t bg-muted/30">
-      <div className="container mx-auto px-4 py-12 md:py-16">
-        <div className="grid gap-8 md:grid-cols-4">
+    <footer className="border-t bg-muted/20">
+      <div className="container mx-auto px-4 py-16">
+        <div className="grid gap-12 md:grid-cols-4">
           <div className="space-y-4">
             <Link href="/">
               <a className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground">
-                  <Gift className="h-5 w-5" />
-                </div>
-                <span className="font-serif text-xl font-bold tracking-tight text-primary">DorVador</span>
+                <Leaf className="h-5 w-5 text-primary" />
+                <span className="font-serif text-xl font-semibold text-foreground">Everleaf</span>
               </a>
             </Link>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              The registry for future generations. Give gifts that grow, compound, and create lasting financial security.
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+              A gift layer for life events. Contributors give. Recipients grow.
             </p>
           </div>
           
           <div>
-            <h4 className="font-semibold mb-4">Product</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="/create">Start a Registry</Link></li>
-              <li><Link href="/registry">Find a Registry</Link></li>
-              <li><Link href="#">Sample Registry</Link></li>
-              <li><Link href="#">Pricing</Link></li>
+            <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Product</h4>
+            <ul className="space-y-3 text-sm">
+              <li><Link href="/create"><a className="text-foreground/80 hover:text-foreground transition-colors">Create a Profile</a></Link></li>
+              <li><Link href="/give"><a className="text-foreground/80 hover:text-foreground transition-colors">Give a Gift</a></Link></li>
+              <li><Link href="/#how"><a className="text-foreground/80 hover:text-foreground transition-colors">How It Works</a></Link></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="#">About Us</Link></li>
-              <li><Link href="#">Careers</Link></li>
-              <li><Link href="#">Blog</Link></li>
-              <li><Link href="#">Contact</Link></li>
+            <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Company</h4>
+            <ul className="space-y-3 text-sm">
+              <li><a href="#" className="text-foreground/80 hover:text-foreground transition-colors">About</a></li>
+              <li><a href="#" className="text-foreground/80 hover:text-foreground transition-colors">Blog</a></li>
+              <li><a href="#" className="text-foreground/80 hover:text-foreground transition-colors">Careers</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-semibold mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><Link href="#">Terms of Service</Link></li>
-              <li><Link href="#">Privacy Policy</Link></li>
-              <li><Link href="#">Security</Link></li>
-              <li><Link href="#">Disclosures</Link></li>
+            <h4 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">Legal</h4>
+            <ul className="space-y-3 text-sm">
+              <li><a href="#" className="text-foreground/80 hover:text-foreground transition-colors">Terms</a></li>
+              <li><a href="#" className="text-foreground/80 hover:text-foreground transition-colors">Privacy</a></li>
+              <li><a href="#" className="text-foreground/80 hover:text-foreground transition-colors">Disclosures</a></li>
             </ul>
           </div>
         </div>
-        <div className="mt-12 border-t pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} DorVador Inc. All rights reserved. Not an investment advisor.</p>
+        <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
+          <p>&copy; {new Date().getFullYear()} Everleaf Inc. All rights reserved. Not investment advice.</p>
         </div>
       </div>
     </footer>

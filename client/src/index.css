@@ -4,8 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
-  --font-serif: 'Libre Baskerville', serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -40,75 +40,65 @@
 }
 
 :root {
-  /* Base - Warm, clean, high-end paper feel */
-  --background: 40 20% 98%; 
-  --foreground: 222 47% 11%; /* Deep Navy */
+  --background: 45 30% 97%;
+  --foreground: 20 14% 12%;
 
-  /* Cards - Pure white for contrast */
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+  --card-foreground: 20 14% 12%;
 
-  /* Primary - Deep Trustworthy Navy */
-  --primary: 222 47% 11%;
-  --primary-foreground: 210 40% 98%;
+  --primary: 152 45% 28%;
+  --primary-foreground: 45 30% 97%;
 
-  /* Secondary - Celebration Gold */
-  --secondary: 35 92% 55%; 
-  --secondary-foreground: 222 47% 11%;
+  --secondary: 36 60% 55%;
+  --secondary-foreground: 20 14% 12%;
 
-  /* Muted - For secondary text */
-  --muted: 210 20% 96%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 45 20% 94%;
+  --muted-foreground: 20 10% 45%;
 
-  /* Accent - Subtle interactive areas */
-  --accent: 210 20% 96%;
-  --accent-foreground: 222 47% 11%;
+  --accent: 152 30% 94%;
+  --accent-foreground: 152 45% 20%;
 
-  /* Destructive */
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 45 30% 97%;
 
-  /* Borders & Inputs */
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 222 47% 11%;
+  --border: 45 15% 88%;
+  --input: 45 15% 88%;
+  --ring: 152 45% 28%;
 
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  /* Chart Colors */
-  --chart-1: 222 47% 11%; /* Navy */
-  --chart-2: 35 92% 55%;  /* Gold */
-  --chart-3: 160 84% 39%; /* Growth Green */
-  --chart-4: 280 65% 60%; /* Purple */
-  --chart-5: 340 75% 55%; /* Pink */
+  --chart-1: 152 45% 28%;
+  --chart-2: 36 60% 55%;
+  --chart-3: 200 70% 50%;
+  --chart-4: 280 60% 55%;
+  --chart-5: 340 70% 50%;
 }
 
 .dark {
-  /* Reversed for dark mode if needed, though this brand feels better in light mode */
-  --background: 222 47% 5%;
-  --foreground: 210 40% 98%;
+  --background: 20 14% 8%;
+  --foreground: 45 30% 95%;
 
-  --card: 222 47% 8%;
-  --card-foreground: 210 40% 98%;
+  --card: 20 14% 12%;
+  --card-foreground: 45 30% 95%;
 
-  --primary: 210 40% 98%;
-  --primary-foreground: 222 47% 9%;
+  --primary: 152 40% 45%;
+  --primary-foreground: 20 14% 8%;
 
-  --secondary: 35 92% 55%;
-  --secondary-foreground: 222 47% 9%;
+  --secondary: 36 55% 50%;
+  --secondary-foreground: 20 14% 8%;
 
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 20 14% 18%;
+  --muted-foreground: 45 15% 60%;
 
-  --accent: 217 33% 17%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 152 30% 18%;
+  --accent-foreground: 152 40% 70%;
 
-  --destructive: 0 62% 30%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 0 62% 40%;
+  --destructive-foreground: 45 30% 95%;
 
-  --border: 217 33% 17%;
-  --input: 217 33% 17%;
-  --ring: 212.7 26.8% 83.9%;
+  --border: 20 14% 20%;
+  --input: 20 14% 20%;
+  --ring: 152 40% 45%;
 }
 
 @layer base {
@@ -118,7 +108,7 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-serif;
+  h1, h2, h3, h4 {
+    @apply font-serif tracking-tight;
   }
 }

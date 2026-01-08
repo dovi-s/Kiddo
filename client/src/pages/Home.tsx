@@ -2,235 +2,141 @@ import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { ArrowRight, TrendingUp, ShieldCheck, Heart, Sparkles, Star, Users, Baby, User, Wallet } from "lucide-react";
-import heroImage from "@assets/generated_images/golden_tree_growing_from_digital_foundation.png";
+import { ArrowRight, Leaf, Heart, Shield, Sparkles, Users, Gift } from "lucide-react";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-background font-sans">
       <Nav />
       
-      {/* Hero Section - Clean, Sophisticated */}
-      <section className="relative overflow-hidden pt-20 pb-32 md:pt-32 md:pb-40">
+      {/* Hero */}
+      <section className="relative pt-20 pb-28 md:pt-32 md:pb-40 overflow-hidden">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center space-y-8">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              <h1 className="font-serif text-5xl font-bold leading-tight text-primary md:text-7xl tracking-tight">
-                Invest in the ones you love.
-              </h1>
-            </motion.div>
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-xl text-muted-foreground md:text-2xl leading-relaxed max-w-2xl mx-auto"
-            >
-              One account for a lifetime of growth. Family, friends, and loved ones can gift shares for birthdays, bar mitzvahs, graduations, or just because.
-            </motion.p>
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex flex-col gap-4 sm:flex-row justify-center pt-4"
-            >
+          <motion.div 
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            className="max-w-3xl mx-auto text-center space-y-8"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-medium">
+              <Leaf className="h-4 w-4" /> A new way to give
+            </div>
+            <h1 className="font-serif text-5xl md:text-7xl font-semibold leading-[1.1] text-foreground">
+              Invest in the ones you love.
+            </h1>
+            <p className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              One account for a lifetime of gifts. Family and friends contribute to real investments for birthdays, bar mitzvahs, graduations, and beyond.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
               <Link href="/create">
-                <Button size="lg" className="h-14 px-10 text-lg font-bold shadow-xl shadow-primary/20">
-                  Open an Account
+                <Button size="lg" className="h-14 px-10 text-lg font-semibold" data-testid="button-hero-cta">
+                  Create a Profile
                 </Button>
               </Link>
               <Link href="/give">
-                <Button variant="outline" size="lg" className="h-14 px-10 text-lg font-bold">
+                <Button variant="outline" size="lg" className="h-14 px-10 text-lg font-semibold" data-testid="button-hero-give">
                   Give a Gift
                 </Button>
               </Link>
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
         </div>
-        
-        {/* Abstract Background Element */}
-        <div className="absolute -bottom-1/2 left-1/2 -translate-x-1/2 w-[150%] aspect-square rounded-full bg-gradient-to-t from-secondary/5 to-transparent blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-1/3 left-1/2 -translate-x-1/2 w-[200%] aspect-square rounded-full bg-gradient-to-t from-primary/5 via-secondary/5 to-transparent blur-3xl pointer-events-none" />
       </section>
 
-      {/* Who It's For */}
-      <section className="py-24 border-t bg-muted/20">
+      {/* How It Works */}
+      <section className="py-24 border-t bg-card" id="how">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="font-serif text-3xl font-bold text-primary md:text-4xl">Built for everyone.</h2>
+            <h2 className="font-serif text-4xl md:text-5xl font-semibold text-foreground mb-4">Simple by design.</h2>
+            <p className="text-lg text-muted-foreground max-w-xl mx-auto">Three steps. Real ownership. Lasting impact.</p>
           </div>
-          <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
-            <Card className="border-none shadow-sm hover:shadow-lg transition-shadow bg-white">
-              <CardHeader className="pb-4">
-                <div className="h-12 w-12 rounded-xl bg-blue-50 flex items-center justify-center mb-4">
-                  <Baby className="h-6 w-6 text-blue-600" />
-                </div>
-                <CardTitle className="font-serif text-xl">For Your Children</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  Open a custodial account and let your community invest in your child's future. One fund, a lifetime of gifts.
-                </p>
-              </CardContent>
-            </Card>
 
-            <Card className="border-none shadow-sm hover:shadow-lg transition-shadow bg-white">
-              <CardHeader className="pb-4">
-                <div className="h-12 w-12 rounded-xl bg-green-50 flex items-center justify-center mb-4">
-                  <User className="h-6 w-6 text-green-600" />
-                </div>
-                <CardTitle className="font-serif text-xl">For Yourself</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  Build your own portfolio and let friends and family contribute to your goals. Weddings, milestones, or just because.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-sm hover:shadow-lg transition-shadow bg-white">
-              <CardHeader className="pb-4">
-                <div className="h-12 w-12 rounded-xl bg-amber-50 flex items-center justify-center mb-4">
-                  <Users className="h-6 w-6 text-amber-600" />
-                </div>
-                <CardTitle className="font-serif text-xl">For Givers</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">
-                  No account needed. Scan a QR code, pick an amount, and gift ownership in seconds. It's that simple.
-                </p>
-              </CardContent>
-            </Card>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {[
+              { num: "01", title: "Create a profile", desc: "For your child or yourself. Set up a Future Fund in minutes.", icon: Users },
+              { num: "02", title: "Share a Moment", desc: "Design a page for the event. Get a link and QR to share.", icon: Gift },
+              { num: "03", title: "Watch it grow", desc: "Every gift becomes real ownership. Track it all in one place.", icon: Sparkles },
+            ].map((step, i) => (
+              <Card key={i} className="border-none bg-transparent shadow-none text-center group">
+                <CardContent className="pt-8 space-y-4">
+                  <div className="mx-auto h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                    <step.icon className="h-7 w-7" />
+                  </div>
+                  <span className="font-serif text-sm text-muted-foreground">{step.num}</span>
+                  <h3 className="font-serif text-2xl font-semibold text-foreground">{step.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed">{step.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* How It Works - Simplified */}
+      {/* Why Everleaf */}
       <section className="py-24">
         <div className="container mx-auto px-4">
-          <div className="grid gap-16 md:grid-cols-2 items-center max-w-6xl mx-auto">
-            <div className="space-y-10">
-              <h2 className="font-serif text-3xl font-bold text-primary md:text-4xl">
-                One account.<br/>A lifetime of growth.
-              </h2>
-              <div className="space-y-8">
+          <div className="grid md:grid-cols-2 gap-16 items-center max-w-6xl mx-auto">
+            <div className="space-y-8">
+              <h2 className="font-serif text-4xl font-semibold text-foreground">Why ownership matters.</h2>
+              <div className="space-y-6">
                 {[
-                  { num: "1", title: "Open an account", desc: "For yourself or your child. Takes 2 minutes." },
-                  { num: "2", title: "Share your link", desc: "Send it, print it, or display a QR code at your event." },
-                  { num: "3", title: "Watch it grow", desc: "Every gift becomes real ownership. Track it all in one place." }
-                ].map((item) => (
-                  <div key={item.num} className="flex gap-6 items-start">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground font-serif font-bold">
-                      {item.num}
-                    </span>
+                  { icon: Heart, title: "Gifts that last", text: "Not cash that vanishes. Not toys that break. Real shares in their name." },
+                  { icon: Shield, title: "Secure & regulated", text: "Held in SIPC-insured custodial accounts. Bank-grade security." },
+                  { icon: Sparkles, title: "Compound over time", text: "$100 today could be $500+ by age 18. Time is the ultimate gift." },
+                ].map((item, i) => (
+                  <div key={i} className="flex gap-4 items-start">
+                    <div className="h-10 w-10 rounded-xl bg-secondary/20 flex items-center justify-center shrink-0">
+                      <item.icon className="h-5 w-5 text-secondary" />
+                    </div>
                     <div>
-                      <h3 className="font-bold text-lg text-primary">{item.title}</h3>
-                      <p className="text-muted-foreground">{item.desc}</p>
+                      <h4 className="font-semibold text-foreground">{item.title}</h4>
+                      <p className="text-muted-foreground text-sm mt-1">{item.text}</p>
                     </div>
                   </div>
                 ))}
               </div>
               <Link href="/create">
-                <Button size="lg" className="h-12 px-8 text-lg font-bold">
-                  Get Started <ArrowRight className="ml-2 h-5 w-5" />
+                <Button className="mt-4" data-testid="button-why-cta">
+                  Get Started <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
             </div>
             <div className="relative">
-              <img 
-                src={heroImage} 
-                alt="Growth visualization" 
-                className="rounded-2xl shadow-2xl"
-              />
-              <div className="absolute -bottom-6 -left-6 bg-white rounded-xl p-4 shadow-lg border max-w-[200px]">
-                <p className="text-xs text-muted-foreground">Total Contributions</p>
-                <p className="text-2xl font-bold font-serif text-primary">$12,450</p>
-                <p className="text-xs text-green-600 font-medium">+14.2% all time</p>
+              <div className="aspect-[4/5] rounded-3xl bg-gradient-to-br from-primary/20 via-secondary/10 to-accent/20 flex items-center justify-center">
+                <div className="bg-card rounded-2xl shadow-2xl p-8 max-w-xs text-center space-y-4 border">
+                  <div className="h-20 w-20 rounded-full bg-muted mx-auto" />
+                  <p className="font-serif text-xl font-semibold">Ari's Future Fund</p>
+                  <p className="text-3xl font-bold text-primary">$4,250</p>
+                  <p className="text-sm text-muted-foreground">18 contributors</p>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Trust Bar */}
-      <section className="py-16 border-y bg-primary text-primary-foreground">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {[
-              { value: "10,000+", label: "Families" },
-              { value: "$2.4M", label: "Gifted" },
-              { value: "SIPC", label: "Insured" },
-              { value: "256-bit", label: "Encryption" }
-            ].map((stat) => (
-              <div key={stat.label}>
-                <p className="text-3xl font-bold font-serif">{stat.value}</p>
-                <p className="text-sm opacity-70">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Why */}
-      <section className="py-24" id="about">
-        <div className="container mx-auto px-4">
-          <div className="mb-16 text-center max-w-2xl mx-auto">
-            <h2 className="mb-4 font-serif text-3xl font-bold text-primary md:text-4xl">
-              Why ownership matters.
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              Cash gets spent. Toys break. Ownership compounds.
-            </p>
-          </div>
-
-          <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
-            {[
-              {
-                icon: TrendingUp,
-                title: "Compound Growth",
-                description: "$100 today could be $500+ by age 18. Time is the ultimate gift."
-              },
-              {
-                icon: ShieldCheck,
-                title: "Real Ownership",
-                description: "Not points. Not credits. Real shares in real companies, held in their name."
-              },
-              {
-                icon: Heart,
-                title: "Lasting Memory",
-                description: "Every gift includes a message. A permanent record of who believed in them."
-              }
-            ].map((feature, i) => (
-              <div key={i} className="text-center p-8">
-                <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-full bg-secondary/10 text-secondary">
-                  <feature.icon className="h-7 w-7" />
-                </div>
-                <h3 className="mb-3 font-serif text-xl font-bold text-primary">{feature.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
-              </div>
-            ))}
           </div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-24 bg-muted/30 border-t">
+      <section className="py-24 bg-primary text-primary-foreground">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="font-serif text-3xl font-bold text-primary md:text-4xl mb-6">
-            Start building their future today.
-          </h2>
-          <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-            It takes 2 minutes to open an account. Free to create. Transparent pricing.
+          <h2 className="font-serif text-4xl md:text-5xl font-semibold mb-6">Start building their future.</h2>
+          <p className="text-xl opacity-90 mb-10 max-w-xl mx-auto">
+            Create a profile in 2 minutes. Share it with anyone. No account needed to give.
           </p>
-          <Link href="/create">
-            <Button size="lg" className="h-14 px-12 text-lg font-bold shadow-xl shadow-primary/20">
-              Open an Account
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/create">
+              <Button size="lg" variant="secondary" className="h-14 px-12 text-lg font-semibold">
+                Create a Profile
+              </Button>
+            </Link>
+            <Link href="/give">
+              <Button size="lg" variant="outline" className="h-14 px-12 text-lg font-semibold border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">
+                Give a Gift
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
 
