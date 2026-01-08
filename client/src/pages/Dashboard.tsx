@@ -2,7 +2,7 @@ import { Nav } from "@/components/layout/Nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Share2, QrCode, Copy, Users, Gift, MessageSquare, TrendingUp, Check, ExternalLink } from "lucide-react";
+import { Plus, QrCode, Copy, Users, Gift, MessageSquare, TrendingUp, Check, ExternalLink, PieChart, Shield, CheckCircle2, Clock, ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
@@ -25,6 +25,19 @@ const THANK_YOUS = [
   { to: "Uncle Dave", amount: 180, status: "Draft ready" },
   { to: "Grandma Ruth", amount: 500, status: "Draft ready" },
   { to: "The Cohens", amount: 100, status: "Not started" },
+];
+
+const HOLDINGS = [
+  { name: "Total Stock Market", ticker: "VTI", value: 2125, allocation: 50, change: 12.4 },
+  { name: "International Stocks", ticker: "VXUS", value: 850, allocation: 20, change: 8.2 },
+  { name: "Bond Index", ticker: "BND", value: 637, allocation: 15, change: 2.1 },
+  { name: "Cash (Seed)", ticker: "—", value: 638, allocation: 15, change: 0 },
+];
+
+const ACTIVITY = [
+  { type: "invested", desc: "Uncle Dave's $180 invested into Future Fund", time: "Today, 4:30 PM" },
+  { type: "invested", desc: "Grandma Ruth's $500 invested into Future Fund", time: "Yesterday" },
+  { type: "pending", desc: "The Cohens' $100 pending investment", time: "Today, 2:15 PM" },
 ];
 
 export default function Dashboard() {
@@ -79,7 +92,7 @@ export default function Dashboard() {
                 <div className="text-right">
                   <p className="text-2xl font-semibold text-foreground">${profile.balance.toLocaleString()}</p>
                   <p className="text-sm text-muted-foreground flex items-center justify-end gap-1">
-                    <TrendingUp className="h-3 w-3 text-primary" /> +12.5%
+                    <TrendingUp className="h-3 w-3 text-primary" /> +12.5% all time
                   </p>
                 </div>
               </div>
@@ -88,12 +101,119 @@ export default function Dashboard() {
         ))}
 
         {/* Tabs */}
-        <Tabs defaultValue="moments" className="space-y-6">
-          <TabsList className="bg-muted/50">
+        <Tabs defaultValue="holdings" className="space-y-6">
+          <TabsList className="bg-muted/50 w-full grid grid-cols-4">
+            <TabsTrigger value="holdings"><PieChart className="mr-2 h-4 w-4" /> Holdings</TabsTrigger>
             <TabsTrigger value="moments"><Gift className="mr-2 h-4 w-4" /> Moments</TabsTrigger>
-            <TabsTrigger value="contributions"><Users className="mr-2 h-4 w-4" /> Contributions</TabsTrigger>
+            <TabsTrigger value="contributions"><Users className="mr-2 h-4 w-4" /> Activity</TabsTrigger>
             <TabsTrigger value="thankyou"><MessageSquare className="mr-2 h-4 w-4" /> Thank you</TabsTrigger>
           </TabsList>
+
+          {/* Holdings Tab */}
+          <TabsContent value="holdings" className="space-y-4">
+            {/* Brokerage Status */}
+            <Card className="border-none shadow-sm bg-primary/5 border-l-4 border-l-primary">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="font-medium text-foreground text-sm">Brokerage connected</p>
+                    <p className="text-xs text-muted-foreground">Custodial account via Apex Clearing • SIPC insured</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-primary border-primary/30">Active</Badge>
+              </CardContent>
+            </Card>
+
+            {/* Allocation */}
+            <Card className="border-none shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Portfolio allocation</CardTitle>
+                  <p className="text-xs text-muted-foreground">Future Fund (auto-managed)</p>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {HOLDINGS.map((h, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
+                        {h.allocation}%
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground text-sm">{h.name}</p>
+                        <p className="text-xs text-muted-foreground">{h.ticker}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-foreground text-sm">${h.value.toLocaleString()}</p>
+                      {h.change > 0 && (
+                        <p className="text-xs text-primary flex items-center justify-end gap-0.5">
+                          <ArrowUpRight className="h-3 w-3" /> {h.change}%
+                        </p>
+                      )}
+                      {h.change === 0 && h.ticker === "—" && (
+                        <p className="text-xs text-muted-foreground">Uninvested</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Quick info */}
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="border-none shadow-sm">
+                <CardContent className="p-4 text-center">
+                  <p className="text-lg font-semibold text-foreground">$4,250</p>
+                  <p className="text-xs text-muted-foreground">Total value</p>
+                </CardContent>
+              </Card>
+              <Card className="border-none shadow-sm">
+                <CardContent className="p-4 text-center">
+                  <p className="text-lg font-semibold text-primary">+$472</p>
+                  <p className="text-xs text-muted-foreground">Total return</p>
+                </CardContent>
+              </Card>
+              <Card className="border-none shadow-sm">
+                <CardContent className="p-4 text-center">
+                  <p className="text-lg font-semibold text-foreground">$638</p>
+                  <p className="text-xs text-muted-foreground">Pending</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Activity */}
+            <Card className="border-none shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Recent activity</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {ACTIVITY.map((a, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${
+                      a.type === "invested" ? "bg-primary/10" : "bg-muted"
+                    }`}>
+                      {a.type === "invested" ? <Check className="h-3.5 w-3.5 text-primary" /> : <Clock className="h-3.5 w-3.5 text-muted-foreground" />}
+                    </div>
+                    <div>
+                      <p className="text-sm text-foreground">{a.desc}</p>
+                      <p className="text-xs text-muted-foreground">{a.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Trust footer */}
+            <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground pt-2">
+              <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> SIPC insured</span>
+              <span>•</span>
+              <span>Cleared by Apex</span>
+              <span>•</span>
+              <span>256-bit encryption</span>
+            </div>
+          </TabsContent>
 
           <TabsContent value="moments" className="space-y-4">
             <div className="flex justify-between items-center">
