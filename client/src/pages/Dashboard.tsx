@@ -3,9 +3,10 @@ import { Nav } from "@/components/layout/Nav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, QrCode, Copy, Users, Gift, MessageSquare, TrendingUp, Check, ExternalLink, PieChart, Shield, CheckCircle2, Clock, ArrowUpRight, ArrowRight, Landmark, Sparkles, Share2, Settings } from "lucide-react";
+import { Plus, QrCode, Copy, Users, Gift, MessageSquare, TrendingUp, Check, ExternalLink, PieChart, Shield, CheckCircle2, Clock, ArrowUpRight, ArrowRight, Landmark, Sparkles, Share2, Settings, HelpCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Link, useSearch } from "wouter";
 import { motion } from "framer-motion";
 
@@ -42,8 +43,8 @@ export default function Dashboard() {
     },
     { 
       id: "brokerage", 
-      label: "Open brokerage", 
-      desc: isPersonal ? "Open a personal brokerage (2 min)" : "Open a custodial account (2 min)", 
+      label: "Open investment account", 
+      desc: isPersonal ? "Personal account within Everleaf (2 min)" : "Custodial account within Everleaf (2 min)", 
       done: false, 
       icon: Landmark, 
       action: `/onboard?type=${accountType}&name=${encodeURIComponent(profileName)}&email=${encodeURIComponent(userEmail)}`, 
@@ -174,13 +175,23 @@ export default function Dashboard() {
               <Card className="border-2 border-dashed border-primary/30 bg-primary/5 mb-8">
                 <CardContent className="p-6 text-center">
                   <Landmark className="h-10 w-10 text-primary mx-auto mb-3" />
-                  <p className="font-semibold text-foreground mb-1">Open a brokerage to start receiving gifts</p>
+                  <p className="font-semibold text-foreground mb-1 flex items-center justify-center gap-1.5">
+                    Open {isPersonal ? "your" : "a custodial"} investment account
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs text-left">
+                        <p className="text-sm">We'll create a new {isPersonal ? "brokerage" : "UTMA custodial"} account for you within Everleaf, powered by Apex Clearing. SIPC insured up to $500k.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </p>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {isPersonal ? "Open a personal brokerage" : "Open a custodial account"} in 2 minutes. SIPC insured.
+                    Takes about 2 minutes. No external accounts needed.
                   </p>
                   <Link href={`/onboard?type=${accountType}&name=${encodeURIComponent(profileName)}&email=${encodeURIComponent(userEmail)}`}>
                     <Button onClick={() => completeStep("brokerage")}>
-                      Open brokerage <ArrowRight className="ml-2 h-4 w-4" />
+                      Open account <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
                 </CardContent>
@@ -261,9 +272,19 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-primary" />
                       <div>
-                        <p className="font-medium text-foreground text-sm">Brokerage connected</p>
+                        <p className="font-medium text-foreground text-sm flex items-center gap-1.5">
+                          Investment account active
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs text-left">
+                              <p className="text-sm">Your {isPersonal ? "personal" : "UTMA custodial"} account is held within Everleaf, cleared by Apex Clearing Corporation. SIPC insured up to $500k.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </p>
                         <p className="text-xs text-muted-foreground">
-                          {isPersonal ? "Personal account" : "Custodial account"} via Apex Clearing • SIPC insured
+                          {isPersonal ? "Personal account" : "Custodial account"} • Powered by Apex • SIPC insured
                         </p>
                       </div>
                     </div>
