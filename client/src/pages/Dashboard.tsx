@@ -1070,11 +1070,31 @@ export default function Dashboard() {
                     />
                   </div>
 
-                  {/* Preview card */}
-                  <div className="p-4 rounded-xl bg-foreground/[0.03] border">
-                    <p className="text-xs text-muted-foreground mb-3">Preview</p>
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">
+                  {/* Preview card - matches share card design */}
+                  <div className={`rounded-xl overflow-hidden border shadow-sm ${
+                    selectedEventType === "birthday" ? "bg-gradient-to-br from-pink-50 to-rose-50" :
+                    selectedEventType === "graduation" ? "bg-gradient-to-br from-blue-50 to-indigo-50" :
+                    selectedEventType === "bar_mitzvah" ? "bg-gradient-to-br from-indigo-50 to-violet-50" :
+                    selectedEventType === "wedding" ? "bg-gradient-to-br from-rose-50 to-pink-50" :
+                    selectedEventType === "baby" ? "bg-gradient-to-br from-yellow-50 to-amber-50" :
+                    selectedEventType === "baptism" ? "bg-gradient-to-br from-sky-50 to-blue-50" :
+                    selectedEventType === "quinceañera" ? "bg-gradient-to-br from-fuchsia-50 to-purple-50" :
+                    selectedEventType === "holiday" ? "bg-gradient-to-br from-green-50 to-emerald-50" :
+                    "bg-white"
+                  }`}>
+                    <div className={`h-1.5 ${
+                      selectedEventType === "birthday" ? "bg-gradient-to-r from-pink-400 to-rose-400" :
+                      selectedEventType === "graduation" ? "bg-gradient-to-r from-blue-400 to-indigo-400" :
+                      selectedEventType === "bar_mitzvah" ? "bg-gradient-to-r from-indigo-400 to-violet-400" :
+                      selectedEventType === "wedding" ? "bg-gradient-to-r from-rose-300 to-pink-300" :
+                      selectedEventType === "baby" ? "bg-gradient-to-r from-yellow-300 to-amber-300" :
+                      selectedEventType === "baptism" ? "bg-gradient-to-r from-sky-300 to-blue-300" :
+                      selectedEventType === "quinceañera" ? "bg-gradient-to-r from-fuchsia-400 to-purple-400" :
+                      selectedEventType === "holiday" ? "bg-gradient-to-r from-green-400 to-emerald-400" :
+                      "bg-gray-200"
+                    }`} />
+                    <div className="p-4 text-center">
+                      <span className="text-3xl block mb-2">
                         {selectedEventType === "birthday" ? "🎂" :
                          selectedEventType === "graduation" ? "🎓" :
                          selectedEventType === "bar_mitzvah" ? "✡️" :
@@ -1084,19 +1104,22 @@ export default function Dashboard() {
                          selectedEventType === "quinceañera" ? "👑" :
                          selectedEventType === "holiday" ? "🎄" : "✨"}
                       </span>
-                      <div>
-                        <p className="font-semibold">{pageTitle || `${profileName}'s ${
-                          selectedEventType === "birthday" ? "Birthday" :
-                          selectedEventType === "graduation" ? "Graduation" :
-                          selectedEventType === "bar_mitzvah" ? "Bar Mitzvah" :
-                          selectedEventType === "wedding" ? "Wedding" :
-                          selectedEventType === "baby" ? "Baby Shower" :
-                          selectedEventType === "baptism" ? "Baptism" :
-                          selectedEventType === "quinceañera" ? "Quinceañera" :
-                          selectedEventType === "holiday" ? "Holiday Gift" : "Event"
-                        }`}</p>
-                        <p className="text-xs text-muted-foreground">everleaf.com/m/{profileName.toLowerCase().replace(/\s+/g, "-")}</p>
-                      </div>
+                      <p className="font-semibold text-gray-900">{pageTitle || `${profileName}'s ${
+                        selectedEventType === "birthday" ? "Birthday" :
+                        selectedEventType === "graduation" ? "Graduation" :
+                        selectedEventType === "bar_mitzvah" ? "Bar Mitzvah" :
+                        selectedEventType === "wedding" ? "Wedding" :
+                        selectedEventType === "baby" ? "Baby Shower" :
+                        selectedEventType === "baptism" ? "Baptism" :
+                        selectedEventType === "quinceañera" ? "Quinceañera" :
+                        selectedEventType === "holiday" ? "Holiday Gift" : "Event"
+                      }`}</p>
+                      {eventDate && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(eventDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-2">everleaf.com/m/{profileName.toLowerCase().replace(/\s+/g, "-")}</p>
                     </div>
                   </div>
 
