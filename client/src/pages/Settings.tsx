@@ -1,12 +1,10 @@
 import { Nav } from "@/components/layout/Nav";
-import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { User, Bell, Shield, CreditCard, LogOut, Landmark, CheckCircle2, ExternalLink, TrendingUp } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useSearch } from "wouter";
 
 export default function Settings() {
@@ -17,211 +15,123 @@ export default function Settings() {
   const isPersonal = accountType === "personal";
 
   return (
-    <div className="min-h-screen bg-background font-sans">
+    <div className="min-h-screen bg-background">
       <Nav />
       
       <main className="container mx-auto px-4 py-10 max-w-lg">
-        <h1 className="text-2xl font-semibold text-foreground mb-8">Settings</h1>
+        <h1 className="text-2xl font-semibold text-foreground mb-10">Settings</h1>
 
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Brokerage */}
-          <Card className="border-none shadow-sm" id="brokerage">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2"><Landmark className="h-4 w-4" /> Brokerage</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-primary/5 border border-primary/10">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="font-medium text-sm">Account active</p>
-                    <p className="text-xs text-muted-foreground">Member FINRA/SIPC • Cleared by Apex</p>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-primary border-primary/30">Active</Badge>
-              </div>
-              
-              <p className="text-[10px] text-muted-foreground">
-                Brokerage services provided by [Broker-Dealer], Member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation. Everleaf is a technology platform and is not a broker-dealer.
-              </p>
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">Account details</p>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-muted-foreground text-xs">Account type</p>
-                    <p className="font-medium">{isPersonal ? "Individual brokerage" : "UTMA custodial"}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-muted-foreground text-xs">Account number</p>
-                    <p className="font-medium">••••4827</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-muted-foreground text-xs">Clearing firm</p>
-                    <p className="font-medium">Apex Clearing Corp.</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-muted-foreground text-xs">Protection</p>
-                    <p className="font-medium">SIPC up to $500k</p>
-                  </div>
-                  {!isPersonal && (
-                    <div className="p-3 rounded-lg bg-muted/50 col-span-2">
-                      <p className="text-muted-foreground text-xs">Beneficiary</p>
-                      <p className="font-medium">{profileName}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-muted-foreground">Default investment</p>
-                <div className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <TrendingUp className="h-4 w-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm">Future Fund</p>
-                      <p className="text-xs text-muted-foreground">Auto-invest into diversified basket</p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm">Change</Button>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <ExternalLink className="mr-2 h-3 w-3" /> View statements
-                </Button>
-                <Button variant="outline" size="sm" className="flex-1">
-                  Tax documents
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Account */}
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" /> Account</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-sm">Email</Label>
-                <Input value="you@example.com" disabled className="bg-muted/50" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm">Name</Label>
-                <Input defaultValue="Sarah Miller" />
-              </div>
-              <Button variant="outline" size="sm">Update</Button>
-            </CardContent>
-          </Card>
-
-          {/* Privacy */}
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2"><Shield className="h-4 w-4" /> Privacy</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">Hide amounts publicly</p>
-                  <p className="text-xs text-muted-foreground">Contributors see their own, not others'</p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              {!isPersonal && (
+          <section>
+            <h2 className="font-semibold mb-4">Investment account</h2>
+            <Card className="border">
+              <CardContent className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">Show messages to {profileName}</p>
-                    <p className="text-xs text-muted-foreground">Let them see contributor notes</p>
+                    <p className="text-sm font-medium">Account active</p>
+                    <p className="text-xs text-muted-foreground">Apex Clearing · SIPC protected</p>
                   </div>
-                  <Switch defaultChecked />
+                  <span className="text-xs border px-2 py-1 rounded">Active</span>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="p-3 rounded-md bg-muted/50">
+                    <p className="text-xs text-muted-foreground">Type</p>
+                    <p className="font-medium">{isPersonal ? "Individual" : "Custodial"}</p>
+                  </div>
+                  <div className="p-3 rounded-md bg-muted/50">
+                    <p className="text-xs text-muted-foreground">Account</p>
+                    <p className="font-medium">••••4827</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1">Statements</Button>
+                  <Button variant="outline" size="sm" className="flex-1">Tax docs</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Account */}
+          <section>
+            <h2 className="font-semibold mb-4">Account</h2>
+            <Card className="border">
+              <CardContent className="p-5 space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Email</Label>
+                  <Input value="you@example.com" disabled className="bg-muted/50" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Name</Label>
+                  <Input defaultValue="Sarah Miller" />
+                </div>
+                <Button variant="outline" size="sm">Update</Button>
+              </CardContent>
+            </Card>
+          </section>
 
           {/* Notifications */}
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2"><Bell className="h-4 w-4" /> Notifications</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">New contributions</p>
-                <Switch defaultChecked />
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Weekly summary</p>
-                <Switch defaultChecked />
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Investment updates</p>
-                <Switch defaultChecked />
-              </div>
-            </CardContent>
-          </Card>
+          <section>
+            <h2 className="font-semibold mb-4">Notifications</h2>
+            <Card className="border">
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">New contributions</p>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Weekly summary</p>
+                  <Switch defaultChecked />
+                </div>
+              </CardContent>
+            </Card>
+          </section>
 
           {/* Plan */}
-          <Card className="border-none shadow-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-4 w-4" /> Plan</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 rounded-xl border-2 border-primary bg-primary/5">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-semibold text-sm">Free</p>
-                  <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full">Current</span>
-                </div>
-                <p className="text-xs text-muted-foreground">Guests pay fees at checkout</p>
-                <p className="text-xs text-muted-foreground">Card processing (pass-through) + 2.0% service fee (cap $12)</p>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-xs font-medium text-muted-foreground">Upgrade options</p>
-                
-                <div className="p-4 rounded-xl border hover:border-primary/50 transition-colors">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-semibold text-sm">Plus</p>
-                    <p className="font-semibold text-sm">$99 <span className="text-muted-foreground font-normal text-xs">per event</span></p>
+          <section>
+            <h2 className="font-semibold mb-4">Plan</h2>
+            <Card className="border">
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Free</p>
+                    <p className="text-xs text-muted-foreground">Guests pay ~3% at checkout</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2">Fee-free for guests. Premium templates. Auto thank-yous.</p>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• Guests see $0 fees</li>
-                    <li>• Service fee waived up to $5,000</li>
-                    <li>• Host covers processing at cost</li>
-                  </ul>
+                  <span className="text-xs border px-2 py-1 rounded">Current</span>
                 </div>
-
-                <div className="p-4 rounded-xl border hover:border-primary/50 transition-colors">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-semibold text-sm">Family</p>
-                    <p className="font-semibold text-sm">$199 <span className="text-muted-foreground font-normal text-xs">per year</span></p>
+                <div className="p-4 rounded-md border">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium">Plus</p>
+                    <p className="text-sm font-medium">$99/event</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2">Multiple kids, one home base. Fee-free on all events.</p>
-                  <ul className="text-xs text-muted-foreground space-y-1">
-                    <li>• Up to 10 events per year</li>
-                    <li>• Service fee waived up to $10,000/year</li>
-                    <li>• Household dashboard + recurring management</li>
-                  </ul>
+                  <p className="text-xs text-muted-foreground">Guests pay $0. You cover processing.</p>
                 </div>
-              </div>
-
-              <Button className="w-full">Upgrade Plan</Button>
-            </CardContent>
-          </Card>
+                <div className="p-4 rounded-md border">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-medium">Family</p>
+                    <p className="text-sm font-medium">$199/year</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Up to 10 events. Household dashboard.</p>
+                </div>
+                <Button className="w-full">Upgrade</Button>
+              </CardContent>
+            </Card>
+          </section>
 
           {/* Sign out */}
-          <Card className="border-none shadow-sm">
+          <Card className="border">
             <CardContent className="p-5">
-              <Button variant="outline" className="w-full justify-start"><LogOut className="mr-2 h-4 w-4" /> Sign out</Button>
+              <Button variant="outline" className="w-full justify-start">
+                <LogOut className="mr-2 h-4 w-4" /> Sign out
+              </Button>
             </CardContent>
           </Card>
+
+          <p className="text-xs text-muted-foreground text-center pt-4">
+            Brokerage by [Broker-Dealer], Member FINRA/SIPC. Clearing by Apex.
+          </p>
         </div>
       </main>
-      <Footer />
     </div>
   );
 }
