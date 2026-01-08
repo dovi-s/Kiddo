@@ -8,6 +8,7 @@ import Home from "@/pages/Home";
 import Registry from "@/pages/Registry";
 import Dashboard from "@/pages/Dashboard";
 import Create from "@/pages/Create";
+import Give from "@/pages/Give";
 
 function Router() {
   return (
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/registry" component={Registry} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/create" component={Create} />
+      <Route path="/give" component={Give} />
       <Route component={NotFound} />
     </Switch>
   );
