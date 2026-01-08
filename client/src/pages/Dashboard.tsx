@@ -520,11 +520,11 @@ export default function Dashboard() {
       <Dialog open={showQR} onOpenChange={setShowQR}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold tracking-tight">Share {profileName}'s page</DialogTitle>
+            <DialogTitle className="text-lg font-semibold tracking-tight">Share</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 pt-2">
             <p className="text-sm text-muted-foreground text-center">
-              Scan to open the contribution page
+              Guests scan to give a gift
             </p>
 
             {/* QR code */}
@@ -544,9 +544,9 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground break-all">{momentLink}</p>
             </div>
 
-            {/* Download hint */}
+            {/* Hint */}
             <p className="text-xs text-muted-foreground text-center">
-              Screenshot to save, or print for your event
+              Print for your party or share directly
             </p>
           </div>
         </DialogContent>
