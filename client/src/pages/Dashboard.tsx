@@ -156,13 +156,23 @@ export default function Dashboard() {
                           <p className="text-xs text-muted-foreground">SIPC protected · 2 minutes</p>
                         </div>
                       </div>
-                      <Link href={`/onboard?type=${accountType}&name=${encodeURIComponent(profileName)}&email=${encodeURIComponent(userEmail)}`}>
-                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                          <Button size="sm" onClick={() => setBrokerageOpen(true)}>
-                            Continue <ArrowRight className="ml-2 h-3 w-3" />
-                          </Button>
-                        </motion.div>
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-xs text-muted-foreground"
+                          onClick={() => setBrokerageOpen(true)}
+                        >
+                          Later
+                        </Button>
+                        <Link href={`/onboard?type=${accountType}&name=${encodeURIComponent(profileName)}&email=${encodeURIComponent(userEmail)}`}>
+                          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                            <Button size="sm" onClick={() => setBrokerageOpen(true)}>
+                              Continue <ArrowRight className="ml-2 h-3 w-3" />
+                            </Button>
+                          </motion.div>
+                        </Link>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-between p-5 border rounded-lg bg-foreground/[0.02]">
