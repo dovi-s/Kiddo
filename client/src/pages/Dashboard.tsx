@@ -169,7 +169,7 @@ export default function Dashboard() {
                         </Button>
                         <Link href={`/onboard?type=${accountType}&name=${encodeURIComponent(profileName)}&email=${encodeURIComponent(userEmail)}`}>
                           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                            <Button size="sm" onClick={() => setBrokerageOpen(true)}>
+                            <Button size="sm">
                               Continue <ArrowRight className="ml-2 h-3 w-3" />
                             </Button>
                           </motion.div>
@@ -208,11 +208,13 @@ export default function Dashboard() {
                           <p className="text-xs text-muted-foreground">For events or always-on</p>
                         </div>
                       </div>
-                      <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                        <Button size="sm" onClick={() => setPageCreated(true)}>
-                          Create <ArrowRight className="ml-2 h-3 w-3" />
-                        </Button>
-                      </motion.div>
+                      <Link href={`/create?type=${accountType}&name=${encodeURIComponent(profileName)}&step=page`}>
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button size="sm">
+                            Create <ArrowRight className="ml-2 h-3 w-3" />
+                          </Button>
+                        </motion.div>
+                      </Link>
                     </div>
                   ) : pageCreated ? (
                     <div className="flex items-center justify-between p-5 border rounded-lg bg-foreground/[0.02]">
