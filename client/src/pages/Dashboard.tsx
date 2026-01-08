@@ -808,38 +808,76 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* QR Code Modal for sharing moment page */}
+      {/* QR Code Modal for sharing moment page - Premium */}
       <Dialog open={showQR} onOpenChange={setShowQR}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold tracking-tight">Share</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 pt-2">
-            <p className="text-sm text-muted-foreground text-center">
-              Guests scan to give a gift
-            </p>
-
-            {/* QR code */}
-            <div className="flex justify-center">
-              <div className="p-6 bg-white rounded-xl border shadow-sm">
-                <QRCodeSVG 
-                  value={momentLink}
-                  size={180}
-                  level="H"
-                  includeMargin={false}
-                />
+        <DialogContent className="max-w-sm p-0 overflow-hidden border-0 shadow-2xl rounded-2xl">
+          <div className="bg-gradient-to-br from-emerald-50 via-white to-teal-50 relative">
+            {/* Decorative blurs */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-emerald-200/40 blur-3xl" />
+              <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full bg-teal-200/40 blur-3xl" />
+            </div>
+            
+            <div className="relative p-8 text-center">
+              {/* Header */}
+              <div className="mb-6">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <QrCode className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 tracking-tight">Share {profileName}'s Fund</h3>
+                <p className="text-sm text-gray-500 mt-1">Guests scan to give a gift</p>
               </div>
-            </div>
 
-            {/* Link */}
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground break-all">{momentLink}</p>
-            </div>
+              {/* QR code - elegant frame */}
+              <div className="inline-block p-1 bg-white rounded-2xl shadow-xl mb-6">
+                <div className="p-5 rounded-xl bg-gradient-to-br from-emerald-50/50 to-teal-50/50">
+                  <QRCodeSVG 
+                    value={momentLink}
+                    size={160}
+                    level="H"
+                    includeMargin={false}
+                    bgColor="transparent"
+                  />
+                </div>
+              </div>
 
-            {/* Hint */}
-            <p className="text-xs text-muted-foreground text-center">
-              Print for your party or share directly
-            </p>
+              {/* Link pill */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-100/60 mb-6">
+                <span className="text-xs font-medium text-emerald-700 break-all">
+                  {momentLink.replace('https://', '')}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 bg-white/80 hover:bg-white"
+                  onClick={() => {
+                    navigator.clipboard.writeText(momentLink);
+                    toast({ title: "Link copied!" });
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy link
+                </Button>
+                <Button 
+                  className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/20"
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ title: `${profileName}'s Gift Fund`, url: momentLink });
+                    }
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Share
+                </Button>
+              </div>
+
+              <p className="text-xs text-gray-400 mt-6">
+                Print for your party or share directly
+              </p>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -1206,97 +1244,217 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Beautiful Share Card Modal */}
+      {/* Premium Share Card Modal */}
       <Dialog open={showShareCard} onOpenChange={setShowShareCard}>
-        <DialogContent className="max-w-sm p-0 overflow-hidden border-0 shadow-2xl">
-          {/* The Printable Card */}
+        <DialogContent className="max-w-md p-0 overflow-hidden border-0 shadow-2xl rounded-3xl">
+          {/* The Printable Card - Premium Design */}
           <div 
             id="share-card"
-            className="bg-white"
+            className={`relative overflow-hidden ${
+              selectedEventType === "birthday" ? "bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50" :
+              selectedEventType === "graduation" ? "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50" :
+              selectedEventType === "bar_mitzvah" ? "bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50" :
+              selectedEventType === "wedding" ? "bg-gradient-to-br from-rose-50 via-white to-amber-50" :
+              selectedEventType === "baby" ? "bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50" :
+              selectedEventType === "baptism" ? "bg-gradient-to-br from-sky-50 via-blue-50 to-cyan-50" :
+              selectedEventType === "quinceañera" ? "bg-gradient-to-br from-fuchsia-50 via-pink-50 to-purple-50" :
+              selectedEventType === "holiday" ? "bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50" :
+              "bg-gradient-to-br from-slate-50 via-gray-50 to-zinc-50"
+            }`}
           >
-            {/* Colored Header Band */}
-            <div className={`h-3 ${
-              selectedEventType === "birthday" ? "bg-gradient-to-r from-pink-400 to-rose-400" :
-              selectedEventType === "graduation" ? "bg-gradient-to-r from-blue-400 to-indigo-400" :
-              selectedEventType === "bar_mitzvah" ? "bg-gradient-to-r from-indigo-400 to-violet-400" :
-              selectedEventType === "wedding" ? "bg-gradient-to-r from-rose-300 to-pink-300" :
-              selectedEventType === "baby" ? "bg-gradient-to-r from-yellow-300 to-amber-300" :
-              selectedEventType === "baptism" ? "bg-gradient-to-r from-sky-300 to-blue-300" :
-              selectedEventType === "quinceañera" ? "bg-gradient-to-r from-fuchsia-400 to-purple-400" :
-              selectedEventType === "holiday" ? "bg-gradient-to-r from-green-400 to-emerald-400" :
-              "bg-gradient-to-r from-gray-300 to-slate-300"
+            {/* Decorative Elements */}
+            <div className="absolute inset-0 opacity-30">
+              <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl ${
+                selectedEventType === "birthday" ? "bg-pink-200" :
+                selectedEventType === "graduation" ? "bg-blue-200" :
+                selectedEventType === "bar_mitzvah" ? "bg-violet-200" :
+                selectedEventType === "wedding" ? "bg-rose-200" :
+                selectedEventType === "baby" ? "bg-yellow-200" :
+                selectedEventType === "baptism" ? "bg-sky-200" :
+                selectedEventType === "quinceañera" ? "bg-fuchsia-200" :
+                selectedEventType === "holiday" ? "bg-emerald-200" :
+                "bg-gray-200"
+              }`} />
+              <div className={`absolute -bottom-20 -left-20 w-64 h-64 rounded-full blur-3xl ${
+                selectedEventType === "birthday" ? "bg-rose-200" :
+                selectedEventType === "graduation" ? "bg-indigo-200" :
+                selectedEventType === "bar_mitzvah" ? "bg-purple-200" :
+                selectedEventType === "wedding" ? "bg-amber-100" :
+                selectedEventType === "baby" ? "bg-orange-200" :
+                selectedEventType === "baptism" ? "bg-cyan-200" :
+                selectedEventType === "quinceañera" ? "bg-purple-200" :
+                selectedEventType === "holiday" ? "bg-teal-200" :
+                "bg-zinc-200"
+              }`} />
+            </div>
+
+            {/* Top Accent Line */}
+            <div className={`h-1.5 ${
+              selectedEventType === "birthday" ? "bg-gradient-to-r from-pink-400 via-rose-400 to-fuchsia-400" :
+              selectedEventType === "graduation" ? "bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" :
+              selectedEventType === "bar_mitzvah" ? "bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400" :
+              selectedEventType === "wedding" ? "bg-gradient-to-r from-rose-300 via-pink-300 to-amber-300" :
+              selectedEventType === "baby" ? "bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400" :
+              selectedEventType === "baptism" ? "bg-gradient-to-r from-sky-400 via-blue-400 to-cyan-400" :
+              selectedEventType === "quinceañera" ? "bg-gradient-to-r from-fuchsia-400 via-pink-400 to-purple-400" :
+              selectedEventType === "holiday" ? "bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500" :
+              "bg-gradient-to-r from-gray-400 via-slate-400 to-zinc-400"
             }`} />
             
             {/* Content */}
-            <div className="p-8 text-center">
-              {/* Emoji */}
-              <div className="text-6xl mb-4">
-                {selectedEventType === "birthday" ? "🎂" :
-                 selectedEventType === "graduation" ? "🎓" :
-                 selectedEventType === "bar_mitzvah" ? "✡️" :
-                 selectedEventType === "wedding" ? "💒" :
-                 selectedEventType === "baby" ? "👶" :
-                 selectedEventType === "baptism" ? "✝️" :
-                 selectedEventType === "quinceañera" ? "👑" :
-                 selectedEventType === "holiday" ? "🎄" : "✨"}
-              </div>
+            <div className="relative px-10 pt-10 pb-8 text-center">
+              {/* Event Photo or Elegant Icon */}
+              {eventPhoto ? (
+                <div className="w-28 h-28 mx-auto mb-6 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white">
+                  <img src={eventPhoto} alt="" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className={`w-24 h-24 mx-auto mb-6 rounded-2xl flex items-center justify-center shadow-lg ${
+                  selectedEventType === "birthday" ? "bg-gradient-to-br from-pink-400 to-rose-500" :
+                  selectedEventType === "graduation" ? "bg-gradient-to-br from-blue-500 to-indigo-600" :
+                  selectedEventType === "bar_mitzvah" ? "bg-gradient-to-br from-indigo-500 to-violet-600" :
+                  selectedEventType === "wedding" ? "bg-gradient-to-br from-rose-400 to-pink-500" :
+                  selectedEventType === "baby" ? "bg-gradient-to-br from-yellow-400 to-amber-500" :
+                  selectedEventType === "baptism" ? "bg-gradient-to-br from-sky-400 to-blue-500" :
+                  selectedEventType === "quinceañera" ? "bg-gradient-to-br from-fuchsia-500 to-purple-600" :
+                  selectedEventType === "holiday" ? "bg-gradient-to-br from-green-500 to-emerald-600" :
+                  "bg-gradient-to-br from-gray-400 to-slate-500"
+                }`}>
+                  <span className="text-5xl drop-shadow-sm">
+                    {selectedEventType === "birthday" ? "🎂" :
+                     selectedEventType === "graduation" ? "🎓" :
+                     selectedEventType === "bar_mitzvah" ? "✡️" :
+                     selectedEventType === "wedding" ? "💒" :
+                     selectedEventType === "baby" ? "👶" :
+                     selectedEventType === "baptism" ? "✝️" :
+                     selectedEventType === "quinceañera" ? "👑" :
+                     selectedEventType === "holiday" ? "🎄" : "✨"}
+                  </span>
+                </div>
+              )}
               
+              {/* Headline */}
+              <p className={`text-xs font-semibold uppercase tracking-[0.2em] mb-3 ${
+                selectedEventType === "birthday" ? "text-pink-500" :
+                selectedEventType === "graduation" ? "text-blue-600" :
+                selectedEventType === "bar_mitzvah" ? "text-violet-600" :
+                selectedEventType === "wedding" ? "text-rose-500" :
+                selectedEventType === "baby" ? "text-amber-600" :
+                selectedEventType === "baptism" ? "text-sky-600" :
+                selectedEventType === "quinceañera" ? "text-fuchsia-600" :
+                selectedEventType === "holiday" ? "text-emerald-600" :
+                "text-gray-500"
+              }`}>
+                {selectedEventType === "birthday" ? "You're Invited to Celebrate" :
+                 selectedEventType === "graduation" ? "Celebrate This Achievement" :
+                 selectedEventType === "bar_mitzvah" ? "Mazel Tov" :
+                 selectedEventType === "wedding" ? "Celebrate Our Love" :
+                 selectedEventType === "baby" ? "Welcome Baby" :
+                 selectedEventType === "baptism" ? "A Blessed Celebration" :
+                 selectedEventType === "quinceañera" ? "Celebrate Her Day" :
+                 selectedEventType === "holiday" ? "Season's Greetings" : "You're Invited"}
+              </p>
+
               {/* Title */}
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">
+              <h2 className="text-3xl font-bold text-gray-900 tracking-tight leading-tight mb-2">
                 {pageTitle || `${profileName}'s ${
                   selectedEventType === "birthday" ? "Birthday" :
                   selectedEventType === "graduation" ? "Graduation" :
                   selectedEventType === "bar_mitzvah" ? "Bar Mitzvah" :
                   selectedEventType === "wedding" ? "Wedding" :
-                  selectedEventType === "baby" ? "Baby Shower" :
+                  selectedEventType === "baby" ? "Arrival" :
                   selectedEventType === "baptism" ? "Baptism" :
                   selectedEventType === "quinceañera" ? "Quinceañera" :
-                  selectedEventType === "holiday" ? "Holiday Gift" : "Special Day"
+                  selectedEventType === "holiday" ? "Holiday" : "Celebration"
                 }`}
               </h2>
               
               {/* Date */}
               {eventDate && (
-                <p className="text-gray-500 mb-6">
-                  {new Date(eventDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                <p className="text-base text-gray-600 font-medium mb-8">
+                  {new Date(eventDate).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
               )}
-              {!eventDate && <div className="mb-6" />}
+              {!eventDate && <div className="mb-8" />}
+
+              {/* Divider */}
+              <div className="flex items-center gap-4 mb-8">
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+                <span className="text-gray-400 text-xs font-medium">GIVE A GIFT</span>
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+              </div>
               
-              {/* QR Code */}
-              <div className="inline-block p-4 bg-gray-50 rounded-2xl mb-4">
-                <QRCodeSVG 
-                  value={momentLink}
-                  size={160}
-                  level="H"
-                  includeMargin={false}
-                />
+              {/* QR Code - Elegant Frame */}
+              <div className="inline-block p-1 bg-white rounded-2xl shadow-xl mb-6">
+                <div className={`p-4 rounded-xl ${
+                  selectedEventType === "birthday" ? "bg-gradient-to-br from-pink-50 to-rose-50" :
+                  selectedEventType === "graduation" ? "bg-gradient-to-br from-blue-50 to-indigo-50" :
+                  selectedEventType === "bar_mitzvah" ? "bg-gradient-to-br from-violet-50 to-purple-50" :
+                  selectedEventType === "wedding" ? "bg-gradient-to-br from-rose-50 to-amber-50" :
+                  selectedEventType === "baby" ? "bg-gradient-to-br from-yellow-50 to-amber-50" :
+                  selectedEventType === "baptism" ? "bg-gradient-to-br from-sky-50 to-blue-50" :
+                  selectedEventType === "quinceañera" ? "bg-gradient-to-br from-fuchsia-50 to-purple-50" :
+                  selectedEventType === "holiday" ? "bg-gradient-to-br from-green-50 to-emerald-50" :
+                  "bg-gray-50"
+                }`}>
+                  <QRCodeSVG 
+                    value={momentLink}
+                    size={140}
+                    level="H"
+                    includeMargin={false}
+                    bgColor="transparent"
+                  />
+                </div>
               </div>
               
               {/* CTA */}
-              <p className="text-lg font-semibold text-gray-900 mb-1">
-                Scan to give a gift
+              <p className="text-lg font-semibold text-gray-800 mb-1">
+                Scan to contribute
               </p>
-              <p className="text-sm text-gray-500 mb-6">
-                Gifts become investments that grow over time
+              <p className="text-sm text-gray-500 max-w-[240px] mx-auto">
+                Your gift becomes an investment that grows with {profileName}
               </p>
-              
-              {/* Link */}
-              <div className="px-4 py-2 bg-gray-100 rounded-lg inline-block">
-                <p className="text-xs font-mono text-gray-600">
-                  everleaf.com/m/{profileName.toLowerCase().replace(/\s+/g, "-")}
-                </p>
-              </div>
             </div>
             
             {/* Footer */}
-            <div className="px-8 pb-6 text-center">
-              <div className="flex items-center justify-center gap-1.5 text-gray-400">
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" />
-                </svg>
-                <span className="text-sm font-medium">everleaf</span>
+            <div className="relative px-10 pb-8 text-center">
+              {/* Link Pill */}
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 ${
+                selectedEventType === "birthday" ? "bg-pink-100/80" :
+                selectedEventType === "graduation" ? "bg-blue-100/80" :
+                selectedEventType === "bar_mitzvah" ? "bg-violet-100/80" :
+                selectedEventType === "wedding" ? "bg-rose-100/80" :
+                selectedEventType === "baby" ? "bg-amber-100/80" :
+                selectedEventType === "baptism" ? "bg-sky-100/80" :
+                selectedEventType === "quinceañera" ? "bg-fuchsia-100/80" :
+                selectedEventType === "holiday" ? "bg-emerald-100/80" :
+                "bg-gray-100/80"
+              }`}>
+                <span className={`text-xs font-medium ${
+                  selectedEventType === "birthday" ? "text-pink-700" :
+                  selectedEventType === "graduation" ? "text-blue-700" :
+                  selectedEventType === "bar_mitzvah" ? "text-violet-700" :
+                  selectedEventType === "wedding" ? "text-rose-700" :
+                  selectedEventType === "baby" ? "text-amber-700" :
+                  selectedEventType === "baptism" ? "text-sky-700" :
+                  selectedEventType === "quinceañera" ? "text-fuchsia-700" :
+                  selectedEventType === "holiday" ? "text-emerald-700" :
+                  "text-gray-700"
+                }`}>
+                  everleaf.com/m/{profileName.toLowerCase().replace(/\s+/g, "-")}
+                </span>
               </div>
+
+              {/* Branding */}
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2v20M8 6l4-4 4 4" />
+                  </svg>
+                </div>
+                <span className="text-sm font-semibold text-gray-700 tracking-tight">everleaf</span>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">Gifts that grow</p>
             </div>
           </div>
           
