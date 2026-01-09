@@ -46,10 +46,35 @@ export default function Dashboard() {
   const userEmail = decodeURIComponent(params.get("email") || "you@example.com");
   const isPersonal = accountType === "personal";
 
-  const [showFull, setShowFull] = useState(false);
-  const [brokerageOpen, setBrokerageOpen] = useState(false);
-  const [pageCreated, setPageCreated] = useState(false);
-  const [linkShared, setLinkShared] = useState(false);
+  const [showFull, setShowFull] = useState(() => {
+    const saved = localStorage.getItem("everleaf_showFull");
+    return saved === "true";
+  });
+  const [brokerageOpen, setBrokerageOpen] = useState(() => {
+    const saved = localStorage.getItem("everleaf_brokerageOpen");
+    return saved === "true";
+  });
+  const [pageCreated, setPageCreated] = useState(() => {
+    const saved = localStorage.getItem("everleaf_pageCreated");
+    return saved === "true";
+  });
+  const [linkShared, setLinkShared] = useState(() => {
+    const saved = localStorage.getItem("everleaf_linkShared");
+    return saved === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("everleaf_showFull", String(showFull));
+  }, [showFull]);
+  useEffect(() => {
+    localStorage.setItem("everleaf_brokerageOpen", String(brokerageOpen));
+  }, [brokerageOpen]);
+  useEffect(() => {
+    localStorage.setItem("everleaf_pageCreated", String(pageCreated));
+  }, [pageCreated]);
+  useEffect(() => {
+    localStorage.setItem("everleaf_linkShared", String(linkShared));
+  }, [linkShared]);
   const [copied, setCopied] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showQR, setShowQR] = useState(false);
