@@ -139,9 +139,9 @@ export default function Dashboard() {
   };
 
   const contributions = [
-    { from: "Uncle Dave", amount: 180, message: "Congrats! So proud of you.", time: "2h ago" },
-    { from: "Grandma Ruth", amount: 500, message: "For your future, with all my love.", time: "Yesterday" },
-    { from: "The Cohens", amount: 100, message: "Here's to many more milestones!", time: "2 days ago" },
+    { from: "Uncle Dave", amount: 180, message: "Congrats! So proud of you.", time: "2h ago", fund: profileName },
+    { from: "Grandma Ruth", amount: 500, message: "For your future, with all my love.", time: "Yesterday", fund: profileName },
+    { from: "The Cohens", amount: 100, message: "Here's to many more milestones!", time: "2 days ago", fund: currentPlan === "family" ? "Maya" : profileName },
   ];
 
   return (
@@ -455,13 +455,25 @@ export default function Dashboard() {
                   </button>
                 </motion.div>
 
-                {/* Fund with Event Pages */}
+                {/* Your Funds Section */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.35 }}
                 >
-                  {/* Fund Card - Refined */}
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold tracking-tight">Your Funds</h2>
+                    {currentPlan === "family" && (
+                      <button 
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                        onClick={() => setShowPageSetup(true)}
+                      >
+                        <Plus className="h-4 w-4" /> Add fund
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Primary Fund Card */}
                   <div className="rounded-2xl border bg-card overflow-hidden">
                     {/* Fund Header */}
                     <div className="p-5 border-b">
@@ -630,33 +642,33 @@ export default function Dashboard() {
                   )}
 
                   {/* Add Fund - Always shown, locked for non-family */}
-                  <Card 
-                    className={`border border-dashed mt-4 transition-all ${
+                  <div 
+                    className={`mt-3 p-4 rounded-xl border border-dashed transition-all flex items-center justify-between ${
                       currentPlan === "family" 
-                        ? "hover:border-foreground/30 cursor-pointer" 
-                        : "opacity-60 cursor-not-allowed"
+                        ? "hover:border-foreground/30 cursor-pointer hover:bg-muted/30" 
+                        : "opacity-50"
                     }`}
                     onClick={() => currentPlan === "family" && setShowPageSetup(true)}
                   >
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Plus className="h-4 w-4" />
-                        <span className="text-sm">Add another fund</span>
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl border-2 border-dashed flex items-center justify-center">
+                        <Plus className="h-4 w-4 text-muted-foreground" />
                       </div>
-                      {currentPlan !== "family" && (
-                        <button 
-                          className="text-xs px-2.5 py-1 rounded-full bg-foreground/5 hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-                          onClick={(e) => { e.stopPropagation(); setShowUpgrade(true); }}
-                        >
-                          <Lock className="h-3 w-3" />
-                          Family plan
-                        </button>
-                      )}
-                    </CardContent>
-                  </Card>
+                      <span className="text-sm text-muted-foreground">Add another child's fund</span>
+                    </div>
+                    {currentPlan !== "family" && (
+                      <button 
+                        className="text-xs px-2.5 py-1 rounded-full bg-foreground/5 hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                        onClick={(e) => { e.stopPropagation(); setShowUpgrade(true); }}
+                      >
+                        <Lock className="h-3 w-3" />
+                        Family
+                      </button>
+                    )}
+                  </div>
                 </motion.div>
 
-                {/* Holdings - Refined */}
+                {/* Holdings - Account Level */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -664,8 +676,8 @@ export default function Dashboard() {
                 >
                   <div className="flex items-center justify-between mb-5">
                     <div>
-                      <h2 className="text-lg font-semibold tracking-tight">Holdings</h2>
-                      <p className="text-sm text-muted-foreground">Auto-managed portfolio</p>
+                      <h2 className="text-lg font-semibold tracking-tight">Portfolio</h2>
+                      <p className="text-sm text-muted-foreground">Combined holdings across all funds</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -693,7 +705,7 @@ export default function Dashboard() {
                   </div>
                 </motion.div>
 
-                {/* Contributions - Refined */}
+                {/* Recent Gifts - Account Level */}
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -702,11 +714,9 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h2 className="text-lg font-semibold tracking-tight">Recent Gifts</h2>
-                      <p className="text-sm text-muted-foreground">From family & friends</p>
+                      <p className="text-sm text-muted-foreground">Across all funds</p>
                     </div>
-                    <Link href={`/moment?name=${encodeURIComponent(profileName)}`}>
-                      <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">View all</button>
-                    </Link>
+                    <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">View all</button>
                   </div>
                   <div className="rounded-xl border bg-card divide-y overflow-hidden">
                     {contributions.map((c, i) => (
@@ -722,7 +732,11 @@ export default function Dashboard() {
                             {c.from.charAt(0)}
                           </div>
                           <div>
-                            <p className="font-medium">{c.from}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{c.from}</p>
+                              <span className="text-xs text-muted-foreground">→</span>
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{c.fund}'s Fund</span>
+                            </div>
                             <p className="text-sm text-muted-foreground">{c.message}</p>
                           </div>
                         </div>
