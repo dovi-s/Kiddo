@@ -31,9 +31,12 @@ export default function FundPage() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
         <div className="max-w-lg mx-auto px-6 h-14 flex items-center justify-between">
-          <Link href="/dashboard">
-            <span className="text-sm text-stone-500 hover:text-stone-900">← Dashboard</span>
-          </Link>
+          <button 
+            onClick={() => window.history.back()}
+            className="text-sm text-stone-500 hover:text-stone-900"
+          >
+            ← Back
+          </button>
           <span className="text-sm font-medium text-stone-900">{recipientName}</span>
           <span className="text-xs text-stone-400 w-16 text-right">Secure</span>
         </div>
