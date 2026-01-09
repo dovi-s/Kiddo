@@ -299,15 +299,80 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Occasions */}
+      {/* Two Ways to Give */}
       <section className="py-24 border-t bg-card">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto">
+            <FadeIn className="text-center mb-12">
+              <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Two ways to give ownership.</h2>
+            </FadeIn>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Create a Fund */}
+              <FadeIn delay={0.1}>
+                <Link href="/create">
+                  <motion.div 
+                    whileHover={{ y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.1)" }}
+                    className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full"
+                  >
+                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-2xl mb-6 shadow-lg shadow-emerald-500/20">
+                      🌱
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">Create a fund</h3>
+                    <p className="text-muted-foreground mb-4">
+                      For a child, yourself, or anyone. Share the link at events. Family and friends contribute to one growing investment.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {["Baby shower", "Birthday", "Graduation", "Wedding"].map(tag => (
+                        <span key={tag} className="text-xs px-2 py-1 rounded-full bg-muted">{tag}</span>
+                      ))}
+                    </div>
+                    <span className="text-sm font-medium text-emerald-600 flex items-center gap-1">
+                      Get started free <ArrowRight className="h-4 w-4" />
+                    </span>
+                  </motion.div>
+                </Link>
+              </FadeIn>
+
+              {/* Send Stock */}
+              <FadeIn delay={0.2}>
+                <Link href="/send">
+                  <motion.div 
+                    whileHover={{ y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.1)" }}
+                    className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full"
+                  >
+                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-2xl mb-6 shadow-lg shadow-violet-500/20">
+                      📈
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">Send stock directly</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Give someone ownership in a real company. Pick a stock, enter the amount, they claim it. Better than cash.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {["Thank you", "Congrats", "Birthday", "Just because"].map(tag => (
+                        <span key={tag} className="text-xs px-2 py-1 rounded-full bg-muted">{tag}</span>
+                      ))}
+                    </div>
+                    <span className="text-sm font-medium text-violet-600 flex items-center gap-1">
+                      Send stock now <ArrowRight className="h-4 w-4" />
+                    </span>
+                  </motion.div>
+                </Link>
+              </FadeIn>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Occasions */}
+      <section className="py-20 border-t">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <FadeIn>
-              <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight mb-12">For any occasion.</h2>
+              <p className="text-sm text-muted-foreground mb-6">Perfect for</p>
             </FadeIn>
             <div className="flex flex-wrap justify-center gap-3">
-              {["Birthday", "Bar Mitzvah", "Bat Mitzvah", "Graduation", "Wedding", "Baby Shower", "Holiday", "Just Because"].map((occasion, i) => (
+              {["First birthday", "Bar/Bat Mitzvah", "Graduation", "Wedding", "Baby shower", "Holidays", "New job", "Just because"].map((occasion, i) => (
                 <motion.span 
                   key={occasion}
                   initial={{ opacity: 0, scale: 0.9 }}

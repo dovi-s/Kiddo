@@ -13,6 +13,7 @@ import Recipient from "@/pages/Recipient";
 import Settings from "@/pages/Settings";
 import Onboard from "@/pages/Onboard";
 import MomentCreate from "@/pages/MomentCreate";
+import Send from "@/pages/Send";
 
 function Router() {
   return (
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/moment/create" component={MomentCreate} />
       <Route path="/moment" component={Moment} />
       <Route path="/moment/:id" component={Moment} />
+      <Route path="/send" component={Send} />
       <Route path="/recipient" component={Recipient} />
       <Route path="/recipient/:id" component={Recipient} />
       <Route path="/settings" component={Settings} />

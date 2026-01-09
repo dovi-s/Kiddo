@@ -78,7 +78,14 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                 href="/moment" 
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group"
               >
-                Send a gift
+                Give
+                <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-foreground transition-all group-hover:w-full" />
+              </Link>
+              <Link 
+                href="/send" 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group"
+              >
+                Send stock
                 <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-foreground transition-all group-hover:w-full" />
               </Link>
               <Link href="/dashboard">
