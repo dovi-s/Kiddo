@@ -412,106 +412,150 @@ export default function PageEditor() {
 
           {/* Phone Frame */}
           <div className="bg-stone-900 rounded-[2.5rem] p-3 shadow-2xl">
-            <div className="bg-stone-50 rounded-[2rem] overflow-hidden">
+            <div className={`rounded-[2rem] overflow-hidden ${currentTheme.bg}`}>
               
               {/* Preview Content */}
-              <div className="min-h-[600px]">
+              <motion.div className={`min-h-[600px] ${currentTheme.text}`} layout>
                 
-                {/* Step 0: Amount Selection */}
+                {/* Step 0: Landing + Amount */}
                 {previewStep === 0 && (
-                  <div className="p-6 text-center">
+                  <div className={pageData.layout === "centered" ? "text-center" : ""}>
                     
-                    {/* Photo if exists */}
-                    {pageData.photo && (
-                      <img 
-                        src={pageData.photo} 
-                        alt="" 
-                        className="w-full aspect-video object-cover rounded-xl mb-6"
-                      />
+                    {/* Hero photo layout */}
+                    {pageData.photo && pageData.layout === "hero" && (
+                      <div className="h-40 relative">
+                        <img src={pageData.photo} alt="" className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      </div>
                     )}
 
-                    {/* Avatar */}
-                    <div className="w-16 h-16 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center text-xl font-light mx-auto mb-5">
-                      {fundName.charAt(0)}
-                    </div>
-                    
-                    {/* Headline */}
-                    <h1 className="text-2xl font-light text-stone-900 mb-1">
-                      Give to {fundName}
-                    </h1>
-                    <p className="text-stone-500 mb-8">{pageData.title}</p>
+                    <div className="p-6">
+                      {/* Standard photo layout */}
+                      {pageData.photo && pageData.layout !== "hero" && (
+                        <img 
+                          src={pageData.photo} 
+                          alt="" 
+                          className="w-full aspect-video object-cover rounded-xl mb-5"
+                        />
+                      )}
 
-                    {/* Amount buttons */}
-                    <div className="grid grid-cols-4 gap-2 mb-4">
-                      {[25, 50, 100, 250].map((a) => (
-                        <div
-                          key={a}
-                          className={`py-3 rounded text-sm font-medium ${
-                            a === 50
-                              ? "bg-stone-900 text-stone-50"
-                              : "bg-white border border-stone-200 text-stone-900"
-                          }`}
-                        >
-                          ${a}
+                      {/* Avatar (only if no photo) */}
+                      {!pageData.photo && (
+                        <div className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-light mb-4 ${currentTheme.accent} ${pageData.theme === "dark" ? "text-stone-900" : "text-white"} ${pageData.layout === "centered" ? "mx-auto" : ""}`}>
+                          {fundName.charAt(0)}
                         </div>
-                      ))}
-                    </div>
+                      )}
+                      
+                      {/* Headline */}
+                      <h1 className="text-xl font-medium mb-2 leading-tight">
+                        {pageData.headline || `Give to ${fundName}`}
+                      </h1>
+                      
+                      {/* Description */}
+                      {pageData.description && (
+                        <p className="text-sm opacity-60 mb-4 leading-relaxed">
+                          {pageData.description}
+                        </p>
+                      )}
+                      
+                      {/* Event title badge */}
+                      <p className="text-xs opacity-50 mb-5">{pageData.title}</p>
 
-                    {/* Custom amount */}
-                    <div className="relative mb-6">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">$</span>
-                      <div className="w-full pl-8 pr-4 py-3 bg-white border border-stone-200 rounded text-stone-400 text-left">
-                        Other amount
+                      {/* Progress bar */}
+                      {pageData.showAmount && (
+                        <div className="mb-5">
+                          <div className="flex justify-between text-xs mb-1.5">
+                            <span className="font-medium">${pageData.currentAmount.toLocaleString()}</span>
+                            <span className="opacity-50">of ${pageData.goalAmount.toLocaleString()}</span>
+                          </div>
+                          <div className={`h-1.5 rounded-full overflow-hidden ${pageData.theme === "dark" ? "bg-white/20" : "bg-stone-200"}`}>
+                            <motion.div 
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.min((pageData.currentAmount / pageData.goalAmount) * 100, 100)}%` }}
+                              className={currentTheme.accent}
+                              style={{ height: "100%" }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Amount buttons */}
+                      <div className="grid grid-cols-4 gap-1.5 mb-3">
+                        {[25, 50, 100, 250].map((a) => (
+                          <div
+                            key={a}
+                            className={`py-2.5 rounded text-xs font-medium ${
+                              a === 50
+                                ? `${currentTheme.accent} ${pageData.theme === "dark" ? "text-stone-900" : "text-white"}`
+                                : `${pageData.theme === "dark" ? "bg-white/10 text-white" : "bg-white border border-stone-200"}`
+                            }`}
+                          >
+                            ${a}
+                          </div>
+                        ))}
                       </div>
-                    </div>
 
-                    {/* Projection */}
-                    <div className="p-5 bg-stone-900 text-stone-50 rounded mb-6 text-left">
-                      <p className="text-stone-400 text-sm mb-1">Your $50 could become</p>
-                      <p className="text-3xl font-light">$230</p>
-                      <p className="text-stone-500 text-sm mt-1">in 18 years at 7% annual return</p>
-                    </div>
+                      {/* Custom amount */}
+                      <div className={`mb-5 px-3 py-2.5 rounded text-xs text-left ${pageData.theme === "dark" ? "bg-white/10 text-white/40" : "bg-white border border-stone-200 text-stone-400"}`}>
+                        <span className="mr-1">$</span>Other amount
+                      </div>
 
-                    {/* CTA */}
-                    <button className="w-full py-3 bg-stone-900 text-stone-50 rounded font-medium">
-                      Continue
-                    </button>
+                      {/* Projection */}
+                      <div className={`p-4 rounded mb-5 text-left ${pageData.theme === "dark" ? "bg-white/10" : "bg-stone-900 text-white"}`}>
+                        <p className={`text-xs mb-1 ${pageData.theme === "dark" ? "text-white/50" : "text-stone-400"}`}>Your $50 could become</p>
+                        <p className="text-2xl font-light">$230</p>
+                        <p className={`text-xs mt-1 ${pageData.theme === "dark" ? "text-white/40" : "text-stone-500"}`}>in 18 years</p>
+                      </div>
+
+                      {/* CTA */}
+                      <button className={`w-full py-3 rounded text-sm font-medium ${
+                        pageData.theme === "dark" 
+                          ? "bg-white text-stone-900" 
+                          : `${currentTheme.accent} text-white`
+                      }`}>
+                        {pageData.buttonText || "Continue"}
+                      </button>
+                    </div>
                   </div>
                 )}
 
                 {/* Step 1: Details */}
                 {previewStep === 1 && (
                   <div className="p-6">
-                    <p className="text-sm text-stone-500 mb-1">Giving $50 to {fundName}</p>
-                    <h1 className="text-2xl font-light text-stone-900 mb-8">Add your details</h1>
+                    <p className="text-xs opacity-50 mb-1">Giving $50 to {fundName}</p>
+                    <h1 className="text-xl font-medium mb-6">Add your details</h1>
 
-                    <div className="space-y-4 mb-6">
+                    <div className="space-y-3 mb-5">
                       <div>
-                        <p className="text-sm text-stone-500 mb-2">Your name</p>
-                        <div className="w-full px-4 py-3 bg-white border border-stone-200 rounded text-stone-400">
+                        <p className="text-xs opacity-60 mb-1.5">Your name</p>
+                        <div className={`px-3 py-2.5 rounded text-xs ${pageData.theme === "dark" ? "bg-white/10 text-white/40" : "bg-white border border-stone-200 text-stone-400"}`}>
                           How they'll see you
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-stone-500 mb-2">Add a note (optional)</p>
-                        <div className="w-full px-4 py-3 bg-white border border-stone-200 rounded text-stone-400 h-20">
+                        <p className="text-xs opacity-60 mb-1.5">Add a note (optional)</p>
+                        <div className={`px-3 py-2.5 rounded text-xs h-16 ${pageData.theme === "dark" ? "bg-white/10 text-white/40" : "bg-white border border-stone-200 text-stone-400"}`}>
                           Say something nice...
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-4 bg-white border border-stone-200 rounded mb-6">
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-stone-500">Gift amount</span>
-                        <span className="text-stone-900">$50.00</span>
+                    <div className={`p-3 rounded mb-5 ${pageData.theme === "dark" ? "bg-white/10" : "bg-white border border-stone-200"}`}>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="opacity-60">Gift amount</span>
+                        <span>$50.00</span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-stone-500">Processing fee</span>
-                        <span className="text-stone-900">$1.45</span>
+                      <div className="flex justify-between text-xs">
+                        <span className="opacity-60">Processing fee</span>
+                        <span>$1.45</span>
                       </div>
                     </div>
 
-                    <button className="w-full py-3 bg-stone-900 text-stone-50 rounded font-medium">
+                    <button className={`w-full py-3 rounded text-sm font-medium ${
+                      pageData.theme === "dark" 
+                        ? "bg-white text-stone-900" 
+                        : `${currentTheme.accent} text-white`
+                    }`}>
                       Give $51.45
                     </button>
                   </div>
@@ -520,21 +564,21 @@ export default function PageEditor() {
                 {/* Step 2: Confirmation */}
                 {previewStep === 2 && (
                   <div className="p-6 text-center flex flex-col items-center justify-center min-h-[500px]">
-                    <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-6">
-                      <Check size={32} />
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center mb-5">
+                      <Check size={28} />
                     </div>
-                    <h1 className="text-2xl font-light text-stone-900 mb-2">Gift sent!</h1>
-                    <p className="text-stone-500 mb-8">
+                    <h1 className="text-xl font-medium mb-2">Gift sent!</h1>
+                    <p className="text-sm opacity-60 mb-6">
                       Your $50 gift to {fundName} is on its way
                     </p>
-                    <div className="w-full p-4 bg-stone-100 rounded-lg text-left">
-                      <p className="text-sm text-stone-500 mb-1">Projected value in 18 years</p>
-                      <p className="text-2xl font-light text-stone-900">$230</p>
+                    <div className={`w-full p-4 rounded-lg text-left ${pageData.theme === "dark" ? "bg-white/10" : "bg-stone-100"}`}>
+                      <p className="text-xs opacity-50 mb-1">Projected value in 18 years</p>
+                      <p className="text-2xl font-light">$230</p>
                     </div>
                   </div>
                 )}
 
-              </div>
+              </motion.div>
             </div>
           </div>
 
