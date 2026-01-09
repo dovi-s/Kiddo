@@ -262,7 +262,7 @@ export default function Dashboard() {
                               <QrCode size={14} />
                             </button>
                             <Link href={`/${fundSlug}`}>
-                              <button className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors" title="View fund">
+                              <button className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors" title="View fund & events">
                                 <ExternalLink size={14} />
                               </button>
                             </Link>
@@ -543,7 +543,7 @@ export default function Dashboard() {
             </button>
             <Link href={`/${fundSlug}`} onClick={() => setShowEditFund(false)} className="flex-1">
               <button className="w-full py-2.5 border border-stone-200 rounded-lg text-sm text-stone-600 hover:bg-stone-50">
-                View fund
+                View fund & events
               </button>
             </Link>
           </div>
