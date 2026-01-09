@@ -262,19 +262,19 @@ export default function Dashboard() {
                               <QrCode size={14} />
                             </button>
                             <Link href={`/${fundSlug}`}>
-                              <button className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors" title="View page">
+                              <button className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors" title="View fund">
                                 <ExternalLink size={14} />
                               </button>
                             </Link>
                           </div>
                         </div>
 
-                        {/* Pages within this Fund */}
+                        {/* Events within this Fund */}
                         <div className="px-5 py-4">
                           <div className="flex items-center justify-between mb-3">
-                            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Pages</p>
+                            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</p>
                             <Link href="/moment/create" className="text-xs text-stone-500 hover:text-stone-900">
-                              + New page
+                              + New event
                             </Link>
                           </div>
                           
@@ -306,7 +306,7 @@ export default function Dashboard() {
                                       <Link href={`/edit/${fundSlug}/${eventData.slug}`}>
                                         <button 
                                           className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                          title="Edit page"
+                                          title="Edit event"
                                         >
                                           <Pencil size={12} />
                                         </button>
@@ -326,7 +326,7 @@ export default function Dashboard() {
                                         <QrCode size={12} />
                                       </button>
                                       <Link href={`/${fundSlug}/${eventData.slug}`}>
-                                        <button className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all" title="View page">
+                                        <button className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all" title="View event">
                                           <ExternalLink size={12} />
                                         </button>
                                       </Link>
@@ -446,7 +446,7 @@ export default function Dashboard() {
                 {isPersonal ? "Individual" : "UTMA"}
               </span>
             </div>
-            <p className="text-sm text-stone-500">Manage your fund and its pages</p>
+            <p className="text-sm text-stone-500">Manage your fund and events</p>
           </div>
 
           {/* Fund Details */}
@@ -471,16 +471,16 @@ export default function Dashboard() {
                   className="flex-1 px-3 py-2.5 text-stone-900 focus:outline-none"
                 />
               </div>
-              <p className="text-xs text-stone-400 mt-1.5">This is your fund's main page where people can give anytime</p>
+              <p className="text-xs text-stone-400 mt-1.5">Your fund's shareable link — contributors can give anytime</p>
             </div>
           </div>
 
-          {/* Pages Section */}
+          {/* Events Section */}
           <div className="p-5 border-b border-stone-100">
             <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-medium text-stone-400 uppercase tracking-wider">Event Pages</label>
+              <label className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</label>
               <Link href="/moment/create" onClick={() => setShowEditFund(false)}>
-                <span className="text-xs text-stone-500 hover:text-stone-900">+ Add page</span>
+                <span className="text-xs text-stone-500 hover:text-stone-900">+ Add event</span>
               </Link>
             </div>
             
@@ -498,12 +498,12 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Link href={`/edit/${fundSlug}/${eventData.slug}`} onClick={() => setShowEditFund(false)}>
-                        <button className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded" title="Edit page">
+                        <button className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded" title="Edit event">
                           <Pencil size={12} />
                         </button>
                       </Link>
                       <Link href={`/${fundSlug}/${eventData.slug}`} onClick={() => setShowEditFund(false)}>
-                        <button className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded" title="View page">
+                        <button className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded" title="View event">
                           <ExternalLink size={12} />
                         </button>
                       </Link>
@@ -543,7 +543,7 @@ export default function Dashboard() {
             </button>
             <Link href={`/${fundSlug}`} onClick={() => setShowEditFund(false)} className="flex-1">
               <button className="w-full py-2.5 border border-stone-200 rounded-lg text-sm text-stone-600 hover:bg-stone-50">
-                View fund page
+                View fund
               </button>
             </Link>
           </div>
