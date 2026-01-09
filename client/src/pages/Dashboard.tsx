@@ -490,14 +490,14 @@ export default function Dashboard() {
                             </div>
                           </Link>
 
-                          {/* Birthday event */}
+                          {/* Past event */}
                           <div className="group flex items-center justify-between p-3 -mx-2 rounded-xl hover:bg-muted/50 transition-all cursor-pointer">
                             <div className="flex items-center gap-3">
                               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-pink-100 to-pink-50 dark:from-pink-900/40 dark:to-pink-900/20 flex items-center justify-center text-lg">
-                                🎂
+                                {isPersonal ? "🎉" : "🎂"}
                               </div>
                               <div>
-                                <p className="font-medium">5th Birthday</p>
+                                <p className="font-medium">{isPersonal ? "30th Birthday" : "5th Birthday"}</p>
                                 <p className="text-sm text-muted-foreground">$1,420 from 8 gifts</p>
                               </div>
                             </div>
@@ -511,10 +511,10 @@ export default function Dashboard() {
                           <div className="group flex items-center justify-between p-3 -mx-2 rounded-xl hover:bg-muted/50 transition-all cursor-pointer">
                             <div className="flex items-center gap-3">
                               <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/40 dark:to-blue-900/20 flex items-center justify-center text-lg">
-                                🎓
+                                {isPersonal ? "💒" : "🎓"}
                               </div>
                               <div>
-                                <p className="font-medium">Kindergarten Graduation</p>
+                                <p className="font-medium">{isPersonal ? "Wedding" : "Kindergarten Graduation"}</p>
                                 <p className="text-sm text-muted-foreground">$650 from 4 gifts</p>
                               </div>
                             </div>
