@@ -82,6 +82,16 @@ export default function PageEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [previewStep, setPreviewStep] = useState(0);
   
+  // Interactive preview state
+  const [previewAmount, setPreviewAmount] = useState(50);
+  const [previewName, setPreviewName] = useState("");
+  const [previewNote, setPreviewNote] = useState("");
+  const [previewProcessing, setPreviewProcessing] = useState(false);
+  
+  const previewProjection = Math.round(previewAmount * 4.6);
+  const previewFee = Math.round(previewAmount * 0.029 * 100) / 100 + 0.30;
+  const previewTotal = (previewAmount + previewFee).toFixed(2);
+  
   // Initialize with stored data or defaults
   const [pageData, setPageData] = useState(() => {
     const stored = getStoredPageData(storageKey);
@@ -505,71 +515,103 @@ export default function PageEditor() {
                         </div>
                       )}
 
-                      {/* Amount buttons */}
+                      {/* Amount buttons - Interactive */}
                       <div className="grid grid-cols-4 gap-1.5 mb-3">
                         {[25, 50, 100, 250].map((a) => (
-                          <div
+                          <button
                             key={a}
-                            className={`py-2.5 rounded text-xs font-medium ${
-                              a === 50
+                            onClick={() => setPreviewAmount(a)}
+                            className={`py-2.5 rounded text-xs font-medium transition-all ${
+                              previewAmount === a
                                 ? `${currentTheme.accent} ${pageData.theme === "dark" ? "text-stone-900" : "text-white"}`
-                                : `${pageData.theme === "dark" ? "bg-white/10 text-white" : "bg-white border border-stone-200"}`
+                                : `${pageData.theme === "dark" ? "bg-white/10 text-white hover:bg-white/20" : "bg-white border border-stone-200 hover:border-stone-300"}`
                             }`}
                           >
                             ${a}
-                          </div>
+                          </button>
                         ))}
                       </div>
 
-                      {/* Custom amount */}
-                      <div className={`mb-5 px-3 py-2.5 rounded text-xs text-left ${pageData.theme === "dark" ? "bg-white/10 text-white/40" : "bg-white border border-stone-200 text-stone-400"}`}>
-                        <span className="mr-1">$</span>Other amount
+                      {/* Custom amount - Interactive */}
+                      <div className={`mb-5 px-3 py-2 rounded text-xs text-left flex items-center ${pageData.theme === "dark" ? "bg-white/10" : "bg-white border border-stone-200"}`}>
+                        <span className={`mr-1 ${pageData.theme === "dark" ? "text-white/40" : "text-stone-400"}`}>$</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Other"
+                          value={![25, 50, 100, 250].includes(previewAmount) ? previewAmount : ""}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value) || 0;
+                            if (val > 0) setPreviewAmount(val);
+                          }}
+                          className={`flex-1 bg-transparent focus:outline-none text-xs ${pageData.theme === "dark" ? "text-white placeholder:text-white/40" : "text-stone-900 placeholder:text-stone-400"}`}
+                        />
                       </div>
 
-                      {/* Projection */}
-                      <div className={`p-4 rounded mb-5 text-left ${pageData.theme === "dark" ? "bg-white/10" : "bg-stone-900 text-white"}`}>
-                        <p className={`text-xs mb-1 ${pageData.theme === "dark" ? "text-white/50" : "text-stone-400"}`}>Your $50 could become</p>
-                        <p className="text-2xl font-light">$230</p>
-                        <p className={`text-xs mt-1 ${pageData.theme === "dark" ? "text-white/40" : "text-stone-500"}`}>in 18 years</p>
-                      </div>
+                      {/* Projection - Dynamic */}
+                      {previewAmount > 0 && (
+                        <div className={`p-4 rounded mb-5 text-left ${pageData.theme === "dark" ? "bg-white/10" : "bg-stone-900 text-white"}`}>
+                          <p className={`text-xs mb-1 ${pageData.theme === "dark" ? "text-white/50" : "text-stone-400"}`}>Your ${previewAmount} could become</p>
+                          <p className="text-2xl font-light">${previewProjection.toLocaleString()}</p>
+                          <p className={`text-xs mt-1 ${pageData.theme === "dark" ? "text-white/40" : "text-stone-500"}`}>in 18 years</p>
+                        </div>
+                      )}
 
-                      {/* CTA */}
-                      <button className={`w-full py-3 rounded text-sm font-medium ${
-                        pageData.theme === "dark" 
-                          ? "bg-white text-stone-900" 
-                          : `${currentTheme.accent} text-white`
-                      }`}>
+                      {/* CTA - Advances to next step */}
+                      <button 
+                        onClick={() => previewAmount >= 5 && setPreviewStep(1)}
+                        disabled={previewAmount < 5}
+                        className={`w-full py-3 rounded text-sm font-medium transition-all disabled:opacity-40 ${
+                          pageData.theme === "dark" 
+                            ? "bg-white text-stone-900 hover:bg-stone-100" 
+                            : `${currentTheme.accent} text-white hover:opacity-90`
+                        }`}
+                      >
                         {pageData.buttonText || "Continue"}
                       </button>
                     </div>
                   </div>
                 )}
 
-                {/* Step 1: Details */}
+                {/* Step 1: Details - Interactive */}
                 {previewStep === 1 && (
                   <div className="p-6">
-                    <p className="text-xs opacity-50 mb-1">Giving $50 to {fundName}</p>
+                    <button 
+                      onClick={() => setPreviewStep(0)}
+                      className={`text-xs mb-4 ${pageData.theme === "dark" ? "text-white/50 hover:text-white" : "text-stone-400 hover:text-stone-600"}`}
+                    >
+                      ← Back
+                    </button>
+                    <p className="text-xs opacity-50 mb-1">Giving ${previewAmount} to {fundName}</p>
                     <h1 className="text-xl font-medium mb-6">Add your details</h1>
 
                     <div className="space-y-3 mb-5">
                       <div>
                         <p className="text-xs opacity-60 mb-1.5">Your name</p>
-                        <div className={`px-3 py-2.5 rounded text-xs ${pageData.theme === "dark" ? "bg-white/10 text-white/40" : "bg-white border border-stone-200 text-stone-400"}`}>
-                          How they'll see you
-                        </div>
+                        <input
+                          type="text"
+                          placeholder="How they'll see you"
+                          value={previewName}
+                          onChange={(e) => setPreviewName(e.target.value)}
+                          className={`w-full px-3 py-2.5 rounded text-xs focus:outline-none ${pageData.theme === "dark" ? "bg-white/10 text-white placeholder:text-white/40" : "bg-white border border-stone-200 text-stone-900 placeholder:text-stone-400"}`}
+                        />
                       </div>
                       <div>
                         <p className="text-xs opacity-60 mb-1.5">Add a note (optional)</p>
-                        <div className={`px-3 py-2.5 rounded text-xs h-16 ${pageData.theme === "dark" ? "bg-white/10 text-white/40" : "bg-white border border-stone-200 text-stone-400"}`}>
-                          Say something nice...
-                        </div>
+                        <textarea
+                          placeholder="Say something nice..."
+                          value={previewNote}
+                          onChange={(e) => setPreviewNote(e.target.value)}
+                          rows={2}
+                          className={`w-full px-3 py-2.5 rounded text-xs resize-none focus:outline-none ${pageData.theme === "dark" ? "bg-white/10 text-white placeholder:text-white/40" : "bg-white border border-stone-200 text-stone-900 placeholder:text-stone-400"}`}
+                        />
                       </div>
                     </div>
 
                     <div className={`p-3 rounded mb-5 ${pageData.theme === "dark" ? "bg-white/10" : "bg-white border border-stone-200"}`}>
                       <div className="flex justify-between text-xs mb-1.5">
                         <span className="opacity-60">Gift amount</span>
-                        <span>$50.00</span>
+                        <span>${previewAmount.toFixed(2)}</span>
                       </div>
                       <div className={`flex justify-between text-xs mb-1.5 pb-2 border-b ${pageData.theme === "dark" ? "border-white/10" : "border-stone-100"}`}>
                         <span className="opacity-60">Platform fee (0%)</span>
@@ -577,41 +619,79 @@ export default function PageEditor() {
                       </div>
                       <div className="flex justify-between text-xs mb-1">
                         <span className="opacity-60">Payment processing</span>
-                        <span>$1.75</span>
+                        <span>${previewFee.toFixed(2)}</span>
                       </div>
                       <p className={`text-[10px] mb-3 ${pageData.theme === "dark" ? "text-white/30" : "text-stone-400"}`}>
                         2.9% + $0.30 · Paid by contributor
                       </p>
                       <div className={`flex justify-between text-xs font-medium pt-2 border-t ${pageData.theme === "dark" ? "border-white/10" : "border-stone-100"}`}>
                         <span>Total</span>
-                        <span>$51.75</span>
+                        <span>${previewTotal}</span>
                       </div>
                     </div>
 
-                    <button className={`w-full py-3 rounded text-sm font-medium ${
-                      pageData.theme === "dark" 
-                        ? "bg-white text-stone-900" 
-                        : `${currentTheme.accent} text-white`
-                    }`}>
-                      Give $51.75
+                    <button 
+                      onClick={() => {
+                        setPreviewProcessing(true);
+                        setTimeout(() => {
+                          setPreviewProcessing(false);
+                          setPreviewStep(2);
+                        }, 1000);
+                      }}
+                      disabled={previewProcessing}
+                      className={`w-full py-3 rounded text-sm font-medium transition-all ${
+                        pageData.theme === "dark" 
+                          ? "bg-white text-stone-900 hover:bg-stone-100" 
+                          : `${currentTheme.accent} text-white hover:opacity-90`
+                      } ${previewProcessing ? "opacity-70" : ""}`}
+                    >
+                      {previewProcessing ? "Processing..." : `Give $${previewTotal}`}
                     </button>
                   </div>
                 )}
 
-                {/* Step 2: Confirmation */}
+                {/* Step 2: Confirmation - Interactive */}
                 {previewStep === 2 && (
                   <div className="p-6 text-center flex flex-col items-center justify-center min-h-[500px]">
-                    <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center mb-5">
+                    <motion.div
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center mb-5"
+                    >
                       <Check size={28} />
-                    </div>
+                    </motion.div>
                     <h1 className="text-xl font-medium mb-2">Gift sent!</h1>
                     <p className="text-sm opacity-60 mb-6">
-                      Your $50 gift to {fundName} is on its way
+                      Your ${previewAmount} gift to {fundName} is on its way
                     </p>
+                    
+                    {previewName && (
+                      <p className={`text-xs mb-4 ${pageData.theme === "dark" ? "text-white/50" : "text-stone-500"}`}>
+                        From: {previewName}
+                      </p>
+                    )}
+                    {previewNote && (
+                      <p className={`text-xs italic mb-4 ${pageData.theme === "dark" ? "text-white/40" : "text-stone-400"}`}>
+                        "{previewNote}"
+                      </p>
+                    )}
+                    
                     <div className={`w-full p-4 rounded-lg text-left ${pageData.theme === "dark" ? "bg-white/10" : "bg-stone-100"}`}>
                       <p className="text-xs opacity-50 mb-1">Projected value in 18 years</p>
-                      <p className="text-2xl font-light">$230</p>
+                      <p className="text-2xl font-light">${previewProjection.toLocaleString()}</p>
                     </div>
+                    
+                    <button 
+                      onClick={() => {
+                        setPreviewStep(0);
+                        setPreviewAmount(50);
+                        setPreviewName("");
+                        setPreviewNote("");
+                      }}
+                      className={`mt-6 text-xs ${pageData.theme === "dark" ? "text-white/50 hover:text-white" : "text-stone-400 hover:text-stone-600"}`}
+                    >
+                      Start over
+                    </button>
                   </div>
                 )}
 
