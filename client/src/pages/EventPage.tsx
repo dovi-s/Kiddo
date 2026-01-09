@@ -67,8 +67,8 @@ export default function EventPage() {
             >
               {/* Breadcrumb */}
               <div className="text-sm mb-8 flex items-center gap-1.5">
-                <Link href="/">
-                  <span className="text-stone-400 hover:text-stone-600">Everleaf</span>
+                <Link href="/dashboard">
+                  <span className="text-stone-400 hover:text-stone-600">Dashboard</span>
                 </Link>
                 <span className="text-stone-300">/</span>
                 <Link href={`/${fundSlug}`}>
