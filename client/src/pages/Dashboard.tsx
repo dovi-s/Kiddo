@@ -239,6 +239,12 @@ export default function Dashboard() {
                           </div>
                           <div className="flex gap-2">
                             <button 
+                              onClick={() => setShowEditFund(true)}
+                              className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50"
+                            >
+                              Edit
+                            </button>
+                            <button 
                               onClick={handleCopy}
                               className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50"
                             >
@@ -277,21 +283,32 @@ export default function Dashboard() {
                                   
                                   {/* Page item */}
                                   <div className="flex-1 py-2 flex items-center justify-between group">
-                                    <Link href={`/${fundSlug}/${eventData.slug}`} className="flex items-center gap-2 flex-1">
+                                    <div className="flex items-center gap-2 flex-1">
                                       <div className={`h-2 w-2 rounded-full ${event.active ? 'bg-emerald-500' : 'bg-stone-300'}`} />
                                       <div>
                                         <p className="text-sm text-stone-900">{eventData.title}</p>
                                         <p className="text-xs text-stone-400">/{fundSlug}/{eventData.slug}</p>
                                       </div>
-                                    </Link>
-                                    <div className="flex items-center gap-3">
-                                      <p className="text-sm text-stone-600">${event.raised.toLocaleString()}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm text-stone-600 mr-2">${event.raised.toLocaleString()}</p>
                                       <button 
                                         onClick={(e) => { e.stopPropagation(); setShowEditEvent(event.id); }}
-                                        className="text-xs text-stone-400 hover:text-stone-600 opacity-0 group-hover:opacity-100"
+                                        className="px-2 py-1 text-xs border border-stone-200 rounded hover:bg-stone-50 opacity-0 group-hover:opacity-100"
                                       >
                                         Edit
                                       </button>
+                                      <button 
+                                        onClick={() => { navigator.clipboard.writeText(`everleaf.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied" }); }}
+                                        className="px-2 py-1 text-xs border border-stone-200 rounded hover:bg-stone-50 opacity-0 group-hover:opacity-100"
+                                      >
+                                        Copy
+                                      </button>
+                                      <Link href={`/${fundSlug}/${eventData.slug}`}>
+                                        <button className="px-2 py-1 text-xs border border-stone-200 rounded hover:bg-stone-50 opacity-0 group-hover:opacity-100">
+                                          View
+                                        </button>
+                                      </Link>
                                     </div>
                                   </div>
                                 </div>
