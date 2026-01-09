@@ -198,16 +198,25 @@ export default function Dashboard() {
               {/* Fund Header */}
               <button
                 onClick={() => setExpandedFund(expandedFund === fund.id ? null : fund.id)}
-                className="w-full p-5 flex items-center justify-between text-left hover:bg-stone-50 transition-colors"
+                className="w-full p-5 flex items-center gap-4 text-left hover:bg-stone-50 transition-colors group"
               >
-                <div>
+                <motion.div 
+                  animate={{ rotate: expandedFund === fund.id ? 90 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-stone-400 group-hover:text-stone-600"
+                >
+                  <svg width="8" height="12" viewBox="0 0 8 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M1.5 1L6.5 6L1.5 11" />
+                  </svg>
+                </motion.div>
+                <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-stone-900">{fund.name}'s Fund</p>
                     <span className="text-[10px] font-medium text-stone-400 uppercase tracking-wider px-1.5 py-0.5 bg-stone-100 rounded">
                       {fund.accountType}
                     </span>
                   </div>
-                  <p className="text-sm text-stone-500">{fund.contributors} contributors</p>
+                  <p className="text-sm text-stone-500">{fund.contributors} contributors · {fund.events.length} events</p>
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-medium text-stone-900">${fund.balance.toLocaleString()}</p>
