@@ -629,15 +629,31 @@ export default function Dashboard() {
                     </Card>
                   )}
 
-                  {/* Add Fund - Family plan */}
-                  {currentPlan === "family" && (
-                    <Card className="border border-dashed mt-4 hover:border-foreground/30 transition-colors cursor-pointer">
-                      <CardContent className="p-4 flex items-center justify-center gap-2 text-muted-foreground">
+                  {/* Add Fund - Always shown, locked for non-family */}
+                  <Card 
+                    className={`border border-dashed mt-4 transition-all ${
+                      currentPlan === "family" 
+                        ? "hover:border-foreground/30 cursor-pointer" 
+                        : "opacity-60 cursor-not-allowed"
+                    }`}
+                    onClick={() => currentPlan === "family" && setShowPageSetup(true)}
+                  >
+                    <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <Plus className="h-4 w-4" />
-                        <span className="text-sm">Add another child's fund</span>
-                      </CardContent>
-                    </Card>
-                  )}
+                        <span className="text-sm">Add another fund</span>
+                      </div>
+                      {currentPlan !== "family" && (
+                        <button 
+                          className="text-xs px-2.5 py-1 rounded-full bg-foreground/5 hover:bg-foreground/10 text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                          onClick={(e) => { e.stopPropagation(); setShowUpgrade(true); }}
+                        >
+                          <Lock className="h-3 w-3" />
+                          Family plan
+                        </button>
+                      )}
+                    </CardContent>
+                  </Card>
                 </motion.div>
 
                 {/* Holdings - Refined */}
