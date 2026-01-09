@@ -35,7 +35,8 @@ export default function Dashboard() {
   const [expandedFund, setExpandedFund] = useState<number | null>(0);
   const [showPortfolio, setShowPortfolio] = useState(false);
 
-  const momentLink = `everleaf.com/m/${profileName.toLowerCase().replace(/\s+/g, "-")}`;
+  const fundSlug = profileName.toLowerCase().replace(/\s+/g, "-");
+  const momentLink = `everleaf.com/m/${fundSlug}`;
 
   const handleCopy = () => {
     navigator.clipboard?.writeText(`https://${momentLink}`);
@@ -56,9 +57,9 @@ export default function Dashboard() {
       projection: 28400,
       yearsLeft: 14,
       events: [
-        { id: 1, title: "Open anytime", raised: 2180, gifts: 12, active: true },
-        { id: 2, title: isPersonal ? "30th Birthday" : "5th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
-        { id: 3, title: isPersonal ? "MBA Graduation" : "Kindergarten", raised: 650, gifts: 4, date: "May 2026", active: true },
+        { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
+        { id: 2, slug: isPersonal ? "30th-birthday" : "5th-birthday", title: isPersonal ? "30th Birthday" : "5th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
+        { id: 3, slug: isPersonal ? "mba-graduation" : "kindergarten-graduation", title: isPersonal ? "MBA Graduation" : "Kindergarten", raised: 650, gifts: 4, date: "May 2026", active: true },
       ]
     },
   ];
@@ -232,7 +233,7 @@ export default function Dashboard() {
                         </div>
                         <div className="space-y-1">
                           {fund.events.map((event) => (
-                            <Link key={event.id} href={`/moment?name=${encodeURIComponent(fund.name)}&title=${encodeURIComponent(event.title)}`}>
+                            <Link key={event.id} href={`/m/${fundSlug}/${event.slug}`}>
                               <div className="p-3 -mx-2 rounded hover:bg-stone-50 transition-colors flex items-center justify-between group">
                                 <div className="flex items-center gap-3">
                                   {event.active && (
@@ -258,7 +259,7 @@ export default function Dashboard() {
 
                       {/* Actions */}
                       <div className="pt-2 flex gap-2">
-                        <Link href={`/moment?name=${encodeURIComponent(fund.name)}`} className="flex-1">
+                        <Link href={`/m/${fundSlug}`} className="flex-1">
                           <button className="w-full py-2.5 text-sm font-medium text-stone-900 border border-stone-200 rounded hover:bg-stone-50 transition-colors">
                             View page
                           </button>

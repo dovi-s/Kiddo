@@ -14,6 +14,8 @@ import Settings from "@/pages/Settings";
 import Onboard from "@/pages/Onboard";
 import MomentCreate from "@/pages/MomentCreate";
 import Send from "@/pages/Send";
+import FundPage from "@/pages/FundPage";
+import EventPage from "@/pages/EventPage";
 
 function Router() {
   return (
@@ -27,6 +29,8 @@ function Router() {
       <Route path="/moment" component={Moment} />
       <Route path="/moment/:id" component={Moment} />
       <Route path="/send" component={Send} />
+      <Route path="/m/:slug" component={FundPage} />
+      <Route path="/m/:slug/:event" component={EventPage} />
       <Route path="/recipient" component={Recipient} />
       <Route path="/recipient/:id" component={Recipient} />
       <Route path="/settings" component={Settings} />
