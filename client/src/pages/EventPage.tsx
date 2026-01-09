@@ -64,12 +64,22 @@ export default function EventPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              {/* Back link */}
-              <Link href={`/${fundSlug}`}>
-                <span className="text-sm text-stone-500 hover:text-stone-900 mb-8 block">
-                  ← {recipientName}'s Fund
-                </span>
-              </Link>
+              {/* Breadcrumb */}
+              <div className="text-sm mb-8 flex items-center gap-1.5">
+                <Link href="/">
+                  <span className="text-stone-400 hover:text-stone-600">Everleaf</span>
+                </Link>
+                <span className="text-stone-300">/</span>
+                <Link href={`/${fundSlug}`}>
+                  <span className="text-stone-500 hover:text-stone-900">{recipientName}</span>
+                </Link>
+                {eventTitle && (
+                  <>
+                    <span className="text-stone-300">/</span>
+                    <span className="text-stone-900">{eventTitle}</span>
+                  </>
+                )}
+              </div>
 
               {/* Header */}
               <div className="text-center mb-10">

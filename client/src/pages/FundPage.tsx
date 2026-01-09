@@ -40,6 +40,15 @@ export default function FundPage() {
 
       <main className="max-w-lg mx-auto px-6 py-12">
         
+        {/* Breadcrumb */}
+        <div className="text-sm mb-10 flex items-center gap-1.5">
+          <Link href="/">
+            <span className="text-stone-400 hover:text-stone-600">Everleaf</span>
+          </Link>
+          <span className="text-stone-300">/</span>
+          <span className="text-stone-900">{recipientName}</span>
+        </div>
+
         {/* Fund Header */}
         <motion.div 
           initial={{ opacity: 0 }}
