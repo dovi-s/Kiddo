@@ -1,8 +1,22 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useParams } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Image, Type, Palette, Eye, Save, Trash2, Plus, Check, Pencil } from "lucide-react";
+
+// Helper to get/set from localStorage
+const getStoredPageData = (key: string) => {
+  try {
+    const stored = localStorage.getItem(`everleaf_page_${key}`);
+    return stored ? JSON.parse(stored) : null;
+  } catch { return null; }
+};
+
+const setStoredPageData = (key: string, data: any) => {
+  try {
+    localStorage.setItem(`everleaf_page_${key}`, JSON.stringify(data));
+  } catch {}
+};
 
 const themes = [
   { id: "minimal", name: "Minimal", bg: "bg-stone-50", text: "text-stone-900", accent: "bg-stone-900" },
@@ -49,6 +63,9 @@ export default function PageEditor() {
   const fundSlug = params.fund || "mila";
   const eventSlug = params.event || "anytime";
   
+  // Storage key for this page
+  const storageKey = `${fundSlug}_${eventSlug}`;
+  
   // Get initial data based on the event slug
   const initialData = useMemo(() => {
     const data = eventDataMap[eventSlug] || eventDataMap["anytime"];
@@ -65,28 +82,34 @@ export default function PageEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [previewStep, setPreviewStep] = useState(0);
   
-  const [pageData, setPageData] = useState({
-    title: initialData.title,
-    slug: eventSlug,
-    headline: initialData.headline,
-    description: initialData.description,
-    buttonText: "Give a gift",
-    theme: "minimal",
-    layout: "centered",
-    photo: null as string | null,
-    showAmount: true,
-    goalAmount: initialData.goalAmount,
-    currentAmount: initialData.currentAmount,
+  // Initialize with stored data or defaults
+  const [pageData, setPageData] = useState(() => {
+    const stored = getStoredPageData(storageKey);
+    if (stored) return stored;
+    return {
+      title: initialData.title,
+      slug: eventSlug,
+      headline: initialData.headline,
+      description: initialData.description,
+      buttonText: "Give a gift",
+      theme: "minimal",
+      layout: "centered",
+      photo: null as string | null,
+      showAmount: true,
+      goalAmount: initialData.goalAmount,
+      currentAmount: initialData.currentAmount,
+    };
   });
 
   const currentTheme = themes.find(t => t.id === pageData.theme) || themes[0];
 
   const handleSave = () => {
     setIsSaving(true);
+    setStoredPageData(storageKey, pageData);
     setTimeout(() => {
       setIsSaving(false);
       toast({ title: "Changes saved" });
-    }, 800);
+    }, 500);
   };
 
   const handlePhotoUpload = () => {

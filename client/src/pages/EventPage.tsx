@@ -4,22 +4,41 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const AMOUNTS = [25, 50, 100, 250];
 
+// Helper to get from localStorage
+const getStoredPageData = (key: string) => {
+  try {
+    const stored = localStorage.getItem(`everleaf_page_${key}`);
+    return stored ? JSON.parse(stored) : null;
+  } catch { return null; }
+};
+
 export default function EventPage() {
   const params = useParams<{ slug: string; event: string }>();
   const fundSlug = params.slug || "mila";
   const eventSlug = params.event || "anytime";
+  
+  // Load saved page data from localStorage
+  const savedData = getStoredPageData(`${fundSlug}_${eventSlug}`);
   
   const recipientName = fundSlug
     .split("-")
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 
-  const eventTitle = eventSlug === "anytime" 
+  const eventTitle = savedData?.title || (eventSlug === "anytime" 
     ? null 
     : eventSlug
         .split("-")
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
+        .join(" "));
+  
+  const headline = savedData?.headline;
+  const description = savedData?.description;
+  const photo = savedData?.photo;
+  const buttonText = savedData?.buttonText || "Continue";
+  const showProgress = savedData?.showAmount;
+  const goalAmount = savedData?.goalAmount || 1000;
+  const currentAmount = savedData?.currentAmount || 0;
 
   const [step, setStep] = useState(0);
   const [amount, setAmount] = useState(50);
@@ -85,18 +104,48 @@ export default function EventPage() {
                 )}
               </div>
 
+              {/* Photo */}
+              {photo && (
+                <img 
+                  src={photo} 
+                  alt="" 
+                  className="w-full aspect-video object-cover rounded-xl mb-6"
+                />
+              )}
+
               {/* Header */}
               <div className="text-center mb-10">
-                <div className="w-16 h-16 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center text-xl font-light mx-auto mb-5">
-                  {recipientName.charAt(0)}
-                </div>
+                {!photo && (
+                  <div className="w-16 h-16 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center text-xl font-light mx-auto mb-5">
+                    {recipientName.charAt(0)}
+                  </div>
+                )}
                 <h1 className="text-2xl font-light text-stone-900 mb-1">
-                  Give to {recipientName}
+                  {headline || `Give to ${recipientName}`}
                 </h1>
-                {eventTitle && (
+                {description && (
+                  <p className="text-stone-500 text-sm mt-2 leading-relaxed">{description}</p>
+                )}
+                {!description && eventTitle && (
                   <p className="text-stone-500">{eventTitle}</p>
                 )}
               </div>
+
+              {/* Progress bar */}
+              {showProgress && (
+                <div className="mb-6">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium text-stone-900">${currentAmount.toLocaleString()}</span>
+                    <span className="text-stone-400">of ${goalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-stone-900 transition-all"
+                      style={{ width: `${Math.min((currentAmount / goalAmount) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Amount Selection */}
               <div className="grid grid-cols-4 gap-2 mb-4">
@@ -145,7 +194,7 @@ export default function EventPage() {
                 disabled={finalAmount < 5}
                 className="w-full py-3 bg-stone-900 text-stone-50 rounded font-medium disabled:opacity-40 hover:bg-stone-800 transition-colors"
               >
-                Continue
+                {buttonText}
               </button>
             </motion.div>
           )}
