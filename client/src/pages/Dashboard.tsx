@@ -5,6 +5,7 @@ import { Link, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
+import { Pencil, Copy, QrCode, ExternalLink } from "lucide-react";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -238,28 +239,31 @@ export default function Dashboard() {
                             </p>
                             <p className="text-xs text-stone-400">{fund.contributors} contributors</p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-1">
                             <button 
                               onClick={() => setShowEditFund(true)}
-                              className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50"
+                              className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                              title="Edit"
                             >
-                              Edit
+                              <Pencil size={14} />
                             </button>
                             <button 
                               onClick={handleCopy}
-                              className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50"
+                              className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                              title="Copy link"
                             >
-                              Copy
+                              <Copy size={14} />
                             </button>
                             <button 
                               onClick={() => setShowQR(true)}
-                              className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50"
+                              className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                              title="QR code"
                             >
-                              QR
+                              <QrCode size={14} />
                             </button>
                             <Link href={`/${fundSlug}`}>
-                              <button className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50">
-                                View
+                              <button className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors" title="View page">
+                                <ExternalLink size={14} />
                               </button>
                             </Link>
                           </div>
@@ -297,29 +301,32 @@ export default function Dashboard() {
                                         <p className="text-xs text-stone-400">/{fundSlug}/{eventData.slug}</p>
                                       </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-1">
                                       <p className="text-sm text-stone-600 mr-2">${event.raised.toLocaleString()}</p>
                                       <button 
                                         onClick={(e) => { e.stopPropagation(); setShowEditEvent(event.id); }}
-                                        className="px-2 py-1 text-xs border border-stone-200 rounded hover:bg-stone-50 opacity-0 group-hover:opacity-100"
+                                        className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                        title="Edit"
                                       >
-                                        Edit
+                                        <Pencil size={12} />
                                       </button>
                                       <button 
                                         onClick={() => { navigator.clipboard.writeText(`everleaf.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied" }); }}
-                                        className="px-2 py-1 text-xs border border-stone-200 rounded hover:bg-stone-50 opacity-0 group-hover:opacity-100"
+                                        className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                        title="Copy link"
                                       >
-                                        Copy
+                                        <Copy size={12} />
                                       </button>
                                       <button 
                                         onClick={() => setShowPageQR(`everleaf.com/${fundSlug}/${eventData.slug}`)}
-                                        className="px-2 py-1 text-xs border border-stone-200 rounded hover:bg-stone-50 opacity-0 group-hover:opacity-100"
+                                        className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                        title="QR code"
                                       >
-                                        QR
+                                        <QrCode size={12} />
                                       </button>
                                       <Link href={`/${fundSlug}/${eventData.slug}`}>
-                                        <button className="px-2 py-1 text-xs border border-stone-200 rounded hover:bg-stone-50 opacity-0 group-hover:opacity-100">
-                                          View
+                                        <button className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all" title="View page">
+                                          <ExternalLink size={12} />
                                         </button>
                                       </Link>
                                     </div>
