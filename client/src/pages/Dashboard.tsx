@@ -48,6 +48,7 @@ export default function Dashboard() {
     {
       id: 1,
       name: profileName,
+      accountType: isPersonal ? "Individual" : "UTMA",
       balance: 4250,
       gain: 472,
       gainPercent: 12.5,
@@ -182,7 +183,12 @@ export default function Dashboard() {
                 className="w-full p-5 flex items-center justify-between text-left hover:bg-stone-50 transition-colors"
               >
                 <div>
-                  <p className="font-medium text-stone-900">{fund.name}'s Fund</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-stone-900">{fund.name}'s Fund</p>
+                    <span className="text-[10px] font-medium text-stone-400 uppercase tracking-wider px-1.5 py-0.5 bg-stone-100 rounded">
+                      {fund.accountType}
+                    </span>
+                  </div>
                   <p className="text-sm text-stone-500">{fund.contributors} contributors</p>
                 </div>
                 <div className="text-right">
