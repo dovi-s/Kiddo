@@ -434,41 +434,120 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Fund Modal */}
+      {/* Fund Settings Panel */}
       <Dialog open={showEditFund} onOpenChange={setShowEditFund}>
-        <DialogContent className="max-w-sm bg-white">
-          <DialogHeader>
-            <DialogTitle className="font-medium">Edit fund</DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
+        <DialogContent className="max-w-md bg-white p-0 gap-0">
+          
+          {/* Header */}
+          <div className="p-5 border-b border-stone-100">
+            <div className="flex items-center justify-between mb-1">
+              <DialogTitle className="font-medium text-stone-900">Fund Settings</DialogTitle>
+              <span className="text-[10px] font-medium text-stone-400 uppercase tracking-wider px-2 py-1 bg-stone-100 rounded">
+                {isPersonal ? "Individual" : "UTMA"}
+              </span>
+            </div>
+            <p className="text-sm text-stone-500">Manage your fund and its pages</p>
+          </div>
+
+          {/* Fund Details */}
+          <div className="p-5 border-b border-stone-100 space-y-4">
             <div>
-              <label className="block text-sm text-stone-500 mb-2">Fund name</label>
+              <label className="block text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Fund name</label>
               <input
                 type="text"
                 value={fundName}
                 onChange={(e) => setFundName(e.target.value)}
-                className="w-full px-3 py-2 border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+                className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
               />
             </div>
             <div>
-              <label className="block text-sm text-stone-500 mb-2">URL</label>
-              <div className="flex items-center gap-1">
-                <span className="text-sm text-stone-400">everleaf.com/</span>
+              <label className="block text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Fund URL</label>
+              <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden">
+                <span className="px-3 py-2.5 bg-stone-50 text-sm text-stone-400 border-r border-stone-200">everleaf.com/</span>
                 <input
                   type="text"
                   value={fundSlugEdit}
                   onChange={(e) => setFundSlugEdit(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
-                  className="flex-1 px-2 py-2 border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+                  className="flex-1 px-3 py-2.5 text-stone-900 focus:outline-none"
                 />
               </div>
+              <p className="text-xs text-stone-400 mt-1.5">This is your fund's main page where people can give anytime</p>
             </div>
+          </div>
+
+          {/* Pages Section */}
+          <div className="p-5 border-b border-stone-100">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-medium text-stone-400 uppercase tracking-wider">Event Pages</label>
+              <Link href="/moment/create" onClick={() => setShowEditFund(false)}>
+                <span className="text-xs text-stone-500 hover:text-stone-900">+ Add page</span>
+              </Link>
+            </div>
+            
+            <div className="space-y-2">
+              {funds[0]?.events.map((event) => {
+                const eventData = eventEdits[event.id] || { title: event.title, slug: event.slug };
+                return (
+                  <div key={event.id} className="flex items-center justify-between p-3 bg-stone-50 rounded-lg group">
+                    <div className="flex items-center gap-3">
+                      <div className={`h-2 w-2 rounded-full ${event.active ? 'bg-emerald-500' : 'bg-stone-300'}`} />
+                      <div>
+                        <p className="text-sm text-stone-900">{eventData.title}</p>
+                        <p className="text-xs text-stone-400">/{fundSlug}/{eventData.slug}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Link href={`/edit/${fundSlug}/${eventData.slug}`} onClick={() => setShowEditFund(false)}>
+                        <button className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded" title="Edit page">
+                          <Pencil size={12} />
+                        </button>
+                      </Link>
+                      <Link href={`/${fundSlug}/${eventData.slug}`} onClick={() => setShowEditFund(false)}>
+                        <button className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-200 rounded" title="View page">
+                          <ExternalLink size={12} />
+                        </button>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="p-5 border-b border-stone-100">
+            <label className="block text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">Fund Overview</label>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-lg font-medium text-stone-900">${funds[0]?.balance.toLocaleString()}</p>
+                <p className="text-xs text-stone-400">Balance</p>
+              </div>
+              <div>
+                <p className="text-lg font-medium text-emerald-700">+{funds[0]?.gainPercent}%</p>
+                <p className="text-xs text-stone-400">Returns</p>
+              </div>
+              <div>
+                <p className="text-lg font-medium text-stone-900">{funds[0]?.contributors}</p>
+                <p className="text-xs text-stone-400">Contributors</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="p-5 flex gap-3">
             <button 
               onClick={() => { setShowEditFund(false); toast({ title: "Changes saved" }); }}
-              className="w-full py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors"
+              className="flex-1 py-2.5 bg-stone-900 text-stone-50 rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors"
             >
-              Save
+              Save changes
             </button>
+            <Link href={`/${fundSlug}`} onClick={() => setShowEditFund(false)} className="flex-1">
+              <button className="w-full py-2.5 border border-stone-200 rounded-lg text-sm text-stone-600 hover:bg-stone-50">
+                View fund page
+              </button>
+            </Link>
           </div>
+
         </DialogContent>
       </Dialog>
 
