@@ -22,6 +22,7 @@ export default function Send() {
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [deliveryType, setDeliveryType] = useState<"stock" | "cash">("stock");
 
   const filteredStocks = STOCKS.filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -209,6 +210,53 @@ export default function Send() {
                 </div>
               </div>
 
+              {/* Delivery Type */}
+              <div className="mb-6">
+                <label className="block text-sm text-stone-500 mb-3">How should they receive it?</label>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setDeliveryType("stock")}
+                    className={`w-full p-4 text-left rounded border transition-all ${
+                      deliveryType === "stock"
+                        ? "border-stone-900 bg-white"
+                        : "border-stone-200 bg-white hover:border-stone-300"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-stone-900">Buy {selectedStock?.symbol} shares</p>
+                        <p className="text-sm text-stone-500">We'll purchase the stock immediately</p>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        deliveryType === "stock" ? "border-stone-900" : "border-stone-300"
+                      }`}>
+                        {deliveryType === "stock" && <div className="w-2 h-2 rounded-full bg-stone-900" />}
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setDeliveryType("cash")}
+                    className={`w-full p-4 text-left rounded border transition-all ${
+                      deliveryType === "cash"
+                        ? "border-stone-900 bg-white"
+                        : "border-stone-200 bg-white hover:border-stone-300"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-stone-900">Send to cash balance</p>
+                        <p className="text-sm text-stone-500">They choose what to invest in</p>
+                      </div>
+                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        deliveryType === "cash" ? "border-stone-900" : "border-stone-300"
+                      }`}>
+                        {deliveryType === "cash" && <div className="w-2 h-2 rounded-full bg-stone-900" />}
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               {/* Message */}
               <div className="mb-6">
                 <label className="block text-sm text-stone-500 mb-2">Add a note (optional)</label>
@@ -224,7 +272,11 @@ export default function Send() {
               {/* Summary */}
               <div className="p-4 bg-white border border-stone-200 rounded mb-6 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-stone-500">{selectedStock?.name} ({shares.toFixed(4)} shares)</span>
+                  <span className="text-stone-500">
+                    {deliveryType === "stock" 
+                      ? `${selectedStock?.name} (${shares.toFixed(4)} shares)` 
+                      : "Cash balance"}
+                  </span>
                   <span className="text-stone-900">${parseFloat(amount || "0").toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -267,15 +319,27 @@ export default function Send() {
                 </div>
                 <h1 className="text-2xl font-light text-stone-900 mb-2">Sent</h1>
                 <p className="text-stone-500">
-                  {recipientName} will receive an email to claim their {selectedStock?.name} shares
+                  {deliveryType === "stock" 
+                    ? `${recipientName} will receive an email to claim their ${selectedStock?.name} shares`
+                    : `${recipientName} will receive an email to claim their $${amount} cash balance`
+                  }
                 </p>
               </motion.div>
 
               <div className="p-5 bg-white border border-stone-200 rounded text-left mb-8 max-w-xs mx-auto">
                 <div className="flex justify-between mb-3">
                   <div>
-                    <p className="font-medium text-stone-900">{shares.toFixed(4)} shares</p>
-                    <p className="text-sm text-stone-500">{selectedStock?.name}</p>
+                    {deliveryType === "stock" ? (
+                      <>
+                        <p className="font-medium text-stone-900">{shares.toFixed(4)} shares</p>
+                        <p className="text-sm text-stone-500">{selectedStock?.name}</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-medium text-stone-900">Cash balance</p>
+                        <p className="text-sm text-stone-500">They choose their investment</p>
+                      </>
+                    )}
                   </div>
                   <p className="font-medium text-stone-900">${amount}</p>
                 </div>
