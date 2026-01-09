@@ -29,8 +29,8 @@ function Router() {
       <Route path="/moment" component={Moment} />
       <Route path="/moment/:id" component={Moment} />
       <Route path="/send" component={Send} />
-      <Route path="/m/:slug" component={FundPage} />
-      <Route path="/m/:slug/:event" component={EventPage} />
+      <Route path="/:slug" component={FundPage} />
+      <Route path="/:slug/:event" component={EventPage} />
       <Route path="/recipient" component={Recipient} />
       <Route path="/recipient/:id" component={Recipient} />
       <Route path="/settings" component={Settings} />

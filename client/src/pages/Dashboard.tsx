@@ -36,7 +36,7 @@ export default function Dashboard() {
   const [showPortfolio, setShowPortfolio] = useState(false);
 
   const fundSlug = profileName.toLowerCase().replace(/\s+/g, "-");
-  const momentLink = `everleaf.com/m/${fundSlug}`;
+  const momentLink = `everleaf.com/${fundSlug}`;
 
   const handleCopy = () => {
     navigator.clipboard?.writeText(`https://${momentLink}`);
@@ -233,7 +233,7 @@ export default function Dashboard() {
                         </div>
                         <div className="space-y-1">
                           {fund.events.map((event) => (
-                            <Link key={event.id} href={`/m/${fundSlug}/${event.slug}`}>
+                            <Link key={event.id} href={`/${fundSlug}/${event.slug}`}>
                               <div className="p-3 -mx-2 rounded hover:bg-stone-50 transition-colors flex items-center justify-between group">
                                 <div className="flex items-center gap-3">
                                   {event.active && (
@@ -259,7 +259,7 @@ export default function Dashboard() {
 
                       {/* Actions */}
                       <div className="pt-2 flex gap-2">
-                        <Link href={`/m/${fundSlug}`} className="flex-1">
+                        <Link href={`/${fundSlug}`} className="flex-1">
                           <button className="w-full py-2.5 text-sm font-medium text-stone-900 border border-stone-200 rounded hover:bg-stone-50 transition-colors">
                             View page
                           </button>

@@ -92,7 +92,7 @@ export default function FundPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + i * 0.1 }}
               >
-                <Link href={`/m/${fundSlug}/${event.slug}`}>
+                <Link href={`/${fundSlug}/${event.slug}`}>
                   <div className="p-5 bg-white border border-stone-200 rounded-lg hover:border-stone-300 transition-colors cursor-pointer group">
                     <div className="flex justify-between items-start">
                       <div>

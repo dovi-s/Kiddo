@@ -65,7 +65,7 @@ export default function EventPage() {
               exit={{ opacity: 0 }}
             >
               {/* Back link */}
-              <Link href={`/m/${fundSlug}`}>
+              <Link href={`/${fundSlug}`}>
                 <span className="text-sm text-stone-500 hover:text-stone-900 mb-8 block">
                   ← {recipientName}'s Fund
                 </span>
@@ -268,7 +268,7 @@ export default function EventPage() {
                 </div>
               </div>
 
-              <Link href={`/m/${fundSlug}`}>
+              <Link href={`/${fundSlug}`}>
                 <span className="text-sm text-stone-500 hover:text-stone-900">
                   View {recipientName}'s fund →
                 </span>
