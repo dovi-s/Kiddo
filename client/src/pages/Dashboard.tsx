@@ -91,6 +91,34 @@ export default function Dashboard() {
   const [inviteCopied, setInviteCopied] = useState(false);
   const [thankYousSent, setThankYousSent] = useState(false);
 
+  const [userEvents, setUserEvents] = useState<Array<{id: string; type: string; title: string; date: string; emoji: string}>>(() => {
+    const saved = localStorage.getItem("everleaf_userEvents");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("everleaf_userEvents", JSON.stringify(userEvents));
+  }, [userEvents]);
+
+  const addUserEvent = () => {
+    const eventEmojis: Record<string, string> = {
+      birthday: "🎂", graduation: "🎓", bar_mitzvah: "✡️", wedding: "💒",
+      baby: "👶", baptism: "✝️", quinceañera: "👑", holiday: "🎄", other: "✨"
+    };
+    const eventLabels: Record<string, string> = {
+      birthday: "Birthday", graduation: "Graduation", bar_mitzvah: "Bar Mitzvah", wedding: "Wedding",
+      baby: "Baby Shower", baptism: "Baptism", quinceañera: "Quinceañera", holiday: "Holiday", other: "Celebration"
+    };
+    const newEvent = {
+      id: Date.now().toString(),
+      type: selectedEventType,
+      title: pageTitle || `${profileName}'s ${eventLabels[selectedEventType] || "Event"}`,
+      date: eventDate,
+      emoji: eventEmojis[selectedEventType] || "✨"
+    };
+    setUserEvents(prev => [...prev, newEvent]);
+  };
+
   const inviteLink = "everleaf.com/invite/abc123";
   const momentLink = `https://everleaf.com/m/${encodeURIComponent(profileName.toLowerCase().replace(/\s+/g, "-"))}`;
 
@@ -523,6 +551,33 @@ export default function Dashboard() {
                               <div className="h-2 w-2 rounded-full bg-amber-500" />
                             </div>
                           </div>
+
+                          {/* User-created events */}
+                          {userEvents.map((event) => (
+                            <Link key={event.id} href={`/moment?name=${encodeURIComponent(profileName)}&title=${encodeURIComponent(event.title)}`}>
+                              <div className="group flex items-center justify-between p-3 -mx-2 rounded-xl hover:bg-muted/50 transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/40 dark:to-emerald-900/20 flex items-center justify-center text-lg">
+                                    {event.emoji}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium">{event.title}</p>
+                                    <p className="text-sm text-muted-foreground">$0 from 0 gifts</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <button 
+                                    className="opacity-0 group-hover:opacity-100 p-2 hover:bg-background rounded-lg transition-all"
+                                    onClick={(e) => { e.preventDefault(); setShowQR(true); }}
+                                  >
+                                    <QrCode className="h-4 w-4 text-muted-foreground" />
+                                  </button>
+                                  {event.date && <span className="text-xs text-muted-foreground">{new Date(event.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>}
+                                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
                         </div>
                       </div>
                   </div>
@@ -1196,6 +1251,7 @@ export default function Dashboard() {
                   <Button 
                     className="w-full h-12 text-base" 
                     onClick={() => { 
+                      addUserEvent();
                       setPageCreated(true); 
                       setShowPageSetup(false);
                       setEventStep(1);
