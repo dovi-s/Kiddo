@@ -177,129 +177,133 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* Funds */}
+        {/* Funds - Visual Hierarchy */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
           className="mb-12"
         >
-          <div className="flex items-baseline justify-between mb-4">
-            <h2 className="text-xs font-medium text-stone-400 uppercase tracking-wider">Funds</h2>
-          </div>
-          
           {funds.map((fund) => (
-            <div key={fund.id} className="border border-stone-200 rounded-lg bg-white overflow-hidden">
+            <div key={fund.id} className="mb-6">
               
-              {/* Fund Header */}
-              <button
-                onClick={() => setExpandedFund(expandedFund === fund.id ? null : fund.id)}
-                className="w-full p-5 flex items-center gap-4 text-left hover:bg-stone-50 transition-colors group"
-              >
-                <motion.div 
-                  animate={{ rotate: expandedFund === fund.id ? 90 : 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-stone-400 group-hover:text-stone-600"
+              {/* Fund Level */}
+              <div className="border border-stone-200 rounded-lg bg-white overflow-hidden">
+                <button
+                  onClick={() => setExpandedFund(expandedFund === fund.id ? null : fund.id)}
+                  className="w-full p-5 flex items-center gap-4 text-left hover:bg-stone-50 transition-colors group"
                 >
-                  <svg width="8" height="12" viewBox="0 0 8 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M1.5 1L6.5 6L1.5 11" />
-                  </svg>
-                </motion.div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-stone-900">{fund.name}'s Fund</p>
-                    <span className="text-[10px] font-medium text-stone-400 uppercase tracking-wider px-1.5 py-0.5 bg-stone-100 rounded">
-                      {fund.accountType}
-                    </span>
-                  </div>
-                  <p className="text-sm text-stone-500">{fund.contributors} contributors · {fund.events.length} events</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-medium text-stone-900">${fund.balance.toLocaleString()}</p>
-                  <p className="text-sm text-emerald-700">+{fund.gainPercent}%</p>
-                </div>
-              </button>
-
-              {/* Expanded */}
-              <AnimatePresence>
-                {expandedFund === fund.id && (
-                  <motion.div
-                    initial={{ height: 0 }}
-                    animate={{ height: "auto" }}
-                    exit={{ height: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="overflow-hidden"
+                  <motion.div 
+                    animate={{ rotate: expandedFund === fund.id ? 90 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-stone-400 group-hover:text-stone-600"
                   >
-                    <div className="px-5 pb-5 border-t border-stone-100">
-                      
-                      {/* Projection */}
-                      <div className="py-4 border-b border-stone-100">
-                        <p className="text-sm text-stone-500 mb-1">
-                          {isPersonal ? "In 20 years" : `When ${fund.name} turns 18`}
-                        </p>
-                        <p className="text-2xl font-light text-stone-900">
-                          ${fund.projection.toLocaleString()}
-                        </p>
-                        <p className="text-xs text-stone-400 mt-1">
-                          Projected at 7% annual return
-                        </p>
-                      </div>
-
-                      {/* Event Pages */}
-                      <div className="py-4">
-                        <div className="flex items-baseline justify-between mb-3">
-                          <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Event Pages</p>
-                          <Link href="/moment/create" className="text-xs text-stone-500 hover:text-stone-900">
-                            + Add
-                          </Link>
-                        </div>
-                        <div className="space-y-1">
-                          {fund.events.map((event) => {
-                            const eventData = eventEdits[event.id] || { title: event.title, slug: event.slug };
-                            return (
-                              <div key={event.id} className="p-3 -mx-2 rounded hover:bg-stone-50 transition-colors flex items-center justify-between group">
-                                <Link href={`/${fundSlug}/${eventData.slug}`} className="flex items-center gap-3 flex-1">
-                                  {event.active && (
-                                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                  )}
-                                  {!event.active && (
-                                    <div className="h-1.5 w-1.5 rounded-full bg-stone-300" />
-                                  )}
-                                  <div>
-                                    <p className="text-sm text-stone-900">{eventData.title}</p>
-                                    <p className="text-xs text-stone-400">/{fundSlug}/{eventData.slug}</p>
-                                  </div>
-                                </Link>
-                                <div className="flex items-center gap-3">
-                                  <div className="text-right">
-                                    <p className="text-sm text-stone-600">${event.raised.toLocaleString()}</p>
-                                    <p className="text-xs text-stone-400">{event.gifts} gifts</p>
-                                  </div>
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); setShowEditEvent(event.id); }}
-                                    className="text-xs text-stone-400 hover:text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    Edit
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="pt-2 flex gap-2">
-                        <Link href={`/${fundSlug}`} className="flex-1">
-                          <button className="w-full py-2.5 text-sm font-medium text-stone-900 border border-stone-200 rounded hover:bg-stone-50 transition-colors">
-                            View page
-                          </button>
-                        </Link>
-                      </div>
-                    </div>
+                    <svg width="8" height="12" viewBox="0 0 8 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M1.5 1L6.5 6L1.5 11" />
+                    </svg>
                   </motion.div>
-                )}
-              </AnimatePresence>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-medium text-stone-900">{fund.name}'s Fund</p>
+                      <span className="text-[10px] font-medium text-stone-400 uppercase tracking-wider px-1.5 py-0.5 bg-stone-100 rounded">
+                        {fund.accountType}
+                      </span>
+                    </div>
+                    <p className="text-xs text-stone-400">everleaf.com/{fundSlug}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-medium text-stone-900">${fund.balance.toLocaleString()}</p>
+                    <p className="text-sm text-emerald-700">+{fund.gainPercent}%</p>
+                  </div>
+                </button>
+
+                {/* Expanded Content */}
+                <AnimatePresence>
+                  {expandedFund === fund.id && (
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: "auto" }}
+                      exit={{ height: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="border-t border-stone-100">
+                        
+                        {/* Fund Info Row */}
+                        <div className="px-5 py-4 flex items-center justify-between border-b border-stone-100">
+                          <div>
+                            <p className="text-sm text-stone-500">
+                              {isPersonal ? "In 20 years" : `When ${fund.name} turns 18`}: <span className="font-medium text-stone-900">${fund.projection.toLocaleString()}</span>
+                            </p>
+                            <p className="text-xs text-stone-400">{fund.contributors} contributors</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={handleCopy}
+                              className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50"
+                            >
+                              Copy link
+                            </button>
+                            <Link href={`/${fundSlug}`}>
+                              <button className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50">
+                                View
+                              </button>
+                            </Link>
+                          </div>
+                        </div>
+
+                        {/* Pages within this Fund */}
+                        <div className="px-5 py-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Pages</p>
+                            <Link href="/moment/create" className="text-xs text-stone-500 hover:text-stone-900">
+                              + New page
+                            </Link>
+                          </div>
+                          
+                          {/* Tree visualization */}
+                          <div className="space-y-0">
+                            {fund.events.map((event, idx) => {
+                              const eventData = eventEdits[event.id] || { title: event.title, slug: event.slug };
+                              const isLast = idx === fund.events.length - 1;
+                              return (
+                                <div key={event.id} className="flex">
+                                  {/* Tree connector */}
+                                  <div className="w-6 flex flex-col items-center mr-2">
+                                    <div className={`w-px bg-stone-200 ${idx === 0 ? 'h-3' : 'h-full'}`} />
+                                    <div className="w-3 h-px bg-stone-200" style={{ marginTop: idx === 0 ? 0 : -12 }} />
+                                    {!isLast && <div className="w-px bg-stone-200 flex-1" />}
+                                  </div>
+                                  
+                                  {/* Page item */}
+                                  <div className="flex-1 py-2 flex items-center justify-between group">
+                                    <Link href={`/${fundSlug}/${eventData.slug}`} className="flex items-center gap-2 flex-1">
+                                      <div className={`h-2 w-2 rounded-full ${event.active ? 'bg-emerald-500' : 'bg-stone-300'}`} />
+                                      <div>
+                                        <p className="text-sm text-stone-900">{eventData.title}</p>
+                                        <p className="text-xs text-stone-400">/{fundSlug}/{eventData.slug}</p>
+                                      </div>
+                                    </Link>
+                                    <div className="flex items-center gap-3">
+                                      <p className="text-sm text-stone-600">${event.raised.toLocaleString()}</p>
+                                      <button 
+                                        onClick={(e) => { e.stopPropagation(); setShowEditEvent(event.id); }}
+                                        className="text-xs text-stone-400 hover:text-stone-600 opacity-0 group-hover:opacity-100"
+                                      >
+                                        Edit
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           ))}
         </motion.div>
