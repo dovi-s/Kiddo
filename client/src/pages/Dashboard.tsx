@@ -829,7 +829,7 @@ export default function Dashboard() {
                 </motion.div>
 
                 <p className="text-xs text-muted-foreground text-center pt-4">
-                  Brokerage by [Broker-Dealer], Member FINRA/SIPC. Clearing by Apex.
+                  Brokerage by Alpaca Securities LLC, member FINRA/SIPC. Clearing by Apex.
                 </p>
               </motion.div>
             )}

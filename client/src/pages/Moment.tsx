@@ -134,21 +134,23 @@ export default function Moment() {
 
                   {/* Growth projection */}
                   <motion.div 
-                    className="p-4 rounded-lg bg-foreground/[0.03] border border-foreground/[0.06]"
+                    className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100 dark:border-emerald-800/30"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Zap className="h-4 w-4 text-foreground/60" />
-                        <span className="text-sm text-muted-foreground">In 18 years</span>
+                      <div>
+                        <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">Could become</span>
+                        <p className="text-2xl font-semibold text-emerald-700 dark:text-emerald-300">
+                          <AnimatedNumber value={projectedGrowth} prefix="$" />
+                        </p>
                       </div>
-                      <span className="font-semibold text-foreground">
-                        <AnimatedNumber value={projectedGrowth} prefix="$" />
-                      </span>
+                      <div className="text-right">
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400">in 18 years</span>
+                        <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">at 7% annual return</p>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">Projected at 7% annual return</p>
                   </motion.div>
 
                   <div className="space-y-3">
@@ -249,7 +251,7 @@ export default function Moment() {
                           ))}
                         </div>
                         <p className="text-xs text-muted-foreground pt-2">
-                          Brokerage services provided by [Broker-Dealer], Member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation.
+                          Brokerage services by Alpaca Securities LLC, member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation.
                         </p>
                       </CardContent>
                     </Card>

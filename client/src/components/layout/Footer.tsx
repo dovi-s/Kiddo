@@ -86,7 +86,7 @@ export function Footer() {
 
         <div className="mt-16 pt-8 border-t space-y-4">
           <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
-            Everleaf is a technology platform and is not a broker-dealer. Brokerage services provided by [Broker-Dealer], Member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation, Member FINRA/SIPC. SIPC protects against broker failure, not market losses.
+            Everleaf is a technology platform and is not a broker-dealer. Brokerage services by Alpaca Securities LLC, member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation, member FINRA/SIPC. SIPC protects against broker failure, not market losses.
           </p>
           <p className="text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} Everleaf Inc.
