@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Link, useParams, useLocation } from "wouter";
+import { useState, useMemo } from "react";
+import { Link, useParams } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Image, Type, Palette, Layout, Eye, Save, Trash2, Plus, X, Check } from "lucide-react";
+import { ArrowLeft, Image, Type, Palette, Eye, Save, Trash2, Plus, Check } from "lucide-react";
 
 const themes = [
   { id: "minimal", name: "Minimal", bg: "bg-stone-50", text: "text-stone-900", accent: "bg-stone-900" },
@@ -19,27 +19,63 @@ const layouts = [
   { id: "hero", name: "Full hero", icon: "▣" },
 ];
 
+// Mock data for different events
+const eventDataMap: Record<string, { title: string; headline: string; description: string; currentAmount: number; goalAmount: number }> = {
+  "anytime": {
+    title: "Open anytime",
+    headline: "Give to their future, anytime",
+    description: "No special occasion needed. Every gift grows over time into something meaningful.",
+    currentAmount: 2180,
+    goalAmount: 5000,
+  },
+  "5th-birthday": {
+    title: "5th Birthday",
+    headline: "Help celebrate Mila's 5th birthday",
+    description: "Instead of toys that get forgotten, give Mila the gift of a financial head start.",
+    currentAmount: 1420,
+    goalAmount: 500,
+  },
+  "kindergarten-graduation": {
+    title: "Kindergarten Graduation",
+    headline: "Celebrate this milestone",
+    description: "A proud moment deserves a gift that keeps growing. Contribute to their future.",
+    currentAmount: 650,
+    goalAmount: 1000,
+  },
+};
+
 export default function PageEditor() {
-  const params = useParams();
-  const [, setLocation] = useLocation();
+  const params = useParams<{ fund: string; event: string }>();
   const fundSlug = params.fund || "mila";
-  const eventSlug = params.event || "5th-birthday";
+  const eventSlug = params.event || "anytime";
+  
+  // Get initial data based on the event slug
+  const initialData = useMemo(() => {
+    const data = eventDataMap[eventSlug] || eventDataMap["anytime"];
+    return data;
+  }, [eventSlug]);
+
+  // Convert fund slug to display name
+  const fundName = fundSlug
+    .split("-")
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
   
   const [activeTab, setActiveTab] = useState<"content" | "style" | "photo">("content");
   const [isSaving, setIsSaving] = useState(false);
   
   const [pageData, setPageData] = useState({
-    title: "5th Birthday",
+    title: initialData.title,
     slug: eventSlug,
-    headline: "Help celebrate Mila's 5th birthday",
-    description: "Instead of toys that get forgotten, give Mila the gift of a financial head start. Every contribution grows over time.",
+    headline: initialData.headline,
+    description: initialData.description,
     buttonText: "Give a gift",
     theme: "minimal",
     layout: "centered",
     photo: null as string | null,
     showAmount: true,
-    goalAmount: 500,
-    currentAmount: 1420,
+    goalAmount: initialData.goalAmount,
+    currentAmount: initialData.currentAmount,
   });
 
   const currentTheme = themes.find(t => t.id === pageData.theme) || themes[0];
@@ -68,13 +104,14 @@ export default function PageEditor() {
         
         {/* Header */}
         <div className="p-4 border-b border-stone-200">
-          <div className="flex items-center justify-between mb-4">
-            <Link href="/dashboard">
-              <button className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-900">
-                <ArrowLeft size={16} />
-                <span>Back</span>
-              </button>
-            </Link>
+          <div className="flex items-center justify-between mb-3">
+            <button 
+              onClick={() => window.history.back()}
+              className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-900"
+            >
+              <ArrowLeft size={16} />
+              <span>Back</span>
+            </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
@@ -89,6 +126,19 @@ export default function PageEditor() {
                 </>
               )}
             </button>
+          </div>
+
+          {/* Breadcrumb */}
+          <div className="text-xs flex items-center gap-1.5 mb-4">
+            <Link href="/dashboard">
+              <span className="text-stone-400 hover:text-stone-600">Dashboard</span>
+            </Link>
+            <span className="text-stone-300">/</span>
+            <Link href={`/${fundSlug}`}>
+              <span className="text-stone-400 hover:text-stone-600">{fundName}</span>
+            </Link>
+            <span className="text-stone-300">/</span>
+            <span className="text-stone-600">{pageData.title}</span>
           </div>
           
           {/* Page URL */}
@@ -380,7 +430,7 @@ export default function PageEditor() {
 
                   {/* Fund badge */}
                   <p className="text-xs text-stone-400 uppercase tracking-wider mb-2">
-                    {fundSlug}'s fund
+                    {fundName}'s fund
                   </p>
 
                   {/* Headline */}
