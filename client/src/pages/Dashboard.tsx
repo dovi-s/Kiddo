@@ -144,7 +144,7 @@ export default function Dashboard() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="flex items-center justify-between p-5 border rounded-lg bg-foreground/[0.02]"
+                  className="group flex items-center justify-between p-5 border rounded-lg bg-foreground/[0.02]"
                 >
                   <div className="flex items-center gap-4">
                     <div className="h-8 w-8 rounded-full bg-foreground text-background flex items-center justify-center">
@@ -155,6 +155,11 @@ export default function Dashboard() {
                       <p className="text-xs text-muted-foreground">{isPersonal ? "Personal" : profileName}</p>
                     </div>
                   </div>
+                  <Link href={`/start?edit=true`}>
+                    <button className="text-xs text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100">
+                      Edit
+                    </button>
+                  </Link>
                 </motion.div>
 
                 {/* Step 2 */}
