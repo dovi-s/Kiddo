@@ -34,8 +34,15 @@ export default function Dashboard() {
   const [showQR, setShowQR] = useState(false);
   const [expandedFund, setExpandedFund] = useState<number | null>(0);
   const [showPortfolio, setShowPortfolio] = useState(false);
+  const [showEditFund, setShowEditFund] = useState(false);
+  const [showEditEvent, setShowEditEvent] = useState<number | null>(null);
+  
+  // Editable state
+  const [fundName, setFundName] = useState(profileName);
+  const [fundSlugEdit, setFundSlugEdit] = useState(profileName.toLowerCase().replace(/\s+/g, "-"));
+  const [eventEdits, setEventEdits] = useState<Record<number, { title: string; slug: string }>>({});
 
-  const fundSlug = profileName.toLowerCase().replace(/\s+/g, "-");
+  const fundSlug = fundSlugEdit;
   const momentLink = `everleaf.com/${fundSlug}`;
 
   const handleCopy = () => {
@@ -48,7 +55,7 @@ export default function Dashboard() {
   const funds = [
     {
       id: 1,
-      name: profileName,
+      name: fundName,
       accountType: isPersonal ? "Individual" : "UTMA",
       balance: 4250,
       gain: 472,
@@ -144,7 +151,15 @@ export default function Dashboard() {
           transition={{ delay: 0.3 }}
           className="mb-12 p-5 rounded-lg bg-white border border-stone-200"
         >
-          <p className="text-sm text-stone-500 mb-3">Share your page</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm text-stone-500">Share your page</p>
+            <button 
+              onClick={() => setShowEditFund(true)}
+              className="text-xs text-stone-400 hover:text-stone-600"
+            >
+              Edit
+            </button>
+          </div>
           <div className="flex gap-2">
             <div className="flex-1 px-3 py-2 bg-stone-50 rounded text-sm text-stone-600 truncate">
               {momentLink}
@@ -232,10 +247,11 @@ export default function Dashboard() {
                           </Link>
                         </div>
                         <div className="space-y-1">
-                          {fund.events.map((event) => (
-                            <Link key={event.id} href={`/${fundSlug}/${event.slug}`}>
-                              <div className="p-3 -mx-2 rounded hover:bg-stone-50 transition-colors flex items-center justify-between group">
-                                <div className="flex items-center gap-3">
+                          {fund.events.map((event) => {
+                            const eventData = eventEdits[event.id] || { title: event.title, slug: event.slug };
+                            return (
+                              <div key={event.id} className="p-3 -mx-2 rounded hover:bg-stone-50 transition-colors flex items-center justify-between group">
+                                <Link href={`/${fundSlug}/${eventData.slug}`} className="flex items-center gap-3 flex-1">
                                   {event.active && (
                                     <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                                   )}
@@ -243,17 +259,25 @@ export default function Dashboard() {
                                     <div className="h-1.5 w-1.5 rounded-full bg-stone-300" />
                                   )}
                                   <div>
-                                    <p className="text-sm text-stone-900">{event.title}</p>
-                                    {event.date && <p className="text-xs text-stone-400">{event.date}</p>}
+                                    <p className="text-sm text-stone-900">{eventData.title}</p>
+                                    <p className="text-xs text-stone-400">/{fundSlug}/{eventData.slug}</p>
                                   </div>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-sm text-stone-600">${event.raised.toLocaleString()}</p>
-                                  <p className="text-xs text-stone-400">{event.gifts} gifts</p>
+                                </Link>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right">
+                                    <p className="text-sm text-stone-600">${event.raised.toLocaleString()}</p>
+                                    <p className="text-xs text-stone-400">{event.gifts} gifts</p>
+                                  </div>
+                                  <button 
+                                    onClick={(e) => { e.stopPropagation(); setShowEditEvent(event.id); }}
+                                    className="text-xs text-stone-400 hover:text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    Edit
+                                  </button>
                                 </div>
                               </div>
-                            </Link>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -342,6 +366,92 @@ export default function Dashboard() {
               Scan to give
             </p>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Fund Modal */}
+      <Dialog open={showEditFund} onOpenChange={setShowEditFund}>
+        <DialogContent className="max-w-sm bg-white">
+          <DialogHeader>
+            <DialogTitle className="font-medium">Edit fund</DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <label className="block text-sm text-stone-500 mb-2">Fund name</label>
+              <input
+                type="text"
+                value={fundName}
+                onChange={(e) => setFundName(e.target.value)}
+                className="w-full px-3 py-2 border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-stone-500 mb-2">URL</label>
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-stone-400">everleaf.com/</span>
+                <input
+                  type="text"
+                  value={fundSlugEdit}
+                  onChange={(e) => setFundSlugEdit(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+                  className="flex-1 px-2 py-2 border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+                />
+              </div>
+            </div>
+            <button 
+              onClick={() => { setShowEditFund(false); toast({ title: "Changes saved" }); }}
+              className="w-full py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors"
+            >
+              Save
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Event Modal */}
+      <Dialog open={showEditEvent !== null} onOpenChange={() => setShowEditEvent(null)}>
+        <DialogContent className="max-w-sm bg-white">
+          <DialogHeader>
+            <DialogTitle className="font-medium">Edit event</DialogTitle>
+          </DialogHeader>
+          {showEditEvent !== null && (
+            <div className="py-4 space-y-4">
+              {(() => {
+                const event = funds[0]?.events.find(e => e.id === showEditEvent);
+                const current = eventEdits[showEditEvent] || { title: event?.title || "", slug: event?.slug || "" };
+                return (
+                  <>
+                    <div>
+                      <label className="block text-sm text-stone-500 mb-2">Event name</label>
+                      <input
+                        type="text"
+                        value={current.title}
+                        onChange={(e) => setEventEdits(prev => ({ ...prev, [showEditEvent]: { ...current, title: e.target.value } }))}
+                        className="w-full px-3 py-2 border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-stone-500 mb-2">URL</label>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm text-stone-400 truncate">everleaf.com/{fundSlug}/</span>
+                        <input
+                          type="text"
+                          value={current.slug}
+                          onChange={(e) => setEventEdits(prev => ({ ...prev, [showEditEvent]: { ...current, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") } }))}
+                          className="flex-1 px-2 py-2 border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+                        />
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => { setShowEditEvent(null); toast({ title: "Changes saved" }); }}
+                      className="w-full py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors"
+                    >
+                      Save
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
