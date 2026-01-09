@@ -1,135 +1,104 @@
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Lock, ArrowLeft, ArrowRight, Check, Search, TrendingUp, Sparkles } from "lucide-react";
+import { useState } from "react";
 import { Link } from "wouter";
-import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
-const POPULAR_STOCKS = [
-  { symbol: "AAPL", name: "Apple", price: 178.50, logo: "🍎", color: "from-gray-100 to-gray-200" },
-  { symbol: "DIS", name: "Disney", price: 92.30, logo: "🏰", color: "from-blue-100 to-indigo-100" },
-  { symbol: "TSLA", name: "Tesla", price: 248.75, logo: "⚡", color: "from-red-50 to-red-100" },
-  { symbol: "AMZN", name: "Amazon", price: 178.25, logo: "📦", color: "from-amber-50 to-orange-100" },
-  { symbol: "GOOGL", name: "Google", price: 141.80, logo: "🔍", color: "from-blue-50 to-green-50" },
-  { symbol: "NFLX", name: "Netflix", price: 628.50, logo: "🎬", color: "from-red-100 to-red-200" },
-  { symbol: "MSFT", name: "Microsoft", price: 378.90, logo: "💻", color: "from-blue-100 to-cyan-100" },
-  { symbol: "NVDA", name: "NVIDIA", price: 875.30, logo: "🎮", color: "from-green-100 to-emerald-100" },
+const STOCKS = [
+  { symbol: "AAPL", name: "Apple", price: 178.50 },
+  { symbol: "DIS", name: "Disney", price: 92.30 },
+  { symbol: "TSLA", name: "Tesla", price: 248.75 },
+  { symbol: "AMZN", name: "Amazon", price: 178.25 },
+  { symbol: "GOOGL", name: "Google", price: 141.80 },
+  { symbol: "MSFT", name: "Microsoft", price: 378.90 },
+  { symbol: "NFLX", name: "Netflix", price: 628.50 },
+  { symbol: "NVDA", name: "NVIDIA", price: 875.30 },
 ];
 
 export default function Send() {
   const [step, setStep] = useState(0);
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
-  const [selectedStock, setSelectedStock] = useState<typeof POPULAR_STOCKS[0] | null>(null);
+  const [selectedStock, setSelectedStock] = useState<typeof STOCKS[0] | null>(null);
   const [amount, setAmount] = useState("50");
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const filteredStocks = POPULAR_STOCKS.filter(s => 
+  const filteredStocks = STOCKS.filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.symbol.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const shares = selectedStock ? (parseFloat(amount) / selectedStock.price) : 0;
-  const futureValue = parseFloat(amount) * 2.5; // Simplified 10-year projection
+  const futureValue = parseFloat(amount) * 2.5;
 
   const handleSend = () => {
     setIsProcessing(true);
     setTimeout(() => {
       setStep(3);
       setIsProcessing(false);
-    }, 2000);
+    }, 1500);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-violet-50/50 via-background to-background dark:from-violet-950/20">
+    <div className="min-h-screen bg-stone-50">
       {/* Header */}
-      <header className="p-4 sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
-        <div className="container mx-auto flex justify-between items-center max-w-lg">
+      <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
+        <div className="max-w-lg mx-auto px-6 h-14 flex items-center justify-between">
           <Link href="/">
-            <span className="flex items-center gap-2 text-foreground">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2v20M8 6l4-4 4 4" />
-                </svg>
-              </div>
-              <span className="font-semibold tracking-tight">Everleaf</span>
-            </span>
+            <span className="text-sm font-medium tracking-tight text-stone-900">Everleaf</span>
           </Link>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">
-            <Lock className="h-3 w-3" />
-            <span>Secure</span>
-          </div>
+          <span className="text-xs text-stone-400">Secure</span>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-lg">
+      <main className="max-w-lg mx-auto px-6 py-10">
         <AnimatePresence mode="wait">
           
           {/* Step 0: Who */}
           {step === 0 && (
             <motion.div 
               key="who"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
-              <div className="text-center mb-10">
-                <motion.div 
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="mx-auto mb-6 h-16 w-16 rounded-2xl bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center shadow-xl shadow-violet-500/25"
-                >
-                  <Sparkles className="h-8 w-8 text-white" />
-                </motion.div>
-                <h1 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight mb-2">
-                  Send stock to anyone
-                </h1>
-                <p className="text-muted-foreground">
-                  Better than cash. They'll own a piece of a real company.
-                </p>
+              <h1 className="text-2xl font-light text-stone-900 mb-2">Send stock to anyone</h1>
+              <p className="text-stone-500 mb-10">Better than cash. They'll own a piece of a real company.</p>
+
+              <div className="space-y-4 mb-8">
+                <div>
+                  <label className="block text-sm text-stone-500 mb-2">Their name</label>
+                  <input 
+                    type="text"
+                    value={recipientName}
+                    onChange={(e) => setRecipientName(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+                    placeholder="Name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-stone-500 mb-2">Their email</label>
+                  <input 
+                    type="email"
+                    value={recipientEmail}
+                    onChange={(e) => setRecipientEmail(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+                    placeholder="email@example.com"
+                  />
+                </div>
               </div>
 
-              <Card className="border-0 shadow-xl shadow-black/5 overflow-hidden">
-                <CardContent className="p-6 space-y-6">
-                  <div>
-                    <Label className="text-sm text-muted-foreground mb-2 block">Who's it for?</Label>
-                    <Input 
-                      placeholder="Their name"
-                      value={recipientName}
-                      onChange={(e) => setRecipientName(e.target.value)}
-                      className="h-14 text-lg border-2 focus:border-foreground mb-3"
-                    />
-                    <Input 
-                      type="email"
-                      placeholder="Their email"
-                      value={recipientEmail}
-                      onChange={(e) => setRecipientEmail(e.target.value)}
-                      className="h-14 text-lg border-2 focus:border-foreground"
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      We'll send them a link to claim their shares
-                    </p>
-                  </div>
-
-                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                    <Button 
-                      className="w-full h-14 text-lg font-semibold rounded-xl"
-                      onClick={() => setStep(1)}
-                      disabled={!recipientName || !recipientEmail}
-                    >
-                      Continue
-                      <ArrowRight className="ml-2 h-5 w-5" />
-                    </Button>
-                  </motion.div>
-                </CardContent>
-              </Card>
+              <button 
+                onClick={() => setStep(1)}
+                disabled={!recipientName || !recipientEmail}
+                className="w-full py-3 bg-stone-900 text-stone-50 rounded font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stone-800 transition-colors"
+              >
+                Continue
+              </button>
+              
+              <p className="text-xs text-stone-400 mt-4 text-center">
+                We'll send them a link to claim their shares
+              </p>
             </motion.div>
           )}
 
@@ -137,188 +106,143 @@ export default function Send() {
           {step === 1 && (
             <motion.div 
               key="stock"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
               <button 
                 onClick={() => setStep(0)}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+                className="text-sm text-stone-500 hover:text-stone-900 mb-6"
               >
-                <ArrowLeft className="h-4 w-4" /> Back
+                ← Back
               </button>
 
-              <div className="text-center mb-8">
-                <p className="text-muted-foreground mb-1">Sending to {recipientName}</p>
-                <h1 className="text-2xl font-semibold tracking-tight">
-                  Pick a stock
-                </h1>
-              </div>
+              <p className="text-sm text-stone-500 mb-1">Sending to {recipientName}</p>
+              <h1 className="text-2xl font-light text-stone-900 mb-8">Pick a stock</h1>
 
-              {/* Search */}
-              <div className="relative mb-6">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  placeholder="Search companies..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-14 pl-12 text-lg border-2 focus:border-foreground"
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="Search companies..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400 mb-6"
+              />
 
-              {/* Stock Grid */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {filteredStocks.map((stock, i) => (
-                  <motion.button
+              <div className="space-y-2 mb-8">
+                {filteredStocks.map((stock) => (
+                  <button
                     key={stock.symbol}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
                     onClick={() => setSelectedStock(stock)}
-                    className={`p-4 rounded-2xl border-2 text-left transition-all ${
+                    className={`w-full p-4 text-left rounded border transition-all ${
                       selectedStock?.symbol === stock.symbol
-                        ? "border-foreground bg-foreground/5 shadow-lg"
-                        : "border-transparent bg-card hover:border-foreground/20"
+                        ? "border-stone-900 bg-white"
+                        : "border-stone-200 bg-white hover:border-stone-300"
                     }`}
                   >
-                    <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${stock.color} flex items-center justify-center text-2xl mb-3`}>
-                      {stock.logo}
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-stone-900">{stock.name}</p>
+                        <p className="text-sm text-stone-500">{stock.symbol}</p>
+                      </div>
+                      <p className="text-stone-600">${stock.price}</p>
                     </div>
-                    <p className="font-semibold">{stock.name}</p>
-                    <p className="text-sm text-muted-foreground">{stock.symbol} · ${stock.price}</p>
-                  </motion.button>
+                  </button>
                 ))}
               </div>
 
-              <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                <Button 
-                  className="w-full h-14 text-lg font-semibold rounded-xl"
-                  onClick={() => setStep(2)}
-                  disabled={!selectedStock}
-                >
-                  Continue with {selectedStock?.name || "stock"}
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </motion.div>
+              <button 
+                onClick={() => setStep(2)}
+                disabled={!selectedStock}
+                className="w-full py-3 bg-stone-900 text-stone-50 rounded font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stone-800 transition-colors"
+              >
+                Continue with {selectedStock?.name || "..."}
+              </button>
             </motion.div>
           )}
 
-          {/* Step 2: Amount & Message */}
+          {/* Step 2: Amount */}
           {step === 2 && (
             <motion.div 
               key="amount"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.4 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
             >
               <button 
                 onClick={() => setStep(1)}
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+                className="text-sm text-stone-500 hover:text-stone-900 mb-6"
               >
-                <ArrowLeft className="h-4 w-4" /> Back
+                ← Back
               </button>
 
-              <div className="text-center mb-8">
-                <div className={`mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br ${selectedStock?.color} flex items-center justify-center text-3xl mb-4`}>
-                  {selectedStock?.logo}
+              <p className="text-sm text-stone-500 mb-1">Sending {selectedStock?.name} to {recipientName}</p>
+              <h1 className="text-2xl font-light text-stone-900 mb-8">How much?</h1>
+
+              <div className="mb-8">
+                <div className="relative mb-2">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-stone-400">$</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                    className="w-full pl-10 pr-4 py-4 text-3xl font-light bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+                  />
                 </div>
-                <p className="text-muted-foreground">
-                  Sending {selectedStock?.name} to {recipientName}
+                <p className="text-sm text-stone-500">
+                  ≈ {shares.toFixed(4)} shares of {selectedStock?.symbol}
                 </p>
               </div>
 
-              <Card className="border-0 shadow-xl shadow-black/5 overflow-hidden">
-                <CardContent className="p-6 space-y-6">
-                  
-                  {/* Amount Input */}
+              {/* Projection */}
+              <div className="p-5 bg-stone-900 text-stone-50 rounded mb-6">
+                <div className="flex justify-between items-baseline">
                   <div>
-                    <Label className="text-sm text-muted-foreground mb-2 block">Amount</Label>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-muted-foreground">$</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
-                        className="h-16 pl-10 text-3xl font-light border-2 focus:border-foreground"
-                      />
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      ≈ {shares.toFixed(4)} shares of {selectedStock?.symbol}
-                    </p>
+                    <p className="text-stone-400 text-sm">Could become</p>
+                    <p className="text-2xl font-light">${futureValue.toFixed(0)}</p>
                   </div>
-
-                  {/* Future Value Card */}
-                  <div className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-slate-400 text-sm">Could become</p>
-                        <p className="text-2xl font-light">${futureValue.toFixed(0)}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-slate-400 text-sm">in 10 years</p>
-                        <div className="flex items-center gap-1 text-emerald-400">
-                          <TrendingUp className="h-4 w-4" />
-                          <span className="text-sm font-medium">+{Math.round((futureValue / parseFloat(amount) - 1) * 100)}%</span>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="text-right">
+                    <p className="text-stone-400 text-sm">in 10 years</p>
+                    <p className="text-emerald-400 text-sm">+{Math.round((futureValue / parseFloat(amount || "1") - 1) * 100)}%</p>
                   </div>
+                </div>
+              </div>
 
-                  {/* Message */}
-                  <div>
-                    <Label className="text-sm text-muted-foreground mb-2 block">
-                      Add a note <span className="text-muted-foreground/50">(optional)</span>
-                    </Label>
-                    <Textarea 
-                      placeholder={`Why you're sending ${selectedStock?.name}...`}
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      className="min-h-[100px] border-2 focus:border-foreground resize-none"
-                    />
-                  </div>
+              {/* Message */}
+              <div className="mb-6">
+                <label className="block text-sm text-stone-500 mb-2">Add a note (optional)</label>
+                <textarea 
+                  placeholder="Why you're sending this..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400 resize-none"
+                />
+              </div>
 
-                  {/* Total */}
-                  <div className="p-4 rounded-xl bg-muted/30 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{selectedStock?.name} ({shares.toFixed(4)} shares)</span>
-                      <span>${parseFloat(amount).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Fee</span>
-                      <span className="text-emerald-600">$0.00</span>
-                    </div>
-                    <div className="flex justify-between font-semibold pt-2 border-t">
-                      <span>Total</span>
-                      <span>${parseFloat(amount).toFixed(2)}</span>
-                    </div>
-                  </div>
+              {/* Summary */}
+              <div className="p-4 bg-white border border-stone-200 rounded mb-6 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-stone-500">{selectedStock?.name} ({shares.toFixed(4)} shares)</span>
+                  <span className="text-stone-900">${parseFloat(amount || "0").toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-stone-500">Fee</span>
+                  <span className="text-emerald-700">$0.00</span>
+                </div>
+                <div className="flex justify-between font-medium pt-2 border-t border-stone-100">
+                  <span className="text-stone-900">Total</span>
+                  <span className="text-stone-900">${parseFloat(amount || "0").toFixed(2)}</span>
+                </div>
+              </div>
 
-                  {/* Submit */}
-                  <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                    <Button 
-                      className="w-full h-14 text-lg font-semibold rounded-xl bg-foreground hover:bg-foreground/90"
-                      onClick={handleSend}
-                      disabled={isProcessing || parseFloat(amount) < 1}
-                    >
-                      {isProcessing ? (
-                        <span className="flex items-center gap-2">
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="h-5 w-5 border-2 border-background/30 border-t-background rounded-full"
-                          />
-                          Sending...
-                        </span>
-                      ) : (
-                        `Send $${amount} of ${selectedStock?.symbol}`
-                      )}
-                    </Button>
-                  </motion.div>
-                </CardContent>
-              </Card>
+              <button 
+                onClick={handleSend}
+                disabled={isProcessing || parseFloat(amount) < 1}
+                className="w-full py-3 bg-stone-900 text-stone-50 rounded font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stone-800 transition-colors"
+              >
+                {isProcessing ? "Sending..." : `Send $${amount}`}
+              </button>
             </motion.div>
           )}
 
@@ -326,107 +250,57 @@ export default function Send() {
           {step === 3 && (
             <motion.div 
               key="success"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="text-center pt-12"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center pt-16"
             >
               <motion.div
-                initial={{ scale: 0 }}
+                initial={{ scale: 0.9 }}
                 animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="mx-auto mb-8 h-24 w-24 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-500/30"
+                className="mb-8"
               >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.4, type: "spring" }}
-                >
-                  <Check className="h-12 w-12 text-white" strokeWidth={3} />
-                </motion.div>
+                <div className="w-16 h-16 rounded-full bg-emerald-100 mx-auto flex items-center justify-center mb-6">
+                  <svg className="w-8 h-8 text-emerald-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h1 className="text-2xl font-light text-stone-900 mb-2">Sent</h1>
+                <p className="text-stone-500">
+                  {recipientName} will receive an email to claim their {selectedStock?.name} shares
+                </p>
               </motion.div>
 
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="text-3xl font-semibold tracking-tight mb-3"
-              >
-                Sent!
-              </motion.h1>
+              <div className="p-5 bg-white border border-stone-200 rounded text-left mb-8 max-w-xs mx-auto">
+                <div className="flex justify-between mb-3">
+                  <div>
+                    <p className="font-medium text-stone-900">{shares.toFixed(4)} shares</p>
+                    <p className="text-sm text-stone-500">{selectedStock?.name}</p>
+                  </div>
+                  <p className="font-medium text-stone-900">${amount}</p>
+                </div>
+                <div className="text-sm text-stone-500 pt-3 border-t border-stone-100">
+                  <p>To: {recipientName}</p>
+                  {message && <p className="mt-1 italic">"{message}"</p>}
+                </div>
+              </div>
 
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="text-lg text-muted-foreground mb-8"
-              >
-                {recipientName} will get an email to claim their {selectedStock?.name} shares
-              </motion.p>
-
-              {/* Summary Card */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Card className="border-0 shadow-xl shadow-black/5 overflow-hidden max-w-sm mx-auto text-left">
-                  <CardContent className="p-6">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${selectedStock?.color} flex items-center justify-center text-2xl`}>
-                        {selectedStock?.logo}
-                      </div>
-                      <div>
-                        <p className="font-semibold">{shares.toFixed(4)} shares</p>
-                        <p className="text-sm text-muted-foreground">{selectedStock?.name} ({selectedStock?.symbol})</p>
-                      </div>
-                      <div className="ml-auto text-right">
-                        <p className="font-semibold">${amount}</p>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 rounded-xl bg-muted/30">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">To</span>
-                        <span className="font-medium">{recipientName}</span>
-                      </div>
-                      <div className="flex justify-between text-sm mt-1">
-                        <span className="text-muted-foreground">Email</span>
-                        <span className="font-medium">{recipientEmail}</span>
-                      </div>
-                      {message && (
-                        <div className="mt-3 pt-3 border-t">
-                          <p className="text-sm text-muted-foreground mb-1">Your note</p>
-                          <p className="text-sm">"{message}"</p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              {/* Actions */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
-                className="mt-8 space-y-4"
-              >
-                <Button variant="outline" className="rounded-xl" onClick={() => {
+              <button 
+                onClick={() => {
                   setStep(0);
                   setRecipientName("");
                   setRecipientEmail("");
                   setSelectedStock(null);
                   setAmount("50");
                   setMessage("");
-                }}>
-                  Send another
-                </Button>
+                }}
+                className="text-sm text-stone-500 hover:text-stone-900"
+              >
+                Send another
+              </button>
 
-                <p className="text-xs text-muted-foreground">
-                  {recipientName} has 30 days to claim their shares
-                </p>
-              </motion.div>
+              <p className="text-xs text-stone-400 mt-8">
+                They have 30 days to claim their shares
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
