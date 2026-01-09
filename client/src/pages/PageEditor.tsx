@@ -143,18 +143,17 @@ export default function PageEditor() {
           </div>
           
           {/* Page URL - Editable */}
-          <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs text-stone-400">Event URL</p>
-              <Pencil size={10} className="text-stone-300" />
-            </div>
-            <div className="flex items-center">
-              <span className="text-sm text-stone-400">everleaf.com/{fundSlug}/</span>
+          <div className="space-y-2">
+            <p className="text-xs text-stone-400">Event URL</p>
+            <div className="flex items-center gap-0 border border-stone-200 rounded-lg overflow-hidden bg-white">
+              <span className="text-xs text-stone-400 bg-stone-50 px-3 py-2.5 border-r border-stone-200 whitespace-nowrap">
+                everleaf.com/{fundSlug}/
+              </span>
               <input
                 type="text"
                 value={pageData.slug}
                 onChange={(e) => setPageData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") }))}
-                className="flex-1 text-sm text-stone-900 bg-white border border-stone-200 rounded px-2 py-1 ml-1 focus:outline-none focus:border-stone-400 font-medium"
+                className="flex-1 text-sm text-stone-900 px-3 py-2 focus:outline-none min-w-0"
                 placeholder="event-name"
               />
             </div>
