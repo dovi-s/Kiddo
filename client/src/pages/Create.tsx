@@ -1,4 +1,3 @@
-import { Nav } from "@/components/layout/Nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Loader2, ArrowRight, Shield, Lock } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -40,8 +39,17 @@ export default function Create() {
   const profileType = form.watch("profileType");
 
   return (
-    <div className="min-h-screen bg-background">
-      <Nav />
+    <div className="min-h-screen bg-stone-50">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
+        <div className="max-w-lg mx-auto px-6 h-14 flex items-center justify-between">
+          <Link href="/">
+            <span className="text-sm text-stone-500 hover:text-stone-900">← Back</span>
+          </Link>
+          <span className="text-sm font-medium tracking-tight text-stone-900">Create a fund</span>
+          <span className="w-12"></span>
+        </div>
+      </header>
       
       <main className="container mx-auto px-4 py-12 max-w-md">
         <motion.div 

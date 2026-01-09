@@ -92,16 +92,18 @@ export default function Dashboard() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
         <div className="max-w-lg mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <span className="text-sm text-stone-500 hover:text-stone-900">← Home</span>
+            </Link>
+          </div>
           <Link href="/">
             <span className="text-sm font-medium tracking-tight text-stone-900">Everleaf</span>
           </Link>
           <div className="flex items-center gap-4">
-            <button className="text-sm text-stone-500 hover:text-stone-900 transition-colors">
-              Settings
-            </button>
-            <div className="h-7 w-7 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center text-xs font-medium">
-              {profileName.charAt(0)}
-            </div>
+            <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
+              <span className="text-sm text-stone-500 hover:text-stone-900">Settings</span>
+            </Link>
           </div>
         </div>
       </header>
