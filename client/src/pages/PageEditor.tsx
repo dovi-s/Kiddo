@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Link, useParams } from "wouter";
 import { motion } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Image, Type, Palette, Eye, Save, Trash2, Plus, Check } from "lucide-react";
+import { ArrowLeft, Image, Type, Palette, Eye, Save, Trash2, Plus, Check, Pencil } from "lucide-react";
 
 const themes = [
   { id: "minimal", name: "Minimal", bg: "bg-stone-50", text: "text-stone-900", accent: "bg-stone-900" },
@@ -142,16 +142,20 @@ export default function PageEditor() {
             <span className="text-stone-600">{pageData.title}</span>
           </div>
           
-          {/* Page URL */}
-          <div className="p-3 bg-stone-50 rounded-lg">
-            <p className="text-xs text-stone-400 mb-1">Page URL</p>
-            <div className="flex items-center gap-1">
-              <span className="text-sm text-stone-500">everleaf.com/{fundSlug}/</span>
+          {/* Page URL - Editable */}
+          <div className="p-3 bg-stone-50 rounded-lg border border-stone-200">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-stone-400">Event URL</p>
+              <Pencil size={10} className="text-stone-300" />
+            </div>
+            <div className="flex items-center">
+              <span className="text-sm text-stone-400">everleaf.com/{fundSlug}/</span>
               <input
                 type="text"
                 value={pageData.slug}
                 onChange={(e) => setPageData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") }))}
-                className="flex-1 text-sm text-stone-900 bg-transparent focus:outline-none font-medium"
+                className="flex-1 text-sm text-stone-900 bg-white border border-stone-200 rounded px-2 py-1 ml-1 focus:outline-none focus:border-stone-400 font-medium"
+                placeholder="event-name"
               />
             </div>
           </div>
