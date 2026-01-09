@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Leaf, Menu, Settings } from "lucide-react";
+import { Menu, Settings } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -23,9 +23,11 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
     >
       <div className="container mx-auto flex h-14 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 group" data-testid="link-home">
-          <motion.div whileHover={{ rotate: 10 }} transition={{ duration: 0.2 }}>
-            <Leaf className="h-5 w-5 text-primary" />
-          </motion.div>
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v20M8 6l4-4 4 4" />
+            </svg>
+          </div>
           <span className="font-semibold text-foreground tracking-tight">Everleaf</span>
         </Link>
 

@@ -35,7 +35,7 @@ function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string
 export default function Moment() {
   const search = useSearch();
   const params = new URLSearchParams(search);
-  const recipientName = decodeURIComponent(params.get("name") || "Ari");
+  const recipientName = decodeURIComponent(params.get("name") || "Mila");
   const eventTitle = decodeURIComponent(params.get("title") || `${recipientName}'s Fund`);
 
   const [step, setStep] = useState(0);
@@ -66,13 +66,17 @@ export default function Moment() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="p-4 border-b">
+      <header className="p-4 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto flex justify-between items-center">
           <Link href="/">
-            <a className="flex items-center gap-2 text-foreground">
-              <Leaf className="h-5 w-5 text-primary" />
+            <span className="flex items-center gap-2 text-foreground">
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v20M8 6l4-4 4 4" />
+                </svg>
+              </div>
               <span className="font-semibold tracking-tight">Everleaf</span>
-            </a>
+            </span>
           </Link>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Lock className="h-3 w-3" />
@@ -90,12 +94,12 @@ export default function Moment() {
                   initial={{ scale: 0.9 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                  className="mx-auto mb-5 h-14 w-14 rounded-full bg-foreground text-background flex items-center justify-center text-xl font-semibold"
+                  className="mx-auto mb-5 h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center text-2xl font-semibold shadow-lg shadow-emerald-500/20"
                 >
                   {recipientName.charAt(0)}
                 </motion.div>
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">{eventTitle}</h1>
-                <p className="text-muted-foreground text-sm mt-1">A gift that grows over time.</p>
+                <h1 className="text-2xl font-semibold text-foreground tracking-tight">{eventTitle}</h1>
+                <p className="text-muted-foreground mt-2">Give a gift that grows over time</p>
               </div>
 
               <Card className="border overflow-hidden">

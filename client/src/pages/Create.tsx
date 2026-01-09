@@ -50,8 +50,8 @@ export default function Create() {
           transition={{ duration: 0.4 }}
           className="text-center mb-10"
         >
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight mb-2">Create a fund</h1>
-          <p className="text-muted-foreground">Free to start. Takes two minutes.</p>
+          <h1 className="text-3xl font-semibold text-foreground tracking-tight mb-3">Create a fund</h1>
+          <p className="text-muted-foreground text-lg">Free to start. Takes two minutes.</p>
         </motion.div>
 
         <motion.div
@@ -68,8 +68,8 @@ export default function Create() {
                     <p className="text-sm text-muted-foreground">Who is this for?</p>
                     <div className="grid grid-cols-2 gap-3">
                       {[
-                        { value: "child", label: "A child", desc: "Custodial account" },
-                        { value: "personal", label: "Myself", desc: "Personal account" },
+                        { value: "child", label: "For a child", desc: "UGMA/UTMA custodial" },
+                        { value: "personal", label: "For myself", desc: "Individual brokerage" },
                       ].map((opt) => (
                         <motion.button
                           key={opt.value}

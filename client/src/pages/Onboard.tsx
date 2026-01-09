@@ -11,7 +11,7 @@ export default function Onboard() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const accountType = params.get("type") || "child";
-  const profileName = params.get("name") || "Ari";
+  const profileName = params.get("name") || "Mila";
   const email = params.get("email") || "you@example.com";
   const isPersonal = accountType === "personal";
 
