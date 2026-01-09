@@ -63,6 +63,7 @@ export default function PageEditor() {
   
   const [activeTab, setActiveTab] = useState<"content" | "style" | "photo">("content");
   const [isSaving, setIsSaving] = useState(false);
+  const [previewStep, setPreviewStep] = useState(0);
   
   const [pageData, setPageData] = useState({
     title: initialData.title,
@@ -385,97 +386,166 @@ export default function PageEditor() {
           {/* Preview Header */}
           <div className="flex items-center justify-between mb-4">
             <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Live Preview</p>
-            <div className="flex gap-2">
-              <button className="p-1.5 rounded bg-stone-200 text-stone-600">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="5" y="2" width="14" height="20" rx="2" />
-                </svg>
-              </button>
-              <button className="p-1.5 rounded text-stone-400 hover:bg-stone-200">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="2" y="5" width="20" height="14" rx="2" />
-                </svg>
-              </button>
+            <div className="flex items-center gap-3">
+              <div className="flex text-xs">
+                <button 
+                  onClick={() => setPreviewStep(0)}
+                  className={`px-3 py-1.5 rounded-l border ${previewStep === 0 ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-500 border-stone-200'}`}
+                >
+                  Give
+                </button>
+                <button 
+                  onClick={() => setPreviewStep(1)}
+                  className={`px-3 py-1.5 border-t border-b ${previewStep === 1 ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-500 border-stone-200'}`}
+                >
+                  Details
+                </button>
+                <button 
+                  onClick={() => setPreviewStep(2)}
+                  className={`px-3 py-1.5 rounded-r border ${previewStep === 2 ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-500 border-stone-200'}`}
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
 
           {/* Phone Frame */}
           <div className="bg-stone-900 rounded-[2.5rem] p-3 shadow-2xl">
-            <div className="bg-white rounded-[2rem] overflow-hidden">
+            <div className="bg-stone-50 rounded-[2rem] overflow-hidden">
               
               {/* Preview Content */}
-              <motion.div 
-                className={`min-h-[600px] ${currentTheme.bg} ${currentTheme.text}`}
-                layout
-              >
+              <div className="min-h-[600px]">
                 
-                {/* Photo Hero */}
-                {pageData.photo && pageData.layout === "hero" && (
-                  <div className="h-48 relative">
-                    <img src={pageData.photo} alt="" className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                {/* Step 0: Amount Selection */}
+                {previewStep === 0 && (
+                  <div className="p-6 text-center">
+                    
+                    {/* Photo if exists */}
+                    {pageData.photo && (
+                      <img 
+                        src={pageData.photo} 
+                        alt="" 
+                        className="w-full aspect-video object-cover rounded-xl mb-6"
+                      />
+                    )}
+
+                    {/* Avatar */}
+                    <div className="w-16 h-16 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center text-xl font-light mx-auto mb-5">
+                      {fundName.charAt(0)}
+                    </div>
+                    
+                    {/* Headline */}
+                    <h1 className="text-2xl font-light text-stone-900 mb-1">
+                      Give to {fundName}
+                    </h1>
+                    <p className="text-stone-500 mb-8">{pageData.title}</p>
+
+                    {/* Amount buttons */}
+                    <div className="grid grid-cols-4 gap-2 mb-4">
+                      {[25, 50, 100, 250].map((a) => (
+                        <div
+                          key={a}
+                          className={`py-3 rounded text-sm font-medium ${
+                            a === 50
+                              ? "bg-stone-900 text-stone-50"
+                              : "bg-white border border-stone-200 text-stone-900"
+                          }`}
+                        >
+                          ${a}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Custom amount */}
+                    <div className="relative mb-6">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">$</span>
+                      <div className="w-full pl-8 pr-4 py-3 bg-white border border-stone-200 rounded text-stone-400 text-left">
+                        Other amount
+                      </div>
+                    </div>
+
+                    {/* Projection */}
+                    <div className="p-5 bg-stone-900 text-stone-50 rounded mb-6 text-left">
+                      <p className="text-stone-400 text-sm mb-1">Your $50 could become</p>
+                      <p className="text-3xl font-light">$230</p>
+                      <p className="text-stone-500 text-sm mt-1">in 18 years at 7% annual return</p>
+                    </div>
+
+                    {/* CTA */}
+                    <button className="w-full py-3 bg-stone-900 text-stone-50 rounded font-medium">
+                      Continue
+                    </button>
                   </div>
                 )}
 
-                <div className={`p-6 ${pageData.layout === "centered" ? "text-center" : ""}`}>
-                  
-                  {/* Photo (non-hero) */}
-                  {pageData.photo && pageData.layout !== "hero" && (
-                    <img 
-                      src={pageData.photo} 
-                      alt="" 
-                      className="w-full aspect-video object-cover rounded-xl mb-6"
-                    />
-                  )}
+                {/* Step 1: Details */}
+                {previewStep === 1 && (
+                  <div className="p-6">
+                    <p className="text-sm text-stone-500 mb-1">Giving $50 to {fundName}</p>
+                    <h1 className="text-2xl font-light text-stone-900 mb-8">Add your details</h1>
 
-                  {/* Fund badge */}
-                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-2">
-                    {fundName}'s fund
-                  </p>
-
-                  {/* Headline */}
-                  <h1 className="text-2xl font-medium mb-4 leading-tight">
-                    {pageData.headline || "Your headline here"}
-                  </h1>
-
-                  {/* Description */}
-                  <p className="text-sm opacity-70 mb-6 leading-relaxed">
-                    {pageData.description || "Add a description to tell your story"}
-                  </p>
-
-                  {/* Progress */}
-                  {pageData.showAmount && (
-                    <div className="mb-6">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="font-medium">${pageData.currentAmount.toLocaleString()}</span>
-                        <span className="opacity-50">of ${pageData.goalAmount.toLocaleString()}</span>
+                    <div className="space-y-4 mb-6">
+                      <div>
+                        <p className="text-sm text-stone-500 mb-2">Your name</p>
+                        <div className="w-full px-4 py-3 bg-white border border-stone-200 rounded text-stone-400">
+                          How they'll see you
+                        </div>
                       </div>
-                      <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${Math.min((pageData.currentAmount / pageData.goalAmount) * 100, 100)}%` }}
-                          className={`h-full ${currentTheme.accent}`}
-                        />
+                      <div>
+                        <p className="text-sm text-stone-500 mb-2">Add a note (optional)</p>
+                        <div className="w-full px-4 py-3 bg-white border border-stone-200 rounded text-stone-400 h-20">
+                          Say something nice...
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  {/* CTA Button */}
-                  <button className={`w-full py-3.5 rounded-xl text-sm font-medium ${
-                    pageData.theme === "dark" 
-                      ? "bg-white text-stone-900" 
-                      : "bg-stone-900 text-white"
-                  }`}>
-                    {pageData.buttonText || "Give a gift"}
-                  </button>
+                    <div className="p-4 bg-white border border-stone-200 rounded mb-6">
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-stone-500">Gift amount</span>
+                        <span className="text-stone-900">$50.00</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-stone-500">Processing fee</span>
+                        <span className="text-stone-900">$1.45</span>
+                      </div>
+                    </div>
 
-                  {/* Footer */}
-                  <p className="text-xs opacity-40 mt-6 text-center">
-                    Powered by Everleaf
-                  </p>
-                </div>
-              </motion.div>
+                    <button className="w-full py-3 bg-stone-900 text-stone-50 rounded font-medium">
+                      Give $51.45
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 2: Confirmation */}
+                {previewStep === 2 && (
+                  <div className="p-6 text-center flex flex-col items-center justify-center min-h-[500px]">
+                    <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-6">
+                      <Check size={32} />
+                    </div>
+                    <h1 className="text-2xl font-light text-stone-900 mb-2">Gift sent!</h1>
+                    <p className="text-stone-500 mb-8">
+                      Your $50 gift to {fundName} is on its way
+                    </p>
+                    <div className="w-full p-4 bg-stone-100 rounded-lg text-left">
+                      <p className="text-sm text-stone-500 mb-1">Projected value in 18 years</p>
+                      <p className="text-2xl font-light text-stone-900">$230</p>
+                    </div>
+                  </div>
+                )}
+
+              </div>
             </div>
+          </div>
+
+          {/* Step indicator */}
+          <div className="mt-4 flex justify-center gap-2">
+            {[0, 1, 2].map((s) => (
+              <div 
+                key={s} 
+                className={`w-2 h-2 rounded-full transition-colors ${previewStep === s ? 'bg-stone-900' : 'bg-stone-300'}`}
+              />
+            ))}
           </div>
         </div>
       </div>
