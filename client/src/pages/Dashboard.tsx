@@ -303,13 +303,14 @@ export default function Dashboard() {
                                     </div>
                                     <div className="flex items-center gap-1">
                                       <p className="text-sm text-stone-600 mr-2">${event.raised.toLocaleString()}</p>
-                                      <button 
-                                        onClick={(e) => { e.stopPropagation(); setShowEditEvent(event.id); }}
-                                        className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                        title="Edit"
-                                      >
-                                        <Pencil size={12} />
-                                      </button>
+                                      <Link href={`/edit/${fundSlug}/${eventData.slug}`}>
+                                        <button 
+                                          className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                          title="Edit page"
+                                        >
+                                          <Pencil size={12} />
+                                        </button>
+                                      </Link>
                                       <button 
                                         onClick={() => { navigator.clipboard.writeText(`everleaf.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied" }); }}
                                         className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"

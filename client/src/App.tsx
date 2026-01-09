@@ -16,6 +16,7 @@ import MomentCreate from "@/pages/MomentCreate";
 import Send from "@/pages/Send";
 import FundPage from "@/pages/FundPage";
 import EventPage from "@/pages/EventPage";
+import PageEditor from "@/pages/PageEditor";
 
 function Router() {
   return (
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/moment" component={Moment} />
       <Route path="/moment/:id" component={Moment} />
       <Route path="/send" component={Send} />
+      <Route path="/edit/:fund/:event" component={PageEditor} />
       <Route path="/:slug" component={FundPage} />
       <Route path="/:slug/:event" component={EventPage} />
       <Route path="/recipient" component={Recipient} />
