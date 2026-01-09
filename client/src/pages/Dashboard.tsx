@@ -42,7 +42,7 @@ export default function Dashboard() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const accountType = params.get("type") || "child";
-  const profileName = decodeURIComponent(params.get("name") || (accountType === "personal" ? "My Fund" : "Ari"));
+  const profileName = decodeURIComponent(params.get("name") || (accountType === "personal" ? "My Fund" : "Mila"));
   const userEmail = decodeURIComponent(params.get("email") || "you@example.com");
   const isPersonal = accountType === "personal";
 
