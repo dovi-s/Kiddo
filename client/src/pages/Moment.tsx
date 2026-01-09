@@ -4,19 +4,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Leaf, DollarSign, Check, ArrowLeft, ChevronDown, Lock, Zap, Eye, EyeOff, User } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { Lock, ArrowLeft, Heart, Sparkles, Gift, Check, CreditCard, Smartphone } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-const AMOUNTS = ["25", "50", "100", "200"];
+const AMOUNTS = [25, 50, 100, 250];
 
 function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
-    const duration = 600;
+    const duration = 800;
     const start = display;
     const diff = value - start;
     const startTime = Date.now();
@@ -36,351 +35,426 @@ export default function Moment() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const recipientName = decodeURIComponent(params.get("name") || "Mila");
-  const eventTitle = decodeURIComponent(params.get("title") || `${recipientName}'s Fund`);
+  const eventTitle = decodeURIComponent(params.get("title") || "");
 
   const [step, setStep] = useState(0);
-  const [amount, setAmount] = useState("50");
+  const [amount, setAmount] = useState(50);
   const [customAmount, setCustomAmount] = useState("");
   const [message, setMessage] = useState("");
   const [giverName, setGiverName] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [hideAmount, setHideAmount] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"apple" | "card">("apple");
 
-  const finalAmount = customAmount || amount;
-  const fee = (Number(finalAmount) * 0.03).toFixed(2);
-  const total = (Number(finalAmount) + Number(fee)).toFixed(2);
+  const finalAmount = customAmount ? parseInt(customAmount) : amount;
+  const fee = Math.round(finalAmount * 0.03 * 100) / 100;
+  const total = (finalAmount + fee).toFixed(2);
+  const projectedGrowth = Math.round(finalAmount * 4.6); // ~18 years at 7%
 
-  const projectedGrowth = Math.round(Number(finalAmount) * 3.2);
-
-  const handleContinue = () => setStep(1);
-  const handleConfirm = () => {
+  const handleGive = () => {
     setIsProcessing(true);
     setTimeout(() => {
-      toast({ title: "Gift sent", description: `$${finalAmount} contributed to ${recipientName}'s fund.` });
       setStep(2);
       setIsProcessing(false);
-    }, 1500);
+    }, 2000);
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="p-4 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto flex justify-between items-center">
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50/50 via-background to-background dark:from-emerald-950/20">
+      {/* Header */}
+      <header className="p-4 sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
+        <div className="container mx-auto flex justify-between items-center max-w-lg">
           <Link href="/">
             <span className="flex items-center gap-2 text-foreground">
-              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2v20M8 6l4-4 4 4" />
                 </svg>
               </div>
               <span className="font-semibold tracking-tight">Everleaf</span>
             </span>
           </Link>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">
             <Lock className="h-3 w-3" />
             <span>Secure</span>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-10 max-w-md">
+      <main className="container mx-auto px-4 py-8 max-w-lg">
         <AnimatePresence mode="wait">
+          
+          {/* Step 0: Amount Selection */}
           {step === 0 && (
-            <motion.div key="amount" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
+            <motion.div 
+              key="amount"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              {/* Recipient Hero */}
               <div className="text-center mb-10">
                 <motion.div 
-                  initial={{ scale: 0.9 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                  className="mx-auto mb-5 h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center text-2xl font-semibold shadow-lg shadow-emerald-500/20"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
+                  className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center text-3xl font-semibold shadow-xl shadow-emerald-500/25"
                 >
                   {recipientName.charAt(0)}
                 </motion.div>
-                <h1 className="text-2xl font-semibold text-foreground tracking-tight">{eventTitle}</h1>
-                <p className="text-muted-foreground mt-2">Give a gift that grows over time</p>
+                <motion.h1 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight mb-2"
+                >
+                  Give to {recipientName}
+                </motion.h1>
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="text-muted-foreground"
+                >
+                  {eventTitle || "A gift that grows with them"}
+                </motion.p>
               </div>
 
-              <Card className="border overflow-hidden">
-                <CardContent className="p-6 space-y-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm text-muted-foreground">Amount</Label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {AMOUNTS.map((val) => (
-                        <motion.div key={val} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                          <Button
-                            variant={amount === val && !customAmount ? "default" : "outline"}
+              {/* Amount Selection */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="border-0 shadow-xl shadow-black/5 overflow-hidden">
+                  <CardContent className="p-6 space-y-6">
+                    
+                    {/* Preset Amounts */}
+                    <div>
+                      <Label className="text-sm text-muted-foreground mb-3 block">Choose amount</Label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {AMOUNTS.map((val) => (
+                          <motion.button
+                            key={val}
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
                             onClick={() => { setAmount(val); setCustomAmount(""); }}
-                            className={`h-12 w-full font-medium transition-all duration-200 ${amount === val && !customAmount ? "" : "hover:border-foreground/40"}`}
-                            data-testid={`button-amount-${val}`}
+                            className={`h-14 rounded-xl font-semibold text-lg transition-all ${
+                              amount === val && !customAmount
+                                ? "bg-foreground text-background shadow-lg"
+                                : "bg-muted/50 text-foreground hover:bg-muted"
+                            }`}
                           >
                             ${val}
-                          </Button>
-                        </motion.div>
-                      ))}
-                    </div>
-                    <div className="relative group">
-                      <DollarSign className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-foreground" />
-                      <Input
-                        placeholder="Other amount"
-                        value={customAmount}
-                        onChange={(e) => setCustomAmount(e.target.value.replace(/[^0-9]/g, ""))}
-                        className="pl-9 h-12 transition-all focus:ring-2 focus:ring-foreground/10"
-                        data-testid="input-custom-amount"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Growth projection */}
-                  <motion.div 
-                    className="p-4 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-100 dark:border-emerald-800/30"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="text-sm font-medium text-emerald-800 dark:text-emerald-200">Could become</span>
-                        <p className="text-2xl font-semibold text-emerald-700 dark:text-emerald-300">
-                          <AnimatedNumber value={projectedGrowth} prefix="$" />
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-xs text-emerald-600 dark:text-emerald-400">in 18 years</span>
-                        <p className="text-xs text-emerald-600/70 dark:text-emerald-400/70">at 7% annual return</p>
+                          </motion.button>
+                        ))}
                       </div>
                     </div>
-                  </motion.div>
 
-                  <div className="space-y-3">
-                    <Label className="text-sm text-muted-foreground">Your name</Label>
+                    {/* Custom Amount */}
+                    <div>
+                      <Label className="text-sm text-muted-foreground mb-2 block">Or enter custom</Label>
+                      <div className="relative">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-muted-foreground">$</span>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Other"
+                          value={customAmount}
+                          onChange={(e) => setCustomAmount(e.target.value.replace(/[^0-9]/g, ""))}
+                          className="h-14 pl-10 text-xl font-medium border-2 focus:border-foreground"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Future Value - The Magic */}
+                    <motion.div 
+                      layout
+                      className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-slate-400 text-sm">This could become</p>
+                          <p className="text-3xl font-light tracking-tight">
+                            <AnimatedNumber value={projectedGrowth} prefix="$" />
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-slate-400 text-sm">in 18 years</p>
+                          <p className="text-emerald-400 text-sm font-medium">+{Math.round((projectedGrowth / finalAmount - 1) * 100)}% growth</p>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    {/* Continue Button */}
+                    <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+                      <Button 
+                        className="w-full h-14 text-lg font-semibold rounded-xl"
+                        onClick={() => setStep(1)}
+                        disabled={finalAmount < 5}
+                      >
+                        Continue
+                      </Button>
+                    </motion.div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Trust Elements */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="mt-6 text-center"
+              >
+                <p className="text-xs text-muted-foreground">
+                  Invested same-day · Protected by SIPC up to $500,000
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* Step 1: Details & Payment */}
+          {step === 1 && (
+            <motion.div 
+              key="details"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.4 }}
+            >
+              {/* Back Button */}
+              <button 
+                onClick={() => setStep(0)}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+              >
+                <ArrowLeft className="h-4 w-4" /> Back
+              </button>
+
+              {/* Summary Header */}
+              <div className="text-center mb-8">
+                <p className="text-muted-foreground mb-1">Giving to {recipientName}</p>
+                <p className="text-4xl font-light tracking-tight">${finalAmount}</p>
+              </div>
+
+              <Card className="border-0 shadow-xl shadow-black/5 overflow-hidden">
+                <CardContent className="p-6 space-y-6">
+                  
+                  {/* Your Name */}
+                  <div>
+                    <Label className="text-sm text-muted-foreground mb-2 block">Your name</Label>
                     <Input 
-                      placeholder={isAnonymous ? "Anonymous" : "First and last"}
-                      value={giverName} 
-                      onChange={(e) => setGiverName(e.target.value)} 
-                      className="h-12 transition-all focus:ring-2 focus:ring-foreground/10"
+                      placeholder="First and last"
+                      value={giverName}
+                      onChange={(e) => setGiverName(e.target.value)}
+                      className="h-12 border-2 focus:border-foreground"
                       disabled={isAnonymous}
-                      data-testid="input-giver-name"
                     />
+                    <div className="flex items-center justify-between mt-3 p-3 rounded-lg bg-muted/30">
+                      <span className="text-sm">Give anonymously</span>
+                      <Switch checked={isAnonymous} onCheckedChange={setIsAnonymous} />
+                    </div>
                   </div>
 
-                  {/* Privacy options */}
-                  <div className="space-y-3 p-4 rounded-lg border bg-foreground/[0.02]">
-                    <motion.div 
-                      className="flex items-center justify-between"
-                      whileHover={{ x: 2 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-sm font-medium">Give anonymously</p>
-                          <p className="text-xs text-muted-foreground">Your name won't be shown</p>
-                        </div>
-                      </div>
-                      <Switch 
-                        checked={isAnonymous} 
-                        onCheckedChange={setIsAnonymous}
-                        data-testid="switch-anonymous"
-                      />
-                    </motion.div>
-                    <motion.div 
-                      className="flex items-center justify-between"
-                      whileHover={{ x: 2 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <div className="flex items-center gap-3">
-                        {hideAmount ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                        <div>
-                          <p className="text-sm font-medium">Hide amount</p>
-                          <p className="text-xs text-muted-foreground">Only the family sees how much</p>
-                        </div>
-                      </div>
-                      <Switch 
-                        checked={hideAmount} 
-                        onCheckedChange={setHideAmount}
-                        data-testid="switch-hide-amount"
-                      />
-                    </motion.div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm text-muted-foreground">Message <span className="text-muted-foreground/60">(optional)</span></Label>
+                  {/* Message */}
+                  <div>
+                    <Label className="text-sm text-muted-foreground mb-2 block">
+                      Message for {recipientName} <span className="text-muted-foreground/50">(optional)</span>
+                    </Label>
                     <Textarea 
-                      placeholder={`A note for ${recipientName}...`}
+                      placeholder={`Write something they'll read in the future...`}
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      className="min-h-[80px] resize-none transition-all focus:ring-2 focus:ring-foreground/10"
-                      data-testid="input-message"
+                      className="min-h-[100px] border-2 focus:border-foreground resize-none"
                     />
                   </div>
 
+                  {/* Payment Method */}
+                  <div>
+                    <Label className="text-sm text-muted-foreground mb-3 block">Pay with</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => setPaymentMethod("apple")}
+                        className={`p-4 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${
+                          paymentMethod === "apple" 
+                            ? "border-foreground bg-foreground/5" 
+                            : "border-muted hover:border-foreground/30"
+                        }`}
+                      >
+                        <Smartphone className="h-5 w-5" />
+                        <span className="font-medium">Apple Pay</span>
+                      </button>
+                      <button
+                        onClick={() => setPaymentMethod("card")}
+                        className={`p-4 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${
+                          paymentMethod === "card" 
+                            ? "border-foreground bg-foreground/5" 
+                            : "border-muted hover:border-foreground/30"
+                        }`}
+                      >
+                        <CreditCard className="h-5 w-5" />
+                        <span className="font-medium">Card</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Total */}
+                  <div className="p-4 rounded-xl bg-muted/30 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Gift amount</span>
+                      <span>${finalAmount}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Processing (3%)</span>
+                      <span>${fee.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between font-semibold pt-2 border-t">
+                      <span>Total</span>
+                      <span>${total}</span>
+                    </div>
+                  </div>
+
+                  {/* Submit */}
                   <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                    <Button className="w-full h-12 font-medium" onClick={handleContinue} data-testid="button-continue">
-                      Continue
+                    <Button 
+                      className="w-full h-14 text-lg font-semibold rounded-xl bg-foreground hover:bg-foreground/90"
+                      onClick={handleGive}
+                      disabled={isProcessing || (!giverName && !isAnonymous)}
+                    >
+                      {isProcessing ? (
+                        <span className="flex items-center gap-2">
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            className="h-5 w-5 border-2 border-background/30 border-t-background rounded-full"
+                          />
+                          Processing...
+                        </span>
+                      ) : (
+                        `Give $${total}`
+                      )}
                     </Button>
                   </motion.div>
                 </CardContent>
               </Card>
 
-              <Collapsible open={showDetails} onOpenChange={setShowDetails}>
-                <CollapsibleTrigger asChild>
-                  <button className="w-full flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    How it works
-                    <motion.div animate={{ rotate: showDetails ? 180 : 0 }} transition={{ duration: 0.2 }}>
-                      <ChevronDown className="h-4 w-4" />
-                    </motion.div>
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <Card className="border">
-                      <CardContent className="p-5 space-y-4 text-sm">
-                        <div className="space-y-3">
-                          {[
-                            { q: "Where does it go?", a: `Directly into ${recipientName}'s brokerage account. Invested the same day.` },
-                            { q: "Who controls it?", a: `${recipientName}'s parent/guardian until they come of age (18-21 depending on state).` },
-                            { q: "What are the fees?", a: "~3% at checkout covers payment processing. No hidden fees, no annual charges." },
-                            { q: "Can I get a refund?", a: "Yes, before the funds are invested (same day). Not after." },
-                          ].map((item, i) => (
-                            <div key={i} className="pb-3 border-b last:border-0 last:pb-0">
-                              <p className="font-medium text-foreground">{item.q}</p>
-                              <p className="text-muted-foreground mt-0.5">{item.a}</p>
-                            </div>
-                          ))}
-                        </div>
-                        <p className="text-xs text-muted-foreground pt-2">
-                          Brokerage services by Alpaca Securities LLC, member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                </CollapsibleContent>
-              </Collapsible>
+              <p className="text-xs text-muted-foreground text-center mt-4">
+                100% goes to {recipientName}'s investment account
+              </p>
             </motion.div>
           )}
 
-          {step === 1 && (
-            <motion.div key="confirm" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }}>
-              <button onClick={() => setStep(0)} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
-                <ArrowLeft className="h-4 w-4" /> Back
-              </button>
-
-              <h1 className="text-xl font-semibold text-foreground tracking-tight mb-6">Confirm</h1>
-
-              <Card className="border">
-                <CardContent className="p-6">
-                  <div className="space-y-3">
-                    <div className="flex justify-between py-3 border-b">
-                      <span className="text-muted-foreground">Gift</span>
-                      <span className="font-medium">${finalAmount}</span>
-                    </div>
-                    <div className="flex justify-between py-3 border-b">
-                      <span className="text-muted-foreground">Processing</span>
-                      <span className="font-medium">${fee}</span>
-                    </div>
-                    <div className="flex justify-between py-3">
-                      <span className="font-medium">Total</span>
-                      <span className="font-semibold text-lg">${total}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="mt-6 p-5 rounded-lg border"
+          {/* Step 2: Success! */}
+          {step === 2 && (
+            <motion.div 
+              key="success"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+              className="text-center pt-12"
+            >
+              {/* Celebration Animation */}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="mx-auto mb-8 h-24 w-24 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-500/30"
               >
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="text-muted-foreground text-xs">To</p>
-                    <p className="font-medium">{recipientName}'s Fund</p>
-                  </div>
-                  <div>
-                      <p className="text-muted-foreground text-xs">From</p>
-                      <p className="font-medium">{isAnonymous ? "Anonymous" : (giverName || "You")}</p>
-                      {(isAnonymous || hideAmount) && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {isAnonymous && hideAmount 
-                            ? "Name and amount hidden from others"
-                            : isAnonymous 
-                              ? "Name hidden from others" 
-                              : "Amount hidden from others"}
-                        </p>
-                      )}
-                    </div>
-                  {message && (
-                    <div>
-                      <p className="text-muted-foreground text-xs">Message</p>
-                      <p className="font-medium">{message}</p>
-                    </div>
-                  )}
-                </div>
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.4, type: "spring" }}
+                >
+                  <Check className="h-12 w-12 text-white" strokeWidth={3} />
+                </motion.div>
               </motion.div>
 
-              <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} className="mt-6">
-                <Button 
-                  className="w-full h-12 font-medium" 
-                  onClick={handleConfirm} 
-                  disabled={isProcessing}
-                  data-testid="button-confirm"
-                >
-                  {isProcessing ? (
-                    <motion.div 
-                      className="flex items-center gap-2"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                    >
-                      <motion.div 
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="h-4 w-4 border-2 border-background/30 border-t-background rounded-full"
-                      />
-                      Processing...
-                    </motion.div>
-                  ) : (
-                    `Pay $${total}`
-                  )}
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-3xl font-semibold tracking-tight mb-3"
+              >
+                Gift sent!
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="text-lg text-muted-foreground mb-8"
+              >
+                ${finalAmount} is on its way to {recipientName}'s fund
+              </motion.p>
+
+              {/* Future Value Card */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Card className="border-0 shadow-xl shadow-black/5 overflow-hidden max-w-sm mx-auto">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-xl font-semibold text-white">
+                        {recipientName.charAt(0)}
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold">{recipientName}'s Fund</p>
+                        <p className="text-sm text-muted-foreground">Your gift is growing</p>
+                      </div>
+                    </div>
+                    
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="text-slate-400 text-sm">Your ${finalAmount} could become</p>
+                          <p className="text-2xl font-light">${projectedGrowth.toLocaleString()}</p>
+                        </div>
+                        <p className="text-emerald-400 text-sm">in 18 years</p>
+                      </div>
+                    </div>
+
+                    {message && (
+                      <div className="mt-4 p-4 rounded-xl bg-muted/30">
+                        <p className="text-sm text-muted-foreground mb-1">Your message</p>
+                        <p className="text-sm font-medium">"{message}"</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Share */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="mt-8"
+              >
+                <p className="text-sm text-muted-foreground mb-4">
+                  Know others who'd want to give?
+                </p>
+                <Button variant="outline" className="rounded-xl">
+                  Share {recipientName}'s fund
                 </Button>
               </motion.div>
 
-              <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground mt-6">
-                <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Encrypted</span>
-                <span>•</span>
-                <span>Apple Pay, cards, bank</span>
-              </div>
-            </motion.div>
-          )}
-
-          {step === 2 && (
-            <motion.div 
-              key="done" 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              transition={{ type: "spring", stiffness: 200, damping: 20 }}
-              className="text-center py-16"
-            >
-              <motion.div 
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
-                className="mx-auto h-16 w-16 rounded-full bg-foreground flex items-center justify-center mb-6"
+              {/* Create Your Own */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.9 }}
+                className="mt-12 p-6 rounded-2xl bg-muted/30"
               >
-                <Check className="h-8 w-8 text-background" />
-              </motion.div>
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                <h1 className="text-xl font-semibold text-foreground tracking-tight mb-2">Gift sent</h1>
-                <p className="text-muted-foreground mb-2">
-                  ${finalAmount} is on its way to {recipientName}'s fund.
+                <Gift className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+                <p className="font-medium mb-2">Create a fund for someone you love</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Takes 2 minutes. Free to start.
                 </p>
-                <p className="text-sm text-muted-foreground/70 mb-8">
-                  Could grow to <AnimatedNumber value={projectedGrowth} prefix="$" /> in 18 years.
-                </p>
-                <Link href="/">
-                  <Button variant="outline">Done</Button>
+                <Link href="/create">
+                  <Button>Create a fund</Button>
                 </Link>
               </motion.div>
             </motion.div>

@@ -141,11 +141,11 @@ export default function Home() {
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50/30 via-background to-background dark:from-emerald-950/10">
       <Nav />
       
       {/* Hero */}
-      <section className="pt-20 pb-24 md:pt-32 md:pb-36">
+      <section className="pt-24 pb-28 md:pt-36 md:pb-40">
         <div className="container mx-auto px-4">
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
@@ -153,16 +153,24 @@ export default function Home() {
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="max-w-3xl mx-auto text-center"
           >
-            <h1 className="text-4xl md:text-5xl lg:text-[3.5rem] font-semibold leading-[1.1] text-foreground tracking-tight mb-6">
-              A gift they'll still have<br className="hidden sm:block" /> in twenty years.
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.1 }}
+              className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4"
+            >
+              The gift that grows
+            </motion.p>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.05] text-foreground tracking-tight mb-6">
+              Give a gift they'll still<br className="hidden sm:block" /> have in twenty years.
             </h1>
             <motion.p 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.6 }}
-              className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-lg mx-auto mb-10"
+              className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl mx-auto mb-10"
             >
-              Create a page. Share it. Friends and family contribute. It becomes a long-term investment fund.
+              Create a fund for someone you love. Share the link. Family and friends contribute in under 60 seconds. It becomes an investment that compounds for years.
             </motion.p>
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
@@ -172,15 +180,16 @@ export default function Home() {
             >
               <Link href="/create">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button size="lg" className="h-12 px-8 text-base" data-testid="button-create-fund">
+                  <Button size="lg" className="h-14 px-10 text-base rounded-xl shadow-lg shadow-emerald-500/20" data-testid="button-create-fund">
                     Create a fund
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </motion.div>
               </Link>
               <Link href="/moment">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button variant="ghost" size="lg" className="h-12 px-8 text-base text-muted-foreground" data-testid="button-send-gift">
-                    Send a gift
+                  <Button variant="outline" size="lg" className="h-14 px-10 text-base rounded-xl" data-testid="button-send-gift">
+                    Give a gift
                   </Button>
                 </motion.div>
               </Link>
@@ -190,13 +199,13 @@ export default function Home() {
       </section>
 
       {/* Social proof */}
-      <section className="py-16 border-t border-b">
+      <section className="py-12">
         <div className="container mx-auto px-4">
-          <div className="flex flex-wrap justify-center gap-x-16 gap-y-6 text-center">
+          <div className="flex flex-wrap justify-center gap-x-12 gap-y-4 text-center">
             {[
-              { value: 10000, suffix: "+", label: "families" },
+              { value: 10000, suffix: "+", label: "families", prefix: "" },
               { value: 2.4, suffix: "M", label: "contributed", prefix: "$" },
-              { value: 47, suffix: " sec", label: "avg. gift time" },
+              { value: 47, suffix: "s", label: "avg. gift time", prefix: "" },
             ].map((stat, i) => (
               <motion.div 
                 key={i}
@@ -204,9 +213,10 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
+                className="flex items-baseline gap-2"
               >
-                <p className="text-2xl md:text-3xl font-semibold text-foreground">
-                  {stat.prefix || ""}<AnimatedNumber value={stat.value} suffix={stat.suffix} />
+                <p className="text-3xl md:text-4xl font-light text-foreground tracking-tight">
+                  {stat.prefix}<AnimatedNumber value={stat.value} suffix={stat.suffix} />
                 </p>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
               </motion.div>
