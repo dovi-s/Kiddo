@@ -545,13 +545,24 @@ export default function PageEditor() {
                     </div>
 
                     <div className={`p-3 rounded mb-5 ${pageData.theme === "dark" ? "bg-white/10" : "bg-white border border-stone-200"}`}>
-                      <div className="flex justify-between text-xs mb-1">
+                      <div className="flex justify-between text-xs mb-1.5">
                         <span className="opacity-60">Gift amount</span>
                         <span>$50.00</span>
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="opacity-60">Processing fee</span>
-                        <span>$1.45</span>
+                      <div className={`flex justify-between text-xs mb-1.5 pb-2 border-b ${pageData.theme === "dark" ? "border-white/10" : "border-stone-100"}`}>
+                        <span className="opacity-60">Platform fee (0%)</span>
+                        <span>$0.00</span>
+                      </div>
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="opacity-60">Payment processing</span>
+                        <span>$1.75</span>
+                      </div>
+                      <p className={`text-[10px] mb-3 ${pageData.theme === "dark" ? "text-white/30" : "text-stone-400"}`}>
+                        2.9% + $0.30 · Paid by contributor
+                      </p>
+                      <div className={`flex justify-between text-xs font-medium pt-2 border-t ${pageData.theme === "dark" ? "border-white/10" : "border-stone-100"}`}>
+                        <span>Total</span>
+                        <span>$51.75</span>
                       </div>
                     </div>
 
@@ -560,7 +571,7 @@ export default function PageEditor() {
                         ? "bg-white text-stone-900" 
                         : `${currentTheme.accent} text-white`
                     }`}>
-                      Give $51.45
+                      Give $51.75
                     </button>
                   </div>
                 )}
