@@ -36,6 +36,7 @@ export default function Dashboard() {
   const [showPortfolio, setShowPortfolio] = useState(false);
   const [showEditFund, setShowEditFund] = useState(false);
   const [showEditEvent, setShowEditEvent] = useState<number | null>(null);
+  const [showPageQR, setShowPageQR] = useState<string | null>(null);
   
   // Editable state
   const [fundName, setFundName] = useState(profileName);
@@ -248,7 +249,13 @@ export default function Dashboard() {
                               onClick={handleCopy}
                               className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50"
                             >
-                              Copy link
+                              Copy
+                            </button>
+                            <button 
+                              onClick={() => setShowQR(true)}
+                              className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50"
+                            >
+                              QR
                             </button>
                             <Link href={`/${fundSlug}`}>
                               <button className="px-3 py-1.5 text-xs border border-stone-200 rounded hover:bg-stone-50">
@@ -303,6 +310,12 @@ export default function Dashboard() {
                                         className="px-2 py-1 text-xs border border-stone-200 rounded hover:bg-stone-50 opacity-0 group-hover:opacity-100"
                                       >
                                         Copy
+                                      </button>
+                                      <button 
+                                        onClick={() => setShowPageQR(`everleaf.com/${fundSlug}/${eventData.slug}`)}
+                                        className="px-2 py-1 text-xs border border-stone-200 rounded hover:bg-stone-50 opacity-0 group-hover:opacity-100"
+                                      >
+                                        QR
                                       </button>
                                       <Link href={`/${fundSlug}/${eventData.slug}`}>
                                         <button className="px-2 py-1 text-xs border border-stone-200 rounded hover:bg-stone-50 opacity-0 group-hover:opacity-100">
@@ -383,13 +396,29 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* QR Modal */}
+      {/* QR Modal - Fund */}
       <Dialog open={showQR} onOpenChange={setShowQR}>
         <DialogContent className="max-w-xs bg-white">
           <div className="flex flex-col items-center py-6">
             <div className="p-4 bg-white rounded-lg border border-stone-200 mb-4">
               <QRCodeSVG value={`https://${momentLink}`} size={180} level="H" />
             </div>
+            <p className="text-xs text-stone-400 text-center mb-1">{momentLink}</p>
+            <p className="text-sm text-stone-500 text-center">
+              Scan to give
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Modal - Page */}
+      <Dialog open={showPageQR !== null} onOpenChange={() => setShowPageQR(null)}>
+        <DialogContent className="max-w-xs bg-white">
+          <div className="flex flex-col items-center py-6">
+            <div className="p-4 bg-white rounded-lg border border-stone-200 mb-4">
+              <QRCodeSVG value={`https://${showPageQR}`} size={180} level="H" />
+            </div>
+            <p className="text-xs text-stone-400 text-center mb-1">{showPageQR}</p>
             <p className="text-sm text-stone-500 text-center">
               Scan to give
             </p>
