@@ -155,7 +155,7 @@ export default function Dashboard() {
                       <p className="text-xs text-muted-foreground">{isPersonal ? "Personal" : profileName}</p>
                     </div>
                   </div>
-                  <Link href={`/start?edit=true`}>
+                  <Link href={`/create?edit=true`}>
                     <button className="text-xs text-muted-foreground hover:text-foreground transition-colors opacity-0 group-hover:opacity-100">
                       Edit
                     </button>
