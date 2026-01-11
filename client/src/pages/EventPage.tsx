@@ -4,6 +4,15 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const AMOUNTS = [25, 50, 100, 250];
 
+const STOCK_OPTIONS = [
+  { id: "fund", name: "Fund's strategy", description: "Diversified portfolio", icon: "📊" },
+  { id: "VTI", name: "Total US Market", description: "VTI · 4,000+ companies", icon: "🇺🇸" },
+  { id: "DIS", name: "Disney", description: "DIS · Entertainment", icon: "🏰" },
+  { id: "AAPL", name: "Apple", description: "AAPL · Technology", icon: "🍎" },
+  { id: "MSFT", name: "Microsoft", description: "MSFT · Technology", icon: "💻" },
+  { id: "GOOGL", name: "Google", description: "GOOGL · Technology", icon: "🔍" },
+];
+
 const getStoredPageData = (key: string) => {
   try {
     const stored = localStorage.getItem(`kora_page_${key}`);
@@ -44,6 +53,8 @@ export default function EventPage() {
   const [message, setMessage] = useState("");
   const [giverName, setGiverName] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedStock, setSelectedStock] = useState("fund");
+  const [showStockPicker, setShowStockPicker] = useState(false);
 
   const finalAmount = customAmount ? parseInt(customAmount) || 0 : amount;
   const fee = Math.round(finalAmount * 0.029 * 100) / 100;
@@ -277,13 +288,76 @@ export default function EventPage() {
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-5 lg:p-6 bg-stone-900 text-stone-50 rounded-lg mb-8"
+                        className="p-5 lg:p-6 bg-stone-900 text-stone-50 rounded-lg mb-6"
                       >
                         <p className="text-stone-400 text-sm mb-1">Your ${finalAmount} could become</p>
                         <p className="text-3xl lg:text-4xl font-light">${projectedGrowth.toLocaleString()}</p>
                         <p className="text-stone-500 text-sm mt-1">in 18 years at 7% annual return</p>
                       </motion.div>
                     )}
+
+                    {/* Optional Stock Picker */}
+                    <div className="mb-8">
+                      <button
+                        onClick={() => setShowStockPicker(!showStockPicker)}
+                        data-testid="button-toggle-stock-picker"
+                        className="w-full flex items-center justify-between py-3 text-sm text-stone-500 hover:text-stone-700 transition-colors"
+                      >
+                        <span className="flex items-center gap-2">
+                          <span>{STOCK_OPTIONS.find(s => s.id === selectedStock)?.icon}</span>
+                          <span>
+                            Investing in: <span className="text-stone-900 font-medium">{STOCK_OPTIONS.find(s => s.id === selectedStock)?.name}</span>
+                          </span>
+                        </span>
+                        <span className="text-xs text-stone-400">{showStockPicker ? "Hide" : "Change"}</span>
+                      </button>
+                      
+                      <AnimatePresence>
+                        {showStockPicker && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pt-2 pb-4 space-y-2">
+                              {STOCK_OPTIONS.map((stock) => (
+                                <button
+                                  key={stock.id}
+                                  onClick={() => { setSelectedStock(stock.id); setShowStockPicker(false); }}
+                                  data-testid={`stock-option-${stock.id}`}
+                                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                                    selectedStock === stock.id
+                                      ? "border-stone-900 bg-stone-50"
+                                      : "border-stone-200 hover:border-stone-300 bg-white"
+                                  }`}
+                                >
+                                  <span className="text-xl">{stock.icon}</span>
+                                  <div className="text-left flex-1">
+                                    <p className={`text-sm font-medium ${selectedStock === stock.id ? "text-stone-900" : "text-stone-700"}`}>
+                                      {stock.name}
+                                    </p>
+                                    <p className="text-xs text-stone-400">{stock.description}</p>
+                                  </div>
+                                  {selectedStock === stock.id && (
+                                    <svg className="w-5 h-5 text-stone-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                  {stock.id === "fund" && selectedStock !== stock.id && (
+                                    <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">Default</span>
+                                  )}
+                                </button>
+                              ))}
+                              <p className="text-[10px] text-stone-400 text-center pt-2">
+                                All investments go to {recipientName}'s fund
+                              </p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
 
                     <button
                       onClick={() => setStep(1)}
