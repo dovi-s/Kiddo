@@ -153,21 +153,21 @@ export default function Dashboard() {
   const cashAmount = portfolioValue - investedAmount;
   const pendingAmount = isNewAccount ? 0 : 180;
 
-  const holdings = [
+  const holdings = isNewAccount ? [] : [
     { ticker: "VTI", name: "US Total Market ETF", shares: 12.4, value: 2125, gain: 245 },
     { ticker: "VXUS", name: "International ETF", shares: 8.2, value: 850, gain: 72 },
     { ticker: "DIS", name: "Disney", shares: 3.5, value: 425, gain: 38 },
     { ticker: "AAPL", name: "Apple", shares: 2.1, value: 400, gain: 85 },
   ];
 
-  const portfolio = [
+  const portfolio = isNewAccount ? [] : [
     { name: "US Total Market", allocation: "50%", value: 2125 },
     { name: "International Developed", allocation: "20%", value: 850 },
     { name: "Bonds", allocation: "15%", value: 638 },
     { name: "Cash", allocation: "15%", value: 637 },
   ];
 
-  const allContributions = [
+  const allContributions = isNewAccount ? [] : [
     { id: "gift_1", from: "Dave Chen", email: "dave@example.com", amount: 180, event: "5th Birthday", date: new Date(Date.now() - 2 * 60 * 60 * 1000), note: "So proud of you", status: "pending" as const },
     { id: "gift_2", from: "Ruth Stein", email: "ruth@example.com", amount: 500, event: "Open anytime", date: new Date(Date.now() - 24 * 60 * 60 * 1000), note: "With love", status: "invested" as const },
     { id: "gift_3", from: "Michael Park", email: "michael@example.com", amount: 100, event: "Open anytime", date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), note: null, status: "invested" as const },
@@ -407,28 +407,30 @@ export default function Dashboard() {
               )}
             </motion.div>
 
-            {/* Portfolio Preview */}
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              onClick={() => setShowPortfolio(true)}
-              data-testid="button-portfolio"
-              className="w-full mb-8 lg:mb-10 text-left group"
-            >
-              <div className="flex h-2 lg:h-2.5 rounded-full overflow-hidden mb-2 bg-stone-200">
-                <div className="bg-stone-900 transition-all group-hover:opacity-90" style={{ width: "50%" }} title="Stocks 50%" />
-                <div className="bg-stone-600" style={{ width: "20%" }} title="International 20%" />
-                <div className="bg-stone-400" style={{ width: "15%" }} title="Bonds 15%" />
-                <div className="bg-stone-300" style={{ width: "15%" }} title="Cash 15%" />
-              </div>
-              <div className="flex gap-4 text-xs text-stone-400 group-hover:text-stone-500 transition-colors">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-900"></span>Stocks</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-600"></span>Int'l</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-400"></span>Bonds</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-300"></span>Cash</span>
-              </div>
-            </motion.button>
+            {/* Portfolio Preview - only show if has holdings */}
+            {!isNewAccount && portfolio.length > 0 && (
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                onClick={() => setShowPortfolio(true)}
+                data-testid="button-portfolio"
+                className="w-full mb-8 lg:mb-10 text-left group"
+              >
+                <div className="flex h-2 lg:h-2.5 rounded-full overflow-hidden mb-2 bg-stone-200">
+                  <div className="bg-stone-900 transition-all group-hover:opacity-90" style={{ width: "50%" }} title="Stocks 50%" />
+                  <div className="bg-stone-600" style={{ width: "20%" }} title="International 20%" />
+                  <div className="bg-stone-400" style={{ width: "15%" }} title="Bonds 15%" />
+                  <div className="bg-stone-300" style={{ width: "15%" }} title="Cash 15%" />
+                </div>
+                <div className="flex gap-4 text-xs text-stone-400 group-hover:text-stone-500 transition-colors">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-900"></span>Stocks</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-600"></span>Int'l</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-400"></span>Bonds</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-300"></span>Cash</span>
+                </div>
+              </motion.button>
+            )}
 
             {/* Share - Mobile only */}
             <motion.div
@@ -709,6 +711,23 @@ export default function Dashboard() {
             >
               <h2 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-4">Recent Activity</h2>
               
+              {recentActivity.length === 0 ? (
+                <div className="bg-white border border-stone-200 rounded-xl p-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-stone-100 mx-auto mb-4 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-medium text-stone-700 mb-1">No activity yet</p>
+                  <p className="text-xs text-stone-500 mb-4">Share your link to start receiving gifts</p>
+                  <button 
+                    onClick={handleCopyClick}
+                    className="px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-800 transition-colors"
+                  >
+                    Copy link to share
+                  </button>
+                </div>
+              ) : (
               <div className="space-y-3">
                 {recentActivity.map((item, i) => {
                   const isExpanded = expandedActivity === item.id;
@@ -802,6 +821,7 @@ export default function Dashboard() {
                   );
                 })}
               </div>
+              )}
             </motion.div>
           </div>
 
