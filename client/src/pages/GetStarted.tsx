@@ -237,33 +237,19 @@ export default function GetStarted() {
               </div>
 
               <div className="bg-white rounded-2xl border border-stone-200 p-6 space-y-5">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                      First name
-                    </label>
-                    <input
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="Sarah"
-                      data-testid="input-first-name"
-                      className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1.5">
-                      Last name
-                    </label>
-                    <input
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Chen"
-                      data-testid="input-last-name"
-                      className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1.5">
+                    What should we call you?
+                  </label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Sarah"
+                    data-testid="input-first-name"
+                    className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+                  />
+                  <p className="text-xs text-stone-400 mt-1.5">Just for your profile. Legal name comes later when you activate investing.</p>
                 </div>
 
                 <div>
@@ -417,8 +403,8 @@ export default function GetStarted() {
 
               <div className="bg-white rounded-2xl border border-stone-200 divide-y divide-stone-100">
                 <div className="p-5">
-                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-2">Account holder</p>
-                  <p className="font-medium text-stone-900">{firstName} {lastName}</p>
+                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-2">Your profile</p>
+                  <p className="font-medium text-stone-900">{firstName}</p>
                   <p className="text-sm text-stone-500">{email}</p>
                 </div>
 
