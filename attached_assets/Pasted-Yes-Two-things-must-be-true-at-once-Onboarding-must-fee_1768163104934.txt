@@ -1,0 +1,275 @@
+Yes. Two things must be true at once:
+
+Onboarding must feel light (no needless steps).
+
+The brokerage must be impossible to miss, because it is the core “where the assets live.”
+
+Below is the clean, fully accounted-for flow that solves both.
+
+First principle
+
+You do not want users “connecting a brokerage” as a separate concept in the default path.
+
+Default path should be: Everleaf creates the brokerage account inside onboarding (powered by a broker-dealer/custodian stack). The user experiences it as “Set up investing for this fund.”
+
+“Connect an existing Schwab/Fidelity” is an advanced option later, because it hurts conversion and creates operational edge cases.
+
+The minimum onboarding that is still complete
+
+There are only 3 moments that matter:
+
+Create the Everleaf login
+
+Create the first Fund
+
+Activate investing (brokerage account) for that Fund
+
+Everything else is optional and can be deferred.
+
+Host onboarding (parent household) with brokerage accounted for
+Screen 1: Create account
+
+Name
+
+Email
+
+Password
+Primary CTA: Continue
+
+Small text: “You can create pages and share a link in minutes. You’ll activate investing when you’re ready.”
+
+Screen 2: Create your first Fund
+
+Choice:
+
+“For my child”
+
+“For me”
+
+Fields:
+
+Fund name (ex: “Mila’s Fund”)
+
+Add a photo (optional)
+CTA: Create Fund
+
+You now land on the dashboard with the Fund created.
+
+Screen 3: Fund dashboard (critical brokerage moment)
+
+The Fund card has a clear status bar:
+
+Investing status: Not active
+Subtext: “Gifts can be collected now. To invest gifts into stocks/ETFs, activate investing (2 to 4 minutes).”
+
+Buttons:
+
+Activate investing (primary)
+
+“Skip for now” (secondary)
+
+This is where the brokerage is introduced. Not hidden. Not vague.
+
+Screen 4: What “Activate investing” means (1 screen, plain English)
+
+Title: “Where will the assets live?”
+
+Options:
+
+Recommended: Create an Everleaf investing account
+“A brokerage account is opened for this fund. Gifts can be invested automatically.”
+
+Advanced: Connect an existing brokerage (disabled in v1 or “coming soon”)
+
+CTA: Continue
+
+This removes confusion: users explicitly choose the model.
+
+Screen 5: Identity verification (KYC) step
+
+This is the “heavy” step, so you make it feel short and structured.
+
+Section A: Parent/guardian identity
+
+Legal name
+
+DOB
+
+SSN (last 4 first, then full if needed)
+
+Address
+
+Phone
+
+Citizenship
+
+Employment status (basic)
+
+CTA: Continue
+
+If child fund: child info required for custodial account
+
+Child legal name
+
+DOB
+
+SSN (if required by partner; sometimes optional depending on structure)
+
+CTA: Submit
+
+Screen 6: Agreements (single acceptance step)
+
+Brokerage agreement
+
+Disclosures
+
+Privacy + electronic delivery
+
+CTA: Agree and open account
+
+Screen 7: Status screen
+
+“Opening your investing account…”
+
+States:
+
+“Pending verification” (most common)
+
+“Needs info” (rare)
+
+“Active”
+
+CTA: Go to dashboard
+
+Back on Fund dashboard (status is now obvious)
+
+Investing status: Pending verification
+What can happen while pending:
+
+Gifts can be collected (Seed mode)
+
+Investing is queued (auto-invest begins when active)
+
+When active:
+Investing status: Active
+Shows:
+
+Default basket (editable by host)
+
+Holdings (simple view)
+
+Activity: gifts, buys, dividends
+
+Guest flow (giver) stays lightweight regardless of brokerage state
+
+Guest never sees “brokerage.” They see:
+
+Gift amount
+
+Where it goes (Future Fund / Education / Favorites)
+
+Pay
+
+Card reveal
+
+Behind the scenes:
+
+If fund investing is Active: gift is invested according to settings
+
+If Pending or Not Active: gift becomes “Seed” and auto-invests when Active (or host triggers invest)
+
+This avoids dead-ends.
+
+Creating events and plan selection (where Plus/Fee-free fits)
+
+Plan selection should happen only in one place:
+
+When host publishes an event page
+
+Event builder step: “Fees”
+
+Choice:
+
+“Guests pay processing” (default)
+
+“Make this event fee-free” (upgrade)
+
+If they pick fee-free:
+
+Offer Plus $49 for this event
+
+Offer Family $99/year
+
+They pick once, event is labeled “Fees included” for guests.
+
+No other plan screen needed.
+
+Prevent overload: how to keep it short
+What you should NOT ask during signup
+
+No SSN/DOB on day 1 unless they click “Activate investing”
+
+No child SSN unless required for the custodial structure you choose
+
+No long preference questionnaire
+
+Use progressive activation
+
+Let them create fund and event pages first
+
+Only require KYC when they want gifts to become real investments
+
+Keep KYC as 2 screens max
+
+Screen A: parent identity
+
+Screen B: child identity (only if child fund) + submit
+
+All user types and exactly where brokerage happens
+1) Parent creating a child fund
+
+Brokerage created at: Activate investing on the Fund.
+
+2) Adult creating their own fund
+
+Brokerage created at: Activate investing on the Fund.
+
+3) Host who never activates investing
+
+They can still run events. Gifts sit as Seed until they activate.
+
+4) Guest giving a gift
+
+No brokerage steps. Ever.
+
+5) Multiple funds (multiple kids)
+
+Best practice: brokerage account per fund, so accounting and custody are clean.
+Dashboard shows each fund and its investing status.
+
+6) Multiple account types (brokerage vs IRA)
+
+Do not support IRA in v1. It adds complexity and constraints that confuse gifting.
+If you ever support it later, it lives under “Add account type” as advanced.
+
+The one UI element you are missing
+
+Every fund card needs a persistent status chip:
+
+Not active
+
+Pending verification
+
+Active
+
+Needs info
+
+If that chip is always visible, nobody asks “where is the brokerage.”
+
+Recommendation
+
+Keep your current onboarding for creating funds/events, but move brokerage/KYC behind one explicit action:
+
+Activate investing
+
+That solves overload and makes brokerage unmissable.

@@ -2,165 +2,14 @@
 
 ## Overview
 
-Kora is a modern gifting platform that transforms traditional gifts into long-term investments. The core concept is "gifts that grow" - instead of giving cash or physical presents, contributors can give money that gets invested into a recipient's fund (typically for children through custodial accounts).
+Kora is a modern gifting platform designed to transform traditional gifts into long-term investments, focusing on "gifts that grow." It enables users to contribute money to a recipient's investment fund, typically custodial accounts for children. The platform aims to be a leading consumer financial platform by offering a seamless experience for gifting and investing.
 
-**Brand**: Short, ownable, platform-grade. Feels like it could be a $5B consumer platform.
-**Tagline**: Give something that stays.
+The product operates on a three-layer model:
+1.  **Kora**: The user-facing UI, handling gifting, registries, checkout, messages, thank-you flows, and displaying investment details.
+2.  **Brokerage Account**: The actual securities account with a partner like Apex/DriveWealth, holding cash and shares, hidden from the end-user.
+3.  **Clearing/Custody**: A regulated entity managing KYC/AML, custody, trade execution, and tax documentation, completely abstracted from the user.
 
-## The 3-Layer Model
-
-Understanding the product requires knowing these three layers:
-
-| Layer | What it is | Who sees it |
-|-------|------------|-------------|
-| **Layer 1: Kora** | The UI + gifting/registry layer. Creates pages, runs checkout, stores messages, runs thank-you flows, shows "where it's invested" | Everyone |
-| **Layer 2: Brokerage Account** | The real securities account at Apex/DriveWealth where cash + shares actually sit. Gets SIPC coverage. | Hidden from users |
-| **Layer 3: Clearing/Custody** | Regulated entity handling KYC/AML, custody, trade execution, statements, tax docs | Users never think about this |
-
-**Key insight**: Users only see Layer 1 (Kora). They never need to know what Apex is.
-
-## Core Concepts
-
-### What is a "Fund"?
-
-**One Fund = One Brokerage Account**
-
-- "Mila's Fund" = a UTMA custodial account at Apex
-- "My Fund" = a personal taxable account at Apex
-- "Wedding Fund" = a joint or individual taxable account
-
-A Fund is the "container" that maps to one brokerage account. V1 supports only:
-- **Custodial UTMA** (for kids)
-- **Personal taxable** (for adults)
-
-No IRAs, no external account linking (Schwab/Fidelity) in v1.
-
-### Pages vs Funds
-
-Pages are public-facing "skins" that route gifts into the same Fund:
-
-```
-Fund (Mila's UTMA Account)
-├── kora.com/mila (Open anytime)
-├── kora.com/mila/5th-birthday
-├── kora.com/mila/kindergarten-graduation
-└── kora.com/mila/bar-mitzvah
-```
-
-**All pages route to the same Fund.** Pages are just attribution labels for thank-yous. You do NOT open a new brokerage account per event.
-
-### Gift Lifecycle
-
-1. **Gift received** → Shows as "Pending" (payment captured)
-2. **Market opens** → Kora places buy order via broker
-3. **Trade settles** → Status updates to "Invested"
-4. **Holdings appear** → Visible at Fund level in "Where it's invested"
-
-If markets are closed (weekend): "Will invest when markets open"
-
-### Holdings Location
-
-Holdings are always at the **Fund level** (because that's the brokerage account).
-
-- "Where it's invested" = Fund
-- "Contributions and notes" = Fund and Event
-- "Event totals" = Event
-
-Events are attribution layers, NOT separate portfolios.
-
-## User Flows
-
-### 1. Gift-Giver (no account, 60 seconds)
-1. Opens link → Sees event page
-2. Picks amount ($25, $50, $100, custom)
-3. Picks type: "Future Fund" (default basket) OR "Pick a stock"
-4. Adds name + note
-5. Pays (Apple Pay/card)
-6. Sees "Gift pending - will invest when markets open"
-7. Done. No account needed.
-
-### 2. Parent/Host (account owner)
-1. Creates Fund (for child or self)
-2. Completes identity verification (KYC)
-3. Creates event pages
-4. Shares links/QR codes
-5. Dashboard shows: Total, Invested vs Cash, Recent gifts
-6. Sends thank-yous
-
-### 3. Kid/Recipient (read-only "Story Mode")
-- Sees total, milestones, messages
-- Can't trade or withdraw
-- Like a digital scrapbook with a balance
-
-### 4. Adult Recipient (self-directed)
-- Same as parent but no custodian
-- Creates their own Fund
-- Uses for wedding, milestone birthday, etc.
-
-### 5. Co-Parent/Family Admin
-- Invited as collaborator
-- Can: View, create events, send thank-yous
-- Can't: Change settings, withdraw
-
-## Key Scenarios
-
-| Scenario | What happens |
-|----------|--------------|
-| Gift on Saturday | Shows "Pending" → Monday 9:30am auto-invests → Updates to "Invested" |
-| Seed Mode | Gifts stay as cash → Parent clicks "Invest Now" after event |
-| 2 kids | 2 separate Funds → Dashboard has fund switcher |
-| Pick a stock | Contributor picks Disney → Payment clears → Buy order placed → Shares appear |
-
-## Dashboard IA
-
-```
-[Fund Switcher: Mila ▾ | Noah | Me]
-
-Total Balance: $4,250
-├── Invested: $3,800
-├── Cash: $450
-└── Pending: $180 (pulsing indicator)
-
-[Holdings] - Fund level
-• VTI - US Total Market
-• VXUS - International
-• DIS - Disney
-• AAPL - Apple
-
-[Events] - Share/QR per row
-• Open anytime - $2,180
-• 5th Birthday - $1,420
-
-[Activity] - Status per gift
-• Dave Chen → 5th Birthday (+$180) [Pending]
-• Ruth Stein → Open anytime (+$500) [Invested]
-
-[Quick Actions]
-1. Share link (primary)
-2. Create event page
-3. Send thank-yous (3 pending)
-4. Send a gift (secondary)
-```
-
-## Platform Architecture
-
-The platform consists of:
-- **Fund Pages**: Permanent giving links for recipients
-- **Event Pages**: Occasion-specific pages that route to the underlying fund
-- **Contributor Checkout**: Frictionless 60-second flow (no account required)
-- **Dashboard**: For parents/guardians to manage funds and send thank-yous
-
-## Pricing Model (Elena Verna Strategy)
-
-Everyone starts Free. Upgrades happen when hosts want to cover fees for guests.
-
-| Plan | Price | Who pays fees | Coverage |
-|------|-------|---------------|----------|
-| **Free** | $0 | Guest pays 1.5% (max $10) + processing | Unlimited funds/events |
-| **Plus** | $49/event | Host covers fees | Up to $7,500 in gifts |
-| **Family** | $99/year | Host covers fees | Up to 6 events, $15k/year |
-
-**Key insight**: No plan selection during onboarding. Hosts upgrade per-event or annually when they want premium features. "Cover fees for guests" toggle triggers upsell.
+Key capabilities include creating investment funds (custodial UTMA for children, personal taxable for adults), linking multiple public-facing event pages to a single fund for attribution, and managing a gift lifecycle from pending payment to settled investment. The onboarding process is designed for progressive activation, allowing users to create accounts and share links immediately, with identity verification (KYC) required only when activating investing.
 
 ## User Preferences
 
@@ -168,180 +17,31 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
-- **Framework**: React with TypeScript
-- **Routing**: Wouter (lightweight React router)
-- **Styling**: Tailwind CSS v4 with custom design tokens for a "premium, calm, established" brand feel
-- **UI Components**: shadcn/ui (New York style) with Radix UI primitives
-- **State Management**: TanStack React Query for server state
-- **Animations**: Framer Motion for micro-interactions and page transitions
-- **Build Tool**: Vite with custom plugins for Replit integration
+### Core Concepts and Features
 
-### Backend Architecture
-- **Runtime**: Node.js with Express
-- **Language**: TypeScript (ESM modules)
-- **API Pattern**: RESTful endpoints prefixed with `/api`
-- **Development**: Hot reload via Vite middleware integration
+*   **Funds**: Each fund maps to a single brokerage account (e.g., "Mila's Fund" = a UTMA custodial account). V1 supports Custodial UTMA and Personal Taxable accounts.
+*   **Pages vs. Funds**: Pages (e.g., `kora.com/mila/5th-birthday`) are public-facing "skins" that route all gifts to the same underlying fund, serving as attribution labels.
+*   **Gift Lifecycle**: Gifts move from "Pending" (payment captured) to "Invested" (trade settled via broker), with holdings visible at the Fund level.
+*   **Onboarding**: A 7-beat activation journey with no upfront KYC. Users create an account, name funds, and then explicitly activate investing via KYC. Gifts can be pledged even before activation.
+*   **User Roles**: Includes Gift-Giver (no account needed), Parent/Host (account owner, KYC, manages funds/events), Kid/Recipient (read-only "Story Mode"), Adult Recipient (self-directed), and Co-Parent/Family Admin (collaborator with limited permissions).
+*   **Dashboard IA**: Provides a fund switcher, total balance breakdown (invested, cash, pending), holdings, events summary, activity feed, and quick actions (share link, create event, send thank-yous).
+*   **Child Privacy**: Minors are non-discoverable by default, with link-only access. Visibility settings for pages include "Unlisted" (default for minors), "Private," and "Public" (adults only). Pages for minors display first name only.
+*   **Child Experience**: Designed to make investing feel like a scoreboard of progress through milestones and behavior-based feedback, avoiding complex financial jargon.
+*   **Pricing Model**: Starts with a free tier, with upgrades (Plus per event, Family annual) for hosts to cover guest fees.
 
-### Data Layer
-- **ORM**: Drizzle ORM with PostgreSQL dialect
-- **Schema Location**: `shared/schema.ts` (shared between frontend and backend)
-- **Validation**: Zod schemas generated from Drizzle schema via drizzle-zod
-- **Storage Interface**: Abstracted through `IStorage` interface in `server/storage.ts` (currently in-memory, designed for easy database swap)
+### Technical Implementation
 
-### Project Structure
-```
-client/           # Frontend React application
-  src/
-    components/   # Reusable UI components
-    pages/        # Route-based page components
-    hooks/        # Custom React hooks
-    lib/          # Utilities and query client
-server/           # Backend Express application
-  index.ts        # Entry point
-  routes.ts       # API route registration
-  storage.ts      # Data access layer
-shared/           # Code shared between client and server
-  schema.ts       # Database schema and types
-```
-
-### Key Design Decisions
-1. **Monorepo Structure**: Client, server, and shared code in one repository with path aliases (`@/`, `@shared/`)
-2. **Type Safety**: End-to-end TypeScript with shared schema types
-3. **Component Architecture**: shadcn/ui components are copied into the project (not imported from a package) for full customization
-4. **Build Process**: Custom build script bundles server with select dependencies to optimize cold start times
+*   **Monorepo**: Client, server, and shared code within a single repository.
+*   **Frontend**: React with TypeScript, Wouter for routing, Tailwind CSS v4 for styling, shadcn/ui for components, TanStack React Query for state, Framer Motion for animations, and Vite for building.
+*   **Backend**: Node.js with Express, TypeScript (ESM), RESTful API.
+*   **Data Layer**: Drizzle ORM with PostgreSQL, shared schema (`shared/schema.ts`), and Zod for validation.
+*   **Design Decisions**: End-to-end type safety, customizable shadcn/ui components, and a custom build process for server optimization.
 
 ## External Dependencies
 
-### Database
-- **PostgreSQL**: Primary database (configured via `DATABASE_URL` environment variable)
-- **Drizzle Kit**: Database migrations stored in `/migrations`
-
-### Payment Processing
-- **Stripe**: Payment processing for gift contributions (dependency present in package.json)
-
-### Authentication & Sessions
-- **Passport.js**: Authentication framework with local strategy
-- **express-session**: Session management
-- **connect-pg-simple**: PostgreSQL session store
-
-### Brokerage Integration (Embedded Broker Model)
-Kora uses an embedded broker-dealer model where:
-- **Broker Partner**: Apex Clearing or DriveWealth acts as the broker-dealer of record
-- **What Partner Handles**: KYC/AML, identity verification, custody, clearing, settlement, tax reporting, brokerage statements, SIPC membership
-- **What Kora Handles**: Front-end UX, event registry, payments, gift cards, thank-you system, templates, customer relationships
-- **Key Messaging**: "Brokerage services provided by [Partner], member FINRA/SIPC"
-
-Accounts opened "inside Kora, powered by [Partner]" - users never leave the Kora experience.
-
-### Compliance (Kora Responsibilities)
-Even with an embedded broker partner, Kora must handle:
-- **Marketing/Product Compliance**: All claims, disclosures, no performance promises
-- **Payment Fraud Controls**: Chargebacks, velocity limits, risk scoring, disputes
-- **Data Security**: Encryption, access control, audit logs, SOC 2-ready controls
-- **Customer Support**: Complaint workflows, response times, recordkeeping
-- **Insurance**: Cyber liability, crime/fraud coverage, E&O, D&O, general liability
-
-### User Roles & Permissions
-- **Guardian/Parent**: Creates account, manages children's funds, receives thank-yous
-- **Child/Recipient**: Has fund in their name, receives gifts (custodial account)
-- **Adult User**: Self-directed account holder
-- **Guest Contributor**: Gives gifts without creating account (60-second checkout)
-
-### Child Privacy & Discoverability (Critical)
-
-**Core principle**: Minors should be non-discoverable by default. Link-only access.
-
-**Visibility settings per page**:
-- **Unlisted** (default for minors): Only accessible via link/QR shared by parent
-- **Private**: Only invited contributors can access (invite list)
-- **Public**: Only allowed for adults, never for minors
-
-**What this means in practice**:
-- No public directory of children
-- No search for children by name
-- Givers arrive from links shared by parents, not by browsing
-- Child pages show first name only (no last name, location, or birthdate by default)
-- Contributor list visibility defaults to "host only"
-
-**Anti-abuse protections**:
-- Non-guessable IDs behind friendly URLs
-- Rate-limit page hits
-- Bot protection
-- Block search engine indexing for child pages
-
-**Adult-only findability** (optional):
-- Adults can enable "Allow people to find me" by phone/email
-- This is never available for minor accounts
-
-### UX Priorities
-- **Fee Transparency**: Separate "Processing (payment processor)" vs "Platform fee" line items
-- **Trust Signals**: Every page shows "No account required • Apple Pay • Secure checkout"
-- **Performance**: <2 second page loads, no reloads during checkout
-- **Thank-You Automation**: Draft suggestions, reminders, optional video thank-yous
-- **Milestones**: Celebrate first $500, 10 contributors, one-year anniversary
-
-### Child Experience Philosophy (Critical)
-
-**Goal**: Make investing feel like a scoreboard of progress, not a finance course.
-
-**5 core lessons to embed (without teaching them directly)**:
-1. Owning pieces of real businesses is normal
-2. Time is the advantage
-3. Volatility is the price of growth
-4. Diversification is the safety net
-5. Consistency beats "being smart"
-
-**Separate balance from progress**:
-- "Your Fund" = total balance (simple number)
-- "Your Progress" = behavior-based (days invested, streaks, milestones)
-- Pride comes from behavior, not gifts received
-
-**Milestones over returns**:
-- First $100, First $500, First $1,000
-- First dividend received
-- One year invested
-- Stayed invested through a dip
-- Added to fund 6 months in a row
-
-**Compounding visual**: Show "What people added" vs "What time added" - no percentages, no trading vibes
-
-**"Why it changed" feed**: Kid-safe explanations
-- "Your fund moved because the market moved"
-- "A dividend was paid"
-- "A gift was added"
-
-**Three-tab IA for recipient**:
-1. **Today**: Total, next milestone, "what changed" card
-2. **Progress**: Time ramp, streaks, milestones timeline
-3. **Story**: Contributors + notes, thank-you prompts
-
-**Parent controls**: Kid mode (view only, no sell/withdraw) vs Custodian mode (full control)
-
-**Year Recap** (Spotify Wrapped style):
-- "You've been invested 365 days"
-- "Time added $X"
-- "You earned 4 milestones"
-- "You have 18 people in your corner"
-
-**Messaging rules**:
-- Never: "Get rich", "Beat the market", "Pick winners"
-- Always: "Start early", "Let time do the work", "Own the world, not one stock", "Stay invested"
-
-### Phase 2 Features (Planned)
-
-**Payback Feature** - Turn Kora from "events only" to everyday use:
-- When you owe someone money (covered dinner, split a bill), offer to pay back to their Fund instead of cash
-- Two destinations only: **Cash** or **Their Fund** (recommended)
-- NO stock picking in payback - keeps it simple, avoids timing/price confusion
-- Default to "Add to your Fund" - one-tap to confirm
-- Increases usage frequency without complicating the core product
-- Implementation: same rails as gifting (money → account → invests per their default rules)
-
-### Frontend Libraries
-- **QR Code Generation**: qrcode.react for shareable fund/event links
-- **Date Handling**: date-fns
-- **Form Handling**: react-hook-form with @hookform/resolvers
-
-### Development Tools
-- **Replit Plugins**: Cartographer, dev banner, runtime error overlay for enhanced Replit development experience
+*   **Database**: PostgreSQL (via `DATABASE_URL`), Drizzle Kit for migrations.
+*   **Payment Processing**: Stripe.
+*   **Authentication & Sessions**: Passport.js (local strategy), express-session, connect-pg-simple (PostgreSQL session store).
+*   **Brokerage Integration**: Embedded broker-dealer model with partners like Apex Clearing or DriveWealth, handling KYC/AML, custody, clearing, settlement, and tax reporting. Kora manages the front-end UX and customer relationships.
+*   **Frontend Libraries**: qrcode.react for QR codes, date-fns for date handling, react-hook-form with @hookform/resolvers for form management.
+*   **Development Tools**: Replit Plugins (Cartographer, dev banner, runtime error overlay).

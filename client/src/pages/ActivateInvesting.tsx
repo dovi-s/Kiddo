@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, Shield, Lock } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
-type Step = "intro" | "identity" | "child" | "agreements" | "processing" | "complete";
+type Step = "intro" | "brokerage" | "identity" | "child" | "agreements" | "processing" | "complete";
 
 export default function ActivateInvesting() {
   const search = useSearch();
@@ -47,8 +47,12 @@ export default function ActivateInvesting() {
     disclosures: false,
   });
 
+  const [brokerageChoice, setBrokerageChoice] = useState<"embedded" | "external">("embedded");
+
   const handleNext = () => {
     if (step === "intro") {
+      setStep("brokerage");
+    } else if (step === "brokerage") {
       setStep("identity");
     } else if (step === "identity") {
       if (!isPersonal && childNames.length > 0) {
@@ -72,8 +76,10 @@ export default function ActivateInvesting() {
   };
 
   const handleBack = () => {
-    if (step === "identity") {
+    if (step === "brokerage") {
       setStep("intro");
+    } else if (step === "identity") {
+      setStep("brokerage");
     } else if (step === "child") {
       if (currentChildIndex > 0) {
         setCurrentChildIndex(currentChildIndex - 1);
@@ -117,7 +123,7 @@ export default function ActivateInvesting() {
     <div className="min-h-screen bg-stone-50">
       <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
         <div className="max-w-xl mx-auto px-4 h-14 flex items-center justify-between">
-          {step !== "intro" && step !== "processing" && step !== "complete" ? (
+          {step !== "intro" && step !== "brokerage" && step !== "processing" && step !== "complete" ? (
             <button onClick={handleBack} className="text-stone-500 hover:text-stone-900 transition-colors">
               <ArrowLeft size={20} />
             </button>
@@ -197,6 +203,85 @@ export default function ActivateInvesting() {
               <p className="text-xs text-stone-400 text-center">
                 Brokerage services provided by Apex Clearing Corporation, member FINRA/SIPC
               </p>
+            </motion.div>
+          )}
+
+          {step === "brokerage" && (
+            <motion.div
+              key="brokerage"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <div className="text-center mb-6">
+                <h1 className="text-xl font-medium text-stone-900 mb-2">Where will your assets live?</h1>
+                <p className="text-sm text-stone-500">Choose how your investment account is set up</p>
+              </div>
+
+              <div className="space-y-3">
+                <button
+                  onClick={() => setBrokerageChoice("embedded")}
+                  data-testid="option-embedded-brokerage"
+                  className={`w-full p-5 rounded-xl border-2 text-left transition-all ${
+                    brokerageChoice === "embedded"
+                      ? "border-stone-900 bg-stone-50"
+                      : "border-stone-200 hover:border-stone-300 bg-white"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                      brokerageChoice === "embedded" ? "border-stone-900 bg-stone-900" : "border-stone-300"
+                    }`}>
+                      {brokerageChoice === "embedded" && <Check size={12} className="text-white" />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-stone-900">Kora investing account</p>
+                        <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">Recommended</span>
+                      </div>
+                      <p className="text-sm text-stone-500">
+                        A brokerage account is opened for this fund. Gifts are invested automatically.
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  disabled
+                  data-testid="option-external-brokerage"
+                  className="w-full p-5 rounded-xl border-2 border-stone-100 bg-stone-50 text-left opacity-60 cursor-not-allowed"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-full border-2 border-stone-200 mt-0.5" />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-medium text-stone-400">Connect existing brokerage</p>
+                        <span className="text-xs px-2 py-0.5 bg-stone-200 text-stone-500 rounded-full">Coming soon</span>
+                      </div>
+                      <p className="text-sm text-stone-400">
+                        Link your Schwab, Fidelity, or other brokerage account.
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
+                <p className="text-sm text-blue-800 font-medium mb-1">What is a Kora investing account?</p>
+                <p className="text-xs text-blue-700">
+                  Your funds are held by Apex Clearing Corporation, a licensed broker-dealer and member of FINRA/SIPC. 
+                  Kora handles the experience; Apex handles the assets.
+                </p>
+              </div>
+
+              <Button 
+                onClick={handleNext}
+                data-testid="button-continue-brokerage"
+                className="w-full bg-stone-900 text-white hover:bg-stone-800"
+              >
+                Continue
+              </Button>
             </motion.div>
           )}
 
