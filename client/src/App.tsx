@@ -20,11 +20,13 @@ import Claim from "@/pages/Claim";
 import GetStarted from "@/pages/GetStarted";
 import ActivateInvesting from "@/pages/ActivateInvesting";
 import GiftCard from "@/pages/GiftCard";
+import Login from "@/pages/Login";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/login" component={Login} />
       <Route path="/get-started" component={GetStarted} />
       <Route path="/onboard" component={Onboard} />
       <Route path="/activate" component={ActivateInvesting} />
