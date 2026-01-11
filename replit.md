@@ -75,11 +75,35 @@ shared/           # Code shared between client and server
 - **express-session**: Session management
 - **connect-pg-simple**: PostgreSQL session store
 
-### Brokerage Integration (Planned)
-The product is designed to integrate with a brokerage/clearing partner (like Apex Clearing) for:
-- Custodial accounts (UGMA/UTMA for minors)
-- Fractional share investing
-- SIPC protection
+### Brokerage Integration (Embedded Broker Model)
+Everleaf uses an embedded broker-dealer model where:
+- **Broker Partner**: Apex Clearing or DriveWealth acts as the broker-dealer of record
+- **What Partner Handles**: KYC/AML, identity verification, custody, clearing, settlement, tax reporting, brokerage statements, SIPC membership
+- **What Everleaf Handles**: Front-end UX, event registry, payments, gift cards, thank-you system, templates, customer relationships
+- **Key Messaging**: "Brokerage services provided by [Partner], member FINRA/SIPC"
+
+Accounts opened "inside Everleaf, powered by [Partner]" - users never leave the Everleaf experience.
+
+### Compliance (Everleaf Responsibilities)
+Even with an embedded broker partner, Everleaf must handle:
+- **Marketing/Product Compliance**: All claims, disclosures, no performance promises
+- **Payment Fraud Controls**: Chargebacks, velocity limits, risk scoring, disputes
+- **Data Security**: Encryption, access control, audit logs, SOC 2-ready controls
+- **Customer Support**: Complaint workflows, response times, recordkeeping
+- **Insurance**: Cyber liability, crime/fraud coverage, E&O, D&O, general liability
+
+### User Roles & Permissions
+- **Guardian/Parent**: Creates account, manages children's funds, receives thank-yous
+- **Child/Recipient**: Has fund in their name, receives gifts (custodial account)
+- **Adult User**: Self-directed account holder
+- **Guest Contributor**: Gives gifts without creating account (60-second checkout)
+
+### UX Priorities
+- **Fee Transparency**: Separate "Processing (payment processor)" vs "Platform fee" line items
+- **Trust Signals**: Every page shows "No account required • Apple Pay • Secure checkout"
+- **Performance**: <2 second page loads, no reloads during checkout
+- **Thank-You Automation**: Draft suggestions, reminders, optional video thank-yous
+- **Milestones**: Celebrate first $500, 10 contributors, one-year anniversary
 
 ### Frontend Libraries
 - **QR Code Generation**: qrcode.react for shareable fund/event links
