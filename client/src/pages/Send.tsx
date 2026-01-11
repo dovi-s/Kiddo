@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { Shield, Lock, CheckCircle2, AlertCircle, Phone, Mail, Key, Eye, EyeOff, User, HelpCircle } from "lucide-react";
 
 const STOCKS = [
   { symbol: "AAPL", name: "Apple", price: 178.50 },
@@ -13,16 +14,23 @@ const STOCKS = [
   { symbol: "NVDA", name: "NVIDIA", price: 875.30 },
 ];
 
+type VerificationMethod = "email" | "phone" | "secret" | "none";
+
 export default function Send() {
   const [step, setStep] = useState(0);
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
+  const [recipientPhone, setRecipientPhone] = useState("");
+  const [secretPhrase, setSecretPhrase] = useState("");
+  const [showSecretPhrase, setShowSecretPhrase] = useState(false);
+  const [verificationMethod, setVerificationMethod] = useState<VerificationMethod>("email");
   const [selectedStock, setSelectedStock] = useState<typeof STOCKS[0] | null>(null);
   const [amount, setAmount] = useState("50");
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [deliveryType, setDeliveryType] = useState<"stock" | "cash">("stock");
+  const [showVerificationDetails, setShowVerificationDetails] = useState(false);
 
   const filteredStocks = STOCKS.filter(s => 
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -32,6 +40,28 @@ export default function Send() {
   const shares = selectedStock ? (parseFloat(amount) / selectedStock.price) : 0;
   const futureValue = parseFloat(amount) * 2.5;
 
+  const isValidEmail = recipientEmail.includes("@") && recipientEmail.includes(".");
+  const isValidPhone = recipientPhone.replace(/\D/g, "").length >= 10;
+  const hasSecretPhrase = secretPhrase.length >= 4;
+
+  const verificationStrength = () => {
+    let score = 0;
+    if (isValidEmail) score += 1;
+    if (isValidPhone) score += 1;
+    if (hasSecretPhrase) score += 2;
+    return score;
+  };
+
+  const strengthLabel = () => {
+    const score = verificationStrength();
+    if (score >= 3) return { label: "Maximum", color: "text-emerald-600", bg: "bg-emerald-50" };
+    if (score >= 2) return { label: "Strong", color: "text-blue-600", bg: "bg-blue-50" };
+    if (score >= 1) return { label: "Basic", color: "text-amber-600", bg: "bg-amber-50" };
+    return { label: "None", color: "text-stone-400", bg: "bg-stone-50" };
+  };
+
+  const canProceed = recipientName && isValidEmail;
+
   const handleSend = () => {
     setIsProcessing(true);
     setTimeout(() => {
@@ -40,25 +70,34 @@ export default function Send() {
     }, 1500);
   };
 
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 10);
+    if (digits.length >= 6) {
+      return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6)}`;
+    } else if (digits.length >= 3) {
+      return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+    }
+    return digits;
+  };
+
   return (
     <div className="min-h-screen bg-stone-50">
-      {/* Header */}
       <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <Link href="/">
             <span className="text-sm text-stone-500 hover:text-stone-900 transition-colors" data-testid="link-back">← Back</span>
           </Link>
           <span className="text-sm font-medium tracking-tight text-stone-900">Send stock</span>
-          <span className="text-xs text-stone-400">Secure</span>
+          <div className="flex items-center gap-1.5 text-xs text-stone-400">
+            <Lock size={12} />
+            <span>Secure</span>
+          </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
-        
-        {/* Desktop: Two column layout */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-start">
           
-          {/* Left column - Context info (desktop) */}
           <div className="hidden lg:block lg:sticky lg:top-20">
             <div className="mb-8">
               <h1 className="text-3xl font-light text-stone-900 mb-3">Send stock to anyone</h1>
@@ -67,10 +106,9 @@ export default function Send() {
               </p>
             </div>
 
-            {/* Progress indicator */}
             <div className="flex items-center gap-3 mb-10">
               {[
-                { label: "Who", step: 0 },
+                { label: "Verify", step: 0 },
                 { label: "Stock", step: 1 },
                 { label: "Amount", step: 2 },
                 { label: "Done", step: 3 },
@@ -94,19 +132,16 @@ export default function Send() {
               ))}
             </div>
 
-            {/* Trust badges */}
             <div className="space-y-3 text-sm text-stone-500">
               <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span>No fees to send stock</span>
+                <Shield className="w-5 h-5 text-stone-400" />
+                <span>Multi-layer recipient verification</span>
               </div>
               <div className="flex items-center gap-3">
                 <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>They have 30 days to claim</span>
+                <span>30 days to claim with verification</span>
               </div>
               <div className="flex items-center gap-3">
                 <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -117,11 +152,9 @@ export default function Send() {
             </div>
           </div>
 
-          {/* Right column - Form */}
           <div className="max-w-lg mx-auto lg:mx-0 lg:max-w-none">
             <AnimatePresence mode="wait">
               
-              {/* Step 0: Who */}
               {step === 0 && (
                 <motion.div 
                   key="who"
@@ -131,52 +164,164 @@ export default function Send() {
                 >
                   <div className="lg:bg-white lg:border lg:border-stone-200 lg:rounded-xl lg:p-6">
                     <h1 className="text-2xl font-light text-stone-900 mb-2 lg:hidden">Send stock to anyone</h1>
-                    <p className="text-stone-500 mb-10 lg:hidden">Better than cash. They'll own a piece of a real company.</p>
+                    <p className="text-stone-500 mb-8 lg:hidden">Verify they're the right person before sending.</p>
 
-                    <h2 className="hidden lg:block text-lg font-medium text-stone-900 mb-6">Who's receiving?</h2>
+                    <div className="hidden lg:flex items-center justify-between mb-6">
+                      <h2 className="text-lg font-medium text-stone-900">Verify recipient</h2>
+                      <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${strengthLabel().bg} ${strengthLabel().color}`}>
+                        <Shield size={12} />
+                        {strengthLabel().label} security
+                      </div>
+                    </div>
 
-                    <div className="space-y-4 mb-8">
+                    <div className="space-y-4 mb-6">
                       <div>
                         <label className="block text-sm text-stone-500 mb-2">Their name</label>
-                        <input 
-                          type="text"
-                          value={recipientName}
-                          onChange={(e) => setRecipientName(e.target.value)}
-                          data-testid="input-recipient-name"
-                          className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
-                          placeholder="Name"
-                        />
+                        <div className="relative">
+                          <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                          <input 
+                            type="text"
+                            value={recipientName}
+                            onChange={(e) => setRecipientName(e.target.value)}
+                            data-testid="input-recipient-name"
+                            className="w-full pl-10 pr-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400 focus:ring-2 focus:ring-stone-900/5"
+                            placeholder="Full name"
+                          />
+                        </div>
                       </div>
+
                       <div>
-                        <label className="block text-sm text-stone-500 mb-2">Their email</label>
-                        <input 
-                          type="email"
-                          value={recipientEmail}
-                          onChange={(e) => setRecipientEmail(e.target.value)}
-                          data-testid="input-recipient-email"
-                          className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
-                          placeholder="email@example.com"
-                        />
+                        <label className="block text-sm text-stone-500 mb-2">Their email <span className="text-stone-400">(required)</span></label>
+                        <div className="relative">
+                          <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                          <input 
+                            type="email"
+                            value={recipientEmail}
+                            onChange={(e) => setRecipientEmail(e.target.value)}
+                            data-testid="input-recipient-email"
+                            className="w-full pl-10 pr-10 py-3 lg:py-4 bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400 focus:ring-2 focus:ring-stone-900/5"
+                            placeholder="email@example.com"
+                          />
+                          {isValidEmail && (
+                            <CheckCircle2 size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />
+                          )}
+                        </div>
+                        <p className="text-xs text-stone-400 mt-1.5">They'll receive a verification code here</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm text-stone-500 mb-2">Their phone <span className="text-stone-400">(recommended)</span></label>
+                        <div className="relative">
+                          <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                          <input 
+                            type="tel"
+                            value={recipientPhone}
+                            onChange={(e) => setRecipientPhone(formatPhone(e.target.value))}
+                            data-testid="input-recipient-phone"
+                            className="w-full pl-10 pr-10 py-3 lg:py-4 bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400 focus:ring-2 focus:ring-stone-900/5"
+                            placeholder="(555) 000-0000"
+                          />
+                          {isValidPhone && (
+                            <CheckCircle2 size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500" />
+                          )}
+                        </div>
+                        <p className="text-xs text-stone-400 mt-1.5">SMS verification adds an extra layer of security</p>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-stone-100 pt-6 mb-6">
+                      <button 
+                        onClick={() => setShowVerificationDetails(!showVerificationDetails)}
+                        className="flex items-center justify-between w-full text-left mb-4"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Key size={16} className="text-stone-500" />
+                          <span className="text-sm font-medium text-stone-700">Secret phrase verification</span>
+                          {hasSecretPhrase && <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Active</span>}
+                        </div>
+                        <span className="text-xs text-stone-400">{showVerificationDetails ? "Hide" : "Show"}</span>
+                      </button>
+
+                      <AnimatePresence>
+                        {showVerificationDetails && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="p-4 bg-stone-50 rounded-lg border border-stone-100 mb-4">
+                              <p className="text-sm text-stone-600 mb-3">
+                                Set a phrase only the real recipient would know. They must enter it exactly to claim the gift.
+                              </p>
+                              <div className="space-y-3">
+                                <div className="relative">
+                                  <input 
+                                    type={showSecretPhrase ? "text" : "password"}
+                                    value={secretPhrase}
+                                    onChange={(e) => setSecretPhrase(e.target.value)}
+                                    data-testid="input-secret-phrase"
+                                    className="w-full px-4 py-3 pr-10 bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
+                                    placeholder="e.g., Our first pet's name, Where we met"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowSecretPhrase(!showSecretPhrase)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                                  >
+                                    {showSecretPhrase ? <EyeOff size={18} /> : <Eye size={18} />}
+                                  </button>
+                                </div>
+                                <p className="text-xs text-stone-400">
+                                  Examples: "purple elephant", "grandma's kitchen", "2019 road trip"
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    <div className="p-4 bg-stone-900 text-white rounded-lg mb-6">
+                      <div className="flex items-start gap-3">
+                        <Shield size={20} className="text-stone-400 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-sm mb-1">How recipient verification works</p>
+                          <ul className="text-xs text-stone-400 space-y-1">
+                            <li>1. Recipient receives claim link via email</li>
+                            {isValidPhone && <li>2. SMS code sent to verify phone number</li>}
+                            {hasSecretPhrase && <li>{isValidPhone ? "3" : "2"}. Must enter your secret phrase exactly</li>}
+                            <li>{hasSecretPhrase ? (isValidPhone ? "4" : "3") : (isValidPhone ? "3" : "2")}. Identity verified before shares transfer</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 mb-4 lg:hidden">
+                      <div className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${strengthLabel().bg} ${strengthLabel().color}`}>
+                        <Shield size={12} />
+                        {strengthLabel().label} security
                       </div>
                     </div>
 
                     <button 
                       onClick={() => setStep(1)}
-                      disabled={!recipientName || !recipientEmail}
+                      disabled={!canProceed}
                       data-testid="button-continue-step0"
-                      className="w-full py-3 lg:py-4 bg-stone-900 text-stone-50 rounded font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stone-800 transition-colors"
+                      className="w-full py-3 lg:py-4 bg-stone-900 text-stone-50 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stone-800 transition-colors"
                     >
                       Continue
                     </button>
                     
-                    <p className="text-xs text-stone-400 mt-4 text-center">
-                      We'll send them a link to claim their shares
+                    <p className="text-xs text-stone-400 mt-4 text-center flex items-center justify-center gap-1.5">
+                      <Lock size={12} />
+                      {hasSecretPhrase ? "Protected by secret phrase + " : ""}
+                      {isValidPhone ? "SMS + " : ""}email verification
                     </p>
                   </div>
                 </motion.div>
               )}
 
-              {/* Step 1: Pick Stock */}
               {step === 1 && (
                 <motion.div 
                   key="stock"
@@ -193,7 +338,15 @@ export default function Send() {
                   </button>
 
                   <div className="lg:bg-white lg:border lg:border-stone-200 lg:rounded-xl lg:p-6">
-                    <p className="text-sm text-stone-500 mb-1">Sending to {recipientName}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm text-stone-500">Sending to</p>
+                      <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <CheckCircle2 size={10} />
+                        Verified
+                      </span>
+                    </div>
+                    <p className="text-lg font-medium text-stone-900 mb-6">{recipientName}</p>
+
                     <h1 className="text-2xl font-light text-stone-900 mb-8">Pick a stock</h1>
 
                     <input
@@ -202,7 +355,7 @@ export default function Send() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       data-testid="input-search-stock"
-                      className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400 mb-6"
+                      className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400 mb-6"
                     />
 
                     <div className="space-y-2 mb-8 max-h-80 overflow-auto">
@@ -211,9 +364,9 @@ export default function Send() {
                           key={stock.symbol}
                           onClick={() => setSelectedStock(stock)}
                           data-testid={`stock-${stock.symbol}`}
-                          className={`w-full p-4 text-left rounded border transition-all ${
+                          className={`w-full p-4 text-left rounded-lg border transition-all ${
                             selectedStock?.symbol === stock.symbol
-                              ? "border-stone-900 bg-white"
+                              ? "border-stone-900 bg-white ring-2 ring-stone-900/10"
                               : "border-stone-200 bg-white hover:border-stone-300"
                           }`}
                         >
@@ -232,7 +385,7 @@ export default function Send() {
                       onClick={() => setStep(2)}
                       disabled={!selectedStock}
                       data-testid="button-continue-step1"
-                      className="w-full py-3 lg:py-4 bg-stone-900 text-stone-50 rounded font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stone-800 transition-colors"
+                      className="w-full py-3 lg:py-4 bg-stone-900 text-stone-50 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stone-800 transition-colors"
                     >
                       Continue with {selectedStock?.name || "..."}
                     </button>
@@ -240,7 +393,6 @@ export default function Send() {
                 </motion.div>
               )}
 
-              {/* Step 2: Amount */}
               {step === 2 && (
                 <motion.div 
                   key="amount"
@@ -257,7 +409,13 @@ export default function Send() {
                   </button>
 
                   <div className="lg:bg-white lg:border lg:border-stone-200 lg:rounded-xl lg:p-6">
-                    <p className="text-sm text-stone-500 mb-1">Sending {selectedStock?.name} to {recipientName}</p>
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm text-stone-500">Sending {selectedStock?.name} to</p>
+                      <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <CheckCircle2 size={10} />
+                        {recipientName}
+                      </span>
+                    </div>
                     <h1 className="text-2xl font-light text-stone-900 mb-8">How much?</h1>
 
                     <div className="mb-8">
@@ -269,7 +427,7 @@ export default function Send() {
                           value={amount}
                           onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
                           data-testid="input-amount"
-                          className="w-full pl-10 pr-4 py-4 lg:py-5 text-3xl font-light bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+                          className="w-full pl-10 pr-4 py-4 lg:py-5 text-3xl font-light bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
                         />
                       </div>
                       <p className="text-sm text-stone-500">
@@ -277,8 +435,7 @@ export default function Send() {
                       </p>
                     </div>
 
-                    {/* Projection */}
-                    <div className="p-5 lg:p-6 bg-stone-900 text-stone-50 rounded mb-6">
+                    <div className="p-5 lg:p-6 bg-stone-900 text-stone-50 rounded-lg mb-6">
                       <div className="flex justify-between items-baseline">
                         <div>
                           <p className="text-stone-400 text-sm">Could become</p>
@@ -291,16 +448,15 @@ export default function Send() {
                       </div>
                     </div>
 
-                    {/* Delivery Type */}
                     <div className="mb-6">
                       <label className="block text-sm text-stone-500 mb-3">How should they receive it?</label>
                       <div className="space-y-2">
                         <button
                           onClick={() => setDeliveryType("stock")}
                           data-testid="delivery-stock"
-                          className={`w-full p-4 text-left rounded border transition-all ${
+                          className={`w-full p-4 text-left rounded-lg border transition-all ${
                             deliveryType === "stock"
-                              ? "border-stone-900 bg-white"
+                              ? "border-stone-900 bg-white ring-2 ring-stone-900/10"
                               : "border-stone-200 bg-white hover:border-stone-300"
                           }`}
                         >
@@ -319,9 +475,9 @@ export default function Send() {
                         <button
                           onClick={() => setDeliveryType("cash")}
                           data-testid="delivery-cash"
-                          className={`w-full p-4 text-left rounded border transition-all ${
+                          className={`w-full p-4 text-left rounded-lg border transition-all ${
                             deliveryType === "cash"
-                              ? "border-stone-900 bg-white"
+                              ? "border-stone-900 bg-white ring-2 ring-stone-900/10"
                               : "border-stone-200 bg-white hover:border-stone-300"
                           }`}
                         >
@@ -340,7 +496,6 @@ export default function Send() {
                       </div>
                     </div>
 
-                    {/* Message */}
                     <div className="mb-6">
                       <label className="block text-sm text-stone-500 mb-2">Add a note (optional)</label>
                       <textarea 
@@ -349,12 +504,11 @@ export default function Send() {
                         onChange={(e) => setMessage(e.target.value)}
                         rows={3}
                         data-testid="input-message"
-                        className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400 resize-none"
+                        className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400 resize-none"
                       />
                     </div>
 
-                    {/* Summary */}
-                    <div className="p-4 bg-white border border-stone-200 rounded mb-6 space-y-2">
+                    <div className="p-4 bg-white border border-stone-200 rounded-lg mb-4 space-y-2">
                       <div className="flex justify-between text-sm">
                         <span className="text-stone-500">
                           {deliveryType === "stock" 
@@ -373,11 +527,22 @@ export default function Send() {
                       </div>
                     </div>
 
+                    <div className="p-3 bg-stone-50 rounded-lg border border-stone-100 mb-6">
+                      <div className="flex items-center gap-2 text-xs text-stone-500">
+                        <Shield size={14} className="text-emerald-600" />
+                        <span>
+                          {recipientName} must verify via
+                          {isValidPhone ? " SMS +" : ""} email
+                          {hasSecretPhrase ? " + secret phrase" : ""} to claim
+                        </span>
+                      </div>
+                    </div>
+
                     <button 
                       onClick={handleSend}
                       disabled={isProcessing || parseFloat(amount) < 1}
                       data-testid="button-send"
-                      className="w-full py-3 lg:py-4 bg-stone-900 text-stone-50 rounded font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stone-800 transition-colors"
+                      className="w-full py-3 lg:py-4 bg-stone-900 text-stone-50 rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-stone-800 transition-colors"
                     >
                       {isProcessing ? "Sending..." : `Send $${amount}`}
                     </button>
@@ -385,7 +550,6 @@ export default function Send() {
                 </motion.div>
               )}
 
-              {/* Step 3: Success */}
               {step === 3 && (
                 <motion.div 
                   key="success"
@@ -399,21 +563,16 @@ export default function Send() {
                       animate={{ scale: 1 }}
                       className="mb-8"
                     >
-                      <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-slate-100 mx-auto flex items-center justify-center mb-6">
-                        <svg className="w-8 h-8 lg:w-10 lg:h-10 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
+                      <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-emerald-50 mx-auto flex items-center justify-center mb-6">
+                        <CheckCircle2 className="w-8 h-8 lg:w-10 lg:h-10 text-emerald-600" />
                       </div>
-                      <h1 className="text-2xl lg:text-3xl font-light text-stone-900 mb-2">Sent</h1>
+                      <h1 className="text-2xl lg:text-3xl font-light text-stone-900 mb-2">Sent securely</h1>
                       <p className="text-stone-500">
-                        {deliveryType === "stock" 
-                          ? `${recipientName} will receive an email to claim their ${selectedStock?.name} shares`
-                          : `${recipientName} will receive an email to claim their $${amount} cash balance`
-                        }
+                        {recipientName} will receive an email with a secure claim link
                       </p>
                     </motion.div>
 
-                    <div className="p-5 bg-white border border-stone-200 rounded text-left mb-8 max-w-xs mx-auto">
+                    <div className="p-5 bg-white border border-stone-200 rounded-lg text-left mb-6 max-w-xs mx-auto">
                       <div className="flex justify-between mb-3">
                         <div>
                           {deliveryType === "stock" ? (
@@ -436,11 +595,35 @@ export default function Send() {
                       </div>
                     </div>
 
+                    <div className="p-4 bg-stone-50 rounded-lg border border-stone-100 max-w-xs mx-auto mb-8">
+                      <p className="text-xs font-medium text-stone-700 mb-2">Verification required to claim</p>
+                      <div className="space-y-1.5 text-xs text-stone-500">
+                        <div className="flex items-center gap-2">
+                          <Mail size={12} className="text-emerald-600" />
+                          <span>Email verification code</span>
+                        </div>
+                        {isValidPhone && (
+                          <div className="flex items-center gap-2">
+                            <Phone size={12} className="text-emerald-600" />
+                            <span>SMS verification code</span>
+                          </div>
+                        )}
+                        {hasSecretPhrase && (
+                          <div className="flex items-center gap-2">
+                            <Key size={12} className="text-emerald-600" />
+                            <span>Secret phrase match</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     <button 
                       onClick={() => {
                         setStep(0);
                         setRecipientName("");
                         setRecipientEmail("");
+                        setRecipientPhone("");
+                        setSecretPhrase("");
                         setSelectedStock(null);
                         setAmount("50");
                         setMessage("");
@@ -452,7 +635,7 @@ export default function Send() {
                     </button>
 
                     <p className="text-xs text-stone-400 mt-8">
-                      They have 30 days to claim their shares
+                      30 days to claim · Unclaimed gifts are refunded
                     </p>
                   </div>
                 </motion.div>
