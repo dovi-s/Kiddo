@@ -28,7 +28,7 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
               <path d="M12 2v20M8 6l4-4 4 4" />
             </svg>
           </div>
-          <span className="font-semibold text-foreground tracking-tight">Everleaf</span>
+          <span className="font-semibold text-foreground tracking-tight">Kora</span>
         </Link>
 
         <div className="hidden md:flex md:items-center md:gap-6">

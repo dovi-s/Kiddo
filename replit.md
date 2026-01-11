@@ -1,8 +1,11 @@
-# Everleaf
+# Kora
 
 ## Overview
 
-Everleaf is a modern gifting platform that transforms traditional gifts into long-term investments. The core concept is "gifts that grow" - instead of giving cash or physical presents, contributors can give money that gets invested into a recipient's fund (typically for children through custodial accounts).
+Kora is a modern gifting platform that transforms traditional gifts into long-term investments. The core concept is "gifts that grow" - instead of giving cash or physical presents, contributors can give money that gets invested into a recipient's fund (typically for children through custodial accounts).
+
+**Brand**: Short, ownable, platform-grade. Feels like it could be a $5B consumer platform.
+**Tagline**: Give something that stays.
 
 ## The 3-Layer Model
 
@@ -10,11 +13,11 @@ Understanding the product requires knowing these three layers:
 
 | Layer | What it is | Who sees it |
 |-------|------------|-------------|
-| **Layer 1: Everleaf** | The UI + gifting/registry layer. Creates pages, runs checkout, stores messages, runs thank-you flows, shows "where it's invested" | Everyone |
+| **Layer 1: Kora** | The UI + gifting/registry layer. Creates pages, runs checkout, stores messages, runs thank-you flows, shows "where it's invested" | Everyone |
 | **Layer 2: Brokerage Account** | The real securities account at Apex/DriveWealth where cash + shares actually sit. Gets SIPC coverage. | Hidden from users |
 | **Layer 3: Clearing/Custody** | Regulated entity handling KYC/AML, custody, trade execution, statements, tax docs | Users never think about this |
 
-**Key insight**: Users only see Layer 1 (Everleaf). They never need to know what Apex is.
+**Key insight**: Users only see Layer 1 (Kora). They never need to know what Apex is.
 
 ## Core Concepts
 
@@ -38,10 +41,10 @@ Pages are public-facing "skins" that route gifts into the same Fund:
 
 ```
 Fund (Mila's UTMA Account)
-├── everleaf.com/mila (Open anytime)
-├── everleaf.com/mila/5th-birthday
-├── everleaf.com/mila/kindergarten-graduation
-└── everleaf.com/mila/bar-mitzvah
+├── kora.com/mila (Open anytime)
+├── kora.com/mila/5th-birthday
+├── kora.com/mila/kindergarten-graduation
+└── kora.com/mila/bar-mitzvah
 ```
 
 **All pages route to the same Fund.** Pages are just attribution labels for thank-yous. You do NOT open a new brokerage account per event.
@@ -49,7 +52,7 @@ Fund (Mila's UTMA Account)
 ### Gift Lifecycle
 
 1. **Gift received** → Shows as "Pending" (payment captured)
-2. **Market opens** → Everleaf places buy order via broker
+2. **Market opens** → Kora places buy order via broker
 3. **Trade settles** → Status updates to "Invested"
 4. **Holdings appear** → Visible at Fund level in "Where it's invested"
 
@@ -213,16 +216,16 @@ shared/           # Code shared between client and server
 - **connect-pg-simple**: PostgreSQL session store
 
 ### Brokerage Integration (Embedded Broker Model)
-Everleaf uses an embedded broker-dealer model where:
+Kora uses an embedded broker-dealer model where:
 - **Broker Partner**: Apex Clearing or DriveWealth acts as the broker-dealer of record
 - **What Partner Handles**: KYC/AML, identity verification, custody, clearing, settlement, tax reporting, brokerage statements, SIPC membership
-- **What Everleaf Handles**: Front-end UX, event registry, payments, gift cards, thank-you system, templates, customer relationships
+- **What Kora Handles**: Front-end UX, event registry, payments, gift cards, thank-you system, templates, customer relationships
 - **Key Messaging**: "Brokerage services provided by [Partner], member FINRA/SIPC"
 
-Accounts opened "inside Everleaf, powered by [Partner]" - users never leave the Everleaf experience.
+Accounts opened "inside Kora, powered by [Partner]" - users never leave the Kora experience.
 
-### Compliance (Everleaf Responsibilities)
-Even with an embedded broker partner, Everleaf must handle:
+### Compliance (Kora Responsibilities)
+Even with an embedded broker partner, Kora must handle:
 - **Marketing/Product Compliance**: All claims, disclosures, no performance promises
 - **Payment Fraud Controls**: Chargebacks, velocity limits, risk scoring, disputes
 - **Data Security**: Encryption, access control, audit logs, SOC 2-ready controls
@@ -244,7 +247,7 @@ Even with an embedded broker partner, Everleaf must handle:
 
 ### Phase 2 Features (Planned)
 
-**Payback Feature** - Turn Everleaf from "events only" to everyday use:
+**Payback Feature** - Turn Kora from "events only" to everyday use:
 - When you owe someone money (covered dinner, split a bill), offer to pay back to their Fund instead of cash
 - Two destinations only: **Cash** or **Their Fund** (recommended)
 - NO stock picking in payback - keeps it simple, avoids timing/price confusion

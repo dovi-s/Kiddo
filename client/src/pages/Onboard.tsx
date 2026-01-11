@@ -73,7 +73,7 @@ export default function Onboard() {
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-stone-100">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/">
-            <span className="text-lg font-semibold tracking-tight text-stone-900">everleaf</span>
+            <span className="text-lg font-semibold tracking-tight text-stone-900">Kora</span>
           </Link>
           <div className="flex items-center gap-3 text-xs text-stone-400">
             <div className="flex items-center gap-1">
@@ -304,7 +304,7 @@ export default function Onboard() {
 
               <p className="text-xs text-stone-400">
                 By continuing, you agree to the Apex Brokerage Agreement
-                {!isPersonal && ", UTMA Custodial Disclosure"}, and Everleaf Terms of Service.
+                {!isPersonal && ", UTMA Custodial Disclosure"}, and Kora Terms of Service.
               </p>
             </motion.div>
           )}

@@ -71,7 +71,7 @@ export default function Moment() {
                   <path d="M12 2v20M8 6l4-4 4 4" />
                 </svg>
               </div>
-              <span className="font-semibold tracking-tight">Everleaf</span>
+              <span className="font-semibold tracking-tight">Kora</span>
             </span>
           </Link>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">

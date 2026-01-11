@@ -16,7 +16,7 @@ export function Footer() {
                 <motion.div whileHover={{ rotate: 10 }} transition={{ duration: 0.2 }}>
                   <Leaf className="h-5 w-5 text-primary" />
                 </motion.div>
-                <span className="font-semibold text-foreground tracking-tight">Everleaf</span>
+                <span className="font-semibold text-foreground tracking-tight">Kora</span>
               </motion.a>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[200px]">
@@ -86,10 +86,10 @@ export function Footer() {
 
         <div className="mt-16 pt-8 border-t space-y-4">
           <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
-            Everleaf is a technology platform and is not a broker-dealer. Brokerage services by Alpaca Securities LLC, member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation, member FINRA/SIPC. SIPC protects against broker failure, not market losses.
+            Kora is a technology platform and is not a broker-dealer. Brokerage services by Alpaca Securities LLC, member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation, member FINRA/SIPC. SIPC protects against broker failure, not market losses.
           </p>
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Everleaf Inc.
+            &copy; {new Date().getFullYear()} Kora Inc.
           </p>
         </div>
       </div>

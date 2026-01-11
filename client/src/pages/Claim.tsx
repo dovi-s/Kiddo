@@ -78,7 +78,7 @@ export default function Claim() {
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-stone-100">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/">
-            <span className="text-lg font-semibold tracking-tight text-stone-900">everleaf</span>
+            <span className="text-lg font-semibold tracking-tight text-stone-900">Kora</span>
           </Link>
           {step !== "success" && (
             <div className="flex items-center gap-1.5 text-xs text-stone-400">

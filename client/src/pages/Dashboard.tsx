@@ -52,7 +52,7 @@ export default function Dashboard() {
   const [selectedFundSlug, setSelectedFundSlug] = useState(profileName.toLowerCase().replace(/\s+/g, "-"));
 
   const fundSlug = selectedFundSlug;
-  const momentLink = `everleaf.com/${fundSlug}`;
+  const momentLink = `kora.com/${fundSlug}`;
 
   const handleCopy = (link?: string) => {
     navigator.clipboard?.writeText(`https://${link || momentLink}`);
@@ -172,7 +172,7 @@ export default function Dashboard() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link href="/">
-              <span className="text-sm font-medium tracking-tight text-stone-900">Everleaf</span>
+              <span className="text-sm font-medium tracking-tight text-stone-900">Kora</span>
             </Link>
             {funds.length > 1 && (
               <select 
@@ -450,7 +450,7 @@ export default function Dashboard() {
                             {fund.accountType}
                           </span>
                         </div>
-                        <p className="text-xs text-stone-400 truncate">everleaf.com/{fund.slug}</p>
+                        <p className="text-xs text-stone-400 truncate">kora.com/{fund.slug}</p>
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-lg font-medium text-stone-900">${fund.balance.toLocaleString()}</p>
@@ -554,7 +554,7 @@ export default function Dashboard() {
                                             </button>
                                           </Link>
                                           <button 
-                                            onClick={() => { navigator.clipboard.writeText(`everleaf.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied" }); }}
+                                            onClick={() => { navigator.clipboard.writeText(`kora.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied" }); }}
                                             className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-all"
                                             title="Copy link"
                                             data-testid={`button-copy-event-${event.id}`}
@@ -562,7 +562,7 @@ export default function Dashboard() {
                                             <Copy size={12} />
                                           </button>
                                           <button 
-                                            onClick={() => setShowPageQR(`everleaf.com/${fundSlug}/${eventData.slug}`)}
+                                            onClick={() => setShowPageQR(`kora.com/${fundSlug}/${eventData.slug}`)}
                                             className="hidden sm:block p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"
                                             title="QR code"
                                             data-testid={`button-qr-event-${event.id}`}
@@ -844,7 +844,7 @@ export default function Dashboard() {
             <div>
               <label className="block text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Fund URL</label>
               <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden">
-                <span className="px-3 py-2.5 bg-stone-50 text-sm text-stone-400 border-r border-stone-200">everleaf.com/</span>
+                <span className="px-3 py-2.5 bg-stone-50 text-sm text-stone-400 border-r border-stone-200">kora.com/</span>
                 <input
                   type="text"
                   value={fundSlugEdit}
@@ -1025,7 +1025,7 @@ export default function Dashboard() {
                   <div>
                     <label className="block text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Event URL</label>
                     <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden">
-                      <span className="px-3 py-2.5 bg-stone-50 text-sm text-stone-400 border-r border-stone-200 truncate">everleaf.com/{fundSlug}/</span>
+                      <span className="px-3 py-2.5 bg-stone-50 text-sm text-stone-400 border-r border-stone-200 truncate">kora.com/{fundSlug}/</span>
                       <input
                         type="text"
                         value={eventData.slug}

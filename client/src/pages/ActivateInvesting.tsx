@@ -123,7 +123,7 @@ export default function ActivateInvesting() {
           ) : (
             <div />
           )}
-          <span className="text-sm font-medium tracking-tight text-stone-900">Everleaf</span>
+          <span className="text-sm font-medium tracking-tight text-stone-900">Kora</span>
           <div className="w-5" />
         </div>
       </header>

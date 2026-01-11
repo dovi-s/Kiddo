@@ -140,7 +140,7 @@ export default function MomentCreate() {
                 <div className="p-4 rounded-xl bg-muted/50 text-left space-y-2">
                   <p className="text-xs text-muted-foreground">Share link</p>
                   <div className="flex gap-2">
-                    <Input value={`everleaf.com/${profileName.toLowerCase().replace(/\s/g, "-")}`} readOnly className="text-sm" />
+                    <Input value={`kora.com/${profileName.toLowerCase().replace(/\s/g, "-")}`} readOnly className="text-sm" />
                     <Button variant="outline" size="icon"><Copy className="h-4 w-4" /></Button>
                   </div>
                 </div>

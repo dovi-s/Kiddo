@@ -88,7 +88,7 @@ export default function GetStarted() {
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-stone-100">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/">
-            <span className="text-lg font-semibold tracking-tight text-stone-900">everleaf</span>
+            <span className="text-lg font-semibold tracking-tight text-stone-900">Kora</span>
           </Link>
           <div className="flex items-center gap-3 text-xs text-stone-400">
             <div className="flex items-center gap-1">
@@ -129,7 +129,7 @@ export default function GetStarted() {
             >
               <div className="text-center space-y-3">
                 <h1 className="text-2xl font-semibold text-stone-900">
-                  Get started with Everleaf
+                  Get started with Kora
                 </h1>
                 <p className="text-stone-500">
                   Create an account to open investment funds and receive gifts
@@ -464,7 +464,7 @@ export default function GetStarted() {
               </div>
 
               <p className="text-xs text-stone-400 leading-relaxed">
-                By continuing, you agree to Everleaf's Terms of Service, Privacy Policy, and the 
+                By continuing, you agree to Kora's Terms of Service, Privacy Policy, and the 
                 Alpaca Securities Brokerage Agreement. {accountType === "parent" && "Custodial accounts are governed by UTMA regulations."}
               </p>
             </motion.div>

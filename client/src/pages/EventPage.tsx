@@ -6,7 +6,7 @@ const AMOUNTS = [25, 50, 100, 250];
 
 const getStoredPageData = (key: string) => {
   try {
-    const stored = localStorage.getItem(`everleaf_page_${key}`);
+    const stored = localStorage.getItem(`kora_page_${key}`);
     return stored ? JSON.parse(stored) : null;
   } catch { return null; }
 };

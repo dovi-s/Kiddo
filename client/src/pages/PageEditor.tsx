@@ -20,14 +20,14 @@ interface PageData {
 
 const getStoredPageData = (key: string): PageData | null => {
   try {
-    const stored = localStorage.getItem(`everleaf_page_${key}`);
+    const stored = localStorage.getItem(`kora_page_${key}`);
     return stored ? JSON.parse(stored) : null;
   } catch { return null; }
 };
 
 const setStoredPageData = (key: string, data: PageData) => {
   try {
-    localStorage.setItem(`everleaf_page_${key}`, JSON.stringify(data));
+    localStorage.setItem(`kora_page_${key}`, JSON.stringify(data));
   } catch {}
 };
 
@@ -631,7 +631,7 @@ export default function PageEditor() {
             <p className="text-xs text-stone-400">Event URL</p>
             <div className="flex items-center gap-0 border border-stone-200 rounded-lg overflow-hidden bg-white">
               <span className="text-xs text-stone-400 bg-stone-50 px-3 py-2.5 border-r border-stone-200 whitespace-nowrap">
-                everleaf.com/{fundSlug}/
+                kora.com/{fundSlug}/
               </span>
               <input
                 type="text"
