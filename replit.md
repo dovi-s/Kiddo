@@ -27,7 +27,15 @@ Preferred communication style: Simple, everyday language.
 *   **Dashboard IA**: Provides a fund switcher, total balance breakdown (invested, cash, pending), holdings, events summary, activity feed, and quick actions (share link, create event, send thank-yous).
 *   **Child Privacy**: Minors are non-discoverable by default, with link-only access. Visibility settings for pages include "Unlisted" (default for minors), "Private," and "Public" (adults only). Pages for minors display first name only.
 *   **Child Experience**: Designed to make investing feel like a scoreboard of progress through milestones and behavior-based feedback, avoiding complex financial jargon.
-*   **Pricing Model**: Starts with a free tier, with upgrades (Plus per event, Family annual) for hosts to cover guest fees.
+*   **Pricing Model**: Two fee layers at checkout:
+    1. **Processing (pass-through)**: Card ~2.9% + $0.30, ACH ~$0.75
+    2. **Kora platform fee**: Card 1.5% (min $1, max $10), ACH 1.0% (min $0.75, max $10)
+    
+    **Plans:**
+    - **Free ($0)**: Guests pay processing + Kora platform fee. Host can toggle to cover platform fee per event (billed 1.5% per gift).
+    - **Plus ($99/event)**: Kora platform fee waived up to $7,500 gift volume. Premium themes, goal cards, thank-you automation. Guests still pay processing.
+    - **Family ($199/year)**: Everything in Plus. Kora platform fee waived up to $15,000/year. Household dashboard, recurring gifts, priority support.
+    - **Organizations**: Contact sales for schools, nonprofits, teams.
 
 ### Technical Implementation
 

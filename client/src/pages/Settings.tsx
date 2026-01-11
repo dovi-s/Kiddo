@@ -418,7 +418,7 @@ function BillingTab() {
         <div className="flex items-center justify-between p-4 bg-stone-50 rounded-lg border border-stone-100">
           <div>
             <p className="font-medium text-stone-900">Free</p>
-            <p className="text-sm text-stone-500">Guests pay ~3% processing at checkout</p>
+            <p className="text-sm text-stone-500">Guests pay processing + Kora platform fee</p>
           </div>
           <span className="text-xs font-medium text-stone-600 bg-stone-200 px-2 py-1 rounded">Current</span>
         </div>
@@ -429,14 +429,33 @@ function BillingTab() {
               <p className="font-medium text-stone-900">Plus</p>
               <p className="text-sm font-medium text-stone-900">$99/event</p>
             </div>
-            <p className="text-sm text-stone-500">Guests pay $0. You cover processing fees.</p>
+            <p className="text-sm text-stone-500 mb-2">Make gifting cheaper for guests. Kora platform fee waived up to $7,500 gift volume.</p>
+            <ul className="text-xs text-stone-400 space-y-1">
+              <li>• Premium themes & card designs</li>
+              <li>• Goal cards & group gifting</li>
+              <li>• Thank-you automation</li>
+              <li>• Guests still pay processing</li>
+            </ul>
           </div>
           <div className="p-4 rounded-lg border-2 border-stone-200 hover:border-stone-300 transition-colors cursor-pointer">
             <div className="flex items-center justify-between mb-2">
               <p className="font-medium text-stone-900">Family</p>
               <p className="text-sm font-medium text-stone-900">$199/year</p>
             </div>
-            <p className="text-sm text-stone-500">Unlimited events. Household dashboard. Priority support.</p>
+            <p className="text-sm text-stone-500 mb-2">Everything in Plus. Kora platform fee waived up to $15,000/year.</p>
+            <ul className="text-xs text-stone-400 space-y-1">
+              <li>• Household dashboard (multiple kids)</li>
+              <li>• Recurring gifting management</li>
+              <li>• Multiple events per child</li>
+              <li>• Priority support</li>
+            </ul>
+          </div>
+          <div className="p-4 rounded-lg border border-stone-100 bg-stone-50/50">
+            <div className="flex items-center justify-between mb-1">
+              <p className="font-medium text-stone-700">Organizations</p>
+              <p className="text-sm text-stone-500">Contact sales</p>
+            </div>
+            <p className="text-xs text-stone-400">For schools, nonprofits, and teams running multiple events.</p>
           </div>
         </div>
 
@@ -446,6 +465,46 @@ function BillingTab() {
         >
           Upgrade plan
         </button>
+      </SettingsSection>
+
+      <SettingsSection title="How fees work" description="Two components shown at checkout">
+        <div className="space-y-3">
+          <div className="p-3 rounded-lg bg-stone-50 border border-stone-100">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-medium text-stone-700">Processing (pass-through)</p>
+              <p className="text-sm text-stone-500">~2.9% + $0.30</p>
+            </div>
+            <p className="text-xs text-stone-400">Card network fees. Lower for ACH (~$0.75).</p>
+          </div>
+          <div className="p-3 rounded-lg bg-stone-50 border border-stone-100">
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-sm font-medium text-stone-700">Kora platform fee</p>
+              <p className="text-sm text-stone-500">1.5% ($1–$10)</p>
+            </div>
+            <p className="text-xs text-stone-400">Covers brokerage, KYC, support, and thank-you automation. 1.0% for ACH.</p>
+          </div>
+        </div>
+        <p className="text-xs text-stone-400 pt-2">Example: $100 gift = $3.20 processing + $1.50 Kora fee = $4.70 total</p>
+      </SettingsSection>
+
+      <SettingsSection title="Fee preferences" description="Default behavior for new events">
+        <AutoSaveSelect 
+          label="Who pays Kora platform fee" 
+          value="guests" 
+          options={[
+            { value: "guests", label: "Guests pay platform fee (default)" },
+            { value: "host", label: "I cover platform fee (billed 1.5% per gift)" },
+          ]}
+        />
+        <AutoSaveSelect 
+          label="When goal is reached" 
+          value="continue" 
+          options={[
+            { value: "continue", label: "Continue accepting gifts" },
+            { value: "stop", label: "Stop accepting gifts at goal" },
+          ]}
+        />
+        <p className="text-xs text-stone-400">Guests always pay processing. You can cover that too per-event.</p>
       </SettingsSection>
 
       <SettingsSection title="Payment method">
@@ -464,27 +523,8 @@ function BillingTab() {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Fee preferences" description="Default behavior for new events">
-        <AutoSaveSelect 
-          label="Who pays processing fees" 
-          value="guests" 
-          options={[
-            { value: "guests", label: "Guests pay processing (~3%)" },
-            { value: "host", label: "I cover processing fees" },
-          ]}
-        />
-        <AutoSaveSelect 
-          label="When goal is reached" 
-          value="continue" 
-          options={[
-            { value: "continue", label: "Continue accepting gifts" },
-            { value: "stop", label: "Stop accepting gifts at goal" },
-          ]}
-        />
-      </SettingsSection>
-
       <SettingsSection title="Invoices">
-        <p className="text-sm text-stone-500">No invoices yet. Invoices will appear here after you upgrade.</p>
+        <p className="text-sm text-stone-500">No invoices yet. Invoices will appear here after you upgrade or cover fees.</p>
       </SettingsSection>
     </div>
   );

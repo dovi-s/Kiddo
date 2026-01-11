@@ -1,0 +1,225 @@
+What makes this Elena-style
+1) One core value metric, one core monetization lever
+
+Your value metric is not “events.” It is gift volume moved through Everleaf.
+
+So your monetization should ladder cleanly:
+
+Free: guest pays fees (default)
+
+Paid: host can make checkout feel cheaper or fee-free
+
+Upsell: “I want my guests to have the smoothest experience”
+
+That is exactly the right direction.
+
+2) Fees must be presented as “cost vs Everleaf”
+
+You already have this. Keep it. It is non-negotiable for trust and support load.
+
+3) Paid plans should “remove friction,” not “add features”
+
+Paid plans should primarily change the guest experience:
+
+fewer fees
+
+better cards
+
+easier thank-yous
+
+more control
+
+Everything else is secondary.
+
+The EV-grade final pricing model
+Payment rails (pass-through costs + Everleaf fee)
+Card / Apple Pay
+
+Processing (pass-through): Stripe card rate (ex: 2.9% + $0.30)
+
+Everleaf platform fee: 1.5% of gift amount (min $1, max $10)
+
+ACH
+
+Processing (pass-through): your ACH cost (ex: $0.75)
+
+Everleaf platform fee: 1.0% (min $0.75, max $10)
+
+This is correct because:
+
+you have a margin lever (platform fee)
+
+you are not pretending Stripe is revenue
+
+you push ACH naturally for larger gifts
+
+Plans
+Free
+
+$0
+
+Default behavior:
+
+Guest pays processing + Everleaf platform fee
+
+Host toggle per event:
+
+Host covers Everleaf platform fee (guests still pay processing)
+
+Host is billed 1.5% (min $1, max $10) per gift
+
+This is the cleanest “fair” model, and it lets you monetize Free without forcing subscription.
+
+Plus (per event)
+
+This is where I would change one thing from my prior version:
+
+Set Plus to $99 per event (not $79)
+
+Why:
+
+Weddings are price insensitive relative to event spend.
+
+You want margin for support, disputes, and brokerage overhead.
+
+$99 feels premium but not predatory.
+
+Plus: $99/event
+Includes:
+
+premium event themes and cards
+
+goal cards + group gifting link
+
+address capture
+
+thank-you automation (drafts + send flow)
+
+privacy controls
+
+keepsake PDF
+
+Fee benefit:
+
+Everleaf platform fee waived for guests up to $7,500 in gift volume for that event
+
+Guests still pay processing
+
+Over $7,500:
+
+host covers Everleaf platform fee at 0.75% (min $0.75, max $10), or
+
+event reverts to guest-paid fees (host chooses default behavior)
+
+This is the correct pairing:
+
+$99 maps to “premium event add-on”
+
+$7,500 maps to typical wedding and milestone volume
+
+You are not subsidizing Stripe
+
+Family (household annual)
+
+Also adjust:
+
+Family: $199/year (not $149)
+
+Why:
+
+You are becoming a household system of record for gifting and long-term funds.
+
+Annual plans need room for ongoing support, education layer, recurring gift infra, and brokerage partner overhead.
+
+Family: $199/year
+Includes:
+
+everything in Plus
+
+household dashboard (multiple kids and funds)
+
+recurring gifting management
+
+multiple events per kid with templates
+
+priority support
+
+Fee benefit:
+
+Everleaf platform fee waived for guests up to $15,000/year household gift volume
+
+Guests still pay processing
+
+Over $15,000/year:
+
+host covers Everleaf platform fee at 0.75%, or revert to guest-paid
+
+This makes Family clearly superior and still fair.
+
+Organizations
+
+Keep it, but do not lead with it.
+
+“Contact Sales”
+
+Price later once you know activation and support profile
+
+The one thing that must be true for this to work
+
+Your Free plan must monetize meaningfully through the platform fee.
+
+That means you should default to:
+
+“Guest pays fees”
+
+with an obvious upgrade path:
+
+“Make checkout cheaper for guests” (cover Everleaf fee)
+
+“Make checkout feel premium” (Plus or Family)
+
+This is a proven ladder.
+
+The EV “Aha” metric for you (your version of “7 friends in 10 days”)
+
+Your equivalent is:
+
+A host creates a fund and gets 3 contributions within 7 days.
+
+If they hit that, they stick.
+If they do not, they churn.
+
+Everything in onboarding, templates, and sharing should be engineered to get to:
+
+share link sent
+
+first 3 gifts received quickly
+
+first thank-you flow completed
+
+Is it weird for a host to pay to cover fees?
+
+No, if you frame it correctly.
+
+The host is not “paying fees for themselves.”
+They are buying a better guest experience.
+
+Label it like:
+
+“Make gifting cheaper for guests”
+
+“Cover Everleaf fees”
+
+“Guests still pay card processing”
+
+Very clear, very defensible.
+
+Final answer
+
+Yes, this is the right EV-level structure, with two changes I would lock in as the “dream team final”:
+
+Plus: $99/event, waives Everleaf platform fee up to $7,500 volume
+
+Family: $199/year, waives Everleaf platform fee up to $15,000/year volume
+
+Everything else remains as written.

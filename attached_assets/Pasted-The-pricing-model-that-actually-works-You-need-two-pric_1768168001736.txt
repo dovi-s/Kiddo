@@ -1,0 +1,260 @@
+The pricing model that actually works
+
+You need two price layers:
+
+Payment processing (pass-through cost)
+This is what Stripe (and the card networks) charge to move money.
+
+Everleaf platform fee (your margin)
+This covers brokerage partner costs, KYC, fraud, support, card design + delivery, receipts, thank-you automation, and your profit.
+
+If you bundle these into one line without separating “cost vs margin,” you either lose money or look expensive and cannot explain why.
+
+Pricing primitives (locked)
+A) Payment methods
+Card / Apple Pay
+
+Processing (pass-through): Stripe card rate (example: 2.9% + $0.30)
+
+Everleaf platform fee: 1.5% of gift amount (min $1, max $10)
+
+So a $100 gift typically looks like:
+
+Processing: $2.90 + $0.30 = $3.20
+
+Everleaf fee: $1.50
+
+Total fee shown to payer: $4.70
+
+ACH (recommended for larger gifts)
+
+Processing (pass-through): your ACH cost (example: $0.75)
+
+Everleaf platform fee: 1.0% (min $0.75, max $10)
+
+So a $250 gift:
+
+Processing: $0.75
+
+Everleaf fee: $2.50
+
+Total fee: $3.25 (way cheaper than card)
+
+UX rule: for gifts above $250, default to showing ACH as “Save on fees,” but keep Apple Pay one tap available.
+
+Host plans (what the parent pays)
+
+Important: the subscription is not “paying to invest.” It is paying to make the gifting experience better (fee coverage, premium cards, thank-you automation, templates, privacy).
+
+Plan 1: Free
+
+$0/month
+
+Create unlimited Funds and Events
+
+Beautiful event pages + QR
+
+Default “Future Fund” option
+
+Contributors list + receipts
+
+Basic thank-you export
+
+Fees
+
+By default: Guests pay processing + Everleaf platform fee
+
+Optional toggle per event: Host covers Everleaf platform fee (guests still pay processing)
+
+Host-cover pricing (when enabled):
+
+Host is billed 1.5% (min $1, max $10) per gift that comes in on that event.
+
+This is the cleanest “fair” model:
+
+Guests always see real processing cost.
+
+Hosts can choose to make checkout feel cheaper without Everleaf eating Stripe.
+
+Plan 2: Plus (per event)
+
+$79 per event
+
+Designed for weddings and milestones where hosts care about guest experience.
+
+Includes everything in Free plus:
+
+Premium themes and card designs
+
+Goal cards + group gifting link
+
+Address collection
+
+Auto thank-you drafts
+
+Gift privacy controls
+
+Keepsake templates (print-ready)
+
+Fee coverage
+
+Includes Everleaf platform fee covered for guests up to $5,000 in gift volume for that event.
+
+Guests still pay processing.
+
+Host effectively makes gifts feel cheaper without you subsidizing Stripe.
+
+Over $5,000 volume
+
+Event automatically flips to:
+
+Host covers Everleaf platform fee at a reduced 0.75% (min $0.75, max $10), or
+
+Guests pay standard fees again (host chooses default behavior)
+
+Why $5,000 cap:
+At 1.5% platform fee, $5,000 implies $75 in waived platform fees. That is close to the $79 price. You are not taking a bath.
+
+Plan 3: Family (household)
+
+$149 per year
+
+For parents running multiple kids, multiple events, and recurring gifts.
+
+Includes everything in Plus plus:
+
+Household dashboard (multiple kids/funds)
+
+Recurring gifting controls and reminders
+
+Multiple events per kid
+
+Family templates library
+
+Priority support
+
+Fee coverage
+
+Covers Everleaf platform fee for guests up to $12,000 per year across the household.
+
+Guests still pay processing.
+
+Over $12,000/year
+
+Host covers Everleaf platform fee at 0.75% (min $0.75, max $10), or guests pay standard.
+
+Why $149 and $12k:
+It is high enough to fund real support and brokerage overhead, while still feeling cheap relative to what families spend on events.
+
+Plan 4: Organizations
+
+Do not overthink pricing here yet.
+
+Start with:
+
+$499/year includes up to 25 events
+
+Additional events: $15/event
+
+Optional: “fee coverage bundle” negotiated per org
+
+What else do you pay besides Stripe (your hidden cost stack)
+
+Your Everleaf platform fee must cover these categories, or you will lose money even if Stripe is passed through:
+
+Brokerage partner + clearing stack
+
+Typical cost buckets (varies by partner):
+
+KYC / identity verification checks
+
+Account opening overhead
+
+Money movement fees (ACH in/out)
+
+Trade execution and settlement overhead (even if “commission-free”)
+
+Monthly per-account platform fees at scale (sometimes)
+
+You should assume this is meaningful. Do not price as if it is free.
+
+Risk and support
+
+Chargebacks and fraud tooling
+
+Manual review and support headcount
+
+SMS costs (thank-yous, receipts, verification)
+
+Compliance legal and vendor monitoring
+
+That is exactly why the platform fee exists.
+
+“Do we make money if we bring accounts to the broker?”
+
+Sometimes yes, but treat it as upside, not your core unit economics.
+
+Possible upside streams (partner-dependent):
+
+Revenue share on cash sweep yield
+
+Securities lending revenue share
+
+Referral bounties for funded accounts
+
+Interchange later (if you ever add a card)
+
+Do not rely on these to survive. They are gravy.
+
+Your pricing must work even if partner economics are mediocre.
+
+The simplest way to present fees (high conversion, low confusion)
+
+On checkout show ONE line, with a tiny “details” link:
+
+Fees: $4.70
+
+Tap “details” reveals:
+
+Processing (pass-through): $3.20
+
+Everleaf platform fee: $1.50
+
+Hosts understand. Guests do not feel tricked. Support tickets drop.
+
+Does this cover paid-plan economics?
+
+Yes, because Plus and Family are not subsidizing Stripe. They are primarily subsidizing your platform fee, which is your margin lever.
+
+You can also add one more lever if needed later:
+
+Optional “Truly fee-free checkout”
+
+Hosts can choose to cover processing too:
+
+Host pays processing + platform fee
+
+Guests see $0 fees
+Price it as:
+
+“Host-paid fees” billed at actual processing + platform rate
+This is an advanced toggle, not default.
+
+Summary (locked recommendation)
+Platform fee (your margin)
+
+Card: 1.5% (min $1, max $10)
+
+ACH: 1.0% (min $0.75, max $10)
+
+Plans
+
+Free: $0, guests pay fees by default, host can cover platform fee per event
+
+Plus: $79/event, waives platform fee up to $5,000 event volume, then 0.75% host-paid or revert to guest-paid
+
+Family: $149/year, waives platform fee up to $12,000/year, then 0.75% host-paid or revert to guest-paid
+
+Org: start $499/year for 25 events
+
+If you want, I’ll compute revenue + gross profit under your scenario (events, gifts/month, average gift size, mix of card vs ACH, percent upgrading, host-cover toggles), using this pricing and a conservative cost stack for brokerage + KYC + risk.
