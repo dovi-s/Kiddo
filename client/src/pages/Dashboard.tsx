@@ -112,11 +112,10 @@ export default function Dashboard() {
     ])
   }));
 
-  const totalBalance = funds.reduce((sum, f) => sum + f.balance, 0);
-  const totalGain = funds.reduce((sum, f) => sum + f.gain, 0);
-  const investedAmount = Math.round(totalBalance * 0.85);
-  const cashAmount = totalBalance - investedAmount;
-  const pendingAmount = 180;
+  const portfolioValue = funds.reduce((sum, f) => sum + f.balance, 0);
+  const marketChange = funds.reduce((sum, f) => sum + f.gain, 0);
+  const totalReceived = portfolioValue - marketChange;
+  const pendingAmount = isNewAccount ? 0 : 180;
 
   const holdings = [
     { ticker: "VTI", name: "US Total Market ETF", shares: 12.4, value: 2125, gain: 245 },
@@ -189,43 +188,65 @@ export default function Dashboard() {
           {/* Main column */}
           <div className="lg:col-span-2">
             
-            {/* The Number */}
+            {/* Financial Overview */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8 }}
               className="mb-10 lg:mb-12"
             >
-              <p className="text-sm text-stone-500 mb-1">Total balance</p>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-2">
-                <AnimatedValue value={totalBalance} />
-              </h1>
-              {isNewAccount && totalBalance === 0 ? (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
-                  <span className="text-stone-500">
-                    {funds.length === 1 
-                      ? `${funds[0].name}'s fund is ready to share`
-                      : `${funds.length} funds ready to share`
-                    }
-                  </span>
-                  <span className="text-emerald-600 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    Active
-                  </span>
-                </div>
-              ) : (
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
-                  <span className="text-emerald-700">+${totalGain.toLocaleString()} all time</span>
-                  <span className="text-stone-300">|</span>
-                  <span className="text-stone-500">Invested: ${investedAmount.toLocaleString()}</span>
-                  <span className="text-stone-500">Cash: ${cashAmount.toLocaleString()}</span>
-                  {pendingAmount > 0 && (
-                    <span className="text-amber-600 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                      Pending: ${pendingAmount}
+              {isNewAccount && portfolioValue === 0 ? (
+                <>
+                  <p className="text-sm text-stone-500 mb-1">Portfolio value</p>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-2">
+                    $0
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
+                    <span className="text-stone-500">
+                      {funds.length === 1 
+                        ? `${funds[0].name}'s fund is ready to share`
+                        : `${funds.length} funds ready to share`
+                      }
                     </span>
-                  )}
-                </div>
+                    <span className="text-emerald-600 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Active
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Two-metric display */}
+                  <div className="grid grid-cols-2 gap-6 sm:gap-8 mb-4">
+                    <div>
+                      <p className="text-sm text-stone-500 mb-1">Total received</p>
+                      <p className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight text-stone-900">
+                        <AnimatedValue value={totalReceived} />
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-stone-500 mb-1">Portfolio value</p>
+                      <p className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight text-stone-900">
+                        <AnimatedValue value={portfolioValue} />
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                    <span className={marketChange >= 0 ? "text-emerald-700" : "text-red-600"}>
+                      {marketChange >= 0 ? "+" : ""}{marketChange.toLocaleString()} market change
+                    </span>
+                    {pendingAmount > 0 && (
+                      <>
+                        <span className="text-stone-300">|</span>
+                        <span className="text-amber-600 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                          ${pendingAmount} pending
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </>
               )}
             </motion.div>
 
