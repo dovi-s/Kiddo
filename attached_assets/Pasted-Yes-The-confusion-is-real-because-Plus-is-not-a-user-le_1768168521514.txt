@@ -1,0 +1,247 @@
+Yes. The confusion is real because “Plus” is not a user-level plan in the way people expect. It is an event add-on. If you present it like a normal SaaS plan picker during onboarding, it will feel broken.
+
+Here is the clean, “can’t-get-confusing” structure.
+
+The correct mental model
+There are 3 layers
+
+Household account (parent or individual)
+
+Funds (Ari’s Future Fund, My Future Fund)
+
+Moments (events, links, pages) that route gifts into a fund
+Example: “Bar Mitzvah page” and “Birthday page” both feed “Ari’s Future Fund”
+
+Billing has 2 products (not 3 plans)
+
+Everleaf Free (default)
+
+Everleaf Family (subscription for the household)
+
+And then a single add-on:
+
+Plus Event Pass (one-time purchase, applies to one event page)
+
+So:
+
+“Plus” should be called a Pass or Event Upgrade, not a “plan.”
+
+Rename to remove the confusion
+Do this
+
+Free
+
+Family (annual)
+
+Plus becomes: Event Pass (or “Plus Pass”)
+
+Why
+
+“Plan” implies it changes the whole account.
+“Pass” implies it upgrades one event.
+
+This alone fixes 50 percent of the confusion.
+
+Where Plus actually appears in the product
+Plus should never appear during account onboarding
+
+Onboarding is only:
+
+create household
+
+create first fund
+
+(later) KYC if you are opening brokerage accounts
+
+Then inside the product, Plus appears only in event contexts:
+
+When creating an Event Page
+
+toggle: “Make gifting cheaper for guests”
+
+you choose:
+
+Guests pay fees (default)
+
+I cover Everleaf fees for this event
+
+Add Event Pass (recommended)
+
+So Plus is purchased only when the user is setting up an event.
+
+The upgrade flow that actually feels natural
+Entry point 1 (best): Event creation
+
+User creates “Bar Mitzvah Page” for Ari.
+
+They see a simple section:
+
+Fees
+
+Guests pay fees (default)
+
+Cover Everleaf fees for guests (pay as gifts come in)
+
+Get Event Pass ($99) (best for weddings and big events)
+
+If they pick “Get Event Pass”:
+
+pay $99 now
+
+done
+
+this event now shows “Event Pass active”
+
+No plan confusion.
+
+Entry point 2: Share screen after event is created
+
+After they create the event, they land on the “Share” screen with QR and link.
+
+Add a small callout:
+
+“Want your guests to have a smoother checkout? Add Event Pass.”
+
+Tap -> purchase.
+
+Entry point 3: After first gift hits (smart and high converting)
+
+Once the first gift arrives, show:
+
+“You received $100 from Sarah. Guests paid $4.20 in fees. Want to cover fees for guests or add an Event Pass?”
+
+This is persuasive because it shows real numbers.
+
+How to avoid the weirdness of choosing between $99 annual vs $99 event
+
+Do not show them side by side as “plans.”
+
+Correct presentation
+
+Inside Billing:
+
+Family (annual)
+Best for multiple kids and repeated gifting.
+
+Inside an Event page:
+
+Event Pass
+Best for one big event.
+
+If you show both, it must be framed as:
+
+“Upgrade this household” (Family)
+
+“Upgrade this event” (Event Pass)
+
+Different verbs. Different surfaces.
+
+What happens if someone is on Family
+
+Family should include one of these benefits so it is obvious:
+
+Option A (clean):
+
+Family includes 2 Event Passes per year, then discounted Event Passes after
+
+Option B (clean):
+
+Family waives Everleaf fees across all events up to a yearly cap
+
+Either is fine. The key is: Family should clearly supersede Event Pass needs for repeat households.
+
+Exact structure I recommend
+Free (default)
+
+Guests pay processing + Everleaf platform fee
+
+Host can optionally cover Everleaf platform fee per event (pay per gift)
+
+Event Pass ($99 per event)
+
+Waives Everleaf platform fee for that event up to a cap
+
+Guests still pay processing
+
+Unlocks premium event themes, thank-you automation, address capture, keepsake PDF
+
+Family ($199 per year per household)
+
+Covers multiple funds, multiple kids, multiple moments
+
+Recurring gift management
+
+Includes fee perks across events (cap) or includes passes
+
+How this maps to your IA
+Left nav (simple)
+
+Home
+
+Funds
+
+Moments (Events)
+
+Activity
+
+Learn
+
+Settings
+
+Settings tabs
+
+Profile
+
+Household
+
+Billing
+
+Notifications
+
+Security
+
+Billing shows:
+
+Family status
+
+Event Passes (purchased, active, expired)
+
+Fee settings defaults
+
+One more critical fix: “Moments” not “Registries”
+
+Use a term that allows:
+
+one fund
+
+many shareable pages
+
+many templates
+
+“Moment” works well:
+
+Bar Mitzvah Moment
+
+Birthday Moment
+
+Graduation Moment
+
+Each Moment:
+
+has a template
+
+has a link + QR
+
+routes to a fund
+
+has contributors and messages
+
+Summary
+
+Plus is not a plan. It is an Event Pass.
+
+Do not present it during onboarding.
+
+Sell it only inside event creation, share, and post-first-gift.
+
+Family is the only real subscription plan.
