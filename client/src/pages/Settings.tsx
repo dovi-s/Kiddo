@@ -203,23 +203,25 @@ function AccountTab() {
       </SettingsSection>
 
       <SettingsSection title="Household">
-        <AutoSaveSelect 
-          label="Your role" 
-          value="parent" 
-          options={[
-            { value: "parent", label: "Parent / Guardian" },
-            { value: "adult", label: "Adult recipient" },
-            { value: "contributor", label: "Contributor only" },
-          ]}
-        />
-        <LinkRow 
-          label="Manage children" 
-          description="Add or edit children in your household"
-          onClick={() => toast({ 
-            title: "Manage children", 
-            description: "Go to Dashboard and click 'Add Fund' to add a new child, or tap a fund to edit" 
-          })}
-        />
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <p className="text-sm font-medium text-stone-900">Your role</p>
+            <p className="text-xs text-stone-500 mt-0.5">Based on your account setup</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users size={14} className="text-stone-400" />
+            <span className="text-sm font-medium text-stone-700">Parent / Guardian</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between py-2 border-t border-stone-100">
+          <div>
+            <p className="text-sm font-medium text-stone-900">Children</p>
+            <p className="text-xs text-stone-500 mt-0.5">Mila (fund active)</p>
+          </div>
+          <Link href="/dashboard">
+            <button className="text-sm text-stone-600 hover:text-stone-900 font-medium">Manage</button>
+          </Link>
+        </div>
       </SettingsSection>
 
       <SettingsSection title="Account">
