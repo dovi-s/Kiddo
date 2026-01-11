@@ -49,6 +49,7 @@ export default function Dashboard() {
   const [snoozedThankYous, setSnoozedThankYous] = useState<string[]>([]);
   const [expandedThankYou, setExpandedThankYou] = useState<string | null>(null);
   const [thankYouDrafts, setThankYouDrafts] = useState<Record<string, string>>({});
+  const [showContributors, setShowContributors] = useState(false);
   
   const isNewAccount = params.get("new") === "true";
   
@@ -165,11 +166,43 @@ export default function Dashboard() {
     { name: "Cash", allocation: "15%", value: 637 },
   ];
 
-  const recentActivity = [
-    { id: "gift_1", from: "Dave Chen", amount: 180, event: "5th Birthday", time: "2 hours ago", note: "So proud of you", status: "pending" as const },
-    { id: "gift_2", from: "Ruth Stein", amount: 500, event: "Open anytime", time: "Yesterday", note: "With love", status: "invested" as const },
-    { id: "gift_3", from: "Michael Park", amount: 100, event: "Open anytime", time: "3 days ago", note: null, status: "invested" as const },
+  const allContributions = [
+    { id: "gift_1", from: "Dave Chen", email: "dave@example.com", amount: 180, event: "5th Birthday", date: new Date(Date.now() - 2 * 60 * 60 * 1000), note: "So proud of you", status: "pending" as const },
+    { id: "gift_2", from: "Ruth Stein", email: "ruth@example.com", amount: 500, event: "Open anytime", date: new Date(Date.now() - 24 * 60 * 60 * 1000), note: "With love", status: "invested" as const },
+    { id: "gift_3", from: "Michael Park", email: "michael@example.com", amount: 100, event: "Open anytime", date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), note: null, status: "invested" as const },
+    { id: "gift_4", from: "Sarah Johnson", email: "sarah@example.com", amount: 250, event: "5th Birthday", date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), note: "Happy birthday sweetie!", status: "invested" as const },
+    { id: "gift_5", from: "The Goldbergs", email: "goldberg@example.com", amount: 100, event: "5th Birthday", date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), note: "Wishing you the best!", status: "invested" as const },
+    { id: "gift_6", from: "Uncle James", email: "james@example.com", amount: 300, event: "Open anytime", date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), note: "For your future", status: "invested" as const },
+    { id: "gift_7", from: "Aunt Lisa", email: "lisa@example.com", amount: 75, event: "Kindergarten", date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), note: "Can't wait to see all you accomplish!", status: "invested" as const },
+    { id: "gift_8", from: "The Cohens", email: "cohens@example.com", amount: 200, event: "Open anytime", date: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000), note: "Here's to many more milestones!", status: "invested" as const },
+    { id: "gift_9", from: "Grandma Helen", email: "helen@example.com", amount: 500, event: "5th Birthday", date: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000), note: "My beautiful grandchild", status: "invested" as const },
+    { id: "gift_10", from: "Mom & Dad", email: "parents@example.com", amount: 1000, event: "Open anytime", date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), note: "Starting your journey", status: "invested" as const },
+    { id: "gift_11", from: "Cousin Jake", email: "jake@example.com", amount: 50, event: "5th Birthday", date: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000), note: null, status: "invested" as const },
+    { id: "gift_12", from: "The Petersons", email: "petersons@example.com", amount: 150, event: "Open anytime", date: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000), note: "Best wishes!", status: "invested" as const },
+    { id: "gift_13", from: "Nana", email: "nana@example.com", amount: 250, event: "Kindergarten", date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), note: "So proud of you", status: "invested" as const },
+    { id: "gift_14", from: "Friend from work", email: "work@example.com", amount: 100, event: "Open anytime", date: new Date(Date.now() - 50 * 24 * 60 * 60 * 1000), note: "Congratulations!", status: "invested" as const },
+    { id: "gift_15", from: "The Smiths", email: "smiths@example.com", amount: 75, event: "5th Birthday", date: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000), note: null, status: "invested" as const },
+    { id: "gift_16", from: "Grandpa Joe", email: "joe@example.com", amount: 400, event: "Open anytime", date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), note: "For your college fund", status: "invested" as const },
+    { id: "gift_17", from: "Aunt Maya", email: "maya@example.com", amount: 125, event: "Kindergarten", date: new Date(Date.now() - 65 * 24 * 60 * 60 * 1000), note: "Love you!", status: "invested" as const },
+    { id: "gift_18", from: "Family Friends", email: "friends@example.com", amount: 200, event: "Open anytime", date: new Date(Date.now() - 70 * 24 * 60 * 60 * 1000), note: "Wishing you the best future", status: "invested" as const },
   ];
+
+  const recentActivity = allContributions.slice(0, 3).map(c => ({
+    ...c,
+    time: c.date.getTime() > Date.now() - 3 * 60 * 60 * 1000 
+      ? `${Math.round((Date.now() - c.date.getTime()) / (60 * 60 * 1000))} hours ago`
+      : c.date.getTime() > Date.now() - 24 * 60 * 60 * 1000
+        ? "Yesterday"
+        : `${Math.round((Date.now() - c.date.getTime()) / (24 * 60 * 60 * 1000))} days ago`
+  }));
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
 
   const getDefaultThankYou = (item: typeof recentActivity[0]) => {
     const firstName = item.from.split(" ")[0];
@@ -493,7 +526,13 @@ export default function Dashboard() {
                                 <p className="text-sm text-stone-500">
                                   <span className="text-stone-400">Projection:</span> {isPersonal ? "In 20 years" : `When ${fund.name} turns 18`}: <span className="font-medium text-stone-900">${fund.projection.toLocaleString()}</span>
                                 </p>
-                                <p className="text-xs text-stone-400">{fund.contributors} contributors</p>
+                                <button 
+                                  onClick={() => setShowContributors(true)}
+                                  className="text-xs text-stone-400 hover:text-stone-600 hover:underline transition-colors"
+                                  data-testid="button-view-contributors"
+                                >
+                                  {fund.contributors} contributors →
+                                </button>
                                 <p className="text-[10px] text-stone-300 mt-1">Assumes 7% annual return. Not guaranteed.</p>
                               </div>
                               <div className="flex gap-1">
@@ -1195,6 +1234,62 @@ export default function Dashboard() {
                 setExpandedThankYou(null);
               }}
               data-testid="button-close-thankyous"
+              className="w-full py-2.5 bg-stone-100 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-200 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Contributors Ledger Modal */}
+      <Dialog open={showContributors} onOpenChange={setShowContributors}>
+        <DialogContent className="max-w-lg bg-white p-0 gap-0 max-h-[85vh] flex flex-col">
+          <div className="p-5 border-b border-stone-100 shrink-0">
+            <DialogTitle className="font-medium text-stone-900">All Contributors</DialogTitle>
+            <p className="text-sm text-stone-500 mt-1">
+              {allContributions.length} gifts totaling ${allContributions.reduce((sum, c) => sum + c.amount, 0).toLocaleString()}
+            </p>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto">
+            {allContributions.map((contribution) => (
+              <div 
+                key={contribution.id} 
+                className="p-4 border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-stone-900">{contribution.from}</p>
+                      {contribution.status === "pending" ? (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
+                          <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
+                          Pending
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
+                          Invested
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-stone-500 mt-0.5">
+                      {contribution.event} • {formatDate(contribution.date)} at {formatTime(contribution.date)}
+                    </p>
+                    {contribution.note && (
+                      <p className="text-sm text-stone-400 mt-1 italic">"{contribution.note}"</p>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-stone-900 shrink-0">+${contribution.amount}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-5 border-t border-stone-100 shrink-0">
+            <button 
+              onClick={() => setShowContributors(false)}
+              data-testid="button-close-contributors"
               className="w-full py-2.5 bg-stone-100 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-200 transition-colors"
             >
               Done
