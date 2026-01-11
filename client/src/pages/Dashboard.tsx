@@ -122,10 +122,26 @@ export default function Dashboard() {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <span className="text-sm font-medium tracking-tight text-stone-900">Everleaf</span>
+          <div className="flex items-center gap-3">
+            <Link href="/">
+              <span className="text-sm font-medium tracking-tight text-stone-900">Everleaf</span>
+            </Link>
+            {funds.length > 1 && (
+              <select 
+                value={selectedFundSlug}
+                onChange={(e) => setSelectedFundSlug(e.target.value)}
+                className="text-sm text-stone-600 bg-transparent border-0 cursor-pointer hover:text-stone-900 transition-colors focus:outline-none focus:ring-0"
+                data-testid="select-fund-switcher"
+              >
+                {funds.map(f => (
+                  <option key={f.slug} value={f.slug}>{f.name}'s Fund</option>
+                ))}
+              </select>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <Link href="/send">
-              <span className="text-sm text-stone-500 hover:text-stone-900 transition-colors" data-testid="link-send">Send stock</span>
+              <span className="text-sm text-stone-500 hover:text-stone-900 transition-colors" data-testid="link-send">Send a gift</span>
             </Link>
             <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
               <span className="text-sm text-stone-500 hover:text-stone-900 transition-colors" data-testid="link-settings">Settings</span>
@@ -168,15 +184,18 @@ export default function Dashboard() {
               data-testid="button-portfolio"
               className="w-full mb-8 lg:mb-10 text-left group"
             >
-              <div className="flex h-2 lg:h-2.5 rounded-full overflow-hidden mb-3 bg-stone-200">
-                <div className="bg-stone-900 transition-all group-hover:opacity-90" style={{ width: "50%" }} />
-                <div className="bg-stone-600" style={{ width: "20%" }} />
-                <div className="bg-stone-400" style={{ width: "15%" }} />
-                <div className="bg-stone-300" style={{ width: "15%" }} />
+              <div className="flex h-2 lg:h-2.5 rounded-full overflow-hidden mb-2 bg-stone-200">
+                <div className="bg-stone-900 transition-all group-hover:opacity-90" style={{ width: "50%" }} title="Stocks 50%" />
+                <div className="bg-stone-600" style={{ width: "20%" }} title="International 20%" />
+                <div className="bg-stone-400" style={{ width: "15%" }} title="Bonds 15%" />
+                <div className="bg-stone-300" style={{ width: "15%" }} title="Cash 15%" />
               </div>
-              <p className="text-xs text-stone-400 group-hover:text-stone-600 transition-colors">
-                Where it's invested →
-              </p>
+              <div className="flex gap-4 text-xs text-stone-400 group-hover:text-stone-500 transition-colors">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-900"></span>Stocks</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-600"></span>Int'l</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-400"></span>Bonds</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-300"></span>Cash</span>
+              </div>
             </motion.button>
 
             {/* Share - Mobile only */}
@@ -274,9 +293,10 @@ export default function Dashboard() {
                             <div className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-100 gap-3">
                               <div>
                                 <p className="text-sm text-stone-500">
-                                  {isPersonal ? "In 20 years" : `When ${fund.name} turns 18`}: <span className="font-medium text-stone-900">${fund.projection.toLocaleString()}</span>
+                                  <span className="text-stone-400">Projection:</span> {isPersonal ? "In 20 years" : `When ${fund.name} turns 18`}: <span className="font-medium text-stone-900">${fund.projection.toLocaleString()}</span>
                                 </p>
                                 <p className="text-xs text-stone-400">{fund.contributors} contributors</p>
+                                <p className="text-[10px] text-stone-300 mt-1">Assumes 7% annual return. Not guaranteed.</p>
                               </div>
                               <div className="flex gap-1">
                                 <button 
@@ -477,20 +497,34 @@ export default function Dashboard() {
               >
                 <p className="text-sm font-medium text-stone-900 mb-4">Quick actions</p>
                 <div className="space-y-2">
-                  <Link href="/send" className="block">
-                    <button 
-                      data-testid="button-send-stock"
-                      className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3"
-                    >
-                      Send stock to someone
-                    </button>
-                  </Link>
+                  <button 
+                    onClick={handleCopyClick}
+                    data-testid="button-quick-share"
+                    className="w-full py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors text-left px-3"
+                  >
+                    Share link
+                  </button>
                   <Link href="/moment/create" className="block">
                     <button 
                       data-testid="button-new-event"
                       className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3"
                     >
-                      Create new event
+                      Create event page
+                    </button>
+                  </Link>
+                  <button 
+                    data-testid="button-thank-yous"
+                    className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3 flex items-center justify-between"
+                  >
+                    <span>Send thank-yous</span>
+                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">3 pending</span>
+                  </button>
+                  <Link href="/send" className="block">
+                    <button 
+                      data-testid="button-send-gift"
+                      className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-400 hover:text-stone-700 hover:bg-stone-50 transition-colors text-left px-3"
+                    >
+                      Send a gift
                     </button>
                   </Link>
                 </div>
