@@ -50,9 +50,27 @@ export default function Recipient() {
   const nextMilestone = milestones.find(m => !m.reached);
 
   const whatChanged = [
-    { type: "growth", message: "Your fund grew because the market moved up", time: "Today" },
-    { type: "gift", message: "Uncle Dave added to your fund", time: "2 days ago", amount: 180 },
-    { type: "dividend", message: "Disney paid a dividend", time: "1 week ago" },
+    { 
+      type: "growth", 
+      message: "Time gave your fund a boost today", 
+      detail: "Staying invested let it grow without any new gifts. That's compounding at work.",
+      time: "Today",
+      amount: 47
+    },
+    { 
+      type: "gift", 
+      message: "Uncle Dave moved you closer to your next milestone", 
+      detail: "People fuel the fund. Time makes it grow.",
+      time: "2 days ago", 
+      amount: 180 
+    },
+    { 
+      type: "dividend", 
+      message: "Disney shared some of their profits with you", 
+      detail: "When you own a piece of a company, you sometimes get a share of what they earn. These little drops add up.",
+      time: "1 week ago",
+      amount: 3
+    },
   ];
 
   const messages = [
@@ -184,16 +202,17 @@ export default function Recipient() {
               {/* What Changed */}
               <div>
                 <h2 className="text-sm font-medium text-stone-900 mb-3">What changed</h2>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {whatChanged.map((item, i) => (
-                    <div key={i} className="p-3 rounded-lg bg-white border border-stone-200">
-                      <div className="flex items-start justify-between">
-                        <p className="text-sm text-stone-700">{item.message}</p>
+                    <div key={i} className="p-4 rounded-xl bg-white border border-stone-200">
+                      <div className="flex items-start justify-between mb-1">
+                        <p className="text-sm font-medium text-stone-900">{item.message}</p>
                         {item.amount && (
-                          <span className="text-xs text-emerald-600 font-medium shrink-0 ml-2">+${item.amount}</span>
+                          <span className="text-xs text-emerald-600 font-medium shrink-0 ml-2 bg-emerald-50 px-2 py-0.5 rounded-full">+${item.amount}</span>
                         )}
                       </div>
-                      <p className="text-xs text-stone-400 mt-1">{item.time}</p>
+                      <p className="text-xs text-stone-500 leading-relaxed mb-2">{item.detail}</p>
+                      <p className="text-[10px] text-stone-400">{item.time}</p>
                     </div>
                   ))}
                 </div>
