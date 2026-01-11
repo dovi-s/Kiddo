@@ -13,6 +13,7 @@ export default function Onboard() {
   const accountType = params.get("type") || "child";
   const profileName = params.get("name") || "Mila";
   const email = params.get("email") || "you@example.com";
+  const childrenParam = params.get("children") || "";
   const isPersonal = accountType === "personal";
 
   const totalSteps = isPersonal ? 2 : 3;
@@ -24,7 +25,8 @@ export default function Onboard() {
     if (step === totalSteps - 1) {
       setIsSubmitting(true);
       setTimeout(() => {
-        setLocation(`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName)}`);
+        const childrenQuery = childrenParam ? `&children=${encodeURIComponent(childrenParam)}` : "";
+        setLocation(`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName)}${childrenQuery}`);
       }, 1500);
     } else {
       setStep(step + 1);

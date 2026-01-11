@@ -29,48 +29,77 @@ export default function Dashboard() {
   const params = new URLSearchParams(search);
   const accountType = params.get("type") || "child";
   const profileName = decodeURIComponent(params.get("name") || "Mila");
+  const childrenParam = params.get("children");
   const isPersonal = accountType === "personal";
 
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
-  const [expandedFund, setExpandedFund] = useState<number | null>(0);
+  const [expandedFund, setExpandedFund] = useState<number | null>(1);
   const [showPortfolio, setShowPortfolio] = useState(false);
   const [showEditFund, setShowEditFund] = useState(false);
   const [showEditEvent, setShowEditEvent] = useState<number | null>(null);
   const [showPageQR, setShowPageQR] = useState<string | null>(null);
+  const [showAddChild, setShowAddChild] = useState(false);
   
   const [fundName, setFundName] = useState(profileName);
   const [fundSlugEdit, setFundSlugEdit] = useState(profileName.toLowerCase().replace(/\s+/g, "-"));
   const [eventEdits, setEventEdits] = useState<Record<number, { title: string; slug: string }>>({});
+  const [selectedFundSlug, setSelectedFundSlug] = useState(profileName.toLowerCase().replace(/\s+/g, "-"));
 
-  const fundSlug = fundSlugEdit;
+  const fundSlug = selectedFundSlug;
   const momentLink = `everleaf.com/${fundSlug}`;
 
-  const handleCopy = () => {
-    navigator.clipboard?.writeText(`https://${momentLink}`);
+  const handleCopy = (link?: string) => {
+    navigator.clipboard?.writeText(`https://${link || momentLink}`);
     setCopied(true);
     toast({ title: "Link copied" });
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const funds = [
+  const handleCopyClick = () => handleCopy();
+
+  const childNames = childrenParam ? decodeURIComponent(childrenParam).split(",") : [profileName];
+  
+  const funds = isPersonal ? [
     {
       id: 1,
-      name: fundName,
-      accountType: isPersonal ? "Individual" : "UTMA",
+      name: profileName,
+      slug: profileName.toLowerCase().replace(/\s+/g, "-"),
+      accountType: "Individual",
       balance: 4250,
       gain: 472,
       gainPercent: 12.5,
       contributors: 18,
       projection: 28400,
-      yearsLeft: 14,
+      yearsLeft: 20,
       events: [
         { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
-        { id: 2, slug: isPersonal ? "30th-birthday" : "5th-birthday", title: isPersonal ? "30th Birthday" : "5th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
-        { id: 3, slug: isPersonal ? "mba-graduation" : "kindergarten-graduation", title: isPersonal ? "MBA Graduation" : "Kindergarten", raised: 650, gifts: 4, date: "May 2026", active: true },
+        { id: 2, slug: "30th-birthday", title: "30th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
+        { id: 3, slug: "mba-graduation", title: "MBA Graduation", raised: 650, gifts: 4, date: "May 2026", active: true },
       ]
     },
-  ];
+  ] : childNames.map((name, index) => ({
+    id: index + 1,
+    name: name.trim(),
+    slug: name.trim().toLowerCase().replace(/\s+/g, "-"),
+    accountType: "UTMA",
+    balance: index === 0 ? 4250 : index === 1 ? 1820 : 650,
+    gain: index === 0 ? 472 : index === 1 ? 156 : 42,
+    gainPercent: index === 0 ? 12.5 : index === 1 ? 9.4 : 6.9,
+    contributors: index === 0 ? 18 : index === 1 ? 8 : 3,
+    projection: index === 0 ? 28400 : index === 1 ? 12200 : 4350,
+    yearsLeft: index === 0 ? 14 : index === 1 ? 16 : 17,
+    events: index === 0 ? [
+      { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
+      { id: 2, slug: "5th-birthday", title: "5th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
+      { id: 3, slug: "kindergarten-graduation", title: "Kindergarten", raised: 650, gifts: 4, date: "May 2026", active: true },
+    ] : index === 1 ? [
+      { id: 4, slug: "anytime", title: "Open anytime", raised: 1200, gifts: 6, active: true },
+      { id: 5, slug: "3rd-birthday", title: "3rd Birthday", raised: 620, gifts: 4, date: "Mar 2025", active: true },
+    ] : [
+      { id: 6, slug: "anytime", title: "Open anytime", raised: 650, gifts: 3, active: true },
+    ]
+  }));
 
   const totalBalance = funds.reduce((sum, f) => sum + f.balance, 0);
   const totalGain = funds.reduce((sum, f) => sum + f.gain, 0);
@@ -172,7 +201,7 @@ export default function Dashboard() {
                   {momentLink}
                 </div>
                 <button 
-                  onClick={handleCopy}
+                  onClick={handleCopyClick}
                   data-testid="button-copy-mobile"
                   className="px-4 py-2 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors"
                 >
@@ -200,7 +229,10 @@ export default function Dashboard() {
                   
                   <div className="border border-stone-200 rounded-lg bg-white overflow-hidden">
                     <button
-                      onClick={() => setExpandedFund(expandedFund === fund.id ? null : fund.id)}
+                      onClick={() => {
+                        setExpandedFund(expandedFund === fund.id ? null : fund.id);
+                        setSelectedFundSlug(fund.slug);
+                      }}
                       data-testid={`button-expand-fund-${fund.id}`}
                       className="w-full p-4 sm:p-5 flex items-center gap-4 text-left hover:bg-stone-50 transition-colors group"
                     >
@@ -220,7 +252,7 @@ export default function Dashboard() {
                             {fund.accountType}
                           </span>
                         </div>
-                        <p className="text-xs text-stone-400 truncate">everleaf.com/{fundSlug}</p>
+                        <p className="text-xs text-stone-400 truncate">everleaf.com/{fund.slug}</p>
                       </div>
                       <div className="text-right shrink-0">
                         <p className="text-lg font-medium text-stone-900">${fund.balance.toLocaleString()}</p>
@@ -256,7 +288,7 @@ export default function Dashboard() {
                                   <Pencil size={14} />
                                 </button>
                                 <button 
-                                  onClick={handleCopy}
+                                  onClick={handleCopyClick}
                                   data-testid="button-copy-link"
                                   className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
                                   title="Copy link"
@@ -419,7 +451,7 @@ export default function Dashboard() {
                   </div>
                   <div className="flex gap-2">
                     <button 
-                      onClick={handleCopy}
+                      onClick={handleCopyClick}
                       data-testid="button-copy-desktop"
                       className="flex-1 py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors"
                     >

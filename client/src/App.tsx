@@ -18,11 +18,13 @@ import FundPage from "@/pages/FundPage";
 import EventPage from "@/pages/EventPage";
 import PageEditor from "@/pages/PageEditor";
 import Claim from "@/pages/Claim";
+import GetStarted from "@/pages/GetStarted";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/get-started" component={GetStarted} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/create" component={Create} />
       <Route path="/give" component={Give} />
