@@ -502,6 +502,21 @@ export default function Dashboard() {
                           <span className="text-[10px] font-medium text-stone-400 uppercase tracking-wider px-1.5 py-0.5 bg-stone-100 rounded">
                             {fund.accountType}
                           </span>
+                          {fund.status === "active" ? (
+                            <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              Connected
+                            </span>
+                          ) : fund.status === "draft" ? (
+                            <span className="text-[10px] font-medium text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded">
+                              Not activated
+                            </span>
+                          ) : fund.status === "pending" ? (
+                            <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                              Verifying
+                            </span>
+                          ) : null}
                         </div>
                         <p className="text-xs text-stone-400 truncate">kora.com/{fund.slug}</p>
                       </div>
@@ -522,8 +537,33 @@ export default function Dashboard() {
                         >
                           <div className="border-t border-stone-100">
                             
+                            {fund.status === "draft" && (
+                              <div className="px-4 sm:px-5 py-4 bg-amber-50 border-b border-amber-100">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-medium text-amber-800">Activate investing to start growing gifts</p>
+                                    <p className="text-xs text-amber-600 mt-0.5">Contributors can pledge now — funds invest once activated</p>
+                                  </div>
+                                  <Link href="/activate">
+                                    <button 
+                                      data-testid="button-activate-fund"
+                                      className="px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-800 transition-colors whitespace-nowrap"
+                                    >
+                                      Activate investing
+                                    </button>
+                                  </Link>
+                                </div>
+                              </div>
+                            )}
+                            
                             <div className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-100 gap-3">
                               <div>
+                                {fund.status === "active" && (
+                                  <p className="text-xs text-emerald-600 mb-1 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    Connected to Alpaca Securities · <button className="underline hover:no-underline">Account settings</button>
+                                  </p>
+                                )}
                                 <p className="text-sm text-stone-500">
                                   <span className="text-stone-400">Projection:</span> {isPersonal ? "In 20 years" : `When ${fund.name} turns 18`}: <span className="font-medium text-stone-900">${fund.projection.toLocaleString()}</span>
                                 </p>
