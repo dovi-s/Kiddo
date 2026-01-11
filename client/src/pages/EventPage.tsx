@@ -1,16 +1,146 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useParams } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { Search, X, TrendingUp, DollarSign, Sparkles } from "lucide-react";
 
 const AMOUNTS = [25, 50, 100, 250];
 
-const STOCK_OPTIONS = [
-  { id: "fund", name: "Fund's strategy", description: "Diversified portfolio", icon: "📊" },
-  { id: "VTI", name: "Total US Market", description: "VTI · 4,000+ companies", icon: "🇺🇸" },
-  { id: "DIS", name: "Disney", description: "DIS · Entertainment", icon: "🏰" },
-  { id: "AAPL", name: "Apple", description: "AAPL · Technology", icon: "🍎" },
-  { id: "MSFT", name: "Microsoft", description: "MSFT · Technology", icon: "💻" },
-  { id: "GOOGL", name: "Google", description: "GOOGL · Technology", icon: "🔍" },
+interface StockOption {
+  id: string;
+  symbol: string;
+  name: string;
+  price: number;
+  change: number;
+  sector?: string;
+  popular?: boolean;
+}
+
+const STOCK_DATABASE: StockOption[] = [
+  // Popular / Featured
+  { id: "VTI", symbol: "VTI", name: "Total US Market", price: 268.45, change: 0.42, sector: "Index", popular: true },
+  { id: "VOO", symbol: "VOO", name: "S&P 500", price: 489.12, change: 0.38, sector: "Index", popular: true },
+  { id: "AAPL", symbol: "AAPL", name: "Apple", price: 178.50, change: 1.24, sector: "Technology", popular: true },
+  { id: "MSFT", symbol: "MSFT", name: "Microsoft", price: 425.22, change: 0.89, sector: "Technology", popular: true },
+  { id: "GOOGL", symbol: "GOOGL", name: "Alphabet", price: 175.98, change: -0.32, sector: "Technology", popular: true },
+  { id: "AMZN", symbol: "AMZN", name: "Amazon", price: 185.60, change: 1.15, sector: "Consumer", popular: true },
+  { id: "DIS", symbol: "DIS", name: "Disney", price: 112.45, change: 0.67, sector: "Entertainment", popular: true },
+  { id: "TSLA", symbol: "TSLA", name: "Tesla", price: 248.50, change: -1.82, sector: "Automotive", popular: true },
+  // Technology
+  { id: "NFLX", symbol: "NFLX", name: "Netflix", price: 628.90, change: 2.14, sector: "Entertainment" },
+  { id: "NVDA", symbol: "NVDA", name: "NVIDIA", price: 875.28, change: 3.45, sector: "Technology" },
+  { id: "META", symbol: "META", name: "Meta", price: 505.75, change: 1.28, sector: "Technology" },
+  { id: "AMD", symbol: "AMD", name: "Advanced Micro Devices", price: 156.82, change: 2.15, sector: "Technology" },
+  { id: "INTC", symbol: "INTC", name: "Intel", price: 31.45, change: -0.85, sector: "Technology" },
+  { id: "CRM", symbol: "CRM", name: "Salesforce", price: 268.90, change: 0.92, sector: "Technology" },
+  { id: "ORCL", symbol: "ORCL", name: "Oracle", price: 142.35, change: 0.45, sector: "Technology" },
+  { id: "ADBE", symbol: "ADBE", name: "Adobe", price: 485.60, change: 1.35, sector: "Technology" },
+  { id: "CSCO", symbol: "CSCO", name: "Cisco Systems", price: 48.72, change: 0.28, sector: "Technology" },
+  { id: "IBM", symbol: "IBM", name: "IBM", price: 168.45, change: 0.65, sector: "Technology" },
+  { id: "PYPL", symbol: "PYPL", name: "PayPal", price: 62.85, change: -1.25, sector: "Technology" },
+  { id: "SQ", symbol: "SQ", name: "Block (Square)", price: 72.40, change: 1.85, sector: "Technology" },
+  { id: "SHOP", symbol: "SHOP", name: "Shopify", price: 68.95, change: 2.45, sector: "Technology" },
+  { id: "SPOT", symbol: "SPOT", name: "Spotify", price: 315.20, change: 1.68, sector: "Technology" },
+  { id: "UBER", symbol: "UBER", name: "Uber", price: 78.45, change: 0.95, sector: "Technology" },
+  { id: "LYFT", symbol: "LYFT", name: "Lyft", price: 12.85, change: -0.45, sector: "Technology" },
+  { id: "ABNB", symbol: "ABNB", name: "Airbnb", price: 142.60, change: 1.25, sector: "Technology" },
+  { id: "SNOW", symbol: "SNOW", name: "Snowflake", price: 158.90, change: 2.85, sector: "Technology" },
+  { id: "PLTR", symbol: "PLTR", name: "Palantir", price: 22.45, change: 3.25, sector: "Technology" },
+  { id: "ZM", symbol: "ZM", name: "Zoom Video", price: 68.25, change: -0.65, sector: "Technology" },
+  { id: "DOCU", symbol: "DOCU", name: "DocuSign", price: 58.90, change: 0.45, sector: "Technology" },
+  // Finance
+  { id: "JPM", symbol: "JPM", name: "JPMorgan Chase", price: 198.45, change: 0.56, sector: "Finance" },
+  { id: "BAC", symbol: "BAC", name: "Bank of America", price: 38.92, change: 0.42, sector: "Finance" },
+  { id: "WFC", symbol: "WFC", name: "Wells Fargo", price: 58.45, change: 0.35, sector: "Finance" },
+  { id: "GS", symbol: "GS", name: "Goldman Sachs", price: 458.75, change: 0.85, sector: "Finance" },
+  { id: "MS", symbol: "MS", name: "Morgan Stanley", price: 98.65, change: 0.65, sector: "Finance" },
+  { id: "V", symbol: "V", name: "Visa", price: 285.40, change: 0.48, sector: "Finance" },
+  { id: "MA", symbol: "MA", name: "Mastercard", price: 468.90, change: 0.55, sector: "Finance" },
+  { id: "AXP", symbol: "AXP", name: "American Express", price: 235.80, change: 0.72, sector: "Finance" },
+  { id: "BRK.B", symbol: "BRK.B", name: "Berkshire Hathaway", price: 412.50, change: 0.28, sector: "Finance" },
+  { id: "C", symbol: "C", name: "Citigroup", price: 62.45, change: 0.45, sector: "Finance" },
+  // Healthcare
+  { id: "JNJ", symbol: "JNJ", name: "Johnson & Johnson", price: 156.20, change: -0.18, sector: "Healthcare" },
+  { id: "UNH", symbol: "UNH", name: "UnitedHealth", price: 528.45, change: 0.65, sector: "Healthcare" },
+  { id: "PFE", symbol: "PFE", name: "Pfizer", price: 28.65, change: -0.35, sector: "Healthcare" },
+  { id: "MRK", symbol: "MRK", name: "Merck", price: 125.80, change: 0.42, sector: "Healthcare" },
+  { id: "ABBV", symbol: "ABBV", name: "AbbVie", price: 178.90, change: 0.55, sector: "Healthcare" },
+  { id: "LLY", symbol: "LLY", name: "Eli Lilly", price: 785.45, change: 2.15, sector: "Healthcare" },
+  { id: "TMO", symbol: "TMO", name: "Thermo Fisher", price: 545.20, change: 0.85, sector: "Healthcare" },
+  { id: "ABT", symbol: "ABT", name: "Abbott Labs", price: 108.65, change: 0.35, sector: "Healthcare" },
+  { id: "DHR", symbol: "DHR", name: "Danaher", price: 248.90, change: 0.65, sector: "Healthcare" },
+  { id: "BMY", symbol: "BMY", name: "Bristol-Myers Squibb", price: 42.85, change: -0.25, sector: "Healthcare" },
+  // Consumer
+  { id: "KO", symbol: "KO", name: "Coca-Cola", price: 62.45, change: 0.22, sector: "Consumer" },
+  { id: "PEP", symbol: "PEP", name: "PepsiCo", price: 168.90, change: 0.35, sector: "Consumer" },
+  { id: "NKE", symbol: "NKE", name: "Nike", price: 98.75, change: -0.45, sector: "Consumer" },
+  { id: "SBUX", symbol: "SBUX", name: "Starbucks", price: 95.80, change: 0.34, sector: "Consumer" },
+  { id: "MCD", symbol: "MCD", name: "McDonald's", price: 285.45, change: 0.42, sector: "Consumer" },
+  { id: "WMT", symbol: "WMT", name: "Walmart", price: 168.25, change: 0.55, sector: "Consumer" },
+  { id: "TGT", symbol: "TGT", name: "Target", price: 142.80, change: -0.65, sector: "Consumer" },
+  { id: "COST", symbol: "COST", name: "Costco", price: 745.90, change: 0.85, sector: "Consumer" },
+  { id: "HD", symbol: "HD", name: "Home Depot", price: 358.45, change: 0.45, sector: "Consumer" },
+  { id: "LOW", symbol: "LOW", name: "Lowe's", price: 228.90, change: 0.55, sector: "Consumer" },
+  { id: "PG", symbol: "PG", name: "Procter & Gamble", price: 165.80, change: 0.28, sector: "Consumer" },
+  { id: "CL", symbol: "CL", name: "Colgate-Palmolive", price: 92.45, change: 0.18, sector: "Consumer" },
+  // Energy
+  { id: "XOM", symbol: "XOM", name: "Exxon Mobil", price: 108.45, change: -0.85, sector: "Energy" },
+  { id: "CVX", symbol: "CVX", name: "Chevron", price: 158.90, change: -0.65, sector: "Energy" },
+  { id: "COP", symbol: "COP", name: "ConocoPhillips", price: 115.25, change: -0.45, sector: "Energy" },
+  { id: "SLB", symbol: "SLB", name: "Schlumberger", price: 48.65, change: -0.35, sector: "Energy" },
+  // Industrial
+  { id: "BA", symbol: "BA", name: "Boeing", price: 185.45, change: 1.25, sector: "Industrial" },
+  { id: "CAT", symbol: "CAT", name: "Caterpillar", price: 358.90, change: 0.85, sector: "Industrial" },
+  { id: "GE", symbol: "GE", name: "General Electric", price: 168.45, change: 0.65, sector: "Industrial" },
+  { id: "HON", symbol: "HON", name: "Honeywell", price: 198.75, change: 0.45, sector: "Industrial" },
+  { id: "UPS", symbol: "UPS", name: "United Parcel Service", price: 142.85, change: 0.35, sector: "Industrial" },
+  { id: "FDX", symbol: "FDX", name: "FedEx", price: 268.90, change: 0.55, sector: "Industrial" },
+  // ETFs
+  { id: "QQQ", symbol: "QQQ", name: "Nasdaq 100 ETF", price: 445.80, change: 0.95, sector: "Index" },
+  { id: "SPY", symbol: "SPY", name: "S&P 500 ETF", price: 498.45, change: 0.42, sector: "Index" },
+  { id: "IWM", symbol: "IWM", name: "Russell 2000 ETF", price: 218.90, change: 0.65, sector: "Index" },
+  { id: "DIA", symbol: "DIA", name: "Dow Jones ETF", price: 398.45, change: 0.35, sector: "Index" },
+  { id: "VGT", symbol: "VGT", name: "Vanguard Tech ETF", price: 528.90, change: 1.15, sector: "Index" },
+  { id: "XLF", symbol: "XLF", name: "Financial Select ETF", price: 42.85, change: 0.45, sector: "Index" },
+  { id: "XLE", symbol: "XLE", name: "Energy Select ETF", price: 88.45, change: -0.55, sector: "Index" },
+  { id: "XLV", symbol: "XLV", name: "Healthcare Select ETF", price: 142.65, change: 0.35, sector: "Index" },
+  { id: "ARKK", symbol: "ARKK", name: "ARK Innovation ETF", price: 48.90, change: 2.85, sector: "Index" },
+  { id: "VEA", symbol: "VEA", name: "Developed Markets ETF", price: 48.25, change: 0.25, sector: "Index" },
+  { id: "VWO", symbol: "VWO", name: "Emerging Markets ETF", price: 42.85, change: 0.45, sector: "Index" },
+  // Entertainment & Media
+  { id: "WBD", symbol: "WBD", name: "Warner Bros Discovery", price: 8.45, change: -1.25, sector: "Entertainment" },
+  { id: "PARA", symbol: "PARA", name: "Paramount Global", price: 12.85, change: -0.85, sector: "Entertainment" },
+  { id: "CMCSA", symbol: "CMCSA", name: "Comcast", price: 38.90, change: 0.35, sector: "Entertainment" },
+  { id: "T", symbol: "T", name: "AT&T", price: 18.45, change: 0.25, sector: "Telecom" },
+  { id: "VZ", symbol: "VZ", name: "Verizon", price: 42.85, change: 0.35, sector: "Telecom" },
+  { id: "TMUS", symbol: "TMUS", name: "T-Mobile", price: 168.90, change: 0.55, sector: "Telecom" },
+  // Gaming & Sports
+  { id: "EA", symbol: "EA", name: "Electronic Arts", price: 138.45, change: 0.65, sector: "Gaming" },
+  { id: "TTWO", symbol: "TTWO", name: "Take-Two Interactive", price: 158.90, change: 0.85, sector: "Gaming" },
+  { id: "RBLX", symbol: "RBLX", name: "Roblox", price: 42.85, change: 2.45, sector: "Gaming" },
+  { id: "DKNG", symbol: "DKNG", name: "DraftKings", price: 38.90, change: 1.85, sector: "Gaming" },
+  // Automotive
+  { id: "F", symbol: "F", name: "Ford", price: 12.45, change: 0.35, sector: "Automotive" },
+  { id: "GM", symbol: "GM", name: "General Motors", price: 38.90, change: 0.45, sector: "Automotive" },
+  { id: "RIVN", symbol: "RIVN", name: "Rivian", price: 18.45, change: -1.85, sector: "Automotive" },
+  { id: "LCID", symbol: "LCID", name: "Lucid Motors", price: 3.85, change: -2.45, sector: "Automotive" },
+  { id: "TM", symbol: "TM", name: "Toyota", price: 248.90, change: 0.45, sector: "Automotive" },
+  // Food & Beverage
+  { id: "MDLZ", symbol: "MDLZ", name: "Mondelez", price: 72.45, change: 0.25, sector: "Consumer" },
+  { id: "KHC", symbol: "KHC", name: "Kraft Heinz", price: 35.80, change: 0.15, sector: "Consumer" },
+  { id: "GIS", symbol: "GIS", name: "General Mills", price: 68.45, change: 0.22, sector: "Consumer" },
+  { id: "K", symbol: "K", name: "Kellogg's", price: 58.90, change: 0.18, sector: "Consumer" },
+  { id: "HSY", symbol: "HSY", name: "Hershey", price: 195.45, change: 0.35, sector: "Consumer" },
+  // Real Estate
+  { id: "AMT", symbol: "AMT", name: "American Tower", price: 198.45, change: 0.45, sector: "Real Estate" },
+  { id: "PLD", symbol: "PLD", name: "Prologis", price: 128.90, change: 0.55, sector: "Real Estate" },
+  { id: "SPG", symbol: "SPG", name: "Simon Property", price: 158.45, change: 0.65, sector: "Real Estate" },
+  // Crypto-related
+  { id: "COIN", symbol: "COIN", name: "Coinbase", price: 225.80, change: 4.85, sector: "Finance" },
+  { id: "MSTR", symbol: "MSTR", name: "MicroStrategy", price: 1685.45, change: 5.25, sector: "Technology" },
+  // Space & Defense
+  { id: "LMT", symbol: "LMT", name: "Lockheed Martin", price: 468.90, change: 0.45, sector: "Defense" },
+  { id: "RTX", symbol: "RTX", name: "RTX (Raytheon)", price: 98.45, change: 0.35, sector: "Defense" },
+  { id: "NOC", symbol: "NOC", name: "Northrop Grumman", price: 478.90, change: 0.55, sector: "Defense" },
 ];
 
 const getStoredPageData = (key: string) => {
@@ -53,13 +183,57 @@ export default function EventPage() {
   const [message, setMessage] = useState("");
   const [giverName, setGiverName] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedStock, setSelectedStock] = useState("fund");
   const [showStockPicker, setShowStockPicker] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deliveryType, setDeliveryType] = useState<"fund" | "stock" | "cash">("fund");
+  const [selectedStock, setSelectedStock] = useState<StockOption | null>(null);
 
   const finalAmount = customAmount ? parseInt(customAmount) || 0 : amount;
   const fee = Math.round(finalAmount * 0.029 * 100) / 100;
   const total = (finalAmount + fee).toFixed(2);
   const projectedGrowth = Math.round(finalAmount * 4.6);
+
+  const filteredStocks = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return STOCK_DATABASE.filter(s => s.popular);
+    }
+    const query = searchQuery.toLowerCase();
+    return STOCK_DATABASE.filter(s => 
+      s.symbol.toLowerCase().includes(query) || 
+      s.name.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
+
+  const shareQuantity = useMemo(() => {
+    if (deliveryType === "cash" || deliveryType === "fund" || !selectedStock || finalAmount <= 0) return null;
+    return (finalAmount / selectedStock.price).toFixed(4);
+  }, [deliveryType, selectedStock, finalAmount]);
+
+  const handleSelectStock = (stock: StockOption) => {
+    setSelectedStock(stock);
+    setDeliveryType("stock");
+    setShowStockPicker(false);
+    setSearchQuery("");
+  };
+
+  const handleSelectFund = () => {
+    setDeliveryType("fund");
+    setSelectedStock(null);
+    setShowStockPicker(false);
+  };
+
+  const handleSelectCash = () => {
+    setDeliveryType("cash");
+    setSelectedStock(null);
+    setShowStockPicker(false);
+  };
+
+  const getInvestmentLabel = () => {
+    if (deliveryType === "cash") return "Cash";
+    if (deliveryType === "fund") return "Fund's strategy";
+    if (selectedStock) return selectedStock.symbol;
+    return "Fund's strategy";
+  };
 
   const handleGive = () => {
     setIsProcessing(true);
@@ -296,67 +470,59 @@ export default function EventPage() {
                       </motion.div>
                     )}
 
-                    {/* Optional Stock Picker */}
+                    {/* Investment Choice - Premium Compact Display */}
                     <div className="mb-8">
                       <button
-                        onClick={() => setShowStockPicker(!showStockPicker)}
-                        data-testid="button-toggle-stock-picker"
-                        className="w-full flex items-center justify-between py-3 text-sm text-stone-500 hover:text-stone-700 transition-colors"
+                        onClick={() => setShowStockPicker(true)}
+                        data-testid="button-open-stock-picker"
+                        className="w-full p-4 bg-white border border-stone-200 rounded-xl hover:border-stone-300 transition-all group"
                       >
-                        <span className="flex items-center gap-2">
-                          <span>{STOCK_OPTIONS.find(s => s.id === selectedStock)?.icon}</span>
-                          <span>
-                            Investing in: <span className="text-stone-900 font-medium">{STOCK_OPTIONS.find(s => s.id === selectedStock)?.name}</span>
-                          </span>
-                        </span>
-                        <span className="text-xs text-stone-400">{showStockPicker ? "Hide" : "Change"}</span>
-                      </button>
-                      
-                      <AnimatePresence>
-                        {showStockPicker && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="pt-2 pb-4 space-y-2">
-                              {STOCK_OPTIONS.map((stock) => (
-                                <button
-                                  key={stock.id}
-                                  onClick={() => { setSelectedStock(stock.id); setShowStockPicker(false); }}
-                                  data-testid={`stock-option-${stock.id}`}
-                                  className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                                    selectedStock === stock.id
-                                      ? "border-stone-900 bg-stone-50"
-                                      : "border-stone-200 hover:border-stone-300 bg-white"
-                                  }`}
-                                >
-                                  <span className="text-xl">{stock.icon}</span>
-                                  <div className="text-left flex-1">
-                                    <p className={`text-sm font-medium ${selectedStock === stock.id ? "text-stone-900" : "text-stone-700"}`}>
-                                      {stock.name}
-                                    </p>
-                                    <p className="text-xs text-stone-400">{stock.description}</p>
-                                  </div>
-                                  {selectedStock === stock.id && (
-                                    <svg className="w-5 h-5 text-stone-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  )}
-                                  {stock.id === "fund" && selectedStock !== stock.id && (
-                                    <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">Default</span>
-                                  )}
-                                </button>
-                              ))}
-                              <p className="text-[10px] text-stone-400 text-center pt-2">
-                                All investments go to {recipientName}'s fund
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                              deliveryType === "cash" 
+                                ? "bg-emerald-50 text-emerald-600" 
+                                : deliveryType === "stock" 
+                                  ? "bg-stone-100 text-stone-700" 
+                                  : "bg-stone-900 text-stone-50"
+                            }`}>
+                              {deliveryType === "cash" ? (
+                                <DollarSign size={18} />
+                              ) : deliveryType === "stock" && selectedStock ? (
+                                <span className="text-xs font-semibold">{selectedStock.symbol.slice(0, 3)}</span>
+                              ) : (
+                                <TrendingUp size={18} />
+                              )}
+                            </div>
+                            <div className="text-left">
+                              <p className="text-sm font-medium text-stone-900">
+                                {deliveryType === "cash" 
+                                  ? "Hold as cash" 
+                                  : deliveryType === "stock" && selectedStock 
+                                    ? selectedStock.name 
+                                    : "Fund's strategy"}
+                              </p>
+                              <p className="text-xs text-stone-400">
+                                {deliveryType === "cash" 
+                                  ? "Family will invest when ready" 
+                                  : deliveryType === "stock" && selectedStock 
+                                    ? `${selectedStock.symbol} · $${selectedStock.price.toFixed(2)}` 
+                                    : "Diversified portfolio"}
                               </p>
                             </div>
-                          </motion.div>
+                          </div>
+                          <span className="text-xs text-stone-400 group-hover:text-stone-600 transition-colors">Change</span>
+                        </div>
+                        
+                        {/* Share calculation */}
+                        {deliveryType === "stock" && selectedStock && finalAmount > 0 && (
+                          <div className="mt-3 pt-3 border-t border-stone-100">
+                            <p className="text-xs text-stone-500">
+                              ${finalAmount} = <span className="font-medium text-stone-700">{shareQuantity} shares</span> at ${selectedStock.price.toFixed(2)}
+                            </p>
+                          </div>
                         )}
-                      </AnimatePresence>
+                      </button>
                     </div>
 
                     <button
@@ -527,6 +693,199 @@ export default function EventPage() {
           </div>
         </div>
       </main>
+
+      {/* Stock Picker Modal - Premium Full-Screen Overlay */}
+      <AnimatePresence>
+        {showStockPicker && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowStockPicker(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] overflow-hidden flex flex-col"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 border-b border-stone-100">
+                <h2 className="text-lg font-medium text-stone-900">Choose what this gift becomes</h2>
+                <button
+                  onClick={() => setShowStockPicker(false)}
+                  data-testid="button-close-stock-picker"
+                  className="p-2 -mr-2 text-stone-400 hover:text-stone-600 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="p-4 border-b border-stone-100">
+                <div className="relative">
+                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search 100+ popular stocks & ETFs..."
+                    data-testid="input-stock-search"
+                    className="w-full pl-11 pr-4 py-3 bg-stone-50 border-0 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200"
+                  />
+                </div>
+              </div>
+
+              {/* Options */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {/* Default Options - Only show when not searching */}
+                {!searchQuery && (
+                  <>
+                    {/* Fund's Strategy - Recommended */}
+                    <button
+                      onClick={handleSelectFund}
+                      data-testid="option-fund-strategy"
+                      className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                        deliveryType === "fund"
+                          ? "border-stone-900 bg-stone-50"
+                          : "border-stone-100 hover:border-stone-200 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center">
+                          <TrendingUp size={20} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-stone-900">Fund's strategy</p>
+                            <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Recommended</span>
+                          </div>
+                          <p className="text-sm text-stone-500 mt-0.5">Diversified across stocks, bonds, and ETFs</p>
+                        </div>
+                        {deliveryType === "fund" && (
+                          <div className="w-6 h-6 rounded-full bg-stone-900 flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Cash Option */}
+                    <button
+                      onClick={handleSelectCash}
+                      data-testid="option-cash"
+                      className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                        deliveryType === "cash"
+                          ? "border-stone-900 bg-stone-50"
+                          : "border-stone-100 hover:border-stone-200 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                          <DollarSign size={20} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-stone-900">Hold as cash</p>
+                          <p className="text-sm text-stone-500 mt-0.5">Family decides when and what to invest</p>
+                        </div>
+                        {deliveryType === "cash" && (
+                          <div className="w-6 h-6 rounded-full bg-stone-900 flex items-center justify-center">
+                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Divider */}
+                    <div className="flex items-center gap-3 py-2">
+                      <div className="flex-1 h-px bg-stone-100"></div>
+                      <span className="text-xs text-stone-400 uppercase tracking-wider">Or pick a stock</span>
+                      <div className="flex-1 h-px bg-stone-100"></div>
+                    </div>
+                  </>
+                )}
+
+                {/* Stock Results */}
+                <div className="space-y-2">
+                  {searchQuery && filteredStocks.length === 0 ? (
+                    <div className="text-center py-8">
+                      <div className="w-12 h-12 rounded-full bg-stone-100 mx-auto mb-3 flex items-center justify-center">
+                        <Search size={20} className="text-stone-400" />
+                      </div>
+                      <p className="text-stone-600 font-medium">No results for "{searchQuery}"</p>
+                      <p className="text-sm text-stone-400 mt-1">Try Apple, Tesla, Disney, or S&P 500</p>
+                    </div>
+                  ) : (
+                    filteredStocks.map((stock) => {
+                      const shares = finalAmount > 0 ? (finalAmount / stock.price).toFixed(4) : "0";
+                      const isSelected = deliveryType === "stock" && selectedStock?.id === stock.id;
+                      
+                      return (
+                        <button
+                          key={stock.id}
+                          onClick={() => handleSelectStock(stock)}
+                          data-testid={`stock-${stock.symbol}`}
+                          className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                            isSelected
+                              ? "border-stone-900 bg-stone-50"
+                              : "border-stone-100 hover:border-stone-200 bg-white"
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center">
+                              <span className="text-xs font-bold text-stone-600">{stock.symbol}</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-stone-900 truncate">{stock.name}</p>
+                                {stock.sector && (
+                                  <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded shrink-0">{stock.sector}</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 mt-0.5">
+                                <span className="text-sm text-stone-600">${stock.price.toFixed(2)}</span>
+                                <span className={`text-xs ${stock.change >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                                  {stock.change >= 0 ? "+" : ""}{stock.change.toFixed(2)}%
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              {finalAmount > 0 && (
+                                <p className="text-sm font-medium text-stone-700">{shares} shares</p>
+                              )}
+                              {isSelected && (
+                                <div className="w-6 h-6 rounded-full bg-stone-900 flex items-center justify-center mt-1 ml-auto">
+                                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 border-t border-stone-100 bg-stone-50">
+                <p className="text-xs text-stone-400 text-center">
+                  All investments go to {recipientName}'s fund · Assets held by Alpaca Securities LLC
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
