@@ -6,23 +6,46 @@ export default function FundPage() {
   const params = useParams<{ slug: string }>();
   const fundSlug = params.slug || "mila";
   
-  const recipientName = fundSlug
-    .split("-")
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  // Mock fund data - in production this would come from API
+  const fundsData: Record<string, { recipientName: string; createdBy: string; accountType: string; totalRaised: number; contributors: number; events: { slug: string; title: string; description: string; raised: number; gifts: number; active: boolean }[] }> = {
+    "mila": {
+      recipientName: "Mila",
+      createdBy: "Sarah",
+      accountType: "UTMA",
+      totalRaised: 4250,
+      contributors: 18,
+      events: [
+        { slug: "anytime", title: "Give anytime", description: "Contribute to their future, no occasion needed", raised: 2180, gifts: 12, active: true },
+        { slug: "5th-birthday", title: "5th Birthday", description: "December 15, 2025", raised: 1420, gifts: 8, active: true },
+        { slug: "kindergarten-graduation", title: "Kindergarten Graduation", description: "May 2026", raised: 650, gifts: 4, active: false },
+      ]
+    },
+    "emma": {
+      recipientName: "Emma",
+      createdBy: "Michael",
+      accountType: "UTMA",
+      totalRaised: 2800,
+      contributors: 12,
+      events: [
+        { slug: "anytime", title: "Give anytime", description: "Contribute to their future, no occasion needed", raised: 1200, gifts: 6, active: true },
+        { slug: "1st-birthday", title: "1st Birthday", description: "March 8, 2026", raised: 1600, gifts: 6, active: true },
+      ]
+    }
+  };
 
-  const fund = {
-    name: recipientName,
+  // Fall back to a default fund if slug not found
+  const fund = fundsData[fundSlug] || {
+    recipientName: fundSlug.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" "),
+    createdBy: "Parent",
     accountType: "UTMA",
-    totalRaised: 4250,
-    contributors: 18,
-    createdBy: "Sarah",
+    totalRaised: 0,
+    contributors: 0,
     events: [
-      { slug: "anytime", title: "Give anytime", description: "Contribute to their future, no occasion needed", raised: 2180, gifts: 12, active: true },
-      { slug: "5th-birthday", title: "5th Birthday", description: "December 15, 2025", raised: 1420, gifts: 8, active: true },
-      { slug: "kindergarten-graduation", title: "Kindergarten Graduation", description: "May 2026", raised: 650, gifts: 4, active: false },
+      { slug: "anytime", title: "Give anytime", description: "Contribute to their future, no occasion needed", raised: 0, gifts: 0, active: true },
     ]
   };
+  
+  const recipientName = fund.recipientName;
 
   return (
     <div className="min-h-screen bg-stone-50">

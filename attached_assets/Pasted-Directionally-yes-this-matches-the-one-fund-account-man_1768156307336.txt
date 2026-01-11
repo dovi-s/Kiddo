@@ -1,0 +1,184 @@
+Directionally yes: this matches the “one fund (account) → many shareable pages (events/templates)” model. It’s clean, simple, and the hierarchy is close.
+
+That said, a few things are off vs the “dumbed-down, highest conversion, gift-first” plan, and some key pieces are missing.
+
+What this gets right
+
+One canonical balance at the top. Good.
+
+Fund card + expandable detail is the right mental model (a “Fund” that contains multiple event pages).
+
+Share card on the right (copy link + QR) is exactly what should be prominent.
+
+Recent activity shows who gave + message. That’s core to the “memory book” feel.
+
+What’s off (and how to fix it)
+1) “Send stock” is the wrong top-level nav label
+
+This is a gifting product, not a trading product.
+
+Change:
+
+“Send stock” → Send a gift
+
+If needed, a small sublabel inside the flow: “Gift shares” / “Gift an investment”
+
+2) Dashboard is missing the two primary host jobs
+
+For a parent/host/custodian, the top 3 jobs are:
+
+Share a page (link/QR)
+
+Create an event page
+
+Send thank-yous
+
+Right now, #3 is missing and #1 and #2 are present but not “primary enough.”
+
+Change the right rail “Quick actions” to:
+
+Share link / Get QR
+
+Create event page
+
+Send thank-yous (with a count: “12 pending”)
+
+“Send a gift” can stay, but it should be secondary for the host.
+
+3) The “Where it’s invested” bar needs clarity
+
+A segmented bar with no labels creates confusion.
+
+Fix:
+
+Either label segments (Stocks / Cash / Bonds) with hover tooltips, or
+
+Replace with a simpler line: Invested: $X | Cash: $Y (tap for details)
+
+4) Events list needs “shareability controls”
+
+If events are the growth engine, each event row should make sharing and printing obvious.
+
+Each event row should show:
+
+Event name
+
+Date/status (Upcoming / Active / Past)
+
+Total raised
+
+Share (copy link)
+
+QR
+
+Optional: “Thank-yous pending” for that event
+
+5) The projection “When Mila turns 18: $28,400” is risky without context
+
+Projections are fine, but they must be clearly framed.
+
+Fix:
+
+Label it as Projection
+
+Add: “Assumes X% annual return. Not guaranteed.” (tap to adjust or hide)
+
+Or make projections a toggle: Show projections (off by default)
+
+The clean object model (so the nesting always makes sense)
+
+This is the model I’d lock in for the builder.
+
+Household (owner account)
+
+Parent (primary)
+
+Optional other guardian/co-parent
+
+Optional “kid view” (read-only)
+
+Fund (one per person, usually)
+
+A Fund is the “container” and typically maps to one brokerage account.
+
+“Mila’s Fund” (UTMA)
+
+“My Fund” (individual)
+
+Pages (many per Fund)
+
+Pages are public-facing “skins” that route gifts into the same Fund, but tag attribution.
+
+Anytime page: everleaf.com/mila
+
+Event pages: everleaf.com/mila/5th-birthday, /bar-mitzvah, /graduation
+
+So you are not opening a new brokerage account per event.
+You open one (per fund/recipient), and events are pages + tags.
+
+What’s missing that you’ll want for a “final” product
+Thank-you system (must-have)
+
+Pending thank-yous
+
+One-click send (email/SMS)
+
+Export list
+
+Optional “ask for address” at checkout (tasteful toggle)
+
+Fund switcher (if a parent has multiple kids)
+
+Right now it looks like a single-fund dashboard.
+
+Add a simple Fund switcher in the header (or left sidebar):
+
+Mila’s Fund (UTMA)
+
+Noah’s Fund (UTMA)
+
+My Fund
+
+Roles and visibility
+
+Parent/custodian: full control
+
+Kid: read-only “story mode”
+
+Gift-givers: never need an account
+
+Optional: “show amounts publicly” toggle per page/event
+
+Language that keeps it non-financey
+
+“Fund” is okay
+
+“UTMA” should be a small badge with tooltip (“Custodial account”)
+
+Avoid broker jargon in primary UI
+
+Is this “what I had in mind”?
+
+Yes on the structural idea:
+
+One Fund
+
+Multiple event pages
+
+Share link + QR front and center
+
+Activity feed as the emotional core
+
+But to match the plan and maximize conversion + trust:
+
+Rename “Send stock”
+
+Promote “Thank you”
+
+Make event rows explicitly shareable
+
+Make the investment bar legible
+
+Add multi-fund navigation and roles
+
+If you want the crispest next step for the builder: implement the object model above (Household → Fund → Pages) and refactor the dashboard IA so the top actions are Share, Create event, Thank-you. Everything else becomes secondary.
