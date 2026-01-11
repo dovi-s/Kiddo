@@ -46,6 +46,9 @@ export default function Dashboard() {
   const [newChildName, setNewChildName] = useState("");
   const [showThankYous, setShowThankYous] = useState(false);
   const [sentThankYous, setSentThankYous] = useState<string[]>([]);
+  const [snoozedThankYous, setSnoozedThankYous] = useState<string[]>([]);
+  const [expandedThankYou, setExpandedThankYou] = useState<string | null>(null);
+  const [thankYouDrafts, setThankYouDrafts] = useState<Record<string, string>>({});
   
   const isNewAccount = params.get("new") === "true";
   
@@ -163,12 +166,18 @@ export default function Dashboard() {
   ];
 
   const recentActivity = [
-    { from: "Dave Chen", amount: 180, event: "5th Birthday", time: "2 hours ago", note: "So proud of you", status: "pending" as const },
-    { from: "Ruth Stein", amount: 500, event: "Open anytime", time: "Yesterday", note: "With love", status: "invested" as const },
-    { from: "Michael Park", amount: 100, event: "Open anytime", time: "3 days ago", note: null, status: "invested" as const },
+    { id: "gift_1", from: "Dave Chen", amount: 180, event: "5th Birthday", time: "2 hours ago", note: "So proud of you", status: "pending" as const },
+    { id: "gift_2", from: "Ruth Stein", amount: 500, event: "Open anytime", time: "Yesterday", note: "With love", status: "invested" as const },
+    { id: "gift_3", from: "Michael Park", amount: 100, event: "Open anytime", time: "3 days ago", note: null, status: "invested" as const },
   ];
 
-  const pendingThankYous = recentActivity.filter(a => a.status === "invested" && !sentThankYous.includes(a.from)).length;
+  const getDefaultThankYou = (item: typeof recentActivity[0]) => {
+    const firstName = item.from.split(" ")[0];
+    return `Thank you so much for your generous gift of $${item.amount}, ${firstName}! It means the world to us and will help ${selectedFund.name}'s future grow.`;
+  };
+
+  const pendingThankYous = recentActivity.filter(a => a.status === "invested" && !sentThankYous.includes(a.id) && !snoozedThankYous.includes(a.id)).length;
+  const snoozedCount = recentActivity.filter(a => a.status === "invested" && snoozedThankYous.includes(a.id) && !sentThankYous.includes(a.id)).length;
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -1074,53 +1083,106 @@ export default function Dashboard() {
       </Dialog>
 
       {/* Thank-Yous Modal */}
-      <Dialog open={showThankYous} onOpenChange={setShowThankYous}>
+      <Dialog open={showThankYous} onOpenChange={(open) => {
+        setShowThankYous(open);
+        if (!open) setExpandedThankYou(null);
+      }}>
         <DialogContent className="max-w-md bg-white p-0 gap-0">
           <div className="p-5 border-b border-stone-100">
             <DialogTitle className="font-medium text-stone-900">Send thank-yous</DialogTitle>
             <p className="text-sm text-stone-500 mt-1">
               {pendingThankYous > 0 
-                ? `${pendingThankYous} contributor${pendingThankYous === 1 ? '' : 's'} waiting for a thank-you`
-                : "All caught up! No pending thank-yous."}
+                ? `${pendingThankYous} pending${snoozedCount > 0 ? ` • ${snoozedCount} for later` : ''}`
+                : snoozedCount > 0 
+                  ? `${snoozedCount} saved for later`
+                  : "All caught up!"}
             </p>
           </div>
           
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto">
             {recentActivity
               .filter(a => a.status === "invested")
               .map((item, i) => {
-                const isSent = sentThankYous.includes(item.from);
+                const isSent = sentThankYous.includes(item.id);
+                const isSnoozed = snoozedThankYous.includes(item.id);
+                const isExpanded = expandedThankYou === item.id;
+                const draftMessage = thankYouDrafts[item.id] ?? getDefaultThankYou(item);
+                
                 return (
                   <div 
-                    key={i} 
-                    className={`p-4 border-b border-stone-100 last:border-0 ${isSent ? 'bg-stone-50' : ''}`}
+                    key={item.id} 
+                    className={`border-b border-stone-100 last:border-0 ${isSent ? 'bg-emerald-50/50' : isSnoozed ? 'bg-stone-50' : ''}`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-stone-900">{item.from}</p>
-                          {isSent && (
-                            <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Sent</span>
+                    <div 
+                      className={`p-4 ${!isSent ? 'cursor-pointer hover:bg-stone-50' : ''} transition-colors`}
+                      onClick={() => !isSent && setExpandedThankYou(isExpanded ? null : item.id)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-stone-900">{item.from}</p>
+                            {isSent && (
+                              <span className="text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">Sent</span>
+                            )}
+                            {isSnoozed && !isSent && (
+                              <span className="text-xs text-stone-500 bg-stone-200 px-2 py-0.5 rounded-full">Later</span>
+                            )}
+                          </div>
+                          <p className="text-sm text-stone-500">${item.amount} • {item.event}</p>
+                          {item.note && (
+                            <p className="text-sm text-stone-400 mt-1 italic">"{item.note}"</p>
                           )}
                         </div>
-                        <p className="text-sm text-stone-500">${item.amount} • {item.event}</p>
-                        {item.note && (
-                          <p className="text-sm text-stone-400 mt-1 italic">"{item.note}"</p>
+                        {!isSent && (
+                          <span className="text-xs text-stone-400">
+                            {isExpanded ? '▲' : '▼'}
+                          </span>
                         )}
                       </div>
-                      {!isSent && (
-                        <button
-                          onClick={() => {
-                            setSentThankYous(prev => [...prev, item.from]);
-                            toast({ title: `Thank-you sent to ${item.from}` });
-                          }}
-                          data-testid={`button-send-thanks-${i}`}
-                          className="shrink-0 px-3 py-1.5 bg-stone-900 text-white text-xs font-medium rounded-lg hover:bg-stone-800 transition-colors"
-                        >
-                          Send
-                        </button>
-                      )}
                     </div>
+                    
+                    {isExpanded && !isSent && (
+                      <div className="px-4 pb-4 space-y-3">
+                        <textarea
+                          value={draftMessage}
+                          onChange={(e) => setThankYouDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                          className="w-full p-3 text-sm border border-stone-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+                          rows={3}
+                          placeholder="Write your thank-you message..."
+                          data-testid={`textarea-thankyou-${item.id}`}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSentThankYous(prev => [...prev, item.id]);
+                              setSnoozedThankYous(prev => prev.filter(id => id !== item.id));
+                              setExpandedThankYou(null);
+                              toast({ title: `Thank-you sent to ${item.from}` });
+                            }}
+                            data-testid={`button-send-thanks-${item.id}`}
+                            className="flex-1 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-800 transition-colors"
+                          >
+                            Send thank-you
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isSnoozed) {
+                                setSnoozedThankYous(prev => prev.filter(id => id !== item.id));
+                              } else {
+                                setSnoozedThankYous(prev => [...prev, item.id]);
+                              }
+                              setExpandedThankYou(null);
+                            }}
+                            data-testid={`button-snooze-thanks-${item.id}`}
+                            className="px-4 py-2 border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors"
+                          >
+                            {isSnoozed ? 'Restore' : 'Later'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1128,7 +1190,10 @@ export default function Dashboard() {
 
           <div className="p-5 border-t border-stone-100">
             <button 
-              onClick={() => setShowThankYous(false)}
+              onClick={() => {
+                setShowThankYous(false);
+                setExpandedThankYou(null);
+              }}
               data-testid="button-close-thankyous"
               className="w-full py-2.5 bg-stone-100 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-200 transition-colors"
             >
