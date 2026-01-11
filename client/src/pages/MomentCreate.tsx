@@ -87,7 +87,7 @@ export default function MomentCreate() {
   const [, setLocation] = useLocation();
   const search = useSearch();
   const params = new URLSearchParams(search);
-  const profileName = decodeURIComponent(params.get("name") || "Ari");
+  const profileName = decodeURIComponent(params.get("name") || "Mila");
   const accountType = params.get("type") || "child";
 
   const [step, setStep] = useState(0);
@@ -243,7 +243,7 @@ export default function MomentCreate() {
                 <CardContent className="p-6 space-y-5">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Title</Label>
-                    <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-12 text-base" placeholder="Ari's 13th Birthday" data-testid="input-title" />
+                    <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-12 text-base" placeholder="Mila's 5th Birthday" data-testid="input-title" />
                   </div>
                   
                   <div className="space-y-2">

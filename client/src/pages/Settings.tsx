@@ -24,7 +24,7 @@ export default function Settings() {
   const search = useSearch();
   const params = new URLSearchParams(search);
   const accountType = params.get("type") || "child";
-  const profileName = decodeURIComponent(params.get("name") || "Ari");
+  const profileName = decodeURIComponent(params.get("name") || "Mila");
   const isPersonal = accountType === "personal";
 
   return (
