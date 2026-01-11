@@ -281,6 +281,53 @@ Even with an embedded broker partner, Kora must handle:
 - **Thank-You Automation**: Draft suggestions, reminders, optional video thank-yous
 - **Milestones**: Celebrate first $500, 10 contributors, one-year anniversary
 
+### Child Experience Philosophy (Critical)
+
+**Goal**: Make investing feel like a scoreboard of progress, not a finance course.
+
+**5 core lessons to embed (without teaching them directly)**:
+1. Owning pieces of real businesses is normal
+2. Time is the advantage
+3. Volatility is the price of growth
+4. Diversification is the safety net
+5. Consistency beats "being smart"
+
+**Separate balance from progress**:
+- "Your Fund" = total balance (simple number)
+- "Your Progress" = behavior-based (days invested, streaks, milestones)
+- Pride comes from behavior, not gifts received
+
+**Milestones over returns**:
+- First $100, First $500, First $1,000
+- First dividend received
+- One year invested
+- Stayed invested through a dip
+- Added to fund 6 months in a row
+
+**Compounding visual**: Show "What people added" vs "What time added" - no percentages, no trading vibes
+
+**"Why it changed" feed**: Kid-safe explanations
+- "Your fund moved because the market moved"
+- "A dividend was paid"
+- "A gift was added"
+
+**Three-tab IA for recipient**:
+1. **Today**: Total, next milestone, "what changed" card
+2. **Progress**: Time ramp, streaks, milestones timeline
+3. **Story**: Contributors + notes, thank-you prompts
+
+**Parent controls**: Kid mode (view only, no sell/withdraw) vs Custodian mode (full control)
+
+**Year Recap** (Spotify Wrapped style):
+- "You've been invested 365 days"
+- "Time added $X"
+- "You earned 4 milestones"
+- "You have 18 people in your corner"
+
+**Messaging rules**:
+- Never: "Get rich", "Beat the market", "Pick winners"
+- Always: "Start early", "Let time do the work", "Own the world, not one stock", "Stay invested"
+
 ### Phase 2 Features (Planned)
 
 **Payback Feature** - Turn Kora from "events only" to everyday use:
