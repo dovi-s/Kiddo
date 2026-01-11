@@ -186,3 +186,79 @@ The onboarding is designed to be light upfront, with brokerage activation as an 
 2. Brokerage is inside Kora (not external connection in v1)
 3. Progressive activation
 4. Persistent status chip on every fund card
+
+## Gift Execution Models
+
+Kora supports 3 execution models. Each fund has a default, with options for customization.
+
+### Model A: Auto-Invest (Default)
+- **What happens**: Giver pays → cash lands at broker → system auto-buys the fund's default basket at next trading window
+- **Status flow**: Pending → Processing → Invested
+- **When to use**: Most kid funds, event registries, "Future Fund" default
+- **Guardrails**: Parent sets default once; optional "auto-invest only in ETFs" toggle
+
+### Model B: Hold as Seed (Control Mode)
+- **What happens**: Giver pays → gift becomes Seed balance → owner gets notification → owner chooses allocation and invests
+- **When to use**: New/nervous users, funds where parents want to pick stocks, large gifts ($500+)
+- **Downside**: Lower instant gratification, more support questions if ignored
+
+### Model C: Giver Chooses (Personalized)
+- **What happens**: On checkout, giver selects from Fund's strategy, Favorites list, or specific stock/ETF
+- **When to use**: Event gifting with a story, older kids with curated favorites
+- **Guardrails**: Favorites list pre-approved by parent (10-20 tickers max); default stays "Fund's strategy"
+
+### Default Configuration
+- **Per-fund default**: Auto-invest (Model A)
+- **Settings toggles**:
+  - "Hold gifts as Seed until I invest" (enables Model B)
+  - "Let givers choose from Favorites" (enables Model C)
+
+### Execution Timing
+- Market open: "Executes today"
+- Market closed: "Executes next trading day"
+- Always show status: Received → Processing → Invested
+
+### Approval & Control
+- **Owner (parent/guardian)**: Controls defaults and favorites list
+- **Kid view**: View-only, or "Suggest favorites" requiring parent approval
+
+### Refunds & Chargebacks
+- If payment reversed while pending: Cancel the trade
+- If already invested: Sell equivalent shares or pull from cash balance (policy must be clearly defined)
+
+### Account Structure (V1)
+- 1 taxable brokerage per adult
+- 1 custodial brokerage (UTMA) per child
+- No IRA routing in V1 (too complex for gifting)
+- "Connect existing" is advanced toggle, not default
+
+## Tax & Legal Considerations
+
+### Personal Gifts (Core Product)
+- **No direct tax deduction** for the giver - personal gifts are not deductible
+- **Gift tax simplicity**: Annual exclusion is $19,000/recipient (2026) before filing Form 709
+- **Appreciated stock benefit**: Giver avoids realizing capital gains; recipient inherits carryover basis
+- **Messaging**: Focus on emotional/growth value, NOT tax advantages
+
+### Gifting Appreciated Stock
+- Giver does not realize capital gains at moment of gift (no sale = no gain)
+- Recipient gets carryover basis (IRS Publication 551 rules)
+- Future gains may be taxed at recipient's (potentially lower) rate
+- This is "tax smart" but NOT a tax write-off
+
+### Future Product Rails
+- **Charitable giving**: Donating appreciated securities = real tax benefit (deduction + avoid cap gains)
+- **529 contributions**: State-dependent tax benefits; "5-year election" superfunding option
+- **Donor-Advised Funds**: Extension for "gift to causes they care about"
+
+### Product Implications
+1. **Clear labeling**: Distinguish "Gift" (true gift) from "Reimbursement" (could trigger tax)
+2. **No over-promising**: Don't market tax benefits for personal gifts
+3. **Disclosures**: Accurate language about what's happening (purchase → transfer)
+4. **Backend separation**: Keep gift types conceptually separated for compliance
+
+### UX Language
+- Default: "Gifts are invested automatically into Future Fund"
+- Toggle: "Hold gifts as Seed until I invest"
+- Toggle: "Let givers choose from Favorites"
+- Checkout: Big button "Gift to Future Fund" + small "More options" link
