@@ -1253,11 +1253,13 @@ export default function Dashboard() {
           </div>
           
           <div className="flex-1 overflow-y-auto">
-            {allContributions.map((contribution) => (
-              <div 
-                key={contribution.id} 
-                className="p-4 border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors"
-              >
+            {allContributions.map((contribution) => {
+              const isThanked = sentThankYous.includes(contribution.id);
+              return (
+                <div 
+                  key={contribution.id} 
+                  className="p-4 border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors"
+                >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -1272,6 +1274,17 @@ export default function Dashboard() {
                           Invested
                         </span>
                       )}
+                      {contribution.status === "invested" && (
+                        isThanked ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
+                            Thanked
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500 font-medium">
+                            Not thanked
+                          </span>
+                        )
+                      )}
                     </div>
                     <p className="text-sm text-stone-500 mt-0.5">
                       {contribution.event} • {formatDate(contribution.date)} at {formatTime(contribution.date)}
@@ -1282,8 +1295,9 @@ export default function Dashboard() {
                   </div>
                   <p className="text-sm font-medium text-stone-900 shrink-0">+${contribution.amount}</p>
                 </div>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
 
           <div className="p-5 border-t border-stone-100 shrink-0">
