@@ -68,13 +68,6 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                 Pricing
                 <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-foreground transition-all group-hover:w-full" />
               </a>
-              <Link 
-                href="/send" 
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group"
-              >
-                Send stock
-                <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-foreground transition-all group-hover:w-full" />
-              </Link>
               <Link href="/dashboard">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button variant="ghost" size="sm" data-testid="button-login">Log in</Button>
@@ -113,7 +106,6 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                 <>
                   <a href="/#how" onClick={() => setIsOpen(false)} className="font-medium">How it works</a>
                   <a href="/#pricing" onClick={() => setIsOpen(false)} className="font-medium">Pricing</a>
-                  <Link href="/send" onClick={() => setIsOpen(false)} className="font-medium">Send stock</Link>
                   <hr />
                   <Link href="/dashboard" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
                   <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Get started</Button></Link>

@@ -402,9 +402,33 @@ export default function Home() {
 
             <div className="space-y-4">
               {[
-                { id: "free", name: "Free", price: "$0", period: "", desc: "Create unlimited funds. Share with anyone. Contributors pay a small fee at checkout.", featured: false },
-                { id: "plus", name: "Plus", price: "$99", period: "per event", desc: "For big events. You cover fees so guests contribute the full amount.", featured: true },
-                { id: "family", name: "Family", price: "$199", period: "per year", desc: "Multiple children, up to 10 events per year. One dashboard.", featured: false },
+                { 
+                  id: "free", 
+                  name: "Free", 
+                  price: "$0", 
+                  period: "", 
+                  desc: "Create unlimited funds and events. Guests pay a small fee at checkout.", 
+                  details: "1.5% service fee (max $10) + processing",
+                  featured: false 
+                },
+                { 
+                  id: "plus", 
+                  name: "Plus", 
+                  price: "$49", 
+                  period: "per event", 
+                  desc: "Make gifts fee-free for your guests. Premium templates and thank-you tools.", 
+                  details: "Covers fees up to $7,500 in gifts",
+                  featured: true 
+                },
+                { 
+                  id: "family", 
+                  name: "Family", 
+                  price: "$99", 
+                  period: "per year", 
+                  desc: "For households with multiple kids or events. One dashboard, fee-free gifting.", 
+                  details: "Up to 6 events • Covers fees up to $15k/year",
+                  featured: false 
+                },
               ].map((plan, i) => (
                 <FadeIn key={plan.id} delay={i * 0.1}>
                   <motion.div
@@ -418,8 +442,16 @@ export default function Home() {
                     }`}
                   >
                     <div className="mb-4 md:mb-0">
-                      <h3 className="font-semibold text-lg">{plan.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg">{plan.name}</h3>
+                        {plan.featured && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-foreground text-background font-medium">
+                            Most popular
+                          </span>
+                        )}
+                      </div>
                       <p className="text-muted-foreground text-sm mt-1">{plan.desc}</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">{plan.details}</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
@@ -439,9 +471,12 @@ export default function Home() {
               ))}
             </div>
 
-            <FadeIn delay={0.4} className="text-center mt-10">
+            <FadeIn delay={0.4} className="text-center mt-10 space-y-2">
               <p className="text-xs text-muted-foreground">
-                Free tier: guests pay ~3% at checkout. Plus/Family: you cover processing, we waive our fee on the first $5k–$10k.
+                All plans include real investment accounts, premium designs, and shareable event pages.
+              </p>
+              <p className="text-xs text-muted-foreground/70">
+                Free hosts can toggle "let guests pay fees" or "I'll cover fees" per event.
               </p>
             </FadeIn>
           </div>
