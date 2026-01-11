@@ -212,7 +212,14 @@ function AccountTab() {
             { value: "contributor", label: "Contributor only" },
           ]}
         />
-        <LinkRow label="Manage children" description="Add or edit children in your household" href="/dashboard" />
+        <LinkRow 
+          label="Manage children" 
+          description="Add or edit children in your household"
+          onClick={() => toast({ 
+            title: "Manage children", 
+            description: "Go to Dashboard and click 'Add Fund' to add a new child, or tap a fund to edit" 
+          })}
+        />
       </SettingsSection>
 
       <SettingsSection title="Account">
