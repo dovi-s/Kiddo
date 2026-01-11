@@ -41,27 +41,28 @@
 
 :root {
   /* Kora Design Tokens - Premium, Calm, Established */
-  --background: 40 20% 98%;  /* Warm paper */
-  --foreground: 220 15% 12%; /* Deep ink */
+  /* Palette: Ink + Deep Cobalt + Warm Neutral */
+  --background: 40 20% 98%;  /* Cloud - warm off-white */
+  --foreground: 220 20% 10%; /* Ink - near-black */
 
   --card: 40 15% 99%;
-  --card-foreground: 220 15% 12%;
+  --card-foreground: 220 20% 10%;
 
-  /* Evergreen - Primary Accent */
-  --primary: 158 45% 28%;
+  /* Deep Cobalt - Signature Color */
+  --primary: 220 65% 38%;
   --primary-foreground: 0 0% 100%;
 
   /* Secondary - Soft */
   --secondary: 40 10% 96%;
-  --secondary-foreground: 220 15% 12%;
+  --secondary-foreground: 220 20% 10%;
 
   /* Muted */
   --muted: 40 10% 96%;
   --muted-foreground: 220 10% 46%;
 
-  /* Accent */
-  --accent: 158 30% 94%;
-  --accent-foreground: 158 45% 24%;
+  /* Accent - Cobalt tint */
+  --accent: 220 30% 95%;
+  --accent-foreground: 220 65% 32%;
 
   /* Destructive */
   --destructive: 0 72% 51%;
@@ -70,16 +71,16 @@
   /* Borders */
   --border: 40 15% 90%;
   --input: 40 15% 90%;
-  --ring: 158 45% 28%;
+  --ring: 220 65% 38%;
 
   --radius: 0.5rem;
 
-  /* Chart */
-  --chart-1: 158 45% 28%;
-  --chart-2: 35 90% 55%;
-  --chart-3: 200 80% 50%;
-  --chart-4: 280 65% 55%;
-  --chart-5: 340 75% 55%;
+  /* Chart - Cobalt-based palette */
+  --chart-1: 220 65% 38%;
+  --chart-2: 200 75% 45%;
+  --chart-3: 240 55% 50%;
+  --chart-4: 280 50% 50%;
+  --chart-5: 320 60% 50%;
 }
 
 .dark {
@@ -89,7 +90,7 @@
   --card: 220 25% 9%;
   --card-foreground: 210 20% 98%;
 
-  --primary: 160 50% 45%;
+  --primary: 215 70% 55%;
   --primary-foreground: 220 25% 6%;
 
   --secondary: 220 20% 15%;
@@ -98,15 +99,15 @@
   --muted: 220 20% 15%;
   --muted-foreground: 215 15% 60%;
 
-  --accent: 160 30% 15%;
-  --accent-foreground: 160 50% 70%;
+  --accent: 220 30% 18%;
+  --accent-foreground: 215 70% 70%;
 
   --destructive: 0 62% 40%;
   --destructive-foreground: 210 20% 98%;
 
   --border: 220 20% 18%;
   --input: 220 20% 18%;
-  --ring: 160 50% 45%;
+  --ring: 215 70% 55%;
 }
 
 @layer base {

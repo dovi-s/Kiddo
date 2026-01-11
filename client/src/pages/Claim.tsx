@@ -100,8 +100,8 @@ export default function Claim() {
               className="space-y-8"
             >
               <div className="text-center space-y-3">
-                <div className="w-16 h-16 mx-auto bg-emerald-50 rounded-full flex items-center justify-center">
-                  <GiftIcon className="w-8 h-8 text-emerald-600" />
+                <div className="w-16 h-16 mx-auto bg-slate-100 rounded-full flex items-center justify-center">
+                  <GiftIcon className="w-8 h-8 text-slate-600" />
                 </div>
                 <h1 className="text-2xl lg:text-3xl font-semibold text-stone-900">
                   You've received a gift
@@ -166,14 +166,14 @@ export default function Claim() {
                     </div>
                   )}
 
-                  <div className="bg-emerald-50 rounded-xl p-4">
+                  <div className="bg-slate-50 rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <TrendingUp className="w-5 h-5 text-emerald-600 mt-0.5" />
+                      <TrendingUp className="w-5 h-5 text-slate-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-emerald-900">
+                        <p className="text-sm font-medium text-slate-900">
                           Could grow to ${projectedValue.toLocaleString()}
                         </p>
-                        <p className="text-sm text-emerald-700">
+                        <p className="text-sm text-slate-600">
                           Based on historical market performance over 18 years
                         </p>
                       </div>
@@ -457,9 +457,9 @@ export default function Claim() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="w-20 h-20 mx-auto bg-emerald-100 rounded-full flex items-center justify-center"
+                className="w-20 h-20 mx-auto bg-slate-100 rounded-full flex items-center justify-center"
               >
-                <Check className="w-10 h-10 text-emerald-600" />
+                <Check className="w-10 h-10 text-slate-600" />
               </motion.div>
 
               <div className="space-y-2">
@@ -505,14 +505,14 @@ export default function Claim() {
                 </div>
               </div>
 
-              <div className="bg-emerald-50 rounded-xl p-4 max-w-sm mx-auto">
+              <div className="bg-slate-50 rounded-xl p-4 max-w-sm mx-auto">
                 <div className="flex items-start gap-3">
-                  <TrendingUp className="w-5 h-5 text-emerald-600 mt-0.5" />
+                  <TrendingUp className="w-5 h-5 text-slate-600 mt-0.5" />
                   <div className="text-left">
-                    <p className="text-sm font-medium text-emerald-900">
+                    <p className="text-sm font-medium text-slate-900">
                       Projected to grow to ${projectedValue.toLocaleString()}
                     </p>
-                    <p className="text-sm text-emerald-700">
+                    <p className="text-sm text-slate-600">
                       Over 18 years based on historical returns
                     </p>
                   </div>

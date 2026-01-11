@@ -596,9 +596,9 @@ export default function ActivateInvesting() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", duration: 0.5 }}
-                className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6"
+                className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-6"
               >
-                <Check size={28} className="text-emerald-600" />
+                <Check size={28} className="text-slate-600" />
               </motion.div>
               <h2 className="text-xl font-medium text-stone-900 mb-2">You're all set!</h2>
               <p className="text-stone-500 mb-8">

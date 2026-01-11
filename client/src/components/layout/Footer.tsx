@@ -1,4 +1,3 @@
-import { Leaf } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 
@@ -10,17 +9,24 @@ export function Footer() {
           <div className="space-y-4">
             <Link href="/">
               <motion.a 
-                className="flex items-center gap-2 group"
+                className="flex items-center gap-2.5 group"
                 whileHover={{ x: 2 }}
               >
-                <motion.div whileHover={{ rotate: 10 }} transition={{ duration: 0.2 }}>
-                  <Leaf className="h-5 w-5 text-primary" />
-                </motion.div>
-                <span className="font-semibold text-foreground tracking-tight">Kora</span>
+                <svg className="w-5 h-5" viewBox="0 0 32 32" fill="none">
+                  <path 
+                    d="M8 6v20M8 16l10-10M8 16l10 10" 
+                    stroke="currentColor" 
+                    strokeWidth="2.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                    className="text-foreground"
+                  />
+                </svg>
+                <span className="font-medium text-foreground tracking-wide text-[15px]" style={{ letterSpacing: '0.04em' }}>kora</span>
               </motion.a>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[200px]">
-              Gifts that grow.
+              Give something that stays.
             </p>
           </div>
           

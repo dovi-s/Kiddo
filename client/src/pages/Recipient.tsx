@@ -98,8 +98,8 @@ export default function Recipient() {
             <AnimatedValue value={totalValue} />
           </p>
           <div className="flex items-center justify-center gap-2">
-            <TrendingUp className="h-4 w-4 text-emerald-600" />
-            <span className="text-sm text-emerald-600 font-medium">Growing for your future</span>
+            <TrendingUp className="h-4 w-4 text-primary" />
+            <span className="text-sm text-primary font-medium">Growing for your future</span>
           </div>
           <p className="text-xs text-stone-400 mt-3">{contributorCount} people believe in you</p>
         </motion.div>

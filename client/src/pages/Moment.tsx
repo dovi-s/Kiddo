@@ -60,18 +60,16 @@ export default function Moment() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50/50 via-background to-background dark:from-emerald-950/20">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50/50 via-background to-background dark:from-slate-950/20">
       {/* Header */}
       <header className="p-4 sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
         <div className="container mx-auto flex justify-between items-center max-w-lg">
           <Link href="/">
-            <span className="flex items-center gap-2 text-foreground">
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
-                <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2v20M8 6l4-4 4 4" />
-                </svg>
-              </div>
-              <span className="font-semibold tracking-tight">Kora</span>
+            <span className="flex items-center gap-2.5 text-foreground">
+              <svg className="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                <path d="M8 6v20M8 16l10-10M8 16l10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span className="font-medium tracking-wide text-[15px]" style={{ letterSpacing: '0.04em' }}>kora</span>
             </span>
           </Link>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">
@@ -99,7 +97,7 @@ export default function Moment() {
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-                  className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white flex items-center justify-center text-3xl font-semibold shadow-xl shadow-emerald-500/25"
+                  className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center text-3xl font-semibold shadow-xl shadow-slate-500/25"
                 >
                   {recipientName.charAt(0)}
                 </motion.div>
@@ -359,7 +357,7 @@ export default function Moment() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="mx-auto mb-8 h-24 w-24 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-xl shadow-emerald-500/30"
+                className="mx-auto mb-8 h-24 w-24 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-xl shadow-slate-500/30"
               >
                 <motion.div
                   initial={{ scale: 0 }}
@@ -397,7 +395,7 @@ export default function Moment() {
                 <Card className="border-0 shadow-xl shadow-black/5 overflow-hidden max-w-sm mx-auto">
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-xl font-semibold text-white">
+                      <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-xl font-semibold text-white">
                         {recipientName.charAt(0)}
                       </div>
                       <div className="text-left">

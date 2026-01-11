@@ -1,0 +1,107 @@
+Kora should not look like “finance.” It should look like a trusted, modern platform that happens to do money.
+
+Best logo direction for Kora
+Core mark
+
+A single “K” built from two calm, rounded strokes that form a subtle “path” or “bridge.”
+Meaning: guidance, connection, continuity. Not growth arrows, not leaves, not charts.
+
+Shape language
+
+Geometric, rounded terminals
+
+1 mark + wordmark, nothing else
+
+Works as:
+
+app icon
+
+favicon
+
+emboss on a card
+
+watermark on receipts
+
+Hidden meaning (subtle, optional)
+
+You can embed one of these in the “K” without it being obvious:
+
+two dots connected (giver → recipient)
+
+a notch that implies a “card” corner
+
+a split that implies “funds” and “events” under one roof
+
+Three concrete logo concepts (pick one)
+Option A: “Ribbon K” (my top pick)
+
+A rounded ribbon stroke that folds into a K. Feels premium and timeless.
+No symbolism overload. Works at tiny sizes.
+
+Option B: “Monoline K” (most tech)
+
+A simple monoline K with rounded ends and a slightly wider inner angle.
+Feels like Stripe-level restraint.
+
+Option C: “Seal K” (most trust)
+
+A K inside a soft squircle seal. The K is simple, the container adds “official.”
+Great for “powered by” style trust cues.
+
+Wordmark spec
+
+Lowercase: kora feels friendlier and modern.
+
+Custom tweak: slightly shorten the cross stroke of the “k” so it feels less aggressive.
+
+Tracking: slightly open.
+
+Colors (avoid green)
+
+Green screams fintech/investing. You want platform trust.
+
+Use one signature color + neutrals:
+
+Ink: near-black (primary)
+
+Cloud: warm off-white (background)
+
+Signature (choose one):
+
+deep cobalt
+
+slate blue
+
+aubergine
+
+ember (muted orange-red)
+
+If you want the most “big company forever” palette: Ink + Cobalt + Warm Neutral.
+
+Icon usage rules
+
+App icon: mark only, centered, lots of padding
+
+Favicon: simplified mark (remove internal details)
+
+Receipts/cards: mark top-left, small, like a bank but cleaner
+
+If you want, upload the current bottom-right logo you liked (or tell me which element it had), and I’ll specify exactly how to redesign it into a Kora mark (shapes, stroke widths, corner radius, and layout).
+
+what does kora mean 
+
+“Kora” has a few real-world meanings and associations:
+
+Kora (Tibetan Buddhism): a ritual walk or circumambulation around a sacred site, done repeatedly as a practice. Association: ritual, return, tradition, life events, “coming back each year.”
+
+Kora (music): a West African 21-string harp-lute (often spelled “kora”). Association: heritage, celebration, storytelling.
+
+Kora (sport/brand/location): it is also used as a name across different countries and products, so it is not a blank slate.
+
+For your business, the strongest meaning is the first one: a recurring life ritual. That fits “always-on family fund” and “every birthday, every milestone” without sounding like finance.
+
+Two cautions:
+
+It does not inherently mean “gifting” or “investing,” so the brand story has to supply that.
+
+Because it’s used elsewhere, you would need trademark/domain checks to see if it’s viable in fintech.

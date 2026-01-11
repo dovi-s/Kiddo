@@ -55,9 +55,9 @@ function GrowthCalculator() {
       {/* Bars */}
       <div className="flex items-end justify-center gap-6 md:gap-10">
         {[
-          { value: amount, label: "Today", height: baseHeight, color: "bg-emerald-100 dark:bg-emerald-900/30" },
-          { value: growth10, label: "10 years", height: height10, color: "bg-emerald-200 dark:bg-emerald-800/40" },
-          { value: growth18, label: "18 years", height: height18, color: "bg-emerald-300 dark:bg-emerald-700/50" },
+          { value: amount, label: "Today", height: baseHeight, color: "bg-slate-100 dark:bg-slate-900/30" },
+          { value: growth10, label: "10 years", height: height10, color: "bg-slate-200 dark:bg-slate-800/40" },
+          { value: growth18, label: "18 years", height: height18, color: "bg-slate-300 dark:bg-slate-700/50" },
         ].map((bar, i) => (
           <motion.div 
             key={i}
@@ -75,7 +75,7 @@ function GrowthCalculator() {
                 key={bar.value}
                 initial={{ opacity: 0.5 }}
                 animate={{ opacity: 1 }}
-                className="text-base font-semibold text-emerald-900 dark:text-emerald-100"
+                className="text-base font-semibold text-slate-900 dark:text-slate-100"
               >
                 ${bar.value.toLocaleString()}
               </motion.span>
@@ -92,7 +92,7 @@ function GrowthCalculator() {
         animate={{ opacity: 1 }}
         className="text-sm text-muted-foreground"
       >
-        <span className="font-medium text-emerald-600 dark:text-emerald-400">{(growth18 / amount).toFixed(1)}×</span> growth over 18 years
+        <span className="font-medium text-primary dark:text-primary">{(growth18 / amount).toFixed(1)}×</span> growth over 18 years
       </motion.p>
     </motion.div>
   );
@@ -141,7 +141,7 @@ export default function Home() {
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-emerald-50/30 via-background to-background dark:from-emerald-950/10">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50/30 via-background to-background dark:from-slate-950/10">
       <Nav />
       
       {/* Hero */}
@@ -157,7 +157,7 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="text-sm font-medium text-emerald-600 dark:text-emerald-400 mb-4"
+              className="text-sm font-medium text-primary dark:text-primary mb-4"
             >
               The gift that grows
             </motion.p>
@@ -180,7 +180,7 @@ export default function Home() {
             >
               <Link href="/get-started">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button size="lg" className="h-14 px-10 text-base rounded-xl shadow-lg shadow-emerald-500/20" data-testid="button-create-fund">
+                  <Button size="lg" className="h-14 px-10 text-base rounded-xl shadow-lg shadow-primary/20" data-testid="button-create-fund">
                     Get started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -315,8 +315,10 @@ export default function Home() {
                     whileHover={{ y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.1)" }}
                     className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full"
                   >
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-2xl mb-6 shadow-lg shadow-emerald-500/20">
-                      🌱
+                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-900 flex items-center justify-center text-2xl mb-6 shadow-lg shadow-slate-500/20">
+                      <svg className="w-7 h-7 text-white" viewBox="0 0 32 32" fill="none">
+                        <path d="M8 6v20M8 16l10-10M8 16l10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     </div>
                     <h3 className="text-xl font-semibold mb-2">Create a fund</h3>
                     <p className="text-muted-foreground mb-4">
@@ -327,7 +329,7 @@ export default function Home() {
                         <span key={tag} className="text-xs px-2 py-1 rounded-full bg-muted">{tag}</span>
                       ))}
                     </div>
-                    <span className="text-sm font-medium text-emerald-600 flex items-center gap-1">
+                    <span className="text-sm font-medium text-primary flex items-center gap-1">
                       Get started free <ArrowRight className="h-4 w-4" />
                     </span>
                   </motion.div>

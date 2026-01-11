@@ -131,7 +131,7 @@ export default function Dashboard() {
     switch (status) {
       case "draft": return "bg-stone-100 text-stone-600";
       case "pending": return "bg-amber-100 text-amber-700";
-      case "active": return "bg-emerald-100 text-emerald-700";
+      case "active": return "bg-blue-100 text-blue-700";
       case "needs_action": return "bg-red-100 text-red-700";
     }
   };
@@ -342,8 +342,8 @@ export default function Dashboard() {
                     )}
                   </div>
                   
-                  <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100 mt-4">
-                    <p className="text-xs text-emerald-700">
+                  <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 mt-4">
+                    <p className="text-xs text-blue-700">
                       <strong>Gift rules:</strong> {portfolioValue === 0 
                         ? "Share your link and contributions will automatically invest per your settings."
                         : "Gifts are accepted and invested automatically when markets are open."
