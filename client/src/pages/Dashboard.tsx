@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Link, useSearch } from "wouter";
+import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Pencil, Copy, QrCode, ExternalLink } from "lucide-react";
+import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users } from "lucide-react";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -32,6 +32,7 @@ export default function Dashboard() {
   const childrenParam = params.get("children");
   const isPersonal = accountType === "personal";
 
+  const [, setLocation] = useLocation();
   const [copied, setCopied] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [expandedFund, setExpandedFund] = useState<number | null>(1);
@@ -40,6 +41,10 @@ export default function Dashboard() {
   const [showEditEvent, setShowEditEvent] = useState<number | null>(null);
   const [showPageQR, setShowPageQR] = useState<string | null>(null);
   const [showAddChild, setShowAddChild] = useState(false);
+  const [showAddFund, setShowAddFund] = useState(false);
+  const [newChildName, setNewChildName] = useState("");
+  
+  const isNewAccount = params.get("new") === "true";
   
   const [fundName, setFundName] = useState(profileName);
   const [fundSlugEdit, setFundSlugEdit] = useState(profileName.toLowerCase().replace(/\s+/g, "-"));
@@ -66,13 +71,16 @@ export default function Dashboard() {
       name: profileName,
       slug: profileName.toLowerCase().replace(/\s+/g, "-"),
       accountType: "Individual",
-      balance: 4250,
-      gain: 472,
-      gainPercent: 12.5,
-      contributors: 18,
-      projection: 28400,
+      balance: isNewAccount ? 0 : 4250,
+      gain: isNewAccount ? 0 : 472,
+      gainPercent: isNewAccount ? 0 : 12.5,
+      contributors: isNewAccount ? 0 : 18,
+      projection: isNewAccount ? 0 : 28400,
       yearsLeft: 20,
-      events: [
+      isNew: isNewAccount,
+      events: isNewAccount ? [
+        { id: 1, slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
+      ] : [
         { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
         { id: 2, slug: "30th-birthday", title: "30th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
         { id: 3, slug: "mba-graduation", title: "MBA Graduation", raised: 650, gifts: 4, date: "May 2026", active: true },
@@ -83,13 +91,16 @@ export default function Dashboard() {
     name: name.trim(),
     slug: name.trim().toLowerCase().replace(/\s+/g, "-"),
     accountType: "UTMA",
-    balance: index === 0 ? 4250 : index === 1 ? 1820 : 650,
-    gain: index === 0 ? 472 : index === 1 ? 156 : 42,
-    gainPercent: index === 0 ? 12.5 : index === 1 ? 9.4 : 6.9,
-    contributors: index === 0 ? 18 : index === 1 ? 8 : 3,
-    projection: index === 0 ? 28400 : index === 1 ? 12200 : 4350,
+    balance: isNewAccount ? 0 : (index === 0 ? 4250 : index === 1 ? 1820 : 650),
+    gain: isNewAccount ? 0 : (index === 0 ? 472 : index === 1 ? 156 : 42),
+    gainPercent: isNewAccount ? 0 : (index === 0 ? 12.5 : index === 1 ? 9.4 : 6.9),
+    contributors: isNewAccount ? 0 : (index === 0 ? 18 : index === 1 ? 8 : 3),
+    projection: isNewAccount ? 0 : (index === 0 ? 28400 : index === 1 ? 12200 : 4350),
     yearsLeft: index === 0 ? 14 : index === 1 ? 16 : 17,
-    events: index === 0 ? [
+    isNew: isNewAccount,
+    events: isNewAccount ? [
+      { id: index * 10 + 1, slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
+    ] : (index === 0 ? [
       { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
       { id: 2, slug: "5th-birthday", title: "5th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
       { id: 3, slug: "kindergarten-graduation", title: "Kindergarten", raised: 650, gifts: 4, date: "May 2026", active: true },
@@ -98,7 +109,7 @@ export default function Dashboard() {
       { id: 5, slug: "3rd-birthday", title: "3rd Birthday", raised: 620, gifts: 4, date: "Mar 2025", active: true },
     ] : [
       { id: 6, slug: "anytime", title: "Open anytime", raised: 650, gifts: 3, active: true },
-    ]
+    ])
   }));
 
   const totalBalance = funds.reduce((sum, f) => sum + f.balance, 0);
@@ -150,6 +161,14 @@ export default function Dashboard() {
                 ))}
               </select>
             )}
+            <button
+              onClick={() => setShowAddFund(true)}
+              data-testid="button-add-fund"
+              className="text-sm text-stone-400 hover:text-stone-900 transition-colors flex items-center gap-1"
+            >
+              <Plus size={14} />
+              <span className="hidden sm:inline">Add fund</span>
+            </button>
           </div>
           <div className="flex items-center gap-4">
             <Link href="/send">
@@ -181,18 +200,33 @@ export default function Dashboard() {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-2">
                 <AnimatedValue value={totalBalance} />
               </h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
-                <span className="text-emerald-700">+${totalGain.toLocaleString()} all time</span>
-                <span className="text-stone-300">|</span>
-                <span className="text-stone-500">Invested: ${investedAmount.toLocaleString()}</span>
-                <span className="text-stone-500">Cash: ${cashAmount.toLocaleString()}</span>
-                {pendingAmount > 0 && (
-                  <span className="text-amber-600 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                    Pending: ${pendingAmount}
+              {isNewAccount && totalBalance === 0 ? (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
+                  <span className="text-stone-500">
+                    {funds.length === 1 
+                      ? `${funds[0].name}'s fund is ready to share`
+                      : `${funds.length} funds ready to share`
+                    }
                   </span>
-                )}
-              </div>
+                  <span className="text-emerald-600 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    Active
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
+                  <span className="text-emerald-700">+${totalGain.toLocaleString()} all time</span>
+                  <span className="text-stone-300">|</span>
+                  <span className="text-stone-500">Invested: ${investedAmount.toLocaleString()}</span>
+                  <span className="text-stone-500">Cash: ${cashAmount.toLocaleString()}</span>
+                  {pendingAmount > 0 && (
+                    <span className="text-amber-600 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                      Pending: ${pendingAmount}
+                    </span>
+                  )}
+                </div>
+              )}
             </motion.div>
 
             {/* Portfolio Preview */}
@@ -735,6 +769,102 @@ export default function Dashboard() {
               className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors"
             >
               Done
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Fund Modal */}
+      <Dialog open={showAddFund} onOpenChange={setShowAddFund}>
+        <DialogContent className="max-w-md bg-white p-0 gap-0">
+          <div className="p-5 border-b border-stone-100">
+            <DialogTitle className="font-medium text-stone-900">Add a fund</DialogTitle>
+            <p className="text-sm text-stone-500 mt-1">Each fund is a separate brokerage account</p>
+          </div>
+          
+          <div className="p-5 space-y-3">
+            <button
+              onClick={() => {
+                setShowAddFund(false);
+                setShowAddChild(true);
+              }}
+              data-testid="button-add-child-fund"
+              className="w-full p-4 rounded-xl border-2 border-stone-200 hover:border-stone-300 bg-white text-left transition-all group"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-stone-100 group-hover:bg-stone-200 flex items-center justify-center transition-colors">
+                  <Users size={18} className="text-stone-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-stone-900">Add a child</p>
+                  <p className="text-sm text-stone-500 mt-0.5">Open a custodial account (UTMA)</p>
+                </div>
+              </div>
+            </button>
+
+            {!isPersonal && (
+              <button
+                onClick={() => {
+                  setShowAddFund(false);
+                  setLocation("/get-started?intent=personal");
+                }}
+                data-testid="button-add-personal-fund"
+                className="w-full p-4 rounded-xl border-2 border-stone-200 hover:border-stone-300 bg-white text-left transition-all group"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-stone-100 group-hover:bg-stone-200 flex items-center justify-center transition-colors">
+                    <User size={18} className="text-stone-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-stone-900">Open a personal fund</p>
+                    <p className="text-sm text-stone-500 mt-0.5">For yourself (individual brokerage)</p>
+                  </div>
+                </div>
+              </button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Child Modal */}
+      <Dialog open={showAddChild} onOpenChange={setShowAddChild}>
+        <DialogContent className="max-w-md bg-white p-0 gap-0">
+          <div className="p-5 border-b border-stone-100">
+            <DialogTitle className="font-medium text-stone-900">Add a child</DialogTitle>
+            <p className="text-sm text-stone-500 mt-1">We'll create a custodial account for them</p>
+          </div>
+          
+          <div className="p-5 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Child's first name</label>
+              <input
+                type="text"
+                value={newChildName}
+                onChange={(e) => setNewChildName(e.target.value)}
+                placeholder="e.g., Mila"
+                data-testid="input-new-child-name"
+                className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+              />
+            </div>
+          </div>
+
+          <div className="p-5 border-t border-stone-100">
+            <button 
+              onClick={() => {
+                if (newChildName.trim()) {
+                  const newChildren = childrenParam 
+                    ? `${decodeURIComponent(childrenParam)},${newChildName.trim()}`
+                    : newChildName.trim();
+                  setShowAddChild(false);
+                  setNewChildName("");
+                  setLocation(`/onboard?type=child&name=${encodeURIComponent(newChildName.trim())}&email=user@example.com&children=${encodeURIComponent(newChildren)}`);
+                }
+              }}
+              disabled={!newChildName.trim()}
+              data-testid="button-continue-add-child"
+              className="w-full py-3 bg-stone-900 text-white rounded-xl text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-40"
+            >
+              Continue
             </button>
           </div>
         </DialogContent>

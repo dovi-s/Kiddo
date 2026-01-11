@@ -59,7 +59,7 @@ export default function Onboard() {
       setIsSubmitting(true);
       setTimeout(() => {
         const childrenQuery = childrenParam ? `&children=${encodeURIComponent(childrenParam)}` : "";
-        setLocation(`/dashboard?type=${accountType}&name=${encodeURIComponent(childrenNames[0] || profileName)}${childrenQuery}`);
+        setLocation(`/dashboard?type=${accountType}&name=${encodeURIComponent(childrenNames[0] || profileName)}${childrenQuery}&new=true`);
       }, 1500);
     } else {
       setStep(step + 1);
