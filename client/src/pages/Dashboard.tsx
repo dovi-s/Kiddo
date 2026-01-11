@@ -552,7 +552,9 @@ export default function Dashboard() {
                     className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3 flex items-center justify-between"
                   >
                     <span>Send thank-yous</span>
-                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">3 pending</span>
+                    {pendingThankYous > 0 && (
+                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{pendingThankYous} pending</span>
+                    )}
                   </button>
                   <Link href="/send" className="block">
                     <button 
