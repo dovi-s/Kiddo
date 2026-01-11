@@ -1,0 +1,301 @@
+Settings: the “brilliant but not bloated” model
+
+Principle: settings exist to (1) keep people safe, (2) reduce support, (3) make the product feel personal. Everything else should be inline in the flow, not buried.
+
+You do not want 12 sections. You want one Settings surface with 5 tabs, plus a few contextual “Manage” links inside Funds and Events.
+
+The recommended IA
+Left nav: Account menu
+
+Dashboard
+
+Funds
+
+Events
+
+Gifts (history, receipts)
+
+Settings (single place)
+
+Inside Settings: top tabs
+
+Account
+
+Security
+
+Notifications
+
+Billing
+
+Documents
+
+That is it.
+
+Everything else lives inside Fund or Event “Manage” screens.
+
+1) Settings → Account
+
+Purpose: identity + household basics.
+
+Fields:
+
+Name
+
+Email
+
+Phone (optional, for SMS receipts)
+
+Household role (Parent/Guardian, Adult, Contributor only)
+
+Time zone
+
+Communication language
+
+Links:
+
+Manage children (if applicable)
+
+Close account (deep link to support flow, not self-serve in v1)
+
+Do not show brokerage details here. Users do not think “brokerage account,” they think “my fund.”
+
+2) Settings → Security
+
+Purpose: trust.
+
+Password
+
+2FA (SMS or authenticator)
+
+Devices / sessions
+
+Privacy defaults:
+
+“My pages are unlisted by default” (on)
+
+“Allow search by name” (off by default)
+
+“Require passcode for event pages” (optional)
+
+Data permissions:
+
+“Who can see contributor names” (host only default)
+
+“Who can see gift amounts” (host only default)
+
+One line “Brokerage custody and SIPC details” link goes here as “Learn more,” not a giant section.
+
+3) Settings → Notifications
+
+Purpose: reduce churn, increase thank-you completion, prevent fraud.
+
+Use a simple grid:
+
+Rows = notification types
+
+Columns = Email | SMS | Push (if app)
+
+Notification types (keep tight):
+Money movement
+
+Gift received
+
+Gift pending / failed
+
+Recurring gift upcoming (giver)
+
+Recurring gift processed (giver)
+
+Withdraw request / transfer initiated
+
+Security alerts
+
+Events
+
+RSVP/comment (if you have it)
+
+Event reminders (host only)
+
+Goal reached
+
+Gratitude
+
+“Time to send thank-yous” nudges (host)
+
+Thank-you sent confirmation (giver)
+
+Education (optional, off by default)
+
+Weekly “money lesson” for kid view
+
+Monthly recap
+
+Default:
+
+Email on for critical
+
+SMS off except security
+
+Push later when mobile exists
+
+4) Settings → Billing
+
+Purpose: one place for plan and receipts.
+
+Show:
+
+Current plan (Free / Plus / Family)
+
+Renewals and cancellations
+
+Payment method (if subscription)
+
+Invoices
+
+If you support “host covers fees” toggles, they belong here under:
+
+“Fee preferences”
+
+Default for new events: Guests pay fees OR Host covers fees
+
+Default cap behavior: stop accepting gifts at cap? or continue with host fee?
+
+Keep the fee language simple:
+
+“Guests pay processing” vs “You cover processing.”
+
+5) Settings → Documents
+
+Purpose: compliance and clarity, without spooking.
+
+Sections:
+
+Statements and tax docs (powered by broker)
+
+Confirmations (gift receipts)
+
+Disclosures and agreements
+
+Support and policies
+
+This prevents the product feeling like a fintech maze, but still has everything.
+
+Where Funds and Events get managed (not in Settings)
+Funds → select fund → Manage (top-right button)
+
+This is where “fund-level” settings live.
+
+Tabs inside fund:
+
+Overview
+
+Contributors
+
+Holdings
+
+Rules
+
+Documents
+
+Fund-level controls:
+
+Fund name, cover photo
+
+Default gift option (Future Fund / Education / Favorites)
+
+Favorites list (kid + parent approval)
+
+Visibility: unlisted, passcode
+
+Who can view holdings performance (parent only default)
+
+Withdrawal policy (if allowed): locked, restricted, flexible
+
+Auto-invest rules for Seed gifts
+
+Events → select event → Manage
+
+Event-level controls only.
+
+Event settings:
+
+Theme + card design
+
+Event date + location
+
+Default suggested amounts
+
+Goal card for group gifting
+
+Visibility / passcode
+
+Thank-you workflow (collect addresses, auto drafts)
+
+Close event (turn into evergreen link)
+
+Minimal “brokerage” mental model for users
+
+Users should not manage brokerages. They manage Funds.
+
+How you explain it:
+
+In Fund → Documents: “This fund is held in a brokerage account powered by [Partner].”
+
+In Fund → Status: “Active” or “Verification pending”
+
+In Settings → Documents: link to official statements
+
+Do not add “Brokerage Accounts” to the nav unless you want confusion.
+
+If user has multiple accounts (IRA + brokerage):
+
+V1: do not support IRAs. Too complex and not aligned with gifting.
+
+If you eventually support “Personal investing” accounts, represent them as:
+
+Fund type: “Personal Fund (Taxable)”
+
+Fund type: “Retirement Fund (IRA)” (later)
+Still, the user interacts with “Funds,” not “accounts.”
+
+The UI layout that feels high-end
+Settings page layout
+
+Left sidebar: Account, Security, Notifications, Billing, Documents
+
+Main panel: clean cards, short descriptions, toggles
+
+Save behavior: auto-save per field with toast “Saved”
+
+No giant forms, no long scrolls
+
+Add a universal search at top of Settings:
+
+“Search settings…”
+This makes it feel premium and reduces support.
+
+What to cut entirely (for now)
+
+Deep preference trees (“education preferences,” “gamification preferences”) unless it truly changes behavior
+
+“Integrations”
+
+“Advanced brokerage settings”
+
+“Export data” unless required
+
+“Portfolio analytics” in settings
+
+Defaults that remove 80% of future complaints
+
+Pages are unlisted by default
+
+Children are never searchable
+
+Gift amounts are hidden from public by default
+
+Guests never need an account
+
+Seed mode available as fallback if verification pending
+
+A single “Support” entry point everywhere
