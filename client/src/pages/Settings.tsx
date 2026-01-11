@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { 
   User, Shield, Bell, CreditCard, FileText, Search, 
   ChevronRight, Check, LogOut, HelpCircle, ArrowLeft,
-  Smartphone, Mail, Eye, EyeOff, Lock, Globe, Users
+  Smartphone, Mail, Eye, EyeOff, Lock, Globe, Users, Sparkles
 } from "lucide-react";
 
 type SettingsTab = "account" | "security" | "notifications" | "billing" | "documents";
@@ -414,57 +414,64 @@ function NotificationsTab() {
 function BillingTab() {
   return (
     <div className="space-y-6">
-      <SettingsSection title="Current plan">
-        <div className="flex items-center justify-between p-4 bg-stone-50 rounded-lg border border-stone-100">
-          <div>
-            <p className="font-medium text-stone-900">Free</p>
-            <p className="text-sm text-stone-500">Guests pay processing + Kora platform fee</p>
-          </div>
-          <span className="text-xs font-medium text-stone-600 bg-stone-200 px-2 py-1 rounded">Current</span>
-        </div>
-
-        <div className="space-y-3 pt-2">
-          <div className="p-4 rounded-lg border-2 border-stone-200 hover:border-stone-300 transition-colors cursor-pointer">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-medium text-stone-900">Plus</p>
-              <p className="text-sm font-medium text-stone-900">$99/event</p>
+      <SettingsSection title="Membership" description="Your household's account status">
+        <div className="p-5 bg-white rounded-xl border border-stone-200">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-lg font-semibold text-stone-900">Free</p>
+                <span className="text-xs font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">Current</span>
+              </div>
+              <p className="text-sm text-stone-500">Guests pay all fees at checkout</p>
             </div>
-            <p className="text-sm text-stone-500 mb-2">Make gifting cheaper for guests. Kora platform fee waived up to $7,500 gift volume.</p>
-            <ul className="text-xs text-stone-400 space-y-1">
-              <li>• Premium themes & card designs</li>
-              <li>• Goal cards & group gifting</li>
-              <li>• Thank-you automation</li>
-              <li>• Guests still pay processing</li>
+          </div>
+          
+          <div className="p-4 rounded-lg bg-gradient-to-br from-stone-900 to-stone-800 text-white">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="font-semibold mb-0.5">Upgrade to Family</p>
+                <p className="text-sm text-stone-300">$199/year</p>
+              </div>
+              <Sparkles size={20} className="text-amber-400" />
+            </div>
+            <ul className="text-sm text-stone-300 space-y-1.5 mb-4">
+              <li className="flex items-center gap-2">
+                <Check size={14} className="text-emerald-400" />
+                Platform fees waived up to $15,000/year
+              </li>
+              <li className="flex items-center gap-2">
+                <Check size={14} className="text-emerald-400" />
+                Household dashboard for all your kids
+              </li>
+              <li className="flex items-center gap-2">
+                <Check size={14} className="text-emerald-400" />
+                Recurring gift management
+              </li>
+              <li className="flex items-center gap-2">
+                <Check size={14} className="text-emerald-400" />
+                Priority support
+              </li>
             </ul>
-          </div>
-          <div className="p-4 rounded-lg border-2 border-stone-200 hover:border-stone-300 transition-colors cursor-pointer">
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-medium text-stone-900">Family</p>
-              <p className="text-sm font-medium text-stone-900">$199/year</p>
-            </div>
-            <p className="text-sm text-stone-500 mb-2">Everything in Plus. Kora platform fee waived up to $15,000/year.</p>
-            <ul className="text-xs text-stone-400 space-y-1">
-              <li>• Household dashboard (multiple kids)</li>
-              <li>• Recurring gifting management</li>
-              <li>• Multiple events per child</li>
-              <li>• Priority support</li>
-            </ul>
-          </div>
-          <div className="p-4 rounded-lg border border-stone-100 bg-stone-50/50">
-            <div className="flex items-center justify-between mb-1">
-              <p className="font-medium text-stone-700">Organizations</p>
-              <p className="text-sm text-stone-500">Contact sales</p>
-            </div>
-            <p className="text-xs text-stone-400">For schools, nonprofits, and teams running multiple events.</p>
+            <button 
+              onClick={() => toast({ title: "Upgrade to Family", description: "Family plan coming soon" })}
+              className="w-full py-2.5 bg-white text-stone-900 font-medium rounded-lg hover:bg-stone-100 transition-colors text-sm"
+            >
+              Upgrade to Family
+            </button>
           </div>
         </div>
+      </SettingsSection>
 
-        <button 
-          onClick={() => toast({ title: "Upgrade available", description: "Contact us to upgrade your plan" })}
-          className="w-full py-3 bg-stone-900 text-white font-medium rounded-lg hover:bg-stone-800 transition-colors"
-        >
-          Upgrade plan
-        </button>
+      <SettingsSection title="Event Passes" description="One-time upgrades for individual events">
+        <div className="p-4 bg-stone-50 rounded-lg border border-stone-100">
+          <p className="text-sm text-stone-500 mb-3">
+            Event Passes ($99 each) unlock premium features and waive platform fees for a single event. 
+            Purchase when creating or editing an event.
+          </p>
+          <div className="text-xs text-stone-400">
+            No Event Passes purchased yet.
+          </div>
+        </div>
       </SettingsSection>
 
       <SettingsSection title="How fees work" description="Two components shown at checkout">

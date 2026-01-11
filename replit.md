@@ -31,11 +31,15 @@ Preferred communication style: Simple, everyday language.
     1. **Processing (pass-through)**: Card ~2.9% + $0.30, ACH ~$0.75
     2. **Kora platform fee**: Card 1.5% (min $1, max $10), ACH 1.0% (min $0.75, max $10)
     
-    **Plans:**
+    **Account Memberships (household-level):**
     - **Free ($0)**: Guests pay processing + Kora platform fee. Host can toggle to cover platform fee per event (billed 1.5% per gift).
-    - **Plus ($99/event)**: Kora platform fee waived up to $7,500 gift volume. Premium themes, goal cards, thank-you automation. Guests still pay processing.
-    - **Family ($199/year)**: Everything in Plus. Kora platform fee waived up to $15,000/year. Household dashboard, recurring gifts, priority support.
+    - **Family ($199/year)**: Kora platform fee waived up to $15,000/year. Household dashboard for multiple kids, recurring gift management, priority support.
     - **Organizations**: Contact sales for schools, nonprofits, teams.
+    
+    **Event Add-on (per-event, NOT a plan):**
+    - **Event Pass ($99/event)**: One-time purchase for a single event. Kora platform fee waived up to $7,500 gift volume. Premium themes, goal cards, thank-you automation. Guests still pay processing. NEVER shown in account settings/billing as a "plan" - only appears in event creation/management contexts.
+    
+    **Critical distinction**: "Event Pass" is NOT a subscription plan. It is a one-time add-on purchased when creating or editing an event. The only subscription plan is "Family".
 
 ### Technical Implementation
 
