@@ -1,0 +1,168 @@
+Build it, but not the way that message frames it.
+
+Decision
+
+Add the identity verification step now, but gate it behind “Activate investing” and implement it as broker-hosted capture or a non-stored prototype form.
+Do not collect and store real SSNs in your app database for a prototype.
+
+That gives you:
+
+a realistic flow (users understand why investing requires identity)
+
+high conversion (users see value before paperwork)
+
+lower security and compliance risk
+
+The correct product model (so users are not lost)
+
+Users should only need to understand 3 objects:
+
+Account (hidden infrastructure)
+Personal account or custodial account (for a child). This is where the broker exists.
+
+Fund (what users care about)
+“Ari’s Future Fund” is a Fund. A Fund maps to exactly one brokerage account.
+
+Event Page (sharing layer under a Fund)
+Bar mitzvah, birthday, graduation pages that point to the same Fund (same underlying account), but different theme, copy, QR, and thank-you templates.
+
+In the UI, the broker should appear as: “Powered by [Broker]” and “SIPC insured”, not as a separate thing users “connect.”
+
+Correct onboarding flow (high conversion, still compliant)
+Phase 1: Create and share (no KYC yet)
+
+Get Started
+
+Who is this for? (Me / My child)
+
+Create first Fund (name, photo, short note)
+
+Choose default gift menu (Future Basket default, Education optional, Favorites optional)
+
+Generate share link and QR immediately
+
+Users should be able to share before KYC, but gifts should be limited until activation.
+
+Phase 2: Activate investing (KYC)
+
+Trigger when they try to:
+
+publish the Fund publicly
+
+enable auto-invest
+
+accept the first gift above a small threshold
+
+withdraw, transfer, or invest a Seed balance
+
+Button: Activate investing (2 minutes)
+
+What to build in the prototype right now
+1) KYC screens (adult)
+
+Use broker hosted UI if possible. If not, mock it and do not store SSN.
+
+Fields that are typically required:
+
+Legal name
+
+DOB
+
+SSN (masked, show only last 4 after entry)
+
+Address
+
+Citizenship / residency
+
+Employment and broker-required attestations (affiliations, PEP, etc. if required)
+
+Phone number (often required for verification)
+
+2) Child details (only if custodial)
+
+Child legal name
+
+DOB
+
+SSN (often required)
+
+Relationship
+
+Custodian attestation
+
+3) Brokerage agreement acceptance
+
+A dedicated step with:
+
+checkboxes: Customer Agreement, Privacy, Disclosures
+
+“I agree” button
+
+show “Powered by [Broker/Clearing]” and SIPC statement
+
+4) Fund status states
+
+Every Fund must show one clear status chip:
+
+Draft (not activated)
+
+Verification pending
+
+Active
+
+Needs action (failed verification)
+
+Restricted (rare edge case)
+
+Also show an ETA line for pending:
+
+“Usually under 2 minutes, sometimes up to 24 hours.”
+
+5) Gift receiving rules by status (critical)
+
+Draft: can share link, cannot accept gifts, or can accept “Pledge” only
+
+Pending: can accept gifts into “Seed” but cannot invest yet
+
+Active: accept gifts and invest per settings
+
+This prevents the product from feeling broken.
+
+What was wrong in the message you pasted
+
+It treats KYC as “missing brokerage connection.” The brokerage is not a connection. It is embedded account creation.
+
+It pushes SSN collection too early, which is a conversion killer.
+
+It does not mention how you avoid storing SSN, which is the real risk.
+
+Implementation guidance for the builder
+If you want to do this correctly with minimal risk
+
+Use broker or KYC vendor hosted capture inside an iframe or SDK
+
+Your app receives tokens and status, not raw SSN
+
+Store only:
+
+verification status
+
+last 4 of SSN (optional)
+
+timestamps
+
+broker account id
+
+If you must mock it for now
+
+Clearly label as “Test mode”
+
+Accept any input
+
+Do not persist SSN
+
+Still implement the state machine (Draft, Pending, Active) so the UX is real
+
+The exact instruction to send the agent/builder
+
+“Build the Activate Investing flow now. Gate it after fund creation. Add KYC screens, agreements, and Fund status states. Use broker hosted capture or mock without storing SSN. Implement Draft, Pending, Active, Needs action states and enforce gift rules by state.”

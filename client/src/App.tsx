@@ -18,6 +18,7 @@ import EventPage from "@/pages/EventPage";
 import PageEditor from "@/pages/PageEditor";
 import Claim from "@/pages/Claim";
 import GetStarted from "@/pages/GetStarted";
+import ActivateInvesting from "@/pages/ActivateInvesting";
 
 function Router() {
   return (
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/get-started" component={GetStarted} />
       <Route path="/onboard" component={Onboard} />
+      <Route path="/activate" component={ActivateInvesting} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/give" component={Give} />
       <Route path="/give/:id" component={Give} />

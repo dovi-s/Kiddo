@@ -65,12 +65,15 @@ export default function Dashboard() {
 
   const childNames = childrenParam ? decodeURIComponent(childrenParam).split(",") : [profileName];
   
+  type FundStatus = "draft" | "pending" | "active" | "needs_action";
+  
   const funds = isPersonal ? [
     {
       id: 1,
       name: profileName,
       slug: profileName.toLowerCase().replace(/\s+/g, "-"),
       accountType: "Individual",
+      status: (isNewAccount ? "draft" : "active") as FundStatus,
       balance: isNewAccount ? 0 : 4250,
       gain: isNewAccount ? 0 : 472,
       gainPercent: isNewAccount ? 0 : 12.5,
@@ -91,6 +94,7 @@ export default function Dashboard() {
     name: name.trim(),
     slug: name.trim().toLowerCase().replace(/\s+/g, "-"),
     accountType: "UTMA",
+    status: (isNewAccount ? "draft" : "active") as FundStatus,
     balance: isNewAccount ? 0 : (index === 0 ? 4250 : index === 1 ? 1820 : 650),
     gain: isNewAccount ? 0 : (index === 0 ? 472 : index === 1 ? 156 : 42),
     gainPercent: isNewAccount ? 0 : (index === 0 ? 12.5 : index === 1 ? 9.4 : 6.9),
@@ -111,10 +115,32 @@ export default function Dashboard() {
       { id: 6, slug: "anytime", title: "Open anytime", raised: 650, gifts: 3, active: true },
     ])
   }));
+  
+  const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
+  
+  const getStatusLabel = (status: FundStatus) => {
+    switch (status) {
+      case "draft": return "Not activated";
+      case "pending": return "Verification pending";
+      case "active": return "Active";
+      case "needs_action": return "Needs attention";
+    }
+  };
+  
+  const getStatusColor = (status: FundStatus) => {
+    switch (status) {
+      case "draft": return "bg-stone-100 text-stone-600";
+      case "pending": return "bg-amber-100 text-amber-700";
+      case "active": return "bg-emerald-100 text-emerald-700";
+      case "needs_action": return "bg-red-100 text-red-700";
+    }
+  };
 
   const portfolioValue = funds.reduce((sum, f) => sum + f.balance, 0);
   const marketChange = funds.reduce((sum, f) => sum + f.gain, 0);
   const totalReceived = portfolioValue - marketChange;
+  const investedAmount = Math.round(portfolioValue * 0.85);
+  const cashAmount = portfolioValue - investedAmount;
   const pendingAmount = isNewAccount ? 0 : 180;
 
   const holdings = [
@@ -195,28 +221,97 @@ export default function Dashboard() {
               transition={{ duration: 0.8 }}
               className="mb-10 lg:mb-12"
             >
-              {isNewAccount && portfolioValue === 0 ? (
+              {/* Status chip */}
+              <div className="flex items-center gap-2 mb-3">
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(selectedFund.status)}`}>
+                  {getStatusLabel(selectedFund.status)}
+                </span>
+                {selectedFund.status === "pending" && (
+                  <span className="text-xs text-stone-400">Usually under 2 minutes, sometimes up to 24 hours</span>
+                )}
+              </div>
+              
+              {selectedFund.status === "draft" ? (
                 <>
+                  {/* Draft state - show activate prompt */}
                   <p className="text-sm text-stone-500 mb-1">Portfolio value</p>
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-2">
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-3">
                     $0
                   </h1>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
-                    <span className="text-stone-500">
+                  
+                  <div className="p-4 rounded-xl bg-stone-100 border border-stone-200 mb-4">
+                    <p className="text-sm text-stone-600 mb-3">
                       {funds.length === 1 
-                        ? `${funds[0].name}'s fund is ready to share`
-                        : `${funds.length} funds ready to share`
+                        ? `${funds[0].name}'s fund is ready to share. Activate investing to accept gifts.`
+                        : `${selectedFund.name}'s fund is ready to share. Activate investing to accept gifts.`
                       }
-                    </span>
-                    <span className="text-emerald-600 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                      Active
-                    </span>
+                    </p>
+                    <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}`}>
+                      <Button 
+                        data-testid="button-activate-investing"
+                        className="bg-stone-900 text-white hover:bg-stone-800"
+                      >
+                        Activate investing
+                      </Button>
+                    </Link>
+                    <p className="text-xs text-stone-400 mt-3">Takes about 2 minutes. Identity verification required.</p>
+                  </div>
+                  
+                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-100">
+                    <p className="text-xs text-amber-700">
+                      <strong>Gift rules:</strong> Contributors can pledge gifts now. Pledges convert to real gifts once you activate investing.
+                    </p>
+                  </div>
+                </>
+              ) : selectedFund.status === "pending" ? (
+                <>
+                  {/* Pending verification state */}
+                  <p className="text-sm text-stone-500 mb-1">Portfolio value</p>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-3">
+                    $0
+                  </h1>
+                  
+                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-100 mb-4">
+                    <p className="text-xs text-amber-700">
+                      <strong>Gift rules:</strong> Gifts will be held as cash (Seed) until verification completes. They will auto-invest once your account is active.
+                    </p>
+                  </div>
+                  
+                  <p className="text-sm text-stone-500">
+                    We're verifying your identity. This usually takes under 2 minutes.
+                  </p>
+                </>
+              ) : selectedFund.status === "needs_action" ? (
+                <>
+                  {/* Needs action state */}
+                  <p className="text-sm text-stone-500 mb-1">Portfolio value</p>
+                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-3">
+                    $0
+                  </h1>
+                  
+                  <div className="p-4 rounded-xl bg-red-50 border border-red-100 mb-4">
+                    <p className="text-sm text-red-700 mb-3">
+                      We need additional information to verify your identity. This is common and usually takes just a minute to resolve.
+                    </p>
+                    <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}&retry=true`}>
+                      <Button 
+                        data-testid="button-retry-verification"
+                        className="bg-red-600 text-white hover:bg-red-700"
+                      >
+                        Complete verification
+                      </Button>
+                    </Link>
+                  </div>
+                  
+                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-100">
+                    <p className="text-xs text-amber-700">
+                      <strong>Gift rules:</strong> Gifts will be held as cash until verification is complete.
+                    </p>
                   </div>
                 </>
               ) : (
                 <>
-                  {/* Two-metric display */}
+                  {/* Active state - show metrics */}
                   <div className="grid grid-cols-2 gap-6 sm:gap-8 mb-4">
                     <div>
                       <p className="text-sm text-stone-500 mb-1">Total received</p>
@@ -245,6 +340,15 @@ export default function Dashboard() {
                         </span>
                       </>
                     )}
+                  </div>
+                  
+                  <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-100 mt-4">
+                    <p className="text-xs text-emerald-700">
+                      <strong>Gift rules:</strong> {portfolioValue === 0 
+                        ? "Share your link and contributions will automatically invest per your settings."
+                        : "Gifts are accepted and invested automatically when markets are open."
+                      }
+                    </p>
                   </div>
                 </>
               )}
