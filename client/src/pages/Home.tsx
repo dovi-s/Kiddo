@@ -178,10 +178,10 @@ export default function Home() {
               transition={{ delay: 0.4, duration: 0.5 }}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <Link href="/create">
+              <Link href="/get-started">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button size="lg" className="h-14 px-10 text-base rounded-xl shadow-lg shadow-emerald-500/20" data-testid="button-create-fund">
-                    Create a fund
+                    Get started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </motion.div>
@@ -310,7 +310,7 @@ export default function Home() {
             <div className="grid md:grid-cols-2 gap-6">
               {/* Create a Fund */}
               <FadeIn delay={0.1}>
-                <Link href="/create">
+                <Link href="/get-started">
                   <motion.div 
                     whileHover={{ y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.1)" }}
                     className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full"
@@ -424,7 +424,7 @@ export default function Home() {
                         <p className="text-2xl font-semibold">{plan.price}</p>
                         {plan.period && <p className="text-xs text-muted-foreground">{plan.period}</p>}
                       </div>
-                      <Link href="/create">
+                      <Link href="/get-started">
                         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                           <Button variant={plan.featured ? "default" : "outline"}>
                             {plan.featured ? "Choose Plus" : plan.id === "free" ? "Get started" : "Choose Family"}
@@ -459,14 +459,14 @@ export default function Home() {
             <p className="text-background/70 mb-8 max-w-md mx-auto">
               Free to create. Share it with anyone. Watch their future grow.
             </p>
-            <Link href="/create">
+            <Link href="/get-started">
               <motion.div 
                 whileHover={{ scale: 1.03 }} 
                 whileTap={{ scale: 0.98 }}
                 className="inline-block"
               >
                 <Button size="lg" variant="secondary" className="h-12 px-8 text-base">
-                  Create a fund <ArrowRight className="ml-2 h-4 w-4" />
+                  Get started <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </motion.div>
             </Link>

@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
-import Create from "@/pages/Create";
 import Give from "@/pages/Give";
 import Moment from "@/pages/Moment";
 import Recipient from "@/pages/Recipient";
@@ -26,7 +25,6 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/get-started" component={GetStarted} />
       <Route path="/dashboard" component={Dashboard} />
-      <Route path="/create" component={Create} />
       <Route path="/give" component={Give} />
       <Route path="/give/:id" component={Give} />
       <Route path="/moment/create" component={MomentCreate} />

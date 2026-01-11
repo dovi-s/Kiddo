@@ -453,7 +453,7 @@ export default function Moment() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Takes 2 minutes. Free to start.
                 </p>
-                <Link href="/create">
+                <Link href="/get-started">
                   <Button>Create a fund</Button>
                 </Link>
               </motion.div>

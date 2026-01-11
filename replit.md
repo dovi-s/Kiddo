@@ -105,6 +105,16 @@ Even with an embedded broker partner, Everleaf must handle:
 - **Thank-You Automation**: Draft suggestions, reminders, optional video thank-yous
 - **Milestones**: Celebrate first $500, 10 contributors, one-year anniversary
 
+### Phase 2 Features (Planned)
+
+**Payback Feature** - Turn Everleaf from "events only" to everyday use:
+- When you owe someone money (covered dinner, split a bill), offer to pay back to their Fund instead of cash
+- Two destinations only: **Cash** or **Their Fund** (recommended)
+- NO stock picking in payback - keeps it simple, avoids timing/price confusion
+- Default to "Add to your Fund" - one-tap to confirm
+- Increases usage frequency without complicating the core product
+- Implementation: same rails as gifting (money → account → invests per their default rules)
+
 ### Frontend Libraries
 - **QR Code Generation**: qrcode.react for shareable fund/event links
 - **Date Handling**: date-fns

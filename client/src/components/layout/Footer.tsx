@@ -28,7 +28,7 @@ export function Footer() {
             <h4 className="text-sm font-medium mb-4 text-foreground">Product</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
               {[
-                { href: "/create", label: "Create a fund" },
+                { href: "/get-started", label: "Get started" },
                 { href: "/moment", label: "Send a gift" },
                 { href: "/#pricing", label: "Pricing" },
               ].map((link) => (

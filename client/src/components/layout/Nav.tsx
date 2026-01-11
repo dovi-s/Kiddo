@@ -93,7 +93,7 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                   <Button variant="ghost" size="sm" data-testid="button-login">Log in</Button>
                 </motion.div>
               </Link>
-              <Link href="/create">
+              <Link href="/get-started">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button size="sm" data-testid="button-get-started">Get started</Button>
                 </motion.div>
@@ -129,7 +129,7 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                   <Link href="/moment" onClick={() => setIsOpen(false)} className="font-medium">Send a gift</Link>
                   <hr />
                   <Link href="/dashboard" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
-                  <Link href="/create"><Button className="w-full" onClick={() => setIsOpen(false)}>Get started</Button></Link>
+                  <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Get started</Button></Link>
                 </>
               )}
             </div>
