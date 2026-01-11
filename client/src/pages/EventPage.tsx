@@ -109,18 +109,39 @@ export default function EventPage() {
               )}
             </div>
 
-            {/* Progress bar */}
+            {/* Progress bar with teamwork feel */}
             {showProgress && (
-              <div className="mb-8">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="font-medium text-stone-900">${currentAmount.toLocaleString()}</span>
-                  <span className="text-stone-400">of ${goalAmount.toLocaleString()}</span>
+              <div className="mb-8 p-5 bg-white rounded-xl border border-stone-200">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-stone-900">Group goal</span>
+                  <span className="text-xs text-stone-400">
+                    {Math.round((currentAmount / goalAmount) * 100)}% funded
+                  </span>
                 </div>
-                <div className="h-2.5 bg-stone-200 rounded-full overflow-hidden">
+                <div className="h-3 bg-stone-100 rounded-full overflow-hidden mb-3">
                   <div 
-                    className="h-full bg-stone-900 transition-all"
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all"
                     style={{ width: `${Math.min((currentAmount / goalAmount) * 100, 100)}%` }}
                   />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex -space-x-2">
+                      {["D", "R", "S", "M"].slice(0, 4).map((initial, i) => (
+                        <div 
+                          key={i} 
+                          className="w-6 h-6 rounded-full bg-stone-200 border-2 border-white flex items-center justify-center text-[10px] font-medium text-stone-600"
+                        >
+                          {initial}
+                        </div>
+                      ))}
+                    </div>
+                    <span className="text-xs text-stone-500">12 people have given</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-semibold text-stone-900">${currentAmount.toLocaleString()}</span>
+                    <span className="text-xs text-stone-400"> / ${goalAmount.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             )}

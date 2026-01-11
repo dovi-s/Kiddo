@@ -19,6 +19,7 @@ import PageEditor from "@/pages/PageEditor";
 import Claim from "@/pages/Claim";
 import GetStarted from "@/pages/GetStarted";
 import ActivateInvesting from "@/pages/ActivateInvesting";
+import GiftCard from "@/pages/GiftCard";
 
 function Router() {
   return (
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/moment/:id" component={Moment} />
       <Route path="/send" component={Send} />
       <Route path="/claim/:token" component={Claim} />
+      <Route path="/card/:id" component={GiftCard} />
       <Route path="/edit/:fund/:event" component={PageEditor} />
       <Route path="/recipient" component={Recipient} />
       <Route path="/recipient/:id" component={Recipient} />
