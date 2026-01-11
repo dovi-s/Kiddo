@@ -1,9 +1,8 @@
-import { Nav } from "@/components/layout/Nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { useSearch } from "wouter";
+import { useSearch, Link } from "wouter";
 import { useState, useEffect } from "react";
-import { TrendingUp, Heart } from "lucide-react";
+import { TrendingUp, Heart, Sparkles, Star } from "lucide-react";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -27,61 +26,84 @@ function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string
 export default function Recipient() {
   const search = useSearch();
   const params = new URLSearchParams(search);
-  const recipientName = decodeURIComponent(params.get("name") || "Ari");
+  const recipientName = decodeURIComponent(params.get("name") || "Mila");
   const totalValue = Number(params.get("value")) || 4250;
   const contributorCount = Number(params.get("contributors")) || 18;
 
-  const messages = [
-    { from: "Uncle Dave", message: "Congrats! So proud of you." },
-    { from: "Grandma Ruth", message: "For your future, with all my love." },
-    { from: "The Cohens", message: "Here's to many more milestones!" },
-    { from: "Aunt Lisa", message: "Can't wait to see all you accomplish!" },
-    { from: "The Goldbergs", message: "Wishing you the best!" },
+  const milestones = [
+    { amount: 500, label: "First $500", reached: true, date: "Jan 2024" },
+    { amount: 1000, label: "$1,000", reached: true, date: "Mar 2024" },
+    { amount: 2500, label: "$2,500", reached: true, date: "Aug 2024" },
+    { amount: 5000, label: "$5,000", reached: false, date: null },
+    { amount: 10000, label: "$10,000", reached: false, date: null },
   ];
 
-  const people = ["Uncle Dave", "Grandma Ruth", "The Cohens", "Aunt Lisa", "The Goldbergs", "Cousin Jake", "Mom & Dad"];
+  const messages = [
+    { from: "Uncle Dave", message: "So proud of you, kiddo! This is just the beginning.", amount: 180 },
+    { from: "Grandma Ruth", message: "For your future, with all my love. Can't wait to see who you become.", amount: 500 },
+    { from: "The Cohens", message: "Here's to many more milestones!", amount: 100 },
+    { from: "Aunt Lisa", message: "Can't wait to see all you accomplish!", amount: 75 },
+    { from: "The Goldbergs", message: "Wishing you the best!", amount: 50 },
+  ];
+
+  const supporters = [
+    "Uncle Dave", "Grandma Ruth", "The Cohens", "Aunt Lisa", 
+    "The Goldbergs", "Cousin Jake", "Mom & Dad", "Nana", 
+    "The Petersons", "Aunt Maya"
+  ];
+
+  const holdings = [
+    { name: "Disney", emoji: "🏰" },
+    { name: "Apple", emoji: "🍎" },
+    { name: "US Market", emoji: "📈" },
+  ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Nav />
+    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100">
+      <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <Link href="/">
+            <span className="text-sm font-medium tracking-tight text-stone-900">Everleaf</span>
+          </Link>
+          <span className="text-xs text-stone-400">{recipientName}'s Story</span>
+        </div>
+      </header>
       
-      <main className="container mx-auto px-4 py-12 max-w-md">
-        {/* Header */}
+      <main className="max-w-lg mx-auto px-4 py-10">
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-12"
+          className="text-center mb-10"
         >
           <motion.div 
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
-            className="mx-auto mb-5 h-16 w-16 rounded-full bg-foreground text-background flex items-center justify-center text-2xl font-semibold"
+            className="mx-auto mb-5 h-20 w-20 rounded-full bg-gradient-to-br from-stone-800 to-stone-900 text-stone-50 flex items-center justify-center text-3xl font-light shadow-lg"
           >
             {recipientName.charAt(0)}
           </motion.div>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">{recipientName}'s Fund</h1>
-          <p className="text-muted-foreground text-sm mt-2">{contributorCount} people in your corner</p>
+          <h1 className="text-2xl font-light text-stone-900 tracking-tight">{recipientName}'s Fund</h1>
+          <p className="text-stone-500 text-sm mt-1">Your future is growing</p>
         </motion.div>
 
-        {/* Value */}
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="text-center mb-12"
+          className="text-center mb-10 p-8 rounded-2xl bg-white border border-stone-200 shadow-sm"
         >
-          <p className="text-5xl font-semibold text-foreground tracking-tight">
+          <p className="text-5xl font-light text-stone-900 tracking-tight mb-2">
             <AnimatedValue value={totalValue} />
           </p>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            <TrendingUp className="h-4 w-4 text-green-600" />
-            <span className="text-sm text-green-600 font-medium">Growing</span>
+          <div className="flex items-center justify-center gap-2">
+            <TrendingUp className="h-4 w-4 text-emerald-600" />
+            <span className="text-sm text-emerald-600 font-medium">Growing for your future</span>
           </div>
+          <p className="text-xs text-stone-400 mt-3">{contributorCount} people believe in you</p>
         </motion.div>
 
-        {/* Messages */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -89,8 +111,76 @@ export default function Recipient() {
           className="mb-10"
         >
           <div className="flex items-center gap-2 mb-4">
-            <Heart className="h-4 w-4 text-muted-foreground" />
-            <h2 className="font-semibold tracking-tight">Messages</h2>
+            <Sparkles className="h-4 w-4 text-stone-400" />
+            <h2 className="text-sm font-medium text-stone-900">What you own</h2>
+          </div>
+          <div className="flex gap-3">
+            {holdings.map((holding, i) => (
+              <motion.div
+                key={holding.name}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + i * 0.1 }}
+                className="flex-1 p-4 rounded-xl bg-white border border-stone-200 text-center"
+              >
+                <span className="text-2xl mb-2 block">{holding.emoji}</span>
+                <p className="text-xs text-stone-600">{holding.name}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mb-10"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Star className="h-4 w-4 text-stone-400" />
+            <h2 className="text-sm font-medium text-stone-900">Milestones</h2>
+          </div>
+          <div className="relative">
+            <div className="absolute left-3 top-3 bottom-3 w-0.5 bg-stone-200" />
+            <div className="space-y-3">
+              {milestones.map((milestone, i) => (
+                <motion.div
+                  key={milestone.amount}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 + i * 0.08 }}
+                  className="flex items-center gap-3 pl-1"
+                >
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center z-10 ${
+                    milestone.reached 
+                      ? "bg-emerald-500 text-white" 
+                      : "bg-stone-200 text-stone-400"
+                  }`}>
+                    {milestone.reached && <span className="text-xs">✓</span>}
+                  </div>
+                  <div className="flex-1">
+                    <p className={`text-sm ${milestone.reached ? "text-stone-900" : "text-stone-400"}`}>
+                      {milestone.label}
+                    </p>
+                    {milestone.date && (
+                      <p className="text-xs text-stone-400">{milestone.date}</p>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="mb-10"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Heart className="h-4 w-4 text-stone-400" />
+            <h2 className="text-sm font-medium text-stone-900">Messages from people who love you</h2>
           </div>
           <div className="space-y-3">
             {messages.map((item, i) => (
@@ -98,13 +188,15 @@ export default function Recipient() {
                 key={i} 
                 initial={{ opacity: 0, x: -10 }} 
                 animate={{ opacity: 1, x: 0 }} 
-                transition={{ delay: 0.4 + i * 0.08 }}
-                whileHover={{ x: 4 }}
+                transition={{ delay: 0.6 + i * 0.08 }}
               >
-                <Card className="border hover:border-foreground/20 transition-colors">
+                <Card className="border border-stone-200 hover:border-stone-300 transition-colors bg-white">
                   <CardContent className="p-4">
-                    <p className="font-medium text-sm">{item.from}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{item.message}</p>
+                    <div className="flex items-start justify-between mb-1">
+                      <p className="font-medium text-sm text-stone-900">{item.from}</p>
+                      <span className="text-xs text-emerald-600 font-medium">+${item.amount}</span>
+                    </div>
+                    <p className="text-sm text-stone-500 leading-relaxed">{item.message}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -112,30 +204,43 @@ export default function Recipient() {
           </div>
         </motion.div>
 
-        {/* People */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+          transition={{ delay: 0.7 }}
+          className="mb-10"
         >
-          <h2 className="font-semibold tracking-tight mb-4">Your supporters</h2>
+          <h2 className="text-sm font-medium text-stone-900 mb-4">Your supporters</h2>
           <div className="flex flex-wrap gap-2">
-            {people.map((name, i) => (
+            {supporters.map((name, i) => (
               <motion.span 
                 key={name}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.7 + i * 0.05 }}
-                whileHover={{ scale: 1.05 }}
-                className="inline-flex items-center gap-2 border rounded-full px-3 py-1.5 text-sm hover:bg-foreground/[0.03] transition-colors cursor-default"
+                transition={{ delay: 0.8 + i * 0.03 }}
+                className="inline-flex items-center gap-2 bg-white border border-stone-200 rounded-full px-3 py-1.5 text-sm"
               >
-                <span className="h-5 w-5 rounded-full bg-foreground/10 flex items-center justify-center text-xs font-medium">
+                <span className="h-5 w-5 rounded-full bg-stone-100 flex items-center justify-center text-xs font-medium text-stone-600">
                   {name.charAt(0)}
                 </span>
-                {name}
+                <span className="text-stone-700">{name}</span>
               </motion.span>
             ))}
           </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.9 }}
+          className="text-center pt-6 border-t border-stone-200"
+        >
+          <p className="text-xs text-stone-400 mb-2">
+            Your fund is invested for long-term growth
+          </p>
+          <p className="text-[10px] text-stone-300">
+            Assets held by Apex Clearing, member FINRA/SIPC
+          </p>
         </motion.div>
       </main>
     </div>

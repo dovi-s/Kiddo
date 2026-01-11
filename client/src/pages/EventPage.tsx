@@ -390,9 +390,13 @@ export default function EventPage() {
                         </svg>
                       </div>
                       <h1 className="text-2xl lg:text-3xl font-light text-stone-900 mb-2">Gift sent</h1>
-                      <p className="text-stone-500 mb-8">
+                      <p className="text-stone-500 mb-4">
                         You gave ${finalAmount} to {recipientName}'s future
                       </p>
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-sm mb-8">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                        Will invest when markets open
+                      </div>
                     </motion.div>
 
                     <div className="p-5 bg-white border border-stone-200 rounded text-left max-w-xs mx-auto mb-8">

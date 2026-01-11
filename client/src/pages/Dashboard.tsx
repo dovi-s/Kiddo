@@ -103,6 +103,16 @@ export default function Dashboard() {
 
   const totalBalance = funds.reduce((sum, f) => sum + f.balance, 0);
   const totalGain = funds.reduce((sum, f) => sum + f.gain, 0);
+  const investedAmount = Math.round(totalBalance * 0.85);
+  const cashAmount = totalBalance - investedAmount;
+  const pendingAmount = 180;
+
+  const holdings = [
+    { ticker: "VTI", name: "US Total Market ETF", shares: 12.4, value: 2125, gain: 245 },
+    { ticker: "VXUS", name: "International ETF", shares: 8.2, value: 850, gain: 72 },
+    { ticker: "DIS", name: "Disney", shares: 3.5, value: 425, gain: 38 },
+    { ticker: "AAPL", name: "Apple", shares: 2.1, value: 400, gain: 85 },
+  ];
 
   const portfolio = [
     { name: "US Total Market", allocation: "50%", value: 2125 },
@@ -112,10 +122,12 @@ export default function Dashboard() {
   ];
 
   const recentActivity = [
-    { from: "Dave Chen", amount: 180, event: "5th Birthday", time: "2 hours ago", note: "So proud of you" },
-    { from: "Ruth Stein", amount: 500, event: "Open anytime", time: "Yesterday", note: "With love" },
-    { from: "Michael Park", amount: 100, event: "Open anytime", time: "3 days ago", note: null },
+    { from: "Dave Chen", amount: 180, event: "5th Birthday", time: "2 hours ago", note: "So proud of you", status: "pending" as const },
+    { from: "Ruth Stein", amount: 500, event: "Open anytime", time: "Yesterday", note: "With love", status: "invested" as const },
+    { from: "Michael Park", amount: 100, event: "Open anytime", time: "3 days ago", note: null, status: "invested" as const },
   ];
+
+  const pendingThankYous = recentActivity.filter(a => a.status === "invested").length;
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -169,10 +181,18 @@ export default function Dashboard() {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-2">
                 <AnimatedValue value={totalBalance} />
               </h1>
-              <p className="text-sm">
-                <span className="text-emerald-700">+${totalGain.toLocaleString()}</span>
-                <span className="text-stone-400 ml-1.5">all time</span>
-              </p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm mt-2">
+                <span className="text-emerald-700">+${totalGain.toLocaleString()} all time</span>
+                <span className="text-stone-300">|</span>
+                <span className="text-stone-500">Invested: ${investedAmount.toLocaleString()}</span>
+                <span className="text-stone-500">Cash: ${cashAmount.toLocaleString()}</span>
+                {pendingAmount > 0 && (
+                  <span className="text-amber-600 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    Pending: ${pendingAmount}
+                  </span>
+                )}
+              </div>
             </motion.div>
 
             {/* Portfolio Preview */}
@@ -427,15 +447,30 @@ export default function Dashboard() {
                 {recentActivity.map((item, i) => (
                   <div key={i} className="flex items-start justify-between p-4 bg-white border border-stone-200 rounded-lg lg:border-0 lg:bg-transparent lg:p-0">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-stone-900">
-                        <span className="font-medium">{item.from}</span>
-                        <span className="text-stone-400 mx-1.5">→</span>
-                        <span>{item.event}</span>
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-stone-900">
+                          <span className="font-medium">{item.from}</span>
+                          <span className="text-stone-400 mx-1.5">→</span>
+                          <span>{item.event}</span>
+                        </p>
+                        {item.status === "pending" ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
+                            <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
+                            Pending
+                          </span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
+                            Invested
+                          </span>
+                        )}
+                      </div>
                       {item.note && (
                         <p className="text-sm text-stone-500 mt-0.5 truncate">"{item.note}"</p>
                       )}
-                      <p className="text-xs text-stone-400 mt-1">{item.time}</p>
+                      <p className="text-xs text-stone-400 mt-1">
+                        {item.time}
+                        {item.status === "pending" && " · Will invest when markets open"}
+                      </p>
                     </div>
                     <p className="text-sm font-medium text-stone-900 shrink-0 ml-4">+${item.amount}</p>
                   </div>
@@ -548,22 +583,43 @@ export default function Dashboard() {
 
       {/* Portfolio Modal */}
       <Dialog open={showPortfolio} onOpenChange={setShowPortfolio}>
-        <DialogContent className="max-w-sm bg-white">
+        <DialogContent className="max-w-md bg-white">
           <DialogHeader>
-            <DialogTitle className="font-medium">Portfolio allocation</DialogTitle>
+            <DialogTitle className="font-medium">Where it's invested</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4">
-            {portfolio.map((item, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-stone-900">{item.name}</p>
-                  <p className="text-xs text-stone-400">{item.allocation}</p>
-                </div>
-                <p className="text-sm font-medium text-stone-900">${item.value.toLocaleString()}</p>
+          <div className="py-4">
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100">
+              <div>
+                <p className="text-sm text-stone-500">Invested</p>
+                <p className="text-lg font-medium text-stone-900">${investedAmount.toLocaleString()}</p>
               </div>
-            ))}
-            <p className="text-xs text-stone-400 pt-4 border-t border-stone-100">
-              Automatically rebalanced. Managed for long-term growth.
+              <div className="text-right">
+                <p className="text-sm text-stone-500">Cash</p>
+                <p className="text-lg font-medium text-stone-900">${cashAmount.toLocaleString()}</p>
+              </div>
+            </div>
+            
+            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">Holdings</p>
+            <div className="space-y-3">
+              {holdings.map((holding, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-stone-50">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium text-stone-600 bg-white px-2 py-1 rounded border border-stone-200">{holding.ticker}</span>
+                    <div>
+                      <p className="text-sm text-stone-900">{holding.name}</p>
+                      <p className="text-xs text-stone-400">{holding.shares} shares</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-stone-900">${holding.value.toLocaleString()}</p>
+                    <p className="text-xs text-emerald-600">+${holding.gain}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <p className="text-xs text-stone-400 pt-4 mt-4 border-t border-stone-100">
+              Holdings are at the Fund level. Gifts from all events invest into the same account.
             </p>
           </div>
         </DialogContent>

@@ -4,11 +4,148 @@
 
 Everleaf is a modern gifting platform that transforms traditional gifts into long-term investments. The core concept is "gifts that grow" - instead of giving cash or physical presents, contributors can give money that gets invested into a recipient's fund (typically for children through custodial accounts).
 
+## The 3-Layer Model
+
+Understanding the product requires knowing these three layers:
+
+| Layer | What it is | Who sees it |
+|-------|------------|-------------|
+| **Layer 1: Everleaf** | The UI + gifting/registry layer. Creates pages, runs checkout, stores messages, runs thank-you flows, shows "where it's invested" | Everyone |
+| **Layer 2: Brokerage Account** | The real securities account at Apex/DriveWealth where cash + shares actually sit. Gets SIPC coverage. | Hidden from users |
+| **Layer 3: Clearing/Custody** | Regulated entity handling KYC/AML, custody, trade execution, statements, tax docs | Users never think about this |
+
+**Key insight**: Users only see Layer 1 (Everleaf). They never need to know what Apex is.
+
+## Core Concepts
+
+### What is a "Fund"?
+
+**One Fund = One Brokerage Account**
+
+- "Mila's Fund" = a UTMA custodial account at Apex
+- "My Fund" = a personal taxable account at Apex
+- "Wedding Fund" = a joint or individual taxable account
+
+A Fund is the "container" that maps to one brokerage account. V1 supports only:
+- **Custodial UTMA** (for kids)
+- **Personal taxable** (for adults)
+
+No IRAs, no external account linking (Schwab/Fidelity) in v1.
+
+### Pages vs Funds
+
+Pages are public-facing "skins" that route gifts into the same Fund:
+
+```
+Fund (Mila's UTMA Account)
+├── everleaf.com/mila (Open anytime)
+├── everleaf.com/mila/5th-birthday
+├── everleaf.com/mila/kindergarten-graduation
+└── everleaf.com/mila/bar-mitzvah
+```
+
+**All pages route to the same Fund.** Pages are just attribution labels for thank-yous. You do NOT open a new brokerage account per event.
+
+### Gift Lifecycle
+
+1. **Gift received** → Shows as "Pending" (payment captured)
+2. **Market opens** → Everleaf places buy order via broker
+3. **Trade settles** → Status updates to "Invested"
+4. **Holdings appear** → Visible at Fund level in "Where it's invested"
+
+If markets are closed (weekend): "Will invest when markets open"
+
+### Holdings Location
+
+Holdings are always at the **Fund level** (because that's the brokerage account).
+
+- "Where it's invested" = Fund
+- "Contributions and notes" = Fund and Event
+- "Event totals" = Event
+
+Events are attribution layers, NOT separate portfolios.
+
+## User Flows
+
+### 1. Gift-Giver (no account, 60 seconds)
+1. Opens link → Sees event page
+2. Picks amount ($25, $50, $100, custom)
+3. Picks type: "Future Fund" (default basket) OR "Pick a stock"
+4. Adds name + note
+5. Pays (Apple Pay/card)
+6. Sees "Gift pending - will invest when markets open"
+7. Done. No account needed.
+
+### 2. Parent/Host (account owner)
+1. Creates Fund (for child or self)
+2. Completes identity verification (KYC)
+3. Creates event pages
+4. Shares links/QR codes
+5. Dashboard shows: Total, Invested vs Cash, Recent gifts
+6. Sends thank-yous
+
+### 3. Kid/Recipient (read-only "Story Mode")
+- Sees total, milestones, messages
+- Can't trade or withdraw
+- Like a digital scrapbook with a balance
+
+### 4. Adult Recipient (self-directed)
+- Same as parent but no custodian
+- Creates their own Fund
+- Uses for wedding, milestone birthday, etc.
+
+### 5. Co-Parent/Family Admin
+- Invited as collaborator
+- Can: View, create events, send thank-yous
+- Can't: Change settings, withdraw
+
+## Key Scenarios
+
+| Scenario | What happens |
+|----------|--------------|
+| Gift on Saturday | Shows "Pending" → Monday 9:30am auto-invests → Updates to "Invested" |
+| Seed Mode | Gifts stay as cash → Parent clicks "Invest Now" after event |
+| 2 kids | 2 separate Funds → Dashboard has fund switcher |
+| Pick a stock | Contributor picks Disney → Payment clears → Buy order placed → Shares appear |
+
+## Dashboard IA
+
+```
+[Fund Switcher: Mila ▾ | Noah | Me]
+
+Total Balance: $4,250
+├── Invested: $3,800
+├── Cash: $450
+└── Pending: $180 (pulsing indicator)
+
+[Holdings] - Fund level
+• VTI - US Total Market
+• VXUS - International
+• DIS - Disney
+• AAPL - Apple
+
+[Events] - Share/QR per row
+• Open anytime - $2,180
+• 5th Birthday - $1,420
+
+[Activity] - Status per gift
+• Dave Chen → 5th Birthday (+$180) [Pending]
+• Ruth Stein → Open anytime (+$500) [Invested]
+
+[Quick Actions]
+1. Share link (primary)
+2. Create event page
+3. Send thank-yous (3 pending)
+4. Send a gift (secondary)
+```
+
+## Platform Architecture
+
 The platform consists of:
-- **Fund Pages**: Permanent giving links for recipients (children or adults)
-- **Moment Pages**: Event-specific pages (birthdays, bar mitzvahs, graduations, weddings) that link to the underlying fund
-- **Contributor Checkout**: A frictionless flow for gift-givers (no account required, under 60 seconds)
-- **Dashboard**: For parents/guardians to manage funds, events, and view contributions
+- **Fund Pages**: Permanent giving links for recipients
+- **Event Pages**: Occasion-specific pages that route to the underlying fund
+- **Contributor Checkout**: Frictionless 60-second flow (no account required)
+- **Dashboard**: For parents/guardians to manage funds and send thank-yous
 
 The business model involves platform fees on gifts (capped percentages), with optional subscription tiers for hosts who want fee-free gifting for their guests.
 
