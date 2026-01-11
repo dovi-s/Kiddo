@@ -44,6 +44,8 @@ export default function Dashboard() {
   const [showAddChild, setShowAddChild] = useState(false);
   const [showAddFund, setShowAddFund] = useState(false);
   const [newChildName, setNewChildName] = useState("");
+  const [showThankYous, setShowThankYous] = useState(false);
+  const [sentThankYous, setSentThankYous] = useState<string[]>([]);
   
   const isNewAccount = params.get("new") === "true";
   
@@ -166,7 +168,7 @@ export default function Dashboard() {
     { from: "Michael Park", amount: 100, event: "Open anytime", time: "3 days ago", note: null, status: "invested" as const },
   ];
 
-  const pendingThankYous = recentActivity.filter(a => a.status === "invested").length;
+  const pendingThankYous = recentActivity.filter(a => a.status === "invested" && !sentThankYous.includes(a.from)).length;
 
   return (
     <div className="min-h-screen bg-stone-50">
@@ -716,6 +718,7 @@ export default function Dashboard() {
                   </Link>
                   <button 
                     data-testid="button-thank-yous"
+                    onClick={() => setShowThankYous(true)}
                     className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3 flex items-center justify-between"
                   >
                     <span>Send thank-yous</span>
@@ -1067,6 +1070,71 @@ export default function Dashboard() {
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Thank-Yous Modal */}
+      <Dialog open={showThankYous} onOpenChange={setShowThankYous}>
+        <DialogContent className="max-w-md bg-white p-0 gap-0">
+          <div className="p-5 border-b border-stone-100">
+            <DialogTitle className="font-medium text-stone-900">Send thank-yous</DialogTitle>
+            <p className="text-sm text-stone-500 mt-1">
+              {pendingThankYous > 0 
+                ? `${pendingThankYous} contributor${pendingThankYous === 1 ? '' : 's'} waiting for a thank-you`
+                : "All caught up! No pending thank-yous."}
+            </p>
+          </div>
+          
+          <div className="max-h-80 overflow-y-auto">
+            {recentActivity
+              .filter(a => a.status === "invested")
+              .map((item, i) => {
+                const isSent = sentThankYous.includes(item.from);
+                return (
+                  <div 
+                    key={i} 
+                    className={`p-4 border-b border-stone-100 last:border-0 ${isSent ? 'bg-stone-50' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-stone-900">{item.from}</p>
+                          {isSent && (
+                            <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Sent</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-stone-500">${item.amount} • {item.event}</p>
+                        {item.note && (
+                          <p className="text-sm text-stone-400 mt-1 italic">"{item.note}"</p>
+                        )}
+                      </div>
+                      {!isSent && (
+                        <button
+                          onClick={() => {
+                            setSentThankYous(prev => [...prev, item.from]);
+                            toast({ title: `Thank-you sent to ${item.from}` });
+                          }}
+                          data-testid={`button-send-thanks-${i}`}
+                          className="shrink-0 px-3 py-1.5 bg-stone-900 text-white text-xs font-medium rounded-lg hover:bg-stone-800 transition-colors"
+                        >
+                          Send
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          <div className="p-5 border-t border-stone-100">
+            <button 
+              onClick={() => setShowThankYous(false)}
+              data-testid="button-close-thankyous"
+              className="w-full py-2.5 bg-stone-100 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-200 transition-colors"
+            >
+              Done
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
