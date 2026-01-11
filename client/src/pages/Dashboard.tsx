@@ -5,7 +5,7 @@ import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users } from "lucide-react";
+import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
@@ -627,6 +627,14 @@ export default function Dashboard() {
                                             data-testid={`button-qr-event-${event.id}`}
                                           >
                                             <QrCode size={12} />
+                                          </button>
+                                          <button 
+                                            onClick={() => toast({ title: "Event archived", description: "You can restore it anytime from settings" })}
+                                            className="hidden sm:block p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                            title="Archive event"
+                                            data-testid={`button-archive-event-${event.id}`}
+                                          >
+                                            <Archive size={12} />
                                           </button>
                                           <Link href={`/${fundSlug}/${eventData.slug}`}>
                                             <button 
