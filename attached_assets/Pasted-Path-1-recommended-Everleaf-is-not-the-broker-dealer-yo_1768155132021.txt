@@ -1,0 +1,101 @@
+Path 1 (recommended): Everleaf is not the broker-dealer; you embed a broker stack
+
+What this means
+
+A regulated broker-dealer is the broker of record and performs KYC/AML, custody, statements, trade execution, tax forms.
+
+Everleaf is the front-end product, event registry, payments UX, gift card, thank-you system, templates, referrals, and customer relationship.
+
+Typical partners
+
+Apex Clearing is an SEC-registered broker-dealer, FINRA member, and SIPC member, commonly used as clearing/custody infrastructure.
+
+DriveWealth markets “Brokerage-as-a-Service,” and their customer agreement describes the “introducing firm” model where DriveWealth acts as a clearing broker-dealer for partner experiences.
+
+Why this is the best for your product
+
+You can truthfully say: “We open a brokerage account inside Everleaf, powered by [partner].”
+
+You keep the “60-second gifting” magic because users do not get bounced out to Schwab/Fidelity flows.
+
+Path 2 (advanced option later): Connect existing brokerage accounts
+
+This is attractive in theory but usually kills conversion for gifting because it adds friction, matching issues, transfer delays, and support load.
+
+It is best as “Already have an account? Connect it” after you have traction.
+
+Broker-dealer of record: “Isn’t it whoever they connect to?”
+
+Not in the embedded model.
+
+In the embedded model, the user does not connect their Schwab/Fidelity account.
+
+They open an account through Everleaf, and the broker-dealer of record is your embedded partner stack (or the introducing BD your program runs through), with clearing/custody handled by the clearing firm.
+
+That is why the language you saw (“powered by Apex Clearing”) exists. Apex is explicitly positioned as a broker-dealer and SIPC member.
+
+Compliance: what you actually need (in human terms)
+
+You will have two layers: what the partner covers, and what you still must cover.
+
+Your partner typically covers (because they are regulated)
+
+Identity verification / CIP, KYC and AML program execution
+
+Sanctions screening (OFAC-type checks)
+
+Brokerage statements, trade confirms, tax reporting
+
+Custody, clearing, settlement, corporate actions
+
+Supervision of brokerage activity under their rules
+
+Everleaf still needs (even if you are “just the app”)
+
+Marketing + product compliance
+
+Every claim on the site, every screen, every push notification, every referral incentive
+
+Clear disclosures: “investing involves risk,” “values can go down,” “who holds the assets,” “fees”
+
+No “performance promises” and no “beat bonds” positioning
+
+Payments + fraud controls
+
+Card fraud, chargebacks, stolen cards at events
+
+Velocity limits, risk scoring, disputes process
+
+This can be a bigger cost center than people expect early on
+
+Data security + privacy program
+
+Encryption, access control, audit logs, incident response plan
+
+Vendor security reviews (your broker stack will require this)
+
+SOC 2 is not day 1, but your controls should be SOC 2-ready
+
+Customer support + complaint handling
+
+Broker-dealer partners care a lot about complaint workflows and response times
+
+Recordkeeping
+
+You will be required (by contract and often by regulatory pass-through) to retain certain comms and transaction-related records.
+
+Insurance and protection you should plan for
+
+Even with a partner broker-dealer, you need to protect the company.
+
+Cyber liability (table stakes)
+
+Crime / fraud coverage (social engineering, payment fraud)
+
+E&O / professional liability (especially if you drift into advice-like territory)
+
+D&O (once you have real investors/board)
+
+General liability (basic)
+
+Your brokerage partner will have their own coverage and SIPC membership for brokerage accounts, but that does not replace your company’s coverage needs.

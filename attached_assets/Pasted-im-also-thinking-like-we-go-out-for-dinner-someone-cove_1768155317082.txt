@@ -1,0 +1,90 @@
+im also thinking like we go out for dinner someone covers it i owe him $50 (example), i can be like you want that back in cash or eg disney... you get me? wdyt of this? not an overload, jsut a thing naturally withinn as part of it? 
+Thought for 6s
+
+This is a good idea as a “viral surface,” but it is dangerous if you implement it as “pick a ticker and send it” inside a payback flow.
+
+Why it’s attractive
+
+It turns Everleaf from “something you use at events” into “something you use any week.”
+
+It creates a natural loop: someone receives a gift, installs the app, then uses it to send money back, then uses it for the next birthday.
+
+It feels modern: “Do you want $50 back in cash, or should I drop it into your Future Fund?”
+
+Why the naive version gets messy fast
+
+If you let people repay friends in specific stocks (example “Disney”), you introduce:
+
+Timing + price confusion (what price, what time, fractional rounding, market closed)
+
+Support load (“I sent $50 of Disney but it shows $49.12”)
+
+Tax and reporting complexity (now you’re effectively doing frequent small purchases/transfers)
+
+Regulatory scope creep (it starts looking like payments + investing + money movement combined, which increases partner compliance friction and your operational burden)
+
+The clean version that works
+
+Make it an option, but keep it dumb and defaulted.
+
+“Payback” only supports 2 destinations
+
+Cash (standard repayment)
+
+Their Everleaf Fund (not a ticker)
+
+Default destination: their “Future Fund” (or whatever their default basket is)
+
+Optional: “Education Fund” if that is one of their enabled rails
+
+No stock picking in payback. If they want Disney, they can choose it later inside their own account.
+
+UX that feels natural, not overloaded
+
+In the payback sheet:
+
+Amount: $50
+
+Destination toggle:
+
+Cash
+
+Add to your Fund (recommended)
+
+One line helper text:
+
+“Fund deposits are invested into your default basket.”
+
+Confirm
+
+That’s it.
+
+How it fits the product without changing the core
+
+Your core product is still: event pages + gifting + funds for kids and families.
+
+This becomes an “extra” you see only when:
+
+you already have a contact in Everleaf, or
+
+you are sending money to someone who already has a fund.
+
+It’s optional, but it increases frequency.
+
+Implementation guidance (important)
+
+Treat this as Phase 2, not MVP.
+
+Build it on the same rails as gifting:
+
+money moves into the recipient’s account
+
+it invests according to their default rules
+
+receipts are clear (“$50 contributed, will invest next window”)
+
+Avoid real-time trading promises. Use a clear status like: Pending → Invested.
+
+Verdict
+
+Yes, include it, but only in the “smart default” form: payback in cash or payback into their fund, not “payback in Disney.”

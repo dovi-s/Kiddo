@@ -1,0 +1,89 @@
+Key flows to inspect
+
+Account sign‑up / sign‑in
+
+Are there separate flows for guardian/parent, child/recipient, guest contributor, and adult user?
+
+Is identity verification handled smoothly (especially for minors and custodial accounts)?
+
+Are errors and confirmations clearly communicated at every step?
+
+Dashboard setup
+
+After sign‑up, can a parent create multiple profiles (for children) under one account?
+
+Is there a clear delineation between personal funds and child funds?
+
+Are balances, contributions, and milestones easy to understand?
+
+Fund & event creation
+
+Can the parent/guardian create always‑on “Future Funds” and temporary “Event” pages (bar mitzvah, birthday, graduation, etc.) linked to the same account?
+
+Are theme templates polished, with consistent typography, colors, and trust messaging?
+
+Is it obvious how to add a story/photo, set default gift amounts, and enable recurring gifts or group goals?
+
+Contributor checkout
+
+Does the guest (contributor) checkout flow keep things under 60 seconds with Apple Pay and credit card options up front?
+
+Are fees shown clearly as separate line items for processing vs. platform fee?
+
+Is the “Future Fund (default)” clearly marked to minimize confusion?
+
+Can a contributor choose between the recommended default, a Seed mode, and (optionally) a list of favorite companies?
+
+Does the digital card reveal feel premium and shareable, with a “thank you” message and printing option?
+
+Thank‑you experience
+
+After gifts, does the platform prompt recipients or parents to send thank‑you notes?
+
+Is there automation (drafts, mailing lists, optional video thank‑you) that keeps the process simple?
+
+Are addresses captured appropriately when needed?
+
+Recurring gifts & recurring management
+
+Can grandparents or close relatives set up recurring monthly or annual contributions with minimal friction?
+
+Are recurring rules (start, amount, duration) clearly explained?
+
+Can the parent modify or cancel recurring contributions easily?
+
+Performance & trust
+
+Is the platform extremely responsive on desktop and mobile?
+
+Are SIPC, brokerage disclosures, and refund policies clearly described in plain language?
+
+Are security and privacy statements accessible from every page?
+
+Do receipts show the status of the gift (pending, invested, held as Seed) with estimated timing?
+
+Potential issues and recommended fixes
+
+Confusing sign‑up flows: If guardians must repeatedly create separate accounts, combine them into a single unified flow where a parent can add multiple children and manage funds centrally.
+
+Missing identity verification clarity: Use plain‑language disclosures about brokerage partners (e.g., “Brokerage services provided by Apex Clearing Corporation, member FINRA/SIPC”), including what SIPC insurance covers
+newtab
+.
+
+Inconsistent design language: Templates should follow a cohesive “premium stationery meets modern registry” aesthetic with restrained color palettes, abundant whitespace, soft corners and consistent typography.
+
+Opaque fees: Always break fees into “Processing (paid to our payment processor)” and “Everleaf platform fee (supports operations and investing)” with caps and minimums explicitly spelled out.
+
+Slow or fragile interactions: Gift pages must load quickly (<2 seconds), and the checkout flow must not cause the page to reload. Implement clear progress indicators and batch trades to avoid delays.
+
+Lack of trust signals: Each page should have a small trust strip (“No account required • Apple Pay available • Secure checkout”), and clicking through should reveal the How It Works drawer explaining account control, timing, fees, and support.
+
+Thank‑you friction: Automate drafts and remind the parent if thank‑yous are outstanding; celebrate completion to reinforce positive behaviors.
+
+Poor role management: Distinct roles (guardian, recipient, contributor) must be well-defined, with permission controls to ensure minors cannot act as account holders.
+
+Missing milestone experiences: Include simple milestones (first $500, 10 contributors, one-year anniversary) to prompt engagement and sharing.
+
+Final thoughts
+
+The concept of a registry‑driven, shareable fund for life events is powerful and can become a category leader if executed with care. The current site feels incomplete and confusing, but focusing on clarity, trust, polished design, consistent flows for different user types, and transparent pricing will give you a strong foundation.
