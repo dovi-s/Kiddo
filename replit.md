@@ -45,3 +45,132 @@ Preferred communication style: Simple, everyday language.
 *   **Brokerage Integration**: Embedded broker-dealer model with partners like Apex Clearing or DriveWealth, handling KYC/AML, custody, clearing, settlement, and tax reporting. Kora manages the front-end UX and customer relationships.
 *   **Frontend Libraries**: qrcode.react for QR codes, date-fns for date handling, react-hook-form with @hookform/resolvers for form management.
 *   **Development Tools**: Replit Plugins (Cartographer, dev banner, runtime error overlay).
+
+## PLG Loops & Stickiness Strategy
+
+### Holy Metric
+**"Event shared → 3 gifts received within 7 days"**
+This proves virality + value. Track shares → gifts conversion.
+
+### 5 Retention Loops
+
+**Loop 1: Event Loop (Viral Acquisition)**
+- 1 host creates event → 50-200 guests visit → some become hosts → repeat
+- Key primitive: shareable page + QR + instant card reveal
+
+**Loop 2: Recurring Loop (Revenue + Retention)**
+- "Every birthday", "Monthly for a year", "Holiday season"
+- Frame as "presence over time" not investing
+
+**Loop 3: Gratitude Loop (Emotional Retention)**
+- Thank-you flow is THE retention engine
+- Auto-drafted thank-yous, one-tap send, optional video
+- This is where "this product is better than everything else" happens
+
+**Loop 4: Identity Loop (Kid Grows Up With Product)**
+- Child view: "People who backed you", "How compounding works"
+- If done right, kid becomes evangelist later in life
+
+**Loop 5: Household Loop (Multi-Fund Expansion)**
+- sibling fund → education goal → first home → wedding fund
+- Same household keeps expanding without churn
+
+### What to Gamify (Tastefully)
+**DO:**
+- Milestones, not points (First Gift, 10 People, $1K, 1-Year, First Dividend)
+- Streaks for gratitude/learning (NOT deposits)
+- Memory book (sentimental data = moat)
+- Progress bars for group goals (teamwork feel)
+
+**DON'T:**
+- Stock performance confetti
+- "Beat the market" language
+- Leaderboards
+- "Invite 10 friends to level up"
+- Rewards tied to trading actions
+
+### The 3 Features That Create Love
+1. **Card reveal + share formats** - textable, printable, wallet-pass, premium stationery feel
+2. **Group goal cards** - simple, viral, progress bar, teamwork
+3. **Thank-you automation** - fast, classy, satisfying
+
+### Trust Layer (Must Be Designed, Not Just Policy)
+On every gift page:
+- Who holds assets (Apex Clearing)
+- SIPC coverage (factual, short)
+- Who controls it (parent until age)
+- Status: pending → invested → settled
+- Fees (simple, not hidden)
+
+### Memory Book (Sentimental Data Moat)
+The reason people stay even if gifting slows:
+- Messages from contributors
+- Photos from events
+- Who gave what (private, permissioned)
+- Milestones achieved
+- Recap cards (Spotify Wrapped style)
+
+This data cannot be exported from competitors.
+
+## Child Experience Philosophy
+
+**Goal**: Make investing feel like a scoreboard of progress, not a finance course.
+
+**5 core lessons to embed (without teaching them directly)**:
+1. Owning pieces of real businesses is normal
+2. Time is the advantage
+3. Volatility is the price of growth
+4. Diversification is the safety net
+5. Consistency beats "being smart"
+
+**Separate balance from progress**:
+- "Your Fund" = total balance (simple number)
+- "Your Progress" = behavior-based (days invested, streaks, milestones)
+- Pride comes from behavior, not gifts received
+
+**Milestones over returns**:
+- First $100, First $500, First $1,000
+- First dividend received
+- One year invested
+- Stayed invested through a dip
+- Added to fund 6 months in a row
+
+**Compounding visual**: Show "What people added" vs "What time added" - no percentages, no trading vibes
+
+**Three-tab IA for recipient**:
+1. **Today**: Total, next milestone, "what changed" card
+2. **Progress**: Time ramp, streaks, milestones timeline
+3. **Story**: Contributors + notes, thank-you prompts
+
+**Messaging rules**:
+- Never: "Get rich", "Beat the market", "Pick winners"
+- Always: "Start early", "Let time do the work", "Own the world, not one stock", "Stay invested"
+
+## Onboarding Flow (7-Beat Activation Journey)
+
+The onboarding is designed to be light upfront, with brokerage activation as an explicit action:
+
+### Phase 1: Create Account (no KYC yet)
+1. Choose account type (parent/guardian or self)
+2. Create account (name, email, password)
+3. Name your fund(s)
+4. Confirmation → Dashboard with status = "draft"
+
+### Phase 2: Dashboard (Fund Not Yet Activated)
+- Status chip: "Not activated" (stone colored)
+- "Activate investing" button (primary CTA)
+- Gift rules: Contributors can pledge, pledges convert when activated
+
+### Phase 3: Activate Investing (KYC)
+1. Intro: Overview of steps
+2. Brokerage: "Where will assets live?" (Kora embedded = recommended)
+3. Identity: Parent KYC (name, DOB, SSN, address, phone)
+4. Child: Child info (if custodial)
+5. Agreements: Customer agreement, privacy, disclosures
+6. Status: "Opening your investing account..."
+
+### Key Principles
+1. No KYC during initial signup
+2. Brokerage is inside Kora (not external connection in v1)
+3. Progressive activation
+4. Persistent status chip on every fund card
