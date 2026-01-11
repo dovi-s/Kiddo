@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [fundSlugEdit, setFundSlugEdit] = useState(profileName.toLowerCase().replace(/\s+/g, "-"));
   const [eventEdits, setEventEdits] = useState<Record<number, { title: string; slug: string }>>({});
   const [selectedFundSlug, setSelectedFundSlug] = useState(profileName.toLowerCase().replace(/\s+/g, "-"));
+  const [showGainAsPercent, setShowGainAsPercent] = useState(false);
 
   const fundSlug = selectedFundSlug;
   const momentLink = `kora.com/${fundSlug}`;
@@ -139,6 +140,7 @@ export default function Dashboard() {
   const portfolioValue = funds.reduce((sum, f) => sum + f.balance, 0);
   const marketChange = funds.reduce((sum, f) => sum + f.gain, 0);
   const totalReceived = portfolioValue - marketChange;
+  const marketChangePercent = totalReceived > 0 ? ((marketChange / totalReceived) * 100).toFixed(1) : "0";
   const investedAmount = Math.round(portfolioValue * 0.85);
   const cashAmount = portfolioValue - investedAmount;
   const pendingAmount = isNewAccount ? 0 : 180;
@@ -338,9 +340,16 @@ export default function Dashboard() {
                   </div>
                   
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                    <span className={marketChange >= 0 ? "text-emerald-700" : "text-red-600"}>
-                      {marketChange >= 0 ? "+" : ""}{marketChange.toLocaleString()} market change
-                    </span>
+                    <button 
+                      onClick={() => setShowGainAsPercent(!showGainAsPercent)}
+                      data-testid="button-toggle-gain-format"
+                      className={`${marketChange >= 0 ? "text-emerald-700" : "text-red-600"} hover:underline cursor-pointer`}
+                    >
+                      {showGainAsPercent 
+                        ? `${marketChange >= 0 ? "+" : ""}${marketChangePercent}% gain`
+                        : `${marketChange >= 0 ? "+" : ""}$${Math.abs(marketChange).toLocaleString()} gain`
+                      }
+                    </button>
                     {pendingAmount > 0 && (
                       <>
                         <span className="text-stone-300">|</span>
