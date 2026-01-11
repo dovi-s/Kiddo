@@ -50,6 +50,7 @@ export default function Dashboard() {
   const [expandedThankYou, setExpandedThankYou] = useState<string | null>(null);
   const [thankYouDrafts, setThankYouDrafts] = useState<Record<string, string>>({});
   const [showContributors, setShowContributors] = useState(false);
+  const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
   
   const isNewAccount = params.get("new") === "true";
   
@@ -660,55 +661,98 @@ export default function Dashboard() {
             >
               <h2 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-4">Recent Activity</h2>
               
-              <div className="space-y-4">
-                {recentActivity.map((item, i) => (
-                  <div key={i} className="group p-4 bg-white border border-stone-200 rounded-lg lg:border-0 lg:bg-transparent lg:p-0">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm text-stone-900">
-                            <span className="font-medium">{item.from}</span>
-                            <span className="text-stone-400 mx-1.5">→</span>
-                            <span>{item.event}</span>
-                          </p>
-                          {item.status === "pending" ? (
-                            <span 
-                              className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1 cursor-help"
-                              title="Payment received. Will invest when US markets open (9:30am ET)"
-                            >
-                              <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
-                              Pending
-                            </span>
-                          ) : (
-                            <span 
-                              className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium cursor-help"
-                              title={`Settled · Invested in VTI (Total Stock Market)`}
-                            >
-                              Invested
-                            </span>
-                          )}
+              <div className="space-y-3">
+                {recentActivity.map((item, i) => {
+                  const isExpanded = expandedActivity === item.id;
+                  return (
+                    <div 
+                      key={i} 
+                      className="bg-white border border-stone-200 rounded-xl overflow-hidden lg:border lg:bg-white cursor-pointer hover:border-stone-300 transition-colors"
+                      onClick={() => setExpandedActivity(isExpanded ? null : item.id)}
+                      data-testid={`activity-item-${item.id}`}
+                    >
+                      <div className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm text-stone-900">
+                                <span className="font-medium">{item.from}</span>
+                                <span className="text-stone-400 mx-1.5">→</span>
+                                <span>{item.event}</span>
+                              </p>
+                              {item.status === "pending" ? (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
+                                  <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
+                                  Pending
+                                </span>
+                              ) : (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
+                                  Invested
+                                </span>
+                              )}
+                            </div>
+                            {item.note && (
+                              <p className="text-sm text-stone-500 mt-1 truncate">"{item.note}"</p>
+                            )}
+                            <p className="text-xs text-stone-400 mt-1.5">{item.time}</p>
+                          </div>
+                          <p className="text-sm font-medium text-stone-900 shrink-0 ml-4">+${item.amount}</p>
                         </div>
-                        {item.note && (
-                          <p className="text-sm text-stone-500 mt-0.5 truncate">"{item.note}"</p>
-                        )}
-                        <p className="text-xs text-stone-400 mt-1">
-                          {item.time}
-                        </p>
-                        {item.status === "pending" && (
-                          <p className="text-xs text-amber-600 mt-0.5">
-                            Will invest when US markets open (9:30am ET)
-                          </p>
-                        )}
-                        {item.status === "invested" && (
-                          <p className="text-xs text-emerald-600 mt-0.5">
-                            Settled · Bought shares of VTI
-                          </p>
-                        )}
                       </div>
-                      <p className="text-sm font-medium text-stone-900 shrink-0 ml-4">+${item.amount}</p>
+                      
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-4 pb-4 pt-0 border-t border-stone-100">
+                              <div className="pt-3 space-y-2">
+                                {item.status === "pending" ? (
+                                  <>
+                                    <div className="flex items-start gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
+                                      <p className="text-xs text-stone-600">Payment received</p>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0 animate-pulse"></div>
+                                      <p className="text-xs text-stone-600">Will invest when US markets open (9:30am ET weekdays)</p>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-stone-300 mt-1.5 shrink-0"></div>
+                                      <p className="text-xs text-stone-400">Trade settles in 1-2 business days</p>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="flex items-start gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
+                                      <p className="text-xs text-stone-600">Payment received</p>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
+                                      <p className="text-xs text-stone-600">Trade executed at market open</p>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
+                                      <p className="text-xs text-stone-600">Settled · Bought 0.{Math.floor(item.amount / 5)} shares of VTI</p>
+                                    </div>
+                                  </>
+                                )}
+                                <p className="text-[10px] text-stone-400 pt-2 border-t border-stone-50 mt-2">
+                                  Assets held by Alpaca Securities LLC · SIPC protected
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </motion.div>
           </div>
