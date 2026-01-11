@@ -510,8 +510,16 @@ export default function Dashboard() {
                               Connected
                             </span>
                           ) : fund.status === "draft" ? (
-                            <span className="text-[10px] font-medium text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded">
+                            <span 
+                              className="text-[10px] font-medium text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded cursor-help group/status relative"
+                              title="Activate investing to connect your brokerage account. Contributors can pledge now — gifts invest once activated."
+                            >
                               Not activated
+                              <span className="hidden group-hover/status:block absolute left-0 top-full mt-2 z-50 w-56 p-3 bg-stone-900 text-white text-xs rounded-lg shadow-lg font-normal leading-relaxed">
+                                <span className="font-medium block mb-1">What this means:</span>
+                                Your fund isn't connected to a brokerage yet. Contributors can still pledge gifts — they'll invest once you activate.
+                                <span className="block mt-2 font-medium text-emerald-400">Click the fund to activate →</span>
+                              </span>
                             </span>
                           ) : fund.status === "pending" ? (
                             <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded flex items-center gap-1">
