@@ -1,0 +1,366 @@
+You’re mixing three different “account layers” in your head. Once you separate them, everything clicks and becomes simple for users.
+
+The 3-layer model
+Layer 1: Everleaf (your product)
+
+Everleaf is the UI + gifting/registry layer.
+
+It creates Pages (links/QRs), runs checkout, stores messages, runs thank-you flows, and shows “where it’s invested.”
+
+Layer 2: The brokerage account (where assets actually live)
+
+This is the real securities account at your partner stack (example: Apex, Alpaca, DriveWealth).
+
+This is where the cash + shares actually sit.
+
+This is the thing that gets SIPC coverage (through the broker-dealer/custodian).
+
+Layer 3: The clearing/custody + broker-dealer of record
+
+This is the regulated entity that handles:
+
+KYC/AML identity checks
+
+custody of assets
+
+trade execution/settlement
+
+statements and tax docs
+
+Everleaf should not ask users to understand Layers 2 and 3. Users only need to understand: “I have Funds. Each Fund has pages. Gifts go into the Fund and become investments.”
+
+What is a “Fund” in Everleaf?
+
+A Fund = one underlying brokerage account (almost always).
+
+Examples:
+
+“Mila’s Fund (Custodial UTMA)” -> underlying: Custodial brokerage account
+
+“Dovi’s Fund (Personal)” -> underlying: Individual taxable brokerage account
+
+“Wedding Fund” -> underlying: Joint taxable brokerage account (or one spouse’s, depending)
+
+So your mental model is right:
+
+People are not “sending stock to a page.”
+
+They are contributing money that becomes investments inside the Fund’s brokerage account.
+
+Pages are just “routes” (event templates) pointing at the same Fund.
+
+Where do brokerages “play” in the product?
+
+There are two product modes. Pick one for v1.
+
+Mode A (recommended v1): Embedded account inside Everleaf
+
+User creates a Fund in Everleaf.
+
+Everleaf runs a short identity flow (KYC) inside your UI.
+
+Behind the scenes, you open the brokerage account with your partner.
+
+Gifts flow into that account and you place trades.
+
+User experience: “I have a Mila Fund in Everleaf.” No talk of brokers.
+
+Mode B (advanced later): Connect existing Schwab/Fidelity account
+
+User already has Schwab/Fidelity.
+
+They connect it and gifts route there.
+
+This adds complexity and kills conversion. Good later, not day 1.
+
+What does “send stock” mean in your UI?
+
+For v1, don’t literally “send stock.” That creates confusion.
+
+Instead, offer:
+
+Send a gift (default)
+
+Gift amount -> buys fractional shares of the Fund’s default basket or selected ticker
+
+Optional later: “Transfer shares you already own” (in-kind transfer) is complicated and not needed to win.
+
+So the “gift” is money that becomes shares, not a share-transfer between two brokers.
+
+“Cash balance” vs “invested”
+
+At the Fund level, there are always two states:
+
+Cash: money received, not invested yet (pending, market closed, batching, or “Seed mode”)
+
+Invested: holdings (ETFs, stocks) purchased with contributions
+
+Your “Where it’s invested” should be Fund-level, because holdings live in the Fund’s brokerage account.
+Event pages only affect attribution and messaging.
+
+Multiple funds if I have kids
+
+Yes. A household can have multiple Funds.
+
+Household (you) can have:
+
+Mila Fund (UTMA)
+
+Noah Fund (UTMA)
+
+My Fund (Individual taxable)
+
+Each Fund has:
+
+Always-on page (Open anytime)
+
+Multiple event pages (Birthday, Bar Mitzvah, Graduation)
+All pages point to the same Fund.
+
+What about multiple account types like IRA + brokerage?
+
+This is where you must be strict for simplicity and compliance.
+
+Taxable brokerage (supported)
+
+Great for gifts.
+
+Anyone can gift money to it.
+
+Easy.
+
+Custodial UTMA/UGMA (supported)
+
+Great for kids.
+
+Gifts are irrevocable for the child.
+
+Easy.
+
+IRA (generally do NOT support for gifting)
+
+IRA contributions have rules (earned income, annual limits, ownership constraints).
+
+“Gifting into an IRA” is not a normal gift flow.
+
+You can support “Retirement Fund” as a label but keep the underlying account taxable unless you want heavy constraints and user confusion.
+
+So for v1: support only two Fund types
+
+Custodial (kid)
+
+Personal (adult taxable)
+
+Everything else can be added later.
+
+Walkthrough by user type and flow
+1) Gift-giver (no account)
+
+Goal: gift in under 60 seconds.
+
+Flow:
+
+Open link/QR (event page)
+
+Pick amount (preset buttons)
+
+Pick gift type:
+
+Recommended: “Future Fund” (default basket)
+
+Optional: “Pick a stock” (secondary)
+
+Add note + name (optional hide name)
+
+Pay (Apple Pay/card/ACH)
+
+Instant confirmation + “gift card” screen
+
+What they should see:
+
+“Your gift will be invested into Mila’s Fund.”
+
+Status: Pending / Invested (later)
+
+Receipt
+
+They never need to know what Apex is.
+
+2) Parent/Host (account owner, custodian)
+
+Goal: set up fund, share links, track gifts, send thank-yous.
+
+Flow:
+
+Create Fund
+
+Who is it for: Child / Me
+
+Name, photo
+
+Compliance (embedded KYC)
+
+Choose default investing rule:
+
+Auto-invest gifts into “Future Fund” (recommended)
+
+Or Seed mode: hold as cash until parent invests (optional)
+
+Create Pages
+
+Always-on page (Open anytime)
+
+Event pages via templates
+
+Share link/QR
+
+Dashboard:
+
+Total, invested vs cash
+
+Recent gifts + notes
+
+Thank-you queue
+
+3) Kid/Recipient (read-only)
+
+Goal: feel proud, understand, not trade.
+
+Flow:
+
+Sees a “story mode”:
+
+Total
+
+Milestones
+
+Notes from people
+
+“What you own” simplified (optional)
+No ability to withdraw or trade.
+
+4) Adult recipient (18+)
+
+Same as parent but without custodian structure:
+
+Creates their own Fund
+
+KYC
+
+Can create “events” for wedding, birthday, etc.
+
+5) Co-parent / family admin
+
+Goal: help manage without messing custody.
+
+Flow:
+
+Invited as collaborator:
+
+View
+
+Create event pages
+
+Send thank-yous
+
+Limited settings
+
+Custodian rules depend on account type.
+
+6) Organization (synagogue/school/employer)
+
+Goal: create many events, track adoption.
+
+Flow:
+
+Org dashboard
+
+Template library
+
+Bulk invite / branding
+
+Reporting
+
+Support channel
+
+What “should happen” in common scenarios
+Scenario A: Gift comes in on a weekend
+
+Gift shows as Pending (market closed)
+
+Cash sits in Fund cash balance
+
+Next market open: auto-invest executes
+
+Activity updates to “Invested”
+
+Scenario B: Parent wants gifts held as cash until after event
+
+Fund is set to Seed mode
+
+Gifts accumulate in cash balance
+
+Parent hits “Invest now” after event into default basket
+
+Scenario C: Household has 2 kids and 5 events
+
+One Fund per kid
+
+Multiple pages per Fund
+
+Dashboard shows Funds list
+
+Each Fund expands to its events
+
+Events show totals and share controls
+
+Fund shows where invested
+
+Scenario D: Adult wants both “personal investing” and “gifting”
+
+Do not turn Everleaf into Cash App on day 1.
+
+V1:
+
+Adult has a Fund
+
+Uses “Send a gift” to others
+Later:
+
+Add “peer-to-peer gift links” (still gifts, not payments)
+
+Your dinner example (“cash or Disney?”) can exist later as a small feature, but it drags you into payments, disputes, and money transmitter complexity fast. Keep v1 pure: gifting + investing.
+
+The simplest user explanation (what you’d literally say in-product)
+
+“A Fund is the account where gifts and investments live.”
+
+“Each Fund can have multiple pages for different occasions.”
+
+“When someone gifts, it goes into the Fund and gets invested based on your default.”
+
+“You can create one Fund per child and one for yourself.”
+
+That is it.
+
+If you want the cleanest IA for the dashboard
+
+Header: Fund switcher (Mila, Noah, Me) + “Share” button
+
+Page body:
+
+Total balance
+
+Invested vs cash (simple)
+
+Pages (Open anytime + Events list) with Share/QR per row
+
+Recent gifts + thank-you queue
+
+Right rail:
+
+Share link + QR
+
+Create event page
+
+Send thank-yous

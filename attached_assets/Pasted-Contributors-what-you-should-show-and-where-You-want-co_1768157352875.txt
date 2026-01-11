@@ -1,0 +1,221 @@
+Contributors: what you should show and where
+
+You want contributors visible at three levels, with privacy controls.
+
+1) Fund-level contributors
+
+Purpose: “who is in this kid’s corner overall”
+Show:
+
+Total contributors (unique people)
+
+Top recent contributors
+
+Lifetime contributions by person (optional toggle)
+
+Notes/messages (scrollable feed)
+Controls:
+
+“Show contributor names on public page?”: Yes/No
+
+“Show amounts publicly?”: Yes/No
+
+“Allow anonymous gifts?”: Yes/No
+
+2) Event-level contributors (most important)
+
+Purpose: thank-yous, social proof, and post-event admin
+Show:
+
+Event total
+
+Contributor list for that event only
+
+Status per gift: Pending / Invested / Failed / Refunded
+
+Message + name + email (if they consent) + address collection (optional)
+Actions:
+
+“Send thank-yous” (bulk)
+
+“Export CSV”
+
+“Resend receipt”
+
+“Refund” (if needed, with policy constraints)
+
+3) Gift-level receipt details
+
+Purpose: trust
+Show:
+
+Amount gifted
+
+What it bought (or what it will buy)
+
+Timestamp
+
+Transaction ID
+
+Investment status
+
+Public pages should be “tasteful”. Private dashboard can be “complete”.
+
+Acorns style “invest for you”: is that the plan?
+
+No, not in the Acorns sense.
+
+What you are building
+
+Everleaf is a gifting and registry product where:
+
+Gifts come in
+
+They invest into a default basket or a chosen stock
+
+The host controls defaults and rules
+
+What you are not building (in v1)
+
+A round-ups product
+
+“Spend money and we invest the change”
+
+A general robo-advisor replacement
+
+You can later add “recurring gifts” that feel similar (monthly, birthday, holidays), but it is still gifting, not round-ups.
+
+You want “Pick” not hidden behind Advanced
+
+Agreed. You can keep it prominent without blowing up conversion if you structure the page correctly.
+
+The best gifting screen layout
+
+Above the fold, two equal primary choices:
+
+Option A: Gift to their Future Fund (recommended)
+
+One tap
+
+Simple sentence: “A diversified fund chosen by the family.”
+
+Option B: Pick a stock (your choice)
+
+Search box with typeahead
+
+Also show quick chips: Apple, Disney, Tesla, VOO, SPY, VT, etc
+
+This satisfies “I want to pick” while still giving nervous users a safe default.
+
+Prevent decision overload without hiding “Pick”
+
+Add a “Favorites” shelf that the host sets per Fund or per Event:
+
+“Mila’s favorites” (5 to 10 picks max)
+
+Gift-giver can choose from logos instead of searching tickers
+This keeps “pick” simple and fun.
+
+What actually happens when someone picks a stock
+
+Gift flow should be deterministic:
+
+Giver selects: $100 + Disney
+
+Payment captured
+
+Gift shows as Pending
+
+At next execution window, Everleaf places a buy
+
+Receipt updates to: “Invested into DIS at executed price”
+
+Holding appears in “Where it’s invested” at the Fund level
+
+If the market is closed, show: “Will invest when markets open.”
+
+Where “where it’s invested” belongs
+
+Holdings are always at the Fund level (because that is the brokerage account).
+
+Events are attribution layers (how the gift arrived), not separate portfolios.
+
+So yes:
+
+“Where it’s invested” = Fund
+
+“Contributions and notes” = Fund and Event
+
+“Event totals” = Event
+
+“Holdings” should not fragment by event unless you are doing sub-accounts (do not do that in v1)
+
+The one rule that keeps this understandable
+
+One Fund equals one brokerage account.
+Events are pages under the Fund.
+
+If you later support multiple brokerage accounts per person (taxable + IRA), treat those as separate Funds:
+
+“Dovi Fund (Taxable)”
+
+“Dovi Retirement (IRA)” (optional later, and complicated)
+Do not mix them inside one Fund.
+
+Minimum controls you need for “Pick” to be safe and clean
+
+Host settings per Fund:
+
+Allow picking individual stocks: On/Off
+
+If On, limit to:
+
+Stocks and ETFs only
+
+No leveraged ETFs
+
+No options, crypto, OTC, penny stocks
+
+Max number of holdings (soft limit): ex 25
+
+Rebalancing behavior: none in v1 (do not do robo allocation)
+
+This avoids a messy portfolio while still letting people pick.
+
+What I would change in your current dashboard concept
+
+Add two views:
+
+Fund dashboard
+
+Total
+
+Invested vs cash
+
+Holdings summary
+
+Contributors summary
+
+Events list
+
+Event page admin view
+
+Event total
+
+Contributors list for this event
+
+Thank-you queue and export
+
+Right now you have the beginnings, but the contributors and event admin need to be first-class.
+
+If you want to lock the product rules right now, here is the best default:
+
+Future Fund basket and Pick a stock are both first-class on the gift screen
+
+Host can optionally disable Pick for a specific Fund or Event
+
+Favorites shelf is strongly encouraged and shown above search
+
+Holdings live at Fund level only
+
+Contributors visible at Fund and Event levels with privacy toggles
