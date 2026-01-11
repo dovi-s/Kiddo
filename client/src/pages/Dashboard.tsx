@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link, useSearch, useLocation } from "wouter";
@@ -25,6 +25,37 @@ function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string
   return <span>{prefix}{display.toLocaleString()}</span>;
 }
 
+type FundStatus = "draft" | "pending" | "active" | "needs_action";
+
+interface StoredFund {
+  id: number;
+  name: string;
+  slug: string;
+  accountType: string;
+  status: FundStatus;
+  balance: number;
+  gain: number;
+  gainPercent: number;
+  contributors: number;
+  projection: number;
+  yearsLeft: number;
+  isNew: boolean;
+  events: { id: number; slug: string; title: string; raised: number; gifts: number; date?: string; active: boolean }[];
+}
+
+const loadStoredFunds = (): StoredFund[] => {
+  try {
+    const stored = localStorage.getItem("kora_funds");
+    return stored ? JSON.parse(stored) : [];
+  } catch { return []; }
+};
+
+const saveStoredFunds = (funds: StoredFund[]) => {
+  try {
+    localStorage.setItem("kora_funds", JSON.stringify(funds));
+  } catch {}
+};
+
 export default function Dashboard() {
   const search = useSearch();
   const params = new URLSearchParams(search);
@@ -32,6 +63,8 @@ export default function Dashboard() {
   const profileName = decodeURIComponent(params.get("name") || "Mila");
   const childrenParam = params.get("children");
   const isPersonal = accountType === "personal";
+  const isNewFund = params.get("new") === "true";
+  const newFundName = params.get("newFund");
 
   const [, setLocation] = useLocation();
   const [copied, setCopied] = useState(false);
@@ -51,14 +84,105 @@ export default function Dashboard() {
   const [thankYouDrafts, setThankYouDrafts] = useState<Record<string, string>>({});
   const [showContributors, setShowContributors] = useState(false);
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
-  
-  const isNewAccount = params.get("new") === "true";
-  
-  const [fundName, setFundName] = useState(profileName);
-  const [fundSlugEdit, setFundSlugEdit] = useState(profileName.toLowerCase().replace(/\s+/g, "-"));
-  const [eventEdits, setEventEdits] = useState<Record<number, { title: string; slug: string }>>({});
-  const [selectedFundSlug, setSelectedFundSlug] = useState(profileName.toLowerCase().replace(/\s+/g, "-"));
   const [showGainAsPercent, setShowGainAsPercent] = useState(false);
+
+  const [funds, setFunds] = useState<StoredFund[]>(() => {
+    const stored = loadStoredFunds();
+    if (stored.length > 0) return stored;
+    
+    const childNames = childrenParam ? decodeURIComponent(childrenParam).split(",") : [profileName];
+    const isNewAccount = isNewFund;
+    
+    if (isPersonal) {
+      return [{
+        id: 1,
+        name: profileName,
+        slug: profileName.toLowerCase().replace(/\s+/g, "-"),
+        accountType: "Individual",
+        status: (isNewAccount ? "draft" : "active") as FundStatus,
+        balance: isNewAccount ? 0 : 4250,
+        gain: isNewAccount ? 0 : 472,
+        gainPercent: isNewAccount ? 0 : 12.5,
+        contributors: isNewAccount ? 0 : 18,
+        projection: isNewAccount ? 0 : 28400,
+        yearsLeft: 20,
+        isNew: isNewAccount,
+        events: isNewAccount ? [
+          { id: 1, slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
+        ] : [
+          { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
+          { id: 2, slug: "30th-birthday", title: "30th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
+          { id: 3, slug: "mba-graduation", title: "MBA Graduation", raised: 650, gifts: 4, date: "May 2026", active: true },
+        ]
+      }];
+    }
+    
+    return childNames.map((name, index) => ({
+      id: index + 1,
+      name: name.trim(),
+      slug: name.trim().toLowerCase().replace(/\s+/g, "-"),
+      accountType: "UTMA",
+      status: (isNewAccount ? "draft" : "active") as FundStatus,
+      balance: isNewAccount ? 0 : (index === 0 ? 4250 : index === 1 ? 1820 : 650),
+      gain: isNewAccount ? 0 : (index === 0 ? 472 : index === 1 ? 156 : 42),
+      gainPercent: isNewAccount ? 0 : (index === 0 ? 12.5 : index === 1 ? 9.4 : 6.9),
+      contributors: isNewAccount ? 0 : (index === 0 ? 18 : index === 1 ? 8 : 3),
+      projection: isNewAccount ? 0 : (index === 0 ? 28400 : index === 1 ? 12200 : 4350),
+      yearsLeft: index === 0 ? 14 : index === 1 ? 16 : 17,
+      isNew: isNewAccount,
+      events: isNewAccount ? [
+        { id: index * 10 + 1, slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
+      ] : (index === 0 ? [
+        { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
+        { id: 2, slug: "5th-birthday", title: "5th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
+        { id: 3, slug: "kindergarten-graduation", title: "Kindergarten", raised: 650, gifts: 4, date: "May 2026", active: true },
+      ] : index === 1 ? [
+        { id: 4, slug: "anytime", title: "Open anytime", raised: 1200, gifts: 6, active: true },
+        { id: 5, slug: "3rd-birthday", title: "3rd Birthday", raised: 620, gifts: 4, date: "Mar 2025", active: true },
+      ] : [
+        { id: 6, slug: "anytime", title: "Open anytime", raised: 650, gifts: 3, active: true },
+      ])
+    }));
+  });
+
+  useEffect(() => {
+    if (newFundName && !funds.some(f => f.name.toLowerCase() === newFundName.toLowerCase())) {
+      const newFund: StoredFund = {
+        id: funds.length + 1,
+        name: newFundName,
+        slug: newFundName.toLowerCase().replace(/\s+/g, "-"),
+        accountType: "UTMA",
+        status: "draft",
+        balance: 0,
+        gain: 0,
+        gainPercent: 0,
+        contributors: 0,
+        projection: 0,
+        yearsLeft: 18,
+        isNew: true,
+        events: [
+          { id: Date.now(), slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
+        ]
+      };
+      const updatedFunds = [...funds, newFund];
+      setFunds(updatedFunds);
+      saveStoredFunds(updatedFunds);
+      toast({ title: `${newFundName}'s fund created`, description: "Activate investing to start growing gifts" });
+    }
+  }, [newFundName]);
+
+  useEffect(() => {
+    if (funds.length > 0) {
+      saveStoredFunds(funds);
+    }
+  }, [funds]);
+
+  const isNewAccount = funds.every(f => f.isNew);
+  
+  const [fundName, setFundName] = useState(funds[0]?.name || profileName);
+  const [fundSlugEdit, setFundSlugEdit] = useState((funds[0]?.slug || profileName).toLowerCase().replace(/\s+/g, "-"));
+  const [eventEdits, setEventEdits] = useState<Record<number, { title: string; slug: string }>>({});
+  const [selectedFundSlug, setSelectedFundSlug] = useState(funds[0]?.slug || profileName.toLowerCase().replace(/\s+/g, "-"));
 
   const fundSlug = selectedFundSlug;
   const momentLink = `kora.com/${fundSlug}`;
@@ -71,59 +195,6 @@ export default function Dashboard() {
   };
 
   const handleCopyClick = () => handleCopy();
-
-  const childNames = childrenParam ? decodeURIComponent(childrenParam).split(",") : [profileName];
-  
-  type FundStatus = "draft" | "pending" | "active" | "needs_action";
-  
-  const funds = isPersonal ? [
-    {
-      id: 1,
-      name: profileName,
-      slug: profileName.toLowerCase().replace(/\s+/g, "-"),
-      accountType: "Individual",
-      status: (isNewAccount ? "draft" : "active") as FundStatus,
-      balance: isNewAccount ? 0 : 4250,
-      gain: isNewAccount ? 0 : 472,
-      gainPercent: isNewAccount ? 0 : 12.5,
-      contributors: isNewAccount ? 0 : 18,
-      projection: isNewAccount ? 0 : 28400,
-      yearsLeft: 20,
-      isNew: isNewAccount,
-      events: isNewAccount ? [
-        { id: 1, slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
-      ] : [
-        { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
-        { id: 2, slug: "30th-birthday", title: "30th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
-        { id: 3, slug: "mba-graduation", title: "MBA Graduation", raised: 650, gifts: 4, date: "May 2026", active: true },
-      ]
-    },
-  ] : childNames.map((name, index) => ({
-    id: index + 1,
-    name: name.trim(),
-    slug: name.trim().toLowerCase().replace(/\s+/g, "-"),
-    accountType: "UTMA",
-    status: (isNewAccount ? "draft" : "active") as FundStatus,
-    balance: isNewAccount ? 0 : (index === 0 ? 4250 : index === 1 ? 1820 : 650),
-    gain: isNewAccount ? 0 : (index === 0 ? 472 : index === 1 ? 156 : 42),
-    gainPercent: isNewAccount ? 0 : (index === 0 ? 12.5 : index === 1 ? 9.4 : 6.9),
-    contributors: isNewAccount ? 0 : (index === 0 ? 18 : index === 1 ? 8 : 3),
-    projection: isNewAccount ? 0 : (index === 0 ? 28400 : index === 1 ? 12200 : 4350),
-    yearsLeft: index === 0 ? 14 : index === 1 ? 16 : 17,
-    isNew: isNewAccount,
-    events: isNewAccount ? [
-      { id: index * 10 + 1, slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
-    ] : (index === 0 ? [
-      { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
-      { id: 2, slug: "5th-birthday", title: "5th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
-      { id: 3, slug: "kindergarten-graduation", title: "Kindergarten", raised: 650, gifts: 4, date: "May 2026", active: true },
-    ] : index === 1 ? [
-      { id: 4, slug: "anytime", title: "Open anytime", raised: 1200, gifts: 6, active: true },
-      { id: 5, slug: "3rd-birthday", title: "3rd Birthday", raised: 620, gifts: 4, date: "Mar 2025", active: true },
-    ] : [
-      { id: 6, slug: "anytime", title: "Open anytime", raised: 650, gifts: 3, active: true },
-    ])
-  }));
   
   const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
   
@@ -1173,19 +1244,43 @@ export default function Dashboard() {
             <button 
               onClick={() => {
                 if (newChildName.trim()) {
-                  const newChildren = childrenParam 
-                    ? `${decodeURIComponent(childrenParam)},${newChildName.trim()}`
-                    : newChildName.trim();
+                  const name = newChildName.trim();
+                  if (funds.some(f => f.name.toLowerCase() === name.toLowerCase())) {
+                    toast({ title: "Fund already exists", description: `You already have a fund for ${name}` });
+                    return;
+                  }
+                  const newFund: StoredFund = {
+                    id: Date.now(),
+                    name: name,
+                    slug: name.toLowerCase().replace(/\s+/g, "-"),
+                    accountType: "UTMA",
+                    status: "draft",
+                    balance: 0,
+                    gain: 0,
+                    gainPercent: 0,
+                    contributors: 0,
+                    projection: 0,
+                    yearsLeft: 18,
+                    isNew: true,
+                    events: [
+                      { id: Date.now(), slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
+                    ]
+                  };
+                  const updatedFunds = [...funds, newFund];
+                  setFunds(updatedFunds);
+                  saveStoredFunds(updatedFunds);
+                  setSelectedFundSlug(newFund.slug);
+                  setExpandedFund(newFund.id);
                   setShowAddChild(false);
                   setNewChildName("");
-                  setLocation(`/onboard?type=child&name=${encodeURIComponent(newChildName.trim())}&email=user@example.com&children=${encodeURIComponent(newChildren)}`);
+                  toast({ title: `${name}'s fund created`, description: "Activate investing to start growing gifts" });
                 }
               }}
               disabled={!newChildName.trim()}
               data-testid="button-continue-add-child"
               className="w-full py-3 bg-stone-900 text-white rounded-xl text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-40"
             >
-              Continue
+              Create fund
             </button>
           </div>
         </DialogContent>

@@ -1,0 +1,49 @@
+let me ask you, if we manintain (at least the main part of this app) as a stock gift giving thing, are there tax benefits to the gifters? 
+Thought for 2m 43s
+
+Yes, but it depends on who you are gifting to and what you are gifting.
+
+1) Gifting stock or cash to a person (kid, nephew, friend)
+
+Usually no direct “tax benefit” to the giver. Personal gifts are generally not deductible on your income taxes.
+
+What you do get is gift-tax simplicity (most of the time):
+
+You can gift up to the annual exclusion per recipient per year without filing gift-tax paperwork. For 2026 the IRS says the annual exclusion is $19,000 per recipient.
+
+If you go above the annual exclusion, you often just file Form 709. You typically do not owe gift tax unless your lifetime exemption is exceeded (high for most people, but still a compliance step).
+
+If you gift appreciated stock to a person
+
+This can be “smart,” but it is not a deduction.
+
+The giver generally does not realize capital gains at the moment of gifting (because you did not sell).
+
+The recipient generally gets your carryover basis (with special rules if the stock was down at the time of gift). IRS Publication 551 covers the “property received as a gift” basis rules.
+
+Practical takeaway: this can shift future taxable gains to the recipient when they sell (possibly at a lower tax rate), but it does not create a tax write-off for the giver.
+
+2) Gifting stock to a charity (or donor-advised fund)
+
+This is where givers can get a real tax benefit:
+
+Donating long-term appreciated securities can allow a charitable deduction based on fair market value (subject to IRS limits/rules).
+
+It also typically avoids paying capital gains tax that would have been triggered by selling first (mechanically: no sale, so no realized gain by the donor).
+
+This is a different product rail than “gift to a kid,” but it is a powerful optional extension later (“gift to causes they care about”).
+
+3) Contributing to a 529 for someone
+
+A 529 contribution is generally treated as a gift for gift-tax purposes, and there is a common “5-year election” concept (often called superfunding) where you can elect to treat part of a large contribution as made ratably over 5 years. The IRS Form 709 instructions include an example of this QTP (529) election.
+Income-tax benefits here are mostly state-dependent (many states offer deductions/credits, some do not).
+
+4) Important product implication for Everleaf
+
+You should clearly label gift types because the tax posture differs:
+
+“Gift” (true gift to recipient, no repayment expectation)
+
+“Reimbursement / payback” (this can be treated more like paying a debt with property, and can create taxable outcomes if you’re transferring appreciated shares)
+
+Even if you keep the UX dead simple, the backend and disclosures should keep these concepts separated to avoid users accidentally creating tax/reporting headaches.

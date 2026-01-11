@@ -1,0 +1,161 @@
+when stock is sent to me lets ssay is it auto applie and trade made or do i need to acknowledge and approve or something? and beyind 
+
+There are 3 viable behaviors. You should support all 3, but set one default per fund.
+
+The 3 models
+Model A: Auto-invest immediately (best for simplicity + conversion)
+
+What happens
+
+Giver pays.
+
+Gift lands as cash at the broker.
+
+System auto-buys the fund’s default basket (or selected stock) at the next eligible execution window.
+
+Recipient/parent sees: Pending → Invested.
+
+When to use
+
+Most kid funds.
+
+Most event registries.
+
+Any “Future Fund” default.
+
+Guardrails
+
+Parent sets the default once.
+
+Optional “auto-invest only in ETFs/indexes” toggle.
+
+Cutoff windows (ex: market hours) communicated as “executes next trading window.”
+
+Model B: Hold as “Seed” until the owner approves (best for control)
+
+What happens
+
+Giver pays.
+
+Gift becomes Seed balance inside that fund.
+
+Owner gets a notification: “$100 Seed received. Invest now?”
+
+Owner taps Invest and chooses allocation, then trade executes.
+
+When to use
+
+New users who feel nervous.
+
+Funds where parents want to pick brands occasionally.
+
+Larger gifts (ex: over $500) if you want a safety step.
+
+Downside
+
+Lower “instant gratification,” more support questions if they ignore it.
+
+Model C: Giver chooses exact destination (best for “I want Disney”)
+
+What happens
+
+On checkout, giver selects:
+
+“Future Fund (recommended)” or
+
+“Pick from Favorites” or
+
+“Choose a Stock/ETF”
+
+If it’s allowed, it executes like Model A, but using the giver-selected asset.
+
+When to use
+
+Event gifting where the giver wants a story.
+
+Older kids who curated favorites.
+
+Guardrails
+
+Favorites list is pre-approved by parent/owner.
+
+Hard limit: maybe 10–20 approved tickers max.
+
+Default option stays “Future Fund” to prevent decision fatigue.
+
+The clean default (what you should do)
+
+Default per fund: Auto-invest (Model A).
+Then offer:
+
+“Hold gifts as Seed until I invest” (Model B) as a setting.
+
+“Allow giver to pick from Favorites” (Model C) as an optional add-on.
+
+This keeps the main product dead simple while giving control to the people who need it.
+
+“Beyond” — what else must be defined so users don’t get lost
+
+These are the missing “every beat” rules:
+
+1) Execution timing
+
+If market is open: “Executes today.”
+
+If market is closed: “Executes next trading day.”
+
+Always show status: Received → Processing → Invested.
+
+2) What if the fund has multiple goals
+
+Each fund has one of these rules:
+
+Single default basket (simple)
+
+Goal split (example: 70% Future, 30% College)
+
+Per-event override (bar mitzvah page uses Favorites, birthday uses Future)
+
+3) Who approves what
+
+Owner (parent/guardian) controls defaults and favorites list.
+
+Kid view can be:
+
+View-only, or
+
+“Suggest favorites” that require parent approval.
+
+4) Refunds / chargebacks
+
+If a card payment is reversed:
+
+If still pending: cancel the trade.
+
+If already invested: sell the same amount of shares or pull from cash balance (define the policy clearly).
+
+5) Multiple accounts (brokerage vs IRA)
+
+Keep this simple:
+
+Everleaf should open one taxable brokerage per adult, plus one custodial brokerage per child.
+
+Do not route gifts into IRAs in v1 (too many rules, contributions limits, and it confuses gifting).
+
+If later you support “connect existing,” it should be an advanced toggle, not the default.
+
+Recommended UX language (so users instantly get it)
+
+On fund setup:
+
+“Default: Gifts are invested automatically into Future Fund.”
+
+Toggle: “Hold gifts as Seed until I invest.”
+
+Toggle: “Let givers choose from Favorites.”
+
+On the gift checkout:
+
+Big button: “Gift to Future Fund”
+
+Small link: “More options” → Favorites / Specific stock
