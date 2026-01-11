@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, TrendingUp, Gift as GiftIcon, Shield, Lock, ChevronRight, Plus } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 interface GiftData {
   id: string;
@@ -77,9 +78,7 @@ export default function Claim() {
     <div className="min-h-screen bg-stone-50">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-stone-100">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/">
-            <span className="text-lg font-semibold tracking-tight text-stone-900">Kora</span>
-          </Link>
+          <Logo size="md" className="text-stone-900" />
           {step !== "success" && (
             <div className="flex items-center gap-1.5 text-xs text-stone-400">
               <Lock size={12} />

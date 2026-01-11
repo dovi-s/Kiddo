@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { Logo } from "@/components/ui/logo";
 
 export function Footer() {
   return (
@@ -7,24 +8,7 @@ export function Footer() {
       <div className="container mx-auto px-4 py-16">
         <div className="grid gap-10 md:grid-cols-4">
           <div className="space-y-4">
-            <Link href="/">
-              <motion.a 
-                className="flex items-center gap-2.5 group"
-                whileHover={{ x: 2 }}
-              >
-                <svg className="w-5 h-5" viewBox="0 0 32 32" fill="none">
-                  <path 
-                    d="M8 6v20M8 16l10-10M8 16l10 10" 
-                    stroke="currentColor" 
-                    strokeWidth="2.5" 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                    className="text-foreground"
-                  />
-                </svg>
-                <span className="font-medium text-foreground tracking-wide text-[15px]" style={{ letterSpacing: '0.04em' }}>kora</span>
-              </motion.a>
-            </Link>
+            <Logo size="sm" className="text-foreground" />
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[200px]">
               Give something that stays.
             </p>

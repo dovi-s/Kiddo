@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useSearch, Link } from "wouter";
 import { useState, useEffect } from "react";
 import { TrendingUp, Heart, Sparkles, Star } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -62,9 +63,7 @@ export default function Recipient() {
     <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100">
       <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/">
-            <span className="text-sm font-medium tracking-tight text-stone-900">Kora</span>
-          </Link>
+          <Logo size="sm" className="text-stone-900" />
           <span className="text-xs text-stone-400">{recipientName}'s Story</span>
         </div>
       </header>

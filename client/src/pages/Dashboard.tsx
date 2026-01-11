@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
 import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -173,19 +174,7 @@ export default function Dashboard() {
       <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-2">
-              <svg className="w-5 h-5" viewBox="0 0 32 32" fill="none">
-                <path 
-                  d="M8 6v20M8 16l10-10M8 16l10 10" 
-                  stroke="currentColor" 
-                  strokeWidth="2.5" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                  className="text-stone-900"
-                />
-              </svg>
-              <span className="font-medium text-stone-900 text-[15px]" style={{ letterSpacing: '0.04em' }}>kora</span>
-            </Link>
+            <Logo size="sm" className="text-stone-900" />
             {funds.length > 1 && (
               <select 
                 value={selectedFundSlug}

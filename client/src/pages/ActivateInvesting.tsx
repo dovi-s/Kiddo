@@ -3,6 +3,7 @@ import { useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, Shield, Lock } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 type Step = "intro" | "identity" | "child" | "agreements" | "processing" | "complete";
 
@@ -123,7 +124,7 @@ export default function ActivateInvesting() {
           ) : (
             <div />
           )}
-          <span className="text-sm font-medium tracking-tight text-stone-900">Kora</span>
+          <Logo size="sm" className="text-stone-900" linkTo={null} />
           <div className="w-5" />
         </div>
       </header>

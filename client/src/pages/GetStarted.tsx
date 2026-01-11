@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Lock, Shield, Plus, Trash2, User, Users } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 type AccountType = "parent" | "adult" | null;
 
@@ -87,9 +88,7 @@ export default function GetStarted() {
     <div className="min-h-screen bg-stone-50">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-stone-100">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/">
-            <span className="text-lg font-semibold tracking-tight text-stone-900">Kora</span>
-          </Link>
+          <Logo size="md" className="text-stone-900" />
           <div className="flex items-center gap-3 text-xs text-stone-400">
             <div className="flex items-center gap-1">
               <Lock size={12} />

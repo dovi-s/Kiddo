@@ -1,0 +1,94 @@
+A K as the primary mark
+
+A subtle “< / >” time-direction vibe (now vs later, forward) in the geometry
+That is a really good brand cue because it reads as “Kora” first, and “future-forward” second.
+
+What feels “slightly off” is almost certainly one (or more) of these very fixable issues.
+
+What’s off in the current lockup
+1) The K and the wordmark look like they come from different systems
+
+The K looks like a UI icon. The “kora” looks like regular text. That mismatch creates the “something’s off” feeling.
+
+Fix: make the wordmark feel like it was designed with the same intent as the K.
+
+2) Spacing between mark and wordmark
+
+The gap is either a hair too tight (feels cramped) or too wide (feels detached). Right now it reads slightly detached, like two separate things.
+
+Fix: set a repeatable spacing rule (example below).
+
+3) Vertical alignment
+
+The K and “kora” may not be optically centered on the same baseline or cap-height. Even tiny misalignment looks amateur.
+
+Fix: align optically, not mathematically.
+
+4) Weight mismatch
+
+Your K stroke weight and the wordmark weight do not match. If the K is thinner than the text, it feels weak. If it is thicker, it feels like an icon next to text.
+
+Fix: match perceived weight.
+
+The cleanest solution
+Make the K an intentional monogram and make “kora” a custom wordmark-lite
+
+Not a full custom font, just 2–3 tweaks:
+
+Slightly tighten kerning: k o, o r
+
+Maybe soften one corner or adjust the “k” terminal to echo the K mark
+
+Keep it lowercase like this. Lowercase feels modern and friendly.
+
+Recommended lockups
+
+You should have all 3:
+
+A) Primary horizontal (what you showed)
+
+[ K mark ] kora
+
+Rules:
+
+Space between mark and wordmark: 0.75x to 1.0x the K’s stroke width (optical test)
+
+Wordmark height: set so the x-height feels “equal energy” to the K, not literally equal height
+
+B) Stacked (for app splash, print, social)
+
+K on top, “kora” under it, centered.
+
+C) Standalone mark (favicon, app icon)
+
+Just the K, but you need a “small-size” cut where the inner negative spaces do not collapse.
+
+If you want the “now vs later” to be intentional (without being cheesy)
+
+Do it as an “easter egg” in the K, not as extra symbols beside it.
+
+Two best executions:
+
+Negative-space “>” inside the K where the diagonals meet.
+
+Chevron-built K where the diagonals are subtly chevron-like, but still read as a letter.
+
+Avoid literally putting < or > next to the K in the logo. That starts to look like code.
+
+What I would change immediately
+
+Make the K slightly more distinctive
+
+Either a hidden “>” cut
+
+Or slightly custom diagonals (not a default font K)
+
+Use a slightly more “designed” wordmark
+
+Same font family, but pick a weight that matches the K’s perceived weight
+
+Tighten kerning carefully
+
+Re-space and re-align
+
+This alone can make it feel premium instantly

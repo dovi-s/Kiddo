@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, ArrowLeft, Check, Lock, Shield } from "lucide-react";
 import { Link, useLocation, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { Logo } from "@/components/ui/logo";
 
 export default function Onboard() {
   const search = useSearch();
@@ -72,9 +73,7 @@ export default function Onboard() {
     <div className="min-h-screen bg-stone-50">
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-stone-100">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/">
-            <span className="text-lg font-semibold tracking-tight text-stone-900">Kora</span>
-          </Link>
+          <Logo size="md" className="text-stone-900" />
           <div className="flex items-center gap-3 text-xs text-stone-400">
             <div className="flex items-center gap-1">
               <Lock size={12} />

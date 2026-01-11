@@ -9,6 +9,7 @@ import { Lock, ArrowLeft, Heart, Sparkles, Gift, Check, CreditCard, Smartphone }
 import { Link, useSearch } from "wouter";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { Logo } from "@/components/ui/logo";
 
 const AMOUNTS = [25, 50, 100, 250];
 
@@ -64,14 +65,7 @@ export default function Moment() {
       {/* Header */}
       <header className="p-4 sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
         <div className="container mx-auto flex justify-between items-center max-w-lg">
-          <Link href="/">
-            <span className="flex items-center gap-2.5 text-foreground">
-              <svg className="w-6 h-6" viewBox="0 0 32 32" fill="none">
-                <path d="M8 6v20M8 16l10-10M8 16l10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              <span className="font-medium tracking-wide text-[15px]" style={{ letterSpacing: '0.04em' }}>kora</span>
-            </span>
-          </Link>
+          <Logo size="md" className="text-foreground" />
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 px-2.5 py-1 rounded-full">
             <Lock className="h-3 w-3" />
             <span>Secure</span>
