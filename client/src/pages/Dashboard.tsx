@@ -541,246 +541,174 @@ export default function Dashboard() {
               </div>
             </motion.div>
 
-            {/* Funds */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="mb-10 lg:mb-12"
-            >
-              {funds.map((fund) => (
-                <div key={fund.id} className="mb-6">
-                  
-                  <div className="border border-stone-200 rounded-lg bg-white overflow-hidden">
-                    <button
-                      onClick={() => {
-                        setExpandedFund(expandedFund === fund.id ? null : fund.id);
-                        setSelectedFundSlug(fund.slug);
-                      }}
-                      data-testid={`button-expand-fund-${fund.id}`}
-                      className="w-full p-4 sm:p-5 flex items-center gap-4 text-left hover:bg-stone-50 transition-colors group"
-                    >
-                      <motion.div 
-                        animate={{ rotate: expandedFund === fund.id ? 90 : 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="text-stone-400 group-hover:text-stone-600"
-                      >
-                        <svg width="8" height="12" viewBox="0 0 8 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                          <path d="M1.5 1L6.5 6L1.5 11" />
-                        </svg>
-                      </motion.div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <p className="font-medium text-stone-900">{fund.name}'s Fund</p>
-                          <span className="text-[10px] font-medium text-stone-400 uppercase tracking-wider px-1.5 py-0.5 bg-stone-100 rounded">
-                            {fund.accountType}
-                          </span>
-                          {fund.status === "active" ? (
-                            <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                              Connected
-                            </span>
-                          ) : fund.status === "draft" ? (
-                            <span 
-                              className="text-[10px] font-medium text-stone-500 bg-stone-100 px-1.5 py-0.5 rounded cursor-help group/status relative"
-                              title="Activate investing to connect your brokerage account. Contributors can pledge now — gifts invest once activated."
-                            >
-                              Not activated
-                              <span className="hidden group-hover/status:block absolute left-0 top-full mt-2 z-50 w-56 p-3 bg-stone-900 text-white text-xs rounded-lg shadow-lg font-normal leading-relaxed">
-                                <span className="font-medium block mb-1">What this means:</span>
-                                Your fund isn't connected to a brokerage yet. Contributors can still pledge gifts — they'll invest once you activate.
-                                <span className="block mt-2 font-medium text-emerald-400">Click the fund to activate →</span>
-                              </span>
-                            </span>
-                          ) : fund.status === "pending" ? (
-                            <span className="text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                              Verifying
-                            </span>
-                          ) : null}
+            {/* Selected Fund Details */}
+            {selectedFund && (
+              <motion.div
+                key={selectedFund.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="mb-10 lg:mb-12"
+              >
+                <div className="border border-stone-200 rounded-lg bg-white overflow-hidden">
+                  {selectedFund.status === "draft" && (
+                    <div className="px-4 sm:px-5 py-4 bg-amber-50 border-b border-amber-100">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-medium text-amber-800">Activate investing to start growing gifts</p>
+                          <p className="text-xs text-amber-600 mt-0.5">Contributors can pledge now — funds invest once activated</p>
                         </div>
-                        <p className="text-xs text-stone-400 truncate">kora.com/{fund.slug}</p>
+                        <Link href="/activate">
+                          <button 
+                            data-testid="button-activate-fund"
+                            className="px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-800 transition-colors whitespace-nowrap"
+                          >
+                            Activate investing
+                          </button>
+                        </Link>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-lg font-medium text-stone-900">${fund.balance.toLocaleString()}</p>
-                        <p className="text-sm text-emerald-700">+{fund.gainPercent}%</p>
-                      </div>
-                    </button>
-
-                    <AnimatePresence>
-                      {expandedFund === fund.id && (
-                        <motion.div
-                          initial={{ height: 0 }}
-                          animate={{ height: "auto" }}
-                          exit={{ height: 0 }}
-                          transition={{ duration: 0.25 }}
-                          className="overflow-hidden"
+                    </div>
+                  )}
+                  
+                  <div className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-100 gap-3">
+                    <div>
+                      {selectedFund.status === "active" && (
+                        <p className="text-xs text-emerald-600 mb-1 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                          Connected to Alpaca Securities · <button className="underline hover:no-underline">Account settings</button>
+                        </p>
+                      )}
+                      <p className="text-sm text-stone-500">
+                        <span className="text-stone-400">Projection:</span> {isPersonal ? "In 20 years" : `When ${selectedFund.name} turns 18`}: <span className="font-medium text-stone-900">${selectedFund.projection.toLocaleString()}</span>
+                      </p>
+                      <button 
+                        onClick={() => setShowContributors(true)}
+                        className="text-xs text-stone-400 hover:text-stone-600 hover:underline transition-colors"
+                        data-testid="button-view-contributors"
+                      >
+                        {selectedFund.contributors} contributors →
+                      </button>
+                      <p className="text-[10px] text-stone-300 mt-1">Assumes 7% annual return. Not guaranteed.</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button 
+                        onClick={() => setShowEditFund(true)}
+                        data-testid="button-edit-fund"
+                        className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button 
+                        onClick={handleCopyClick}
+                        data-testid="button-copy-link"
+                        className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                        title="Copy link"
+                      >
+                        <Copy size={14} />
+                      </button>
+                      <button 
+                        onClick={() => setShowQR(true)}
+                        data-testid="button-show-qr"
+                        className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                        title="QR code"
+                      >
+                        <QrCode size={14} />
+                      </button>
+                      <Link href={`/${fundSlug}`}>
+                        <button 
+                          className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors" 
+                          title="View fund & events"
+                          data-testid="button-view-fund"
                         >
-                          <div className="border-t border-stone-100">
+                          <ExternalLink size={14} />
+                        </button>
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="px-4 sm:px-5 py-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</p>
+                      <Link href="/moment/create" className="text-xs text-stone-500 hover:text-stone-900 transition-colors">
+                        + New event
+                      </Link>
+                    </div>
+                    
+                    <div className="space-y-0">
+                      {selectedFund.events.map((event, idx) => {
+                        const eventData = eventEdits[event.id] || { title: event.title, slug: event.slug };
+                        const isLast = idx === selectedFund.events.length - 1;
+                        return (
+                          <div key={event.id} className="flex">
+                            <div className="w-6 flex flex-col items-center mr-2">
+                              <div className={`w-px bg-stone-200 ${idx === 0 ? 'h-3' : 'h-full'}`} />
+                              <div className="w-3 h-px bg-stone-200" style={{ marginTop: idx === 0 ? 0 : -12 }} />
+                              {!isLast && <div className="w-px bg-stone-200 flex-1" />}
+                            </div>
                             
-                            {fund.status === "draft" && (
-                              <div className="px-4 sm:px-5 py-4 bg-amber-50 border-b border-amber-100">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                  <div>
-                                    <p className="text-sm font-medium text-amber-800">Activate investing to start growing gifts</p>
-                                    <p className="text-xs text-amber-600 mt-0.5">Contributors can pledge now — funds invest once activated</p>
-                                  </div>
-                                  <Link href="/activate">
-                                    <button 
-                                      data-testid="button-activate-fund"
-                                      className="px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-800 transition-colors whitespace-nowrap"
-                                    >
-                                      Activate investing
-                                    </button>
-                                  </Link>
+                            <div className="flex-1 py-2 flex items-center justify-between group">
+                              <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <div className={`h-2 w-2 rounded-full shrink-0 ${event.active ? 'bg-emerald-500' : 'bg-stone-300'}`} />
+                                <div className="min-w-0">
+                                  <p className="text-sm text-stone-900 truncate">{eventData.title}</p>
+                                  <p className="text-xs text-stone-400 truncate">/{fundSlug}/{eventData.slug}</p>
                                 </div>
                               </div>
-                            )}
-                            
-                            <div className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-100 gap-3">
-                              <div>
-                                {fund.status === "active" && (
-                                  <p className="text-xs text-emerald-600 mb-1 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                    Connected to Alpaca Securities · <button className="underline hover:no-underline">Account settings</button>
-                                  </p>
-                                )}
-                                <p className="text-sm text-stone-500">
-                                  <span className="text-stone-400">Projection:</span> {isPersonal ? "In 20 years" : `When ${fund.name} turns 18`}: <span className="font-medium text-stone-900">${fund.projection.toLocaleString()}</span>
-                                </p>
-                                <button 
-                                  onClick={() => setShowContributors(true)}
-                                  className="text-xs text-stone-400 hover:text-stone-600 hover:underline transition-colors"
-                                  data-testid="button-view-contributors"
-                                >
-                                  {fund.contributors} contributors →
-                                </button>
-                                <p className="text-[10px] text-stone-300 mt-1">Assumes 7% annual return. Not guaranteed.</p>
-                              </div>
-                              <div className="flex gap-1">
-                                <button 
-                                  onClick={() => setShowEditFund(true)}
-                                  data-testid="button-edit-fund"
-                                  className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
-                                  title="Edit"
-                                >
-                                  <Pencil size={14} />
-                                </button>
-                                <button 
-                                  onClick={handleCopyClick}
-                                  data-testid="button-copy-link"
-                                  className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
-                                  title="Copy link"
-                                >
-                                  <Copy size={14} />
-                                </button>
-                                <button 
-                                  onClick={() => setShowQR(true)}
-                                  data-testid="button-show-qr"
-                                  className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
-                                  title="QR code"
-                                >
-                                  <QrCode size={14} />
-                                </button>
-                                <Link href={`/${fundSlug}`}>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <p className="text-sm text-stone-600 mr-2">${event.raised.toLocaleString()}</p>
+                                <Link href={`/edit/${fundSlug}/${eventData.slug}`}>
                                   <button 
-                                    className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors" 
-                                    title="View fund & events"
-                                    data-testid="button-view-fund"
+                                    className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                                    title="Edit event"
+                                    data-testid={`button-edit-event-${event.id}`}
                                   >
-                                    <ExternalLink size={14} />
+                                    <Pencil size={12} />
+                                  </button>
+                                </Link>
+                                <button 
+                                  onClick={() => { navigator.clipboard.writeText(`kora.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied" }); }}
+                                  className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                                  title="Copy link"
+                                  data-testid={`button-copy-event-${event.id}`}
+                                >
+                                  <Copy size={12} />
+                                </button>
+                                <button 
+                                  onClick={() => setShowPageQR(`kora.com/${fundSlug}/${eventData.slug}`)}
+                                  className="hidden sm:block p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                  title="QR code"
+                                  data-testid={`button-qr-event-${event.id}`}
+                                >
+                                  <QrCode size={12} />
+                                </button>
+                                <button 
+                                  onClick={() => toast({ title: "Event archived", description: "You can restore it anytime from settings" })}
+                                  className="hidden sm:block p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                                  title="Archive event"
+                                  data-testid={`button-archive-event-${event.id}`}
+                                >
+                                  <Archive size={12} />
+                                </button>
+                                <Link href={`/${fundSlug}/${eventData.slug}`}>
+                                  <button 
+                                    className="hidden sm:block p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all" 
+                                    title="View event"
+                                    data-testid={`button-view-event-${event.id}`}
+                                  >
+                                    <ExternalLink size={12} />
                                   </button>
                                 </Link>
                               </div>
                             </div>
-
-                            <div className="px-4 sm:px-5 py-4">
-                              <div className="flex items-center justify-between mb-3">
-                                <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</p>
-                                <Link href="/moment/create" className="text-xs text-stone-500 hover:text-stone-900 transition-colors">
-                                  + New event
-                                </Link>
-                              </div>
-                              
-                              <div className="space-y-0">
-                                {fund.events.map((event, idx) => {
-                                  const eventData = eventEdits[event.id] || { title: event.title, slug: event.slug };
-                                  const isLast = idx === fund.events.length - 1;
-                                  return (
-                                    <div key={event.id} className="flex">
-                                      <div className="w-6 flex flex-col items-center mr-2">
-                                        <div className={`w-px bg-stone-200 ${idx === 0 ? 'h-3' : 'h-full'}`} />
-                                        <div className="w-3 h-px bg-stone-200" style={{ marginTop: idx === 0 ? 0 : -12 }} />
-                                        {!isLast && <div className="w-px bg-stone-200 flex-1" />}
-                                      </div>
-                                      
-                                      <div className="flex-1 py-2 flex items-center justify-between group">
-                                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                                          <div className={`h-2 w-2 rounded-full shrink-0 ${event.active ? 'bg-emerald-500' : 'bg-stone-300'}`} />
-                                          <div className="min-w-0">
-                                            <p className="text-sm text-stone-900 truncate">{eventData.title}</p>
-                                            <p className="text-xs text-stone-400 truncate">/{fundSlug}/{eventData.slug}</p>
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center gap-1 shrink-0">
-                                          <p className="text-sm text-stone-600 mr-2">${event.raised.toLocaleString()}</p>
-                                          <Link href={`/edit/${fundSlug}/${eventData.slug}`}>
-                                            <button 
-                                              className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-all"
-                                              title="Edit event"
-                                              data-testid={`button-edit-event-${event.id}`}
-                                            >
-                                              <Pencil size={12} />
-                                            </button>
-                                          </Link>
-                                          <button 
-                                            onClick={() => { navigator.clipboard.writeText(`kora.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied" }); }}
-                                            className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-all"
-                                            title="Copy link"
-                                            data-testid={`button-copy-event-${event.id}`}
-                                          >
-                                            <Copy size={12} />
-                                          </button>
-                                          <button 
-                                            onClick={() => setShowPageQR(`kora.com/${fundSlug}/${eventData.slug}`)}
-                                            className="hidden sm:block p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                            title="QR code"
-                                            data-testid={`button-qr-event-${event.id}`}
-                                          >
-                                            <QrCode size={12} />
-                                          </button>
-                                          <button 
-                                            onClick={() => toast({ title: "Event archived", description: "You can restore it anytime from settings" })}
-                                            className="hidden sm:block p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                            title="Archive event"
-                                            data-testid={`button-archive-event-${event.id}`}
-                                          >
-                                            <Archive size={12} />
-                                          </button>
-                                          <Link href={`/${fundSlug}/${eventData.slug}`}>
-                                            <button 
-                                              className="hidden sm:block p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all" 
-                                              title="View event"
-                                              data-testid={`button-view-event-${event.id}`}
-                                            >
-                                              <ExternalLink size={12} />
-                                            </button>
-                                          </Link>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
                           </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </motion.div>
+              </motion.div>
+            )}
 
             {/* Activity */}
             <motion.div
