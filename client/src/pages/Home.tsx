@@ -186,10 +186,10 @@ export default function Home() {
                   </Button>
                 </motion.div>
               </Link>
-              <Link href="/moment">
+              <Link href="/send">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button variant="outline" size="lg" className="h-14 px-10 text-base rounded-xl" data-testid="button-send-gift">
-                    Give a gift
+                    Send stock
                   </Button>
                 </motion.div>
               </Link>
