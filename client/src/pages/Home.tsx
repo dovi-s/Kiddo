@@ -398,6 +398,9 @@ export default function Home() {
           <div className="max-w-3xl mx-auto">
             <FadeIn className="text-center mb-16">
               <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Pricing</h2>
+              <p className="text-muted-foreground mt-3 max-w-md mx-auto">
+                Start free. Upgrade when you want to cover fees for guests.
+              </p>
             </FadeIn>
 
             <div className="space-y-4">
@@ -406,28 +409,31 @@ export default function Home() {
                   id: "free", 
                   name: "Free", 
                   price: "$0", 
-                  period: "", 
-                  desc: "Create unlimited funds and events. Guests pay a small fee at checkout.", 
-                  details: "1.5% service fee (max $10) + processing",
-                  featured: false 
+                  period: "forever", 
+                  desc: "Create your fund and share it. Guests pay a small fee at checkout.", 
+                  details: "Guest pays: 1.5% (max $10) + processing",
+                  featured: false,
+                  cta: "Get started free"
                 },
                 { 
                   id: "plus", 
                   name: "Plus", 
                   price: "$49", 
                   period: "per event", 
-                  desc: "Make gifts fee-free for your guests. Premium templates and thank-you tools.", 
-                  details: "Covers fees up to $7,500 in gifts",
-                  featured: true 
+                  desc: "Upgrade any event to cover fees for guests. Premium templates included.", 
+                  details: "You pay once • Covers up to $7,500 in gifts",
+                  featured: true,
+                  cta: "Learn more"
                 },
                 { 
                   id: "family", 
                   name: "Family", 
                   price: "$99", 
                   period: "per year", 
-                  desc: "For households with multiple kids or events. One dashboard, fee-free gifting.", 
-                  details: "Up to 6 events • Covers fees up to $15k/year",
-                  featured: false 
+                  desc: "Best for multiple kids or 3+ events per year. Fee-free gifting on everything.", 
+                  details: "Unlimited events • Covers up to $15k/year",
+                  featured: false,
+                  cta: "Learn more"
                 },
               ].map((plan, i) => (
                 <FadeIn key={plan.id} delay={i * 0.1}>
@@ -461,7 +467,7 @@ export default function Home() {
                       <Link href="/get-started">
                         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                           <Button variant={plan.featured ? "default" : "outline"}>
-                            {plan.featured ? "Choose Plus" : plan.id === "free" ? "Get started" : "Choose Family"}
+                            {plan.cta}
                           </Button>
                         </motion.div>
                       </Link>
@@ -471,12 +477,9 @@ export default function Home() {
               ))}
             </div>
 
-            <FadeIn delay={0.4} className="text-center mt-10 space-y-2">
+            <FadeIn delay={0.4} className="text-center mt-10">
               <p className="text-xs text-muted-foreground">
-                All plans include real investment accounts, premium designs, and shareable event pages.
-              </p>
-              <p className="text-xs text-muted-foreground/70">
-                Free hosts can toggle "let guests pay fees" or "I'll cover fees" per event.
+                All plans include real investment accounts and shareable event pages. Upgrade anytime from your dashboard.
               </p>
             </FadeIn>
           </div>

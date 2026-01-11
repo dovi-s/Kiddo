@@ -1,0 +1,120 @@
+Yes. Minors should be effectively non-discoverable by default. The safest pattern is: no public directory, no child search, link-only access.
+
+The right discoverability model
+Default for children: unlisted, link-only
+
+A child fund page is not searchable on the web.
+
+It is not searchable inside Everleaf/Kora by name.
+
+The only way to reach it is a direct link or QR shared by the parent (or an invite sent by the parent).
+
+This matches how “unlisted” works on YouTube and how most gift registries work when privacy matters.
+
+What people search for (if anything): the parent, not the child
+
+If you want any search at all, it should be:
+
+Search by parent phone/email (or “family page” name), not by child.
+
+Result shows parent name only plus a label like “Family funds” or “Give a gift.”
+
+Child details only appear after the giver enters the flow from a link/invite.
+
+But you can also skip search entirely and be link-only. That is cleaner and safer.
+
+How gifting works without a database people can browse
+1) Event gifting (primary)
+
+Parent creates “Mila’s 5th Birthday” page.
+
+Parent shares link/QR.
+
+Giver opens it, picks amount, picks asset option, pays.
+
+No account required for the giver.
+
+No search needed.
+
+2) Always-on fund (secondary)
+
+Parent has “Mila’s Fund” page that is also unlisted.
+
+Parent shares it privately with family (text/email).
+
+Giver bookmarks it and can gift anytime.
+
+Still no search.
+
+3) “Gift someone I know” inside the app (adult-only)
+
+For adult recipients (not minors), you can allow:
+
+Search by phone/email in your contacts
+
+Recipient must have explicitly enabled “Allow people to find me”
+
+For minors: never.
+
+Controls and protections you should implement
+Visibility settings per page (simple, clear)
+
+Each page (fund or event) has one of:
+
+Unlisted (recommended default): only accessible via link/QR
+
+Private: only invited contributors can access (invite list)
+
+Public: only allowed for adults, never for minors
+
+Optional “access gate” for extra safety
+
+For child pages, add one tap option:
+
+“Require passcode” (shown on invite card or printed QR)
+
+Or “Require last 4 digits of host phone” (easy for guests)
+
+Anti-scraping and enumeration prevention
+
+Even if you use nice URLs like kora.com/mila:
+
+Use non-guessable IDs behind the scenes
+
+Rate-limit page hits
+
+Bot protection
+
+Block listing, block indexing, block internal search
+
+No “browse” endpoints
+
+Child identity minimization
+
+On public-facing pages for minors:
+
+Show first name only (or nickname)
+
+No last name by default
+
+No location
+
+No birthdate (or show age range only)
+
+Contributor list visibility defaults to “host only”
+
+How this maps to your “parent + child funds + events” structure
+
+Account owner (parent) has a household.
+
+Household contains funds (one per child, optionally one for the parent).
+
+Each fund can have multiple event pages (birthday, bar mitzvah, graduation).
+
+Givers do not search for children. They arrive from a specific event link or an always-on fund link.
+
+Answer to your core concern
+
+Yes, you should design it so someone cannot search “Mila” and find a list of children or pages. The product should feel like: “I gift via a link I received,” not “I browse a network of kids.”
+
+If you want, I can write the exact copy and settings labels for: Fund visibility, Event visibility, contributor privacy, and the “Findability” toggle (adult-only).

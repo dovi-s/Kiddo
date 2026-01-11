@@ -150,7 +150,17 @@ The platform consists of:
 - **Contributor Checkout**: Frictionless 60-second flow (no account required)
 - **Dashboard**: For parents/guardians to manage funds and send thank-yous
 
-The business model involves platform fees on gifts (capped percentages), with optional subscription tiers for hosts who want fee-free gifting for their guests.
+## Pricing Model (Elena Verna Strategy)
+
+Everyone starts Free. Upgrades happen when hosts want to cover fees for guests.
+
+| Plan | Price | Who pays fees | Coverage |
+|------|-------|---------------|----------|
+| **Free** | $0 | Guest pays 1.5% (max $10) + processing | Unlimited funds/events |
+| **Plus** | $49/event | Host covers fees | Up to $7,500 in gifts |
+| **Family** | $99/year | Host covers fees | Up to 6 events, $15k/year |
+
+**Key insight**: No plan selection during onboarding. Hosts upgrade per-event or annually when they want premium features. "Cover fees for guests" toggle triggers upsell.
 
 ## User Preferences
 
@@ -237,6 +247,32 @@ Even with an embedded broker partner, Kora must handle:
 - **Child/Recipient**: Has fund in their name, receives gifts (custodial account)
 - **Adult User**: Self-directed account holder
 - **Guest Contributor**: Gives gifts without creating account (60-second checkout)
+
+### Child Privacy & Discoverability (Critical)
+
+**Core principle**: Minors should be non-discoverable by default. Link-only access.
+
+**Visibility settings per page**:
+- **Unlisted** (default for minors): Only accessible via link/QR shared by parent
+- **Private**: Only invited contributors can access (invite list)
+- **Public**: Only allowed for adults, never for minors
+
+**What this means in practice**:
+- No public directory of children
+- No search for children by name
+- Givers arrive from links shared by parents, not by browsing
+- Child pages show first name only (no last name, location, or birthdate by default)
+- Contributor list visibility defaults to "host only"
+
+**Anti-abuse protections**:
+- Non-guessable IDs behind friendly URLs
+- Rate-limit page hits
+- Bot protection
+- Block search engine indexing for child pages
+
+**Adult-only findability** (optional):
+- Adults can enable "Allow people to find me" by phone/email
+- This is never available for minor accounts
 
 ### UX Priorities
 - **Fee Transparency**: Separate "Processing (payment processor)" vs "Platform fee" line items
