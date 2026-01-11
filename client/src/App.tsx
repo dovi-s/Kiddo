@@ -24,6 +24,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/get-started" component={GetStarted} />
+      <Route path="/onboard" component={Onboard} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/give" component={Give} />
       <Route path="/give/:id" component={Give} />
@@ -33,12 +34,11 @@ function Router() {
       <Route path="/send" component={Send} />
       <Route path="/claim/:token" component={Claim} />
       <Route path="/edit/:fund/:event" component={PageEditor} />
-      <Route path="/:slug" component={FundPage} />
-      <Route path="/:slug/:event" component={EventPage} />
       <Route path="/recipient" component={Recipient} />
       <Route path="/recipient/:id" component={Recipient} />
       <Route path="/settings" component={Settings} />
-      <Route path="/onboard" component={Onboard} />
+      <Route path="/:slug" component={FundPage} />
+      <Route path="/:slug/:event" component={EventPage} />
       <Route component={NotFound} />
     </Switch>
   );
