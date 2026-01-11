@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,17 +9,27 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function Onboard() {
   const search = useSearch();
+  const [, setLocation] = useLocation();
   const params = new URLSearchParams(search);
+  
+  // Redirect to get-started if no valid params (user landed here directly)
+  const hasValidParams = params.get("email") && params.get("name");
+  
+  useEffect(() => {
+    if (!hasValidParams) {
+      setLocation("/get-started");
+    }
+  }, [hasValidParams, setLocation]);
+  
   const accountType = params.get("type") || "child";
-  const profileName = params.get("name") || "Mila";
-  const email = params.get("email") || "you@example.com";
+  const profileName = params.get("name") || "";
+  const email = params.get("email") || "";
   const childrenParam = params.get("children") || "";
   const isPersonal = accountType === "personal";
 
   const totalSteps = isPersonal ? 2 : 3;
   const [step, setStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [, setLocation] = useLocation();
 
   const handleNext = () => {
     if (step === totalSteps - 1) {
