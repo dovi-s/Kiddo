@@ -442,9 +442,9 @@ export default function GetStarted() {
                 )}
 
                 <div className="p-5">
-                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-2">Brokerage partner</p>
+                  <p className="text-xs text-stone-400 uppercase tracking-wider mb-2">Where your assets are held</p>
                   <p className="font-medium text-stone-900">Alpaca Securities LLC</p>
-                  <p className="text-sm text-stone-500">Member FINRA/SIPC</p>
+                  <p className="text-sm text-stone-500">Member FINRA/SIPC · Up to $500K SIPC protection</p>
                 </div>
               </div>
 

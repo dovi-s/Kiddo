@@ -662,34 +662,51 @@ export default function Dashboard() {
               
               <div className="space-y-4">
                 {recentActivity.map((item, i) => (
-                  <div key={i} className="flex items-start justify-between p-4 bg-white border border-stone-200 rounded-lg lg:border-0 lg:bg-transparent lg:p-0">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-stone-900">
-                          <span className="font-medium">{item.from}</span>
-                          <span className="text-stone-400 mx-1.5">→</span>
-                          <span>{item.event}</span>
+                  <div key={i} className="group p-4 bg-white border border-stone-200 rounded-lg lg:border-0 lg:bg-transparent lg:p-0">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-stone-900">
+                            <span className="font-medium">{item.from}</span>
+                            <span className="text-stone-400 mx-1.5">→</span>
+                            <span>{item.event}</span>
+                          </p>
+                          {item.status === "pending" ? (
+                            <span 
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1 cursor-help"
+                              title="Payment received. Will invest when US markets open (9:30am ET)"
+                            >
+                              <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
+                              Pending
+                            </span>
+                          ) : (
+                            <span 
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium cursor-help"
+                              title={`Settled · Invested in VTI (Total Stock Market)`}
+                            >
+                              Invested
+                            </span>
+                          )}
+                        </div>
+                        {item.note && (
+                          <p className="text-sm text-stone-500 mt-0.5 truncate">"{item.note}"</p>
+                        )}
+                        <p className="text-xs text-stone-400 mt-1">
+                          {item.time}
                         </p>
-                        {item.status === "pending" ? (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
-                            <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
-                            Pending
-                          </span>
-                        ) : (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
-                            Invested
-                          </span>
+                        {item.status === "pending" && (
+                          <p className="text-xs text-amber-600 mt-0.5">
+                            Will invest when US markets open (9:30am ET)
+                          </p>
+                        )}
+                        {item.status === "invested" && (
+                          <p className="text-xs text-emerald-600 mt-0.5">
+                            Settled · Bought shares of VTI
+                          </p>
                         )}
                       </div>
-                      {item.note && (
-                        <p className="text-sm text-stone-500 mt-0.5 truncate">"{item.note}"</p>
-                      )}
-                      <p className="text-xs text-stone-400 mt-1">
-                        {item.time}
-                        {item.status === "pending" && " · Will invest when markets open"}
-                      </p>
+                      <p className="text-sm font-medium text-stone-900 shrink-0 ml-4">+${item.amount}</p>
                     </div>
-                    <p className="text-sm font-medium text-stone-900 shrink-0 ml-4">+${item.amount}</p>
                   </div>
                 ))}
               </div>
