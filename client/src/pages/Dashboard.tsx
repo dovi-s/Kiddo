@@ -5,7 +5,7 @@ import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, Gift, TrendingUp, Calendar, ChevronRight } from "lucide-react";
+import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
@@ -846,11 +846,11 @@ export default function Dashboard() {
               >
                 <div className="flex items-center justify-between mb-4">
                   <p className="text-sm font-medium text-stone-900">Share your page</p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <button 
                       onClick={() => setShowFundPreview(true)}
                       data-testid="button-preview-fund"
-                      className="text-stone-400 hover:text-stone-600 transition-colors"
+                      className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
                       title="Preview page"
                     >
                       <Eye size={14} />
@@ -858,9 +858,10 @@ export default function Dashboard() {
                     <button 
                       onClick={() => setShowEditFund(true)}
                       data-testid="button-edit-share"
-                      className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                      className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                      title="Edit"
                     >
-                      Edit
+                      <Pencil size={14} />
                     </button>
                   </div>
                 </div>
@@ -1485,104 +1486,48 @@ export default function Dashboard() {
 
       {/* Fund Preview Modal */}
       <Dialog open={showFundPreview} onOpenChange={setShowFundPreview}>
-        <DialogContent className="max-w-lg bg-white p-0 gap-0 overflow-hidden">
-          <div className="relative">
-            {/* Phone Frame Preview */}
-            <div className="bg-gradient-to-br from-stone-50 to-stone-100 p-6">
-              <div className="mx-auto max-w-[280px] bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-stone-200">
-                {/* Phone Status Bar */}
-                <div className="bg-stone-900 text-white px-4 py-2 flex items-center justify-between text-[10px]">
-                  <span>9:41</span>
-                  <div className="flex items-center gap-1">
-                    <div className="w-4 h-2 border border-white rounded-sm">
-                      <div className="w-3 h-1.5 bg-white rounded-sm m-[1px]"></div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Page Content Preview */}
-                <div className="p-4 space-y-4">
-                  {/* Header */}
-                  <div className="text-center">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-stone-100 to-stone-200 mx-auto mb-3 flex items-center justify-center">
-                      <span className="text-2xl">{selectedFund?.name?.charAt(0) || "M"}</span>
-                    </div>
-                    <h3 className="font-semibold text-stone-900">{selectedFund?.name || "Mila"}'s Future Fund</h3>
-                    <p className="text-xs text-stone-500 mt-1">Gifts that grow with {selectedFund?.name || "Mila"}</p>
-                  </div>
-                  
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-stone-50 rounded-lg p-3 text-center">
-                      <div className="flex items-center justify-center gap-1 text-emerald-600 mb-1">
-                        <TrendingUp size={12} />
-                        <span className="text-xs font-medium">Total raised</span>
-                      </div>
-                      <p className="text-lg font-semibold text-stone-900">${selectedFund?.balance.toLocaleString() || "4,250"}</p>
-                    </div>
-                    <div className="bg-stone-50 rounded-lg p-3 text-center">
-                      <div className="flex items-center justify-center gap-1 text-stone-500 mb-1">
-                        <Gift size={12} />
-                        <span className="text-xs font-medium">Contributors</span>
-                      </div>
-                      <p className="text-lg font-semibold text-stone-900">{selectedFund?.contributors || 12}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Events */}
-                  <div>
-                    <p className="text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-2">Events</p>
-                    <div className="space-y-2">
-                      {(selectedFund?.events || []).slice(0, 2).map((event, idx) => (
-                        <div key={idx} className="flex items-center justify-between p-2 bg-stone-50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <Calendar size={12} className="text-stone-400" />
-                            <span className="text-xs text-stone-700">{event.title}</span>
-                          </div>
-                          <ChevronRight size={12} className="text-stone-300" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {/* CTA Button */}
-                  <button className="w-full py-3 bg-stone-900 text-white rounded-xl text-sm font-medium">
-                    Give a gift
-                  </button>
-                  
-                  {/* Trust Footer */}
-                  <p className="text-[8px] text-stone-400 text-center">
-                    Held by Apex Clearing · SIPC Protected
-                  </p>
-                </div>
+        <DialogContent className="max-w-4xl w-[95vw] h-[85vh] bg-white p-0 gap-0 overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 px-2 py-1 bg-stone-100 rounded-lg text-xs text-stone-500">
+                <Eye size={12} />
+                <span>Preview</span>
               </div>
+              <span className="text-sm text-stone-600 truncate">kora.com/{selectedFundSlug}</span>
             </div>
-            
-            {/* Actions Footer */}
-            <div className="p-4 border-t border-stone-100 bg-white">
-              <div className="flex gap-2">
-                <Link href={`/${selectedFundSlug}`} className="flex-1">
-                  <button 
-                    onClick={() => setShowFundPreview(false)}
-                    data-testid="button-view-live"
-                    className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <ExternalLink size={14} />
-                    View live page
-                  </button>
-                </Link>
+            <div className="flex items-center gap-2">
+              <Link href={`/${selectedFundSlug}`}>
                 <button 
-                  onClick={() => {
-                    setShowFundPreview(false);
-                    setShowEditFund(true);
-                  }}
-                  data-testid="button-edit-from-preview"
-                  className="px-4 py-2.5 border border-stone-200 rounded-lg text-sm hover:bg-stone-50 transition-colors"
+                  onClick={() => setShowFundPreview(false)}
+                  data-testid="button-view-live"
+                  className="px-3 py-1.5 bg-stone-900 text-white rounded-lg text-xs font-medium hover:bg-stone-800 transition-colors flex items-center gap-1.5"
                 >
-                  Edit
+                  <ExternalLink size={12} />
+                  Open
                 </button>
-              </div>
+              </Link>
+              <button 
+                onClick={() => {
+                  setShowFundPreview(false);
+                  setShowEditFund(true);
+                }}
+                data-testid="button-edit-from-preview"
+                className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                title="Edit"
+              >
+                <Pencil size={14} />
+              </button>
             </div>
+          </div>
+          
+          {/* Iframe Container */}
+          <div className="flex-1 bg-stone-100 overflow-hidden">
+            <iframe
+              src={`/${selectedFundSlug}?preview=true`}
+              className="w-full h-full border-0"
+              title="Fund page preview"
+            />
           </div>
         </DialogContent>
       </Dialog>
