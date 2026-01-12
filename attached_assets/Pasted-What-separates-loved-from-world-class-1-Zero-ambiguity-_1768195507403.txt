@@ -1,0 +1,200 @@
+What separates “loved” from “world-class”
+1) Zero ambiguity around money states
+
+You can have the cleanest UI in the world, but if any user has to mentally reconcile numbers, you lose the “$5B feel.”
+
+Non-negotiables:
+
+Every number has a meaning visible without hunting.
+
+Every “pending” state has: why, when it clears, and what the user can do (if anything).
+
+Every “gain” has: timeframe and whether it includes pending.
+
+Implementation pattern:
+
+A small “info row” under the primary metrics (not a banner) with short, structured text:
+
+Pending: $180 (invests next market open)
+
+Last updated: 2:14pm ET
+
+Since start: +$472 (unrealized)
+
+2) One primary action per surface
+
+On a $5B product, every panel answers: “What is the one thing I can do here?”
+
+Right panel today has Share, Create event page, Send thank-yous, Send a gift. That is good, but it risks feeling like a task list.
+
+Tighten:
+
+Keep one primary CTA visible.
+
+Everything else goes into a secondary area or a “More” menu.
+
+If “Send thank-yous (2 pending)” is the next best action, it should be the primary CTA, not “Share link.”
+
+Rule:
+
+The UI chooses what matters now based on state.
+
+3) State-driven UI, not static UI
+
+This is the difference between “clean” and “thoughtful.”
+
+Examples:
+
+If there is pending money, show the “pending explainer” inline in the activity item and in the summary, but in a compact way.
+
+If a fund is not activated, the entire dashboard becomes a guided activation screen, not the same dashboard with warnings.
+
+If there are no events, the empty state teaches what an event is and why you should create one.
+
+4) Terminology and object model must be perfect
+
+Even if users “get it,” world-class products remove the need to get it.
+
+You cannot have:
+
+Moment vs event page vs occasion vs fund
+
+Share your page vs share link (which page?)
+
+Create event page vs Create a Moment
+
+World-class move:
+
+One vocabulary set across the product.
+
+The URL, headers, nav labels, and CTAs all match it.
+
+If you want a branded word (like “Moment”), it must be clearly defined once and then used consistently everywhere.
+
+5) Trust, compliance, and “adult supervision” details
+
+Fintech products win trust with small receipts everywhere.
+
+Add more of these without adding clutter:
+
+“Brokerage services by Alpaca Securities LLC” is good. Make it feel intentional:
+
+Add “Custody and SIPC” link near it.
+
+Add a “Security” section in settings that shows: 2FA, device sessions, notification preferences.
+
+Make security choices feel premium:
+
+In “Add extra security,” show “Recommended for gifts over $X” or “Recommended when sending to someone you do not see often.”
+
+6) Action feedback and reversibility
+
+$5B products have crisp feedback loops:
+
+Every action produces a toast that confirms what happened and what is next.
+
+Destructive actions have undo where possible.
+
+Share and copy actions confirm and offer the next step.
+
+Example:
+
+Copy link -> toast: “Copied. Anyone with the link can contribute.” with a “View page” link.
+
+Delete event -> modal clarifies impact: “Existing gifts remain invested in the fund” or whatever the truth is.
+
+Micro-level UI polish that signals “big company”
+Typography and spacing consistency
+
+Standardize vertical rhythm. Every section should snap to a grid.
+
+Make label styles consistent: “Total received” and “Portfolio value” labels should match weight, size, and spacing.
+
+Hit targets and affordances
+
+Icons for edit/share/delete in rows are often too subtle.
+
+Use a kebab menu or add tooltips plus larger hit areas.
+
+Rows should be obviously clickable, or obviously not. No ambiguity.
+
+Remove banner fatigue
+
+The “Gift rules” banner is helpful, but persistent banners train users to ignore messaging.
+
+Better pattern:
+
+Turn it into a collapsible “How gifts work” module.
+
+Keep it available, but not always shouting.
+
+Make allocation legible
+
+The allocation bar looks good but needs numbers to feel real.
+
+Add percentages or a hover breakdown.
+
+Without numbers, it reads as decorative.
+
+Journey-level critique: where to be ruthless
+Journey A: Create fund -> share -> first gift arrives
+
+Peak moments:
+
+The first share
+
+The first pending gift
+
+The first invested gift
+
+World-class means:
+
+The product celebrates without being cheesy.
+
+The product explains the “pending -> invested” transition clearly.
+
+The host knows exactly what to do next (thank-you, share again, create event, etc.).
+
+Journey B: Someone receives a gift link and contributes
+
+The public page and checkout flow are where trust is won or lost.
+
+Clear “what happens after I gift”
+
+Clear “can I add a note”
+
+Clear “is this secure”
+
+Clear “can I do this without an account”
+
+Journey C: Host management over time
+
+This is where a “loved” product becomes a “daily driver.”
+
+Smart reminders: pending thank-yous, event date coming up, large gift received, activation incomplete.
+
+A simple “Inbox” concept can be huge: Pending actions, explained.
+
+The “ship-room gate” checklist (what I would require)
+
+If you want the highest bar, these are pass/fail:
+
+No screen has more than one primary CTA.
+
+Every metric has an immediate definition and timeframe.
+
+Every state has an explanation and next step.
+
+Vocabulary is consistent across UI, routes, modals, and buttons.
+
+No persistent banners unless they are critical.
+
+All icon-only actions have tooltips and large hit targets.
+
+Empty states teach, not just inform.
+
+Every action has a confirmation loop and undo where possible.
+
+The product is accessible: contrast, focus states, keyboard nav, readable sizes.
+
+Trust surfaces are obvious: custody, security settings, audit-like transparency.

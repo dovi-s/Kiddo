@@ -33,7 +33,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/give" component={Give} />
       <Route path="/give/:id" component={Give} />
-      <Route path="/moment/create" component={MomentCreate} />
+      <Route path="/event/create" component={MomentCreate} />
       <Route path="/moment" component={Moment} />
       <Route path="/moment/:id" component={Moment} />
       <Route path="/send" component={Send} />

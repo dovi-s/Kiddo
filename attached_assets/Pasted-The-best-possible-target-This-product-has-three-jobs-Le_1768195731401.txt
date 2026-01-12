@@ -1,0 +1,322 @@
+The “best possible” target
+
+This product has three jobs:
+
+Let a parent set up a fund in minutes, with zero anxiety.
+
+Make gifting dead simple for guests.
+
+Make the whole thing feel bank-grade: clear, controlled, and trustworthy.
+
+Everything in UX/UI should serve one of those jobs.
+
+North-star IA and object model
+
+Lock the nouns and hierarchy:
+
+Fund = the account + portfolio allocation and rules
+
+Event = a shareable page tied to a fund (Birthday, Graduation, Open anytime)
+
+Gift = a contribution (pledge or payment) tied to an event (or Open anytime)
+
+Top navigation: Fund switcher, then Fund-level tabs.
+
+Fund tabs
+
+Overview (dashboard)
+
+Events
+
+Activity
+
+Settings
+
+Remove the “random” mixing of event controls into the main overview. Overview should be health + quick actions only.
+
+The best dashboard layout
+Left side: Fund health (what’s true)
+
+Portfolio value (largest)
+
+Total gifted (secondary)
+
+Pending (if present, always its own explicit line)
+
+Performance (small, optional, with timeframe selector)
+
+Under the numbers, a compact “explain the math” row:
+
+Portfolio value = Invested + Cash + Pending
+
+Total gifted = Gifts completed (excludes pending)
+
+No one should ever wonder why two numbers differ.
+
+Middle: Allocation and projection (what it’s doing)
+
+Allocation bar with percentages (no legend-only bars)
+
+“Projection to age 18” belongs here, but it must be clearly labeled as an estimate with assumptions tucked behind an info tooltip, not a footnote.
+
+Right rail: Do the next thing (what to do)
+
+One primary CTA only. Everything else secondary.
+
+Primary CTA logic
+
+If not activated: Activate investing
+
+If activated and no events: Create an event
+
+If activated and events exist: Share (with dropdown: Share fund, Share event)
+
+Keep “Send thank-yous” prominent but secondary.
+
+Events experience (best version)
+
+Events deserve their own page. The overview should not be managing events.
+
+Events list row should include:
+
+Event name + date
+
+Raised
+
+Gifts count
+
+Status chips: Active, Scheduled, Closed
+
+Primary action: Share
+
+Secondary: Manage (kebab menu: Edit, Duplicate, Close, Delete)
+
+Best pattern: clicking the row opens Event detail.
+
+Event detail page
+
+Event header + share controls
+
+Progress: raised, gifts, pending
+
+Recent gifts for that event
+
+Settings: date, suggested amounts, message, visibility, thank-you defaults
+
+Share flow (best version)
+
+Sharing is critical. Make it fast and intentional.
+
+Share modal should start with a question:
+“What are you sharing?”
+
+Fund link (always-on)
+
+Specific event link (dropdown)
+
+Then show:
+
+Copy link (primary)
+
+QR (secondary)
+
+“Preview” link
+
+“Download QR” (optional but feels enterprise)
+
+“Share via” quick actions (text, email) if you support it
+
+Avoid “Share your page” ambiguity.
+
+Activation (best version)
+
+Activation should feel like “one checklist, one button, no confusion.”
+
+Activation card on Overview:
+
+Title: Activate investing
+
+3 bullets max:
+
+Verify identity (2 minutes)
+
+Pledges convert to gifts automatically (if true)
+
+Gifts invest when markets open (if true)
+
+Primary CTA: Activate investing
+
+Secondary: Learn about custody and protection (SIPC, broker partner)
+
+Remove duplicate banners. One module only.
+
+Gifting flow for guests (best version)
+
+Guest flow must be “no thinking.”
+
+Event page structure:
+
+Event title + who it’s for
+
+Trust line near the top: “Brokerage custody by X. Secure checkout.”
+
+Amount selection (fast presets + custom)
+
+Optional message
+
+Payment
+
+Confirmation that explains what happens next
+
+If there is “claiming” or recipient acceptance, explain it in one sentence and link to “How it works.”
+
+Thank-you flow (best version)
+
+Thank-yous are retention. Make them effortless.
+
+Best implementation:
+
+A “Pending thank-yous” queue
+
+Default templates pulled from event tone (Birthday vs Graduation)
+
+One-click send, with edit option
+
+Audit trail: sent by who, when
+
+On Overview, show:
+
+“2 thank-yous to send” with a single button: “Review and send”
+
+Not a generic quick action.
+
+Settings and structure (best version)
+
+Settings should not be one long page that looks empty.
+
+Settings IA
+
+Profile
+
+Security
+
+Notifications
+
+Billing
+
+Documents
+
+Fund settings (fund-specific)
+
+For fund-specific settings, keep them in Fund settings, not mixed into Account.
+
+Add “Danger zone” at bottom:
+
+Close fund
+
+Delete fund (if allowed)
+
+And always show what that means.
+
+Microcopy standards (best version)
+
+Rules:
+
+No cute terms unless they match user mental model.
+
+Always answer: what, why, what happens next.
+
+Examples:
+
+“Moment” is not a $5B word. Use Event.
+
+“Gift rules” should be “How gifts work” and collapsible.
+
+Every status chip should have a tooltip:
+
+Pending: “Payment received, investing on next market open”
+
+Invested: “Funds invested, may take 1–2 days to settle”
+
+Visual system upgrades for $5B feel
+Typography and spacing
+
+Make your metric hierarchy more dramatic.
+
+Reduce thin gray text. Increase contrast slightly.
+
+Standardize card padding and corner radius across all surfaces.
+
+Buttons
+
+One primary action per surface. Always.
+
+Primary: filled
+
+Secondary: outline
+
+Tertiary: text
+
+Right now some panels feel like everything is equal.
+
+Icons
+
+If actions are icon-only, add:
+
+tooltips
+
+44px hit targets
+
+consistent icon style and stroke
+
+A kebab menu reads more “grown-up” than a row of tiny icons.
+
+“Clarity guardrails” that elite products always have
+
+Empty states that teach
+
+No events yet: show a sample event card + “Create your first event”
+
+Inline explanations
+
+Why portfolio value differs from total gifted
+
+Consistent states
+
+Pending vs invested shows everywhere the same way
+
+Trust anchors
+
+Custody, security, and “how it works” are always one click away
+
+Audit trail
+
+Simple activity log that feels like “you’re in control”
+
+What I would change immediately in your current screens
+
+Rename “Create a Moment” to “Create an event”
+
+Move events management out of Overview into an Events tab
+
+Make portfolio value the hero metric, then total gifted, then pending
+
+Add explicit definitions for each metric (not hidden)
+
+Replace the event action icon row with a Share button + kebab menu
+
+Consolidate activation messaging into one clean activation module
+
+Make “Share” a modal that forces “Fund vs Event” choice
+
+The “ship it” standard: if you do only 5 things
+
+Fix nouns (Fund, Event, Gift) everywhere
+
+Fix metric clarity (definitions + why numbers differ)
+
+Fix action hierarchy (one primary CTA per surface)
+
+Fix events management (separate page, clearer actions)
+
+Fix activation (single module, no duplicates, trust links)

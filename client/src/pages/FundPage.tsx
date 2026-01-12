@@ -151,7 +151,7 @@ export default function FundPage() {
           >
             <div className="lg:bg-white lg:border lg:border-stone-200 lg:rounded-xl lg:p-6">
               <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-4 lg:mb-6">
-                Choose an occasion
+                Choose an event
               </p>
 
               <div className="space-y-3">

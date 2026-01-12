@@ -78,7 +78,7 @@ const TEMPLATES = [
 ];
 
 const THANK_YOU_STYLES = [
-  { id: "match", name: "Match moment", desc: "Same style as your page" },
+  { id: "match", name: "Match event style", desc: "Same style as your page" },
   { id: "photo", name: "Photo card", desc: "Feature your own image" },
   { id: "minimal", name: "Simple text", desc: "Clean & personal" },
 ];
@@ -133,7 +133,7 @@ export default function MomentCreate() {
                   <Check className="h-8 w-8 text-primary" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold mb-1">Your Moment is live!</h2>
+                  <h2 className="text-xl font-semibold mb-1">Your event page is live!</h2>
                   <p className="text-muted-foreground">{title}</p>
                 </div>
 
@@ -154,7 +154,7 @@ export default function MomentCreate() {
                     <Share2 className="h-5 w-5 mb-1" />
                     <span className="text-xs">Share</span>
                   </Button>
-                  <Link href={`/moment?name=${encodeURIComponent(profileName)}&title=${encodeURIComponent(title)}&template=${template}`}>
+                  <Link href={`/${profileName.toLowerCase().replace(/\s/g, "-")}/${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
                     <Button variant="outline" className="flex-col h-auto py-3 w-full">
                       <ExternalLink className="h-5 w-5 mb-1" />
                       <span className="text-xs">Preview</span>
@@ -193,8 +193,8 @@ export default function MomentCreate() {
         </Link>
 
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold mb-2">Create a Moment</h1>
-          <p className="text-muted-foreground text-sm">Design a page people will actually want to visit</p>
+          <h1 className="text-2xl font-semibold mb-2">Create an event page</h1>
+          <p className="text-muted-foreground text-sm">Pick a style for your shareable page</p>
           
           {/* Step indicator */}
           <div className="flex items-center gap-2 mt-5">
@@ -249,7 +249,7 @@ export default function MomentCreate() {
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Story <span className="text-muted-foreground font-normal">(optional)</span></Label>
                     <Textarea 
-                      placeholder="Share what makes this moment special..."
+                      placeholder="Share what makes this event special..."
                       value={story}
                       onChange={(e) => setStory(e.target.value)}
                       rows={3}
@@ -519,7 +519,7 @@ export default function MomentCreate() {
             </Button>
           ) : (
             <Button onClick={handleCreate} className="flex-1" disabled={isCreating}>
-              {isCreating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : <>Create Moment <Check className="ml-2 h-4 w-4" /></>}
+              {isCreating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : <>Create event <Check className="ml-2 h-4 w-4" /></>}
             </Button>
           )}
         </div>

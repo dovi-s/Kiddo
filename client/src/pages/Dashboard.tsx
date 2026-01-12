@@ -5,7 +5,7 @@ import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText } from "lucide-react";
+import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText, ChevronDown, ChevronUp, Info } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
@@ -86,6 +86,7 @@ export default function Dashboard() {
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
   const [showGainAsPercent, setShowGainAsPercent] = useState(false);
   const [showFundPreview, setShowFundPreview] = useState(false);
+  const [showGiftRules, setShowGiftRules] = useState(false);
 
   const [funds, setFunds] = useState<StoredFund[]>(() => {
     const stored = loadStoredFunds();
@@ -432,13 +433,19 @@ export default function Dashboard() {
                   {/* Active state - show metrics */}
                   <div className="grid grid-cols-2 gap-6 sm:gap-8 mb-4">
                     <div>
-                      <p className="text-sm text-stone-500 mb-1">Total received</p>
+                      <p className="text-sm text-stone-500 mb-1 flex items-center gap-1">
+                        Total received
+                        <span className="text-stone-300 text-xs" title="All completed gifts to this fund">(gifts)</span>
+                      </p>
                       <p className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight text-stone-900">
                         <AnimatedValue value={totalReceived} />
                       </p>
                     </div>
                     <div>
-                      <p className="text-sm text-stone-500 mb-1">Portfolio value</p>
+                      <p className="text-sm text-stone-500 mb-1 flex items-center gap-1">
+                        Portfolio value
+                        <span className="text-stone-300 text-xs" title="Invested + cash + growth">(+growth)</span>
+                      </p>
                       <p className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight text-stone-900">
                         <AnimatedValue value={portfolioValue} />
                       </p>
@@ -467,14 +474,26 @@ export default function Dashboard() {
                     )}
                   </div>
                   
-                  <div className="p-3 rounded-lg bg-blue-50 border border-blue-100 mt-4">
-                    <p className="text-xs text-blue-700">
-                      <strong>Gift rules:</strong> {portfolioValue === 0 
-                        ? "Share your link and contributions will automatically invest per your settings."
-                        : "Gifts are accepted and invested automatically when markets are open."
-                      }
-                    </p>
-                  </div>
+                  <button 
+                    onClick={() => setShowGiftRules(!showGiftRules)}
+                    className="w-full p-3 rounded-lg bg-stone-50 border border-stone-100 mt-4 text-left hover:bg-stone-100 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-stone-500 flex items-center gap-1.5">
+                        <Info size={12} />
+                        How gifts work
+                      </span>
+                      {showGiftRules ? <ChevronUp size={14} className="text-stone-400" /> : <ChevronDown size={14} className="text-stone-400" />}
+                    </div>
+                    {showGiftRules && (
+                      <p className="text-xs text-stone-500 mt-2">
+                        {portfolioValue === 0 
+                          ? "Share your link and contributions will automatically invest per your settings. Gifts typically settle in 1-2 business days."
+                          : "Gifts are accepted and invested automatically when markets are open. Pending gifts invest at the next market open."
+                        }
+                      </p>
+                    )}
+                  </button>
                 </>
               )}
             </motion.div>
@@ -489,6 +508,7 @@ export default function Dashboard() {
                 data-testid="button-portfolio"
                 className="w-full mb-8 lg:mb-10 text-left group"
               >
+                <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Allocation</p>
                 <div className="flex h-2 lg:h-2.5 rounded-full overflow-hidden mb-2 bg-stone-200">
                   <div className="bg-stone-900 transition-all group-hover:opacity-90" style={{ width: "50%" }} title="Stocks 50%" />
                   <div className="bg-stone-600" style={{ width: "20%" }} title="International 20%" />
@@ -496,10 +516,10 @@ export default function Dashboard() {
                   <div className="bg-stone-300" style={{ width: "15%" }} title="Cash 15%" />
                 </div>
                 <div className="flex gap-4 text-xs text-stone-400 group-hover:text-stone-500 transition-colors">
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-900"></span>Stocks</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-600"></span>Int'l</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-400"></span>Bonds</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-300"></span>Cash</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-900"></span>Stocks 50%</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-600"></span>Int'l 20%</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-400"></span>Bonds 15%</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-300"></span>Cash 15%</span>
                 </div>
               </motion.button>
             )}
@@ -512,7 +532,7 @@ export default function Dashboard() {
               className="mb-8 lg:hidden p-5 rounded-lg bg-white border border-stone-200"
             >
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm text-stone-500">Share your page</p>
+                <p className="text-sm text-stone-500">Share this fund</p>
                 <button 
                   onClick={() => setShowEditFund(true)}
                   data-testid="button-edit-share-mobile"
@@ -631,7 +651,7 @@ export default function Dashboard() {
                   <div className="px-4 sm:px-5 py-4">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</p>
-                      <Link href="/moment/create" className="text-xs text-stone-500 hover:text-stone-900 transition-colors">
+                      <Link href="/event/create" className="text-xs text-stone-500 hover:text-stone-900 transition-colors">
                         + New event
                       </Link>
                     </div>
@@ -658,46 +678,29 @@ export default function Dashboard() {
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
                                 <p className="text-sm text-stone-600 mr-2">${event.raised.toLocaleString()}</p>
+                                <button 
+                                  onClick={() => { navigator.clipboard.writeText(`kora.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied", description: "Anyone with the link can contribute" }); }}
+                                  className="px-2 py-1 text-xs font-medium text-stone-600 bg-stone-100 hover:bg-stone-200 rounded transition-all"
+                                  data-testid={`button-share-event-${event.id}`}
+                                >
+                                  Share
+                                </button>
                                 <Link href={`/edit/${fundSlug}/${eventData.slug}`}>
                                   <button 
-                                    className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                                    className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-all"
                                     title="Edit event"
                                     data-testid={`button-edit-event-${event.id}`}
                                   >
-                                    <Pencil size={12} />
+                                    <Pencil size={14} />
                                   </button>
                                 </Link>
-                                <button 
-                                  onClick={() => { navigator.clipboard.writeText(`kora.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied" }); }}
-                                  className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-all"
-                                  title="Copy link"
-                                  data-testid={`button-copy-event-${event.id}`}
-                                >
-                                  <Copy size={12} />
-                                </button>
-                                <button 
-                                  onClick={() => setShowPageQR(`kora.com/${fundSlug}/${eventData.slug}`)}
-                                  className="hidden sm:block p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                  title="QR code"
-                                  data-testid={`button-qr-event-${event.id}`}
-                                >
-                                  <QrCode size={12} />
-                                </button>
-                                <button 
-                                  onClick={() => toast({ title: "Event archived", description: "You can restore it anytime from settings" })}
-                                  className="hidden sm:block p-1.5 text-stone-400 hover:text-amber-600 hover:bg-amber-50 rounded opacity-0 group-hover:opacity-100 transition-all"
-                                  title="Archive event"
-                                  data-testid={`button-archive-event-${event.id}`}
-                                >
-                                  <Archive size={12} />
-                                </button>
                                 <Link href={`/${fundSlug}/${eventData.slug}`}>
                                   <button 
-                                    className="hidden sm:block p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded opacity-0 group-hover:opacity-100 transition-all" 
-                                    title="View event"
+                                    className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-all" 
+                                    title="View event page"
                                     data-testid={`button-view-event-${event.id}`}
                                   >
-                                    <ExternalLink size={12} />
+                                    <ExternalLink size={14} />
                                   </button>
                                 </Link>
                               </div>
@@ -876,7 +879,7 @@ export default function Dashboard() {
                 className="p-5 rounded-lg bg-white border border-stone-200"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm font-medium text-stone-900">Share your page</p>
+                  <p className="text-sm font-medium text-stone-900">Share this fund</p>
                   <div className="flex items-center gap-1.5">
                     <button 
                       onClick={() => setShowFundPreview(true)}
@@ -919,23 +922,46 @@ export default function Dashboard() {
                 </div>
               </motion.div>
 
-              {/* Quick Actions */}
+              {/* Quick Actions - State-driven primary CTA */}
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
                 className="p-5 rounded-lg bg-white border border-stone-200"
               >
-                <p className="text-sm font-medium text-stone-900 mb-4">Quick actions</p>
+                <p className="text-sm font-medium text-stone-900 mb-4">Do next</p>
                 <div className="space-y-2">
-                  <button 
-                    onClick={handleCopyClick}
-                    data-testid="button-quick-share"
-                    className="w-full py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors text-left px-3"
-                  >
-                    Share link
-                  </button>
-                  <Link href="/moment/create" className="block">
+                  {/* Primary CTA - changes based on state */}
+                  {pendingThankYous > 0 ? (
+                    <button 
+                      data-testid="button-thank-yous-primary"
+                      onClick={() => setShowThankYous(true)}
+                      className="w-full py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors text-left px-3 flex items-center justify-between"
+                    >
+                      <span>Send thank-yous</span>
+                      <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{pendingThankYous} pending</span>
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={handleCopyClick}
+                      data-testid="button-quick-share"
+                      className="w-full py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors text-left px-3"
+                    >
+                      Share fund link
+                    </button>
+                  )}
+                  
+                  {/* Secondary actions */}
+                  {pendingThankYous > 0 && (
+                    <button 
+                      onClick={handleCopyClick}
+                      data-testid="button-quick-share-secondary"
+                      className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3"
+                    >
+                      Share fund link
+                    </button>
+                  )}
+                  <Link href="/event/create" className="block">
                     <button 
                       data-testid="button-new-event"
                       className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3"
@@ -943,16 +969,15 @@ export default function Dashboard() {
                       Create event page
                     </button>
                   </Link>
-                  <button 
-                    data-testid="button-thank-yous"
-                    onClick={() => setShowThankYous(true)}
-                    className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3 flex items-center justify-between"
-                  >
-                    <span>Send thank-yous</span>
-                    {pendingThankYous > 0 && (
-                      <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{pendingThankYous} pending</span>
-                    )}
-                  </button>
+                  {pendingThankYous === 0 && (
+                    <button 
+                      data-testid="button-thank-yous"
+                      onClick={() => setShowThankYous(true)}
+                      className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3"
+                    >
+                      Send thank-yous
+                    </button>
+                  )}
                   <Link href="/send" className="block">
                     <button 
                       data-testid="button-send-gift"
@@ -965,19 +990,31 @@ export default function Dashboard() {
               </motion.div>
 
               {/* Brokerage Footer */}
-              <p className="text-xs text-stone-400 text-center pt-4">
-                Brokerage services by Alpaca Securities LLC<br />
-                Member FINRA/SIPC
-              </p>
+              <div className="text-xs text-stone-400 text-center pt-4">
+                <p>Brokerage services by Alpaca Securities LLC</p>
+                <p>Member FINRA/SIPC</p>
+                <button 
+                  onClick={() => toast({ title: "Custody & Protection", description: "Your assets are held by Alpaca Securities LLC and protected by SIPC up to $500,000." })}
+                  className="text-stone-500 hover:text-stone-700 underline mt-1"
+                >
+                  Learn about custody + SIPC
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Mobile Footer */}
-        <p className="lg:hidden text-xs text-stone-400 text-center mt-12 pb-8">
-          Brokerage services by Alpaca Securities LLC<br />
-          Member FINRA/SIPC
-        </p>
+        <div className="lg:hidden text-xs text-stone-400 text-center mt-12 pb-8">
+          <p>Brokerage services by Alpaca Securities LLC</p>
+          <p>Member FINRA/SIPC</p>
+          <button 
+            onClick={() => toast({ title: "Custody & Protection", description: "Your assets are held by Alpaca Securities LLC and protected by SIPC up to $500,000." })}
+            className="text-stone-500 hover:text-stone-700 underline mt-1"
+          >
+            Learn about custody + SIPC
+          </button>
+        </div>
       </main>
 
       {/* Portfolio Modal */}
@@ -1098,7 +1135,7 @@ export default function Dashboard() {
           <div className="p-5 border-b border-stone-100">
             <div className="flex items-center justify-between mb-3">
               <label className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</label>
-              <Link href="/moment/create" onClick={() => setShowEditFund(false)}>
+              <Link href="/event/create" onClick={() => setShowEditFund(false)}>
                 <span className="text-xs text-stone-500 hover:text-stone-900 transition-colors">+ Add event</span>
               </Link>
             </div>
