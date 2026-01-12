@@ -119,36 +119,36 @@
     font-feature-settings: "cv11", "ss01", "kern" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
   h1, h2, h3, h4, h5, h6 {
-    @apply tracking-tight font-semibold;
-    letter-spacing: -0.025em;
+    @apply font-semibold;
+    letter-spacing: -0.04em;
   }
   h1 {
-    letter-spacing: -0.035em;
+    letter-spacing: -0.05em;
   }
   h2 {
-    letter-spacing: -0.03em;
+    letter-spacing: -0.045em;
   }
   button, [role="button"], .btn {
-    letter-spacing: -0.01em;
+    letter-spacing: -0.025em;
     font-feature-settings: "kern" 1;
   }
   label {
-    letter-spacing: -0.005em;
+    letter-spacing: -0.015em;
   }
   p {
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
   a {
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
   }
   input, textarea, select {
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
   }
   .font-medium, .font-semibold, .font-bold {
-    letter-spacing: -0.015em;
+    letter-spacing: -0.025em;
   }
 }
 
