@@ -611,38 +611,38 @@ export default function Dashboard() {
                       </button>
                       <p className="text-[10px] text-stone-300 mt-1">Assumes 7% annual return. Not guaranteed.</p>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-0.5 sm:gap-1">
                       <button 
                         onClick={() => setShowEditFund(true)}
                         data-testid="button-edit-fund"
-                        className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                        className="p-2.5 sm:p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
                         title="Edit"
                       >
-                        <Pencil size={14} />
+                        <Pencil size={16} className="sm:w-3.5 sm:h-3.5" />
                       </button>
                       <button 
                         onClick={handleCopyClick}
                         data-testid="button-copy-link"
-                        className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                        className="p-2.5 sm:p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
                         title="Copy link"
                       >
-                        <Copy size={14} />
+                        <Copy size={16} className="sm:w-3.5 sm:h-3.5" />
                       </button>
                       <button 
                         onClick={() => setShowQR(true)}
                         data-testid="button-show-qr"
-                        className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                        className="p-2.5 sm:p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
                         title="QR code"
                       >
-                        <QrCode size={14} />
+                        <QrCode size={16} className="sm:w-3.5 sm:h-3.5" />
                       </button>
                       <Link href={`/${fundSlug}`}>
                         <button 
-                          className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors" 
+                          className="p-2.5 sm:p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center" 
                           title="View fund & events"
                           data-testid="button-view-fund"
                         >
-                          <ExternalLink size={14} />
+                          <ExternalLink size={16} className="sm:w-3.5 sm:h-3.5" />
                         </button>
                       </Link>
                     </div>
@@ -651,7 +651,7 @@ export default function Dashboard() {
                   <div className="px-4 sm:px-5 py-4">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</p>
-                      <Link href="/event/create" className="text-xs text-stone-500 hover:text-stone-900 transition-colors">
+                      <Link href="/event/create" className="text-xs text-stone-500 hover:text-stone-900 transition-colors px-2 py-1.5 -mr-2 rounded-lg hover:bg-stone-100">
                         + New event
                       </Link>
                     </div>

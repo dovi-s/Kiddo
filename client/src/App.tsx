@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { KoraProvider } from "./lib/KoraContext";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
@@ -20,6 +21,7 @@ import Claim from "@/pages/Claim";
 import GetStarted from "@/pages/GetStarted";
 import ActivateInvesting from "@/pages/ActivateInvesting";
 import GiftCard from "@/pages/GiftCard";
+import GiftCheckout from "@/pages/GiftCheckout";
 import Login from "@/pages/Login";
 
 function Router() {
@@ -39,6 +41,8 @@ function Router() {
       <Route path="/send" component={Send} />
       <Route path="/claim/:token" component={Claim} />
       <Route path="/card/:id" component={GiftCard} />
+      <Route path="/checkout/:fund" component={GiftCheckout} />
+      <Route path="/checkout/:fund/:event" component={GiftCheckout} />
       <Route path="/edit/:fund/:event" component={PageEditor} />
       <Route path="/recipient" component={Recipient} />
       <Route path="/recipient/:id" component={Recipient} />
@@ -53,10 +57,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <KoraProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </KoraProvider>
     </QueryClientProvider>
   );
 }

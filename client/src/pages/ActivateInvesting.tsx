@@ -723,9 +723,9 @@ export default function ActivateInvesting() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", duration: 0.5 }}
-                className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-6"
+                className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6"
               >
-                <Check size={28} className="text-slate-600" />
+                <Check size={28} className="text-emerald-600" />
               </motion.div>
               <h2 className="text-xl font-medium text-stone-900 mb-2">You're all set!</h2>
               <p className="text-stone-500 mb-8">
@@ -739,13 +739,37 @@ export default function ActivateInvesting() {
                 }
               </p>
 
-              <Button 
-                onClick={() => setLocation(`/dashboard?type=${accountType}&children=${childrenParam || ""}`)}
-                data-testid="button-go-to-dashboard"
-                className="bg-stone-900 text-white hover:bg-stone-800"
-              >
-                Go to dashboard
-              </Button>
+              <div className="space-y-3 max-w-xs mx-auto">
+                <p className="text-xs text-stone-400 mb-4">What would you like to do next?</p>
+                
+                <Button 
+                  onClick={() => setLocation("/event/create")}
+                  data-testid="button-create-event"
+                  className="w-full bg-stone-900 text-white hover:bg-stone-800"
+                >
+                  Create an event page
+                </Button>
+                
+                <Button 
+                  onClick={() => {
+                    const fundSlug = childNames[0]?.toLowerCase().replace(/\s+/g, "-") || "fund";
+                    navigator.clipboard.writeText(`kora.com/${fundSlug}`);
+                  }}
+                  data-testid="button-share-fund"
+                  variant="outline"
+                  className="w-full"
+                >
+                  Share fund link
+                </Button>
+                
+                <button 
+                  onClick={() => setLocation(`/dashboard?type=${accountType}&children=${childrenParam || ""}`)}
+                  data-testid="button-go-to-dashboard"
+                  className="text-sm text-stone-500 hover:text-stone-900 transition-colors mt-4"
+                >
+                  Go to dashboard →
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
