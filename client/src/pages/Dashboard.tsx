@@ -431,22 +431,22 @@ export default function Dashboard() {
               ) : (
                 <>
                   {/* Active state - show metrics */}
-                  <div className="grid grid-cols-2 gap-6 sm:gap-8 mb-4">
-                    <div>
-                      <p className="text-sm text-stone-500 mb-1 flex items-center gap-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-4">
+                    <div className="p-4 sm:p-0 bg-stone-50 sm:bg-transparent rounded-xl sm:rounded-none">
+                      <p className="text-xs sm:text-sm text-stone-500 mb-1 flex items-center gap-1 uppercase tracking-wide sm:tracking-normal sm:normal-case">
                         Total received
-                        <span className="text-stone-300 text-xs" title="All completed gifts to this fund">(gifts)</span>
+                        <span className="text-stone-300 text-xs hidden sm:inline" title="All completed gifts to this fund">(gifts)</span>
                       </p>
-                      <p className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight text-stone-900">
+                      <p className="text-3xl sm:text-3xl lg:text-4xl font-semibold sm:font-light tracking-tight text-stone-900">
                         <AnimatedValue value={totalReceived} />
                       </p>
                     </div>
-                    <div>
-                      <p className="text-sm text-stone-500 mb-1 flex items-center gap-1">
+                    <div className="p-4 sm:p-0 bg-stone-50 sm:bg-transparent rounded-xl sm:rounded-none">
+                      <p className="text-xs sm:text-sm text-stone-500 mb-1 flex items-center gap-1 uppercase tracking-wide sm:tracking-normal sm:normal-case">
                         Portfolio value
-                        <span className="text-stone-300 text-xs" title="Invested + cash + growth">(+growth)</span>
+                        <span className="text-stone-300 text-xs hidden sm:inline" title="Invested + cash + growth">(+growth)</span>
                       </p>
-                      <p className="text-2xl sm:text-3xl lg:text-4xl font-light tracking-tight text-stone-900">
+                      <p className="text-3xl sm:text-3xl lg:text-4xl font-semibold sm:font-light tracking-tight text-stone-900">
                         <AnimatedValue value={portfolioValue} />
                       </p>
                     </div>
@@ -1551,6 +1551,32 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Mobile Bottom Action Bar - Fixed position for easy access */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 p-4 pb-6 lg:hidden z-40 shadow-lg">
+        <div className="flex gap-3 max-w-lg mx-auto">
+          <button
+            onClick={handleCopyClick}
+            data-testid="mobile-bottom-share"
+            className="flex-1 flex items-center justify-center gap-2 py-4 bg-stone-900 text-white rounded-xl font-medium text-base active:scale-[0.98] transition-transform"
+          >
+            <Copy size={18} />
+            {copied ? "Copied!" : "Share Link"}
+          </button>
+          <Link href="/event/create" className="flex-1">
+            <button
+              data-testid="mobile-bottom-event"
+              className="w-full flex items-center justify-center gap-2 py-4 bg-stone-100 text-stone-900 rounded-xl font-medium text-base active:scale-[0.98] transition-transform"
+            >
+              <Plus size={18} />
+              New Event
+            </button>
+          </Link>
+        </div>
+      </div>
+      
+      {/* Spacer for bottom action bar on mobile */}
+      <div className="h-24 lg:hidden" aria-hidden="true" />
 
       {/* Fund Preview Modal */}
       <Dialog open={showFundPreview} onOpenChange={setShowFundPreview}>
