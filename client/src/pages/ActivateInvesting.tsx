@@ -1,9 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, Shield, Lock } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+
+const updateFundStatus = (status: "active" | "pending") => {
+  try {
+    const stored = localStorage.getItem("kora_funds");
+    if (stored) {
+      const funds = JSON.parse(stored);
+      const updated = funds.map((f: any) => ({
+        ...f,
+        status: f.status === "draft" ? status : f.status,
+        balance: status === "active" && f.balance === 0 ? 0 : f.balance,
+      }));
+      localStorage.setItem("kora_funds", JSON.stringify(updated));
+    }
+  } catch {}
+};
 
 type Step = "intro" | "brokerage" | "identity" | "child" | "agreements" | "processing" | "complete";
 
@@ -69,7 +84,9 @@ export default function ActivateInvesting() {
       }
     } else if (step === "agreements") {
       setStep("processing");
+      updateFundStatus("pending");
       setTimeout(() => {
+        updateFundStatus("active");
         setStep("complete");
       }, 2500);
     }

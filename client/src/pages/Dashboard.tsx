@@ -5,7 +5,7 @@ import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye } from "lucide-react";
+import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
@@ -707,6 +707,37 @@ export default function Dashboard() {
                       })}
                     </div>
                   </div>
+
+                  {/* Statements & Tax Docs - Only for active accounts */}
+                  {selectedFund.status === "active" && (
+                    <div className="px-4 sm:px-5 py-4 border-t border-stone-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Documents</p>
+                      </div>
+                      <div className="space-y-2">
+                        <button className="w-full flex items-center justify-between p-3 rounded-lg bg-stone-50 hover:bg-stone-100 transition-colors text-left group">
+                          <div className="flex items-center gap-3">
+                            <FileText size={16} className="text-stone-400" />
+                            <div>
+                              <p className="text-sm text-stone-700">Monthly Statements</p>
+                              <p className="text-xs text-stone-400">No statements yet</p>
+                            </div>
+                          </div>
+                          <ExternalLink size={14} className="text-stone-300 group-hover:text-stone-500" />
+                        </button>
+                        <button className="w-full flex items-center justify-between p-3 rounded-lg bg-stone-50 hover:bg-stone-100 transition-colors text-left group">
+                          <div className="flex items-center gap-3">
+                            <FileText size={16} className="text-stone-400" />
+                            <div>
+                              <p className="text-sm text-stone-700">Tax Documents</p>
+                              <p className="text-xs text-stone-400">Available after year-end</p>
+                            </div>
+                          </div>
+                          <ExternalLink size={14} className="text-stone-300 group-hover:text-stone-500" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}
