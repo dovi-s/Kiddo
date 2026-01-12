@@ -1,0 +1,173 @@
+UI: Clean, restrained, modern. Strong “fintech” baseline. Lots of whitespace and simple components reads credible.
+
+UX/flow: The core objects (Fund, Event, Gift) are present, but the terminology and hierarchy are not yet “obvious at a glance.” A few spots feel duplicated or slightly under-explained.
+
+$5B feel: You are close on visual polish, but you need stronger clarity cues, tighter terminology, and more “trust + control” affordances (tooltips, definitions, states, confirmations, audit-ish details).
+
+What’s working well
+
+Dashboard structure: Two big numbers + activity feed + events list is the right mental model.
+
+Quick actions panel: Good “do the next thing” pattern, especially with “2 pending” on thank-yous.
+
+Share card: Copy link + QR in one place is intuitive.
+
+Security in send flow: Optional “extra security” is thoughtful and builds trust.
+
+Settings IA: Left nav + search is a proven pattern.
+
+Biggest opportunities (highest ROI)
+1) Make the product nouns unmissable
+
+Right now “Moment” vs “Event page” vs “Occasion” vs “Fund” creates friction.
+
+Pick one vocabulary set and use it everywhere. Example:
+
+Fund (the portfolio container)
+
+Event page (birthday, graduation, etc.)
+
+Gift (a contribution)
+
+Then align buttons/labels:
+
+“Create event page” (not “Create a Moment”)
+
+“Choose an event” (not “Choose an occasion”)
+
+“Share event page” vs “Share your page” (which page?)
+
+2) Clarify the money math on the dashboard
+
+“Total received” and “Portfolio value” are both correct, but users will ask: “Why are these different?”
+
+Add tiny definitions directly under each metric (or tooltip):
+
+Total received: “All gifts made to this fund.”
+
+Portfolio value: “Gifts invested + growth – fees (if any) – cash not invested.”
+
+Also explain:
+
+Pending: what it means and when it clears.
+
+Gain: whether it’s since inception, realized/unrealized, and whether it includes pending.
+
+3) Reduce duplicated “Activate investing” messaging
+
+On the unactivated fund view you have multiple prompts (banner + card + button) that repeat the same idea.
+
+Make one primary module that is unmistakable:
+
+Title: “Activate investing”
+
+2–3 bullets: identity verification, time estimate, what changes after activation
+
+One primary CTA
+
+One secondary link: “Let people pledge first” (if that’s truly supported)
+
+Then remove the extra repeated block.
+
+4) Improve action discoverability in the Events list
+
+The small icon row (edit/duplicate/share/delete) is compact but not obvious.
+
+Upgrade this with one of:
+
+A kebab menu per event (“Edit, Share, Duplicate, Delete”), or
+
+Keep icons but add tooltips + hover labels, and increase hit targets.
+
+Also consider making the row itself clickable to the event page, with a clear “Manage” affordance.
+
+Screen-by-screen notes
+Dashboard (active fund)
+
+The allocation bar (Stocks, Int’l, Bonds, Cash) is visually nice but unclear without numbers.
+
+Add percentages inline: “Stocks 65% · Int’l 15% · Bonds 15% · Cash 5%”
+
+Or a small “Allocation” header above it.
+
+“Gift rules” is useful but visually loud as a persistent banner.
+
+Make it collapsible (“How gifts work”) with a chevron and remember state.
+
+“Connected to Alpaca Securities” is good trust signaling.
+
+Add a subtle “Learn about custody + SIPC” link near it.
+
+Fund switcher (top)
+
+Showing a random string fund name (like a slug) is a bad look for quality.
+
+Force a “Name your fund” step when creating, or use “Untitled fund” with a warning dot until named.
+
+Public preview modal
+
+The preview looks clean and trustworthy.
+
+Add one strong clarity line under the title:
+
+“Gifts are invested for long-term growth” is good, but consider a second line that explains the recipient experience: “They’ll receive an email to claim.”
+
+Create page (template selection)
+
+The layout is solid.
+
+Improve “what is this” clarity:
+
+Replace “Create a Moment” with “Create an event page”
+
+Replace subtitle with something explicit: “Pick a style for your share page.”
+
+Consider adding tiny thumbnails, not just icons. Big companies show previews.
+
+Fund Settings modal (name + URL)
+
+This is good and simple.
+
+Add guardrails:
+
+URL availability/validation feedback
+
+“URL can be changed anytime” or “URL changes break old links” (whichever is true)
+
+Send gift flow
+
+Good minimal flow.
+
+“Add extra security” is a strong feature. Add one sentence on when to use it:
+
+“Use this if you want only the intended person to claim (recommended for larger gifts).”
+
+The disabled Continue state is fine. Add inline validation messages so it doesn’t feel stuck.
+
+Settings page
+
+The layout is good, but it feels like it’s not using the canvas well (lots of unused space).
+
+Consider a max-width container and center alignment, or a two-column layout on wide screens.
+
+Brand and “$5B company” feel
+
+What you have is “credible startup fintech.” To push it to “category leader,” focus on:
+
+Terminology discipline: one set of nouns, everywhere.
+
+Microcopy quality: fewer banners, more precise labels. Avoid cute terms unless they map cleanly to value.
+
+Trust surface area: custody/insurance disclosures, clear pending states, clear “who can see what,” and consistent “secure” indicators.
+
+Interaction polish: hover states, tooltips, better empty states, confirmations for destructive actions, and consistent button hierarchy (one primary action per panel).
+
+Copy tweaks (examples)
+
+“Share your page” → “Share this fund” or “Share event page” (pick one based on context)
+
+“Create a Moment” → “Create an event page”
+
+“Choose an occasion” → “Choose an event”
+
+“Gift rules” → “How gifts work” (collapsible)

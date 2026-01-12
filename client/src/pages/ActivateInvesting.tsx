@@ -20,6 +20,17 @@ const updateFundStatus = (status: "active" | "pending") => {
   } catch {}
 };
 
+const getFundNames = (): string[] => {
+  try {
+    const stored = localStorage.getItem("kora_funds");
+    if (stored) {
+      const funds = JSON.parse(stored);
+      return funds.filter((f: any) => f.status === "draft" || f.status === "pending" || f.status === "active").map((f: any) => f.name);
+    }
+  } catch {}
+  return [];
+};
+
 type Step = "intro" | "brokerage" | "identity" | "child" | "agreements" | "processing" | "complete";
 
 export default function ActivateInvesting() {
@@ -27,8 +38,21 @@ export default function ActivateInvesting() {
   const params = new URLSearchParams(search);
   const accountType = params.get("type") || "child";
   const childrenParam = params.get("children");
-  const childNames = childrenParam ? decodeURIComponent(childrenParam).split(",") : [];
+  const urlChildNames = childrenParam ? decodeURIComponent(childrenParam).split(",") : [];
   const isPersonal = accountType === "personal";
+  
+  const [activatedFundNames, setActivatedFundNames] = useState<string[]>([]);
+  
+  useEffect(() => {
+    const names = getFundNames();
+    if (names.length > 0) {
+      setActivatedFundNames(names);
+    } else if (urlChildNames.length > 0) {
+      setActivatedFundNames(urlChildNames);
+    }
+  }, []);
+  
+  const childNames = activatedFundNames.length > 0 ? activatedFundNames : urlChildNames;
   
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<Step>("intro");
@@ -707,9 +731,11 @@ export default function ActivateInvesting() {
               <p className="text-stone-500 mb-8">
                 {isPersonal 
                   ? "Your fund is now active and ready to receive gifts."
-                  : childNames.length === 1 
-                    ? `${childNames[0]}'s fund is now active and ready to receive gifts.`
-                    : `All ${childNames.length} funds are now active and ready to receive gifts.`
+                  : childNames.length === 0
+                    ? "Your fund is now active and ready to receive gifts."
+                    : childNames.length === 1 
+                      ? `${childNames[0]}'s fund is now active and ready to receive gifts.`
+                      : `All ${childNames.length} funds are now active and ready to receive gifts.`
                 }
               </p>
 
