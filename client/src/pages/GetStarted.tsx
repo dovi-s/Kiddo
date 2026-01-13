@@ -13,7 +13,7 @@ interface ChildProfile {
   relationship: string;
 }
 
-type Step = "hook" | "proof" | "personalize" | "projection" | "choose" | "account" | "children" | "success";
+type Step = "hook" | "proof" | "choose" | "personalize" | "projection" | "account" | "children" | "success";
 
 const testimonials = [
   { name: "Sarah M.", role: "Mom of 2", quote: "My daughter's fund grew 340% by the time she turned 18. Best decision we ever made.", avatar: "S" },
@@ -73,8 +73,11 @@ export default function GetStarted() {
   };
 
   const canProceed = () => {
-    if (step === "personalize") return childName.trim().length > 0;
     if (step === "choose") return accountType !== null;
+    if (step === "personalize") {
+      // For adults, we're collecting their name. For parents, we're collecting child's name.
+      return childName.trim().length > 0;
+    }
     if (step === "account") return email && password && firstName;
     if (step === "children") return children.every(c => c.name.trim());
     return true;
@@ -82,10 +85,10 @@ export default function GetStarted() {
 
   const handleNext = () => {
     if (step === "hook") setStep("proof");
-    else if (step === "proof") setStep("personalize");
+    else if (step === "proof") setStep("choose"); // Choose account type FIRST
+    else if (step === "choose") setStep("personalize"); // Then personalize based on type
     else if (step === "personalize") setStep("projection");
-    else if (step === "projection") setStep("choose");
-    else if (step === "choose") setStep("account");
+    else if (step === "projection") setStep("account");
     else if (step === "account") {
       if (accountType === "parent") {
         if (childName) {
@@ -93,6 +96,10 @@ export default function GetStarted() {
         }
         setStep("children");
       } else {
+        // For adults, use the childName field as their firstName if not already set
+        if (!firstName && childName) {
+          setFirstName(childName);
+        }
         handleSubmit();
       }
     } else if (step === "children") {
@@ -110,15 +117,15 @@ export default function GetStarted() {
 
   const handleBack = () => {
     if (step === "proof") setStep("hook");
-    else if (step === "personalize") setStep("proof");
+    else if (step === "choose") setStep("proof"); // Updated order
+    else if (step === "personalize") setStep("choose"); // Updated order
     else if (step === "projection") setStep("personalize");
-    else if (step === "choose") setStep("projection");
-    else if (step === "account") setStep("choose");
+    else if (step === "account") setStep("projection");
     else if (step === "children") setStep("account");
   };
 
   const getStepNumber = () => {
-    const steps: Step[] = ["hook", "proof", "personalize", "projection", "choose", "account", "children"];
+    const steps: Step[] = ["hook", "proof", "choose", "personalize", "projection", "account", "children"];
     return steps.indexOf(step) + 1;
   };
 
@@ -317,7 +324,7 @@ export default function GetStarted() {
                 </button>
                 <div className="flex gap-1">
                   {[1,2,3,4,5].map((i) => (
-                    <div key={i} className={`w-8 h-1 rounded-full ${i <= 2 ? "bg-stone-900" : "bg-stone-200"}`} />
+                    <div key={i} className={`w-8 h-1 rounded-full ${i <= 3 ? "bg-stone-900" : "bg-stone-200"}`} />
                   ))}
                 </div>
                 <div className="w-5" />
@@ -329,28 +336,40 @@ export default function GetStarted() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center mx-auto mb-8"
+                className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-8 ${
+                  accountType === "parent" 
+                    ? "bg-gradient-to-br from-pink-100 to-rose-100" 
+                    : "bg-gradient-to-br from-stone-100 to-stone-200"
+                }`}
               >
-                <Heart className="w-10 h-10 text-rose-500" />
+                {accountType === "parent" ? (
+                  <Heart className="w-10 h-10 text-rose-500" />
+                ) : (
+                  <User className="w-10 h-10 text-stone-600" />
+                )}
               </motion.div>
 
               <h1 className="text-2xl font-semibold text-stone-900 text-center mb-3">
-                Who is this fund for?
+                {accountType === "parent" 
+                  ? "What's your child's name?" 
+                  : "What's your first name?"}
               </h1>
               <p className="text-stone-500 text-center mb-8">
-                We'll personalize everything for them
+                {accountType === "parent"
+                  ? "We'll personalize their fund and shareable link"
+                  : "We'll personalize your fund and shareable link"}
               </p>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-stone-700 mb-2">
-                    Their first name
+                    {accountType === "parent" ? "Child's first name" : "Your first name"}
                   </label>
                   <input
                     type="text"
                     value={childName}
                     onChange={(e) => setChildName(e.target.value)}
-                    placeholder="e.g., Mila"
+                    placeholder={accountType === "parent" ? "e.g., Mila" : "e.g., Sarah"}
                     autoFocus
                     data-testid="input-child-name"
                     className="w-full px-5 py-4 text-lg border-2 border-stone-200 rounded-2xl text-stone-900 placeholder:text-stone-300 focus:outline-none focus:border-stone-900 transition-colors"
@@ -364,7 +383,7 @@ export default function GetStarted() {
                     className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100"
                   >
                     <p className="text-sm text-emerald-800">
-                      <span className="font-medium">{childName}'s Future Fund</span> will be their personalized investment account
+                      <span className="font-medium">{childName}'s Future Fund</span> will be {accountType === "parent" ? "their" : "your"} personalized investment account
                     </p>
                   </motion.div>
                 )}
@@ -399,7 +418,7 @@ export default function GetStarted() {
                 </button>
                 <div className="flex gap-1">
                   {[1,2,3,4,5].map((i) => (
-                    <div key={i} className={`w-8 h-1 rounded-full ${i <= 3 ? "bg-stone-900" : "bg-stone-200"}`} />
+                    <div key={i} className={`w-8 h-1 rounded-full ${i <= 4 ? "bg-stone-900" : "bg-stone-200"}`} />
                   ))}
                 </div>
                 <div className="w-5" />
@@ -501,7 +520,7 @@ export default function GetStarted() {
                 </button>
                 <div className="flex gap-1">
                   {[1,2,3,4,5].map((i) => (
-                    <div key={i} className={`w-8 h-1 rounded-full ${i <= 4 ? "bg-stone-900" : "bg-stone-200"}`} />
+                    <div key={i} className={`w-8 h-1 rounded-full ${i <= 2 ? "bg-stone-900" : "bg-stone-200"}`} />
                   ))}
                 </div>
                 <div className="w-5" />
@@ -510,7 +529,7 @@ export default function GetStarted() {
 
             <main className="flex-1 px-6 py-10 max-w-lg mx-auto w-full">
               <h1 className="text-2xl font-semibold text-stone-900 text-center mb-3">
-                How will you manage the fund?
+                Who is this fund for?
               </h1>
               <p className="text-stone-500 text-center mb-8">
                 Choose the account type that fits your situation
@@ -533,9 +552,9 @@ export default function GetStarted() {
                       <Users size={24} className={accountType === "parent" ? "text-white" : "text-stone-500"} />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-stone-900 text-lg mb-1">I'm a parent or guardian</p>
+                      <p className="font-semibold text-stone-900 text-lg mb-1">For my child</p>
                       <p className="text-sm text-stone-500 leading-relaxed">
-                        You get a Kora account to manage everything. {childName || "Your child"} gets a custodial fund you control until they're 18-21.
+                        You get a Kora account to manage everything. Your child gets a custodial fund you control until they're 18-21.
                       </p>
                       <div className="mt-3 flex items-center gap-2">
                         <span className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">Most popular</span>
@@ -566,7 +585,7 @@ export default function GetStarted() {
                       <User size={24} className={accountType === "adult" ? "text-white" : "text-stone-500"} />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-stone-900 text-lg mb-1">I'm creating for myself</p>
+                      <p className="font-semibold text-stone-900 text-lg mb-1">For myself</p>
                       <p className="text-sm text-stone-500 leading-relaxed">
                         Personal investment account. Perfect for graduations, weddings, or any milestone.
                       </p>
