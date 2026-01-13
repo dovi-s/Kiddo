@@ -184,7 +184,7 @@ export default function GetStarted() {
                 </h1>
                 
                 <p className="text-lg text-stone-500 mb-8 leading-relaxed">
-                  Transform birthday money into real investments. Watch $100 become $340 by the time they're 18.
+                  Transform birthday money into real investments. Every gift grows over time through the power of compounding.
                 </p>
 
                 <motion.div
