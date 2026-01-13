@@ -535,10 +535,10 @@ export default function GetStarted() {
                     <div className="flex-1">
                       <p className="font-semibold text-stone-900 text-lg mb-1">I'm a parent or guardian</p>
                       <p className="text-sm text-stone-500 leading-relaxed">
-                        Create a custodial account for {childName || "your child"}. You manage it until they're 18-21.
+                        You get a Kora account to manage everything. {childName || "Your child"} gets a custodial fund you control until they're 18-21.
                       </p>
                       <div className="mt-3 flex items-center gap-2">
-                        <span className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">Recommended</span>
+                        <span className="px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">Most popular</span>
                         <span className="text-xs text-stone-400">UTMA/UGMA</span>
                       </div>
                     </div>
@@ -594,6 +594,12 @@ export default function GetStarted() {
                   Continue
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
+                
+                {accountType === "parent" && (
+                  <p className="text-xs text-stone-400 text-center mt-4">
+                    You can add a personal fund for yourself later from your dashboard
+                  </p>
+                )}
               </div>
             </main>
           </motion.div>
