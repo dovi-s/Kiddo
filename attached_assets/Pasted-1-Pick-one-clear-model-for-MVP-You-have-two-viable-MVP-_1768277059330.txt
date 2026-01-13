@@ -1,0 +1,168 @@
+1) Pick one clear model for MVP
+
+You have two viable MVP models. Pick one and make it painfully obvious.
+
+Model A (cleanest MVP): “Gifts invest automatically” is real only after activation
+
+Before activation: guests can “pledge” (or “promise”) gifts. No money moves.
+
+After activation (KYC done): pledges convert to real gifts, money moves, investing happens.
+
+This matches what your screenshots already imply (“pledges convert once you activate investing”).
+
+Model B (simpler conceptually for users): Collect cash first, invest later
+
+Gifts are collected as cash in a holding balance.
+
+Auto-invest happens on a schedule (daily, weekly), once the account is active.
+
+This avoids explaining pledges, but you must clearly show “Cash balance” vs “Invested.”
+
+If you are already built around pledges, stick with Model A.
+
+2) MVP status system (this is the product)
+
+Do not show “Stocks | Bonds | Cash” in MVP. Show statuses.
+
+Use 4 statuses max, with one-line definitions everywhere (tooltips or inline):
+
+Pledged: “They said they’ll give. No payment yet.”
+
+Processing: “Payment submitted. Waiting for bank/card confirmation.”
+
+Received: “Funds received and available to invest.”
+
+Invested: “Funds placed into the portfolio.”
+
+If you only support one asset mix in MVP, “Invested” is enough. Users do not need holdings UI.
+
+3) The only investing surface you need on the dashboard
+
+One “Investing” row, not a tab set.
+
+If activated
+
+“Investing: On”
+
+“Auto-invest: Next market day” (or “next business day”)
+
+“Typical timing: 1 to 2 business days” (match reality)
+
+Link: “How gifts are invested” (simple explainer)
+
+If not activated
+
+A single primary CTA: Activate investing
+
+Two bullets:
+
+“Takes about 2 minutes”
+
+“Identity verification required”
+
+One sentence: “Until activated, people can pledge gifts. No money moves.”
+
+That is it.
+
+4) What “Activate investing” really means in MVP
+
+In MVP, “Activate investing” is not a feature. It is a gate that prevents confusion.
+
+Minimum requirements:
+
+KYC for the adult (guardian), not the child
+
+Link bank account (or whatever funding rail you use)
+
+Accept legal terms (brokerage disclosures)
+
+Do not expose any of the brokerage complexity in the UI beyond:
+
+who custody is with (one line)
+
+SIPC/FINRA mention (one line)
+
+where to read details (link)
+
+5) Guest page copy that prevents 80% of support
+
+On the guest event page, put one compact “What happens” block:
+
+What happens to your gift
+
+“Your gift is received securely.”
+
+“Once the account is active, it is invested automatically for long-term growth.”
+
+“You’ll get a confirmation and receipt.”
+
+If not activated, swap the middle line:
+
+“Right now, gifts are pledges until the account is activated.”
+
+Do not mention tickers, allocations, or returns.
+
+6) Receipts and records: keep it minimal but correct
+
+For each gift entry (owner view):
+
+Name
+
+Amount
+
+Status (from the 4)
+
+Note
+
+Timestamp
+
+“Receipt” link (once processing/received)
+
+For the guest:
+
+Confirmation screen
+
+Email receipt
+
+Avoid showing “portfolio value” as the first number if it includes market moves. In MVP, lead with Total received and show Invested value second.
+
+7) The one thing you must not fake
+
+Do not blur “pending” in a way that implies money is invested when it is not.
+
+If money is not actually at the broker yet, do not show it in “portfolio value.” Put it in “pending/processing.”
+
+8) Practical MVP recommendation for your current screens
+
+Based on what you showed:
+
+Keep “Total received” and “Pending.”
+
+Replace “Stocks | Int’l | Bonds | Cash” with “Pledged | Processing | Received | Invested.”
+
+Keep “Activate investing” exactly as the gate.
+
+Remove projections until users ask for them (or tuck under a small “Details” link).
+
+9) Quick test: if a user asks any of these, rewrite copy
+
+“Is my money invested already?”
+
+“What does pending mean?”
+
+“Is this like a 529?”
+
+“Who owns the account?”
+
+“Can I get a receipt?”
+
+Your UI should answer all five without a help doc.
+
+If you want, paste the exact wording you currently have for:
+
+“gift rules” banner
+
+“pending” label
+
+“activate investing” helper text
+and I’ll rewrite them into MVP-grade copy that is short and unambiguous.
