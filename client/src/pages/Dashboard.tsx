@@ -5,7 +5,7 @@ import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText, ChevronDown, ChevronUp, Info, Sparkles, Trophy } from "lucide-react";
+import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText, ChevronDown, ChevronUp, Info, Sparkles, Trophy, Share2, TrendingUp, Clock, Gift } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { staggerContainer, fadeInUp, liftCard, gentleSpring, bouncySpring } from "@/lib/animations";
 import { AchievementBadge, getDefaultAchievements } from "@/components/ui/achievements";
@@ -346,6 +346,71 @@ export default function Dashboard() {
       
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
         
+        {/* Emotional Hero Section */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-8 lg:mb-12"
+        >
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-stone-900 via-stone-800 to-stone-900 p-6 sm:p-8 lg:p-10">
+            {/* Ambient glow */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl" />
+            
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+              <div className="flex items-center gap-4 sm:gap-6">
+                {/* Avatar */}
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-2xl sm:text-3xl font-medium shadow-lg">
+                  {selectedFund.name.charAt(0)}
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-white tracking-tight">
+                    {selectedFund.name}'s Future Fund
+                  </h1>
+                  <p className="text-stone-400 text-sm sm:text-base mt-1">
+                    {isPersonal 
+                      ? "Building your financial future, one gift at a time"
+                      : `${selectedFund.yearsLeft} years until ${selectedFund.name} turns 18`
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              {/* Primary CTA */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => setShowShareKit(true)}
+                  data-testid="button-hero-share"
+                  className="px-6 py-3 bg-white text-stone-900 font-medium rounded-xl hover:bg-stone-100 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Share2 size={18} />
+                  Share fund
+                </button>
+                <Link href="/event/create">
+                  <button
+                    data-testid="button-hero-create-event"
+                    className="w-full sm:w-auto px-6 py-3 bg-stone-700 text-white font-medium rounded-xl hover:bg-stone-600 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus size={18} />
+                    New event
+                  </button>
+                </Link>
+              </div>
+            </div>
+            
+            {/* Trust badges */}
+            <div className="relative z-10 mt-6 pt-6 border-t border-stone-700/50 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-stone-400">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                Assets held by Apex Clearing
+              </span>
+              <span>SIPC protected up to $500k</span>
+              <span>SEC registered</span>
+            </div>
+          </div>
+        </motion.section>
+
         {/* Desktop: Two column layout */}
         <div className="lg:grid lg:grid-cols-3 lg:gap-12">
           
@@ -356,12 +421,12 @@ export default function Dashboard() {
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: 0.8, delay: 0.1 }}
               className="mb-10 lg:mb-12"
             >
               {/* Status chip */}
-              <div className="flex items-center gap-2 mb-3">
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(selectedFund.status)}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${getStatusColor(selectedFund.status)}`}>
                   {getStatusLabel(selectedFund.status)}
                 </span>
                 {selectedFund.status === "pending" && (
@@ -449,53 +514,99 @@ export default function Dashboard() {
                 </>
               ) : (
                 <>
-                  {/* Active state - show metrics */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8 mb-4">
-                    <div className="p-4 sm:p-0 bg-stone-50 sm:bg-transparent rounded-xl sm:rounded-none">
-                      <p className="text-xs sm:text-sm text-stone-500 mb-1 flex items-center gap-1 uppercase tracking-wide sm:tracking-normal sm:normal-case">
-                        Total received
-                        <span className="text-stone-300 text-xs hidden sm:inline" title="All completed gifts to this fund">(gifts)</span>
-                      </p>
-                      <p className="text-3xl sm:text-3xl lg:text-4xl font-semibold sm:font-light tracking-tight text-stone-900">
+                  {/* Active state - show metrics with glassmorphic tiles */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                    {/* Total Received */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="p-4 sm:p-5 rounded-xl bg-white/80 backdrop-blur-sm border border-stone-200/50 shadow-sm hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <Gift size={14} className="text-stone-400" />
+                        <p className="text-xs text-stone-500 uppercase tracking-wide">Received</p>
+                      </div>
+                      <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-stone-900">
                         <AnimatedValue value={totalReceived} />
                       </p>
-                    </div>
-                    <div className="p-4 sm:p-0 bg-stone-50 sm:bg-transparent rounded-xl sm:rounded-none">
-                      <p className="text-xs sm:text-sm text-stone-500 mb-1 flex items-center gap-1 uppercase tracking-wide sm:tracking-normal sm:normal-case">
-                        Portfolio value
-                        <span className="text-stone-300 text-xs hidden sm:inline" title="Invested + cash + growth">(+growth)</span>
-                      </p>
-                      <p className="text-3xl sm:text-3xl lg:text-4xl font-semibold sm:font-light tracking-tight text-stone-900">
+                      <p className="text-xs text-stone-400 mt-1">{selectedFund.contributors} contributors</p>
+                    </motion.div>
+                    
+                    {/* Portfolio Value */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 }}
+                      className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-stone-900 to-stone-800 text-white shadow-lg"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp size={14} className="text-stone-400" />
+                        <p className="text-xs text-stone-400 uppercase tracking-wide">Value</p>
+                      </div>
+                      <p className="text-2xl sm:text-3xl font-semibold tracking-tight">
                         <AnimatedValue value={portfolioValue} />
                       </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                    <button 
-                      onClick={() => setShowGainAsPercent(!showGainAsPercent)}
-                      data-testid="button-toggle-gain-format"
-                      className={`${marketChange >= 0 ? "text-emerald-700" : "text-red-600"} hover:underline cursor-pointer`}
+                      <button 
+                        onClick={() => setShowGainAsPercent(!showGainAsPercent)}
+                        data-testid="button-toggle-gain-format"
+                        className={`text-xs mt-1 ${marketChange >= 0 ? "text-emerald-400" : "text-red-400"} hover:underline cursor-pointer`}
+                      >
+                        {showGainAsPercent 
+                          ? `${marketChange >= 0 ? "+" : ""}${marketChangePercent}%`
+                          : `${marketChange >= 0 ? "+" : ""}$${Math.abs(marketChange).toLocaleString()}`
+                        } growth
+                      </button>
+                    </motion.div>
+                    
+                    {/* Pending */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="p-4 sm:p-5 rounded-xl bg-white/80 backdrop-blur-sm border border-stone-200/50 shadow-sm"
                     >
-                      {showGainAsPercent 
-                        ? `${marketChange >= 0 ? "+" : ""}${marketChangePercent}% gain`
-                        : `${marketChange >= 0 ? "+" : ""}$${Math.abs(marketChange).toLocaleString()} gain`
-                      }
-                    </button>
-                    {pendingAmount > 0 && (
-                      <>
-                        <span className="text-stone-300">|</span>
-                        <span className="text-amber-600 flex items-center gap-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock size={14} className="text-amber-500" />
+                        <p className="text-xs text-stone-500 uppercase tracking-wide">Pending</p>
+                      </div>
+                      <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-stone-900">
+                        ${pendingAmount}
+                      </p>
+                      {pendingAmount > 0 && (
+                        <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                          ${pendingAmount} pending
-                        </span>
-                      </>
-                    )}
+                          Processing
+                        </p>
+                      )}
+                      {pendingAmount === 0 && (
+                        <p className="text-xs text-stone-400 mt-1">All settled</p>
+                      )}
+                    </motion.div>
+                    
+                    {/* Projection */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.25 }}
+                      className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 shadow-sm"
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles size={14} className="text-emerald-500" />
+                        <p className="text-xs text-emerald-700 uppercase tracking-wide">
+                          {isPersonal ? "In 20 yrs" : `At 18`}
+                        </p>
+                      </div>
+                      <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-emerald-900">
+                        ${selectedFund.projection.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-emerald-600 mt-1">7% annual return</p>
+                    </motion.div>
                   </div>
                   
                   <button 
                     onClick={() => setShowGiftRules(!showGiftRules)}
-                    className="w-full p-3 rounded-lg bg-stone-50 border border-stone-100 mt-4 text-left hover:bg-stone-100 transition-colors"
+                    className="w-full p-3 rounded-lg bg-stone-50/80 border border-stone-100 text-left hover:bg-stone-100 transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-stone-500 flex items-center gap-1.5">
@@ -543,44 +654,6 @@ export default function Dashboard() {
               </motion.button>
             )}
 
-            {/* Share - Mobile only */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="mb-8 lg:hidden p-5 rounded-lg bg-white border border-stone-200"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm text-stone-500">Share this fund</p>
-                <button 
-                  onClick={() => setShowEditFund(true)}
-                  data-testid="button-edit-share-mobile"
-                  className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
-                >
-                  Edit
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <div className="flex-1 px-3 py-2 bg-stone-50 rounded text-sm text-stone-600 truncate">
-                  {momentLink}
-                </div>
-                <button 
-                  onClick={handleCopyClick}
-                  data-testid="button-copy-mobile"
-                  className="px-4 py-2 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors"
-                >
-                  {copied ? "Copied" : "Copy"}
-                </button>
-                <button 
-                  onClick={() => setShowShareKit(true)}
-                  data-testid="button-share-kit-mobile"
-                  className="px-3 py-2 border border-stone-200 rounded text-sm hover:bg-stone-50 transition-colors flex items-center gap-1.5"
-                >
-                  <Sparkles size={14} />
-                  Share
-                </button>
-              </div>
-            </motion.div>
 
             {/* Live Activity - Shows recent contributors */}
             {selectedFund?.status === "active" && selectedFund.contributors > 0 && (
@@ -821,21 +894,47 @@ export default function Dashboard() {
               <h2 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-4">Recent Activity</h2>
               
               {recentActivity.length === 0 ? (
-                <div className="bg-white border border-stone-200 rounded-xl p-8 text-center">
-                  <div className="w-12 h-12 rounded-full bg-stone-100 mx-auto mb-4 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="relative overflow-hidden bg-gradient-to-br from-stone-50 to-white border border-stone-200 rounded-2xl p-8 text-center"
+                >
+                  {/* Decorative elements */}
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/50 to-transparent rounded-full blur-2xl" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-100/50 to-transparent rounded-full blur-2xl" />
+                  
+                  <div className="relative z-10">
+                    <motion.div 
+                      initial={{ scale: 0.8 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.2, type: "spring" }}
+                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 mx-auto mb-5 flex items-center justify-center shadow-lg"
+                    >
+                      <Gift size={28} className="text-white" />
+                    </motion.div>
+                    <h3 className="text-lg font-medium text-stone-900 mb-2">Ready to receive your first gift</h3>
+                    <p className="text-sm text-stone-500 mb-6 max-w-xs mx-auto">
+                      Share {selectedFund.name}'s fund with friends and family. Every gift grows over time.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <button 
+                        onClick={() => setShowShareKit(true)}
+                        data-testid="button-empty-share"
+                        className="px-5 py-2.5 bg-stone-900 text-white text-sm font-medium rounded-xl hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Share2 size={16} />
+                        Share fund link
+                      </button>
+                      <button 
+                        onClick={handleCopyClick}
+                        className="px-5 py-2.5 border border-stone-200 text-stone-700 text-sm font-medium rounded-xl hover:bg-stone-50 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Copy size={16} />
+                        Copy link
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-sm font-medium text-stone-700 mb-1">No activity yet</p>
-                  <p className="text-xs text-stone-500 mb-4">Share your link to start receiving gifts</p>
-                  <button 
-                    onClick={handleCopyClick}
-                    className="px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-800 transition-colors"
-                  >
-                    Copy link to share
-                  </button>
-                </div>
+                </motion.div>
               ) : (
               <motion.div 
                 className="space-y-3"
