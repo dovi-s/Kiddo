@@ -700,188 +700,74 @@ export default function Dashboard() {
               })()}
             </motion.div>
 
-            {/* Selected Fund Details */}
-            {selectedFund && (
-              <motion.div
-                key={selectedFund.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="mb-10 lg:mb-12"
-              >
-                <div className="border border-stone-200 rounded-lg bg-white overflow-hidden">
-                  {selectedFund.status === "draft" && (
-                    <div className="px-4 sm:px-5 py-4 bg-amber-50 border-b border-amber-100">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium text-amber-800">Activate investing to start growing gifts</p>
-                          <p className="text-xs text-amber-600 mt-0.5">Contributors can pledge now — funds invest once activated</p>
+            {/* Events Section - Cleaner card-based design */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="mb-10 lg:mb-12"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</h2>
+                <Link href="/event/create">
+                  <button 
+                    data-testid="button-create-event"
+                    className="text-xs text-stone-500 hover:text-stone-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-stone-100 flex items-center gap-1"
+                  >
+                    <Plus size={12} />
+                    New event
+                  </button>
+                </Link>
+              </div>
+              
+              <div className="grid gap-3">
+                {selectedFund?.events.map((event) => {
+                  const eventData = eventEdits[event.id] || { title: event.title, slug: event.slug };
+                  return (
+                    <motion.div 
+                      key={event.id}
+                      whileHover={{ y: -2 }}
+                      className="bg-white border border-stone-200 rounded-xl p-4 hover:border-stone-300 hover:shadow-sm transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${event.active ? 'bg-emerald-500' : 'bg-stone-300'}`} />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-stone-900 truncate">{eventData.title}</p>
+                            <p className="text-xs text-stone-400">kora.com/{fundSlug}/{eventData.slug}</p>
+                          </div>
                         </div>
-                        <Link href="/activate">
-                          <button 
-                            data-testid="button-activate-fund"
-                            className="px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-800 transition-colors whitespace-nowrap"
-                          >
-                            Activate investing
-                          </button>
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between border-b border-stone-100 gap-3">
-                    <div>
-                      {selectedFund.status === "active" && (
-                        <p className="text-xs text-emerald-600 mb-1 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          Connected to Alpaca Securities · <button className="underline hover:no-underline">Account settings</button>
-                        </p>
-                      )}
-                      <p className="text-sm text-stone-500">
-                        <span className="text-stone-400">Projection:</span> {isPersonal ? "In 20 years" : `When ${selectedFund.name} turns 18`}: <span className="font-medium text-stone-900">${selectedFund.projection.toLocaleString()}</span>
-                      </p>
-                      <button 
-                        onClick={() => setShowContributors(true)}
-                        className="text-xs text-stone-400 hover:text-stone-600 hover:underline transition-colors"
-                        data-testid="button-view-contributors"
-                      >
-                        {selectedFund.contributors} contributors →
-                      </button>
-                      <p className="text-[10px] text-stone-300 mt-1">Assumes 7% annual return. Not guaranteed.</p>
-                    </div>
-                    <div className="flex gap-0.5 sm:gap-1">
-                      <button 
-                        onClick={() => setShowEditFund(true)}
-                        data-testid="button-edit-fund"
-                        className="p-2.5 sm:p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
-                        title="Edit"
-                      >
-                        <Pencil size={16} className="sm:w-3.5 sm:h-3.5" />
-                      </button>
-                      <button 
-                        onClick={handleCopyClick}
-                        data-testid="button-copy-link"
-                        className="p-2.5 sm:p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
-                        title="Copy link"
-                      >
-                        <Copy size={16} className="sm:w-3.5 sm:h-3.5" />
-                      </button>
-                      <button 
-                        onClick={() => setShowQR(true)}
-                        data-testid="button-show-qr"
-                        className="p-2.5 sm:p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
-                        title="QR code"
-                      >
-                        <QrCode size={16} className="sm:w-3.5 sm:h-3.5" />
-                      </button>
-                      <Link href={`/${fundSlug}`}>
-                        <button 
-                          className="p-2.5 sm:p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 flex items-center justify-center" 
-                          title="View fund & events"
-                          data-testid="button-view-fund"
-                        >
-                          <ExternalLink size={16} className="sm:w-3.5 sm:h-3.5" />
-                        </button>
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="px-4 sm:px-5 py-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</p>
-                      <Link href="/event/create" className="text-xs text-stone-500 hover:text-stone-900 transition-colors px-2 py-1.5 -mr-2 rounded-lg hover:bg-stone-100">
-                        + New event
-                      </Link>
-                    </div>
-                    
-                    <div className="space-y-0">
-                      {selectedFund.events.map((event, idx) => {
-                        const eventData = eventEdits[event.id] || { title: event.title, slug: event.slug };
-                        const isLast = idx === selectedFund.events.length - 1;
-                        return (
-                          <div key={event.id} className="flex">
-                            <div className="w-6 flex flex-col items-center mr-2">
-                              <div className={`w-px bg-stone-200 ${idx === 0 ? 'h-3' : 'h-full'}`} />
-                              <div className="w-3 h-px bg-stone-200" style={{ marginTop: idx === 0 ? 0 : -12 }} />
-                              {!isLast && <div className="w-px bg-stone-200 flex-1" />}
-                            </div>
-                            
-                            <div className="flex-1 py-2 flex items-center justify-between group">
-                              <div className="flex items-center gap-2 flex-1 min-w-0">
-                                <div className={`h-2 w-2 rounded-full shrink-0 ${event.active ? 'bg-emerald-500' : 'bg-stone-300'}`} />
-                                <div className="min-w-0">
-                                  <p className="text-sm text-stone-900 truncate">{eventData.title}</p>
-                                  <p className="text-xs text-stone-400 truncate">/{fundSlug}/{eventData.slug}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <p className="text-sm text-stone-600 mr-2">${event.raised.toLocaleString()}</p>
-                                <button 
-                                  onClick={() => { navigator.clipboard.writeText(`kora.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied", description: "Anyone with the link can contribute" }); }}
-                                  className="px-2 py-1 text-xs font-medium text-stone-600 bg-stone-100 hover:bg-stone-200 rounded transition-all"
-                                  data-testid={`button-share-event-${event.id}`}
-                                >
-                                  Share
-                                </button>
-                                <Link href={`/edit/${fundSlug}/${eventData.slug}`}>
-                                  <button 
-                                    className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-all"
-                                    title="Edit event"
-                                    data-testid={`button-edit-event-${event.id}`}
-                                  >
-                                    <Pencil size={14} />
-                                  </button>
-                                </Link>
-                                <Link href={`/${fundSlug}/${eventData.slug}`}>
-                                  <button 
-                                    className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-all" 
-                                    title="View event page"
-                                    data-testid={`button-view-event-${event.id}`}
-                                  >
-                                    <ExternalLink size={14} />
-                                  </button>
-                                </Link>
-                              </div>
-                            </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-stone-900">${event.raised.toLocaleString()}</p>
+                            <p className="text-xs text-stone-400">{event.gifts || 0} gifts</p>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Statements & Tax Docs - Only for active accounts */}
-                  {selectedFund.status === "active" && (
-                    <div className="px-4 sm:px-5 py-4 border-t border-stone-100">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Documents</p>
-                      </div>
-                      <div className="space-y-2">
-                        <button className="w-full flex items-center justify-between p-3 rounded-lg bg-stone-50 hover:bg-stone-100 transition-colors text-left group">
-                          <div className="flex items-center gap-3">
-                            <FileText size={16} className="text-stone-400" />
-                            <div>
-                              <p className="text-sm text-stone-700">Monthly Statements</p>
-                              <p className="text-xs text-stone-400">No statements yet</p>
-                            </div>
+                          <div className="flex items-center">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(`kora.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied" }); }}
+                              className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-all"
+                              data-testid={`button-share-event-${event.id}`}
+                              title="Copy link"
+                            >
+                              <Copy size={14} />
+                            </button>
+                            <Link href={`/${fundSlug}/${eventData.slug}`}>
+                              <button 
+                                className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-all" 
+                                title="View event"
+                                data-testid={`button-view-event-${event.id}`}
+                              >
+                                <ExternalLink size={14} />
+                              </button>
+                            </Link>
                           </div>
-                          <ExternalLink size={14} className="text-stone-300 group-hover:text-stone-500" />
-                        </button>
-                        <button className="w-full flex items-center justify-between p-3 rounded-lg bg-stone-50 hover:bg-stone-100 transition-colors text-left group">
-                          <div className="flex items-center gap-3">
-                            <FileText size={16} className="text-stone-400" />
-                            <div>
-                              <p className="text-sm text-stone-700">Tax Documents</p>
-                              <p className="text-xs text-stone-400">Available after year-end</p>
-                            </div>
-                          </div>
-                          <ExternalLink size={14} className="text-stone-300 group-hover:text-stone-500" />
-                        </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
 
             {/* Activity */}
             <motion.div
