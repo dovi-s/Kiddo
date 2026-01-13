@@ -288,7 +288,7 @@ export default function Dashboard() {
   const snoozedCount = recentActivity.filter(a => a.status === "invested" && snoozedThankYous.includes(a.id) && !sentThankYous.includes(a.id)).length;
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen bg-stone-50 pb-20 md:pb-0">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">

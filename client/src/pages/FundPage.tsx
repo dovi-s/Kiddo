@@ -1,22 +1,71 @@
 import { useState } from "react";
 import { Link, useParams } from "wouter";
 import { motion } from "framer-motion";
+import { Share2, QrCode, Gift, TrendingUp, Users, Calendar, ChevronRight, Shield, Clock, Star, Copy, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { staggerContainer, fadeInUp, liftCard, bouncySpring, gentleSpring } from "@/lib/animations";
+
+interface Milestone {
+  id: string;
+  label: string;
+  amount: number;
+  achieved: boolean;
+  icon: string;
+}
+
+interface Contributor {
+  id: string;
+  name: string;
+  amount: number;
+  date: string;
+  message?: string;
+}
 
 export default function FundPage() {
   const params = useParams<{ slug: string }>();
   const fundSlug = params.slug || "mila";
+  const [copiedLink, setCopiedLink] = useState(false);
   
-  // Mock fund data - in production this would come from API
-  const fundsData: Record<string, { recipientName: string; createdBy: string; accountType: string; totalRaised: number; contributors: number; events: { slug: string; title: string; description: string; raised: number; gifts: number; active: boolean }[] }> = {
+  const fundsData: Record<string, { 
+    recipientName: string; 
+    createdBy: string; 
+    accountType: string; 
+    totalRaised: number; 
+    invested: number;
+    pending: number;
+    contributors: number; 
+    daysActive: number;
+    milestones: Milestone[];
+    recentContributors: Contributor[];
+    events: { slug: string; title: string; description: string; raised: number; gifts: number; active: boolean; date?: string }[] 
+  }> = {
     "mila": {
       recipientName: "Mila",
       createdBy: "Sarah",
       accountType: "UTMA",
       totalRaised: 4250,
+      invested: 3890,
+      pending: 360,
       contributors: 18,
+      daysActive: 847,
+      milestones: [
+        { id: "1", label: "First Gift", amount: 1, achieved: true, icon: "🎁" },
+        { id: "2", label: "$100 Raised", amount: 100, achieved: true, icon: "💯" },
+        { id: "3", label: "$500 Raised", amount: 500, achieved: true, icon: "🌟" },
+        { id: "4", label: "$1,000 Raised", amount: 1000, achieved: true, icon: "🚀" },
+        { id: "5", label: "$5,000 Raised", amount: 5000, achieved: false, icon: "🎯" },
+        { id: "6", label: "$10,000 Raised", amount: 10000, achieved: false, icon: "👑" },
+      ],
+      recentContributors: [
+        { id: "1", name: "Grandma Rose", amount: 500, date: "2 days ago", message: "For your future, sweetheart! 💕" },
+        { id: "2", name: "Uncle David", amount: 100, date: "1 week ago", message: "Happy 5th birthday!" },
+        { id: "3", name: "Aunt Maria", amount: 75, date: "1 week ago" },
+        { id: "4", name: "The Johnson Family", amount: 150, date: "2 weeks ago", message: "Wishing Mila all the best!" },
+        { id: "5", name: "Sarah's Coworkers", amount: 285, date: "3 weeks ago" },
+      ],
       events: [
         { slug: "anytime", title: "Give anytime", description: "Contribute to their future, no occasion needed", raised: 2180, gifts: 12, active: true },
-        { slug: "5th-birthday", title: "5th Birthday", description: "December 15, 2025", raised: 1420, gifts: 8, active: true },
+        { slug: "5th-birthday", title: "5th Birthday", description: "December 15, 2025", raised: 1420, gifts: 8, active: true, date: "Dec 15" },
         { slug: "kindergarten-graduation", title: "Kindergarten Graduation", description: "May 2026", raised: 650, gifts: 4, active: false },
       ]
     },
@@ -25,7 +74,21 @@ export default function FundPage() {
       createdBy: "Michael",
       accountType: "UTMA",
       totalRaised: 2800,
+      invested: 2450,
+      pending: 350,
       contributors: 12,
+      daysActive: 412,
+      milestones: [
+        { id: "1", label: "First Gift", amount: 1, achieved: true, icon: "🎁" },
+        { id: "2", label: "$100 Raised", amount: 100, achieved: true, icon: "💯" },
+        { id: "3", label: "$500 Raised", amount: 500, achieved: true, icon: "🌟" },
+        { id: "4", label: "$1,000 Raised", amount: 1000, achieved: true, icon: "🚀" },
+        { id: "5", label: "$5,000 Raised", amount: 5000, achieved: false, icon: "🎯" },
+      ],
+      recentContributors: [
+        { id: "1", name: "Grandpa Joe", amount: 200, date: "3 days ago" },
+        { id: "2", name: "Family Friends", amount: 150, date: "1 week ago" },
+      ],
       events: [
         { slug: "anytime", title: "Give anytime", description: "Contribute to their future, no occasion needed", raised: 1200, gifts: 6, active: true },
         { slug: "1st-birthday", title: "1st Birthday", description: "March 8, 2026", raised: 1600, gifts: 6, active: true },
@@ -33,173 +96,370 @@ export default function FundPage() {
     }
   };
 
-  // Fall back to a default fund if slug not found
   const fund = fundsData[fundSlug] || {
     recipientName: fundSlug.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" "),
     createdBy: "Parent",
     accountType: "UTMA",
     totalRaised: 0,
+    invested: 0,
+    pending: 0,
     contributors: 0,
+    daysActive: 0,
+    milestones: [],
+    recentContributors: [],
     events: [
       { slug: "anytime", title: "Give anytime", description: "Contribute to their future, no occasion needed", raised: 0, gifts: 0, active: true },
     ]
   };
   
   const recipientName = fund.recipientName;
+  const fundUrl = `${window.location.origin}/${fundSlug}`;
+  
+  const projectedValue = Math.round(fund.totalRaised * 4.6);
+  const nextMilestone = fund.milestones.find(m => !m.achieved);
+  const progress = nextMilestone ? (fund.totalRaised / nextMilestone.amount) * 100 : 100;
+  
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(fundUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <button 
-            onClick={() => window.history.back()}
-            data-testid="button-back"
-            className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
-          >
-            ← Back
-          </button>
-          <span className="text-sm font-medium text-stone-900">{recipientName}</span>
-          <span className="text-xs text-stone-400 w-16 text-right">Secure</span>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-16">
-        
-        {/* Desktop: Two column layout */}
-        <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-start">
+    <div className="min-h-screen bg-gradient-to-b from-stone-50 via-stone-50 to-white pb-24 md:pb-0">
+      {/* Hero Header */}
+      <div className="bg-gradient-to-br from-stone-900 via-stone-800 to-stone-900 text-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          {/* Top nav */}
+          <header className="flex items-center justify-between h-14">
+            <button 
+              onClick={() => window.history.back()}
+              data-testid="button-back"
+              className="text-sm text-stone-400 hover:text-white transition-colors"
+            >
+              ← Back
+            </button>
+            <motion.button 
+              onClick={handleCopyLink}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 text-sm text-stone-400 hover:text-white transition-colors"
+              data-testid="button-share-fund"
+            >
+              {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+              {copiedLink ? "Copied!" : "Share"}
+            </motion.button>
+          </header>
           
-          {/* Left column - Fund info */}
-          <div className="lg:sticky lg:top-20">
+          {/* Hero content */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="py-12 md:py-16 text-center"
+          >
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, ...bouncySpring }}
+              className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-white/20 to-white/5 backdrop-blur border border-white/20 flex items-center justify-center text-4xl md:text-5xl font-light mx-auto mb-6"
+            >
+              {recipientName.charAt(0)}
+            </motion.div>
+            <h1 className="text-3xl md:text-4xl font-light mb-2">
+              {recipientName}'s Future Fund
+            </h1>
+            <p className="text-stone-400">
+              Created by {fund.createdBy} • {fund.daysActive} days growing
+            </p>
             
-            {/* Breadcrumb */}
-            <div className="text-sm mb-8 lg:mb-10 flex items-center gap-1.5">
-              <Link href="/dashboard">
-                <span className="text-stone-400 hover:text-stone-600 transition-colors">Dashboard</span>
-              </Link>
-              <span className="text-stone-300">/</span>
-              <span className="text-stone-900">{recipientName}</span>
-            </div>
-
-            {/* Fund Header */}
+            {/* Stats row */}
             <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center lg:text-left mb-10 lg:mb-12"
-            >
-              <div className="w-20 h-20 lg:w-24 lg:h-24 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center text-2xl lg:text-3xl font-light mx-auto lg:mx-0 mb-6">
-                {recipientName.charAt(0)}
-              </div>
-              <h1 className="text-2xl lg:text-4xl font-light text-stone-900 mb-2">
-                {recipientName}'s Fund
-              </h1>
-              <p className="text-stone-500 lg:text-lg">
-                Created by {fund.createdBy}
-              </p>
-            </motion.div>
-
-            {/* Stats */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-              className="flex justify-center lg:justify-start gap-8 lg:gap-12 mb-10 lg:mb-0 pb-8 lg:pb-0 border-b lg:border-b-0 border-stone-200"
-            >
-              <div className="text-center lg:text-left">
-                <p className="text-2xl lg:text-3xl font-light text-stone-900">${fund.totalRaised.toLocaleString()}</p>
-                <p className="text-sm text-stone-500">raised</p>
-              </div>
-              <div className="text-center lg:text-left">
-                <p className="text-2xl lg:text-3xl font-light text-stone-900">{fund.contributors}</p>
-                <p className="text-sm text-stone-500">contributors</p>
-              </div>
-            </motion.div>
-
-            {/* Trust badges - Desktop only */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="hidden lg:block mt-12 space-y-3 text-sm text-stone-500"
+              className="flex justify-center gap-8 md:gap-12 mt-8"
             >
-              <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span>100% of gifts are invested</span>
+              <div className="text-center">
+                <p className="text-3xl md:text-4xl font-light">${fund.totalRaised.toLocaleString()}</p>
+                <p className="text-sm text-stone-400 mt-1">total raised</p>
               </div>
-              <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>SIPC protected up to $500,000</span>
+              <div className="text-center">
+                <p className="text-3xl md:text-4xl font-light text-emerald-400">${projectedValue.toLocaleString()}</p>
+                <p className="text-sm text-stone-400 mt-1">in 18 years*</p>
               </div>
-              <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-                <span>Invested for long-term growth</span>
+            </motion.div>
+          </motion.div>
+        </div>
+      </div>
+
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 -mt-6">
+        
+        {/* Quick Actions Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white rounded-2xl shadow-xl border border-stone-200 p-6 mb-8"
+        >
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link href={`/${fundSlug}/anytime`} className="flex-1">
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button className="w-full h-14 text-base rounded-xl bg-stone-900 hover:bg-stone-800" data-testid="button-give-now">
+                  <Gift className="w-5 h-5 mr-2" />
+                  Give to {recipientName}
+                </Button>
+              </motion.div>
+            </Link>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button variant="outline" onClick={handleCopyLink} className="h-14 px-6 rounded-xl" data-testid="button-copy-link">
+                {copiedLink ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+              </Button>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Desktop two-column layout */}
+        <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+          
+          {/* Left column - Main content */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* Milestone Progress */}
+            {nextMilestone && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="bg-white rounded-2xl border border-stone-200 p-6"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-semibold text-stone-900">Next milestone</h2>
+                  <span className="text-2xl">{nextMilestone.icon}</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-stone-500">Progress to {nextMilestone.label}</span>
+                    <span className="font-medium text-stone-900">{Math.round(progress)}%</span>
+                  </div>
+                  <div className="h-3 bg-stone-100 rounded-full overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-gradient-to-r from-stone-800 to-stone-600 rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(progress, 100)}%` }}
+                      transition={{ delay: 0.6, duration: 1, ease: "easeOut" }}
+                    />
+                  </div>
+                  <p className="text-sm text-stone-500">
+                    ${(nextMilestone.amount - fund.totalRaised).toLocaleString()} to go
+                  </p>
+                </div>
+                
+                {/* Milestone timeline */}
+                <div className="mt-6 pt-6 border-t border-stone-100">
+                  <div className="flex items-center justify-between overflow-x-auto pb-2 gap-2">
+                    {fund.milestones.slice(0, 5).map((milestone, i) => (
+                      <motion.div
+                        key={milestone.id}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.5 + i * 0.1 }}
+                        className="flex flex-col items-center min-w-[60px]"
+                      >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                          milestone.achieved 
+                            ? 'bg-emerald-100' 
+                            : 'bg-stone-100 grayscale opacity-50'
+                        }`}>
+                          {milestone.icon}
+                        </div>
+                        <span className={`text-[10px] mt-1 text-center ${
+                          milestone.achieved ? 'text-stone-700' : 'text-stone-400'
+                        }`}>
+                          ${milestone.amount >= 1000 ? `${milestone.amount / 1000}k` : milestone.amount}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Events */}
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+              className="space-y-3"
+            >
+              <h2 className="font-semibold text-stone-900 mb-4">Choose an event</h2>
+              {fund.events.filter(e => e.active).map((event, i) => (
+                <motion.div
+                  key={event.slug}
+                  variants={fadeInUp}
+                  custom={i}
+                  whileHover={{ y: -2, boxShadow: "0 8px 30px -10px rgba(0,0,0,0.1)" }}
+                  transition={gentleSpring}
+                >
+                  <Link href={`/${fundSlug}/${event.slug}`}>
+                    <div 
+                      className="p-5 bg-white border border-stone-200 rounded-xl cursor-pointer group"
+                      data-testid={`event-${event.slug}`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-stone-900 group-hover:text-stone-700 transition-colors">
+                              {event.title}
+                            </p>
+                            {event.date && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                                {event.date}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-stone-500 mt-0.5">{event.description}</p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-stone-300 group-hover:text-stone-500 group-hover:translate-x-1 transition-all" />
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-stone-100 flex gap-6 text-sm">
+                        <span className="text-stone-500">
+                          <span className="font-medium text-stone-700">${event.raised.toLocaleString()}</span> raised
+                        </span>
+                        <span className="text-stone-500">
+                          <span className="font-medium text-stone-700">{event.gifts}</span> gifts
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* Contributor Wall */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-white rounded-2xl border border-stone-200 p-6"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="font-semibold text-stone-900">People who believe in {recipientName}</h2>
+                <span className="text-sm text-stone-400">{fund.contributors} contributors</span>
               </div>
+              
+              <motion.div 
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+                className="space-y-4"
+              >
+                {fund.recentContributors.map((contributor, i) => (
+                  <motion.div
+                    key={contributor.id}
+                    variants={fadeInUp}
+                    custom={i}
+                    className="flex items-start gap-4"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center text-sm font-medium text-stone-600 flex-shrink-0">
+                      {contributor.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="font-medium text-stone-900 truncate">{contributor.name}</p>
+                        <span className="text-xs text-stone-400 flex-shrink-0">{contributor.date}</span>
+                      </div>
+                      {contributor.message && (
+                        <p className="text-sm text-stone-500 mt-0.5">"{contributor.message}"</p>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </motion.div>
+              
+              {fund.contributors > fund.recentContributors.length && (
+                <p className="text-sm text-stone-400 text-center mt-6 pt-4 border-t border-stone-100">
+                  + {fund.contributors - fund.recentContributors.length} more people
+                </p>
+              )}
             </motion.div>
           </div>
 
-          {/* Right column - Events */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className="lg:bg-white lg:border lg:border-stone-200 lg:rounded-xl lg:p-6">
-              <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-4 lg:mb-6">
-                Choose an event
-              </p>
-
-              <div className="space-y-3">
-                {fund.events.filter(e => e.active).map((event, i) => (
-                  <motion.div
-                    key={event.slug}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + i * 0.1 }}
-                  >
-                    <Link href={`/${fundSlug}/${event.slug}`}>
-                      <div 
-                        className="p-5 lg:p-6 bg-white border border-stone-200 lg:bg-stone-50 lg:border-stone-100 rounded-lg hover:border-stone-300 lg:hover:bg-stone-100 transition-colors cursor-pointer group"
-                        data-testid={`event-${event.slug}`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium text-stone-900 group-hover:text-stone-700 transition-colors">{event.title}</p>
-                            <p className="text-sm text-stone-500 mt-0.5">{event.description}</p>
-                          </div>
-                          <span className="text-stone-400 group-hover:text-stone-600 transition-colors text-lg">→</span>
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-stone-100 flex gap-4 text-sm text-stone-500">
-                          <span>${event.raised.toLocaleString()} raised</span>
-                          <span>{event.gifts} gifts</span>
-                        </div>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
+          {/* Right column - Sidebar */}
+          <div className="hidden lg:block space-y-6">
+            
+            {/* Fund Stats */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white rounded-2xl border border-stone-200 p-6"
+            >
+              <h3 className="font-semibold text-stone-900 mb-4">Fund details</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-stone-500">Invested</span>
+                  <span className="font-medium text-stone-900">${fund.invested.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-stone-500">Pending</span>
+                  <span className="font-medium text-amber-600">${fund.pending.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-stone-500">Account type</span>
+                  <span className="font-medium text-stone-900">{fund.accountType}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-stone-500">Days active</span>
+                  <span className="font-medium text-stone-900">{fund.daysActive}</span>
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+
+            {/* Trust badges */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-stone-50 rounded-2xl border border-stone-200 p-6"
+            >
+              <h3 className="font-semibold text-stone-900 mb-4">Protected & secure</h3>
+              <div className="space-y-4 text-sm">
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-stone-900">SIPC Protected</p>
+                    <p className="text-stone-500">Up to $500,000 in coverage</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <TrendingUp className="w-5 h-5 text-stone-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-stone-900">100% Invested</p>
+                    <p className="text-stone-500">Every gift grows over time</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Clock className="w-5 h-5 text-stone-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-stone-900">Long-term Focus</p>
+                    <p className="text-stone-500">Built for 18+ year horizons</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
 
         {/* Footer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-12 lg:mt-20 pt-8 border-t border-stone-200"
+          transition={{ delay: 0.8 }}
+          className="mt-12 pt-8 border-t border-stone-200 text-center"
         >
-          <p className="text-sm text-stone-500 text-center mb-4">
-            {recipientName}'s fund is invested for long-term growth
-          </p>
-          <p className="text-xs text-stone-400 text-center">
-            Brokerage services by Alpaca Securities LLC<br />
-            Member FINRA/SIPC
+          <p className="text-xs text-stone-400">
+            *Projected value assumes 7% annual returns. Past performance doesn't guarantee future results.<br />
+            Brokerage services by Alpaca Securities LLC, Member FINRA/SIPC.
           </p>
         </motion.div>
       </main>

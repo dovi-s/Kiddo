@@ -24,13 +24,13 @@ export function Footer() {
               ].map((link) => (
                 <li key={link.href}>
                   <Link href={link.href}>
-                    <motion.a 
-                      className="hover:text-foreground transition-colors inline-block"
+                    <motion.span 
+                      className="hover:text-foreground transition-colors inline-block cursor-pointer"
                       whileHover={{ x: 2 }}
                       transition={{ duration: 0.2 }}
                     >
                       {link.label}
-                    </motion.a>
+                    </motion.span>
                   </Link>
                 </li>
               ))}

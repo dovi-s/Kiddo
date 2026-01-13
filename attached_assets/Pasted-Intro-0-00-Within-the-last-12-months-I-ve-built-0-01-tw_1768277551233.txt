@@ -1,0 +1,990 @@
+Intro
+0:00
+Within the last 12 months, I've built
+0:01
+two apps that have generated 1.5 million
+0:03
+in revenue.
+0:04
+This is Kletchi, a 22-year-old from
+0:06
+Nigeria who moved to the US with nothing
+0:09
+but a dream to build a business.
+0:11
+You know, I moved to the US with
+0:12
+literally only $100 my name
+0:14
+with his back against the wall in just a
+0:16
+few months to prove himself. Kletchi
+0:18
+built two apps that changed his life.
+0:21
+Today, my apps have been downloaded over
+0:23
+700,000 times across the App Store and
+0:26
+Play Store.
+0:27
+His secret sauce, distribution. But it's
+0:29
+not SEO and it's not Tik Tok. It's
+0:32
+something a little different.
+0:33
+Here's what I think most people don't
+0:35
+understand about mobile apps.
+0:36
+By using the strategy, he was able to
+0:38
+get millions of eyeballs on his idea
+0:41
+virtually for free. I brought Kletchi
+0:43
+onto the channel to break down exactly
+0:45
+how he did it. And in this video, we'll
+0:47
+dive into his two apps that made over a
+0:50
+million dollars, his secret distribution
+0:52
+strategy you've probably never heard of
+0:54
+before, and his playbook on how he'd
+0:56
+start over from scratch today. All
+0:58
+right, let's dive in. I'm Pat Walls and
+1:01
+this is Starter Story.
+Who is Kelechi
+1:05
+Welcome, Kleti, to the channel. Tell me
+1:07
+about who you are, what you built, and
+1:08
+what's your story.
+1:09
+Hi, I'm Kishi. Within the last 12
+1:11
+months, I built two apps that have
+1:13
+generated 1.5 million in revenue. So,
+1:15
+the first one is Social Wizard, and the
+1:16
+second one is called Clin. I saw a guy
+1:18
+on X talking about how he made a million
+1:20
+dollars a month from an app. And right
+1:22
+then was when I decided I was going to
+1:24
+start building apps.
+Numbers behind the apps
+1:25
+Okay. Before we get into the apps that
+1:26
+you built, I just want to understand
+1:28
+some of the numbers behind this. You've
+1:29
+done 1.5 million in revenue. What are
+1:32
+these apps and what are some of the
+1:34
+numbers behind them?
+1:35
+Um, so we first launched in, you know,
+1:37
+early 2024. I launched my first app and,
+1:39
+uh, we went extremely viral. Quickly
+1:41
+scaled to about $60,000 a month. Today,
+1:43
+we've done over 600,000 downloads.
+1:45
+Eventually, after some time, I put that
+1:46
+business on autopilot and I launched my
+1:48
+second app. And, uh, we hit about 10K in
+1:50
+revenue within 2 weeks. and about 4
+1:52
+months later ended up exiting that to a
+1:54
+UK based company.
+1:55
+Okay, cool. I want to dig in a little
+The $1M idea
+1:57
+bit into your first app, the first app
+1:59
+that you built, the one that made nearly
+2:01
+a million dollars. How did you actually
+2:03
+find the idea for this app?
+2:04
+The concept really came from my first
+2:06
+app and it was basically a social
+2:07
+application where people shared, you
+2:08
+know, pictures in groups. It was called
+2:10
+Casp. It grew to a few thousand users
+2:12
+and over 20,000 pictures were posted on
+2:13
+the app, but I mean eventually failed.
+2:15
+And there was one particular girl on the
+2:17
+app, you know, she would post all these
+2:18
+really personal pictures about herself.
+2:20
+I'll see her cooking. I'll see her, you
+2:21
+know, working. I'll see her in class.
+2:23
+And eventually, I became interested in
+2:24
+this girl. And we started texting for a
+2:25
+bit, but after a while, it didn't really
+2:27
+go the way I planned. And so, I went to
+2:29
+the app store and I searched up advice,
+2:31
+life advice. I didn't really see any
+2:33
+apps that could help me. And so, around
+2:34
+this time, this was when OpenAI was
+2:36
+really going heavy with the LLMs and I
+2:38
+just whipped up like a script and I
+2:40
+would get like lines to like text this
+2:42
+girl. So, it wasn't even a product, it
+2:43
+wasn't an app, it was just some back end
+2:45
+I was playing around with. It was a
+2:46
+script on NestJS that I had built.
+2:48
+Eventually, my friends invited me to
+2:50
+homecoming. I gave a few people the app
+2:52
+to play around with. And this was
+2:53
+probably the first time that my high
+2:55
+school friends cared about anything I
+2:57
+was working on. That was when I realized
+2:58
+that there might actually be something
+3:00
+here. And eventually I whipped it
+3:01
+together, polished it more, and released
+Growth from 0 to $1M
+3:03
+the app store.
+3:04
+Okay, so the idea is clearly working.
+3:06
+Your friends finally care about it. You
+3:08
+launch into the app store, it becomes a
+3:09
+live app. But then what I want to know
+3:11
+is once you had the live app in the app
+3:12
+store, how'd you grow it to make nearly
+3:14
+a million dollars? So the first sale
+3:16
+came in, you know, very very late
+3:18
+January. We made about $10. I spent the
+3:20
+next four weeks trying to crack
+3:21
+distribution and uh eventually something
+3:24
+stuck. You know, I figured out the viral
+3:25
+formats. Literally 2 weeks after that
+3:27
+happened, 3.5K in MR after 2 weeks.
+3:30
+After 1 month, we had crossed $25,000 in
+3:32
+MR. I think by month six, we had cash
+3:35
+collected about $250,000. That year
+3:38
+probably ended with about half a million
+3:39
+cash collected. I haven't spent a dollar
+3:41
+on marketing within the last year and
+3:42
+we're literally still printing which is
+The $1M distribution strategy
+3:45
+really good.
+3:45
+Okay, Kletchi, so you mentioned
+3:47
+something really important which is you
+3:49
+cracked distribution. I want you to go
+3:51
+deeper though. I want you to tell me how
+3:53
+you actually cracked distribution. What
+3:56
+was the secret sauce behind Social
+3:58
+Wizard where there were lots of other
+3:59
+apps that I'm sure did the same thing
+4:01
+but didn't make nearly a million dollars
+4:02
+like yours?
+4:03
+I think distribution is really a show
+4:05
+don't tell kind of game. With Social
+4:07
+Wizard, people just use it for texting.
+4:09
+Like that's the main use case that guys
+4:11
+use it for. Everyone knows that
+4:12
+Instagram is a dating site. I think
+4:14
+Instagram is a dating site masquerading
+4:16
+as a social network. And we had this
+4:17
+kind of like streamer strategy that we
+4:20
+used to scale the app. There was a
+4:21
+feature on social wizard where you can
+4:23
+take the screenshots of a girl's story,
+4:24
+put it on the app and it would generate
+4:26
+like hints to say. That was the format
+4:28
+that ended up going viral. But it took
+4:29
+me a while to find that format myself.
+4:31
+Initially I was making content myself to
+4:33
+kind of find what was going to stick.
+4:34
+When I found what kind of, you know,
+4:36
+worked, then I went to very, very micro
+4:38
+streamers, very degenerate streamers.
+4:39
+They hadn't really had any viral
+4:41
+moments. Maybe they had some videos that
+4:42
+had done like 100k, 200k, but I saw the
+4:45
+edge with them because, you know, they
+4:47
+were hitting the audience that we
+4:48
+wanted. And uh I believe that if we
+4:50
+worked with them and took shots with the
+4:52
+formats that worked, we would go viral.
+4:53
+And that's exactly what happened. So,
+4:55
+this is an example of a collab that we
+4:57
+did with a streamer. You know, I went to
+4:58
+him and said, "Hey, this is the format
+5:00
+that is working. A lot of people like to
+5:02
+see videos like this. just recreate
+5:04
+this. Just going to play for you so you
+5:05
+see why this went viral and I'll tell
+5:07
+you what we actually ended up getting
+5:08
+from this video.
+5:09
+What's this? Oh my god, look at her.
+5:12
+If you want to go viral, you need to
+5:14
+find a strategy to make the viewer
+5:16
+pause. If your video doesn't make people
+5:18
+pause, they're going to scroll past. And
+5:19
+obviously, you can see why people pause
+5:20
+on this. It starts with a very pretty
+5:22
+girl. And you know, this is literally
+5:24
+where we integrate Social Wizard. He
+5:25
+doesn't talk about trying to sell the
+5:27
+app. The viewer is watching this like a
+5:28
+regular video and he says, "Okay, it's a
+5:30
+pretty girl. What do I say to the
+5:31
+picture? How do I reply to the story?
+5:33
+Everyone is probably thinking the same
+5:34
+thing. Everyone watching this video is
+5:35
+probably thinking, "How does he reply to
+5:37
+this story?" And let's see what he does.
+5:39
+I don't know what to do. You know what?
+5:41
+We're about to use the wizard app.
+5:42
+Wizard app always do the trick.
+5:45
+[Music]
+5:46
+Start a conversation. I'm going add the
+5:48
+picture of her. Flirty. All right. Cook
+5:50
+up, please. That pink dress looks like
+5:52
+it was made just for you. Planning on
+5:55
+stealing any hearts tonight? I'm going
+5:57
+to use that one.
+5:58
+Boom. By this point, we've sold everyone
+6:00
+what this product is. They don't even
+6:01
+need to finish the clip. Distribution is
+6:03
+always a show don't tell game. A lot of
+6:05
+people think you need to try and sell
+6:06
+your products, but demo what it does.
+6:09
+Show people how it works. If they find
+6:11
+value in it, they're going to download
+6:12
+it. They're going to give you money and
+6:14
+your app is going to scale. So, with
+6:15
+this particular video, I paid this
+6:16
+creator about $120 and the video hit 2
+6:19
+million views and brought in tens of
+6:21
+thousands of dollars, which is insane
+6:22
+ROI. You can't get this on paid ad. You
+6:24
+can't get this on UGC. And that's pretty
+6:26
+much it. We took this format and we
+6:28
+scaled it over and over and over and
+6:30
+over and over again across multiple
+6:32
+creators, multiple videos, and yeah, we
+6:34
+just kept printing.
+6:35
+One thing I love about Kletchi's story
+6:37
+is how fast he built his apps. He had
+6:40
+the idea, built it over just a couple
+6:42
+weeks, and started getting users right
+6:44
+away. This is the power of what happens
+6:46
+when you're using the right tools to
+6:48
+build. And this is why I love today's
+6:50
+sponsor, Emergent. Emergent is a vibe
+6:53
+coding platform that turns your idea
+6:55
+into a productionready app just by
+6:57
+chatting with AI. You can build full
+6:59
+stack mobile apps with React Native,
+7:01
+download APKs to test on your phone, and
+7:04
+deploy directly to the app store. And if
+7:06
+you're building AI apps just like Keni,
+7:08
+Emergent's universal LLM key gives you
+7:11
+instant access to OpenAI, Claude, and
+7:14
+Gemini with no complex API setup
+7:16
+required. And the best part about
+7:18
+Emergent is everything is production
+7:20
+ready from day one. Built to handle real
+7:22
+users and real traffic without expensive
+7:25
+rewrites. Over 1.5 million people are
+7:28
+already building with Emergent. And
+7:29
+their apps have hit 15 million ARR in
+7:32
+just 3 months. If you're ready to turn
+7:34
+your idea into a real app without the
+7:37
+overhead, check out Emergent at the
+7:39
+first link in the description right
+7:41
+below. Thank you to Emergent for
+7:42
+sponsoring this video. Let's get back
+7:44
+into it. My next question for you would
+Kelechi's Distribution Playbook
+7:46
+be if you were to start all over again
+7:48
+knowing what you know, what would be
+7:49
+your playbook to build a successful app
+7:52
+right now?
+7:52
+I think in 2025 product development is
+7:55
+not enough anymore. If you don't find a
+7:57
+way to tell people about your product,
+7:58
+then you might as well not even build a
+8:00
+product. Step one is I look at the
+8:02
+niche. Is there a large volume of
+8:04
+content already being produced in this
+8:05
+niche? That's the first question I ask
+8:07
+myself. And if the answer is yes, then
+8:08
+I'll go to midsize to large creators to
+8:11
+make content. If it's no, then I would
+8:13
+focus on making content myself. And it's
+8:15
+very important that you don't outsource
+8:16
+this process because you want to learn
+8:18
+as much as possible. A lot of people,
+8:19
+they have capital and they just
+8:21
+outsource the whole thing and they end
+8:22
+up burning so much money and it never
+8:24
+makes any sense. Step two, produce the
+8:26
+content. And this is where most people
+8:28
+get it wrong. Working with creators is
+8:30
+also a vol game, right? A lot of people
+8:31
+reach out to five creators or 10
+8:33
+creators and they're like, "Ah, it's not
+8:34
+working. It's not working." But in
+8:35
+reality, you might have to reach out to
+8:37
+100 creators to get one that will work
+8:39
+for you. But once you find a creator
+8:40
+that is willing to work with you and you
+8:42
+put out content with them, it's much
+8:43
+easier to get more creators on board
+8:45
+because then you can have that creator's
+8:46
+video and leverage it to other creators.
+8:48
+And all you're trying to do is make
+8:50
+clips with the creator to find what kind
+8:52
+of works, right? A lot of people think
+8:54
+you need to find the viral format from
+8:55
+day one. Not really. You just need to
+8:57
+find something that kind of works. And
+8:59
+it's always important that you make
+9:00
+content on Tik Tok when you're trying to
+9:02
+find a viral format and not Instagram.
+9:04
+It's easier to go viral on Tik Tok on
+9:06
+new accounts compared to Instagram.
+9:07
+create a page, start making content.
+9:09
+I'll start with three videos a day. You
+9:10
+know, on let's say two accounts, so you
+9:12
+have two accounts, you're making three
+9:13
+videos a day, maybe two on one account,
+9:14
+one on another account. The goal here is
+9:16
+consistency and volume. After a week or
+9:17
+two, you scale that up to 10. You scale
+9:19
+that up to 20. A lot of people believe
+9:21
+in this idea of virality being a luck
+9:24
+game. But if you're putting out a 100
+9:25
+videos per day, that's 700 videos in a
+9:27
+week. If one went viral, I don't think
+9:28
+you would call that luck. You would
+9:30
+pretty much think that you earned that.
+9:31
+And so, when it comes to distribution,
+9:33
+it's never luck. It's deterministic. Go
+9:35
+full auto. Create as much volume as
+9:37
+possible. One would stick. If you try
+9:39
+hard enough, you're going to find out
+9:40
+viral formats. Step three, scale. If
+9:43
+you're working with creators, you want
+9:44
+to work with as much as possible. You
+9:45
+want to reproduce your content to reach
+9:47
+out to more, more, more. The more you
+9:48
+reach out, the easier it is to get in
+9:50
+contact with more creators and get them
+9:51
+pumping out the same videos. You don't
+9:53
+have to go to creators that are directly
+9:56
+in your space. They could be adjacent.
+9:58
+I'll give you an example. For Social
+9:59
+Widget, for example, these micro
+10:00
+streamers that we work with, none of
+10:02
+them were really making content for our
+10:04
+space about social skills. It was kind
+10:06
+of a lot of different things. They were
+10:07
+making content about Fortnite, you know,
+10:08
+people breaking into McDonald's, just
+10:10
+crazy stuff. They were reacting to
+10:11
+videos, but again, they were hitting our
+10:13
+audience and there was a lot of
+10:14
+potential I saw with them being able to
+10:16
+create content. If you're building an
+10:17
+app that is in health and fitness, you
+10:19
+could go to cooking creators. You don't
+10:21
+have to go to creators who are directly
+10:23
+in your niche, and if you try hard
+10:25
+enough, you'll find something that will
+Apps to build right now
+10:26
+stick.
+10:26
+Okay, cool. I mean, that playbook is
+10:28
+awesome. It's all about distribution. I
+10:30
+want to go back a little bit and talk to
+10:33
+you about ideas. You launched two very
+10:34
+successful apps. You're a very busy guy.
+10:36
+You probably have a bunch more ideas for
+10:38
+things that could work. Could you share
+10:40
+with the audience right now some of your
+10:41
+mobile app ideas you have in 2025?
+10:44
+I think the education niche is massively
+10:46
+overlooked. I mean, right now, everyone
+10:48
+is building apps in health and fitness
+10:49
+and lifestyle, and that's kind of like
+10:51
+where the craze is going today. There's
+10:53
+so much information out there. You could
+10:55
+build an app about how to get better at
+10:57
+boxing, how to get better at swimming,
+10:59
+how to even get better at persuasion. If
+11:00
+you package it properly, I think there's
+11:02
+a huge opportunity there. So, I think
+11:04
+education is a really good space I think
+11:06
+people should start looking into.
+11:07
+Uh, well, we haven't really talked about
+What are Kelechi's apps
+11:08
+it yet, but I'd love to actually see
+11:10
+what you build. You have two apps that
+11:11
+made $1.5 million. What are these apps?
+11:14
+What do they do?
+11:14
+So, the first one is Social Wizard. It's
+11:16
+an AI powered application that helps
+11:18
+guys improve their social skills. Most
+11:19
+of the users who use the app are within
+11:21
+the ages of 16 to 24. I guess what we're
+11:23
+selling here is confidence, making it
+11:25
+easier for people to uh reply to the DMs
+11:28
+they get. For this app, we monetize
+11:29
+through subscriptions. It's a weekly
+11:31
+subscription about $10 a week. We have a
+11:33
+monthly about 20 bucks and there is a
+11:35
+yearly for about 80. And the second one
+11:36
+is called Clean Eats. Very simple. It's
+11:38
+an app in health and fitness. You scan
+11:40
+the barcode of a food product and will
+11:42
+tell you how it affects your skin or
+11:43
+your weights. Most of the users who use
+11:45
+this are women within the ages of 18 to
+11:48
+say about 28 is the core market. One
+11:50
+thing I'll say app founders need to do
+11:52
+is when you look at your products, try
+11:54
+to extrapolate what you're actually
+11:56
+selling. Because when you're looking at
+11:57
+cleans, you can say we're trying to sell
+11:59
+this healthy alternatives to products,
+12:01
+but what is the purpose of being
+12:02
+healthy? What is that going to get me?
+12:04
+But if you tell me, hey, don't eat this
+12:05
+food product cuz it's going to mess up
+12:06
+my skin. I am not going to touch it. I
+12:09
+think for both apps, really what we're
+12:10
+selling was confidence.
+Tech stack
+12:12
+Okay, let's switch topics here. You
+12:13
+built these apps yourself. What's the
+12:15
+tech stack? How do you build apps,
+12:17
+right? So for me, I'm a React Native
+12:19
+guy. With all these tools today like
+12:20
+charge, it's very, very easy to build a
+12:23
+very performative app with React Native.
+12:25
+For back end, I love NJS. You can deploy
+12:27
+that anywhere. Render Heroku, it doesn't
+12:29
+really matter as long as the server
+12:30
+works. Database, Firebase is my go-to.
+12:33
+Very simple, highly scalable, very
+12:36
+affordable. And analytics, we just use
+12:38
+Mixpanel. Always optimize for a stack
+12:40
+that would get your product out there as
+12:42
+soon as possible and is highly scalable.
+Costs & margins
+12:45
+And on that same note, I want to
+12:46
+understand a little bit about the cost
+12:48
+to run a business like this. What are
+12:49
+the margins like for a solarreneur
+12:52
+running multiple apps? For Social
+12:53
+Wizard, most of the expenses was really
+12:56
+marketing. You know, after Apple takes
+12:58
+their cuts, profit margins are really
+13:00
+over 90%. Because there wasn't really
+13:01
+much we're spending money on. So, every
+13:03
+month, we only spend like 1 to maybe 2K
+13:06
+on infrastructure cost. These apps
+13:08
+barely cost anything to run. You're
+13:09
+going to end up spending like 90% of
+13:11
+your budgets on marketing. If you do it
+13:12
+properly, the cash flow is insane.
+Be proud of being obsessed
+13:14
+Okay. Well, thank you for sharing that,
+13:15
+being transparent about those numbers.
+13:17
+The last question that I have for you
+13:19
+that we ask everyone who comes on
+13:20
+Starter Story, if you could stand on
+13:22
+Young Kletchi shoulders before Social
+13:24
+Wizard, what would be your advice? Or to
+13:26
+anyone who's watching this that wants to
+13:27
+build apps, what would you tell them?
+13:29
+You're not crazy for being extremely
+13:32
+obsessed with your goals. You're not
+13:33
+weird if you choose not to go out on the
+13:35
+weekends because building is all you
+13:37
+love to do. And this is something I
+13:39
+heard from Alex Mozi. To be exceptional,
+13:41
+by definition, you have to be the
+13:43
+exception. And I think that's okay.
+13:45
+That's great advice. Thank you Kletchi
+13:47
+for coming on sharing this. Congrats on
+13:49
+your success. Two very successful apps.
+13:51
+I know people watching this will be
+13:53
+inspired. Thank you for coming on.
+13:54
+Thank you for having me Pat.
+Episode summary
+13:56
+Okay. Thank you to Kletchi for coming on
+13:58
+to the channel. I especially liked what
+13:59
+he said at the end there about what tech
+14:02
+stack to use. Keep it simple. Build
+14:04
+stuff that solves problems and focus on
+14:06
+distribution. But in order to do that,
+14:08
+you need to actually build something.
+14:10
+And what better than to build it with
+14:12
+all these AI coding tools that are
+14:13
+taking off and allowing you to build
+14:15
+apps in days. This is why we launched
+14:18
+Starter Story Build, which is our
+14:19
+program where in just a couple weeks we
+14:21
+will show you how to use AI to build
+14:24
+anything you want. So whether you want
+14:25
+to launch a mobile app or a microsass,
+14:28
+Starter Story Build can help you get
+14:29
+there. Just head to the link in the
+14:31
+description to check out Starter Story
+14:33
+Build. I think you're going to love it.
+14:34
+All right, that's it for this episode,
+14:36
+guys. Thank you for watching. We'll see
+14:37
+you in the next one. Peace.
+

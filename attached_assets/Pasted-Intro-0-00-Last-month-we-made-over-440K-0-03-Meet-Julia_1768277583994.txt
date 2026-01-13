@@ -1,0 +1,849 @@
+Intro
+0:00
+Last month, we made over $440K.
+0:03
+Meet Julian, a developer from Argentina
+0:06
+who built an app that makes over
+0:07
+$400,000 a month. But it didn't start
+0:10
+that way. Before the success, Julian was
+0:12
+a dude at the gym who discovered a
+0:15
+different app that he thought was pretty
+0:16
+cool. However, instead of just using it
+0:18
+himself, he thought, "What if I built
+0:21
+something better?" And that's exactly
+0:23
+what he did. He built an MVP, posted
+0:25
+about it on Reddit, and the rest is
+0:27
+history. I posted this thread on how I
+0:30
+build. We got our first couple of
+0:33
+thousand users. I can't really remember,
+0:34
+but it was a lot. That was the biggest
+0:37
+high probably I've ever had. I brought
+0:39
+Julian onto the channel to break down
+0:41
+this story and how he actually built an
+0:43
+app used by hundreds of thousands of
+0:45
+people. In this episode, we'll dive into
+0:47
+the original app he cloned in just two
+0:50
+months. The simple Reddit strategy that
+0:52
+got him his first users and product
+0:54
+market fit and the marketing playbook
+0:56
+that scaled his app to over $400,000 a
+0:59
+month. Let's dive in. I'm Pat Walls and
+1:01
+this is Starter Story.
+1:06
+All right, Julian, welcome to the
+1:08
+channel. Tell me about who you are, what
+Julian's background
+1:09
+you built, and what's your story.
+1:11
+Hey Pat, I'm Julian. I'm one of the
+1:13
+co-founders and developer of Gravel, an
+1:16
+AI fitness app that provide smart
+1:19
+workouts for the gym. We launched around
+1:22
+2 years ago and now we have over 70,000
+1:25
+subscribers. Last month we made over
+1:28
+440K.
+1:30
+Okay, over 400K with an app is insane.
+1:33
+We're going to get all into that, but
+1:35
+before we do, I want to understand a
+1:36
+little bit more about your background.
+1:38
+How do you even get into building an
+1:39
+app?
+1:39
+I grew up in Argentina. My dad used to
+1:42
+own a fitness center. I pretty much
+1:44
+spent all my time outside of school just
+1:46
+playing sports and at the gym. I then
+1:49
+got into software engineering and uh
+1:52
+moved to Australia. And yeah, here I
+1:54
+worked from small startups to big tech
+1:57
+companies like Atlassian, a few TV
+2:00
+channels, even an investment fund. And
+2:03
+around co my best friend and also our
+2:06
+partner came up with the idea of
+2:09
+starting a company. It was like a at
+2:11
+start a influencer marketing platform
+2:13
+for mobile games. That's how we started.
+2:16
+Fast forward a couple years, we ended up
+2:18
+being some sort of a marketing agency
+2:21
+which was something that I didn't sign
+2:22
+up for. Neither did the guys. But the
+2:24
+good thing is that we learned a lot
+2:26
+about uh user acquisition and marketing,
+2:28
+but also what the numbers were. So, in
+2:31
+terms of revenue and after seeing some
+2:32
+of those numbers, we obviously thought
+2:35
+apps make a lot of money and especially
+2:36
+fitness apps. So, we kind of used our
+2:39
+background to decide that we wanted to
+2:41
+start our own app.
+2:43
+You had this business. You started with
+2:45
+partners. It wasn't really what you
+2:47
+wanted to build. Maybe it wasn't fully
+2:49
+scalable. How does that turn into
+2:50
+building an app that now makes over
+How he found the idea
+2:52
+$400,000 a month?
+2:53
+The business wasn't doing great. And
+2:55
+because we transitioned into this kind
+2:57
+of agency format, I had all this like
+3:00
+energy for developing something that
+3:02
+wasn't being used. So, I started with a
+3:05
+more like a workout tracker kind of app.
+3:07
+So apps like heavy, strong, that kind of
+3:09
+thing. But as I was building it, I
+3:11
+noticed that okay, I'm not adding any
+3:14
+value. It just felt like copy of what
+3:16
+they were doing. And then it was one of
+3:19
+my mates. He showed me Fitbot. And
+3:21
+Fitbot is one of the biggest workout
+3:23
+app. And when he showed me the app, I
+3:25
+was like, "Oh, like this is amazing."
+3:27
+Cuz it kind of provided you with
+3:29
+workouts on the spot and you didn't
+3:31
+really have to do anything else. But
+3:33
+then I started using it, doing some
+3:34
+research. I noticed that the workouts
+3:37
+were weird and even a bit dangerous
+3:41
+sometimes. And like the more I used it,
+3:43
+I was like, "Wow, okay, these workouts
+3:46
+are actually bad." That's what triggered
+3:48
+me. And then I was like, "Okay, this is
+3:51
+it. We need to build FitBot UI UX with
+3:55
+an actual proper workout engine." That's
+3:58
+kind of when we went all in on building
+Building the MVP
+4:01
+it.
+4:01
+Can you tell me a little bit more about
+4:02
+how you built it and how long it took?
+4:04
+Initial MVP took around two to three
+4:08
+months maybe. We can split the MVP into
+4:12
+two parts. First part being pre FitBot
+4:14
+and then after Fitbot. The first part of
+4:17
+the MVP was more of the tracker. Then we
+4:19
+transition into the Fitbot stuff and
+4:22
+that's when things got trickier. There's
+4:23
+a lot of business logic around building
+4:26
+custom workouts for people. There's just
+4:28
+a lot of different settings and
+4:30
+combinations. Things like equipment,
+4:32
+things like your weekly goal, how often
+4:34
+do you go to the gym, are you
+4:36
+consistent, uh your gender, your weight,
+4:39
+your age. There's just so many things to
+4:41
+consider. That was the definitely the
+4:43
+the most challenging part.
+4:45
+Tell me about how you launched this, how
+4:47
+you got your first customer. What did
+His first 1,000 customers
+4:48
+you do to get this app off the ground
+4:50
+and get into people's hands?
+4:51
+I'm a massive supporter of of Reddit as
+4:54
+a distribution channel. I posted this
+4:57
+thread on how I built Gravel. Back in
+4:59
+the day, it was called Games AI and I
+5:01
+shared kind of the technical specs
+5:03
+around it. It got over a couple hundred
+5:06
+likes within the first couple hours and
+5:08
+over 300,000 impressions. Yeah, we got
+5:11
+our first couple thousand us. I can't
+5:13
+really remember, but it was a lot. We
+5:15
+found out that because they're
+5:17
+developers and they like tech and some
+5:20
+of them might like going to the gym, but
+5:22
+they feel like it's a bit intimidating.
+5:23
+I feel like a lot of them were actually
+5:26
+using the app. And then we started
+5:27
+getting feedback about like bugs and
+5:29
+feature requests and were like, "Okay,
+5:32
+we were on to something." And that was
+5:34
+the final push that we needed cuz at
+5:36
+this point the app was was free. And
+5:39
+we're like, "Okay, now we need to build
+5:40
+like a serious business out of this and
+5:42
+and try to start running some ads for
+5:44
+it."
+Learn about AI from the experts
+5:45
+Okay, let's talk about something that is
+5:46
+changing the game for builders right
+5:49
+now. AI. Now, I know we talk about AI
+5:51
+apps a lot on this channel, but I still
+5:54
+get this question every day from
+5:55
+builders. Where do I even start? That's
+5:58
+where HubSpot for Startup's AI adoption
+6:01
+playbook comes in handy. It's a free
+6:03
+guide with a three-step framework on how
+6:05
+to use AI inside your business. Inside,
+6:07
+you'll learn how to spot AI
+6:09
+opportunities in your workflow,
+6:10
+implement AI without hiring expensive
+6:12
+consultants, and see the exact playbooks
+6:15
+companies are using to get real results.
+6:18
+What's even cooler is it's sourced from
+6:19
+executives at HubSpot, Enthropic, and
+6:22
+Replet, some of the biggest AI companies
+6:24
+in the world right now. My favorite part
+6:26
+is inside the case studies where you
+6:28
+will see exactly how one company booked
+6:31
+11,000 meetings and another resolved
+6:33
+customer issues 39% faster using this
+6:36
+framework. These are real numbers from
+6:39
+real businesses. So, if you're ready to
+6:41
+get ahead in the AI race, download
+6:43
+HubSpot for Startup's free AI adoption
+6:45
+playbook at the first link in the
+6:47
+description below. Thank you to HubSpot
+6:49
+for sponsoring this video. Let's get
+6:51
+back into it. I'm sure that probably
+6:52
+isn't what got you to over $400,000 a
+Marketing strategy breakdown
+6:55
+month. So, what has been the actual
+6:58
+distribution strategy or the secret
+7:00
+sauce behind Gravel on how it grew to
+7:02
+over $4 million a year?
+7:04
+For us, the bigger distribution was paid
+7:07
+ads. We started running ads as soon as
+7:11
+we obviously added the subscription
+7:13
+model. I still remember like running our
+7:15
+first app. We got a subscription within
+7:19
+the first 10 minutes of like activating
+7:21
+the ads. Yeah, that was the biggest high
+7:23
+probably I've ever had. And after that,
+7:26
+we translated the app to Spanish. We
+7:28
+started running ads on South America.
+7:30
+And we were spending less than 50 bucks
+7:32
+a day on ads. And that's what worked for
+7:34
+us from the start up until this day. The
+7:37
+next question I have for you that I'm
+7:39
+curious about is you've built this app.
+7:41
+It's huge. It's doing over $400,000 a
+7:43
+month. What would be your top learnings
+5 tips for building mobile apps
+7:46
+or top tips for anyone building apps in
+7:49
+2025, specifically consumer apps or even
+7:52
+uh fitness specific?
+7:53
+The tip number one for sure will be to
+7:55
+validate before spending money on ads.
+7:58
+And when I say validate, it's not just
+8:00
+that the product work, but also that
+8:02
+people are willing to pay for it. That's
+8:04
+also something very important. Tip
+8:06
+number two would be and this is where we
+8:08
+kind of got lucky because well I'm
+8:11
+Spanish speaking and Matias as well so
+8:13
+we're like it makes sense for us to
+8:15
+translate it into Spanish and then
+8:17
+potentially running ads that are cheaper
+8:20
+in in South America the US even though
+8:23
+we all want to end up there and running
+8:25
+ads there is expensive there's a lot of
+8:27
+competition tip three is start small you
+8:30
+can pay influencers or content creator
+8:33
+as low as 50 bucks for some piece of
+8:35
+content. You can use AI tools to create
+8:38
+videos. You can use Capkart to edit your
+8:41
+own videos and you can get some pretty
+8:43
+good results with that. It's not as hard
+8:45
+as you think to create an ad. The hard
+8:47
+thing is is creating the volume. And tip
+8:49
+four, like I said, UGC is king. You'll
+8:52
+see that most of the ads that work out
+8:54
+there are UGC content. You'll seeing a
+8:57
+lot of AI videos and that's cost of
+8:59
+producing them is cheap and they're easy
+9:02
+to test. Last thing would be copy. copy
+9:05
+and copy. Good thing about Meta Ads
+9:07
+library is that it's all public. You can
+9:09
+go into any of your competitions
+9:13
+dashboard and see, you know, which ads
+9:16
+are working for them, where they putting
+9:17
+more money and yeah, there's no secret
+9:20
+source there. Just copy what works for
+9:22
+them and start like that. It'll probably
+9:25
+work for you. I would definitely start
+9:26
+there.
+9:27
+Okay, cool. Well, those tips were
+9:28
+amazing. I'd love if you could show us
+9:30
+what your app does and give us a quick
+How the app works (full walkthrough)
+9:32
+demo of how it works and how something
+9:34
+like this could potentially make
+9:35
+$400,000 a month.
+9:36
+This is our app. This is Gravel. We're
+9:38
+an AI fitness app specifically designed
+9:42
+for strength training and gym workouts.
+9:44
+This is the screen you'll see when you
+9:46
+first download the app. So, this is our
+9:48
+landing screen. We get your name and
+9:50
+then we'll just go and ask you a series
+9:52
+of questions like why you want to use a
+9:54
+fitness app. We ask you about your
+9:56
+experience. Let's say I'm an advanced
+9:58
+user. Depending on on your level, we'll
+10:00
+ask more specific questions like what's
+10:02
+your one rep max for certain exercises,
+10:05
+your goals, ask you about your training
+10:07
+frequency, your working split, like we
+10:10
+use AI here and there. Make sure that
+10:12
+you are showing the users that this is
+10:14
+an AI app cuz that's sales. Now, again,
+10:17
+more questions specific to how you want
+10:19
+to train excluded muscles and focus
+10:21
+muscle help us, you know, design the
+10:24
+workout towards something that you kind
+10:26
+of like. Where do you train? cuz like I
+10:28
+said, we adapt to your gyms and anywhere
+10:31
+you train. So, here is where you could
+10:33
+create kind of that gym profile. This
+10:35
+kind of screen where we generate and
+10:37
+show the user that we're generating a
+10:39
+custom workout. You get to this final
+10:42
+screen where you get your plan kind of
+10:44
+summary. Here we go. Hard payw wall
+10:46
+before you sign in for the first time.
+10:48
+It's like how many users are actually
+10:50
+going to pay before they actually see
+10:51
+their product. And the answer is a lot.
+10:54
+This is what you see when you first open
+10:56
+the app. The main thing is the workout
+10:58
+card. That's the main thing about the
+10:59
+app. That's 90% of your flow is going to
+11:02
+be within the active workout. Here you
+11:05
+just get a list of exercises that you
+11:08
+need to do. From here on is like kind of
+11:10
+works like a workout tracker. We have
+11:12
+proper content for every video. We have
+11:15
+a description and how to do each
+11:19
+exercises. And then we have a lot of
+11:20
+smart AI features like you know if you
+11:23
+sort exercises the weights are adjusted
+11:27
+based on the order that there are. The
+11:29
+app is pretty complete in terms of
+11:30
+everything you need to do at the gym.
+11:32
+Also things like recovery rate uh will
+11:35
+tell you how tired or not your muscles
+11:37
+are based on your previous workout and
+11:39
+that includes external workouts from
+11:42
+Apple Health, from Straa, it could be
+11:45
+runs, it could be anything. We'll learn
+11:47
+from that and we'll adapt your workouts
+11:48
+accordingly. And one of the important
+11:50
+thing that we grew a lot with this and
+11:52
+that was our support. So we have a 247
+11:55
+support chat inside the app and that
+11:58
+includes everything from articles to
+12:01
+messages and we'll have someone reply an
+12:04
+actual person not an AI. That's
+12:06
+something that users value a lot. That's
+12:08
+pretty much it.
+12:10
+On a similar note I'm curious what's
+Mobile app teck stack
+12:12
+your tech stack? How did you build this
+12:13
+app? We use uh React Native and Expo.
+12:16
+For the back end, I did.NET for most of
+12:19
+the core functionality. I've also used
+12:21
+Next and React to build some like
+12:23
+internal admin dashboards. In terms of
+12:25
+AI, so I try to stay kind of niche with
+12:28
+the what I use cursor a lot, but I'm
+12:31
+very specific which files to touch and
+12:34
+don't let the AI just go rogue
+12:36
+basically. Yeah.
+Costs & Margins
+12:37
+Hey guys, Julian here with a little
+12:39
+async update from the future. We
+12:42
+finished recording the video and
+12:43
+realized that we didn't really go into
+12:45
+um numbers and financials of the
+12:47
+business. Obviously, very important for
+12:49
+you to know and I'm also happy to share
+12:50
+some of them. Our expense number one is
+12:53
+Meta and Tik Tok and then maybe a little
+12:56
+bit of Google, maybe a little bit of
+12:58
+Apple search. I'd say a third is somehow
+13:01
+accurate. A third of our revenue that
+13:03
+is. This doesn't include making the ads
+13:05
+but just the cost of running them.
+13:06
+Expense number two is salaries. It was
+13:09
+mainly just the three of us for a first
+13:11
+year. I did the development and then
+13:14
+Matias and Aaron did the growth and ads.
+13:17
+Since then, we've grown the team to
+13:19
+probably maybe 13 to 14 people, give or
+13:21
+take. There's some like part-times.
+13:23
+There's some contractors. I'd say
+13:25
+somewhere between 50 and 80K. Obviously,
+13:28
+let's not forget the 15% from Apple.
+13:32
+Revenue cut. It's a 1% clip from revenue
+13:34
+as well. We have MMPS, which is maybe a
+13:37
+grand a month. And then in terms of
+13:39
+infrastructure for running the actual
+13:41
+app like servers and AI bills and other
+13:45
+tools, I'd say around a grand a month as
+13:48
+well.
+13:49
+The last question that I want to ask you
+13:51
+and what we ask all founders who come on
+13:53
+Starter Story, what would be your advice
+Be proud of what you build
+13:55
+to anyone watching this right now that
+13:56
+wants to build something?
+13:57
+Be proud of what you build. Cuz at least
+14:00
+for me, the motivation that comes from
+14:03
+building something that I'm excited
+14:04
+about can't be matched by anything else.
+14:06
+It's always easier to grind and work for
+14:10
+zero dollars when you love what you're
+14:11
+doing. Another thing will be to keep
+14:13
+pushing then don't give up too soon.
+14:15
+It's a long road. So building it is just
+14:18
+not even half of it. Be ready to do all
+14:21
+the hustling of you know the Reddit
+14:23
+stuff that I did for example and then
+14:25
+having ads that don't work and you're
+14:28
+going to get some punches. So you need
+14:30
+to know that you just need to keep
+14:32
+going. And in saying that, it's also
+14:34
+knowing when to when to give up actually
+14:36
+when you're like, "All right, this
+14:38
+product doesn't work." So that's also a
+14:40
+very important thing. In our case was
+14:42
+our previous startup. We probably
+14:43
+dragged that for an extra year. We
+14:46
+should have probably called it days like
+14:49
+way earlier.
+14:50
+Well, that's great advice. Thank you,
+14:52
+Julian, for coming on to the channel.
+14:53
+Thank you, Pat. Thanks for the time.
+Final word
+14:55
+What I love about Julian's story is his
+14:58
+app is crushing it. is making over
+14:59
+$400,000 a month, but also it's
+15:01
+something he's super passionate about.
+15:03
+Julian clearly loves fitness and working
+15:05
+out, and how cool is it that you get to
+15:07
+build an app that makes hundreds of
+15:09
+thousands of people's lives better, and
+15:10
+it's something that you love, too. That
+15:12
+is exactly why we launched Starter Story
+15:14
+Build so you can do the same in Starter
+15:16
+Story Build. We will help you ship your
+15:18
+idea to the real world in just a couple
+15:20
+weeks, as long as you are ready to
+15:23
+actually launch your product. So, if you
+15:25
+are, head to the link in the description
+15:27
+to check out Starter Story Build. That's
+15:28
+it for this episode of Starter Story.
+15:30
+Thank you guys for watching. I'll see
+15:31
+you in the next one. Peace.

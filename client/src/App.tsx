@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { KoraProvider } from "./lib/KoraContext";
+import { MobileNav } from "@/components/layout/MobileNav";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
@@ -61,6 +62,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <MobileNav />
         </TooltipProvider>
       </KoraProvider>
     </QueryClientProvider>

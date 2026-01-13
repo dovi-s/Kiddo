@@ -1,0 +1,91 @@
+Yes, if you model it as one adult owner profile plus one or more child accounts underneath it.
+
+MVP structure (owner + children)
+
+Account owner (adult)
+
+Completes KYC once.
+
+Owns the login, settings, funding rails, and permissions.
+
+Is the legal controller for any minor accounts.
+
+Child (fund container)
+
+Each child has a “Fund” (always-on) plus optional “Event pages” (bar mitzvah, birthday, etc.).
+
+The child does not need KYC in MVP. You only collect child info that is required for the custodial structure later (or keep it lightweight until you actually open custodial accounts).
+
+What the user sees (simple mental model)
+
+“Your household”
+
+“You” (owner)
+
+“Ari” (child)
+
+“Leah” (child)
+
+Each child has:
+
+Fund total (Received, Pending, Invested)
+
+Contributors (by fund, and filtered by event)
+
+Events (each event is just a page + QR + tracking, not a separate brokerage)
+
+Where brokerage fits
+
+One of two clean MVP approaches:
+
+Option 1 (recommended for clarity): One brokerage per child
+
+Each child fund maps to one custodial brokerage account (later).
+
+Owner KYC is required to activate.
+
+This keeps “Ari’s fund” clean and not mixed with “my IRA.”
+
+Option 2 (simplest operationally early): One brokerage for the household
+
+Gifts are tracked per child as “sub-ledgers.”
+
+Brokerage is one account under the hood.
+
+You must be very clear that “funds are tracked separately” even if held together operationally.
+
+For MVP UI, you can keep it abstract:
+
+“Investing is activated for your household.”
+
+Each child fund shows status and invested amounts.
+
+Child access (MVP)
+
+Default: child has a view-only “kid link” (no login), showing:
+
+total
+
+contributors + notes (optional privacy settings)
+
+milestones
+
+“how investing works” in simple language
+
+Owner controls:
+
+what the child sees
+
+whether names/amounts show
+
+whether the child can suggest “favorites” (optional)
+
+Key rule that prevents confusion
+
+Do not mix owner’s personal investing accounts (IRA, personal brokerage) into MVP.
+
+MVP is: Household → Child Funds → Events
+
+Later: “Connect your existing brokerage” can be an advanced import, but it will confuse early users.
+
+If you want, I can write the exact IA labels and navigation for: Household switcher, Child fund page, Event page, and Contributors view so it feels obvious and not overbuilt.

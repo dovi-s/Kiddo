@@ -1,7 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useParams } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, TrendingUp, DollarSign, Sparkles } from "lucide-react";
+import { Search, X, TrendingUp, DollarSign, Sparkles, Share2, Copy, Check } from "lucide-react";
+import { Confetti, SuccessCheckmark } from "@/components/ui/confetti";
+import { bouncySpring, gentleSpring } from "@/lib/animations";
 
 const AMOUNTS = [25, 50, 100, 250];
 
@@ -636,56 +638,104 @@ export default function EventPage() {
               {step === 2 && (
                 <motion.div
                   key="success"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-center pt-8 lg:pt-16"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={bouncySpring}
+                  className="text-center pt-8 lg:pt-12"
                 >
-                  <div className="lg:bg-white lg:border lg:border-stone-200 lg:rounded-xl lg:p-8">
+                  <Confetti isActive={true} />
+                  
+                  <div className="bg-white border border-stone-200 rounded-2xl p-8 shadow-xl max-w-md mx-auto">
+                    <div className="flex justify-center mb-6">
+                      <SuccessCheckmark delay={0.2} />
+                    </div>
+                    
                     <motion.div
-                      initial={{ scale: 0.9 }}
-                      animate={{ scale: 1 }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 }}
                     >
-                      <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-slate-100 mx-auto flex items-center justify-center mb-6">
-                        <svg className="w-8 h-8 lg:w-10 lg:h-10 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                      <h1 className="text-2xl lg:text-3xl font-light text-stone-900 mb-2">Gift sent</h1>
-                      <p className="text-stone-500 mb-4">
-                        You gave ${finalAmount} to {recipientName}'s future
+                      <h1 className="text-2xl lg:text-3xl font-semibold text-stone-900 mb-2">
+                        Gift sent!
+                      </h1>
+                      <p className="text-stone-500 mb-6">
+                        You gave <span className="font-medium text-stone-900">${finalAmount}</span> to {recipientName}'s future
                       </p>
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-sm mb-8">
-                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                        Will invest when markets open
-                      </div>
+                    </motion.div>
+                    
+                    <motion.div 
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 text-amber-700 text-sm mb-8 border border-amber-200"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                      Invests at next market open
                     </motion.div>
 
-                    <div className="p-5 bg-white border border-stone-200 rounded text-left max-w-xs mx-auto mb-8">
+                    <motion.div 
+                      className="p-5 bg-gradient-to-br from-stone-50 to-stone-100 rounded-xl text-left mb-8"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6 }}
+                    >
                       <div className="flex justify-between mb-3">
                         <span className="text-stone-500">Amount</span>
-                        <span className="font-medium text-stone-900">${finalAmount}</span>
+                        <span className="font-semibold text-stone-900">${finalAmount}</span>
                       </div>
                       <div className="flex justify-between mb-3">
                         <span className="text-stone-500">To</span>
-                        <span className="font-medium text-stone-900">{recipientName}</span>
+                        <span className="font-semibold text-stone-900">{recipientName}</span>
                       </div>
-                      {eventTitle && (
-                        <div className="flex justify-between mb-3">
-                          <span className="text-stone-500">For</span>
-                          <span className="font-medium text-stone-900">{eventTitle}</span>
+                      {message && (
+                        <div className="pt-3 mt-3 border-t border-stone-200">
+                          <p className="text-xs text-stone-400 mb-1">Your message</p>
+                          <p className="text-sm text-stone-700 italic">"{message}"</p>
                         </div>
                       )}
-                      <div className="flex justify-between pt-3 border-t border-stone-100">
-                        <span className="text-stone-500">Could grow to</span>
-                        <span className="font-medium text-emerald-700">${projectedGrowth.toLocaleString()}</span>
+                      <div className="flex justify-between pt-3 mt-3 border-t border-stone-200">
+                        <span className="text-stone-500">Projected in 18 years</span>
+                        <span className="font-semibold text-emerald-600">${projectedGrowth.toLocaleString()}</span>
                       </div>
-                    </div>
+                    </motion.div>
 
-                    <Link href={`/${fundSlug}`}>
-                      <span className="text-sm text-stone-500 hover:text-stone-900 transition-colors" data-testid="link-view-fund">
-                        View {recipientName}'s fund →
-                      </span>
-                    </Link>
+                    <motion.div 
+                      className="flex gap-3"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.7 }}
+                    >
+                      <button
+                        onClick={() => {
+                          navigator.share?.({
+                            title: `I just gifted to ${recipientName}'s Future Fund!`,
+                            url: window.location.origin + `/${fundSlug}`
+                          }).catch(() => {});
+                        }}
+                        className="flex-1 py-3 bg-stone-900 text-white rounded-xl font-medium hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                        data-testid="button-share"
+                      >
+                        <Share2 className="w-4 h-4" />
+                        Share
+                      </button>
+                      <Link href={`/${fundSlug}`} className="flex-1">
+                        <button 
+                          className="w-full py-3 border border-stone-200 text-stone-700 rounded-xl font-medium hover:bg-stone-50 transition-colors"
+                          data-testid="link-view-fund"
+                        >
+                          View fund
+                        </button>
+                      </Link>
+                    </motion.div>
+                    
+                    <motion.p 
+                      className="text-xs text-stone-400 mt-6"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.8 }}
+                    >
+                      Receipt sent to your email
+                    </motion.p>
                   </div>
                 </motion.div>
               )}
