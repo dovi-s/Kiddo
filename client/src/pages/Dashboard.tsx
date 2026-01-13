@@ -87,6 +87,7 @@ export default function Dashboard() {
   const [expandedThankYou, setExpandedThankYou] = useState<string | null>(null);
   const [thankYouDrafts, setThankYouDrafts] = useState<Record<string, string>>({});
   const [showContributors, setShowContributors] = useState(false);
+  const [expandedContributor, setExpandedContributor] = useState<string | null>(null);
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
   const [showGainAsPercent, setShowGainAsPercent] = useState(false);
   const [showFundPreview, setShowFundPreview] = useState(false);
@@ -281,6 +282,22 @@ export default function Dashboard() {
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  const formatRelativeTime = (date: Date) => {
+    const now = Date.now();
+    const diff = now - date.getTime();
+    const hours = Math.floor(diff / (60 * 60 * 1000));
+    const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+    
+    if (hours < 1) return "Just now";
+    if (hours < 2) return "1 hour ago";
+    if (hours < 24) return `${hours} hours ago`;
+    if (days === 1) return "Yesterday";
+    if (days < 7) return `${days} days ago`;
+    if (days < 14) return "Last week";
+    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+    return formatDate(date);
   };
 
   const thankYouTemplates = {
@@ -592,22 +609,27 @@ export default function Dashboard() {
                 <>
                   {/* Active state - show metrics with glassmorphic tiles */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                    {/* Total Received */}
-                    <motion.div 
+                    {/* Total Received - Clickable to show contributors */}
+                    <motion.button 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 }}
-                      className="p-4 sm:p-5 rounded-xl bg-white/80 backdrop-blur-sm border border-stone-200/50 shadow-sm hover:shadow-md transition-all"
+                      onClick={() => setShowContributors(true)}
+                      data-testid="button-show-contributors"
+                      className="p-4 sm:p-5 rounded-xl bg-white/80 backdrop-blur-sm border border-stone-200/50 shadow-sm hover:shadow-md hover:border-stone-300 transition-all text-left group"
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <Gift size={14} className="text-stone-400" />
-                        <p className="text-xs text-stone-500 uppercase tracking-wide">Received</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <Gift size={14} className="text-stone-400" />
+                          <p className="text-xs text-stone-500 uppercase tracking-wide">Received</p>
+                        </div>
+                        <ChevronRight size={14} className="text-stone-300 group-hover:text-stone-500 transition-colors" />
                       </div>
                       <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-stone-900">
                         <AnimatedValue value={totalReceived} />
                       </p>
-                      <p className="text-xs text-stone-400 mt-1">{selectedFund.contributors} contributors</p>
-                    </motion.div>
+                      <p className="text-xs text-stone-400 mt-1 group-hover:text-stone-600 transition-colors">{selectedFund.contributors} contributors</p>
+                    </motion.button>
                     
                     {/* Portfolio Value */}
                     <motion.div 
@@ -1662,11 +1684,11 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Contributors Ledger Modal */}
-      <Dialog open={showContributors} onOpenChange={setShowContributors}>
+      {/* Contributors Ledger Modal - Premium with expandable timelines */}
+      <Dialog open={showContributors} onOpenChange={(open) => { setShowContributors(open); if (!open) setExpandedContributor(null); }}>
         <DialogContent className="max-w-lg bg-white p-0 gap-0 max-h-[85vh] flex flex-col">
           <div className="p-5 border-b border-stone-100 shrink-0">
-            <DialogTitle className="font-medium text-stone-900">All Contributors</DialogTitle>
+            <DialogTitle className="font-semibold text-stone-900">All Contributors</DialogTitle>
             <p className="text-sm text-stone-500 mt-1">
               {allContributions.length} gifts totaling ${allContributions.reduce((sum, c) => sum + c.amount, 0).toLocaleString()}
             </p>
@@ -1675,54 +1697,168 @@ export default function Dashboard() {
           <div className="flex-1 overflow-y-auto">
             {allContributions.map((contribution) => {
               const isThanked = sentThankYous.includes(contribution.id);
+              const isExpanded = expandedContributor === contribution.id;
+              const sharesAmount = (contribution.amount / 250).toFixed(2);
+              
               return (
-                <div 
-                  key={contribution.id} 
-                  className="p-4 border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors"
+                <motion.div 
+                  key={contribution.id}
+                  className="border-b border-stone-100 last:border-0"
                 >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-stone-900">{contribution.from}</p>
-                      {contribution.status === "pending" ? (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
-                          <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
-                          Pending
-                        </span>
-                      ) : (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
-                          Invested
-                        </span>
-                      )}
-                      {contribution.status === "invested" && (
-                        isThanked ? (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-medium">
-                            Thanked
-                          </span>
-                        ) : (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-stone-100 text-stone-500 font-medium">
-                            Not thanked
-                          </span>
-                        )
-                      )}
+                  <button 
+                    onClick={() => setExpandedContributor(isExpanded ? null : contribution.id)}
+                    className="w-full p-4 text-left hover:bg-stone-50 transition-colors"
+                    data-testid={`contributor-${contribution.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-stone-900">{contribution.from}</p>
+                          {contribution.status === "pending" ? (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
+                              <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
+                              Pending
+                            </span>
+                          ) : (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
+                              Settled
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 text-sm text-stone-500">
+                          <span>{formatRelativeTime(contribution.date)}</span>
+                          <span className="text-stone-300">•</span>
+                          <span>{contribution.event}</span>
+                        </div>
+                        {contribution.note && (
+                          <p className="text-sm text-stone-400 mt-1.5 italic">"{contribution.note}"</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <p className="text-sm font-semibold text-emerald-600">+${contribution.amount}</p>
+                        <motion.div
+                          animate={{ rotate: isExpanded ? 90 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronRight size={16} className="text-stone-400" />
+                        </motion.div>
+                      </div>
                     </div>
-                    <p className="text-sm text-stone-500 mt-0.5">
-                      {contribution.event} • {formatDate(contribution.date)} at {formatTime(contribution.date)}
-                    </p>
-                    {contribution.note && (
-                      <p className="text-sm text-stone-400 mt-1 italic">"{contribution.note}"</p>
+                  </button>
+                  
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-4 pb-4 pt-0">
+                          <div className="bg-stone-50 rounded-xl p-4 space-y-3">
+                            {/* Transaction Timeline */}
+                            <div className="space-y-2.5">
+                              {/* Payment received */}
+                              <div className="flex items-start gap-3">
+                                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center mt-0.5 shrink-0">
+                                  <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-stone-900">Payment received</p>
+                                  <p className="text-xs text-stone-500">{formatDate(contribution.date)} at {formatTime(contribution.date)}</p>
+                                </div>
+                              </div>
+                              
+                              {/* Trade executed */}
+                              <div className="flex items-start gap-3">
+                                <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 shrink-0 ${
+                                  contribution.status === "pending" ? "bg-amber-100" : "bg-emerald-100"
+                                }`}>
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    contribution.status === "pending" ? "bg-amber-500 animate-pulse" : "bg-emerald-500"
+                                  }`}></div>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-sm font-medium text-stone-900">
+                                    {contribution.status === "pending" ? "Trade pending" : "Trade executed at market open"}
+                                  </p>
+                                  <p className="text-xs text-stone-500">
+                                    {contribution.status === "pending" 
+                                      ? "Will invest when US markets open (9:30am ET weekdays)"
+                                      : "Order filled at 9:31am ET"
+                                    }
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {/* Settled */}
+                              <div className="flex items-start gap-3">
+                                <div className={`w-5 h-5 rounded-full flex items-center justify-center mt-0.5 shrink-0 ${
+                                  contribution.status === "pending" ? "bg-stone-100" : "bg-emerald-100"
+                                }`}>
+                                  <div className={`w-2 h-2 rounded-full ${
+                                    contribution.status === "pending" ? "bg-stone-300" : "bg-emerald-500"
+                                  }`}></div>
+                                </div>
+                                <div className="flex-1">
+                                  <p className={`text-sm font-medium ${contribution.status === "pending" ? "text-stone-400" : "text-stone-900"}`}>
+                                    {contribution.status === "pending" 
+                                      ? "Awaiting settlement"
+                                      : `Settled · Bought ${sharesAmount} shares of VTI`
+                                    }
+                                  </p>
+                                  {contribution.status === "invested" && (
+                                    <p className="text-xs text-stone-500">Trade settled T+1</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Custody info */}
+                            <div className="pt-3 border-t border-stone-200 flex items-start gap-2">
+                              <Shield size={12} className="text-stone-400 mt-0.5 shrink-0" />
+                              <p className="text-[11px] text-stone-500 leading-relaxed">
+                                Assets held by Alpaca Securities LLC · SIPC protected up to $500,000
+                              </p>
+                            </div>
+                            
+                            {/* Thank you status for invested */}
+                            {contribution.status === "invested" && (
+                              <div className="pt-2 border-t border-stone-200">
+                                {isThanked ? (
+                                  <p className="text-xs text-blue-600 flex items-center gap-1.5">
+                                    <span className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center">✓</span>
+                                    Thank you sent
+                                  </p>
+                                ) : (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setShowContributors(false);
+                                      setShowThankYous(true);
+                                    }}
+                                    className="text-xs text-stone-500 hover:text-stone-700 flex items-center gap-1.5 transition-colors"
+                                  >
+                                    <span className="w-4 h-4 rounded-full bg-stone-100 flex items-center justify-center text-[10px]">💌</span>
+                                    Send thank you
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
                     )}
-                  </div>
-                  <p className="text-sm font-medium text-stone-900 shrink-0">+${contribution.amount}</p>
-                </div>
-                </div>
+                  </AnimatePresence>
+                </motion.div>
               );
             })}
           </div>
 
           <div className="p-5 border-t border-stone-100 shrink-0">
             <button 
-              onClick={() => setShowContributors(false)}
+              onClick={() => { setShowContributors(false); setExpandedContributor(null); }}
               data-testid="button-close-contributors"
               className="w-full py-2.5 bg-stone-100 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-200 transition-colors"
             >
