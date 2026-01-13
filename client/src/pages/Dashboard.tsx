@@ -333,20 +333,12 @@ export default function Dashboard() {
               <span className="hidden sm:inline">Add fund</span>
             </button>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/send" className="hidden sm:block">
-              <span className="text-sm text-stone-500 hover:text-stone-900 transition-colors" data-testid="link-send">Send a gift</span>
-            </Link>
-            <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`} className="hidden sm:block">
-              <span className="text-sm text-stone-500 hover:text-stone-900 transition-colors" data-testid="link-settings">Settings</span>
-            </Link>
-            {/* Mobile: Avatar with dropdown for account access */}
-            <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`} className="sm:hidden">
-              <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center text-stone-600">
-                <User size={16} />
-              </div>
-            </Link>
-          </div>
+          {/* Account access - icon on all viewports for minimal header */}
+          <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
+            <div className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors" data-testid="button-account">
+              <User size={16} />
+            </div>
+          </Link>
         </div>
       </header>
       
