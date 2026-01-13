@@ -1,0 +1,202 @@
+1) Decide the wedge in one sentence
+
+Pick one narrow, repeatable moment where people already spend money.
+
+Wedge: “Collect birthday gifts for a child in one link, send thank-yous, money invests automatically.”
+
+Everything you ship in the next few weeks must make that loop faster, clearer, and more trustworthy.
+
+2) Define the MVP as one loop that works flawlessly
+
+If this loop is great, you have a business. If not, nothing else matters.
+
+Owner loop
+
+Create fund for child
+
+Create one event (Birthday)
+
+Share link
+
+See contributions and pending vs completed
+
+Send thank-yous
+
+Guest loop
+
+Open link
+
+Pick amount
+
+Add note
+
+Pay
+
+Confirmation and receipt
+
+That is the MVP. Not “dashboard features.” A loop.
+
+3) Cut list (most important)
+
+These feel “obvious” to builders, but they are usually wrong pre-customer.
+
+Cut or postpone:
+
+Multiple funds and fund switcher
+
+Multiple event types and template selection
+
+Projections (“when she turns 18…”) unless it materially increases conversion
+
+Portfolio allocation controls, asset tabs, stocks vs bonds vs cash
+
+“Send a gift” outbound flow (owner gifting someone else)
+
+Extra security accordion (SMS, secret phrase) unless a real user asks for it
+
+Full settings IA (Billing, Documents, Notifications) pre-revenue
+
+QR codes as a primary element
+
+Anything that requires explaining the concept before a user can do the job
+
+If it does not increase share rate, contribution completion, or thank-you completion, it is not MVP.
+
+4) What I would ship in the next few weeks
+Owner experience (3 pages total)
+
+Fund Overview
+
+Primary button: Share birthday link
+
+Secondary: Send thank-yous (X pending)
+
+Totals: Received (completed) and Pending
+
+Recent activity list with status and notes
+
+Event Setup (Birthday only)
+
+Event name
+
+Date (optional)
+
+Short “what this is” message
+
+Suggested amounts (optional)
+
+Thank-yous
+
+Queue of gifts
+
+One default template with light personalization
+
+One click send
+
+Guest experience (2 pages total)
+
+Event Page
+
+“Mila’s Birthday Fund”
+
+One sentence: what happens to the money
+
+Amount picker
+
+Optional note
+
+Pay
+
+Confirmation
+
+“Gift received”
+
+What happens next (one sentence)
+
+Receipt confirmation
+
+That’s it.
+
+5) Keep “advanced” via AI, not via surface area
+
+You can still be “modern” without being bloated.
+
+Use AI for:
+
+Drafting the event description in plain language
+
+Drafting thank-you notes
+
+Catching confusing copy (“This reads like investing jargon, rewrite simpler”)
+
+Detecting missing trust info (fees, timing, what “pending” means)
+
+Do not use AI as an excuse to ship 12 product modes.
+
+6) Make trust painfully obvious
+
+This category dies on confusion.
+
+On guest page, answer these clearly:
+
+Who receives the benefit?
+
+Is this cash, a gift card, or an investment contribution?
+
+When does it process?
+
+What does “pending” mean?
+
+Who is the brokerage/custodian, if relevant?
+
+If users ask even one of these in your first 20 sessions, your UI is not done.
+
+7) The only metrics that matter pre-revenue
+
+Track these immediately:
+
+Time to first share (owner)
+
+Share to first contribution conversion
+
+Contribution completion rate
+
+Thank-you completion rate
+
+Drop-off step (where people quit)
+
+Everything else is vanity until these are healthy.
+
+8) What I would do next, in order
+
+Lock the wedge: Birthday for a child, one fund, one event.
+
+Rebuild IA around the loop: Share, contribute, thank-you.
+
+Remove all secondary surfaces from navigation.
+
+Instrument the funnel and watch sessions.
+
+Run 15 to 30 concierge trials: you onboard them, they share, real guests contribute.
+
+Only add the next feature when it fixes a repeated, observed problem.
+
+9) The simple rule to prevent overbuilding
+
+If you cannot name the specific user quote that justifies a feature, it does not ship.
+
+Example:
+
+“I shared it at the party and people asked for a QR.” That ships.
+
+“It might be nice to have templates.” That does not.
+
+If you paste your current page list (routes) and what each contains, I will return:
+
+a stripped MVP sitemap
+
+what to delete vs hide under “Advanced”
+
+the exact primary CTA for each page
+
+the minimum copy that makes it self-explanatory without tutorials

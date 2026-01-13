@@ -5,8 +5,9 @@ import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText, ChevronDown, ChevronUp, Info, Sparkles } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { staggerContainer, fadeInUp, liftCard, gentleSpring, bouncySpring } from "@/lib/animations";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -770,13 +771,22 @@ export default function Dashboard() {
                   </button>
                 </div>
               ) : (
-              <div className="space-y-3">
+              <motion.div 
+                className="space-y-3"
+                variants={staggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
                 {recentActivity.map((item, i) => {
                   const isExpanded = expandedActivity === item.id;
                   return (
-                    <div 
-                      key={i} 
-                      className="bg-white border border-stone-200 rounded-xl overflow-hidden lg:border lg:bg-white cursor-pointer hover:border-stone-300 transition-colors"
+                    <motion.div 
+                      key={i}
+                      variants={fadeInUp}
+                      whileHover={{ scale: 1.01, y: -2 }}
+                      whileTap={{ scale: 0.99 }}
+                      transition={gentleSpring}
+                      className="bg-white border border-stone-200 rounded-xl overflow-hidden cursor-pointer hover:border-stone-300 hover:shadow-md"
                       onClick={() => setExpandedActivity(isExpanded ? null : item.id)}
                       data-testid={`activity-item-${item.id}`}
                     >
@@ -790,10 +800,14 @@ export default function Dashboard() {
                                 <span>{item.event}</span>
                               </p>
                               {item.status === "pending" ? (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
-                                  <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
+                                <motion.span 
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1"
+                                  animate={{ opacity: [0.8, 1, 0.8] }}
+                                  transition={{ duration: 2, repeat: Infinity }}
+                                >
+                                  <span className="w-1 h-1 rounded-full bg-amber-500"></span>
                                   Pending
-                                </span>
+                                </motion.span>
                               ) : (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
                                   Invested
@@ -805,7 +819,14 @@ export default function Dashboard() {
                             )}
                             <p className="text-xs text-stone-400 mt-1.5">{item.time}</p>
                           </div>
-                          <p className="text-sm font-medium text-stone-900 shrink-0 ml-4">+${item.amount}</p>
+                          <motion.p 
+                            className="text-sm font-medium text-emerald-600 shrink-0 ml-4"
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: i * 0.1 + 0.2 }}
+                          >
+                            +${item.amount}
+                          </motion.p>
                         </div>
                       </div>
                       
@@ -859,10 +880,10 @@ export default function Dashboard() {
                           </motion.div>
                         )}
                       </AnimatePresence>
-                    </div>
+                    </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
               )}
             </motion.div>
           </div>
@@ -1553,27 +1574,45 @@ export default function Dashboard() {
       </Dialog>
 
       {/* Mobile Bottom Action Bar - Fixed position for easy access */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 p-4 pb-6 lg:hidden z-40 shadow-lg">
+      <motion.div 
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ ...bouncySpring, delay: 0.3 }}
+        className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-stone-200 p-4 pb-6 lg:hidden z-40 shadow-xl"
+      >
         <div className="flex gap-3 max-w-lg mx-auto">
-          <button
+          <motion.button
             onClick={handleCopyClick}
             data-testid="mobile-bottom-share"
-            className="flex-1 flex items-center justify-center gap-2 py-4 bg-stone-900 text-white rounded-xl font-medium text-base active:scale-[0.98] transition-transform"
+            className="flex-1 flex items-center justify-center gap-2 py-4 bg-stone-900 text-white rounded-xl font-medium text-base shadow-lg"
+            whileTap={{ scale: 0.95, y: 2 }}
+            whileHover={{ scale: 1.02 }}
+            transition={gentleSpring}
           >
-            <Copy size={18} />
-            {copied ? "Copied!" : "Share Link"}
-          </button>
-          <Link href="/event/create" className="flex-1">
-            <button
-              data-testid="mobile-bottom-event"
-              className="w-full flex items-center justify-center gap-2 py-4 bg-stone-100 text-stone-900 rounded-xl font-medium text-base active:scale-[0.98] transition-transform"
+            <motion.div
+              animate={copied ? { rotate: [0, -10, 10, 0], scale: [1, 1.2, 1] } : {}}
+              transition={{ duration: 0.4 }}
             >
-              <Plus size={18} />
+              {copied ? <Sparkles size={18} /> : <Copy size={18} />}
+            </motion.div>
+            {copied ? "Copied!" : "Share Link"}
+          </motion.button>
+          <Link href="/event/create" className="flex-1">
+            <motion.button
+              data-testid="mobile-bottom-event"
+              className="w-full flex items-center justify-center gap-2 py-4 bg-stone-100 text-stone-900 rounded-xl font-medium text-base border border-stone-200"
+              whileTap={{ scale: 0.95, y: 2 }}
+              whileHover={{ scale: 1.02, backgroundColor: "#f5f5f4" }}
+              transition={gentleSpring}
+            >
+              <motion.div whileHover={{ rotate: 90 }} transition={{ duration: 0.2 }}>
+                <Plus size={18} />
+              </motion.div>
               New Event
-            </button>
+            </motion.button>
           </Link>
         </div>
-      </div>
+      </motion.div>
       
       {/* Spacer for bottom action bar on mobile */}
       <div className="h-24 lg:hidden" aria-hidden="true" />

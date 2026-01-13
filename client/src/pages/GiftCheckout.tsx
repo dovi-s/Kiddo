@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Gift, CreditCard, Building2, Check, Heart, ChevronRight, Lock, Shield } from "lucide-react";
+import { ArrowLeft, Gift, CreditCard, Building2, Check, Heart, ChevronRight, Lock, Shield, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Nav } from "@/components/layout/Nav";
+import { bouncySpring, gentleSpring, successPop } from "@/lib/animations";
+import { ProcessingDots } from "@/components/ui/shimmer";
 
 const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
 
@@ -49,15 +51,38 @@ export default function GiftCheckout() {
         <Nav />
         <main className="container mx-auto px-4 py-12 max-w-md">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={bouncySpring}
           >
-            <Card className="border-none shadow-lg text-center overflow-hidden">
-              <div className="h-2 bg-gradient-to-r from-emerald-400 to-emerald-500" />
+            <Card className="border-none shadow-xl text-center overflow-hidden">
+              <motion.div 
+                className="h-2 bg-gradient-to-r from-emerald-400 via-emerald-500 to-teal-400"
+                initial={{ scaleX: 0, originX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ delay: 0.2, duration: 0.6 }}
+              />
               <CardContent className="p-8 space-y-6">
-                <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
-                  <Check className="h-8 w-8 text-emerald-600" />
-                </div>
+                <motion.div
+                  className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto relative"
+                  variants={successPop}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-emerald-200"
+                    initial={{ scale: 1, opacity: 0.5 }}
+                    animate={{ scale: 1.5, opacity: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                  />
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, ...bouncySpring }}
+                  >
+                    <Check className="h-8 w-8 text-emerald-600" />
+                  </motion.div>
+                </motion.div>
                 <div>
                   <h2 className="text-xl font-semibold mb-1 text-stone-900">Gift sent!</h2>
                   <p className="text-stone-500">
@@ -141,19 +166,43 @@ export default function GiftCheckout() {
           <div className="flex items-center gap-2 mb-2">
             {['amount', 'details', 'payment'].map((s, i) => (
               <div key={s} className="flex items-center">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
-                  step === s ? 'bg-stone-900 text-white' : 
-                  ['amount', 'details', 'payment'].indexOf(step) > i ? 'bg-emerald-500 text-white' : 'bg-stone-200 text-stone-500'
-                }`}>
-                  {['amount', 'details', 'payment'].indexOf(step) > i ? <Check className="w-3 h-3" /> : i + 1}
-                </div>
-                {i < 2 && <div className={`w-8 h-0.5 mx-1 ${['amount', 'details', 'payment'].indexOf(step) > i ? 'bg-emerald-500' : 'bg-stone-200'}`} />}
+                <motion.div 
+                  className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
+                    step === s ? 'bg-stone-900 text-white' : 
+                    ['amount', 'details', 'payment'].indexOf(step) > i ? 'bg-emerald-500 text-white' : 'bg-stone-200 text-stone-500'
+                  }`}
+                  animate={step === s ? { scale: [1, 1.1, 1] } : {}}
+                  transition={{ duration: 0.3 }}
+                >
+                  {['amount', 'details', 'payment'].indexOf(step) > i ? (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={bouncySpring}
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                    </motion.div>
+                  ) : i + 1}
+                </motion.div>
+                {i < 2 && (
+                  <motion.div 
+                    className={`w-10 h-0.5 mx-1 origin-left ${['amount', 'details', 'payment'].indexOf(step) > i ? 'bg-emerald-500' : 'bg-stone-200'}`}
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ delay: i * 0.1, duration: 0.3 }}
+                  />
+                )}
               </div>
             ))}
           </div>
-          <p className="text-xs text-stone-400">
+          <motion.p 
+            className="text-xs text-stone-400"
+            key={step}
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
             {step === 'amount' ? 'Choose amount' : step === 'details' ? 'Your details' : 'Payment'}
-          </p>
+          </motion.p>
         </div>
 
         <AnimatePresence mode="wait">
@@ -182,15 +231,21 @@ export default function GiftCheckout() {
                     <Label className="text-sm font-medium text-stone-700">Amount</Label>
                     <div className="grid grid-cols-4 gap-2">
                       {SUGGESTED_AMOUNTS.map((amt) => (
-                        <Button
+                        <motion.div
                           key={amt}
-                          variant={amount === amt && !customAmount ? "default" : "outline"}
-                          onClick={() => { setAmount(amt); setCustomAmount(""); }}
-                          className="h-12"
-                          data-testid={`amount-${amt}`}
+                          whileTap={{ scale: 0.95 }}
+                          whileHover={{ scale: 1.02 }}
+                          transition={gentleSpring}
                         >
-                          ${amt}
-                        </Button>
+                          <Button
+                            variant={amount === amt && !customAmount ? "default" : "outline"}
+                            onClick={() => { setAmount(amt); setCustomAmount(""); }}
+                            className={`h-12 w-full transition-all ${amount === amt && !customAmount ? 'shadow-md' : ''}`}
+                            data-testid={`amount-${amt}`}
+                          >
+                            ${amt}
+                          </Button>
+                        </motion.div>
                       ))}
                     </div>
                     <div className="relative">
