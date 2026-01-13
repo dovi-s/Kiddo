@@ -505,14 +505,14 @@ export default function EventPage() {
                             <div className="text-left">
                               <p className="text-sm font-medium text-stone-900">
                                 {deliveryType === "cash" 
-                                  ? "Hold as cash" 
+                                  ? "Let them choose" 
                                   : deliveryType === "stock" && selectedStock 
                                     ? selectedStock.name 
-                                    : "Fund's strategy"}
+                                    : "Future Fund"}
                               </p>
                               <p className="text-xs text-stone-400">
                                 {deliveryType === "cash" 
-                                  ? "Family will invest when ready" 
+                                  ? "Held as Seed until family decides" 
                                   : deliveryType === "stock" && selectedStock 
                                     ? `${selectedStock.symbol} · $${selectedStock.price.toFixed(2)}` 
                                     : "Diversified portfolio"}
@@ -799,7 +799,7 @@ export default function EventPage() {
                 {/* Default Options - Only show when not searching */}
                 {!searchQuery && (
                   <>
-                    {/* Fund's Strategy - Recommended */}
+                    {/* Future Fund - Recommended */}
                     <button
                       onClick={handleSelectFund}
                       data-testid="option-fund-strategy"
@@ -815,10 +815,10 @@ export default function EventPage() {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-stone-900">Fund's strategy</p>
+                            <p className="font-medium text-stone-900">Future Fund</p>
                             <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Recommended</span>
                           </div>
-                          <p className="text-sm text-stone-500 mt-0.5">Diversified across stocks, bonds, and ETFs</p>
+                          <p className="text-sm text-stone-500 mt-0.5">Auto-invests in diversified portfolio</p>
                         </div>
                         {deliveryType === "fund" && (
                           <div className="w-6 h-6 rounded-full bg-stone-900 flex items-center justify-center">
@@ -830,7 +830,7 @@ export default function EventPage() {
                       </div>
                     </button>
 
-                    {/* Cash Option */}
+                    {/* Let Them Choose Option */}
                     <button
                       onClick={handleSelectCash}
                       data-testid="option-cash"
@@ -841,12 +841,12 @@ export default function EventPage() {
                       }`}
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                          <DollarSign size={20} />
+                        <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                          <Sparkles size={20} />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-stone-900">Hold as cash</p>
-                          <p className="text-sm text-stone-500 mt-0.5">Family decides when and what to invest</p>
+                          <p className="font-medium text-stone-900">Let them choose</p>
+                          <p className="text-sm text-stone-500 mt-0.5">Gift held as Seed until family decides</p>
                         </div>
                         {deliveryType === "cash" && (
                           <div className="w-6 h-6 rounded-full bg-stone-900 flex items-center justify-center">
@@ -931,10 +931,13 @@ export default function EventPage() {
                 </div>
               </div>
 
-              {/* Footer */}
-              <div className="p-4 border-t border-stone-100 bg-stone-50">
+              {/* Footer with disclaimer */}
+              <div className="p-4 border-t border-stone-100 bg-stone-50 space-y-2">
+                <p className="text-xs text-stone-500 text-center">
+                  Orders execute during market hours · Final shares may differ from estimate
+                </p>
                 <p className="text-xs text-stone-400 text-center">
-                  All investments go to {recipientName}'s fund · Assets held by Alpaca Securities LLC
+                  All investments go to {recipientName}'s fund · Assets held by Apex Clearing
                 </p>
               </div>
             </motion.div>
