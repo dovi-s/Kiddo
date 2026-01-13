@@ -1,0 +1,309 @@
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Gift, TrendingUp, Sparkles } from "lucide-react";
+
+export interface Contributor {
+  id: string;
+  name: string;
+  amount: number;
+  timestamp: Date | string;
+  avatar?: string;
+}
+
+const MOCK_CONTRIBUTORS: Contributor[] = [
+  { id: "1", name: "Grandma Rose", amount: 100, timestamp: new Date(Date.now() - 60000) },
+  { id: "2", name: "Uncle David", amount: 50, timestamp: new Date(Date.now() - 120000) },
+  { id: "3", name: "The Smiths", amount: 75, timestamp: new Date(Date.now() - 180000) },
+  { id: "4", name: "Aunt Sarah", amount: 25, timestamp: new Date(Date.now() - 240000) },
+  { id: "5", name: "Family Friend", amount: 50, timestamp: new Date(Date.now() - 300000) },
+];
+
+function getTimeAgo(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+export function LiveContributorTicker({ 
+  contributors = MOCK_CONTRIBUTORS,
+  compact = false 
+}: { 
+  contributors?: Contributor[];
+  compact?: boolean;
+}) {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (contributors.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % contributors.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [contributors.length]);
+
+  if (contributors.length === 0) return null;
+
+  const current = contributors[currentIndex];
+
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2 text-sm">
+        <div className="relative">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
+        </div>
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={current.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="text-stone-600"
+          >
+            <span className="font-medium text-stone-900">{current.name}</span> gave ${current.amount}
+          </motion.span>
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <div className="relative">
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
+        </div>
+        <span className="text-xs font-medium text-emerald-700 uppercase tracking-wider">Live Activity</span>
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current.id}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          className="flex items-center gap-3"
+        >
+          <div className="w-10 h-10 rounded-full bg-white border border-emerald-200 flex items-center justify-center text-sm font-medium text-emerald-700 shadow-sm">
+            {current.avatar || current.name.charAt(0)}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-stone-900">{current.name}</p>
+            <p className="text-xs text-emerald-600">
+              Gave ${current.amount} · {getTimeAgo(current.timestamp)}
+            </p>
+          </div>
+          <Gift className="w-5 h-5 text-emerald-500" />
+        </motion.div>
+      </AnimatePresence>
+
+      <div className="flex justify-center gap-1.5 mt-4">
+        {contributors.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentIndex(i)}
+            className={`w-1.5 h-1.5 rounded-full transition-all ${
+              i === currentIndex ? "bg-emerald-500 w-4" : "bg-emerald-200"
+            }`}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+export function ContributorBubbles({ 
+  contributors = MOCK_CONTRIBUTORS.slice(0, 5),
+  showCount = true 
+}: { 
+  contributors?: Contributor[];
+  showCount?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex -space-x-3">
+        {contributors.slice(0, 5).map((contributor, i) => (
+          <motion.div
+            key={contributor.id}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: i * 0.1, type: "spring", stiffness: 300, damping: 20 }}
+            className="w-8 h-8 rounded-full bg-gradient-to-br from-stone-100 to-stone-200 border-2 border-white flex items-center justify-center text-xs font-medium text-stone-600 shadow-sm"
+          >
+            {contributor.avatar || contributor.name.charAt(0)}
+          </motion.div>
+        ))}
+        {contributors.length > 5 && (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 20 }}
+            className="w-8 h-8 rounded-full bg-stone-900 border-2 border-white flex items-center justify-center text-xs font-medium text-white shadow-sm"
+          >
+            +{contributors.length - 5}
+          </motion.div>
+        )}
+      </div>
+      {showCount && (
+        <span className="text-sm text-stone-500">
+          {contributors.length} {contributors.length === 1 ? "person" : "people"} gave
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function GiftPulse({ amount }: { amount: number }) {
+  return (
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className="relative"
+    >
+      <motion.div
+        className="absolute inset-0 rounded-full bg-emerald-500/20"
+        animate={{
+          scale: [1, 1.5, 1],
+          opacity: [0.5, 0, 0.5],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+      <div className="relative flex items-center gap-2 px-4 py-2 bg-emerald-500 rounded-full text-white text-sm font-medium shadow-lg shadow-emerald-500/30">
+        <Sparkles className="w-4 h-4" />
+        <span>+${amount}</span>
+      </div>
+    </motion.div>
+  );
+}
+
+export function InvestmentReveal({ 
+  amount,
+  stockSymbol = "VTI",
+  stockName = "Total US Market",
+  shares = "0.1856"
+}: {
+  amount: number;
+  stockSymbol?: string;
+  stockName?: string;
+  shares?: string;
+}) {
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => setStage(1), 500),
+      setTimeout(() => setStage(2), 1500),
+      setTimeout(() => setStage(3), 2500),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-gradient-to-br from-stone-900 to-stone-800 rounded-2xl p-6 text-white overflow-hidden"
+    >
+      <AnimatePresence mode="wait">
+        {stage === 0 && (
+          <motion.div
+            key="receiving"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="text-center py-8"
+          >
+            <div className="w-12 h-12 rounded-full border-2 border-white/30 border-t-white animate-spin mx-auto mb-4" />
+            <p className="text-white/60">Receiving gift...</p>
+          </motion.div>
+        )}
+
+        {stage === 1 && (
+          <motion.div
+            key="amount"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            className="text-center py-8"
+          >
+            <motion.p
+              initial={{ scale: 0.5 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              className="text-5xl font-light mb-2"
+            >
+              ${amount}
+            </motion.p>
+            <p className="text-white/60">Gift received</p>
+          </motion.div>
+        )}
+
+        {stage === 2 && (
+          <motion.div
+            key="converting"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="text-center py-8"
+          >
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              >
+                <TrendingUp className="w-8 h-8 text-emerald-400" />
+              </motion.div>
+            </div>
+            <p className="text-white/60">Converting to investment...</p>
+          </motion.div>
+        )}
+
+        {stage === 3 && (
+          <motion.div
+            key="complete"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 15 }}
+              className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mx-auto mb-4 shadow-lg"
+            >
+              <span className="text-2xl font-bold text-white">{stockSymbol.slice(0, 2)}</span>
+            </motion.div>
+            
+            <p className="text-sm text-white/60 mb-1">{stockName}</p>
+            <p className="text-3xl font-light mb-1">{shares} shares</p>
+            <p className="text-sm text-emerald-400">of {stockSymbol}</p>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mt-6 pt-4 border-t border-white/10 flex items-center justify-center gap-2 text-white/40 text-xs"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Now growing in their fund</span>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}

@@ -1,13 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText, ChevronDown, ChevronUp, Info, Sparkles } from "lucide-react";
+import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText, ChevronDown, ChevronUp, Info, Sparkles, Trophy } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { staggerContainer, fadeInUp, liftCard, gentleSpring, bouncySpring } from "@/lib/animations";
+import { AchievementBadge, getDefaultAchievements } from "@/components/ui/achievements";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -1009,6 +1010,39 @@ export default function Dashboard() {
                   </Link>
                 </div>
               </motion.div>
+
+              {/* Achievements Section */}
+              {(() => {
+                const achievements = getDefaultAchievements(
+                  selectedFund?.balance || 0,
+                  selectedFund?.contributors || 0,
+                  180
+                );
+                const unlockedCount = achievements.filter(a => a.unlocked).length;
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="p-5 rounded-lg bg-gradient-to-br from-stone-50 to-white border border-stone-200"
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-sm font-medium text-stone-900">Milestones</p>
+                      <Trophy className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {achievements.slice(0, 4).map((achievement) => (
+                        <AchievementBadge key={achievement.id} achievement={achievement} size="sm" />
+                      ))}
+                    </div>
+                    <p className="text-xs text-stone-400 mt-3">
+                      {selectedFund?.status === "active" 
+                        ? `${unlockedCount} of 6 unlocked`
+                        : "Start growing to unlock achievements"}
+                    </p>
+                  </motion.div>
+                );
+              })()}
 
               {/* Brokerage Footer */}
               <div className="text-xs text-stone-400 text-center pt-4">
