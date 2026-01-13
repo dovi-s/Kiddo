@@ -161,18 +161,21 @@ export default function ActivateInvesting() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
-        <div className="max-w-xl mx-auto px-4 h-14 flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100 overflow-hidden">
+      <header className="sticky top-0 z-50 bg-gradient-to-b from-stone-50 via-stone-50/95 to-stone-50/0 pb-2">
+        <div className="max-w-xl mx-auto px-4 pt-4 h-14 flex items-center justify-between">
           {step !== "intro" && step !== "brokerage" && step !== "processing" && step !== "complete" ? (
-            <button onClick={handleBack} className="text-stone-500 hover:text-stone-900 transition-colors">
-              <ArrowLeft size={20} />
+            <button 
+              onClick={handleBack} 
+              className="w-10 h-10 rounded-full bg-white/80 backdrop-blur border border-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-700 hover:bg-white transition-all shadow-sm"
+            >
+              <ArrowLeft size={18} />
             </button>
           ) : (
-            <div />
+            <div className="w-10" />
           )}
           <Logo size="sm" className="text-stone-900" linkTo={null} />
-          <div className="w-5" />
+          <div className="w-10" />
         </div>
       </header>
 
@@ -184,20 +187,43 @@ export default function ActivateInvesting() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-6"
+              className="space-y-6 relative"
             >
-              <div className="text-center mb-8">
-                <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-4">
-                  <Shield size={28} className="text-stone-600" />
-                </div>
-                <h1 className="text-2xl font-medium text-stone-900 mb-2">Activate investing</h1>
-                <p className="text-stone-500">Complete identity verification to start accepting gifts and investing.</p>
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 0.5 }}
+                transition={{ delay: 0.1 }}
+                className="absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-br from-blue-100/50 to-indigo-100/40 rounded-full blur-3xl pointer-events-none"
+              />
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 0.4 }}
+                transition={{ delay: 0.2 }}
+                className="absolute -bottom-10 -left-20 w-48 h-48 bg-gradient-to-br from-emerald-100/50 to-teal-100/40 rounded-full blur-3xl pointer-events-none"
+              />
+              
+              <div className="text-center mb-8 relative">
+                <motion.div 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                  className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-blue-500/25 ring-4 ring-white/80"
+                >
+                  <Shield size={36} className="text-white" />
+                </motion.div>
+                <h1 className="text-2xl md:text-3xl font-semibold text-stone-900 mb-3">Activate investing</h1>
+                <p className="text-stone-500 leading-relaxed">Complete identity verification to start accepting gifts and investing.</p>
               </div>
 
-              <div className="bg-white rounded-xl border border-stone-200 p-5 space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-xs font-medium text-stone-600">1</span>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-gradient-to-br from-white to-stone-50 rounded-2xl border border-stone-200/80 p-6 space-y-5 shadow-lg relative"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-stone-800 to-stone-900 flex items-center justify-center shrink-0 shadow-md">
+                    <span className="text-xs font-bold text-white">1</span>
                   </div>
                   <div>
                     <p className="font-medium text-stone-900">Your information</p>
@@ -205,9 +231,9 @@ export default function ActivateInvesting() {
                   </div>
                 </div>
                 {!isPersonal && childNames.length > 0 && (
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center shrink-0 mt-0.5">
-                      <span className="text-xs font-medium text-stone-600">2</span>
+                  <div className="flex items-start gap-4">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-stone-800 to-stone-900 flex items-center justify-center shrink-0 shadow-md">
+                      <span className="text-xs font-bold text-white">2</span>
                     </div>
                     <div>
                       <p className="font-medium text-stone-900">Child information</p>
@@ -217,29 +243,40 @@ export default function ActivateInvesting() {
                     </div>
                   </div>
                 )}
-                <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-xs font-medium text-stone-600">{!isPersonal && childNames.length > 0 ? "3" : "2"}</span>
+                <div className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-stone-800 to-stone-900 flex items-center justify-center shrink-0 shadow-md">
+                    <span className="text-xs font-bold text-white">{!isPersonal && childNames.length > 0 ? "3" : "2"}</span>
                   </div>
                   <div>
                     <p className="font-medium text-stone-900">Review and accept</p>
                     <p className="text-sm text-stone-500">Brokerage agreement and disclosures</p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
 
-              <div className="flex items-center gap-2 text-xs text-stone-400 justify-center">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="flex items-center gap-2 text-xs text-stone-400 justify-center"
+              >
                 <Lock size={12} />
                 <span>Your information is encrypted and secure</span>
-              </div>
+              </motion.div>
 
-              <Button 
-                onClick={handleNext}
-                data-testid="button-start-kyc"
-                className="w-full bg-stone-900 text-white hover:bg-stone-800"
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
               >
-                Continue
-              </Button>
+                <Button 
+                  onClick={handleNext}
+                  data-testid="button-start-kyc"
+                  className="w-full h-14 text-base rounded-2xl bg-stone-900 text-white hover:bg-stone-800 shadow-xl shadow-stone-900/20"
+                >
+                  Continue
+                </Button>
+              </motion.div>
 
               <p className="text-xs text-stone-400 text-center">
                 Brokerage services provided by Apex Clearing Corporation, member FINRA/SIPC
@@ -698,77 +735,139 @@ export default function ActivateInvesting() {
               key="processing"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-16"
+              className="min-h-[60vh] flex flex-col items-center justify-center relative"
             >
-              <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-6">
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 0.5 }}
+                transition={{ delay: 0.1 }}
+                className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-br from-blue-100/50 to-indigo-100/40 rounded-full blur-3xl"
+              />
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 0.4 }}
+                transition={{ delay: 0.2 }}
+                className="absolute bottom-1/4 right-1/4 w-56 h-56 bg-gradient-to-br from-amber-100/50 to-orange-100/40 rounded-full blur-3xl"
+              />
+              
+              <div className="relative z-10 text-center">
                 <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="w-8 h-8 border-2 border-stone-300 border-t-stone-900 rounded-full"
-                />
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="w-24 h-24 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-blue-500/30 ring-4 ring-white/80"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                    className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full"
+                  />
+                </motion.div>
+                <h2 className="text-2xl font-semibold text-stone-900 mb-3">Verifying your identity</h2>
+                <p className="text-stone-500">This usually takes under 2 minutes...</p>
               </div>
-              <h2 className="text-lg font-medium text-stone-900 mb-2">Verifying your identity</h2>
-              <p className="text-sm text-stone-500">This usually takes under 2 minutes...</p>
             </motion.div>
           )}
 
           {step === "complete" && (
             <motion.div
               key="complete"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-12"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="min-h-[60vh] flex flex-col items-center justify-center relative"
             >
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", duration: 0.5 }}
-                className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6"
-              >
-                <Check size={28} className="text-emerald-600" />
-              </motion.div>
-              <h2 className="text-xl font-medium text-stone-900 mb-2">You're all set!</h2>
-              <p className="text-stone-500 mb-8">
-                {isPersonal 
-                  ? "Your fund is now active and ready to receive gifts."
-                  : childNames.length === 0
-                    ? "Your fund is now active and ready to receive gifts."
-                    : childNames.length === 1 
-                      ? `${childNames[0]}'s fund is now active and ready to receive gifts.`
-                      : `All ${childNames.length} funds are now active and ready to receive gifts.`
-                }
-              </p>
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 0.6 }}
+                transition={{ delay: 0.1 }}
+                className="absolute top-1/4 left-1/4 w-72 h-72 bg-gradient-to-br from-emerald-200/50 to-teal-100/40 rounded-full blur-3xl"
+              />
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 0.6 }}
+                transition={{ delay: 0.3 }}
+                className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-br from-amber-100/50 to-orange-100/40 rounded-full blur-3xl"
+              />
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 0.3 }}
+                transition={{ delay: 0.5 }}
+                className="absolute top-1/2 right-1/3 w-48 h-48 bg-gradient-to-br from-pink-100/40 to-rose-100/30 rounded-full blur-3xl"
+              />
 
-              <div className="space-y-3 max-w-xs mx-auto">
-                <p className="text-xs text-stone-400 mb-4">What would you like to do next?</p>
-                
-                <Button 
-                  onClick={() => setLocation("/event/create")}
-                  data-testid="button-create-event"
-                  className="w-full bg-stone-900 text-white hover:bg-stone-800"
+              <div className="relative z-10 text-center max-w-sm w-full">
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+                  className="w-28 h-28 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-emerald-500/30 ring-4 ring-white/80"
                 >
-                  Create an event page
-                </Button>
-                
-                <Button 
-                  onClick={() => {
-                    const fundSlug = childNames[0]?.toLowerCase().replace(/\s+/g, "-") || "fund";
-                    navigator.clipboard.writeText(`kora.com/${fundSlug}`);
-                  }}
-                  data-testid="button-share-fund"
-                  variant="outline"
-                  className="w-full"
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
+                  >
+                    <Check className="w-14 h-14 text-white" strokeWidth={3} />
+                  </motion.div>
+                </motion.div>
+
+                <motion.h2
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="text-3xl font-semibold text-stone-900 mb-3"
                 >
-                  Share fund link
-                </Button>
-                
-                <button 
-                  onClick={() => setLocation(`/dashboard?type=${accountType}&children=${childrenParam || ""}`)}
-                  data-testid="button-go-to-dashboard"
-                  className="text-sm text-stone-500 hover:text-stone-900 transition-colors mt-4"
+                  You're all set!
+                </motion.h2>
+                <motion.p 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="text-stone-500 mb-10 leading-relaxed"
                 >
-                  Go to dashboard →
-                </button>
+                  {isPersonal 
+                    ? "Your fund is now active and ready to receive gifts."
+                    : childNames.length === 0
+                      ? "Your fund is now active and ready to receive gifts."
+                      : childNames.length === 1 
+                        ? `${childNames[0]}'s fund is now active and ready to receive gifts.`
+                        : `All ${childNames.length} funds are now active and ready to receive gifts.`
+                  }
+                </motion.p>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="space-y-4"
+                >
+                  <Button 
+                    onClick={() => setLocation(`/dashboard?type=${accountType}&children=${childrenParam || ""}`)}
+                    data-testid="button-go-to-dashboard"
+                    size="lg"
+                    className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800 shadow-xl shadow-stone-900/20"
+                  >
+                    Go to dashboard
+                  </Button>
+                  
+                  <Button 
+                    onClick={() => setLocation("/event/create")}
+                    data-testid="button-create-event"
+                    variant="outline"
+                    size="lg"
+                    className="w-full h-12 rounded-2xl border-stone-300"
+                  >
+                    Create an event page
+                  </Button>
+                </motion.div>
+
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8 }}
+                  className="text-xs text-stone-400 mt-8"
+                >
+                  Gifts you receive will now be invested automatically
+                </motion.p>
               </div>
             </motion.div>
           )}

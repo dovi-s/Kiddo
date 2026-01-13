@@ -924,11 +924,18 @@ export default function GetStarted() {
                   <ChevronRight className="ml-2 w-5 h-5" />
                 </Button>
 
-                <motion.div 
+                <motion.button 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.8 }}
-                  className="bg-gradient-to-br from-white to-stone-50 rounded-2xl p-5 border border-stone-200/80 shadow-lg backdrop-blur-sm"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    const childNames = children.map(c => c.name).join(",");
+                    setLocation(`/activate?type=${accountType === "parent" ? "child" : "personal"}&children=${encodeURIComponent(childNames)}`);
+                  }}
+                  data-testid="button-activate-investing"
+                  className="w-full bg-gradient-to-br from-white to-stone-50 rounded-2xl p-5 border border-stone-200/80 shadow-lg backdrop-blur-sm hover:border-stone-300 hover:shadow-xl transition-all cursor-pointer text-left"
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20">
@@ -942,9 +949,9 @@ export default function GetStarted() {
                         Complete a quick verification (~2 min) to start receiving real investments
                       </p>
                     </div>
-                    <ChevronRight size={16} className="text-stone-300 mt-3 flex-shrink-0" />
+                    <ChevronRight size={16} className="text-stone-400 mt-3 flex-shrink-0" />
                   </div>
-                </motion.div>
+                </motion.button>
               </motion.div>
 
               <motion.p
