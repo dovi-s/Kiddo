@@ -417,10 +417,10 @@ export default function GetStarted() {
               </motion.div>
 
               <h1 className="text-2xl font-semibold text-stone-900 text-center mb-3">
-                Watch {childName || "their"} future grow
+                See how gifts grow over time
               </h1>
               <p className="text-stone-500 text-center mb-8">
-                See how gifts compound over time
+                The power of compounding works in your favor
               </p>
 
               <div className="bg-white rounded-3xl p-6 shadow-lg border border-stone-100 mb-8">
@@ -448,7 +448,7 @@ export default function GetStarted() {
                 <div className="mt-8 pt-6 border-t border-stone-100">
                   <div className="flex items-end justify-between">
                     <div>
-                      <p className="text-sm text-stone-500 mb-1">At age 18</p>
+                      <p className="text-sm text-stone-500 mb-1">In 15 years</p>
                       <motion.p 
                         key={growth18}
                         initial={{ scale: 1.1 }}
@@ -481,7 +481,7 @@ export default function GetStarted() {
                 className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800"
                 data-testid="button-continue-projection"
               >
-                Create {childName}'s fund
+                Continue
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </main>
