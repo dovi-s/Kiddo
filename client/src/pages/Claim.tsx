@@ -3,6 +3,8 @@ import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, TrendingUp, Gift as GiftIcon, Shield, Lock, ChevronRight, Plus } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { Confetti } from "@/components/ui/confetti";
+import { InvestmentReveal } from "@/components/ui/live-ticker";
 
 interface GiftData {
   id: string;
@@ -452,16 +454,22 @@ export default function Claim() {
               animate={{ opacity: 1, scale: 1 }}
               className="text-center space-y-8 py-8"
             >
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="w-20 h-20 mx-auto bg-slate-100 rounded-full flex items-center justify-center"
-              >
-                <Check className="w-10 h-10 text-slate-600" />
-              </motion.div>
+              <Confetti isActive={true} />
+              
+              {/* Cinematic Investment Reveal */}
+              <InvestmentReveal 
+                amount={giftValue}
+                stockSymbol={gift.stockSymbol || "VTI"}
+                stockName={gift.stockName || "Total US Market"}
+                shares={String(gift.shares || (giftValue / 268.45).toFixed(4))}
+              />
 
-              <div className="space-y-2">
+              <motion.div 
+                className="space-y-2"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+              >
                 <h1 className="text-2xl lg:text-3xl font-semibold text-stone-900">
                   Gift claimed!
                 </h1>
@@ -471,7 +479,7 @@ export default function Claim() {
                     : `$${gift.amount?.toFixed(2)} has been added to your fund`
                   }
                 </p>
-              </div>
+              </motion.div>
 
               <div className="bg-white rounded-2xl border border-stone-200 p-6 max-w-sm mx-auto">
                 <div className="space-y-4">

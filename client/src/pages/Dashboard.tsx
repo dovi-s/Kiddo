@@ -10,6 +10,7 @@ import { Logo } from "@/components/ui/logo";
 import { staggerContainer, fadeInUp, liftCard, gentleSpring, bouncySpring } from "@/lib/animations";
 import { AchievementBadge, getDefaultAchievements } from "@/components/ui/achievements";
 import { LiveContributorTicker, ContributorBubbles } from "@/components/ui/live-ticker";
+import { ShareKit } from "@/components/ui/share-kit";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -90,6 +91,7 @@ export default function Dashboard() {
   const [showGainAsPercent, setShowGainAsPercent] = useState(false);
   const [showFundPreview, setShowFundPreview] = useState(false);
   const [showGiftRules, setShowGiftRules] = useState(false);
+  const [showShareKit, setShowShareKit] = useState(false);
 
   const [funds, setFunds] = useState<StoredFund[]>(() => {
     const stored = loadStoredFunds();
@@ -570,11 +572,12 @@ export default function Dashboard() {
                   {copied ? "Copied" : "Copy"}
                 </button>
                 <button 
-                  onClick={() => setShowQR(true)}
-                  data-testid="button-qr-mobile"
-                  className="px-3 py-2 border border-stone-200 rounded text-sm hover:bg-stone-50 transition-colors"
+                  onClick={() => setShowShareKit(true)}
+                  data-testid="button-share-kit-mobile"
+                  className="px-3 py-2 border border-stone-200 rounded text-sm hover:bg-stone-50 transition-colors flex items-center gap-1.5"
                 >
-                  QR
+                  <Sparkles size={14} />
+                  Share
                 </button>
               </div>
             </motion.div>
@@ -1759,6 +1762,15 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Premium Share Kit */}
+      <ShareKit
+        fundName={selectedFund?.name || "Fund"}
+        fundSlug={selectedFundSlug}
+        recipientName={selectedFund?.name || "Fund"}
+        isOpen={showShareKit}
+        onClose={() => setShowShareKit(false)}
+      />
     </div>
   );
 }
