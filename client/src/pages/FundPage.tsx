@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Link, useParams } from "wouter";
 import { motion } from "framer-motion";
-import { Share2, QrCode, Gift, TrendingUp, Users, Calendar, ChevronRight, Shield, Clock, Star, Copy, Check } from "lucide-react";
+import { Share2, QrCode, Gift, TrendingUp, Users, Calendar, ChevronRight, Shield, Clock, Star, Copy, Check, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { staggerContainer, fadeInUp, liftCard, bouncySpring, gentleSpring } from "@/lib/animations";
+import { ContributorBubbles, LiveContributorTicker } from "@/components/ui/live-ticker";
+import { AchievementBadge, getDefaultAchievements } from "@/components/ui/achievements";
 
 interface Milestone {
   id: string;
@@ -386,6 +388,36 @@ export default function FundPage() {
 
           {/* Right column - Sidebar */}
           <div className="hidden lg:block space-y-6">
+            
+            {/* Live Activity */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <LiveContributorTicker />
+            </motion.div>
+
+            {/* Achievement Badges */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.45 }}
+              className="bg-gradient-to-br from-stone-50 to-white rounded-2xl border border-stone-200 p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-stone-900">Milestones</h3>
+                <Trophy className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {getDefaultAchievements(fund.totalRaised, fund.contributors, fund.daysActive).slice(0, 4).map((achievement) => (
+                  <AchievementBadge key={achievement.id} achievement={achievement} size="sm" />
+                ))}
+              </div>
+              <p className="text-xs text-stone-400 mt-3">
+                {getDefaultAchievements(fund.totalRaised, fund.contributors, fund.daysActive).filter(a => a.unlocked).length} of 6 unlocked
+              </p>
+            </motion.div>
             
             {/* Fund Stats */}
             <motion.div

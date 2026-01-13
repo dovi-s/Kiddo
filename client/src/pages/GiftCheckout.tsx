@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Gift, CreditCard, Building2, Check, Heart, ChevronRight, Lock, Shield, Sparkles } from "lucide-react";
+import { ArrowLeft, Gift, CreditCard, Building2, Check, Heart, ChevronRight, Lock, Shield, Sparkles, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Nav } from "@/components/layout/Nav";
 import { bouncySpring, gentleSpring, successPop } from "@/lib/animations";
 import { ProcessingDots } from "@/components/ui/shimmer";
+import { InvestmentReveal } from "@/components/ui/live-ticker";
 
 const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
 

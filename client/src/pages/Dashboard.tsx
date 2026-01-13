@@ -281,9 +281,23 @@ export default function Dashboard() {
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
+  const thankYouTemplates = {
+    heartfelt: (item: typeof recentActivity[0]) => {
+      const firstName = item.from.split(" ")[0];
+      return `Dear ${firstName}, thank you from the bottom of our hearts for your incredibly generous gift of $${item.amount}. It truly means the world to our family, and knowing that ${selectedFund.name} has people like you believing in their future fills us with joy. This gift will grow alongside ${selectedFund.name} for years to come. With love and gratitude.`;
+    },
+    simple: (item: typeof recentActivity[0]) => {
+      const firstName = item.from.split(" ")[0];
+      return `Thank you so much, ${firstName}! Your gift of $${item.amount} is so appreciated. We're excited to watch it grow for ${selectedFund.name}!`;
+    },
+    formal: (item: typeof recentActivity[0]) => {
+      const firstName = item.from.split(" ")[0];
+      return `Dear ${firstName}, thank you for your generous contribution of $${item.amount} to ${selectedFund.name}'s investment fund. Your thoughtful gift has been received and will be invested to help build their financial future. We sincerely appreciate your kindness and generosity.`;
+    },
+  };
+
   const getDefaultThankYou = (item: typeof recentActivity[0]) => {
-    const firstName = item.from.split(" ")[0];
-    return `Thank you so much for your generous gift of $${item.amount}, ${firstName}! It means the world to us and will help ${selectedFund.name}'s future grow.`;
+    return thankYouTemplates.simple(item);
   };
 
   const pendingThankYous = recentActivity.filter(a => a.status === "invested" && !sentThankYous.includes(a.id) && !snoozedThankYous.includes(a.id)).length;
@@ -1492,11 +1506,43 @@ export default function Dashboard() {
                     
                     {isExpanded && !isSent && (
                       <div className="px-4 pb-4 space-y-3">
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setThankYouDrafts(prev => ({ ...prev, [item.id]: thankYouTemplates.simple(item) }));
+                            }}
+                            data-testid={`button-template-simple-${item.id}`}
+                            className="px-3 py-1.5 text-xs border border-stone-200 rounded-full text-stone-600 hover:bg-stone-50 transition-colors"
+                          >
+                            Simple
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setThankYouDrafts(prev => ({ ...prev, [item.id]: thankYouTemplates.heartfelt(item) }));
+                            }}
+                            data-testid={`button-template-heartfelt-${item.id}`}
+                            className="px-3 py-1.5 text-xs border border-stone-200 rounded-full text-stone-600 hover:bg-stone-50 transition-colors"
+                          >
+                            Heartfelt
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setThankYouDrafts(prev => ({ ...prev, [item.id]: thankYouTemplates.formal(item) }));
+                            }}
+                            data-testid={`button-template-formal-${item.id}`}
+                            className="px-3 py-1.5 text-xs border border-stone-200 rounded-full text-stone-600 hover:bg-stone-50 transition-colors"
+                          >
+                            Formal
+                          </button>
+                        </div>
                         <textarea
                           value={draftMessage}
                           onChange={(e) => setThankYouDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
                           className="w-full p-3 text-sm border border-stone-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
-                          rows={3}
+                          rows={4}
                           placeholder="Write your thank-you message..."
                           data-testid={`textarea-thankyou-${item.id}`}
                         />
