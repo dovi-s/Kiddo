@@ -852,30 +852,43 @@ export default function GetStarted() {
           >
             <motion.div
               initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 0.5 }}
-              className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-br from-emerald-200/40 to-teal-100/30 rounded-full blur-3xl"
+              animate={{ scale: 1, opacity: 0.6 }}
+              transition={{ delay: 0.1 }}
+              className="absolute top-1/4 left-1/4 w-72 h-72 bg-gradient-to-br from-emerald-200/50 to-teal-100/40 rounded-full blur-3xl"
             />
             <motion.div
               initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 0.5 }}
-              transition={{ delay: 0.2 }}
-              className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-br from-amber-100/40 to-orange-100/30 rounded-full blur-3xl"
+              animate={{ scale: 1, opacity: 0.6 }}
+              transition={{ delay: 0.3 }}
+              className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-br from-amber-100/50 to-orange-100/40 rounded-full blur-3xl"
+            />
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 0.3 }}
+              transition={{ delay: 0.5 }}
+              className="absolute top-1/2 right-1/3 w-48 h-48 bg-gradient-to-br from-pink-100/40 to-rose-100/30 rounded-full blur-3xl"
             />
 
-            <div className="relative z-10 text-center max-w-sm">
+            <div className="relative z-10 text-center max-w-sm w-full">
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-emerald-500/30 ring-4 ring-white"
+                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+                className="w-28 h-28 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-emerald-500/30 ring-4 ring-white/80"
               >
-                <Check className="w-12 h-12 text-white" strokeWidth={3} />
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
+                >
+                  <Check className="w-14 h-14 text-white" strokeWidth={3} />
+                </motion.div>
               </motion.div>
 
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
+                transition={{ delay: 0.4 }}
                 className="text-3xl font-semibold text-stone-900 mb-3"
               >
                 {accountType === "parent" && children.length > 1 
@@ -886,8 +899,8 @@ export default function GetStarted() {
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="text-stone-500 mb-8"
+                transition={{ delay: 0.5 }}
+                className="text-stone-500 mb-10 leading-relaxed"
               >
                 Share the link with family and friends to start receiving gifts that grow
               </motion.p>
@@ -895,7 +908,7 @@ export default function GetStarted() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
+                transition={{ delay: 0.6 }}
                 className="space-y-4"
               >
                 <Button
@@ -904,23 +917,44 @@ export default function GetStarted() {
                     setLocation(`/dashboard?type=${accountType === "parent" ? "child" : "personal"}&name=${encodeURIComponent(recipientName)}&children=${encodeURIComponent(childNames)}&new=true`);
                   }}
                   size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800 shadow-lg shadow-stone-900/10"
+                  className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800 shadow-xl shadow-stone-900/20"
                   data-testid="button-go-to-dashboard"
                 >
                   Go to dashboard
                   <ChevronRight className="ml-2 w-5 h-5" />
                 </Button>
 
-                <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-sm">
-                  <p className="text-sm text-stone-600 mb-2">
-                    <span className="font-medium">Next step:</span> Activate investing to start receiving real investments
-                  </p>
-                  <div className="flex items-center justify-center gap-2 text-xs text-stone-400">
-                    <Shield size={12} />
-                    <span>KYC verification takes ~2 minutes</span>
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.8 }}
+                  className="bg-gradient-to-br from-white to-stone-50 rounded-2xl p-5 border border-stone-200/80 shadow-lg backdrop-blur-sm"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20">
+                      <Shield size={18} className="text-white" />
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="text-sm font-medium text-stone-900 mb-1">
+                        Next: Activate investing
+                      </p>
+                      <p className="text-xs text-stone-500 leading-relaxed">
+                        Complete a quick verification (~2 min) to start receiving real investments
+                      </p>
+                    </div>
+                    <ChevronRight size={16} className="text-stone-300 mt-3 flex-shrink-0" />
                   </div>
-                </div>
+                </motion.div>
               </motion.div>
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1 }}
+                className="text-xs text-stone-400 mt-8"
+              >
+                Until activated, gifts are held as pledges
+              </motion.p>
             </div>
           </motion.div>
         )}
