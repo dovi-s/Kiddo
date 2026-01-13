@@ -5,7 +5,7 @@ import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText, ChevronDown, ChevronUp, Info, Sparkles, Trophy, Share2, TrendingUp, Clock, Gift } from "lucide-react";
+import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, FileText, ChevronDown, ChevronUp, ChevronRight, Info, Sparkles, Trophy, Share2, TrendingUp, Clock, Gift, Shield } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { staggerContainer, fadeInUp, liftCard, gentleSpring, bouncySpring } from "@/lib/animations";
 import { AchievementBadge, getDefaultAchievements } from "@/components/ui/achievements";
@@ -434,80 +434,158 @@ export default function Dashboard() {
               
               {selectedFund.status === "draft" ? (
                 <>
-                  {/* Draft state - show activate prompt */}
-                  <p className="text-sm text-stone-500 mb-1">Portfolio value</p>
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-3">
-                    $0
-                  </h1>
+                  {/* Draft state - premium activate prompt */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative overflow-hidden bg-gradient-to-br from-white via-stone-50 to-stone-100 border border-stone-200/80 rounded-2xl p-6 sm:p-8 shadow-lg mb-6"
+                  >
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-100/40 to-indigo-100/30 rounded-full blur-3xl" />
+                    <div className="absolute bottom-0 left-0 w-40 h-40 bg-gradient-to-br from-emerald-100/40 to-teal-100/30 rounded-full blur-3xl" />
+                    
+                    <div className="relative z-10">
+                      <div className="flex items-start gap-4 mb-6">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-500/25">
+                          <Shield size={24} className="text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-stone-900 mb-1">One more step</h3>
+                          <p className="text-sm text-stone-500 leading-relaxed">
+                            {funds.length === 1 
+                              ? `${funds[0].name}'s fund is ready. Activate investing to start receiving real gifts.`
+                              : `${selectedFund.name}'s fund is ready. Activate investing to start receiving gifts.`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}`}>
+                        <Button 
+                          data-testid="button-activate-investing"
+                          size="lg"
+                          className="w-full h-14 text-base rounded-2xl bg-stone-900 text-white hover:bg-stone-800 shadow-xl shadow-stone-900/20"
+                        >
+                          Activate investing
+                          <ChevronRight className="ml-2 w-5 h-5" />
+                        </Button>
+                      </Link>
+                      <p className="text-xs text-stone-400 mt-4 text-center">Takes about 2 minutes. Identity verification required.</p>
+                    </div>
+                  </motion.div>
                   
-                  <div className="p-4 rounded-xl bg-stone-100 border border-stone-200 mb-4">
-                    <p className="text-sm text-stone-600 mb-3">
-                      {funds.length === 1 
-                        ? `${funds[0].name}'s fund is ready to share. Activate investing to accept gifts.`
-                        : `${selectedFund.name}'s fund is ready to share. Activate investing to accept gifts.`
-                      }
-                    </p>
-                    <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}`}>
-                      <Button 
-                        data-testid="button-activate-investing"
-                        className="bg-stone-900 text-white hover:bg-stone-800"
-                      >
-                        Activate investing
-                      </Button>
-                    </Link>
-                    <p className="text-xs text-stone-400 mt-3">Takes about 2 minutes. Identity verification required.</p>
-                  </div>
-                  
-                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-100">
-                    <p className="text-xs text-amber-700">
-                      <strong>Gift rules:</strong> Contributors can pledge gifts now. Pledges convert to real gifts once you activate investing.
-                    </p>
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100/80">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <Gift size={16} className="text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-amber-800 mb-0.5">Gift rules</p>
+                        <p className="text-xs text-amber-700 leading-relaxed">
+                          Contributors can pledge gifts now. Pledges convert to real gifts once you activate investing.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </>
               ) : selectedFund.status === "pending" ? (
                 <>
-                  {/* Pending verification state */}
-                  <p className="text-sm text-stone-500 mb-1">Portfolio value</p>
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-3">
-                    $0
-                  </h1>
+                  {/* Pending verification state - premium */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-white border border-blue-100/80 rounded-2xl p-6 sm:p-8 shadow-lg mb-6"
+                  >
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-100/50 to-indigo-100/40 rounded-full blur-3xl" />
+                    <div className="absolute bottom-0 left-0 w-40 h-40 bg-gradient-to-br from-violet-100/40 to-purple-100/30 rounded-full blur-3xl" />
+                    
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-500/25">
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                            className="w-7 h-7 border-3 border-white/30 border-t-white rounded-full"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-stone-900 mb-1">Verifying your identity</h3>
+                          <p className="text-sm text-stone-500">This usually takes under 2 minutes</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 p-3 rounded-xl bg-white/60 backdrop-blur-sm border border-blue-100">
+                        <div className="flex -space-x-1">
+                          <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+                          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: "0.2s" }} />
+                          <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" style={{ animationDelay: "0.4s" }} />
+                        </div>
+                        <p className="text-xs text-blue-700">Verification in progress...</p>
+                      </div>
+                    </div>
+                  </motion.div>
                   
-                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-100 mb-4">
-                    <p className="text-xs text-amber-700">
-                      <strong>Gift rules:</strong> Gifts will be held as cash (Seed) until verification completes. They will auto-invest once your account is active.
-                    </p>
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100/80">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <Gift size={16} className="text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-amber-800 mb-0.5">Gift rules</p>
+                        <p className="text-xs text-amber-700 leading-relaxed">
+                          Gifts will be held as cash (Seed) until verification completes. They will auto-invest once your account is active.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <p className="text-sm text-stone-500">
-                    We're verifying your identity. This usually takes under 2 minutes.
-                  </p>
                 </>
               ) : selectedFund.status === "needs_action" ? (
                 <>
-                  {/* Needs action state */}
-                  <p className="text-sm text-stone-500 mb-1">Portfolio value</p>
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light tracking-tight text-stone-900 mb-3">
-                    $0
-                  </h1>
+                  {/* Needs action state - premium */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="relative overflow-hidden bg-gradient-to-br from-red-50 via-rose-50 to-white border border-red-100/80 rounded-2xl p-6 sm:p-8 shadow-lg mb-6"
+                  >
+                    <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-red-100/50 to-rose-100/40 rounded-full blur-3xl" />
+                    
+                    <div className="relative z-10">
+                      <div className="flex items-start gap-4 mb-6">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-xl shadow-red-500/25">
+                          <Info size={24} className="text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-semibold text-stone-900 mb-1">Additional info needed</h3>
+                          <p className="text-sm text-stone-500 leading-relaxed">
+                            We need a bit more information to verify your identity. This is common and usually takes just a minute.
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}&retry=true`}>
+                        <Button 
+                          data-testid="button-retry-verification"
+                          size="lg"
+                          className="w-full h-14 text-base rounded-2xl bg-red-600 text-white hover:bg-red-700 shadow-xl shadow-red-500/20"
+                        >
+                          Complete verification
+                          <ChevronRight className="ml-2 w-5 h-5" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </motion.div>
                   
-                  <div className="p-4 rounded-xl bg-red-50 border border-red-100 mb-4">
-                    <p className="text-sm text-red-700 mb-3">
-                      We need additional information to verify your identity. This is common and usually takes just a minute to resolve.
-                    </p>
-                    <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}&retry=true`}>
-                      <Button 
-                        data-testid="button-retry-verification"
-                        className="bg-red-600 text-white hover:bg-red-700"
-                      >
-                        Complete verification
-                      </Button>
-                    </Link>
-                  </div>
-                  
-                  <div className="p-3 rounded-lg bg-amber-50 border border-amber-100">
-                    <p className="text-xs text-amber-700">
-                      <strong>Gift rules:</strong> Gifts will be held as cash until verification is complete.
-                    </p>
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100/80">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                        <Gift size={16} className="text-amber-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-amber-800 mb-0.5">Gift rules</p>
+                        <p className="text-xs text-amber-700 leading-relaxed">
+                          Gifts will be held as cash until verification is complete.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </>
               ) : (
