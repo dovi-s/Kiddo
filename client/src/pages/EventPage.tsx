@@ -247,78 +247,101 @@ export default function EventPage() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100 overflow-hidden">
+      {/* Header - Premium floating style */}
+      <header className="sticky top-0 z-50 bg-gradient-to-b from-stone-50 via-stone-50/95 to-stone-50/0 pb-2">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 h-16 flex items-center justify-between">
           <button 
             onClick={() => window.history.back()}
             data-testid="button-back"
-            className="text-sm text-stone-500 hover:text-stone-900 transition-colors"
+            className="w-10 h-10 rounded-full bg-white/80 backdrop-blur border border-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-700 hover:bg-white transition-all shadow-sm"
           >
-            ← Back
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
           </button>
           <span className="text-sm font-medium text-stone-900">{eventTitle || "Give"}</span>
-          <span className="text-xs text-stone-400 w-16 text-right">Secure</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span className="text-xs text-emerald-700 font-medium">Secure</span>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12 relative">
+        {/* Ambient gradient orbs */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-emerald-100/40 to-teal-100/30 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 left-0 w-80 h-80 bg-gradient-to-br from-blue-100/30 to-indigo-100/20 rounded-full blur-3xl pointer-events-none" />
         
         {/* Desktop: Two column layout */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-start">
           
-          {/* Left column - Info (desktop) */}
-          <div className="hidden lg:block lg:sticky lg:top-20">
+          {/* Left column - Info (desktop) - Premium styling */}
+          <div className="hidden lg:block lg:sticky lg:top-20 relative z-10">
             {/* Photo */}
             {photo && (
               <img 
                 src={photo} 
                 alt="" 
-                className="w-full aspect-video object-cover rounded-2xl mb-8"
+                className="w-full aspect-video object-cover rounded-2xl mb-8 shadow-xl"
               />
             )}
 
-            {/* Header */}
-            <div className="mb-8">
-              {!photo && (
-                <div className="w-20 h-20 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center text-2xl font-light mb-6">
-                  {recipientName.charAt(0)}
-                </div>
-              )}
-              <h1 className="text-3xl font-light text-stone-900 mb-2">
-                {headline || `Give to ${recipientName}`}
-              </h1>
-              {description && (
-                <p className="text-stone-500 text-lg leading-relaxed">{description}</p>
-              )}
-              {!description && eventTitle && (
-                <p className="text-stone-500 text-lg">{eventTitle}</p>
-              )}
-            </div>
+            {/* Header Card */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden bg-gradient-to-br from-white via-stone-50 to-stone-100 border border-stone-200/80 rounded-2xl p-8 mb-8 shadow-lg"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/50 to-teal-100/30 rounded-full blur-2xl" />
+              
+              <div className="relative z-10">
+                {!photo && (
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-900 text-stone-50 flex items-center justify-center text-2xl font-medium mb-6 shadow-xl">
+                    {recipientName.charAt(0)}
+                  </div>
+                )}
+                <h1 className="text-3xl font-semibold text-stone-900 mb-3">
+                  {headline || `Give to ${recipientName}`}
+                </h1>
+                {description && (
+                  <p className="text-stone-500 text-lg leading-relaxed">{description}</p>
+                )}
+                {!description && eventTitle && (
+                  <p className="text-stone-500 text-lg">{eventTitle}</p>
+                )}
+              </div>
+            </motion.div>
 
-            {/* Progress bar with teamwork feel */}
+            {/* Progress bar with teamwork feel - Premium */}
             {showProgress && (
-              <div className="mb-8 p-5 bg-white rounded-xl border border-stone-200">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-medium text-stone-900">Group goal</span>
-                  <span className="text-xs text-stone-400">
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="mb-8 p-6 bg-gradient-to-br from-white to-stone-50 rounded-2xl border border-stone-200/80 shadow-lg"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-semibold text-stone-900">Group goal</span>
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
                     {Math.round((currentAmount / goalAmount) * 100)}% funded
                   </span>
                 </div>
-                <div className="h-3 bg-stone-100 rounded-full overflow-hidden mb-3">
-                  <div 
-                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all"
-                    style={{ width: `${Math.min((currentAmount / goalAmount) * 100, 100)}%` }}
+                <div className="h-4 bg-stone-100 rounded-full overflow-hidden mb-4 shadow-inner">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((currentAmount / goalAmount) * 100, 100)}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <div className="flex -space-x-2">
                       {["D", "R", "S", "M"].slice(0, 4).map((initial, i) => (
                         <div 
                           key={i} 
-                          className="w-6 h-6 rounded-full bg-stone-200 border-2 border-white flex items-center justify-center text-[10px] font-medium text-stone-600"
+                          className="w-7 h-7 rounded-full bg-gradient-to-br from-stone-100 to-stone-200 border-2 border-white flex items-center justify-center text-[10px] font-semibold text-stone-600 shadow-sm"
                         >
                           {initial}
                         </div>
@@ -327,33 +350,47 @@ export default function EventPage() {
                     <span className="text-xs text-stone-500">12 people have given</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-lg font-semibold text-stone-900">${currentAmount.toLocaleString()}</span>
-                    <span className="text-xs text-stone-400"> / ${goalAmount.toLocaleString()}</span>
+                    <span className="text-xl font-bold text-stone-900">${currentAmount.toLocaleString()}</span>
+                    <span className="text-xs text-stone-400 ml-1">/ ${goalAmount.toLocaleString()}</span>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {/* Live Activity */}
-            <div className="mb-8">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="mb-8"
+            >
               <LiveContributorTicker />
-            </div>
+            </motion.div>
 
-            {/* Trust badges */}
-            <div className="space-y-3 text-sm text-stone-500">
+            {/* Trust badges - Premium */}
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="p-5 rounded-2xl bg-gradient-to-br from-stone-50 to-white border border-stone-200/80 space-y-4"
+            >
               <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                <span>100% of your gift is invested</span>
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <span className="text-sm text-stone-600">100% of your gift is invested</span>
               </div>
               <div className="flex items-center gap-3">
-                <svg className="w-5 h-5 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>SIPC protected up to $500,000</span>
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+                <span className="text-sm text-stone-600">SIPC protected up to $500,000</span>
               </div>
-            </div>
+            </motion.div>
           </div>
 
           {/* Right column - Form */}
@@ -368,21 +405,21 @@ export default function EventPage() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  {/* Mobile-only info section */}
-                  <div className="lg:hidden">
-                    {/* Breadcrumb */}
-                    <div className="text-sm mb-8 flex items-center gap-1.5">
+                  {/* Mobile-only info section - Premium */}
+                  <div className="lg:hidden relative z-10">
+                    {/* Breadcrumb - styled pills */}
+                    <div className="text-sm mb-8 flex items-center gap-2 flex-wrap">
                       <Link href="/dashboard">
-                        <span className="text-stone-400 hover:text-stone-600">Dashboard</span>
+                        <span className="px-2.5 py-1 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 transition-colors text-xs">Dashboard</span>
                       </Link>
-                      <span className="text-stone-300">/</span>
+                      <span className="text-stone-300">›</span>
                       <Link href={`/${fundSlug}`}>
-                        <span className="text-stone-500 hover:text-stone-900">{recipientName}</span>
+                        <span className="px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors text-xs">{recipientName}</span>
                       </Link>
                       {eventTitle && (
                         <>
-                          <span className="text-stone-300">/</span>
-                          <span className="text-stone-900">{eventTitle}</span>
+                          <span className="text-stone-300">›</span>
+                          <span className="px-2.5 py-1 rounded-full bg-stone-900 text-white text-xs">{eventTitle}</span>
                         </>
                       )}
                     </div>
@@ -392,18 +429,22 @@ export default function EventPage() {
                       <img 
                         src={photo} 
                         alt="" 
-                        className="w-full aspect-video object-cover rounded-xl mb-6"
+                        className="w-full aspect-video object-cover rounded-2xl mb-6 shadow-lg"
                       />
                     )}
 
-                    {/* Header */}
-                    <div className="text-center mb-10">
+                    {/* Header - Premium */}
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-center mb-10"
+                    >
                       {!photo && (
-                        <div className="w-16 h-16 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center text-xl font-light mx-auto mb-5">
+                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-900 text-stone-50 flex items-center justify-center text-2xl font-medium mx-auto mb-6 shadow-xl ring-4 ring-white/80">
                           {recipientName.charAt(0)}
                         </div>
                       )}
-                      <h1 className="text-2xl font-light text-stone-900 mb-1">
+                      <h1 className="text-2xl font-semibold text-stone-900 mb-2">
                         {headline || `Give to ${recipientName}`}
                       </h1>
                       {description && (
@@ -412,136 +453,153 @@ export default function EventPage() {
                       {!description && eventTitle && (
                         <p className="text-stone-500">{eventTitle}</p>
                       )}
-                    </div>
+                    </motion.div>
 
-                    {/* Progress bar */}
+                    {/* Progress bar - Premium */}
                     {showProgress && (
-                      <div className="mb-6">
-                        <div className="flex justify-between text-sm mb-2">
-                          <span className="font-medium text-stone-900">${currentAmount.toLocaleString()}</span>
-                          <span className="text-stone-400">of ${goalAmount.toLocaleString()}</span>
-                        </div>
-                        <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-stone-900 transition-all"
-                            style={{ width: `${Math.min((currentAmount / goalAmount) * 100, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Amount Selection */}
-                  <div className="lg:bg-white lg:border lg:border-stone-200 lg:rounded-xl lg:p-6">
-                    <h2 className="hidden lg:block text-lg font-medium text-stone-900 mb-6">Choose an amount</h2>
-                    
-                    <div className="grid grid-cols-4 gap-2 mb-4">
-                      {AMOUNTS.map((a) => (
-                        <button
-                          key={a}
-                          onClick={() => { setAmount(a); setCustomAmount(""); }}
-                          data-testid={`amount-${a}`}
-                          className={`py-3 lg:py-4 rounded text-sm font-medium transition-all ${
-                            amount === a && !customAmount
-                              ? "bg-stone-900 text-stone-50"
-                              : "bg-white border border-stone-200 text-stone-900 hover:border-stone-300"
-                          }`}
-                        >
-                          ${a}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="relative mb-8">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400">$</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="Other amount"
-                        value={customAmount}
-                        onChange={(e) => setCustomAmount(e.target.value.replace(/[^0-9]/g, ""))}
-                        data-testid="input-custom-amount"
-                        className="w-full pl-8 pr-4 py-3 lg:py-4 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
-                      />
-                    </div>
-
-                    {/* Projection */}
-                    {finalAmount > 0 && (
-                      <motion.div
+                      <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-5 lg:p-6 bg-stone-900 text-stone-50 rounded-lg mb-6"
+                        transition={{ delay: 0.1 }}
+                        className="mb-8 p-4 rounded-2xl bg-gradient-to-br from-white to-stone-50 border border-stone-200/80 shadow-lg"
                       >
-                        <p className="text-stone-400 text-sm mb-1">Your ${finalAmount} could become</p>
-                        <p className="text-3xl lg:text-4xl font-light">${projectedGrowth.toLocaleString()}</p>
-                        <p className="text-stone-500 text-sm mt-1">in 18 years at 7% annual return</p>
+                        <div className="flex justify-between text-sm mb-3">
+                          <span className="font-semibold text-stone-900">${currentAmount.toLocaleString()}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{Math.round((currentAmount / goalAmount) * 100)}%</span>
+                        </div>
+                        <div className="h-3 bg-stone-100 rounded-full overflow-hidden shadow-inner">
+                          <motion.div 
+                            initial={{ width: 0 }}
+                            animate={{ width: `${Math.min((currentAmount / goalAmount) * 100, 100)}%` }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
+                          />
+                        </div>
+                        <p className="text-xs text-stone-400 mt-2">Goal: ${goalAmount.toLocaleString()}</p>
                       </motion.div>
                     )}
+                  </div>
 
-                    {/* Investment Choice - Premium Compact Display */}
-                    <div className="mb-8">
+                  {/* Amount Selection - Premium Card */}
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="relative overflow-hidden bg-gradient-to-br from-white to-stone-50 border border-stone-200/80 rounded-2xl p-6 shadow-lg"
+                  >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/30 to-teal-100/20 rounded-full blur-2xl" />
+                    
+                    <div className="relative z-10">
+                      <h2 className="text-lg font-semibold text-stone-900 mb-6">Choose an amount</h2>
+                      
+                      <div className="grid grid-cols-4 gap-2 mb-4">
+                        {AMOUNTS.map((a) => (
+                          <button
+                            key={a}
+                            onClick={() => { setAmount(a); setCustomAmount(""); }}
+                            data-testid={`amount-${a}`}
+                            className={`py-4 rounded-xl text-sm font-semibold transition-all ${
+                              amount === a && !customAmount
+                                ? "bg-stone-900 text-white shadow-lg shadow-stone-900/20"
+                                : "bg-white border border-stone-200 text-stone-900 hover:border-stone-400 hover:shadow-md"
+                            }`}
+                          >
+                            ${a}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="relative mb-6">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 font-medium">$</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Other amount"
+                          value={customAmount}
+                          onChange={(e) => setCustomAmount(e.target.value.replace(/[^0-9]/g, ""))}
+                          data-testid="input-custom-amount"
+                          className="w-full pl-8 pr-4 py-4 bg-white border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
+                        />
+                      </div>
+
+                      {/* Projection - Premium */}
+                      {finalAmount > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="p-6 bg-gradient-to-br from-stone-900 to-stone-800 text-stone-50 rounded-2xl mb-6 shadow-xl"
+                        >
+                          <p className="text-stone-400 text-sm mb-1">Your ${finalAmount} could become</p>
+                          <p className="text-4xl font-semibold">${projectedGrowth.toLocaleString()}</p>
+                          <p className="text-stone-500 text-sm mt-1">in 18 years at 7% annual return</p>
+                        </motion.div>
+                      )}
+
+                      {/* Investment Choice - Premium Compact Display */}
+                      <div className="mb-6">
+                        <button
+                          onClick={() => setShowStockPicker(true)}
+                          data-testid="button-open-stock-picker"
+                          className="w-full p-4 bg-white border border-stone-200 rounded-xl hover:border-stone-300 hover:shadow-md transition-all group"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                deliveryType === "cash" 
+                                  ? "bg-emerald-50 text-emerald-600" 
+                                  : deliveryType === "stock" 
+                                    ? "bg-stone-100 text-stone-700" 
+                                    : "bg-gradient-to-br from-stone-800 to-stone-900 text-stone-50"
+                              }`}>
+                                {deliveryType === "cash" ? (
+                                  <DollarSign size={18} />
+                                ) : deliveryType === "stock" && selectedStock ? (
+                                  <span className="text-xs font-semibold">{selectedStock.symbol.slice(0, 3)}</span>
+                                ) : (
+                                  <TrendingUp size={18} />
+                                )}
+                              </div>
+                              <div className="text-left">
+                                <p className="text-sm font-medium text-stone-900">
+                                  {deliveryType === "cash" 
+                                    ? "Let them choose" 
+                                    : deliveryType === "stock" && selectedStock 
+                                      ? selectedStock.name 
+                                      : "Future Fund"}
+                                </p>
+                                <p className="text-xs text-stone-400">
+                                  {deliveryType === "cash" 
+                                    ? "Held as Seed until family decides" 
+                                    : deliveryType === "stock" && selectedStock 
+                                      ? `${selectedStock.symbol} · $${selectedStock.price.toFixed(2)}` 
+                                      : "Diversified portfolio"}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-xs text-stone-400 group-hover:text-stone-600 transition-colors">Change</span>
+                          </div>
+                          
+                          {/* Share calculation */}
+                          {deliveryType === "stock" && selectedStock && finalAmount > 0 && (
+                            <div className="mt-3 pt-3 border-t border-stone-100">
+                              <p className="text-xs text-stone-500">
+                                ${finalAmount} = <span className="font-medium text-stone-700">{shareQuantity} shares</span> at ${selectedStock.price.toFixed(2)}
+                              </p>
+                            </div>
+                          )}
+                        </button>
+                      </div>
+
                       <button
-                        onClick={() => setShowStockPicker(true)}
-                        data-testid="button-open-stock-picker"
-                        className="w-full p-4 bg-white border border-stone-200 rounded-xl hover:border-stone-300 transition-all group"
+                        onClick={() => setStep(1)}
+                        disabled={finalAmount < 5}
+                        data-testid="button-continue"
+                        className="w-full py-4 bg-stone-900 text-stone-50 rounded-2xl font-semibold disabled:opacity-40 hover:bg-stone-800 transition-colors shadow-xl shadow-stone-900/20"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                              deliveryType === "cash" 
-                                ? "bg-emerald-50 text-emerald-600" 
-                                : deliveryType === "stock" 
-                                  ? "bg-stone-100 text-stone-700" 
-                                  : "bg-stone-900 text-stone-50"
-                            }`}>
-                              {deliveryType === "cash" ? (
-                                <DollarSign size={18} />
-                              ) : deliveryType === "stock" && selectedStock ? (
-                                <span className="text-xs font-semibold">{selectedStock.symbol.slice(0, 3)}</span>
-                              ) : (
-                                <TrendingUp size={18} />
-                              )}
-                            </div>
-                            <div className="text-left">
-                              <p className="text-sm font-medium text-stone-900">
-                                {deliveryType === "cash" 
-                                  ? "Let them choose" 
-                                  : deliveryType === "stock" && selectedStock 
-                                    ? selectedStock.name 
-                                    : "Future Fund"}
-                              </p>
-                              <p className="text-xs text-stone-400">
-                                {deliveryType === "cash" 
-                                  ? "Held as Seed until family decides" 
-                                  : deliveryType === "stock" && selectedStock 
-                                    ? `${selectedStock.symbol} · $${selectedStock.price.toFixed(2)}` 
-                                    : "Diversified portfolio"}
-                              </p>
-                            </div>
-                          </div>
-                          <span className="text-xs text-stone-400 group-hover:text-stone-600 transition-colors">Change</span>
-                        </div>
-                        
-                        {/* Share calculation */}
-                        {deliveryType === "stock" && selectedStock && finalAmount > 0 && (
-                          <div className="mt-3 pt-3 border-t border-stone-100">
-                            <p className="text-xs text-stone-500">
-                              ${finalAmount} = <span className="font-medium text-stone-700">{shareQuantity} shares</span> at ${selectedStock.price.toFixed(2)}
-                            </p>
-                          </div>
-                        )}
+                        {buttonText}
                       </button>
                     </div>
-
-                    <button
-                      onClick={() => setStep(1)}
-                      disabled={finalAmount < 5}
-                      data-testid="button-continue"
-                      className="w-full py-3 lg:py-4 bg-stone-900 text-stone-50 rounded font-medium disabled:opacity-40 hover:bg-stone-800 transition-colors"
-                    >
-                      {buttonText}
-                    </button>
-                  </div>
+                  </motion.div>
                 </motion.div>
               )}
 
