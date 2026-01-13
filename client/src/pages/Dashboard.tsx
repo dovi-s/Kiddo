@@ -1732,49 +1732,8 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Mobile Bottom Action Bar - Fixed position for easy access */}
-      <motion.div 
-        initial={{ y: 100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ ...bouncySpring, delay: 0.3 }}
-        className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-stone-200 p-4 pb-6 lg:hidden z-40 shadow-xl"
-      >
-        <div className="flex gap-3 max-w-lg mx-auto">
-          <motion.button
-            onClick={handleCopyClick}
-            data-testid="mobile-bottom-share"
-            className="flex-1 flex items-center justify-center gap-2 py-4 bg-stone-900 text-white rounded-xl font-medium text-base shadow-lg"
-            whileTap={{ scale: 0.95, y: 2 }}
-            whileHover={{ scale: 1.02 }}
-            transition={gentleSpring}
-          >
-            <motion.div
-              animate={copied ? { rotate: [0, -10, 10, 0], scale: [1, 1.2, 1] } : {}}
-              transition={{ duration: 0.4 }}
-            >
-              {copied ? <Sparkles size={18} /> : <Copy size={18} />}
-            </motion.div>
-            {copied ? "Copied!" : "Share Link"}
-          </motion.button>
-          <Link href="/event/create" className="flex-1">
-            <motion.button
-              data-testid="mobile-bottom-event"
-              className="w-full flex items-center justify-center gap-2 py-4 bg-stone-100 text-stone-900 rounded-xl font-medium text-base border border-stone-200"
-              whileTap={{ scale: 0.95, y: 2 }}
-              whileHover={{ scale: 1.02, backgroundColor: "#f5f5f4" }}
-              transition={gentleSpring}
-            >
-              <motion.div whileHover={{ rotate: 90 }} transition={{ duration: 0.2 }}>
-                <Plus size={18} />
-              </motion.div>
-              New Event
-            </motion.button>
-          </Link>
-        </div>
-      </motion.div>
-      
-      {/* Spacer for bottom action bar on mobile */}
-      <div className="h-24 lg:hidden" aria-hidden="true" />
+      {/* Spacer for mobile navigation */}
+      <div className="h-20 lg:hidden" aria-hidden="true" />
 
       {/* Fund Preview Modal */}
       <Dialog open={showFundPreview} onOpenChange={setShowFundPreview}>
