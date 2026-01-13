@@ -9,6 +9,7 @@ import { Pencil, Copy, QrCode, ExternalLink, Plus, User, Users, Archive, Eye, Fi
 import { Logo } from "@/components/ui/logo";
 import { staggerContainer, fadeInUp, liftCard, gentleSpring, bouncySpring } from "@/lib/animations";
 import { AchievementBadge, getDefaultAchievements } from "@/components/ui/achievements";
+import { LiveContributorTicker, ContributorBubbles } from "@/components/ui/live-ticker";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -564,6 +565,53 @@ export default function Dashboard() {
               </div>
             </motion.div>
 
+            {/* Live Activity - Shows recent contributors */}
+            {selectedFund?.status === "active" && selectedFund.contributors > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                className="mb-8"
+              >
+                <LiveContributorTicker />
+              </motion.div>
+            )}
+
+            {/* Milestones - All viewports */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mb-8 p-5 rounded-xl bg-gradient-to-br from-stone-50 to-white border border-stone-200"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-medium text-stone-900">Milestones</p>
+                <Trophy className="w-4 h-4 text-amber-500" />
+              </div>
+              {(() => {
+                const achievements = getDefaultAchievements(
+                  selectedFund?.balance || 0,
+                  selectedFund?.contributors || 0,
+                  180
+                );
+                const unlockedCount = achievements.filter(a => a.unlocked).length;
+                return (
+                  <>
+                    <div className="flex flex-wrap gap-3 mb-3">
+                      {achievements.slice(0, 6).map((achievement) => (
+                        <AchievementBadge key={achievement.id} achievement={achievement} size="md" />
+                      ))}
+                    </div>
+                    <p className="text-xs text-stone-400">
+                      {selectedFund?.status === "active" 
+                        ? `${unlockedCount} of 6 milestones unlocked`
+                        : "Activate investing to start unlocking milestones"}
+                    </p>
+                  </>
+                );
+              })()}
+            </motion.div>
+
             {/* Selected Fund Details */}
             {selectedFund && (
               <motion.div
@@ -1010,39 +1058,6 @@ export default function Dashboard() {
                   </Link>
                 </div>
               </motion.div>
-
-              {/* Achievements Section */}
-              {(() => {
-                const achievements = getDefaultAchievements(
-                  selectedFund?.balance || 0,
-                  selectedFund?.contributors || 0,
-                  180
-                );
-                const unlockedCount = achievements.filter(a => a.unlocked).length;
-                return (
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 }}
-                    className="p-5 rounded-lg bg-gradient-to-br from-stone-50 to-white border border-stone-200"
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <p className="text-sm font-medium text-stone-900">Milestones</p>
-                      <Trophy className="w-4 h-4 text-amber-500" />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {achievements.slice(0, 4).map((achievement) => (
-                        <AchievementBadge key={achievement.id} achievement={achievement} size="sm" />
-                      ))}
-                    </div>
-                    <p className="text-xs text-stone-400 mt-3">
-                      {selectedFund?.status === "active" 
-                        ? `${unlockedCount} of 6 unlocked`
-                        : "Start growing to unlock achievements"}
-                    </p>
-                  </motion.div>
-                );
-              })()}
 
               {/* Brokerage Footer */}
               <div className="text-xs text-stone-400 text-center pt-4">
