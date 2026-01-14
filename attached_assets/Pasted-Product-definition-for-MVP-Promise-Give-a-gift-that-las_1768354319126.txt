@@ -1,0 +1,688 @@
+Product definition for MVP
+
+Promise: Give a gift that lasts. In under 60 seconds, a contribution becomes real ownership inside a recipient’s fund.
+
+MVP shape:
+
+Owner app (mobile): parents, guardians, and adults managing their own funds.
+
+Giver flow (web): no app, no account. Link or QR, pay, done.
+
+Brokerage: embedded account creation inside onboarding (or just-in-time before first investment). The owner never “connects” a broker manually.
+
+Core objects (keep the mental model tight):
+
+Household (you)
+
+Fund (Ari’s Future Fund)
+
+Event page (Bar Mitzvah 2026, Birthday, Graduation)
+Events are just branded pages that point to a Fund and change copy, theme, goal, and suggested amounts.
+
+Gift (a contribution)
+A gift always maps to: fund + optional event + message + payment + investment action.
+
+The simplest user journeys (all MVP-critical)
+Journey A: Parent creates a fund, then an event, shares link
+
+Create account (email + passkey)
+
+Create Fund (name + photo + “for who”)
+
+Create Event page (template + goal + suggested amounts)
+
+Share link or show QR
+
+See gifts arrive in Activity
+
+Send thank-yous
+
+Journey B: Giver sends a gift in 45 seconds
+
+Open link
+
+Choose amount
+
+Confirm “Future Fund” (default) or optionally “Pick a stock”
+
+Add note + name
+
+Apple Pay
+
+Card reveal + shareable receipt
+
+Journey C: First-time investing setup (KYC) happens once
+
+Triggered:
+
+during onboarding (recommended if you want “this is real” trust)
+
+OR just-in-time when owner creates first fund (best balance)
+
+OR just-in-time when first gift arrives (highest conversion, but awkward)
+
+MVP recommendation: KYC when creating first Fund, with a “Finish later” that still lets them build pages, but clearly labels “Investing not active yet.”
+
+App IA and navigation (owner app)
+
+Bottom nav (4 tabs, that is it):
+
+Home
+
+Funds
+
+Activity
+
+Settings
+
+Primary action is always top-right: Create (Fund or Event).
+Do not add more tabs.
+
+Screen-by-screen: owner app (MVP)
+0) Welcome
+
+One sentence: “Create a fund. Share a link. Gifts become ownership.”
+
+CTAs: Create account, Log in
+
+Tiny footer trust line: “Brokerage accounts powered by [partner]. SIPC coverage applies.”
+
+1) Account creation
+
+Email + passkey (or email + code)
+
+Name
+
+That is it.
+
+2) Create first Fund
+
+“Who is this for?”
+
+My child
+
+Me
+
+Fund name (default suggestions)
+
+Photo upload (optional)
+
+3) Investing setup (KYC, minimal but real)
+
+Break into 3 fast steps with progress:
+
+Identity basics (legal name, DOB, SSN)
+
+Address + employment (simple)
+
+Agreements (checkboxes, open docs)
+
+States:
+
+Pending verification
+
+Active
+
+Action required
+
+If they skip: fund is created but clearly shows “Investing not active yet. Finish setup to receive invested gifts.”
+
+4) Fund dashboard
+
+Top:
+
+Fund total (big)
+
+“This fund invests into: Future Fund” (tap to view/change)
+
+Gift progress bar if goal is set
+
+Middle tabs (2 only):
+
+Gifts
+
+Holdings
+
+Bottom:
+
+“Create event page” button
+
+“Share fund link” button
+
+5) Create Event page (template-driven)
+
+Pick template:
+
+Birthday
+
+Bar/Bat Mitzvah
+
+Graduation
+
+Wedding
+
+Baby
+
+“Just because”
+
+Then:
+
+Goal amount (optional)
+
+Suggested gift buttons (editable presets)
+
+Theme (auto from template)
+
+Share
+
+Event page is always attached to exactly one Fund.
+
+6) Activity (inbox-style)
+
+Single feed across all funds:
+
+“Gift received”
+
+“Investment placed”
+
+“Verification approved”
+
+“Thank-you sent”
+
+Each item has a receipt view.
+
+7) Thank-you flow (retention engine)
+
+At fund or event level:
+
+List of contributors (name, amount, note)
+
+“Send thank-yous” button
+
+Auto-draft message (editable)
+
+Send via email or SMS if collected
+
+Optional: “Record a 10s thank-you video” later, not MVP.
+
+8) Settings (one page, no maze)
+
+Sections:
+
+Profile
+
+Security (passkey, devices)
+
+Notifications
+
+Plans and billing
+
+Legal and documents
+
+Help
+
+No nested labyrinth.
+
+Giver flow screens (web, no account)
+G1) Landing page (from link/QR)
+
+Recipient name, event title, photo
+
+One-line: “Your gift becomes ownership in their fund.”
+
+Amount buttons + custom
+
+Apple Pay button visible immediately
+
+G2) Choose gift type (defaulted)
+
+Future Fund (recommended) pre-selected
+
+Optional: “Pick a stock” (search)
+
+Optional: “Recipient chooses later” (only if you support Seed mode)
+
+G3) Message + name
+
+“From” field
+
+Short note
+
+Privacy toggle: show name publicly or only to host
+
+G4) Pay
+
+Apple Pay / Google Pay / card
+
+Show fees transparently before final pay
+
+G5) Card reveal
+
+This is the emotional payoff:
+
+Beautiful digital card with message
+
+“Text this card” and “Add to Wallet” (optional later)
+
+Receipt link
+
+Soft prompt: “Set a reminder to gift again next birthday” (optional)
+
+Motion, animation, and delight (tasteful, not cheesy)
+
+Principles:
+
+Motion confirms completion and builds trust.
+
+No confetti spam.
+
+Haptics on key moments (iOS).
+
+Moments that matter:
+
+Card reveal (micro animation: flip, light shimmer)
+
+Progress bar fill when a gift completes
+
+Status chips: Pending → Active (subtle)
+
+Investment placed: a clean “Executed” stamp, not a trading vibe
+
+Keep everything under 300–500ms. Use easing and restraint.
+
+Virality loops (MVP-safe)
+
+Share link / QR on every event page and fund page
+
+Card share after payment (gift-giver shares it in group chats)
+
+Thank-you automation (host sends fast, giver feels good, repeats)
+
+Milestones (only 3 in MVP):
+
+First gift
+
+First $500
+
+First year anniversary recap
+
+Referral can be added later, but if you want one MVP loop:
+
+“Give $10 toward a gift when your friend creates their first fund”
+Keep it invisible until the moment it helps.
+
+Trust, safety, and privacy (must feel premium)
+
+Non-negotiables:
+
+No public search directory of people or kids.
+
+Every gift page is accessed by:
+
+unique link, QR, or invite
+
+Contributors can be “private” by default.
+
+Trust UI components:
+
+“Powered by [Broker]. SIPC coverage up to $500k applies.”
+
+“Who controls this fund?” drawer:
+
+“Parent/guardian controls until age X”
+
+Clear fee disclosure
+
+Clear refund policy
+
+Copy system (no fintech jargon)
+
+Replace:
+
+“brokerage account” with “investment account” in most places (still accurate)
+
+“buy shares” with “your gift is invested into”
+
+“portfolio” with “holdings”
+
+Examples:
+
+“Gift $100”
+
+“Invests into: Future Fund”
+
+“Gifts become ownership”
+
+“Your gift is processing”
+
+“Investment placed”
+
+The “activation moment” metric
+
+The equivalent of “7 friends in 10 days” should be behavior that predicts retention.
+
+Best candidate:
+Within 7 days:
+
+Create 1 Fund
+
+Create 1 Event page
+
+Receive 1 completed gift
+
+Secondary:
+
+Send 3 thank-yous (correlates with repeat giving)
+
+Design the product to drive this sequence.
+
+MVP scope guardrails (what you should NOT build yet)
+
+Do not build:
+
+peer-to-peer “pay friends in stock”
+
+public profiles
+
+complex investing education modules
+
+dozens of settings
+
+social feeds
+
+multiple investment products beyond 2–3 choices
+
+Build:
+
+Fund creation
+
+Event pages
+
+Gifting checkout
+
+Receipts
+
+Thank-you
+
+Clear investing setup status
+Motion and animation
+Principles
+
+Confirm, don’t entertain. Motion exists to show “what just happened” and “what happens next.”
+
+Fast and quiet. 150–250ms for UI transitions. 300–450ms max for “card reveal” moments.
+
+Never block checkout. Animation must not delay Apple Pay.
+
+Where motion matters (MVP)
+
+Card reveal (giver)
+
+A single “card flip” with a soft light sweep.
+
+Ends with two clear CTAs: “Text this card” and “View receipt.”
+
+Progress bar fill (owner)
+
+When a gift settles: progress bar fills, then stops. No looping.
+
+Status chips
+
+Pending → Active: chip morphs and changes label.
+
+If there is a delay, show a “Why?” drawer.
+
+Fund total update
+
+Number tick-up (subtle), not a casino vibe.
+
+Navigation
+
+Standard iOS/Android transitions, no custom page swooshes.
+
+Micro-interactions (high trust)
+
+Haptic on “Gift sent”
+
+A single checkmark animation on completion
+
+Skeleton loaders for balances and activity while data loads
+
+Icon system
+Style
+
+Simple outline icons (2px stroke), rounded corners, minimal detail.
+
+Avoid “fintech” clichés (candlesticks, rockets, coins).
+
+Prefer “registry” and “receipt” metaphors: card, ribbon, check, shield, lock, leaf.
+
+Core icons you need
+
+Fund (leaf or simple circle mark)
+
+Event (ticket or tag)
+
+Gift (card)
+
+Receipt (document + check)
+
+Privacy (lock)
+
+Trust (shield)
+
+Help (question)
+
+Share (standard share icon)
+
+Status: pending (clock), active (check), needs action (alert)
+
+Placement rules
+
+Icons should clarify labels, not replace them.
+
+In primary flows, use icons only in headers and rows. Never on critical buttons without text.
+
+Layout, placement, and navigation
+Owner app (4 tabs only)
+
+Bottom nav:
+
+Home
+
+Funds
+
+Activity
+
+Settings
+
+Top-right primary action:
+
+Create (opens a sheet: “Fund” or “Event page”)
+
+Fund dashboard layout
+
+Top section:
+
+Fund total (largest)
+
+Status chip (Active or Pending verification)
+
+“Invests into: Future Fund” with a small “Change” link
+
+Middle:
+
+Two tabs only: Gifts and Holdings
+
+Gifts tab shows contributors grouped by Event, plus totals and thank-you status
+
+Bottom fixed action area:
+
+“Create event page”
+
+“Share link / QR”
+
+Giver web page layout
+
+Above the fold:
+
+Recipient name + event title + photo
+
+Amount buttons
+
+Apple Pay button visible immediately
+
+Below:
+
+Gift type (default selected)
+
+Note + name
+
+Footer:
+
+Trust line + who holds assets + support link
+
+UX flow improvements for clarity
+Make the mental model explicit in one sentence, everywhere
+
+“A Fund is where gifts are invested. An Event page is just a themed way to share a Fund.”
+
+“Investing not active” state must be clean
+
+If KYC not done:
+
+Allow creating funds and event pages
+
+Gifts can be accepted as “Pending investment”
+
+Show a single banner: “Finish setup to invest gifts automatically.”
+
+Remove branching complexity
+
+For MVP:
+
+2 gift types max:
+
+Future Fund (default)
+
+Pick a stock (optional, clearly marked)
+
+Everything else later.
+
+Trust design (what users need to believe in 10 seconds)
+Trust cues and where they live
+
+On giver page, near Pay button
+
+“Custody and trading provided by [Broker partner]. SIPC coverage applies.”
+
+“No account needed to gift.”
+
+On owner fund page
+
+“Your fund is an investment account. You control it as guardian.”
+
+Status chip plus “Why this takes time” drawer.
+
+Receipts
+Every gift has:
+
+amount
+
+fee
+
+timestamp
+
+status (Authorized, Pending, Invested)
+
+what it invested into (or pending selection rule)
+
+support link
+
+Privacy
+Never allow public search.
+Every page is link-only.
+Show a visible privacy line: “This page is not searchable.”
+
+Trust language style
+
+Short, factual, no hype.
+
+Avoid “guaranteed,” “best returns,” “grow fast.”
+
+Brand system
+Brand personality
+
+Calm, premium, modern registry.
+
+Warm but not cute.
+
+Confident and simple.
+
+Tone rules
+
+Speak like a great concierge.
+
+Use plain words: “gift,” “fund,” “invested,” “receipt.”
+
+Avoid finance jargon in primary UI. Keep it in drawers.
+
+Visual direction
+
+Lots of whitespace
+
+Large type for totals, small type for legal
+
+Soft corners
+
+One accent color used sparingly for primary actions and status “Active”
+
+Mascot (optional, and only if done right)
+
+A mascot can destroy trust if it feels childish. If you do it, keep it abstract.
+
+Best option
+
+A minimal “leaf mark” character used as a helper, not a personality.
+
+No face by default. No speaking in jokes.
+
+Shows up only in:
+
+empty states (“No gifts yet”)
+
+gentle guidance (“Finish setup to activate investing”)
+
+Alternate (even safer)
+
+No mascot at all. Use “card” as the hero artifact instead.
+
+What to fix in your current prototype most often
+
+Based on what typically breaks clarity in products like this:
+
+Too many plan concepts shown inside the core flow
+
+Missing visible account status states (pending vs active)
+
+“Fund vs Event vs Account” not defined clearly in UI
+
+Not enough receipts and status explanations
+
+Too many settings too early
+
+If you want a “perfect MVP” checklist for UX/brand
+
+Giver can complete gift in under 60 seconds.
+
+Owner can create a fund, create an event page, and share in under 2 minutes.
+
+Every money movement has a receipt and a status.
+
+“Who controls this?” is answered in one tap.
+
+No public search, link-only sharing.
+
+Four tabs max in owner app.
+
+Two gift types max in MVP.

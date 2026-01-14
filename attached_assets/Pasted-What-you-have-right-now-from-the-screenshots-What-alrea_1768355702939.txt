@@ -1,0 +1,308 @@
+What you have right now (from the screenshots)
+What already feels strong
+
+Clean, calm layout with real whitespace. It reads “trustworthy” more than “startup gimmick.”
+
+Primary objects are correct: Fund, occasions, activity, sharing.
+
+The “pending → invested” concept is present, which is the core mental model you need for stock gifting.
+
+What’s subtly overbuilt or unclear
+
+These are the places a great MVP usually tightens.
+
+Two different “values” without a crystal-clear story
+
+“Total received” vs “Portfolio value” is logical, but it still makes users ask: “So how much do they have?”
+
+Fix by naming the story more directly:
+
+Invested value (what’s in the market)
+
+Pending gifts (not invested yet)
+
+Total contributed (lifetime)
+
+Duplicate calls to action in the “Not activated” state
+
+“Activate investing” appears in multiple spots. Great products do not repeat CTAs unless the user scrolls past the first one.
+
+Pick one primary card, then make the rest informational.
+
+The allocation bar is not self-explanatory
+
+A segmented bar with Stocks | Intl | Bonds | Cash is fine, but it needs a label that tells the user why it exists.
+
+Add a single line: “Strategy: Growth (80/20)” with “Edit” behind it.
+
+“Events” is doing too much too early
+
+“Open anytime” + multiple occasions is cool, but it’s also a surface area trap pre-customer.
+
+MVP tends to win by having:
+
+One default fund link
+
+Optional “Occasions” later
+
+The template chooser is fun, but it is likely not MVP
+
+Templates are an optimization. Early on, you want to learn what people actually share.
+
+Keep one great default theme and nail it.
+
+The right MVP for this product (pre-revenue, pre-customers)
+The single thing you must nail
+
+A parent can set it up in minutes and confidently share a link.
+Everything else is secondary.
+
+MVP scope (Owner app + simple giver web)
+
+Even if you do “owner app only,” you still need a giver web flow to complete a gift.
+
+Owner app MVP screens
+
+Create household
+
+Add child name + birthday (optional)
+
+Create fund
+
+Default strategy (no allocation UI yet):
+
+Growth (default)
+
+Balanced
+
+Conservative
+
+Activate investing (KYC)
+
+One path, one CTA, clear “why required”
+
+Share
+
+Copy link, QR, iMessage share
+
+Dashboard
+
+Invested value, Pending, Total contributed
+
+Recent gifts
+
+Thank-yous
+
+A simple queue: “2 gifts to thank”
+
+Settings
+
+Household, security, notifications, documents
+
+Defer for later
+
+Multiple templates
+
+Many occasion types
+
+Fine-grained allocation editing
+
+“Send a gift” from the owner side (confusing early)
+
+Deep projections (“when they turn 18”) unless it’s exceptionally accurate and legally safe
+
+Does this account for account owner + child(ren)?
+
+It should, and you’re already close.
+
+The clean model
+
+Household (Owner)
+
+Child 1
+
+Fund (default, 1 per child in MVP)
+
+Optional occasions later
+
+Child 2
+
+Fund
+
+UX rule
+
+The top switcher should be child-first, not fund-first.
+
+“Mila” and “Noah” as the primary switch
+
+Inside each child: one fund, one share link
+
+If you eventually support multiple funds per child, add that later. MVP: one fund per child.
+
+App or website?
+Recommendation
+
+Owner experience: app
+
+Push notifications matter (gift received, pending invested, thank-you reminders).
+
+It feels more trusted for “my kid’s investing account.”
+
+Giver experience: mobile web
+
+Zero install.
+
+Links open instantly from text, WhatsApp, email.
+
+This is where viral spread happens.
+
+So yes: Owner app only is good, as long as you still ship the giver web flow.
+
+The “holy shit I can gift them a TSLA share with Apple Pay” idea
+
+Agree with the feeling. It is a huge hook.
+
+But for MVP, do it in a way that does not explode complexity:
+
+MVP-safe version of that delight
+
+Giver chooses:
+
+$25 / $50 / $100
+
+Optional “in honor of 5th birthday”
+
+You show a fun line like:
+
+“About 0.0X shares of TSLA at today’s price” (clearly labeled as estimate)
+
+Under the hood:
+
+It’s a cash contribution
+
+The fund’s strategy buys according to preset rules
+
+Later version (harder)
+
+True “gift 1 share of TSLA”
+
+More edge cases: fractional rules, price movement, market hours, trade timing, cancellations, what happens if the trade fails, suitability, disclosures.
+
+So yes to the “TSLA share” moment, but ship it as an estimated outcome from a dollar gift first.
+
+Brokerage / investing / transactions in an MVP
+
+This is the highest-risk area to overdo.
+
+The clean MVP approach
+
+Before activation (KYC not done)
+
+Allow “pledges” only, or allow gifts that sit as pending until activation.
+
+Your screenshot already hints at this. That is good.
+
+After activation
+
+Gifts become cash in the brokerage account.
+
+A simple rule invests them:
+
+“Invest next market open”
+
+Activity timeline should be explicit:
+
+Received → Processing → Invested → Settled
+
+Be obsessive about clarity
+
+People will forgive fewer features.
+
+They will not forgive confusion with money.
+
+Animations, delight, and “$5B company” feel
+
+Big companies do delight with restraint.
+
+Micro-interactions that matter
+
+Number tick-up on gift received (fast, subtle).
+
+A tiny progress chip for Pending gifts: “Invests at next market open.”
+
+Confetti only on meaningful moments:
+
+First gift
+
+First $100
+
+First birthday hit
+
+Haptics on iOS for “Link copied” and “Gift received.”
+
+Avoid
+
+Mascots in MVP, unless your brand is explicitly character-driven.
+
+Over-animated dashboards. It lowers trust in a finance-adjacent product.
+
+Brand, color, typography, icons (based on the logo concepts)
+The logo direction is strong
+
+The green + gold reads: growth + warmth + “gift” + long-term.
+
+The mark (K + arrow + heart) is memorable and works as an app icon.
+
+Make the UI match the logo
+
+Right now the UI reads modern-minimal. Good. Just align the system:
+
+Color system (simple)
+
+Primary: deep evergreen
+
+Accent: warm gold (use sparingly)
+
+Neutrals: off-white backgrounds, soft gray borders, near-black text
+
+One functional blue is fine for links, but do not let “link blue” become the brand.
+
+Typography
+
+UI: Inter (or SF on iOS) for clarity.
+
+Brand headline option: a subtle serif for marketing only (not necessary in-product).
+
+The product should feel “calm and inevitable,” not decorative.
+
+Icons
+
+Single stroke family, rounded ends, consistent sizes.
+
+Avoid mixing playful icons with finance UI. Trust beats cute.
+
+Tone of copy
+
+Short, plain, confident.
+
+Replace jargon labels:
+
+“Activate investing” → “Turn on investing”
+
+Add one line: “Required to accept gifts and invest them.”
+
+If I had to cut this down to “the right version” in one pass
+
+Child-first switcher, one fund per child in MVP
+
+Dashboard tells one story: Invested + Pending + Total
+
+One Share action, one link, one giver flow
+
+Occasions optional, not a primary structure
+
+Templates deferred
+
+Transaction timeline made explicit and dead simple
+
+Delight through micro-interactions, not features
