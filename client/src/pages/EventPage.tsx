@@ -250,38 +250,30 @@ export default function EventPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100 overflow-hidden">
-      {/* Header - Premium floating style */}
-      <header className="sticky top-0 z-50 bg-gradient-to-b from-stone-50 via-stone-50/95 to-stone-50/0 pb-2">
+    <div className="min-h-screen bg-background overflow-hidden">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-2">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 h-16 flex items-center justify-between">
           <button 
             onClick={() => window.history.back()}
             data-testid="button-back"
-            className="w-10 h-10 rounded-full bg-white/80 backdrop-blur border border-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-700 hover:bg-white transition-all shadow-sm"
+            className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all shadow-sm"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className="text-sm font-medium text-stone-900">{eventTitle || "Give"}</span>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            <span className="text-xs text-emerald-700 font-medium">Secure</span>
+          <span className="text-sm font-medium text-foreground">{eventTitle || "Give"}</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[hsl(var(--kora-evergreen)/0.1)] border border-[hsl(var(--kora-evergreen)/0.2)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--kora-evergreen))]"></span>
+            <span className="text-xs text-[hsl(var(--kora-evergreen))] font-medium">Secure</span>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12 relative">
-        {/* Ambient gradient orbs */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-emerald-100/40 to-teal-100/30 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 left-0 w-80 h-80 bg-gradient-to-br from-blue-100/30 to-indigo-100/20 rounded-full blur-3xl pointer-events-none" />
-        
-        {/* Desktop: Two column layout */}
         <div className="lg:grid lg:grid-cols-2 lg:gap-16 lg:items-start">
           
-          {/* Left column - Info (desktop) - Premium styling */}
           <div className="hidden lg:block lg:sticky lg:top-20 relative z-10">
-            {/* Photo */}
             {photo && (
               <img 
                 src={photo} 
@@ -290,52 +282,48 @@ export default function EventPage() {
               />
             )}
 
-            {/* Header Card */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-hidden bg-gradient-to-br from-white via-stone-50 to-stone-100 border border-stone-200/80 rounded-2xl p-8 mb-8 shadow-lg"
+              className="relative overflow-hidden bg-card border border-border rounded-2xl p-8 mb-8 shadow-lg"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/50 to-teal-100/30 rounded-full blur-2xl" />
-              
               <div className="relative z-10">
                 {!photo && (
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-900 text-stone-50 flex items-center justify-center text-2xl font-medium mb-6 shadow-xl">
+                  <div className="w-20 h-20 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-2xl font-medium mb-6 shadow-xl">
                     {recipientName.charAt(0)}
                   </div>
                 )}
-                <h1 className="text-3xl font-semibold text-stone-900 mb-3">
+                <h1 className="text-3xl font-semibold text-foreground mb-3">
                   {headline || `Give to ${recipientName}`}
                 </h1>
                 {description && (
-                  <p className="text-stone-500 text-lg leading-relaxed">{description}</p>
+                  <p className="text-muted-foreground text-lg leading-relaxed">{description}</p>
                 )}
                 {!description && eventTitle && (
-                  <p className="text-stone-500 text-lg">{eventTitle}</p>
+                  <p className="text-muted-foreground text-lg">{eventTitle}</p>
                 )}
               </div>
             </motion.div>
 
-            {/* Progress bar with teamwork feel - Premium */}
             {showProgress && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="mb-8 p-6 bg-gradient-to-br from-white to-stone-50 rounded-2xl border border-stone-200/80 shadow-lg"
+                className="mb-8 p-6 bg-card rounded-2xl border border-border shadow-lg"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-sm font-semibold text-stone-900">Group goal</span>
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700">
+                  <span className="text-sm font-semibold text-foreground">Group goal</span>
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-[hsl(var(--kora-evergreen)/0.1)] text-[hsl(var(--kora-evergreen))]">
                     {Math.round((currentAmount / goalAmount) * 100)}% funded
                   </span>
                 </div>
-                <div className="h-4 bg-stone-100 rounded-full overflow-hidden mb-4 shadow-inner">
+                <div className="h-4 bg-muted rounded-full overflow-hidden mb-4">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min((currentAmount / goalAmount) * 100, 100)}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
+                    className="h-full bg-[hsl(var(--kora-evergreen))] rounded-full"
                   />
                 </div>
                 <div className="flex items-center justify-between">
@@ -344,23 +332,22 @@ export default function EventPage() {
                       {["D", "R", "S", "M"].slice(0, 4).map((initial, i) => (
                         <div 
                           key={i} 
-                          className="w-7 h-7 rounded-full bg-gradient-to-br from-stone-100 to-stone-200 border-2 border-white flex items-center justify-center text-[10px] font-semibold text-stone-600 shadow-sm"
+                          className="w-7 h-7 rounded-full bg-muted border-2 border-card flex items-center justify-center text-[10px] font-semibold text-muted-foreground shadow-sm"
                         >
                           {initial}
                         </div>
                       ))}
                     </div>
-                    <span className="text-xs text-stone-500">12 people have given</span>
+                    <span className="text-xs text-muted-foreground">12 people have given</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-xl font-bold text-stone-900">${currentAmount.toLocaleString()}</span>
-                    <span className="text-xs text-stone-400 ml-1">/ ${goalAmount.toLocaleString()}</span>
+                    <span className="text-xl font-bold text-foreground">${currentAmount.toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground ml-1">/ ${goalAmount.toLocaleString()}</span>
                   </div>
                 </div>
               </motion.div>
             )}
 
-            {/* Live Activity */}
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -370,37 +357,34 @@ export default function EventPage() {
               <LiveContributorTicker />
             </motion.div>
 
-            {/* Trust badges - Premium */}
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="p-5 rounded-2xl bg-gradient-to-br from-stone-50 to-white border border-stone-200/80 space-y-4"
+              className="p-5 rounded-2xl bg-card border border-border space-y-4"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-8 h-8 rounded-lg bg-[hsl(var(--kora-evergreen)/0.1)] flex items-center justify-center">
+                  <svg className="w-4 h-4 text-[hsl(var(--kora-evergreen))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
-                <span className="text-sm text-stone-600">100% of your gift is invested</span>
+                <span className="text-sm text-muted-foreground">100% of your gift is invested</span>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                <span className="text-sm text-stone-600">SIPC protected up to $500,000</span>
+                <span className="text-sm text-muted-foreground">SIPC protected up to $500,000</span>
               </div>
             </motion.div>
           </div>
 
-          {/* Right column - Form */}
           <div className="max-w-lg mx-auto lg:mx-0 lg:max-w-none">
             <AnimatePresence mode="wait">
               
-              {/* Step 0: Amount */}
               {step === 0 && (
                 <motion.div
                   key="amount"
@@ -408,26 +392,23 @@ export default function EventPage() {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  {/* Mobile-only info section - Premium */}
                   <div className="lg:hidden relative z-10">
-                    {/* Breadcrumb - styled pills */}
                     <div className="text-sm mb-8 flex items-center gap-2 flex-wrap">
                       <Link href="/dashboard">
-                        <span className="px-2.5 py-1 rounded-full bg-stone-100 text-stone-500 hover:bg-stone-200 transition-colors text-xs">Dashboard</span>
+                        <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground hover:bg-border transition-colors text-xs">Dashboard</span>
                       </Link>
-                      <span className="text-stone-300">›</span>
+                      <span className="text-border">›</span>
                       <Link href={`/${fundSlug}`}>
-                        <span className="px-2.5 py-1 rounded-full bg-stone-100 text-stone-600 hover:bg-stone-200 transition-colors text-xs">{recipientName}</span>
+                        <span className="px-2.5 py-1 rounded-full bg-muted text-muted-foreground hover:bg-border transition-colors text-xs">{recipientName}</span>
                       </Link>
                       {eventTitle && (
                         <>
-                          <span className="text-stone-300">›</span>
-                          <span className="px-2.5 py-1 rounded-full bg-stone-900 text-white text-xs">{eventTitle}</span>
+                          <span className="text-border">›</span>
+                          <span className="px-2.5 py-1 rounded-full bg-primary text-primary-foreground text-xs">{eventTitle}</span>
                         </>
                       )}
                     </div>
 
-                    {/* Photo */}
                     {photo && (
                       <img 
                         src={photo} 
@@ -436,64 +417,59 @@ export default function EventPage() {
                       />
                     )}
 
-                    {/* Header - Premium */}
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       className="text-center mb-10"
                     >
                       {!photo && (
-                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-900 text-stone-50 flex items-center justify-center text-2xl font-medium mx-auto mb-6 shadow-xl ring-4 ring-white/80">
+                        <div className="w-20 h-20 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center text-2xl font-medium mx-auto mb-6 shadow-xl ring-4 ring-card/80">
                           {recipientName.charAt(0)}
                         </div>
                       )}
-                      <h1 className="text-2xl font-semibold text-stone-900 mb-2">
+                      <h1 className="text-2xl font-semibold text-foreground mb-2">
                         {headline || `Give to ${recipientName}`}
                       </h1>
                       {description && (
-                        <p className="text-stone-500 text-sm mt-2 leading-relaxed">{description}</p>
+                        <p className="text-muted-foreground text-sm mt-2 leading-relaxed">{description}</p>
                       )}
                       {!description && eventTitle && (
-                        <p className="text-stone-500">{eventTitle}</p>
+                        <p className="text-muted-foreground">{eventTitle}</p>
                       )}
                     </motion.div>
 
-                    {/* Progress bar - Premium */}
                     {showProgress && (
                       <motion.div 
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="mb-8 p-4 rounded-2xl bg-gradient-to-br from-white to-stone-50 border border-stone-200/80 shadow-lg"
+                        className="mb-8 p-4 rounded-2xl bg-card border border-border shadow-lg"
                       >
                         <div className="flex justify-between text-sm mb-3">
-                          <span className="font-semibold text-stone-900">${currentAmount.toLocaleString()}</span>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">{Math.round((currentAmount / goalAmount) * 100)}%</span>
+                          <span className="font-semibold text-foreground">${currentAmount.toLocaleString()}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-[hsl(var(--kora-evergreen)/0.1)] text-[hsl(var(--kora-evergreen))]">{Math.round((currentAmount / goalAmount) * 100)}%</span>
                         </div>
-                        <div className="h-3 bg-stone-100 rounded-full overflow-hidden shadow-inner">
+                        <div className="h-3 bg-muted rounded-full overflow-hidden">
                           <motion.div 
                             initial={{ width: 0 }}
                             animate={{ width: `${Math.min((currentAmount / goalAmount) * 100, 100)}%` }}
                             transition={{ duration: 1, ease: "easeOut" }}
-                            className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full"
+                            className="h-full bg-[hsl(var(--kora-evergreen))] rounded-full"
                           />
                         </div>
-                        <p className="text-xs text-stone-400 mt-2">Goal: ${goalAmount.toLocaleString()}</p>
+                        <p className="text-xs text-muted-foreground mt-2">Goal: ${goalAmount.toLocaleString()}</p>
                       </motion.div>
                     )}
                   </div>
 
-                  {/* Amount Selection - Premium Card */}
                   <motion.div 
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="relative overflow-hidden bg-gradient-to-br from-white to-stone-50 border border-stone-200/80 rounded-2xl p-6 shadow-lg"
+                    className="relative overflow-hidden bg-card border border-border rounded-2xl p-6 shadow-lg"
                   >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/30 to-teal-100/20 rounded-full blur-2xl" />
-                    
                     <div className="relative z-10">
-                      <h2 className="text-lg font-semibold text-stone-900 mb-6">Choose an amount</h2>
+                      <h2 className="text-lg font-semibold text-foreground mb-6">Choose an amount</h2>
                       
                       <div className="grid grid-cols-4 gap-2 mb-4">
                         {AMOUNTS.map((a) => (
@@ -503,8 +479,8 @@ export default function EventPage() {
                             data-testid={`amount-${a}`}
                             className={`py-4 rounded-xl text-sm font-semibold transition-all ${
                               amount === a && !customAmount
-                                ? "bg-stone-900 text-white shadow-lg shadow-stone-900/20"
-                                : "bg-white border border-stone-200 text-stone-900 hover:border-stone-400 hover:shadow-md"
+                                ? "bg-primary text-primary-foreground shadow-lg"
+                                : "bg-card border border-border text-foreground hover:border-muted-foreground hover:shadow-md"
                             }`}
                           >
                             ${a}
@@ -513,7 +489,7 @@ export default function EventPage() {
                       </div>
 
                       <div className="relative mb-6">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 font-medium">$</span>
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -521,38 +497,36 @@ export default function EventPage() {
                           value={customAmount}
                           onChange={(e) => setCustomAmount(e.target.value.replace(/[^0-9]/g, ""))}
                           data-testid="input-custom-amount"
-                          className="w-full pl-8 pr-4 py-4 bg-white border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:border-stone-400 focus:ring-2 focus:ring-stone-100"
+                          className="w-full pl-8 pr-4 py-4 bg-card border border-border rounded-xl text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
                         />
                       </div>
 
-                      {/* Projection - Premium */}
                       {finalAmount > 0 && (
                         <motion.div
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="p-6 bg-gradient-to-br from-stone-900 to-stone-800 text-stone-50 rounded-2xl mb-6 shadow-xl"
+                          className="p-6 bg-primary text-primary-foreground rounded-2xl mb-6 shadow-xl"
                         >
-                          <p className="text-stone-400 text-sm mb-1">Your ${finalAmount} could become</p>
+                          <p className="text-primary-foreground/70 text-sm mb-1">Your ${finalAmount} could become</p>
                           <p className="text-4xl font-semibold">${projectedGrowth.toLocaleString()}</p>
-                          <p className="text-stone-500 text-sm mt-1">in 18 years at 7% annual return</p>
+                          <p className="text-primary-foreground/60 text-sm mt-1">in 18 years at 7% annual return</p>
                         </motion.div>
                       )}
 
-                      {/* Investment Choice - Premium Compact Display */}
                       <div className="mb-6">
                         <button
                           onClick={() => setShowStockPicker(true)}
                           data-testid="button-open-stock-picker"
-                          className="w-full p-4 bg-white border border-stone-200 rounded-xl hover:border-stone-300 hover:shadow-md transition-all group"
+                          className="w-full p-4 bg-card border border-border rounded-xl hover:border-muted-foreground hover:shadow-md transition-all group"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
                                 deliveryType === "cash" 
-                                  ? "bg-emerald-50 text-emerald-600" 
+                                  ? "bg-[hsl(var(--kora-evergreen)/0.1)] text-[hsl(var(--kora-evergreen))]" 
                                   : deliveryType === "stock" 
-                                    ? "bg-stone-100 text-stone-700" 
-                                    : "bg-gradient-to-br from-stone-800 to-stone-900 text-stone-50"
+                                    ? "bg-muted text-foreground" 
+                                    : "bg-primary text-primary-foreground"
                               }`}>
                                 {deliveryType === "cash" ? (
                                   <DollarSign size={18} />
@@ -563,14 +537,14 @@ export default function EventPage() {
                                 )}
                               </div>
                               <div className="text-left">
-                                <p className="text-sm font-medium text-stone-900">
+                                <p className="text-sm font-medium text-foreground">
                                   {deliveryType === "cash" 
                                     ? "Let them choose" 
                                     : deliveryType === "stock" && selectedStock 
                                       ? selectedStock.name 
                                       : "Future Fund"}
                                 </p>
-                                <p className="text-xs text-stone-400">
+                                <p className="text-xs text-muted-foreground">
                                   {deliveryType === "cash" 
                                     ? "Held as Seed until family decides" 
                                     : deliveryType === "stock" && selectedStock 
@@ -579,14 +553,13 @@ export default function EventPage() {
                                 </p>
                               </div>
                             </div>
-                            <span className="text-xs text-stone-400 group-hover:text-stone-600 transition-colors">Change</span>
+                            <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">Change</span>
                           </div>
                           
-                          {/* Share calculation */}
                           {deliveryType === "stock" && selectedStock && finalAmount > 0 && (
-                            <div className="mt-3 pt-3 border-t border-stone-100">
-                              <p className="text-xs text-stone-500">
-                                ${finalAmount} = <span className="font-medium text-stone-700">{shareQuantity} shares</span> at ${selectedStock.price.toFixed(2)}
+                            <div className="mt-3 pt-3 border-t border-border">
+                              <p className="text-xs text-muted-foreground">
+                                ${finalAmount} = <span className="font-medium text-foreground">{shareQuantity} shares</span> at ${selectedStock.price.toFixed(2)}
                               </p>
                             </div>
                           )}
@@ -597,7 +570,7 @@ export default function EventPage() {
                         onClick={() => setStep(1)}
                         disabled={finalAmount < 5}
                         data-testid="button-continue"
-                        className="w-full py-4 bg-stone-900 text-stone-50 rounded-2xl font-semibold disabled:opacity-40 hover:bg-stone-800 transition-colors shadow-xl shadow-stone-900/20"
+                        className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-semibold disabled:opacity-40 hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors shadow-xl"
                       >
                         {buttonText}
                       </button>
@@ -606,7 +579,6 @@ export default function EventPage() {
                 </motion.div>
               )}
 
-              {/* Step 1: Details + Payment */}
               {step === 1 && (
                 <motion.div
                   key="details"
@@ -617,62 +589,61 @@ export default function EventPage() {
                   <button 
                     onClick={() => setStep(0)}
                     data-testid="button-back-step1"
-                    className="text-sm text-stone-500 hover:text-stone-900 mb-8 transition-colors"
+                    className="text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
                   >
                     ← Back
                   </button>
 
-                  <div className="lg:bg-white lg:border lg:border-stone-200 lg:rounded-xl lg:p-6">
-                    <p className="text-sm text-stone-500 mb-1">Giving ${finalAmount} to {recipientName}</p>
-                    <h1 className="text-2xl font-light text-stone-900 mb-8">Add your details</h1>
+                  <div className="lg:bg-card lg:border lg:border-border lg:rounded-xl lg:p-6">
+                    <p className="text-sm text-muted-foreground mb-1">Giving ${finalAmount} to {recipientName}</p>
+                    <h1 className="text-2xl font-light text-foreground mb-8">Add your details</h1>
 
                     <div className="space-y-4 mb-8">
                       <div>
-                        <label className="block text-sm text-stone-500 mb-2">Your name</label>
+                        <label className="block text-sm text-muted-foreground mb-2">Your name</label>
                         <input
                           type="text"
                           value={giverName}
                           onChange={(e) => setGiverName(e.target.value)}
                           placeholder="How they'll see you"
                           data-testid="input-name"
-                          className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                          className="w-full px-4 py-3 lg:py-4 bg-card border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm text-stone-500 mb-2">Your email</label>
+                        <label className="block text-sm text-muted-foreground mb-2">Your email</label>
                         <input
                           type="email"
                           value={giverEmail}
                           onChange={(e) => setGiverEmail(e.target.value)}
                           placeholder="For your receipt"
                           data-testid="input-email"
-                          className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                          className="w-full px-4 py-3 lg:py-4 bg-card border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm text-stone-500 mb-2">Add a note (optional)</label>
+                        <label className="block text-sm text-muted-foreground mb-2">Add a note (optional)</label>
                         <textarea
                           value={message}
                           onChange={(e) => setMessage(e.target.value)}
                           placeholder="A message for them..."
                           rows={3}
                           data-testid="input-message"
-                          className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 resize-none transition-all"
+                          className="w-full px-4 py-3 lg:py-4 bg-card border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary resize-none transition-all"
                         />
                       </div>
                       
-                      {/* SMS Updates Toggle */}
                       <div className="pt-2">
                         <button
                           type="button"
                           onClick={() => setWantsSmsUpdates(!wantsSmsUpdates)}
                           data-testid="toggle-sms-updates"
-                          className="w-full flex items-start gap-3 p-4 bg-gradient-to-br from-stone-50 to-white border border-stone-200 rounded-xl hover:border-stone-300 transition-all text-left"
+                          className="w-full flex items-start gap-3 p-4 bg-secondary border border-border rounded-xl hover:border-muted-foreground transition-all text-left"
                         >
                           <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
                             wantsSmsUpdates 
-                              ? "bg-stone-900 border-stone-900" 
-                              : "border-stone-300 bg-white"
+                              ? "bg-primary border-primary" 
+                              : "border-border bg-card"
                           }`}>
                             {wantsSmsUpdates && (
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -681,12 +652,11 @@ export default function EventPage() {
                             )}
                           </div>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-stone-900">Get text updates</p>
-                            <p className="text-xs text-stone-500 mt-0.5">Receive a text when the gift is invested and a personal thank-you from {recipientName}'s family</p>
+                            <p className="text-sm font-medium text-foreground">Get text updates</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">Receive a text when the gift is invested and a personal thank-you from {recipientName}'s family</p>
                           </div>
                         </button>
                         
-                        {/* Phone input - shown when SMS opted in */}
                         <AnimatePresence>
                           {wantsSmsUpdates && (
                             <motion.div
@@ -703,9 +673,9 @@ export default function EventPage() {
                                   onChange={(e) => setGiverPhone(e.target.value)}
                                   placeholder="(555) 123-4567"
                                   data-testid="input-phone"
-                                  className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                                  className="w-full px-4 py-3 lg:py-4 bg-card border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all"
                                 />
-                                <p className="text-[11px] text-stone-400 mt-2 px-1">
+                                <p className="text-[11px] text-muted-foreground mt-2 px-1">
                                   By providing your number, you agree to receive SMS updates about this gift. Msg & data rates may apply.
                                 </p>
                               </div>
@@ -715,29 +685,27 @@ export default function EventPage() {
                       </div>
                     </div>
 
-                    {/* Summary */}
-                    <div className="p-4 bg-white border border-stone-200 rounded mb-6 space-y-2">
+                    <div className="p-4 bg-card border border-border rounded mb-6 space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-stone-500">Gift amount</span>
-                        <span className="text-stone-900">${finalAmount.toFixed(2)}</span>
+                        <span className="text-muted-foreground">Gift amount</span>
+                        <span className="text-foreground">${finalAmount.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span className="text-stone-500">Processing fee</span>
-                        <span className="text-stone-900">${fee.toFixed(2)}</span>
+                        <span className="text-muted-foreground">Processing fee</span>
+                        <span className="text-foreground">${fee.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between font-medium pt-2 border-t border-stone-100">
-                        <span className="text-stone-900">Total</span>
-                        <span className="text-stone-900">${total}</span>
+                      <div className="flex justify-between font-medium pt-2 border-t border-border">
+                        <span className="text-foreground">Total</span>
+                        <span className="text-foreground">${total}</span>
                       </div>
                     </div>
 
-                    {/* Payment buttons */}
                     <div className="space-y-3">
                       <button
                         onClick={handleGive}
                         disabled={isProcessing || !giverName || !giverEmail || (wantsSmsUpdates && !giverPhone)}
                         data-testid="button-apple-pay"
-                        className="w-full py-3 lg:py-4 bg-stone-900 text-stone-50 rounded-xl font-medium disabled:opacity-40 hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-3 lg:py-4 bg-primary text-primary-foreground rounded-xl font-medium disabled:opacity-40 hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors flex items-center justify-center gap-2"
                       >
                         {isProcessing ? "Processing..." : (
                           <>
@@ -752,20 +720,19 @@ export default function EventPage() {
                         onClick={handleGive}
                         disabled={isProcessing || !giverName || !giverEmail || (wantsSmsUpdates && !giverPhone)}
                         data-testid="button-card"
-                        className="w-full py-3 lg:py-4 bg-white border border-stone-200 text-stone-900 rounded-xl font-medium disabled:opacity-40 hover:bg-stone-50 transition-colors"
+                        className="w-full py-3 lg:py-4 bg-card border border-border text-foreground rounded-xl font-medium disabled:opacity-40 hover:bg-muted transition-colors"
                       >
                         Pay with card
                       </button>
                     </div>
 
-                    <p className="text-xs text-stone-400 text-center mt-4">
+                    <p className="text-xs text-muted-foreground text-center mt-4">
                       100% of your gift is invested
                     </p>
                   </div>
                 </motion.div>
               )}
 
-              {/* Step 2: Success */}
               {step === 2 && (
                 <motion.div
                   key="success"
@@ -777,7 +744,6 @@ export default function EventPage() {
                   <Confetti isActive={true} />
                   
                   <div className="max-w-md mx-auto space-y-6">
-                    {/* Investment Reveal Animation */}
                     <InvestmentReveal 
                       amount={finalAmount}
                       stockSymbol={deliveryType === "stock" && selectedStock ? selectedStock.symbol : "VTI"}
@@ -788,166 +754,132 @@ export default function EventPage() {
                       }
                     />
 
-                    <div className="bg-white border border-stone-200 rounded-2xl p-8 shadow-xl">
+                    <div className="bg-card border border-border rounded-2xl p-8 shadow-xl">
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.8 }}
                       >
-                        <h1 className="text-2xl lg:text-3xl font-semibold text-stone-900 mb-2">
+                        <h1 className="text-2xl lg:text-3xl font-semibold text-foreground mb-2">
                           Gift sent!
                         </h1>
-                        <p className="text-stone-500 mb-6">
-                          You gave <span className="font-medium text-stone-900">${finalAmount}</span> to {recipientName}'s future
+                        <p className="text-muted-foreground mb-6">
+                          {recipientName}'s family will be notified
                         </p>
-                      </motion.div>
-                      
-                      <motion.div 
-                        className="p-5 bg-gradient-to-br from-stone-50 to-stone-100 rounded-xl text-left mb-8"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 1.0 }}
-                      >
-                        <div className="flex justify-between mb-3">
-                          <span className="text-stone-500">Amount</span>
-                          <span className="font-semibold text-stone-900">${finalAmount}</span>
-                        </div>
-                        <div className="flex justify-between mb-3">
-                          <span className="text-stone-500">To</span>
-                          <span className="font-semibold text-stone-900">{recipientName}</span>
-                        </div>
-                        {message && (
-                          <div className="pt-3 mt-3 border-t border-stone-200">
-                            <p className="text-xs text-stone-400 mb-1">Your message</p>
-                            <p className="text-sm text-stone-700 italic">"{message}"</p>
-                          </div>
-                        )}
-                        <div className="flex justify-between pt-3 mt-3 border-t border-stone-200">
-                          <span className="text-stone-500">Projected in 18 years</span>
-                          <span className="font-semibold text-emerald-600">${projectedGrowth.toLocaleString()}</span>
-                        </div>
-                      </motion.div>
 
-                      <motion.div 
-                        className="flex gap-3"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 1.2 }}
-                      >
-                        <button
-                          onClick={() => {
-                            navigator.share?.({
-                              title: `I just gifted to ${recipientName}'s Future Fund!`,
-                              url: window.location.origin + `/${fundSlug}`
-                            }).catch(() => {});
-                          }}
-                          className="flex-1 py-3 bg-stone-900 text-white rounded-xl font-medium hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
-                          data-testid="button-share"
-                        >
-                          <Share2 className="w-4 h-4" />
-                          Share
-                        </button>
-                        <Link href={`/${fundSlug}`} className="flex-1">
-                          <button 
-                            className="w-full py-3 border border-stone-200 text-stone-700 rounded-xl font-medium hover:bg-stone-50 transition-colors"
-                            data-testid="link-view-fund"
+                        <div className="p-4 bg-secondary rounded-xl mb-6 text-left space-y-3">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Amount</span>
+                            <span className="font-medium text-foreground">${finalAmount}</span>
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Investment</span>
+                            <span className="font-medium text-foreground">{getInvestmentLabel()}</span>
+                          </div>
+                          {message && (
+                            <div className="pt-2 border-t border-border">
+                              <p className="text-sm text-muted-foreground">"{message}"</p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-3">
+                          <button
+                            onClick={() => {
+                              const shareUrl = window.location.href;
+                              navigator.clipboard.writeText(shareUrl);
+                            }}
+                            data-testid="button-share"
+                            className="w-full py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors flex items-center justify-center gap-2"
                           >
-                            View fund
+                            <Share2 size={16} />
+                            Share this fund
                           </button>
-                        </Link>
+                          <Link href="/dashboard">
+                            <button 
+                              data-testid="button-done"
+                              className="w-full py-3 bg-secondary text-foreground rounded-xl font-medium hover:bg-muted transition-colors"
+                            >
+                              Done
+                            </button>
+                          </Link>
+                        </div>
                       </motion.div>
-                      
-                      <motion.p 
-                        className="text-xs text-stone-400 mt-6"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 1.4 }}
-                      >
-                        Receipt sent to your email
-                      </motion.p>
                     </div>
                   </div>
                 </motion.div>
               )}
+
             </AnimatePresence>
           </div>
         </div>
       </main>
 
-      {/* Stock Picker Modal - Premium Full-Screen Overlay */}
       <AnimatePresence>
         {showStockPicker && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-foreground/60 z-50 flex items-end lg:items-center justify-center"
             onClick={() => setShowStockPicker(false)}
           >
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              transition={gentleSpring}
               onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] overflow-hidden flex flex-col"
+              className="w-full lg:max-w-lg bg-card rounded-t-3xl lg:rounded-2xl max-h-[85vh] flex flex-col shadow-2xl"
             >
-              {/* Header */}
-              <div className="flex items-center justify-between p-5 border-b border-stone-100">
-                <h2 className="text-lg font-medium text-stone-900">Choose what this gift becomes</h2>
-                <button
+              <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
+                <h3 className="text-lg font-semibold text-foreground">Choose investment</h3>
+                <button 
                   onClick={() => setShowStockPicker(false)}
                   data-testid="button-close-stock-picker"
-                  className="p-2 -mr-2 text-stone-400 hover:text-stone-600 transition-colors"
+                  className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </button>
               </div>
 
-              {/* Search */}
-              <div className="p-4 border-b border-stone-100">
+              <div className="p-4 border-b border-border shrink-0">
                 <div className="relative">
-                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search 100+ popular stocks & ETFs..."
+                    placeholder="Search stocks..."
                     data-testid="input-stock-search"
-                    className="w-full pl-11 pr-4 py-3 bg-stone-50 border-0 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-200"
+                    className="w-full pl-10 pr-4 py-3 bg-muted border-0 rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
 
-              {/* Options */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {/* Default Options - Only show when not searching */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
                 {!searchQuery && (
                   <>
-                    {/* Future Fund - Recommended */}
                     <button
                       onClick={handleSelectFund}
-                      data-testid="option-fund-strategy"
+                      data-testid="option-fund"
                       className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
                         deliveryType === "fund"
-                          ? "border-stone-900 bg-stone-50"
-                          : "border-stone-100 hover:border-stone-200 bg-white"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground bg-card"
                       }`}
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-stone-900 text-stone-50 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                           <TrendingUp size={20} />
                         </div>
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-stone-900">Future Fund</p>
-                            <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Recommended</span>
-                          </div>
-                          <p className="text-sm text-stone-500 mt-0.5">Auto-invests in diversified portfolio</p>
+                          <p className="font-medium text-foreground">Future Fund</p>
+                          <p className="text-sm text-muted-foreground">Diversified portfolio managed by family</p>
                         </div>
                         {deliveryType === "fund" && (
-                          <div className="w-6 h-6 rounded-full bg-stone-900 flex items-center justify-center">
-                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                            <svg className="w-4 h-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
@@ -955,27 +887,26 @@ export default function EventPage() {
                       </div>
                     </button>
 
-                    {/* Let Them Choose Option */}
                     <button
                       onClick={handleSelectCash}
                       data-testid="option-cash"
                       className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
                         deliveryType === "cash"
-                          ? "border-stone-900 bg-stone-50"
-                          : "border-stone-100 hover:border-stone-200 bg-white"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-muted-foreground bg-card"
                       }`}
                     >
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
-                          <Sparkles size={20} />
+                        <div className="w-12 h-12 rounded-full bg-[hsl(var(--kora-evergreen)/0.1)] text-[hsl(var(--kora-evergreen))] flex items-center justify-center">
+                          <DollarSign size={20} />
                         </div>
                         <div className="flex-1">
-                          <p className="font-medium text-stone-900">Let them choose</p>
-                          <p className="text-sm text-stone-500 mt-0.5">Gift held as Seed until family decides</p>
+                          <p className="font-medium text-foreground">Let them choose</p>
+                          <p className="text-sm text-muted-foreground">Held as Seed until family decides</p>
                         </div>
                         {deliveryType === "cash" && (
-                          <div className="w-6 h-6 rounded-full bg-stone-900 flex items-center justify-center">
-                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+                            <svg className="w-4 h-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
@@ -983,24 +914,22 @@ export default function EventPage() {
                       </div>
                     </button>
 
-                    {/* Divider */}
                     <div className="flex items-center gap-3 py-2">
-                      <div className="flex-1 h-px bg-stone-100"></div>
-                      <span className="text-xs text-stone-400 uppercase tracking-wider">Or pick a stock</span>
-                      <div className="flex-1 h-px bg-stone-100"></div>
+                      <div className="flex-1 h-px bg-border"></div>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider">Or pick a stock</span>
+                      <div className="flex-1 h-px bg-border"></div>
                     </div>
                   </>
                 )}
 
-                {/* Stock Results */}
                 <div className="space-y-2">
                   {searchQuery && filteredStocks.length === 0 ? (
                     <div className="text-center py-8">
-                      <div className="w-12 h-12 rounded-full bg-stone-100 mx-auto mb-3 flex items-center justify-center">
-                        <Search size={20} className="text-stone-400" />
+                      <div className="w-12 h-12 rounded-full bg-muted mx-auto mb-3 flex items-center justify-center">
+                        <Search size={20} className="text-muted-foreground" />
                       </div>
-                      <p className="text-stone-600 font-medium">No results for "{searchQuery}"</p>
-                      <p className="text-sm text-stone-400 mt-1">Try Apple, Tesla, Disney, or S&P 500</p>
+                      <p className="text-muted-foreground font-medium">No results for "{searchQuery}"</p>
+                      <p className="text-sm text-muted-foreground mt-1">Try Apple, Tesla, Disney, or S&P 500</p>
                     </div>
                   ) : (
                     filteredStocks.map((stock) => {
@@ -1014,35 +943,35 @@ export default function EventPage() {
                           data-testid={`stock-${stock.symbol}`}
                           className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
                             isSelected
-                              ? "border-stone-900 bg-stone-50"
-                              : "border-stone-100 hover:border-stone-200 bg-white"
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-muted-foreground bg-card"
                           }`}
                         >
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center">
-                              <span className="text-xs font-bold text-stone-600">{stock.symbol}</span>
+                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                              <span className="text-xs font-bold text-muted-foreground">{stock.symbol}</span>
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="font-medium text-stone-900 truncate">{stock.name}</p>
+                                <p className="font-medium text-foreground truncate">{stock.name}</p>
                                 {stock.sector && (
-                                  <span className="text-[10px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded shrink-0">{stock.sector}</span>
+                                  <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded shrink-0">{stock.sector}</span>
                                 )}
                               </div>
                               <div className="flex items-center gap-3 mt-0.5">
-                                <span className="text-sm text-stone-600">${stock.price.toFixed(2)}</span>
-                                <span className={`text-xs ${stock.change >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                                <span className="text-sm text-muted-foreground">${stock.price.toFixed(2)}</span>
+                                <span className={`text-xs ${stock.change >= 0 ? "text-[hsl(var(--kora-evergreen))]" : "text-destructive"}`}>
                                   {stock.change >= 0 ? "+" : ""}{stock.change.toFixed(2)}%
                                 </span>
                               </div>
                             </div>
                             <div className="text-right shrink-0">
                               {finalAmount > 0 && (
-                                <p className="text-sm font-medium text-stone-700">{shares} shares</p>
+                                <p className="text-sm font-medium text-foreground">{shares} shares</p>
                               )}
                               {isSelected && (
-                                <div className="w-6 h-6 rounded-full bg-stone-900 flex items-center justify-center mt-1 ml-auto">
-                                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center mt-1 ml-auto">
+                                  <svg className="w-4 h-4 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                   </svg>
                                 </div>
@@ -1056,12 +985,11 @@ export default function EventPage() {
                 </div>
               </div>
 
-              {/* Footer with disclaimer */}
-              <div className="p-4 border-t border-stone-100 bg-stone-50 space-y-2">
-                <p className="text-xs text-stone-500 text-center">
+              <div className="p-4 border-t border-border bg-secondary space-y-2">
+                <p className="text-xs text-muted-foreground text-center">
                   Orders execute during market hours · Final shares may differ from estimate
                 </p>
-                <p className="text-xs text-stone-400 text-center">
+                <p className="text-xs text-muted-foreground text-center">
                   All investments go to {recipientName}'s fund · Assets held by Apex Clearing
                 </p>
               </div>

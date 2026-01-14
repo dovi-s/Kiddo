@@ -54,16 +54,16 @@ export function AchievementBadge({
         className={`${sizes[size]} rounded-2xl flex items-center justify-center transition-all ${
           achievement.unlocked
             ? `bg-gradient-to-br ${achievement.color} shadow-lg`
-            : "bg-stone-100 opacity-40"
+            : "bg-muted opacity-40"
         }`}
       >
-        <div className={`${iconSizes[size]} ${achievement.unlocked ? "text-white" : "text-stone-400"}`}>
+        <div className={`${iconSizes[size]} ${achievement.unlocked ? "text-white" : "text-muted-foreground"}`}>
           {achievement.icon}
         </div>
         
         {achievement.unlocked && (
           <motion.div
-            className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center"
+            className="absolute -top-1 -right-1 w-4 h-4 bg-success rounded-full flex items-center justify-center"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.3, type: "spring", stiffness: 500 }}
@@ -75,9 +75,9 @@ export function AchievementBadge({
 
       {achievement.progress !== undefined && !achievement.unlocked && (
         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-full px-1">
-          <div className="h-1 bg-stone-200 rounded-full overflow-hidden">
+          <div className="h-1 bg-border rounded-full overflow-hidden">
             <div 
-              className="h-full bg-stone-400 transition-all"
+              className="h-full bg-muted-foreground transition-all"
               style={{ width: `${achievement.progress}%` }}
             />
           </div>
@@ -85,9 +85,9 @@ export function AchievementBadge({
       )}
 
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-        <div className="bg-stone-900 text-white text-xs px-3 py-2 rounded-lg whitespace-nowrap shadow-lg">
+        <div className="bg-primary text-primary-foreground text-xs px-3 py-2 rounded-lg whitespace-nowrap shadow-lg">
           <p className="font-medium">{achievement.title}</p>
-          <p className="text-stone-400">{achievement.description}</p>
+          <p className="text-primary-foreground/60">{achievement.description}</p>
         </div>
       </div>
     </motion.div>
@@ -118,8 +118,8 @@ export function AchievementCard({ achievement }: { achievement: Achievement }) {
       animate={{ opacity: 1, x: 0 }}
       className={`p-4 rounded-2xl border-2 transition-all ${
         achievement.unlocked
-          ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200"
-          : "bg-stone-50 border-stone-200"
+          ? "bg-success/5 border-success/20"
+          : "bg-muted border-border"
       }`}
     >
       <div className="flex items-center gap-4">
@@ -127,24 +127,24 @@ export function AchievementCard({ achievement }: { achievement: Achievement }) {
           className={`w-12 h-12 rounded-xl flex items-center justify-center ${
             achievement.unlocked
               ? `bg-gradient-to-br ${achievement.color}`
-              : "bg-stone-200"
+              : "bg-secondary"
           }`}
         >
-          <div className={achievement.unlocked ? "text-white" : "text-stone-400"}>
+          <div className={achievement.unlocked ? "text-white" : "text-muted-foreground"}>
             {achievement.icon}
           </div>
         </div>
         <div className="flex-1">
-          <p className={`font-medium ${achievement.unlocked ? "text-stone-900" : "text-stone-500"}`}>
+          <p className={`font-medium ${achievement.unlocked ? "text-foreground" : "text-muted-foreground"}`}>
             {achievement.title}
           </p>
-          <p className="text-sm text-stone-400">{achievement.description}</p>
+          <p className="text-sm text-muted-foreground">{achievement.description}</p>
         </div>
         {achievement.unlocked && (
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="text-emerald-500"
+            className="text-success"
           >
             <Sparkles className="w-5 h-5" />
           </motion.div>
@@ -153,13 +153,13 @@ export function AchievementCard({ achievement }: { achievement: Achievement }) {
       
       {achievement.progress !== undefined && !achievement.unlocked && (
         <div className="mt-3">
-          <div className="flex justify-between text-xs text-stone-400 mb-1">
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
             <span>Progress</span>
             <span>{achievement.progress}%</span>
           </div>
-          <div className="h-2 bg-stone-200 rounded-full overflow-hidden">
+          <div className="h-2 bg-border rounded-full overflow-hidden">
             <motion.div 
-              className="h-full bg-gradient-to-r from-stone-400 to-stone-500"
+              className="h-full bg-muted-foreground"
               initial={{ width: 0 }}
               animate={{ width: `${achievement.progress}%` }}
               transition={{ duration: 1, ease: "easeOut" }}
@@ -188,7 +188,7 @@ export function getDefaultAchievements(totalRaised: number, giverCount: number, 
       icon: ACHIEVEMENT_ICONS.hundred_club,
       unlocked: totalRaised >= 100,
       progress: totalRaised < 100 ? Math.round((totalRaised / 100) * 100) : undefined,
-      color: "from-amber-400 to-orange-500",
+      color: "from-[hsl(var(--kora-gold))] to-[hsl(var(--kora-gold-light))]",
     },
     {
       id: "five_hundred",
@@ -206,7 +206,7 @@ export function getDefaultAchievements(totalRaised: number, giverCount: number, 
       icon: ACHIEVEMENT_ICONS.thousand,
       unlocked: totalRaised >= 1000,
       progress: totalRaised < 1000 ? Math.round((totalRaised / 1000) * 100) : undefined,
-      color: "from-emerald-400 to-teal-500",
+      color: "from-[hsl(var(--kora-evergreen))] to-[hsl(var(--kora-evergreen-light))]",
     },
     {
       id: "five_givers",
@@ -236,7 +236,7 @@ export function MilestoneTimeline({
 }) {
   return (
     <div className="relative pl-8">
-      <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-stone-200" />
+      <div className="absolute left-3 top-2 bottom-2 w-0.5 bg-border" />
       
       {milestones.map((milestone, i) => (
         <motion.div
@@ -249,20 +249,20 @@ export function MilestoneTimeline({
           <div 
             className={`absolute left-0 w-6 h-6 rounded-full flex items-center justify-center -translate-x-[11px] ${
               milestone.achieved 
-                ? "bg-emerald-500 text-white" 
-                : "bg-stone-200 text-stone-400"
+                ? "bg-success text-white" 
+                : "bg-border text-muted-foreground"
             }`}
           >
             {milestone.achieved ? (
               <Sparkles className="w-3 h-3" />
             ) : (
-              <div className="w-2 h-2 rounded-full bg-stone-300" />
+              <div className="w-2 h-2 rounded-full bg-muted-foreground" />
             )}
           </div>
           
-          <div className={milestone.achieved ? "text-stone-900" : "text-stone-400"}>
+          <div className={milestone.achieved ? "text-foreground" : "text-muted-foreground"}>
             <p className="font-medium">{milestone.title}</p>
-            <p className="text-sm text-stone-400">
+            <p className="text-sm text-muted-foreground">
               {milestone.date}
               {milestone.amount && ` · $${milestone.amount.toLocaleString()}`}
             </p>

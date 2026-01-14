@@ -54,8 +54,8 @@ export function LiveContributorTicker({
     return (
       <div className="flex items-center gap-2 text-sm">
         <div className="relative">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
+          <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+          <div className="absolute inset-0 w-2 h-2 rounded-full bg-success animate-ping opacity-75" />
         </div>
         <AnimatePresence mode="wait">
           <motion.span
@@ -63,9 +63,9 @@ export function LiveContributorTicker({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="text-stone-600"
+            className="text-muted-foreground"
           >
-            <span className="font-medium text-stone-900">{current.name}</span> gave ${current.amount}
+            <span className="font-medium text-foreground">{current.name}</span> gave ${current.amount}
           </motion.span>
         </AnimatePresence>
       </div>
@@ -76,14 +76,14 @@ export function LiveContributorTicker({
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl p-4 border border-emerald-100"
+      className="bg-success/5 rounded-2xl p-4 border border-success/10"
     >
       <div className="flex items-center gap-2 mb-3">
         <div className="relative">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-          <div className="absolute inset-0 w-2 h-2 rounded-full bg-emerald-500 animate-ping opacity-75" />
+          <div className="w-2 h-2 rounded-full bg-success" />
+          <div className="absolute inset-0 w-2 h-2 rounded-full bg-success animate-ping opacity-75" />
         </div>
-        <span className="text-xs font-medium text-emerald-700 uppercase tracking-wider">Live Activity</span>
+        <span className="text-xs font-medium text-success uppercase tracking-wider">Live Activity</span>
       </div>
 
       <AnimatePresence mode="wait">
@@ -94,16 +94,16 @@ export function LiveContributorTicker({
           exit={{ opacity: 0, x: -20 }}
           className="flex items-center gap-3"
         >
-          <div className="w-10 h-10 rounded-full bg-white border border-emerald-200 flex items-center justify-center text-sm font-medium text-emerald-700 shadow-sm">
+          <div className="w-10 h-10 rounded-full bg-card border border-success/20 flex items-center justify-center text-sm font-medium text-success shadow-sm">
             {current.avatar || current.name.charAt(0)}
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium text-stone-900">{current.name}</p>
-            <p className="text-xs text-emerald-600">
+            <p className="text-sm font-medium text-foreground">{current.name}</p>
+            <p className="text-xs text-success">
               Gave ${current.amount} · {getTimeAgo(current.timestamp)}
             </p>
           </div>
-          <Gift className="w-5 h-5 text-emerald-500" />
+          <Gift className="w-5 h-5 text-success" />
         </motion.div>
       </AnimatePresence>
 
@@ -113,7 +113,7 @@ export function LiveContributorTicker({
             key={i}
             onClick={() => setCurrentIndex(i)}
             className={`w-1.5 h-1.5 rounded-full transition-all ${
-              i === currentIndex ? "bg-emerald-500 w-4" : "bg-emerald-200"
+              i === currentIndex ? "bg-success w-4" : "bg-success/30"
             }`}
           />
         ))}
@@ -138,7 +138,7 @@ export function ContributorBubbles({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: i * 0.1, type: "spring", stiffness: 300, damping: 20 }}
-            className="w-8 h-8 rounded-full bg-gradient-to-br from-stone-100 to-stone-200 border-2 border-white flex items-center justify-center text-xs font-medium text-stone-600 shadow-sm"
+            className="w-8 h-8 rounded-full bg-muted border-2 border-card flex items-center justify-center text-xs font-medium text-muted-foreground shadow-sm"
           >
             {contributor.avatar || contributor.name.charAt(0)}
           </motion.div>
@@ -148,14 +148,14 @@ export function ContributorBubbles({
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 20 }}
-            className="w-8 h-8 rounded-full bg-stone-900 border-2 border-white flex items-center justify-center text-xs font-medium text-white shadow-sm"
+            className="w-8 h-8 rounded-full bg-primary border-2 border-card flex items-center justify-center text-xs font-medium text-primary-foreground shadow-sm"
           >
             +{contributors.length - 5}
           </motion.div>
         )}
       </div>
       {showCount && (
-        <span className="text-sm text-stone-500">
+        <span className="text-sm text-muted-foreground">
           {contributors.length} {contributors.length === 1 ? "person" : "people"} gave
         </span>
       )}
@@ -171,7 +171,7 @@ export function GiftPulse({ amount }: { amount: number }) {
       className="relative"
     >
       <motion.div
-        className="absolute inset-0 rounded-full bg-emerald-500/20"
+        className="absolute inset-0 rounded-full bg-success/20"
         animate={{
           scale: [1, 1.5, 1],
           opacity: [0.5, 0, 0.5],
@@ -182,7 +182,7 @@ export function GiftPulse({ amount }: { amount: number }) {
           ease: "easeInOut",
         }}
       />
-      <div className="relative flex items-center gap-2 px-4 py-2 bg-emerald-500 rounded-full text-white text-sm font-medium shadow-lg shadow-emerald-500/30">
+      <div className="relative flex items-center gap-2 px-4 py-2 bg-success rounded-full text-success-foreground text-sm font-medium shadow-lg shadow-success/30">
         <Sparkles className="w-4 h-4" />
         <span>+${amount}</span>
       </div>
@@ -216,7 +216,7 @@ export function InvestmentReveal({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-gradient-to-br from-stone-900 to-stone-800 rounded-2xl p-6 text-white overflow-hidden"
+      className="bg-primary rounded-2xl p-6 text-primary-foreground overflow-hidden"
     >
       <AnimatePresence mode="wait">
         {stage === 0 && (
@@ -227,8 +227,8 @@ export function InvestmentReveal({
             exit={{ opacity: 0 }}
             className="text-center py-8"
           >
-            <div className="w-12 h-12 rounded-full border-2 border-white/30 border-t-white animate-spin mx-auto mb-4" />
-            <p className="text-white/60">Receiving gift...</p>
+            <div className="w-12 h-12 rounded-full border-2 border-primary-foreground/30 border-t-primary-foreground animate-spin mx-auto mb-4" />
+            <p className="text-primary-foreground/60">Receiving gift...</p>
           </motion.div>
         )}
 
@@ -248,7 +248,7 @@ export function InvestmentReveal({
             >
               ${amount}
             </motion.p>
-            <p className="text-white/60">Gift received</p>
+            <p className="text-primary-foreground/60">Gift received</p>
           </motion.div>
         )}
 
@@ -265,10 +265,10 @@ export function InvestmentReveal({
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               >
-                <TrendingUp className="w-8 h-8 text-emerald-400" />
+                <TrendingUp className="w-8 h-8 text-[hsl(var(--kora-gold))]" />
               </motion.div>
             </div>
-            <p className="text-white/60">Converting to investment...</p>
+            <p className="text-primary-foreground/60">Converting to investment...</p>
           </motion.div>
         )}
 
@@ -283,20 +283,20 @@ export function InvestmentReveal({
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 15 }}
-              className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mx-auto mb-4 shadow-lg"
+              className="w-16 h-16 rounded-2xl bg-success flex items-center justify-center mx-auto mb-4 shadow-lg"
             >
-              <span className="text-2xl font-bold text-white">{stockSymbol.slice(0, 2)}</span>
+              <span className="text-2xl font-bold text-success-foreground">{stockSymbol.slice(0, 2)}</span>
             </motion.div>
             
-            <p className="text-sm text-white/60 mb-1">{stockName}</p>
+            <p className="text-sm text-primary-foreground/60 mb-1">{stockName}</p>
             <p className="text-3xl font-light mb-1">{shares} shares</p>
-            <p className="text-sm text-emerald-400">of {stockSymbol}</p>
+            <p className="text-sm text-[hsl(var(--kora-gold))]">of {stockSymbol}</p>
 
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="mt-6 pt-4 border-t border-white/10 flex items-center justify-center gap-2 text-white/40 text-xs"
+              className="mt-6 pt-4 border-t border-primary-foreground/10 flex items-center justify-center gap-2 text-primary-foreground/40 text-xs"
             >
               <Sparkles className="w-3 h-3" />
               <span>Now growing in their fund</span>

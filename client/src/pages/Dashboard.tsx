@@ -221,10 +221,10 @@ export default function Dashboard() {
   
   const getStatusColor = (status: FundStatus) => {
     switch (status) {
-      case "draft": return "bg-stone-100 text-stone-600";
-      case "pending": return "bg-amber-100 text-amber-700";
-      case "active": return "bg-blue-100 text-blue-700";
-      case "needs_action": return "bg-red-100 text-red-700";
+      case "draft": return "bg-muted text-muted-foreground";
+      case "pending": return "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]";
+      case "active": return "bg-[hsl(var(--kora-evergreen)/0.15)] text-[hsl(var(--kora-evergreen))]";
+      case "needs_action": return "bg-destructive/15 text-destructive";
     }
   };
 
@@ -327,17 +327,17 @@ export default function Dashboard() {
   const snoozedCount = recentActivity.filter(a => a.status === "invested" && snoozedThankYous.includes(a.id) && !sentThankYous.includes(a.id)).length;
 
   return (
-    <div className="min-h-screen bg-stone-50 pb-20 md:pb-0">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
+      <header className="sticky top-0 z-50 bg-background/95 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Logo size="sm" className="text-stone-900" />
+            <Logo size="sm" className="text-primary" />
             {funds.length > 1 && (
               <select 
                 value={selectedFundSlug}
                 onChange={(e) => setSelectedFundSlug(e.target.value)}
-                className="text-sm text-stone-600 bg-transparent border-0 cursor-pointer hover:text-stone-900 transition-colors focus:outline-none focus:ring-0"
+                className="text-sm text-muted-foreground bg-transparent border-0 cursor-pointer hover:text-foreground transition-colors duration-200 focus:outline-none focus:ring-0"
                 data-testid="select-fund-switcher"
               >
                 {funds.map(f => (
@@ -348,7 +348,7 @@ export default function Dashboard() {
             <button
               onClick={() => setShowAddFund(true)}
               data-testid="button-add-fund"
-              className="text-sm text-stone-400 hover:text-stone-900 transition-colors flex items-center gap-1"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center gap-1"
             >
               <Plus size={14} />
               <span className="hidden sm:inline">Add fund</span>
@@ -356,7 +356,7 @@ export default function Dashboard() {
           </div>
           {/* Account access - icon on all viewports for minimal header */}
           <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
-            <div className="w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-600 transition-colors" data-testid="button-account">
+            <div className="w-8 h-8 rounded-full bg-muted hover:bg-border flex items-center justify-center text-muted-foreground transition-colors duration-200" data-testid="button-account">
               <User size={16} />
             </div>
           </Link>
@@ -369,25 +369,21 @@ export default function Dashboard() {
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.5 }}
           className="mb-8 lg:mb-12"
         >
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-stone-900 via-stone-800 to-stone-900 p-6 sm:p-8 lg:p-10">
-            {/* Ambient glow */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl" />
-            
+          <div className="relative overflow-hidden rounded-2xl bg-[hsl(var(--kora-evergreen))] p-6 sm:p-8 lg:p-10">
             <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex items-center gap-4 sm:gap-6">
                 {/* Avatar */}
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-2xl sm:text-3xl font-medium shadow-lg">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-2xl sm:text-3xl font-medium shadow-lg">
                   {selectedFund.name.charAt(0)}
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-white tracking-tight">
                     {selectedFund.name}'s Future Fund
                   </h1>
-                  <p className="text-stone-400 text-sm sm:text-base mt-1">
+                  <p className="text-white/70 text-sm sm:text-base mt-1">
                     {isPersonal 
                       ? "Building your financial future, one gift at a time"
                       : `${selectedFund.yearsLeft} years until ${selectedFund.name} turns 18`
@@ -401,7 +397,7 @@ export default function Dashboard() {
                 <button
                   onClick={() => setShowShareKit(true)}
                   data-testid="button-hero-share"
-                  className="px-6 py-3 bg-white text-stone-900 font-medium rounded-xl hover:bg-stone-100 transition-colors flex items-center justify-center gap-2"
+                  className="px-6 py-3 bg-white text-primary font-medium rounded-xl hover:bg-secondary transition-colors duration-200 flex items-center justify-center gap-2"
                 >
                   <Share2 size={18} />
                   Share fund
@@ -409,7 +405,7 @@ export default function Dashboard() {
                 <Link href="/event/create">
                   <button
                     data-testid="button-hero-create-event"
-                    className="w-full sm:w-auto px-6 py-3 bg-stone-700 text-white font-medium rounded-xl hover:bg-stone-600 transition-colors flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto px-6 py-3 bg-white/20 text-white font-medium rounded-xl hover:bg-white/30 transition-colors duration-200 flex items-center justify-center gap-2"
                   >
                     <Plus size={18} />
                     New event
@@ -419,9 +415,9 @@ export default function Dashboard() {
             </div>
             
             {/* Trust badges */}
-            <div className="relative z-10 mt-6 pt-6 border-t border-stone-700/50 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-stone-400">
+            <div className="relative z-10 mt-6 pt-6 border-t border-white/20 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-white/70">
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="w-2 h-2 rounded-full bg-[hsl(var(--kora-gold))]"></span>
                 Assets held by Apex Clearing
               </span>
               <span>SIPC protected up to $500k</span>
@@ -449,7 +445,7 @@ export default function Dashboard() {
                   {getStatusLabel(selectedFund.status)}
                 </span>
                 {selectedFund.status === "pending" && (
-                  <span className="text-xs text-stone-400">Usually under 2 minutes, sometimes up to 24 hours</span>
+                  <span className="text-xs text-muted-foreground">Usually under 2 minutes, sometimes up to 24 hours</span>
                 )}
               </div>
               
@@ -459,49 +455,45 @@ export default function Dashboard() {
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="relative overflow-hidden bg-gradient-to-br from-white via-stone-50 to-stone-100 border border-stone-200/80 rounded-2xl p-6 sm:p-8 shadow-lg mb-6"
+                    transition={{ duration: 0.25 }}
+                    className="bg-card border border-border rounded-2xl p-6 sm:p-8 mb-6"
                   >
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-100/40 to-indigo-100/30 rounded-full blur-3xl" />
-                    <div className="absolute bottom-0 left-0 w-40 h-40 bg-gradient-to-br from-emerald-100/40 to-teal-100/30 rounded-full blur-3xl" />
-                    
-                    <div className="relative z-10">
-                      <div className="flex items-start gap-4 mb-6">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-500/25">
-                          <Shield size={24} className="text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-stone-900 mb-1">One more step</h3>
-                          <p className="text-sm text-stone-500 leading-relaxed">
-                            {funds.length === 1 
-                              ? `${funds[0].name}'s fund is ready. Activate investing to start receiving real gifts.`
-                              : `${selectedFund.name}'s fund is ready. Activate investing to start receiving gifts.`
-                            }
-                          </p>
-                        </div>
+                    <div className="flex items-start gap-4 mb-6">
+                      <div className="w-14 h-14 rounded-2xl bg-[hsl(var(--kora-evergreen))] flex items-center justify-center">
+                        <Shield size={24} className="text-white" />
                       </div>
-                      
-                      <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}`}>
-                        <Button 
-                          data-testid="button-activate-investing"
-                          size="lg"
-                          className="w-full h-14 text-base rounded-2xl bg-stone-900 text-white hover:bg-stone-800 shadow-xl shadow-stone-900/20"
-                        >
-                          Activate investing
-                          <ChevronRight className="ml-2 w-5 h-5" />
-                        </Button>
-                      </Link>
-                      <p className="text-xs text-stone-400 mt-4 text-center">Takes about 2 minutes. Identity verification required.</p>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-foreground mb-1">One more step</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {funds.length === 1 
+                            ? `${funds[0].name}'s fund is ready. Activate investing to start receiving real gifts.`
+                            : `${selectedFund.name}'s fund is ready. Activate investing to start receiving gifts.`
+                          }
+                        </p>
+                      </div>
                     </div>
+                    
+                    <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}`}>
+                      <Button 
+                        data-testid="button-activate-investing"
+                        size="lg"
+                        className="w-full h-14 text-base rounded-2xl bg-primary text-primary-foreground hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors duration-200"
+                      >
+                        Activate investing
+                        <ChevronRight className="ml-2 w-5 h-5" />
+                      </Button>
+                    </Link>
+                    <p className="text-xs text-muted-foreground mt-4 text-center">Takes about 2 minutes. Identity verification required.</p>
                   </motion.div>
                   
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100/80">
+                  <div className="p-4 rounded-xl bg-[hsl(var(--kora-gold)/0.1)] border border-[hsl(var(--kora-gold)/0.2)]">
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                        <Gift size={16} className="text-amber-600" />
+                      <div className="w-8 h-8 rounded-lg bg-[hsl(var(--kora-gold)/0.2)] flex items-center justify-center flex-shrink-0">
+                        <Gift size={16} className="text-[hsl(var(--kora-gold))]" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-amber-800 mb-0.5">Gift rules</p>
-                        <p className="text-xs text-amber-700 leading-relaxed">
+                        <p className="text-sm font-medium text-foreground mb-0.5">Gift rules</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                           Contributors can pledge gifts now. Pledges convert to real gifts once you activate investing.
                         </p>
                       </div>
@@ -510,49 +502,45 @@ export default function Dashboard() {
                 </>
               ) : selectedFund.status === "pending" ? (
                 <>
-                  {/* Pending verification state - premium */}
+                  {/* Pending verification state */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-white border border-blue-100/80 rounded-2xl p-6 sm:p-8 shadow-lg mb-6"
+                    transition={{ duration: 0.25 }}
+                    className="bg-card border border-border rounded-2xl p-6 sm:p-8 mb-6"
                   >
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-blue-100/50 to-indigo-100/40 rounded-full blur-3xl" />
-                    <div className="absolute bottom-0 left-0 w-40 h-40 bg-gradient-to-br from-violet-100/40 to-purple-100/30 rounded-full blur-3xl" />
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-14 h-14 rounded-2xl bg-[hsl(var(--kora-gold))] flex items-center justify-center">
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                          className="w-7 h-7 border-3 border-white/30 border-t-white rounded-full"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-foreground mb-1">Verifying your identity</h3>
+                        <p className="text-sm text-muted-foreground">This usually takes under 2 minutes</p>
+                      </div>
+                    </div>
                     
-                    <div className="relative z-10">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-blue-500/25">
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                            className="w-7 h-7 border-3 border-white/30 border-t-white rounded-full"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-stone-900 mb-1">Verifying your identity</h3>
-                          <p className="text-sm text-stone-500">This usually takes under 2 minutes</p>
-                        </div>
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-muted border border-border">
+                      <div className="flex -space-x-1">
+                        <div className="w-2 h-2 rounded-full bg-[hsl(var(--kora-gold))] animate-pulse" />
+                        <div className="w-2 h-2 rounded-full bg-[hsl(var(--kora-gold))] animate-pulse" style={{ animationDelay: "0.2s" }} />
+                        <div className="w-2 h-2 rounded-full bg-[hsl(var(--kora-gold))] animate-pulse" style={{ animationDelay: "0.4s" }} />
                       </div>
-                      
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-white/60 backdrop-blur-sm border border-blue-100">
-                        <div className="flex -space-x-1">
-                          <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
-                          <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" style={{ animationDelay: "0.2s" }} />
-                          <div className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" style={{ animationDelay: "0.4s" }} />
-                        </div>
-                        <p className="text-xs text-blue-700">Verification in progress...</p>
-                      </div>
+                      <p className="text-xs text-muted-foreground">Verification in progress...</p>
                     </div>
                   </motion.div>
                   
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100/80">
+                  <div className="p-4 rounded-xl bg-[hsl(var(--kora-gold)/0.1)] border border-[hsl(var(--kora-gold)/0.2)]">
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                        <Gift size={16} className="text-amber-600" />
+                      <div className="w-8 h-8 rounded-lg bg-[hsl(var(--kora-gold)/0.2)] flex items-center justify-center flex-shrink-0">
+                        <Gift size={16} className="text-[hsl(var(--kora-gold))]" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-amber-800 mb-0.5">Gift rules</p>
-                        <p className="text-xs text-amber-700 leading-relaxed">
+                        <p className="text-sm font-medium text-foreground mb-0.5">Gift rules</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                           Gifts will be held as cash (Seed) until verification completes. They will auto-invest once your account is active.
                         </p>
                       </div>
@@ -561,48 +549,45 @@ export default function Dashboard() {
                 </>
               ) : selectedFund.status === "needs_action" ? (
                 <>
-                  {/* Needs action state - premium */}
+                  {/* Needs action state */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="relative overflow-hidden bg-gradient-to-br from-red-50 via-rose-50 to-white border border-red-100/80 rounded-2xl p-6 sm:p-8 shadow-lg mb-6"
+                    transition={{ duration: 0.25 }}
+                    className="bg-card border border-destructive/30 rounded-2xl p-6 sm:p-8 mb-6"
                   >
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-br from-red-100/50 to-rose-100/40 rounded-full blur-3xl" />
-                    
-                    <div className="relative z-10">
-                      <div className="flex items-start gap-4 mb-6">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center shadow-xl shadow-red-500/25">
-                          <Info size={24} className="text-white" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-stone-900 mb-1">Additional info needed</h3>
-                          <p className="text-sm text-stone-500 leading-relaxed">
-                            We need a bit more information to verify your identity. This is common and usually takes just a minute.
-                          </p>
-                        </div>
+                    <div className="flex items-start gap-4 mb-6">
+                      <div className="w-14 h-14 rounded-2xl bg-destructive flex items-center justify-center">
+                        <Info size={24} className="text-white" />
                       </div>
-                      
-                      <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}&retry=true`}>
-                        <Button 
-                          data-testid="button-retry-verification"
-                          size="lg"
-                          className="w-full h-14 text-base rounded-2xl bg-red-600 text-white hover:bg-red-700 shadow-xl shadow-red-500/20"
-                        >
-                          Complete verification
-                          <ChevronRight className="ml-2 w-5 h-5" />
-                        </Button>
-                      </Link>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-foreground mb-1">Additional info needed</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          We need a bit more information to verify your identity. This is common and usually takes just a minute.
+                        </p>
+                      </div>
                     </div>
+                    
+                    <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}&retry=true`}>
+                      <Button 
+                        data-testid="button-retry-verification"
+                        size="lg"
+                        className="w-full h-14 text-base rounded-2xl bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors duration-200"
+                      >
+                        Complete verification
+                        <ChevronRight className="ml-2 w-5 h-5" />
+                      </Button>
+                    </Link>
                   </motion.div>
                   
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100/80">
+                  <div className="p-4 rounded-xl bg-[hsl(var(--kora-gold)/0.1)] border border-[hsl(var(--kora-gold)/0.2)]">
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                        <Gift size={16} className="text-amber-600" />
+                      <div className="w-8 h-8 rounded-lg bg-[hsl(var(--kora-gold)/0.2)] flex items-center justify-center flex-shrink-0">
+                        <Gift size={16} className="text-[hsl(var(--kora-gold))]" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-amber-800 mb-0.5">Gift rules</p>
-                        <p className="text-xs text-amber-700 leading-relaxed">
+                        <p className="text-sm font-medium text-foreground mb-0.5">Gift rules</p>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
                           Gifts will be held as cash until verification is complete.
                         </p>
                       </div>
@@ -611,40 +596,40 @@ export default function Dashboard() {
                 </>
               ) : (
                 <>
-                  {/* Active state - show metrics with glassmorphic tiles */}
+                  {/* Active state - show metrics */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
                     {/* Total Received - Clickable to show contributors */}
                     <motion.button 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 }}
+                      transition={{ delay: 0.1, duration: 0.2 }}
                       onClick={() => setShowContributors(true)}
                       data-testid="button-show-contributors"
-                      className="p-4 sm:p-5 rounded-xl bg-white/80 backdrop-blur-sm border border-stone-200/50 shadow-sm hover:shadow-md hover:border-stone-300 transition-all text-left group"
+                      className="p-4 sm:p-5 rounded-xl bg-card border border-border hover:border-muted-foreground/30 transition-colors duration-200 text-left group"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <Gift size={14} className="text-stone-400" />
-                          <p className="text-xs text-stone-500 uppercase tracking-wide">Received</p>
+                          <Gift size={14} className="text-muted-foreground" />
+                          <p className="text-xs text-muted-foreground uppercase tracking-wide">Received</p>
                         </div>
-                        <ChevronRight size={14} className="text-stone-300 group-hover:text-stone-500 transition-colors" />
+                        <ChevronRight size={14} className="text-border group-hover:text-muted-foreground transition-colors duration-200" />
                       </div>
-                      <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-stone-900">
+                      <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
                         <AnimatedValue value={totalReceived} />
                       </p>
-                      <p className="text-xs text-stone-400 mt-1 group-hover:text-stone-600 transition-colors">{selectedFund.contributors} contributors</p>
+                      <p className="text-xs text-muted-foreground mt-1 group-hover:text-foreground transition-colors duration-200">{selectedFund.contributors} contributors</p>
                     </motion.button>
                     
                     {/* Portfolio Value */}
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.15 }}
-                      className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-stone-900 to-stone-800 text-white shadow-lg"
+                      transition={{ delay: 0.15, duration: 0.2 }}
+                      className="p-4 sm:p-5 rounded-xl bg-[hsl(var(--kora-evergreen))] text-white"
                     >
                       <div className="flex items-center gap-2 mb-2">
-                        <TrendingUp size={14} className="text-stone-400" />
-                        <p className="text-xs text-stone-400 uppercase tracking-wide">Value</p>
+                        <TrendingUp size={14} className="text-white/70" />
+                        <p className="text-xs text-white/70 uppercase tracking-wide">Value</p>
                       </div>
                       <p className="text-2xl sm:text-3xl font-semibold tracking-tight">
                         <AnimatedValue value={portfolioValue} />
@@ -652,7 +637,7 @@ export default function Dashboard() {
                       <button 
                         onClick={() => setShowGainAsPercent(!showGainAsPercent)}
                         data-testid="button-toggle-gain-format"
-                        className={`text-xs mt-1 ${marketChange >= 0 ? "text-emerald-400" : "text-red-400"} hover:underline cursor-pointer`}
+                        className={`text-xs mt-1 ${marketChange >= 0 ? "text-[hsl(var(--kora-gold))]" : "text-red-400"} hover:underline cursor-pointer`}
                       >
                         {showGainAsPercent 
                           ? `${marketChange >= 0 ? "+" : ""}${marketChangePercent}%`
@@ -665,24 +650,24 @@ export default function Dashboard() {
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
-                      className="p-4 sm:p-5 rounded-xl bg-white/80 backdrop-blur-sm border border-stone-200/50 shadow-sm"
+                      transition={{ delay: 0.2, duration: 0.2 }}
+                      className="p-4 sm:p-5 rounded-xl bg-card border border-border"
                     >
                       <div className="flex items-center gap-2 mb-2">
-                        <Clock size={14} className="text-amber-500" />
-                        <p className="text-xs text-stone-500 uppercase tracking-wide">Pending</p>
+                        <Clock size={14} className="text-[hsl(var(--kora-gold))]" />
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Pending</p>
                       </div>
-                      <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-stone-900">
+                      <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
                         ${pendingAmount}
                       </p>
                       {pendingAmount > 0 && (
-                        <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        <p className="text-xs text-[hsl(var(--kora-gold))] mt-1 flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--kora-gold))] animate-pulse"></span>
                           Processing
                         </p>
                       )}
                       {pendingAmount === 0 && (
-                        <p className="text-xs text-stone-400 mt-1">All settled</p>
+                        <p className="text-xs text-muted-foreground mt-1">All settled</p>
                       )}
                     </motion.div>
                     
@@ -691,34 +676,34 @@ export default function Dashboard() {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.25 }}
-                      className="p-4 sm:p-5 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 shadow-sm"
+                      className="p-4 sm:p-5 rounded-xl bg-success/10 border border-success/20"
                     >
                       <div className="flex items-center gap-2 mb-2">
-                        <Sparkles size={14} className="text-emerald-500" />
-                        <p className="text-xs text-emerald-700 uppercase tracking-wide">
+                        <Sparkles size={14} className="text-success" />
+                        <p className="text-xs text-success uppercase tracking-wide">
                           {isPersonal ? "In 20 yrs" : `At 18`}
                         </p>
                       </div>
-                      <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-emerald-900">
+                      <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-foreground">
                         ${selectedFund.projection.toLocaleString()}
                       </p>
-                      <p className="text-xs text-emerald-600 mt-1">7% annual return</p>
+                      <p className="text-xs text-success mt-1">7% annual return</p>
                     </motion.div>
                   </div>
                   
                   <button 
                     onClick={() => setShowGiftRules(!showGiftRules)}
-                    className="w-full p-3 rounded-lg bg-stone-50/80 border border-stone-100 text-left hover:bg-stone-100 transition-colors"
+                    className="w-full p-3 rounded-lg bg-muted/80 border border-border text-left hover:bg-muted transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-stone-500 flex items-center gap-1.5">
+                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                         <Info size={12} />
                         How gifts work
                       </span>
-                      {showGiftRules ? <ChevronUp size={14} className="text-stone-400" /> : <ChevronDown size={14} className="text-stone-400" />}
+                      {showGiftRules ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
                     </div>
                     {showGiftRules && (
-                      <p className="text-xs text-stone-500 mt-2">
+                      <p className="text-xs text-muted-foreground mt-2">
                         {portfolioValue === 0 
                           ? "Share your link and contributions will automatically invest per your settings. Gifts typically settle in 1-2 business days."
                           : "Gifts are accepted and invested automatically when markets are open. Pending gifts invest at the next market open."
@@ -740,18 +725,18 @@ export default function Dashboard() {
                 data-testid="button-portfolio"
                 className="w-full mb-8 lg:mb-10 text-left group"
               >
-                <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Allocation</p>
-                <div className="flex h-2 lg:h-2.5 rounded-full overflow-hidden mb-2 bg-stone-200">
-                  <div className="bg-stone-900 transition-all group-hover:opacity-90" style={{ width: "50%" }} title="Stocks 50%" />
-                  <div className="bg-stone-600" style={{ width: "20%" }} title="International 20%" />
-                  <div className="bg-stone-400" style={{ width: "15%" }} title="Bonds 15%" />
-                  <div className="bg-stone-300" style={{ width: "15%" }} title="Cash 15%" />
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Allocation</p>
+                <div className="flex h-2 lg:h-2.5 rounded-full overflow-hidden mb-2 bg-border">
+                  <div className="bg-primary transition-all group-hover:opacity-90" style={{ width: "50%" }} title="Stocks 50%" />
+                  <div className="bg-muted-foreground" style={{ width: "20%" }} title="International 20%" />
+                  <div className="bg-muted-foreground/50" style={{ width: "15%" }} title="Bonds 15%" />
+                  <div className="bg-border" style={{ width: "15%" }} title="Cash 15%" />
                 </div>
-                <div className="flex gap-4 text-xs text-stone-400 group-hover:text-stone-500 transition-colors">
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-900"></span>Stocks 50%</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-600"></span>Int'l 20%</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-400"></span>Bonds 15%</span>
-                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-stone-300"></span>Cash 15%</span>
+                <div className="flex gap-4 text-xs text-muted-foreground group-hover:text-muted-foreground transition-colors">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-primary"></span>Stocks 50%</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-muted-foreground"></span>Int'l 20%</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-muted-foreground/50"></span>Bonds 15%</span>
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-border"></span>Cash 15%</span>
                 </div>
               </motion.button>
             )}
@@ -774,11 +759,11 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
-              className="mb-8 p-5 rounded-xl bg-gradient-to-br from-stone-50 to-white border border-stone-200"
+              className="mb-8 p-5 rounded-xl bg-card border border-border"
             >
               <div className="flex items-center justify-between mb-4">
-                <p className="text-sm font-medium text-stone-900">Milestones</p>
-                <Trophy className="w-4 h-4 text-amber-500" />
+                <p className="text-sm font-medium text-foreground">Milestones</p>
+                <Trophy className="w-4 h-4 text-[hsl(var(--kora-gold))]" />
               </div>
               {(() => {
                 const achievements = getDefaultAchievements(
@@ -794,7 +779,7 @@ export default function Dashboard() {
                         <AchievementBadge key={achievement.id} achievement={achievement} size="md" />
                       ))}
                     </div>
-                    <p className="text-xs text-stone-400">
+                    <p className="text-xs text-muted-foreground">
                       {selectedFund?.status === "active" 
                         ? `${unlockedCount} of 6 milestones unlocked`
                         : "Activate investing to start unlocking milestones"}
@@ -812,11 +797,11 @@ export default function Dashboard() {
               className="mb-10 lg:mb-12"
             >
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</h2>
+                <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Events</h2>
                 <Link href="/event/create">
                   <button 
                     data-testid="button-create-event"
-                    className="text-xs text-stone-500 hover:text-stone-900 transition-colors px-3 py-1.5 rounded-lg hover:bg-stone-100 flex items-center gap-1"
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg hover:bg-muted flex items-center gap-1"
                   >
                     <Plus size={12} />
                     New event
@@ -831,25 +816,25 @@ export default function Dashboard() {
                     <motion.div 
                       key={event.id}
                       whileHover={{ y: -2 }}
-                      className="bg-white border border-stone-200 rounded-xl p-4 hover:border-stone-300 hover:shadow-sm transition-all"
+                      className="bg-white border border-border rounded-xl p-4 hover:border-muted-foreground/30 hover:shadow-sm transition-all"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${event.active ? 'bg-emerald-500' : 'bg-stone-300'}`} />
+                          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${event.active ? 'bg-success' : 'bg-border'}`} />
                           <div className="min-w-0">
-                            <p className="text-sm font-medium text-stone-900 truncate">{eventData.title}</p>
-                            <p className="text-xs text-stone-400">kora.com/{fundSlug}/{eventData.slug}</p>
+                            <p className="text-sm font-medium text-foreground truncate">{eventData.title}</p>
+                            <p className="text-xs text-muted-foreground">kora.com/{fundSlug}/{eventData.slug}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                           <div className="text-right">
-                            <p className="text-sm font-medium text-stone-900">${event.raised.toLocaleString()}</p>
-                            <p className="text-xs text-stone-400">{event.gifts || 0} gifts</p>
+                            <p className="text-sm font-medium text-foreground">${event.raised.toLocaleString()}</p>
+                            <p className="text-xs text-muted-foreground">{event.gifts || 0} gifts</p>
                           </div>
                           <div className="flex items-center">
                             <button 
                               onClick={(e) => { e.stopPropagation(); navigator.clipboard?.writeText(`kora.com/${fundSlug}/${eventData.slug}`); toast({ title: "Link copied" }); }}
-                              className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-all"
+                              className="p-2 text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded-lg transition-all"
                               data-testid={`button-share-event-${event.id}`}
                               title="Copy link"
                             >
@@ -857,7 +842,7 @@ export default function Dashboard() {
                             </button>
                             <Link href={`/${fundSlug}/${eventData.slug}`}>
                               <button 
-                                className="p-2 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-all" 
+                                className="p-2 text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded-lg transition-all" 
                                 title="View event"
                                 data-testid={`button-view-event-${event.id}`}
                               >
@@ -879,43 +864,39 @@ export default function Dashboard() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
             >
-              <h2 className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-4">Recent Activity</h2>
+              <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-4">Recent Activity</h2>
               
               {recentActivity.length === 0 ? (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="relative overflow-hidden bg-gradient-to-br from-stone-50 to-white border border-stone-200 rounded-2xl p-8 text-center"
+                  className="bg-card border border-border rounded-2xl p-8 text-center"
                 >
-                  {/* Decorative elements */}
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-100/50 to-transparent rounded-full blur-2xl" />
-                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-blue-100/50 to-transparent rounded-full blur-2xl" />
-                  
-                  <div className="relative z-10">
+                  <div>
                     <motion.div 
                       initial={{ scale: 0.8 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: 0.2, type: "spring" }}
-                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 mx-auto mb-5 flex items-center justify-center shadow-lg"
+                      className="w-16 h-16 rounded-2xl bg-[hsl(var(--kora-evergreen))] mx-auto mb-5 flex items-center justify-center"
                     >
                       <Gift size={28} className="text-white" />
                     </motion.div>
-                    <h3 className="text-lg font-medium text-stone-900 mb-2">Ready to receive your first gift</h3>
-                    <p className="text-sm text-stone-500 mb-6 max-w-xs mx-auto">
+                    <h3 className="text-lg font-medium text-foreground mb-2">Ready to receive your first gift</h3>
+                    <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
                       Share {selectedFund.name}'s fund with friends and family. Every gift grows over time.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <button 
                         onClick={() => setShowShareKit(true)}
                         data-testid="button-empty-share"
-                        className="px-5 py-2.5 bg-stone-900 text-white text-sm font-medium rounded-xl hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                        className="px-5 py-2.5 bg-primary text-white text-sm font-medium rounded-xl hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors flex items-center justify-center gap-2"
                       >
                         <Share2 size={16} />
                         Share fund link
                       </button>
                       <button 
                         onClick={handleCopyClick}
-                        className="px-5 py-2.5 border border-stone-200 text-stone-700 text-sm font-medium rounded-xl hover:bg-stone-50 transition-colors flex items-center justify-center gap-2"
+                        className="px-5 py-2.5 border border-border text-foreground text-sm font-medium rounded-xl hover:bg-muted transition-colors flex items-center justify-center gap-2"
                       >
                         <Copy size={16} />
                         Copy link
@@ -939,7 +920,7 @@ export default function Dashboard() {
                       whileHover={{ scale: 1.01, y: -2 }}
                       whileTap={{ scale: 0.99 }}
                       transition={gentleSpring}
-                      className="bg-white border border-stone-200 rounded-xl overflow-hidden cursor-pointer hover:border-stone-300 hover:shadow-md"
+                      className="bg-white border border-border rounded-xl overflow-hidden cursor-pointer hover:border-muted-foreground/30 hover:shadow-md"
                       onClick={() => setExpandedActivity(isExpanded ? null : item.id)}
                       data-testid={`activity-item-${item.id}`}
                     >
@@ -947,33 +928,33 @@ export default function Dashboard() {
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm text-stone-900">
+                              <p className="text-sm text-foreground">
                                 <span className="font-medium">{item.from}</span>
-                                <span className="text-stone-400 mx-1.5">→</span>
+                                <span className="text-muted-foreground mx-1.5">→</span>
                                 <span>{item.event}</span>
                               </p>
                               {item.status === "pending" ? (
                                 <motion.span 
-                                  className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium flex items-center gap-1"
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] font-medium flex items-center gap-1"
                                   animate={{ opacity: [0.8, 1, 0.8] }}
                                   transition={{ duration: 2, repeat: Infinity }}
                                 >
-                                  <span className="w-1 h-1 rounded-full bg-amber-500"></span>
+                                  <span className="w-1 h-1 rounded-full bg-[hsl(var(--kora-gold))]"></span>
                                   Pending
                                 </motion.span>
                               ) : (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-medium">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-success/20 text-success font-medium">
                                   Invested
                                 </span>
                               )}
                             </div>
                             {item.note && (
-                              <p className="text-sm text-stone-500 mt-1 truncate">"{item.note}"</p>
+                              <p className="text-sm text-muted-foreground mt-1 truncate">"{item.note}"</p>
                             )}
-                            <p className="text-xs text-stone-400 mt-1.5">{item.time}</p>
+                            <p className="text-xs text-muted-foreground mt-1.5">{item.time}</p>
                           </div>
                           <motion.p 
-                            className="text-sm font-medium text-emerald-600 shrink-0 ml-4"
+                            className="text-sm font-medium text-success shrink-0 ml-4"
                             initial={{ scale: 0.9 }}
                             animate={{ scale: 1 }}
                             transition={{ delay: i * 0.1 + 0.2 }}
@@ -992,40 +973,40 @@ export default function Dashboard() {
                             transition={{ duration: 0.2 }}
                             className="overflow-hidden"
                           >
-                            <div className="px-4 pb-4 pt-0 border-t border-stone-100">
+                            <div className="px-4 pb-4 pt-0 border-t border-border">
                               <div className="pt-3 space-y-2">
                                 {item.status === "pending" ? (
                                   <>
                                     <div className="flex items-start gap-2">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                                      <p className="text-xs text-stone-600">Payment received</p>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-success mt-1.5 shrink-0"></div>
+                                      <p className="text-xs text-muted-foreground">Payment received</p>
                                     </div>
                                     <div className="flex items-start gap-2">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 shrink-0 animate-pulse"></div>
-                                      <p className="text-xs text-stone-600">Will invest when US markets open (9:30am ET weekdays)</p>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--kora-gold))] mt-1.5 shrink-0 animate-pulse"></div>
+                                      <p className="text-xs text-muted-foreground">Will invest when US markets open (9:30am ET weekdays)</p>
                                     </div>
                                     <div className="flex items-start gap-2">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-stone-300 mt-1.5 shrink-0"></div>
-                                      <p className="text-xs text-stone-400">Trade settles in 1-2 business days</p>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-border mt-1.5 shrink-0"></div>
+                                      <p className="text-xs text-muted-foreground">Trade settles in 1-2 business days</p>
                                     </div>
                                   </>
                                 ) : (
                                   <>
                                     <div className="flex items-start gap-2">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                                      <p className="text-xs text-stone-600">Payment received</p>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-success mt-1.5 shrink-0"></div>
+                                      <p className="text-xs text-muted-foreground">Payment received</p>
                                     </div>
                                     <div className="flex items-start gap-2">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                                      <p className="text-xs text-stone-600">Trade executed at market open</p>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-success mt-1.5 shrink-0"></div>
+                                      <p className="text-xs text-muted-foreground">Trade executed at market open</p>
                                     </div>
                                     <div className="flex items-start gap-2">
-                                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0"></div>
-                                      <p className="text-xs text-stone-600">Settled · Bought 0.{Math.floor(item.amount / 5)} shares of VTI</p>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-success mt-1.5 shrink-0"></div>
+                                      <p className="text-xs text-muted-foreground">Settled · Bought 0.{Math.floor(item.amount / 5)} shares of VTI</p>
                                     </div>
                                   </>
                                 )}
-                                <p className="text-[10px] text-stone-400 pt-2 border-t border-stone-50 mt-2">
+                                <p className="text-[10px] text-muted-foreground pt-2 border-t border-border mt-2">
                                   Assets held by Alpaca Securities LLC · SIPC protected
                                 </p>
                               </div>
@@ -1050,15 +1031,15 @@ export default function Dashboard() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className="p-5 rounded-lg bg-white border border-stone-200"
+                className="p-5 rounded-lg bg-white border border-border"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <p className="text-sm font-medium text-stone-900">Share this fund</p>
+                  <p className="text-sm font-medium text-foreground">Share this fund</p>
                   <div className="flex items-center gap-1.5">
                     <button 
                       onClick={() => setShowFundPreview(true)}
                       data-testid="button-preview-fund"
-                      className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                      className="p-1.5 text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded transition-colors"
                       title="Preview page"
                     >
                       <Eye size={14} />
@@ -1066,7 +1047,7 @@ export default function Dashboard() {
                     <button 
                       onClick={() => setShowEditFund(true)}
                       data-testid="button-edit-share"
-                      className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                      className="p-1.5 text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded transition-colors"
                       title="Edit"
                     >
                       <Pencil size={14} />
@@ -1074,21 +1055,21 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <div className="px-3 py-2.5 bg-stone-50 rounded text-sm text-stone-600 truncate">
+                  <div className="px-3 py-2.5 bg-muted rounded text-sm text-muted-foreground truncate">
                     {momentLink}
                   </div>
                   <div className="flex gap-2">
                     <button 
                       onClick={handleCopyClick}
                       data-testid="button-copy-desktop"
-                      className="flex-1 py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors"
+                      className="flex-1 py-2.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors"
                     >
                       {copied ? "Copied" : "Copy link"}
                     </button>
                     <button 
                       onClick={() => setShowQR(true)}
                       data-testid="button-qr-desktop"
-                      className="px-4 py-2.5 border border-stone-200 rounded text-sm hover:bg-stone-50 transition-colors"
+                      className="px-4 py-2.5 border border-border rounded text-sm hover:bg-muted transition-colors"
                     >
                       QR
                     </button>
@@ -1101,16 +1082,16 @@ export default function Dashboard() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
-                className="p-5 rounded-lg bg-white border border-stone-200"
+                className="p-5 rounded-lg bg-white border border-border"
               >
-                <p className="text-sm font-medium text-stone-900 mb-4">Do next</p>
+                <p className="text-sm font-medium text-foreground mb-4">Do next</p>
                 <div className="space-y-2">
                   {/* Primary CTA - changes based on state */}
                   {pendingThankYous > 0 ? (
                     <button 
                       data-testid="button-thank-yous-primary"
                       onClick={() => setShowThankYous(true)}
-                      className="w-full py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors text-left px-3 flex items-center justify-between"
+                      className="w-full py-2.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors text-left px-3 flex items-center justify-between"
                     >
                       <span>Send thank-yous</span>
                       <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">{pendingThankYous} pending</span>
@@ -1119,7 +1100,7 @@ export default function Dashboard() {
                     <button 
                       onClick={handleCopyClick}
                       data-testid="button-quick-share"
-                      className="w-full py-2.5 bg-stone-900 text-stone-50 rounded text-sm font-medium hover:bg-stone-800 transition-colors text-left px-3"
+                      className="w-full py-2.5 bg-primary text-primary-foreground rounded text-sm font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors text-left px-3"
                     >
                       Share fund link
                     </button>
@@ -1130,7 +1111,7 @@ export default function Dashboard() {
                     <button 
                       onClick={handleCopyClick}
                       data-testid="button-quick-share-secondary"
-                      className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3"
+                      className="w-full py-2.5 border border-border rounded text-sm text-foreground hover:bg-muted transition-colors text-left px-3"
                     >
                       Share fund link
                     </button>
@@ -1138,7 +1119,7 @@ export default function Dashboard() {
                   <Link href="/event/create" className="block">
                     <button 
                       data-testid="button-new-event"
-                      className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3"
+                      className="w-full py-2.5 border border-border rounded text-sm text-foreground hover:bg-muted transition-colors text-left px-3"
                     >
                       Create event page
                     </button>
@@ -1147,7 +1128,7 @@ export default function Dashboard() {
                     <button 
                       data-testid="button-thank-yous"
                       onClick={() => setShowThankYous(true)}
-                      className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-700 hover:bg-stone-50 transition-colors text-left px-3"
+                      className="w-full py-2.5 border border-border rounded text-sm text-foreground hover:bg-muted transition-colors text-left px-3"
                     >
                       Send thank-yous
                     </button>
@@ -1155,7 +1136,7 @@ export default function Dashboard() {
                   <Link href="/send" className="block">
                     <button 
                       data-testid="button-send-gift"
-                      className="w-full py-2.5 border border-stone-200 rounded text-sm text-stone-400 hover:text-stone-700 hover:bg-stone-50 transition-colors text-left px-3"
+                      className="w-full py-2.5 border border-border rounded text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-left px-3"
                     >
                       Send a gift
                     </button>
@@ -1164,12 +1145,12 @@ export default function Dashboard() {
               </motion.div>
 
               {/* Brokerage Footer */}
-              <div className="text-xs text-stone-400 text-center pt-4">
+              <div className="text-xs text-muted-foreground text-center pt-4">
                 <p>Brokerage services by Alpaca Securities LLC</p>
                 <p>Member FINRA/SIPC</p>
                 <button 
                   onClick={() => toast({ title: "Custody & Protection", description: "Your assets are held by Alpaca Securities LLC and protected by SIPC up to $500,000." })}
-                  className="text-stone-500 hover:text-stone-700 underline mt-1"
+                  className="text-muted-foreground hover:text-foreground underline mt-1"
                 >
                   Learn about custody + SIPC
                 </button>
@@ -1179,12 +1160,12 @@ export default function Dashboard() {
         </div>
 
         {/* Mobile Footer */}
-        <div className="lg:hidden text-xs text-stone-400 text-center mt-12 pb-8">
+        <div className="lg:hidden text-xs text-muted-foreground text-center mt-12 pb-8">
           <p>Brokerage services by Alpaca Securities LLC</p>
           <p>Member FINRA/SIPC</p>
           <button 
             onClick={() => toast({ title: "Custody & Protection", description: "Your assets are held by Alpaca Securities LLC and protected by SIPC up to $500,000." })}
-            className="text-stone-500 hover:text-stone-700 underline mt-1"
+            className="text-muted-foreground hover:text-foreground underline mt-1"
           >
             Learn about custody + SIPC
           </button>
@@ -1198,37 +1179,37 @@ export default function Dashboard() {
             <DialogTitle className="font-medium">Where it's invested</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-stone-100">
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
               <div>
-                <p className="text-sm text-stone-500">Invested</p>
-                <p className="text-lg font-medium text-stone-900">${investedAmount.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Invested</p>
+                <p className="text-lg font-medium text-foreground">${investedAmount.toLocaleString()}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-stone-500">Cash</p>
-                <p className="text-lg font-medium text-stone-900">${cashAmount.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Cash</p>
+                <p className="text-lg font-medium text-foreground">${cashAmount.toLocaleString()}</p>
               </div>
             </div>
             
-            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-3">Holdings</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Holdings</p>
             <div className="space-y-3">
               {holdings.map((holding, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-stone-50">
+                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted">
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-medium text-stone-600 bg-white px-2 py-1 rounded border border-stone-200">{holding.ticker}</span>
+                    <span className="text-xs font-medium text-muted-foreground bg-white px-2 py-1 rounded border border-border">{holding.ticker}</span>
                     <div>
-                      <p className="text-sm text-stone-900">{holding.name}</p>
-                      <p className="text-xs text-stone-400">{holding.shares} shares</p>
+                      <p className="text-sm text-foreground">{holding.name}</p>
+                      <p className="text-xs text-muted-foreground">{holding.shares} shares</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-stone-900">${holding.value.toLocaleString()}</p>
-                    <p className="text-xs text-emerald-600">+${holding.gain}</p>
+                    <p className="text-sm font-medium text-foreground">${holding.value.toLocaleString()}</p>
+                    <p className="text-xs text-success">+${holding.gain}</p>
                   </div>
                 </div>
               ))}
             </div>
             
-            <p className="text-xs text-stone-400 pt-4 mt-4 border-t border-stone-100">
+            <p className="text-xs text-muted-foreground pt-4 mt-4 border-t border-border">
               Holdings are at the Fund level. Gifts from all events invest into the same account.
             </p>
           </div>
@@ -1239,11 +1220,11 @@ export default function Dashboard() {
       <Dialog open={showQR} onOpenChange={setShowQR}>
         <DialogContent className="max-w-xs bg-white">
           <div className="flex flex-col items-center py-6">
-            <div className="p-4 bg-white rounded-lg border border-stone-200 mb-4">
+            <div className="p-4 bg-white rounded-lg border border-border mb-4">
               <QRCodeSVG value={`https://${momentLink}`} size={180} level="H" />
             </div>
-            <p className="text-xs text-stone-400 text-center mb-1">{momentLink}</p>
-            <p className="text-sm text-stone-500 text-center">
+            <p className="text-xs text-muted-foreground text-center mb-1">{momentLink}</p>
+            <p className="text-sm text-muted-foreground text-center">
               Scan to give
             </p>
           </div>
@@ -1254,11 +1235,11 @@ export default function Dashboard() {
       <Dialog open={showPageQR !== null} onOpenChange={() => setShowPageQR(null)}>
         <DialogContent className="max-w-xs bg-white">
           <div className="flex flex-col items-center py-6">
-            <div className="p-4 bg-white rounded-lg border border-stone-200 mb-4">
+            <div className="p-4 bg-white rounded-lg border border-border mb-4">
               <QRCodeSVG value={`https://${showPageQR}`} size={180} level="H" />
             </div>
-            <p className="text-xs text-stone-400 text-center mb-1">{showPageQR}</p>
-            <p className="text-sm text-stone-500 text-center">
+            <p className="text-xs text-muted-foreground text-center mb-1">{showPageQR}</p>
+            <p className="text-sm text-muted-foreground text-center">
               Scan to give
             </p>
           </div>
@@ -1269,48 +1250,48 @@ export default function Dashboard() {
       <Dialog open={showEditFund} onOpenChange={setShowEditFund}>
         <DialogContent className="max-w-md bg-white p-0 gap-0">
           
-          <div className="p-5 border-b border-stone-100">
+          <div className="p-5 border-b border-border">
             <div className="flex items-center justify-between mb-1">
-              <DialogTitle className="font-medium text-stone-900">Fund Settings</DialogTitle>
-              <span className="text-[10px] font-medium text-stone-400 uppercase tracking-wider px-2 py-1 bg-stone-100 rounded">
+              <DialogTitle className="font-medium text-foreground">Fund Settings</DialogTitle>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider px-2 py-1 bg-muted rounded">
                 {isPersonal ? "Individual" : "UTMA"}
               </span>
             </div>
-            <p className="text-sm text-stone-500">Manage your fund and events</p>
+            <p className="text-sm text-muted-foreground">Manage your fund and events</p>
           </div>
 
-          <div className="p-5 border-b border-stone-100 space-y-4">
+          <div className="p-5 border-b border-border space-y-4">
             <div>
-              <label className="block text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Fund name</label>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Fund name</label>
               <input
                 type="text"
                 value={fundName}
                 onChange={(e) => setFundName(e.target.value)}
                 data-testid="input-fund-name"
-                className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
+                className="w-full px-3 py-2.5 border border-border rounded-lg text-foreground focus:outline-none focus:border-muted-foreground"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Fund URL</label>
-              <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden">
-                <span className="px-3 py-2.5 bg-stone-50 text-sm text-stone-400 border-r border-stone-200">kora.com/</span>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Fund URL</label>
+              <div className="flex items-center border border-border rounded-lg overflow-hidden">
+                <span className="px-3 py-2.5 bg-muted text-sm text-muted-foreground border-r border-border">kora.com/</span>
                 <input
                   type="text"
                   value={fundSlugEdit}
                   onChange={(e) => setFundSlugEdit(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
                   data-testid="input-fund-slug"
-                  className="flex-1 px-3 py-2.5 text-stone-900 focus:outline-none"
+                  className="flex-1 px-3 py-2.5 text-foreground focus:outline-none"
                 />
               </div>
-              <p className="text-xs text-stone-400 mt-1.5">Your fund's shareable link — contributors can give anytime</p>
+              <p className="text-xs text-muted-foreground mt-1.5">Your fund's shareable link — contributors can give anytime</p>
             </div>
           </div>
 
-          <div className="p-5 border-b border-stone-100">
+          <div className="p-5 border-b border-border">
             <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-medium text-stone-400 uppercase tracking-wider">Events</label>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Events</label>
               <Link href="/event/create" onClick={() => setShowEditFund(false)}>
-                <span className="text-xs text-stone-500 hover:text-stone-900 transition-colors">+ Add event</span>
+                <span className="text-xs text-muted-foreground hover:text-foreground transition-colors">+ Add event</span>
               </Link>
             </div>
             
@@ -1318,15 +1299,15 @@ export default function Dashboard() {
               {funds[0]?.events.map((event) => {
                 const eventData = eventEdits[event.id] || { title: event.title, slug: event.slug };
                 return (
-                  <div key={event.id} className="flex items-center justify-between p-3 bg-stone-50 rounded-lg group">
+                  <div key={event.id} className="flex items-center justify-between p-3 bg-muted rounded-lg group">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className={`h-2 w-2 rounded-full shrink-0 ${event.active ? 'bg-emerald-500' : 'bg-stone-300'}`} />
-                      <p className="text-sm text-stone-900 truncate">{eventData.title}</p>
+                      <div className={`h-2 w-2 rounded-full shrink-0 ${event.active ? 'bg-success' : 'bg-border'}`} />
+                      <p className="text-sm text-foreground truncate">{eventData.title}</p>
                     </div>
                     <button 
                       onClick={() => setShowEditEvent(event.id)}
                       data-testid={`button-edit-modal-event-${event.id}`}
-                      className="text-xs text-stone-400 hover:text-stone-600 shrink-0 transition-colors"
+                      className="text-xs text-muted-foreground hover:text-muted-foreground shrink-0 transition-colors"
                     >
                       Edit
                     </button>
@@ -1340,7 +1321,7 @@ export default function Dashboard() {
             <button 
               onClick={() => setShowEditFund(false)}
               data-testid="button-done"
-              className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors"
+              className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors"
             >
               Done
             </button>
@@ -1351,9 +1332,9 @@ export default function Dashboard() {
       {/* Add Fund Modal */}
       <Dialog open={showAddFund} onOpenChange={setShowAddFund}>
         <DialogContent className="max-w-md bg-white p-0 gap-0">
-          <div className="p-5 border-b border-stone-100">
-            <DialogTitle className="font-medium text-stone-900">Add a fund</DialogTitle>
-            <p className="text-sm text-stone-500 mt-1">Each fund is a separate brokerage account</p>
+          <div className="p-5 border-b border-border">
+            <DialogTitle className="font-medium text-foreground">Add a fund</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">Each fund is a separate brokerage account</p>
           </div>
           
           <div className="p-5 space-y-3">
@@ -1363,15 +1344,15 @@ export default function Dashboard() {
                 setShowAddChild(true);
               }}
               data-testid="button-add-child-fund"
-              className="w-full p-4 rounded-xl border-2 border-stone-200 hover:border-stone-300 bg-white text-left transition-all group"
+              className="w-full p-4 rounded-xl border-2 border-border hover:border-muted-foreground/30 bg-white text-left transition-all group"
             >
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-stone-100 group-hover:bg-stone-200 flex items-center justify-center transition-colors">
-                  <Users size={18} className="text-stone-600" />
+                <div className="w-10 h-10 rounded-lg bg-muted group-hover:bg-border flex items-center justify-center transition-colors">
+                  <Users size={18} className="text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-medium text-stone-900">Add a child</p>
-                  <p className="text-sm text-stone-500 mt-0.5">Open a custodial account (UTMA)</p>
+                  <p className="font-medium text-foreground">Add a child</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Open a custodial account (UTMA)</p>
                 </div>
               </div>
             </button>
@@ -1383,15 +1364,15 @@ export default function Dashboard() {
                   setLocation("/get-started?intent=personal");
                 }}
                 data-testid="button-add-personal-fund"
-                className="w-full p-4 rounded-xl border-2 border-stone-200 hover:border-stone-300 bg-white text-left transition-all group"
+                className="w-full p-4 rounded-xl border-2 border-border hover:border-muted-foreground/30 bg-white text-left transition-all group"
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-stone-100 group-hover:bg-stone-200 flex items-center justify-center transition-colors">
-                    <User size={18} className="text-stone-600" />
+                  <div className="w-10 h-10 rounded-lg bg-muted group-hover:bg-border flex items-center justify-center transition-colors">
+                    <User size={18} className="text-muted-foreground" />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-stone-900">Open a personal fund</p>
-                    <p className="text-sm text-stone-500 mt-0.5">For yourself (individual brokerage)</p>
+                    <p className="font-medium text-foreground">Open a personal fund</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">For yourself (individual brokerage)</p>
                   </div>
                 </div>
               </button>
@@ -1403,26 +1384,26 @@ export default function Dashboard() {
       {/* Add Child Modal */}
       <Dialog open={showAddChild} onOpenChange={setShowAddChild}>
         <DialogContent className="max-w-md bg-white p-0 gap-0">
-          <div className="p-5 border-b border-stone-100">
-            <DialogTitle className="font-medium text-stone-900">Add a child</DialogTitle>
-            <p className="text-sm text-stone-500 mt-1">We'll create a custodial account for them</p>
+          <div className="p-5 border-b border-border">
+            <DialogTitle className="font-medium text-foreground">Add a child</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">We'll create a custodial account for them</p>
           </div>
           
           <div className="p-5 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-stone-700 mb-1.5">Child's first name</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Child's first name</label>
               <input
                 type="text"
                 value={newChildName}
                 onChange={(e) => setNewChildName(e.target.value)}
                 placeholder="e.g., Mila"
                 data-testid="input-new-child-name"
-                className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+                className="w-full px-4 py-3 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted-foreground"
               />
             </div>
           </div>
 
-          <div className="p-5 border-t border-stone-100">
+          <div className="p-5 border-t border-border">
             <button 
               onClick={() => {
                 if (newChildName.trim()) {
@@ -1460,7 +1441,7 @@ export default function Dashboard() {
               }}
               disabled={!newChildName.trim()}
               data-testid="button-continue-add-child"
-              className="w-full py-3 bg-stone-900 text-white rounded-xl text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-40"
+              className="w-full py-3 bg-primary text-white rounded-xl text-sm font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors disabled:opacity-40"
             >
               Create fund
             </button>
@@ -1478,12 +1459,12 @@ export default function Dashboard() {
             
             return (
               <>
-                <div className="p-5 border-b border-stone-100">
-                  <DialogTitle className="font-medium text-stone-900">Edit Event</DialogTitle>
+                <div className="p-5 border-b border-border">
+                  <DialogTitle className="font-medium text-foreground">Edit Event</DialogTitle>
                 </div>
                 <div className="p-5 space-y-4">
                   <div>
-                    <label className="block text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Event name</label>
+                    <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Event name</label>
                     <input
                       type="text"
                       value={eventData.title}
@@ -1492,13 +1473,13 @@ export default function Dashboard() {
                         [showEditEvent]: { ...eventData, title: e.target.value }
                       }))}
                       data-testid="input-event-title"
-                      className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
+                      className="w-full px-3 py-2.5 border border-border rounded-lg text-foreground focus:outline-none focus:border-muted-foreground"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-stone-400 uppercase tracking-wider mb-2">Event URL</label>
-                    <div className="flex items-center border border-stone-200 rounded-lg overflow-hidden">
-                      <span className="px-3 py-2.5 bg-stone-50 text-sm text-stone-400 border-r border-stone-200 truncate">kora.com/{fundSlug}/</span>
+                    <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Event URL</label>
+                    <div className="flex items-center border border-border rounded-lg overflow-hidden">
+                      <span className="px-3 py-2.5 bg-muted text-sm text-muted-foreground border-r border-border truncate">kora.com/{fundSlug}/</span>
                       <input
                         type="text"
                         value={eventData.slug}
@@ -1507,24 +1488,24 @@ export default function Dashboard() {
                           [showEditEvent]: { ...eventData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") }
                         }))}
                         data-testid="input-event-url"
-                        className="flex-1 px-3 py-2.5 text-stone-900 focus:outline-none min-w-0"
+                        className="flex-1 px-3 py-2.5 text-foreground focus:outline-none min-w-0"
                       />
                     </div>
                   </div>
                   <Link href={`/edit/${fundSlug}/${eventData.slug}`} onClick={() => setShowEditEvent(null)}>
                     <button 
                       data-testid="button-full-editor"
-                      className="w-full py-2.5 border border-stone-200 rounded-lg text-sm text-stone-600 hover:bg-stone-50 transition-colors"
+                      className="w-full py-2.5 border border-border rounded-lg text-sm text-muted-foreground hover:bg-muted transition-colors"
                     >
                       Open full editor
                     </button>
                   </Link>
                 </div>
-                <div className="p-5 border-t border-stone-100">
+                <div className="p-5 border-t border-border">
                   <button 
                     onClick={() => setShowEditEvent(null)}
                     data-testid="button-save-event"
-                    className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors"
+                    className="w-full py-2.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors"
                   >
                     Save
                   </button>
@@ -1541,9 +1522,9 @@ export default function Dashboard() {
         if (!open) setExpandedThankYou(null);
       }}>
         <DialogContent className="max-w-md bg-white p-0 gap-0">
-          <div className="p-5 border-b border-stone-100">
-            <DialogTitle className="font-medium text-stone-900">Send thank-yous</DialogTitle>
-            <p className="text-sm text-stone-500 mt-1">
+          <div className="p-5 border-b border-border">
+            <DialogTitle className="font-medium text-foreground">Send thank-yous</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">
               {pendingThankYous > 0 
                 ? `${pendingThankYous} pending${snoozedCount > 0 ? ` • ${snoozedCount} for later` : ''}`
                 : snoozedCount > 0 
@@ -1564,30 +1545,30 @@ export default function Dashboard() {
                 return (
                   <div 
                     key={item.id} 
-                    className={`border-b border-stone-100 last:border-0 ${isSent ? 'bg-emerald-50/50' : isSnoozed ? 'bg-stone-50' : ''}`}
+                    className={`border-b border-border last:border-0 ${isSent ? 'bg-success/10/50' : isSnoozed ? 'bg-muted' : ''}`}
                   >
                     <div 
-                      className={`p-4 ${!isSent ? 'cursor-pointer hover:bg-stone-50' : ''} transition-colors`}
+                      className={`p-4 ${!isSent ? 'cursor-pointer hover:bg-muted' : ''} transition-colors`}
                       onClick={() => !isSent && setExpandedThankYou(isExpanded ? null : item.id)}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-stone-900">{item.from}</p>
+                            <p className="font-medium text-foreground">{item.from}</p>
                             {isSent && (
-                              <span className="text-xs text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">Sent</span>
+                              <span className="text-xs text-success bg-success/20 px-2 py-0.5 rounded-full">Sent</span>
                             )}
                             {isSnoozed && !isSent && (
-                              <span className="text-xs text-stone-500 bg-stone-200 px-2 py-0.5 rounded-full">Later</span>
+                              <span className="text-xs text-muted-foreground bg-border px-2 py-0.5 rounded-full">Later</span>
                             )}
                           </div>
-                          <p className="text-sm text-stone-500">${item.amount} • {item.event}</p>
+                          <p className="text-sm text-muted-foreground">${item.amount} • {item.event}</p>
                           {item.note && (
-                            <p className="text-sm text-stone-400 mt-1 italic">"{item.note}"</p>
+                            <p className="text-sm text-muted-foreground mt-1 italic">"{item.note}"</p>
                           )}
                         </div>
                         {!isSent && (
-                          <span className="text-xs text-stone-400">
+                          <span className="text-xs text-muted-foreground">
                             {isExpanded ? '▲' : '▼'}
                           </span>
                         )}
@@ -1603,7 +1584,7 @@ export default function Dashboard() {
                               setThankYouDrafts(prev => ({ ...prev, [item.id]: thankYouTemplates.simple(item) }));
                             }}
                             data-testid={`button-template-simple-${item.id}`}
-                            className="px-3 py-1.5 text-xs border border-stone-200 rounded-full text-stone-600 hover:bg-stone-50 transition-colors"
+                            className="px-3 py-1.5 text-xs border border-border rounded-full text-muted-foreground hover:bg-muted transition-colors"
                           >
                             Simple
                           </button>
@@ -1613,7 +1594,7 @@ export default function Dashboard() {
                               setThankYouDrafts(prev => ({ ...prev, [item.id]: thankYouTemplates.heartfelt(item) }));
                             }}
                             data-testid={`button-template-heartfelt-${item.id}`}
-                            className="px-3 py-1.5 text-xs border border-stone-200 rounded-full text-stone-600 hover:bg-stone-50 transition-colors"
+                            className="px-3 py-1.5 text-xs border border-border rounded-full text-muted-foreground hover:bg-muted transition-colors"
                           >
                             Heartfelt
                           </button>
@@ -1623,7 +1604,7 @@ export default function Dashboard() {
                               setThankYouDrafts(prev => ({ ...prev, [item.id]: thankYouTemplates.formal(item) }));
                             }}
                             data-testid={`button-template-formal-${item.id}`}
-                            className="px-3 py-1.5 text-xs border border-stone-200 rounded-full text-stone-600 hover:bg-stone-50 transition-colors"
+                            className="px-3 py-1.5 text-xs border border-border rounded-full text-muted-foreground hover:bg-muted transition-colors"
                           >
                             Formal
                           </button>
@@ -1631,7 +1612,7 @@ export default function Dashboard() {
                         <textarea
                           value={draftMessage}
                           onChange={(e) => setThankYouDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
-                          className="w-full p-3 text-sm border border-stone-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+                          className="w-full p-3 text-sm border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted-foreground"
                           rows={4}
                           placeholder="Write your thank-you message..."
                           data-testid={`textarea-thankyou-${item.id}`}
@@ -1646,7 +1627,7 @@ export default function Dashboard() {
                               toast({ title: `Thank-you sent to ${item.from}` });
                             }}
                             data-testid={`button-send-thanks-${item.id}`}
-                            className="flex-1 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-800 transition-colors"
+                            className="flex-1 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors"
                           >
                             Send thank-you
                           </button>
@@ -1661,7 +1642,7 @@ export default function Dashboard() {
                               setExpandedThankYou(null);
                             }}
                             data-testid={`button-snooze-thanks-${item.id}`}
-                            className="px-4 py-2 border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors"
+                            className="px-4 py-2 border border-border text-muted-foreground text-sm rounded-lg hover:bg-muted transition-colors"
                           >
                             {isSnoozed ? 'Restore' : 'Later'}
                           </button>
@@ -1673,14 +1654,14 @@ export default function Dashboard() {
               })}
           </div>
 
-          <div className="p-5 border-t border-stone-100">
+          <div className="p-5 border-t border-border">
             <button 
               onClick={() => {
                 setShowThankYous(false);
                 setExpandedThankYou(null);
               }}
               data-testid="button-close-thankyous"
-              className="w-full py-2.5 bg-stone-100 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-200 transition-colors"
+              className="w-full py-2.5 bg-muted text-foreground rounded-lg text-sm font-medium hover:bg-border transition-colors"
             >
               Done
             </button>
@@ -1699,7 +1680,7 @@ export default function Dashboard() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               onClick={() => { setShowContributors(false); setExpandedContributor(null); }}
-              className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-50"
+              className="fixed inset-0 bg-primary/60 z-50"
             />
             
             {/* Drawer */}
@@ -1713,7 +1694,7 @@ export default function Dashboard() {
               <div className="h-full bg-white rounded-t-3xl lg:rounded-2xl flex flex-col shadow-2xl">
                 {/* Drag handle (mobile) */}
                 <div className="lg:hidden flex justify-center pt-3 pb-1">
-                  <div className="w-10 h-1 rounded-full bg-stone-300" />
+                  <div className="w-10 h-1 rounded-full bg-border" />
                 </div>
                 
                 {/* Hero Section with gradient background */}
@@ -1726,7 +1707,7 @@ export default function Dashboard() {
                         y: [0, -10, 0],
                       }}
                       transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                      className="absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-br from-emerald-200/60 to-teal-200/40 rounded-full blur-3xl"
+                      className="hidden"
                     />
                     <motion.div
                       animate={{ 
@@ -1734,7 +1715,7 @@ export default function Dashboard() {
                         y: [0, 15, 0],
                       }}
                       transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-                      className="absolute -bottom-10 -left-10 w-48 h-48 bg-gradient-to-tr from-blue-200/50 to-purple-200/30 rounded-full blur-3xl"
+                      className="hidden"
                     />
                   </div>
                   
@@ -1742,7 +1723,7 @@ export default function Dashboard() {
                     {/* Close button */}
                     <button 
                       onClick={() => { setShowContributors(false); setExpandedContributor(null); }}
-                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/80 backdrop-blur-sm border border-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-white transition-all"
+                      className="absolute top-4 right-4 w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white transition-all"
                       data-testid="button-close-contributors"
                     >
                       <ChevronDown size={18} />
@@ -1754,8 +1735,8 @@ export default function Dashboard() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 }}
                     >
-                      <h2 className="text-2xl font-semibold text-stone-900 mb-1">Contributors</h2>
-                      <p className="text-sm text-stone-500">Everyone who's invested in {selectedFund.name}'s future</p>
+                      <h2 className="text-2xl font-semibold text-foreground mb-1">Contributors</h2>
+                      <p className="text-sm text-muted-foreground">Everyone who's invested in {selectedFund.name}'s future</p>
                     </motion.div>
                     
                     {/* Stats row */}
@@ -1765,17 +1746,17 @@ export default function Dashboard() {
                       transition={{ delay: 0.15 }}
                       className="flex gap-4 mt-5"
                     >
-                      <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-stone-200/50">
-                        <p className="text-xs text-stone-500 mb-1">Total Received</p>
-                        <p className="text-2xl font-bold text-stone-900">${allContributions.reduce((sum, c) => sum + c.amount, 0).toLocaleString()}</p>
+                      <div className="flex-1 bg-card rounded-xl p-4 border border-border/50">
+                        <p className="text-xs text-muted-foreground mb-1">Total Received</p>
+                        <p className="text-2xl font-bold text-foreground">${allContributions.reduce((sum, c) => sum + c.amount, 0).toLocaleString()}</p>
                       </div>
-                      <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-stone-200/50">
-                        <p className="text-xs text-stone-500 mb-1">Contributors</p>
-                        <p className="text-2xl font-bold text-stone-900">{allContributions.length}</p>
+                      <div className="flex-1 bg-card rounded-xl p-4 border border-border/50">
+                        <p className="text-xs text-muted-foreground mb-1">Contributors</p>
+                        <p className="text-2xl font-bold text-foreground">{allContributions.length}</p>
                       </div>
-                      <div className="flex-1 bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-stone-200/50">
-                        <p className="text-xs text-stone-500 mb-1">Need Thanks</p>
-                        <p className="text-2xl font-bold text-amber-600">{allContributions.filter(c => c.status === "invested" && !sentThankYous.includes(c.id)).length}</p>
+                      <div className="flex-1 bg-card rounded-xl p-4 border border-border/50">
+                        <p className="text-xs text-muted-foreground mb-1">Need Thanks</p>
+                        <p className="text-2xl font-bold text-[hsl(var(--kora-gold))]">{allContributions.filter(c => c.status === "invested" && !sentThankYous.includes(c.id)).length}</p>
                       </div>
                     </motion.div>
                     
@@ -1793,7 +1774,7 @@ export default function Dashboard() {
                             initial={{ scale: 0, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: 0.25 + i * 0.05, type: "spring" }}
-                            className="w-8 h-8 rounded-full bg-gradient-to-br from-stone-100 to-stone-200 border-2 border-white flex items-center justify-center text-xs font-medium text-stone-600 shadow-sm"
+                            className="w-8 h-8 rounded-full bg-muted border-2 border-white flex items-center justify-center text-xs font-medium text-muted-foreground"
                           >
                             {c.from.charAt(0)}
                           </motion.div>
@@ -1803,13 +1784,13 @@ export default function Dashboard() {
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ delay: 0.5, type: "spring" }}
-                            className="w-8 h-8 rounded-full bg-stone-900 border-2 border-white flex items-center justify-center text-xs font-medium text-white shadow-sm"
+                            className="w-8 h-8 rounded-full bg-primary border-2 border-white flex items-center justify-center text-xs font-medium text-white shadow-sm"
                           >
                             +{allContributions.length - 6}
                           </motion.div>
                         )}
                       </div>
-                      <span className="text-xs text-stone-500 ml-1">Family & Friends</span>
+                      <span className="text-xs text-muted-foreground ml-1">Family & Friends</span>
                     </motion.div>
                   </div>
                 </div>
@@ -1828,7 +1809,7 @@ export default function Dashboard() {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.3 + index * 0.03 }}
-                          className="bg-white rounded-2xl border border-stone-200 shadow-sm overflow-hidden hover:shadow-md hover:border-stone-300 transition-all"
+                          className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden hover:shadow-md hover:border-muted-foreground/30 transition-all"
                         >
                           <button 
                             onClick={() => setExpandedContributor(isExpanded ? null : contribution.id)}
@@ -1837,40 +1818,40 @@ export default function Dashboard() {
                           >
                             <div className="flex items-start gap-3">
                               {/* Avatar */}
-                              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center text-sm font-semibold text-stone-600 shrink-0">
+                              <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground shrink-0">
                                 {contribution.from.split(' ').map(n => n[0]).join('').slice(0, 2)}
                               </div>
                               
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="font-semibold text-stone-900">{contribution.from}</p>
+                                    <p className="font-semibold text-foreground">{contribution.from}</p>
                                     {contribution.status === "pending" ? (
-                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium flex items-center gap-1">
-                                        <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse"></span>
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] font-medium flex items-center gap-1">
+                                        <span className="w-1 h-1 rounded-full bg-[hsl(var(--kora-gold))] animate-pulse"></span>
                                         Pending
                                       </span>
                                     ) : isThanked ? (
-                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium">
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent font-medium">
                                         Thanked
                                       </span>
                                     ) : (
-                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-500 font-medium">
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
                                         Send thanks
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-base font-bold text-emerald-600 shrink-0">+${contribution.amount}</p>
+                                  <p className="text-base font-bold text-success shrink-0">+${contribution.amount}</p>
                                 </div>
                                 
-                                <div className="flex items-center gap-2 mt-1 text-sm text-stone-500">
+                                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                                   <span>{formatRelativeTime(contribution.date)}</span>
-                                  <span className="text-stone-300">•</span>
+                                  <span className="text-border">•</span>
                                   <span className="truncate">{contribution.event}</span>
                                 </div>
                                 
                                 {contribution.note && (
-                                  <p className="text-sm text-stone-500 mt-2 bg-stone-50 rounded-lg px-3 py-2 italic">
+                                  <p className="text-sm text-muted-foreground mt-2 bg-muted rounded-lg px-3 py-2 italic">
                                     "{contribution.note}"
                                   </p>
                                 )}
@@ -1878,11 +1859,11 @@ export default function Dashboard() {
                             </div>
                             
                             {/* Expand indicator */}
-                            <div className="flex items-center justify-center mt-3 pt-3 border-t border-stone-100">
+                            <div className="flex items-center justify-center mt-3 pt-3 border-t border-border">
                               <motion.div
                                 animate={{ rotate: isExpanded ? 180 : 0 }}
                                 transition={{ duration: 0.2 }}
-                                className="flex items-center gap-1 text-xs text-stone-400"
+                                className="flex items-center gap-1 text-xs text-muted-foreground"
                               >
                                 <span>{isExpanded ? "Hide" : "View"} details</span>
                                 <ChevronDown size={14} />
@@ -1900,11 +1881,11 @@ export default function Dashboard() {
                                 className="overflow-hidden"
                               >
                                 <div className="px-4 pb-4">
-                                  <div className="bg-gradient-to-br from-stone-50 to-stone-100/50 rounded-xl p-4">
+                                  <div className="bg-muted rounded-xl p-4">
                                     {/* Transaction Timeline with vertical line */}
                                     <div className="relative">
                                       {/* Vertical connecting line */}
-                                      <div className="absolute left-[9px] top-3 bottom-3 w-0.5 bg-gradient-to-b from-emerald-300 via-emerald-200 to-stone-200" />
+                                      <div className="absolute left-[9px] top-3 bottom-3 w-0.5 bg-border" />
                                       
                                       <div className="space-y-4">
                                         {/* Payment received */}
@@ -1914,12 +1895,12 @@ export default function Dashboard() {
                                           transition={{ delay: 0.1 }}
                                           className="flex items-start gap-3 relative"
                                         >
-                                          <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 z-10 shadow-sm shadow-emerald-200">
+                                          <div className="w-5 h-5 rounded-full bg-success flex items-center justify-center shrink-0 z-10 shadow-sm ">
                                             <div className="w-2 h-2 rounded-full bg-white"></div>
                                           </div>
                                           <div className="flex-1 pt-0.5">
-                                            <p className="text-sm font-medium text-stone-900">Payment received</p>
-                                            <p className="text-xs text-stone-500">{formatDate(contribution.date)} at {formatTime(contribution.date)}</p>
+                                            <p className="text-sm font-medium text-foreground">Payment received</p>
+                                            <p className="text-xs text-muted-foreground">{formatDate(contribution.date)} at {formatTime(contribution.date)}</p>
                                           </div>
                                         </motion.div>
                                         
@@ -1932,8 +1913,8 @@ export default function Dashboard() {
                                         >
                                           <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 z-10 shadow-sm ${
                                             contribution.status === "pending" 
-                                              ? "bg-amber-500 shadow-amber-200" 
-                                              : "bg-emerald-500 shadow-emerald-200"
+                                              ? "bg-[hsl(var(--kora-gold))] " 
+                                              : "bg-success "
                                           }`}>
                                             {contribution.status === "pending" ? (
                                               <motion.div
@@ -1946,10 +1927,10 @@ export default function Dashboard() {
                                             )}
                                           </div>
                                           <div className="flex-1 pt-0.5">
-                                            <p className="text-sm font-medium text-stone-900">
+                                            <p className="text-sm font-medium text-foreground">
                                               {contribution.status === "pending" ? "Trade pending" : "Trade executed"}
                                             </p>
-                                            <p className="text-xs text-stone-500">
+                                            <p className="text-xs text-muted-foreground">
                                               {contribution.status === "pending" 
                                                 ? "Markets open 9:30am ET weekdays"
                                                 : "Filled at market open"
@@ -1967,14 +1948,14 @@ export default function Dashboard() {
                                         >
                                           <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 z-10 shadow-sm ${
                                             contribution.status === "pending" 
-                                              ? "bg-stone-300 shadow-stone-100" 
-                                              : "bg-emerald-500 shadow-emerald-200"
+                                              ? "bg-border" 
+                                              : "bg-success "
                                           }`}>
                                             <div className="w-2 h-2 rounded-full bg-white"></div>
                                           </div>
                                           <div className="flex-1 pt-0.5">
                                             <p className={`text-sm font-medium ${
-                                              contribution.status === "pending" ? "text-stone-400" : "text-stone-900"
+                                              contribution.status === "pending" ? "text-muted-foreground" : "text-foreground"
                                             }`}>
                                               {contribution.status === "pending" 
                                                 ? "Awaiting settlement"
@@ -1982,7 +1963,7 @@ export default function Dashboard() {
                                               }
                                             </p>
                                             {contribution.status === "invested" && (
-                                              <p className="text-xs text-stone-500">T+1 settlement complete</p>
+                                              <p className="text-xs text-muted-foreground">T+1 settlement complete</p>
                                             )}
                                           </div>
                                         </motion.div>
@@ -1994,10 +1975,10 @@ export default function Dashboard() {
                                       initial={{ opacity: 0 }}
                                       animate={{ opacity: 1 }}
                                       transition={{ delay: 0.25 }}
-                                      className="mt-4 pt-3 border-t border-stone-200/70 flex items-start gap-2"
+                                      className="mt-4 pt-3 border-t border-border/70 flex items-start gap-2"
                                     >
-                                      <Shield size={14} className="text-stone-400 mt-0.5 shrink-0" />
-                                      <p className="text-xs text-stone-500 leading-relaxed">
+                                      <Shield size={14} className="text-muted-foreground mt-0.5 shrink-0" />
+                                      <p className="text-xs text-muted-foreground leading-relaxed">
                                         Held by Alpaca Securities LLC · SIPC protected up to $500,000
                                       </p>
                                     </motion.div>
@@ -2008,22 +1989,22 @@ export default function Dashboard() {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.3 }}
-                                        className="mt-4 pt-3 border-t border-stone-200/70"
+                                        className="mt-4 pt-3 border-t border-border/70"
                                       >
                                         {isThanked ? (
                                           <motion.div 
                                             initial={{ scale: 0.9, opacity: 0 }}
                                             animate={{ scale: 1, opacity: 1 }}
-                                            className="flex items-center gap-2 text-emerald-600 bg-emerald-50 rounded-xl p-3"
+                                            className="flex items-center gap-2 text-success bg-success/10 rounded-xl p-3"
                                           >
-                                            <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center">
+                                            <div className="w-7 h-7 rounded-full bg-success/20 flex items-center justify-center">
                                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                                 <polyline points="20 6 9 17 4 12"></polyline>
                                               </svg>
                                             </div>
                                             <div>
                                               <p className="text-sm font-medium">Thank you sent!</p>
-                                              <p className="text-xs text-emerald-500">{contribution.from.split(' ')[0]} will receive it shortly</p>
+                                              <p className="text-xs text-success">{contribution.from.split(' ')[0]} will receive it shortly</p>
                                             </div>
                                           </motion.div>
                                         ) : composingThankYou === contribution.id ? (
@@ -2033,7 +2014,7 @@ export default function Dashboard() {
                                             exit={{ opacity: 0, height: 0 }}
                                             className="space-y-4"
                                           >
-                                            <p className="text-sm font-medium text-stone-700">Choose a template</p>
+                                            <p className="text-sm font-medium text-foreground">Choose a template</p>
                                             
                                             {/* Template options */}
                                             <div className="space-y-2">
@@ -2051,8 +2032,8 @@ export default function Dashboard() {
                                                   }}
                                                   className={`w-full p-3 rounded-xl text-left transition-all ${
                                                     selectedTemplate === template.id 
-                                                      ? "bg-stone-900 text-white ring-2 ring-stone-900 ring-offset-2" 
-                                                      : "bg-white border border-stone-200 hover:border-stone-300 text-stone-700"
+                                                      ? "bg-primary text-white ring-2 ring-primary ring-offset-2" 
+                                                      : "bg-white border border-border hover:border-muted-foreground/30 text-foreground"
                                                   }`}
                                                 >
                                                   <div className="flex items-center gap-2 mb-1">
@@ -2060,7 +2041,7 @@ export default function Dashboard() {
                                                     <span className="text-sm font-medium">{template.label}</span>
                                                   </div>
                                                   <p className={`text-xs leading-relaxed line-clamp-2 ${
-                                                    selectedTemplate === template.id ? "text-stone-300" : "text-stone-500"
+                                                    selectedTemplate === template.id ? "text-white/70" : "text-muted-foreground"
                                                   }`}>
                                                     {template.preview}
                                                   </p>
@@ -2070,19 +2051,19 @@ export default function Dashboard() {
                                             
                                             {/* Custom message area */}
                                             <div>
-                                              <label className="text-xs text-stone-500 mb-1.5 block">Personalize (optional)</label>
+                                              <label className="text-xs text-muted-foreground mb-1.5 block">Personalize (optional)</label>
                                               <textarea
                                                 value={customMessage}
                                                 onChange={(e) => setCustomMessage(e.target.value)}
                                                 onClick={(e) => e.stopPropagation()}
                                                 placeholder="Add a personal touch..."
                                                 rows={3}
-                                                className="w-full px-3 py-2.5 text-sm bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 resize-none"
+                                                className="w-full px-3 py-2.5 text-sm bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted-foreground resize-none"
                                               />
                                             </div>
                                             
                                             {/* Delivery info */}
-                                            <div className="flex items-center gap-2 text-xs text-stone-500 bg-stone-50 rounded-lg p-2.5">
+                                            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted rounded-lg p-2.5">
                                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
                                                 <polyline points="22,6 12,13 2,6"></polyline>
@@ -2099,7 +2080,7 @@ export default function Dashboard() {
                                                   setCustomMessage("");
                                                   setSelectedTemplate(0);
                                                 }}
-                                                className="flex-1 py-2.5 bg-stone-100 text-stone-700 rounded-xl text-sm font-medium hover:bg-stone-200 transition-colors"
+                                                className="flex-1 py-2.5 bg-muted text-foreground rounded-xl text-sm font-medium hover:bg-border transition-colors"
                                               >
                                                 Cancel
                                               </button>
@@ -2120,7 +2101,7 @@ export default function Dashboard() {
                                                   }, 800);
                                                 }}
                                                 disabled={sendingThankYou}
-                                                className="flex-1 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                                className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                               >
                                                 {sendingThankYou ? (
                                                   <>
@@ -2145,7 +2126,7 @@ export default function Dashboard() {
                                               setCustomMessage(`Thank you so much for your generous gift to ${selectedFund.name}! Your investment in their future means the world to us.`);
                                               setComposingThankYou(contribution.id);
                                             }}
-                                            className="w-full py-3.5 bg-gradient-to-r from-stone-900 to-stone-800 text-white rounded-xl text-sm font-medium hover:from-stone-800 hover:to-stone-700 transition-all shadow-lg shadow-stone-900/20 flex items-center justify-center gap-2"
+                                            className="w-full py-3.5 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors duration-200 flex items-center justify-center gap-2"
                                           >
                                             <span>💌</span>
                                             Send thank you to {contribution.from.split(' ')[0]}
@@ -2176,20 +2157,20 @@ export default function Dashboard() {
       <Dialog open={showFundPreview} onOpenChange={setShowFundPreview}>
         <DialogContent className="max-w-4xl w-[95vw] h-[85vh] bg-white p-0 gap-0 overflow-hidden flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-stone-100 shrink-0">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1 px-2 py-1 bg-stone-100 rounded-lg text-xs text-stone-500">
+              <div className="flex items-center gap-1 px-2 py-1 bg-muted rounded-lg text-xs text-muted-foreground">
                 <Eye size={12} />
                 <span>Preview</span>
               </div>
-              <span className="text-sm text-stone-600 truncate">kora.com/{selectedFundSlug}</span>
+              <span className="text-sm text-muted-foreground truncate">kora.com/{selectedFundSlug}</span>
             </div>
             <div className="flex items-center gap-2">
               <Link href={`/${selectedFundSlug}`}>
                 <button 
                   onClick={() => setShowFundPreview(false)}
                   data-testid="button-view-live"
-                  className="px-3 py-1.5 bg-stone-900 text-white rounded-lg text-xs font-medium hover:bg-stone-800 transition-colors flex items-center gap-1.5"
+                  className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors flex items-center gap-1.5"
                 >
                   <ExternalLink size={12} />
                   Open
@@ -2201,7 +2182,7 @@ export default function Dashboard() {
                   setShowEditFund(true);
                 }}
                 data-testid="button-edit-from-preview"
-                className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded transition-colors"
+                className="p-1.5 text-muted-foreground hover:text-muted-foreground hover:bg-muted rounded transition-colors"
                 title="Edit"
               >
                 <Pencil size={14} />
@@ -2210,7 +2191,7 @@ export default function Dashboard() {
           </div>
           
           {/* Iframe Container */}
-          <div className="flex-1 bg-stone-100 overflow-hidden">
+          <div className="flex-1 bg-muted overflow-hidden">
             <iframe
               src={`/${selectedFundSlug}?preview=true`}
               className="w-full h-full border-0"

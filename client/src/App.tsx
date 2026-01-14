@@ -12,6 +12,7 @@ import Give from "@/pages/Give";
 import Moment from "@/pages/Moment";
 import Recipient from "@/pages/Recipient";
 import Settings from "@/pages/Settings";
+import Activity from "@/pages/Activity";
 import Onboard from "@/pages/Onboard";
 import MomentCreate from "@/pages/MomentCreate";
 import Send from "@/pages/Send";
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/onboard" component={Onboard} />
       <Route path="/activate" component={ActivateInvesting} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/activity" component={Activity} />
       <Route path="/give" component={Give} />
       <Route path="/give/:id" component={Give} />
       <Route path="/event/create" component={MomentCreate} />

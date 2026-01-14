@@ -94,23 +94,23 @@ export function ShareKit({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md bg-white p-0 gap-0 overflow-hidden">
-        <div className="p-5 border-b border-stone-100">
+      <DialogContent className="max-w-md bg-card p-0 gap-0 overflow-hidden">
+        <div className="p-5 border-b border-border">
           <div className="flex items-center justify-between">
             <div>
-              <DialogTitle className="font-semibold text-stone-900">Share {recipientName}'s Fund</DialogTitle>
-              <p className="text-sm text-stone-500 mt-0.5">Invite friends and family to contribute</p>
+              <DialogTitle className="font-semibold text-foreground">Share {recipientName}'s Fund</DialogTitle>
+              <p className="text-sm text-muted-foreground mt-0.5">Invite friends and family to contribute</p>
             </div>
             <button 
               onClick={onClose}
-              className="p-2 -mr-2 text-stone-400 hover:text-stone-600 transition-colors"
+              className="p-2 -mr-2 text-muted-foreground hover:text-foreground transition-colors"
             >
               <X size={20} />
             </button>
           </div>
         </div>
 
-        <div className="flex border-b border-stone-100">
+        <div className="flex border-b border-border">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -118,8 +118,8 @@ export function ShareKit({
               data-testid={`tab-share-${tab.id}`}
               className={`flex-1 py-3 px-4 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
                 activeTab === tab.id 
-                  ? "text-stone-900 border-b-2 border-stone-900" 
-                  : "text-stone-500 hover:text-stone-700"
+                  ? "text-foreground border-b-2 border-primary" 
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <tab.icon size={16} />
@@ -137,20 +137,20 @@ export function ShareKit({
               exit={{ opacity: 0, y: -10 }}
               className="p-5 space-y-4"
             >
-              <div className="flex items-center gap-2 p-3 bg-stone-50 rounded-lg border border-stone-200">
+              <div className="flex items-center gap-2 p-3 bg-muted rounded-lg border border-border">
                 <input
                   type="text"
                   value={shareUrl}
                   readOnly
-                  className="flex-1 bg-transparent text-sm text-stone-700 focus:outline-none truncate"
+                  className="flex-1 bg-transparent text-sm text-foreground focus:outline-none truncate"
                 />
                 <button
                   onClick={handleCopy}
                   data-testid="button-copy-link"
                   className={`p-2 rounded-lg transition-colors ${
                     copied 
-                      ? "bg-emerald-100 text-emerald-600" 
-                      : "bg-white text-stone-600 hover:bg-stone-100 border border-stone-200"
+                      ? "bg-success/10 text-success" 
+                      : "bg-card text-muted-foreground hover:bg-secondary border border-border"
                   }`}
                 >
                   {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -162,7 +162,7 @@ export function ShareKit({
                   <button
                     onClick={handleNativeShare}
                     data-testid="button-native-share"
-                    className="flex items-center justify-center gap-2 py-3 bg-stone-900 text-white rounded-xl font-medium hover:bg-stone-800 transition-colors col-span-2"
+                    className="flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors col-span-2"
                   >
                     <Share2 size={18} />
                     Share
@@ -171,7 +171,7 @@ export function ShareKit({
                 <button
                   onClick={handleTextShare}
                   data-testid="button-text-share"
-                  className="flex items-center justify-center gap-2 py-3 border border-stone-200 text-stone-700 rounded-xl font-medium hover:bg-stone-50 transition-colors"
+                  className="flex items-center justify-center gap-2 py-3 border border-border text-foreground rounded-xl font-medium hover:bg-muted transition-colors"
                 >
                   <MessageCircle size={18} />
                   Text
@@ -179,15 +179,15 @@ export function ShareKit({
                 <button
                   onClick={handleEmailShare}
                   data-testid="button-email-share"
-                  className="flex items-center justify-center gap-2 py-3 border border-stone-200 text-stone-700 rounded-xl font-medium hover:bg-stone-50 transition-colors"
+                  className="flex items-center justify-center gap-2 py-3 border border-border text-foreground rounded-xl font-medium hover:bg-muted transition-colors"
                 >
                   <Mail size={18} />
                   Email
                 </button>
               </div>
 
-              <div className="pt-4 border-t border-stone-100">
-                <p className="text-xs text-stone-400 text-center">
+              <div className="pt-4 border-t border-border">
+                <p className="text-xs text-muted-foreground text-center">
                   Anyone with the link can contribute to {recipientName}'s fund
                 </p>
               </div>
@@ -203,22 +203,22 @@ export function ShareKit({
               className="p-5 space-y-4"
             >
               <div className="flex justify-center">
-                <div className="p-4 bg-white rounded-2xl border-2 border-stone-200 shadow-sm">
+                <div className="p-4 bg-card rounded-2xl border-2 border-border shadow-sm">
                   <QRCodeSVG 
                     value={shareUrl}
                     size={180}
                     level="H"
                     includeMargin={false}
-                    fgColor="#1c1917"
+                    fgColor="hsl(var(--foreground))"
                   />
                 </div>
               </div>
 
               <div className="text-center">
-                <p className="text-sm font-medium text-stone-900 mb-1">
+                <p className="text-sm font-medium text-foreground mb-1">
                   Scan to gift
                 </p>
-                <p className="text-xs text-stone-500">
+                <p className="text-xs text-muted-foreground">
                   Perfect for party displays and invitations
                 </p>
               </div>
@@ -245,7 +245,7 @@ export function ShareKit({
                   }
                 }}
                 data-testid="button-download-qr"
-                className="w-full flex items-center justify-center gap-2 py-3 bg-stone-900 text-white rounded-xl font-medium hover:bg-stone-800 transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
               >
                 <Download size={18} />
                 Download QR Code
@@ -261,35 +261,30 @@ export function ShareKit({
               exit={{ opacity: 0, y: -10 }}
               className="p-5 space-y-4"
             >
-              <div className="relative aspect-[1.6/1] bg-gradient-to-br from-stone-800 via-stone-900 to-stone-950 rounded-2xl p-5 overflow-hidden shadow-xl">
-                <div className="absolute inset-0 opacity-10">
-                  <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2" />
-                  <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-500 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2" />
-                </div>
-                
+              <div className="relative aspect-[1.6/1] bg-primary rounded-2xl p-5 overflow-hidden shadow-xl">
                 <div className="relative h-full flex flex-col justify-between">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-stone-400 text-xs uppercase tracking-wider mb-1">Gift to</p>
-                      <p className="text-white text-lg font-semibold">{recipientName}'s Fund</p>
+                      <p className="text-primary-foreground/60 text-xs uppercase tracking-wider mb-1">Gift to</p>
+                      <p className="text-primary-foreground text-lg font-semibold">{recipientName}'s Fund</p>
                     </div>
-                    <Sparkles className="w-6 h-6 text-amber-400" />
+                    <Sparkles className="w-6 h-6 text-[hsl(var(--kora-gold))]" />
                   </div>
                   
                   <div className="flex items-end justify-between">
                     <div>
                       {eventTitle && (
-                        <p className="text-stone-400 text-xs mb-1">{eventTitle}</p>
+                        <p className="text-primary-foreground/60 text-xs mb-1">{eventTitle}</p>
                       )}
-                      <p className="text-white text-sm font-mono tracking-tight">{fundSlug}.kora.com</p>
+                      <p className="text-primary-foreground text-sm font-mono tracking-tight">{fundSlug}.kora.com</p>
                     </div>
-                    <div className="bg-white/10 backdrop-blur rounded-lg p-2">
+                    <div className="bg-primary-foreground/10 rounded-lg p-2">
                       <QRCodeSVG 
                         value={shareUrl}
                         size={48}
                         level="L"
                         bgColor="transparent"
-                        fgColor="white"
+                        fgColor="hsl(var(--primary-foreground))"
                       />
                     </div>
                   </div>
@@ -299,21 +294,21 @@ export function ShareKit({
               <div className="grid grid-cols-2 gap-3">
                 <button
                   data-testid="button-add-wallet"
-                  className="flex items-center justify-center gap-2 py-3 bg-stone-900 text-white rounded-xl font-medium hover:bg-stone-800 transition-colors"
+                  className="flex items-center justify-center gap-2 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
                 >
                   <Smartphone size={18} />
                   Add to Wallet
                 </button>
                 <button
                   data-testid="button-print-card"
-                  className="flex items-center justify-center gap-2 py-3 border border-stone-200 text-stone-700 rounded-xl font-medium hover:bg-stone-50 transition-colors"
+                  className="flex items-center justify-center gap-2 py-3 border border-border text-foreground rounded-xl font-medium hover:bg-muted transition-colors"
                 >
                   <Download size={18} />
                   Print
                 </button>
               </div>
 
-              <p className="text-xs text-stone-400 text-center">
+              <p className="text-xs text-muted-foreground text-center">
                 Beautiful cards for invitations and party displays
               </p>
             </motion.div>
@@ -339,8 +334,8 @@ export function ShareButton({
       data-testid="button-open-share-kit"
       className={`flex items-center justify-center gap-2 font-medium transition-colors ${
         variant === "primary"
-          ? "bg-stone-900 text-white hover:bg-stone-800"
-          : "border border-stone-200 text-stone-700 hover:bg-stone-50"
+          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+          : "border border-border text-foreground hover:bg-muted"
       } ${
         size === "sm" ? "py-2 px-3 text-sm rounded-lg" : "py-3 px-4 rounded-xl"
       }`}

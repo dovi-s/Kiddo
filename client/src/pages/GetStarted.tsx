@@ -16,19 +16,20 @@ interface ChildProfile {
 type Step = "hook" | "choose" | "personalize" | "projection" | "account" | "children" | "success";
 
 const fadeSlide = {
-  initial: { opacity: 0, x: 40 },
+  initial: { opacity: 0, x: 20 },
   animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -40 },
-  transition: { type: "spring" as const, stiffness: 300, damping: 30 }
+  exit: { opacity: 0, x: -20 },
+  transition: { duration: 0.15 }
 };
 
 const staggerChildren = {
-  animate: { transition: { staggerChildren: 0.1 } }
+  animate: { transition: { staggerChildren: 0.05 } }
 };
 
 const fadeUp = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 }
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.15 }
 };
 
 export default function GetStarted() {
@@ -120,12 +121,12 @@ export default function GetStarted() {
   const progress = getProgress();
 
   const PremiumHeader = ({ showBack = true }: { showBack?: boolean }) => (
-    <header className="sticky top-0 z-40 bg-gradient-to-b from-stone-50 via-stone-50/95 to-stone-50/0 pb-4">
+    <header className="sticky top-0 z-40 bg-background pb-4">
       <div className="max-w-lg mx-auto px-4 pt-4 flex items-center justify-between">
         {showBack ? (
           <button 
             onClick={handleBack} 
-            className="w-10 h-10 rounded-full bg-white/80 backdrop-blur border border-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-700 hover:bg-white transition-all shadow-sm"
+            className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150"
           >
             <ArrowLeft size={18} />
           </button>
@@ -139,11 +140,11 @@ export default function GetStarted() {
                 key={i}
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: i * 0.05 }}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
+                transition={{ delay: i * 0.05, duration: 0.15 }}
+                className={`h-1.5 rounded-full transition-all duration-200 ${
                   i < progress.current 
-                    ? "w-8 bg-stone-900" 
-                    : "w-4 bg-stone-200"
+                    ? "w-8 bg-primary" 
+                    : "w-4 bg-border"
                 }`} 
               />
             ))}
@@ -155,7 +156,7 @@ export default function GetStarted() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100 overflow-hidden">
+    <div className="min-h-screen bg-background overflow-hidden">
       <AnimatePresence mode="wait">
         
         {/* HOOK - Premium welcome */}
@@ -167,75 +168,50 @@ export default function GetStarted() {
           >
             <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative">
               <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 20 }}
-                className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-br from-emerald-200/40 to-teal-100/30 rounded-full blur-3xl"
-              />
-              <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.4, type: "spring", stiffness: 200, damping: 20 }}
-                className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-br from-amber-100/40 to-orange-100/30 rounded-full blur-3xl"
-              />
-              
-              <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
+                transition={{ delay: 0.1, duration: 0.2 }}
                 className="relative z-10 text-center max-w-md"
               >
-                <Logo size="lg" className="mx-auto mb-8 text-stone-900" />
+                <Logo size="lg" className="mx-auto mb-8 text-primary" />
                 
                 <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
+                  initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 20 }}
+                  transition={{ delay: 0.15, duration: 0.2 }}
                   className="mb-8"
                 >
-                  <div className="w-28 h-28 mx-auto rounded-3xl bg-gradient-to-br from-stone-900 to-stone-700 flex items-center justify-center shadow-2xl shadow-stone-900/30 ring-4 ring-white/50">
-                    <motion.div
-                      animate={{ 
-                        scale: [1, 1.1, 1],
-                        rotate: [0, 5, -5, 0]
-                      }}
-                      transition={{ 
-                        duration: 3,
-                        repeat: Infinity,
-                        repeatType: "reverse"
-                      }}
-                    >
-                      <Gift className="w-14 h-14 text-white" />
-                    </motion.div>
+                  <div className="w-28 h-28 mx-auto rounded-3xl bg-primary flex items-center justify-center shadow-lg">
+                    <Gift className="w-14 h-14 text-primary-foreground" />
                   </div>
                 </motion.div>
 
-                <h1 className="text-3xl md:text-4xl font-semibold text-stone-900 mb-4 leading-tight">
+                <h1 className="text-3xl md:text-4xl font-semibold text-foreground mb-4 leading-tight">
                   Give something that<br />
-                  <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">grows with them</span>
+                  <span className="text-[hsl(var(--kora-evergreen))]">grows with them</span>
                 </h1>
                 
-                <p className="text-lg text-stone-500 mb-10 leading-relaxed">
+                <p className="text-lg text-muted-foreground mb-10 leading-relaxed">
                   Transform birthday money into real investments that compound over time.
                 </p>
 
                 <motion.div
                   initial={{ y: 10, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.7 }}
+                  transition={{ delay: 0.25, duration: 0.2 }}
                   className="space-y-4"
                 >
                   <Button
                     onClick={handleNext}
                     size="lg"
-                    className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800 shadow-xl shadow-stone-900/20"
+                    className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 shadow-lg"
                     data-testid="button-start"
                   >
                     Start in 2 minutes
                     <ArrowRight className="ml-2 w-5 h-5" />
                   </Button>
                   
-                  <div className="flex items-center justify-center gap-6 text-xs text-stone-400">
+                  <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1.5">
                       <Shield size={14} />
                       <span>SIPC protected</span>
@@ -250,8 +226,8 @@ export default function GetStarted() {
             </div>
 
             <div className="px-6 pb-8 text-center">
-              <p className="text-sm text-stone-400">
-                Already have an account? <Link href="/login"><span className="text-stone-700 underline">Sign in</span></Link>
+              <p className="text-sm text-muted-foreground">
+                Already have an account? <Link href="/login"><span className="text-foreground underline">Sign in</span></Link>
               </p>
             </div>
           </motion.div>
@@ -268,16 +244,11 @@ export default function GetStarted() {
 
             <main className="flex-1 px-6 pb-12 max-w-lg mx-auto w-full">
               <div className="relative mb-8">
-                <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 0.5 }}
-                  className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-emerald-100 to-teal-50 rounded-full blur-2xl"
-                />
                 <motion.div {...fadeUp} className="relative">
-                  <h1 className="text-2xl md:text-3xl font-semibold text-stone-900 mb-3">
+                  <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
                     Who is this fund for?
                   </h1>
-                  <p className="text-stone-500">
+                  <p className="text-muted-foreground">
                     Choose the account type that fits your situation
                   </p>
                 </motion.div>
@@ -293,36 +264,37 @@ export default function GetStarted() {
                   variants={fadeUp}
                   onClick={() => setAccountType("parent")}
                   data-testid="option-parent"
-                  className={`w-full p-5 rounded-2xl border-2 text-left transition-all ${
+                  className={`w-full p-5 rounded-2xl border-2 text-left transition-all duration-150 ${
                     accountType === "parent"
-                      ? "border-stone-900 bg-gradient-to-br from-white to-stone-50 shadow-lg ring-4 ring-stone-900/5"
-                      : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-md"
+                      ? "border-primary bg-card shadow-lg ring-4 ring-primary/5"
+                      : "border-border bg-card hover:border-muted-foreground/30 hover:shadow-md"
                   }`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-150 ${
                       accountType === "parent" 
-                        ? "bg-gradient-to-br from-stone-900 to-stone-700 shadow-lg" 
-                        : "bg-stone-100"
+                        ? "bg-primary shadow-lg" 
+                        : "bg-muted"
                     }`}>
-                      <Users size={22} className={accountType === "parent" ? "text-white" : "text-stone-500"} />
+                      <Users size={22} className={accountType === "parent" ? "text-primary-foreground" : "text-muted-foreground"} />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-stone-900 text-lg mb-1">For my child</p>
-                      <p className="text-sm text-stone-500 leading-relaxed">
+                      <p className="font-semibold text-foreground text-lg mb-1">For my child</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
                         You manage everything. They get a custodial investment account that transfers at 18-21.
                       </p>
                       <div className="mt-3 flex items-center gap-2">
-                        <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium">Most popular</span>
+                        <span className="px-2.5 py-1 bg-success/10 text-success rounded-lg text-xs font-medium">Most popular</span>
                       </div>
                     </div>
                     {accountType === "parent" && (
                       <motion.div 
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="w-6 h-6 bg-stone-900 rounded-full flex items-center justify-center flex-shrink-0"
+                        transition={{ duration: 0.15 }}
+                        className="w-6 h-6 bg-primary rounded-full flex items-center justify-center flex-shrink-0"
                       >
-                        <Check size={14} className="text-white" />
+                        <Check size={14} className="text-primary-foreground" />
                       </motion.div>
                     )}
                   </div>
@@ -332,23 +304,23 @@ export default function GetStarted() {
                   variants={fadeUp}
                   onClick={() => setAccountType("adult")}
                   data-testid="option-adult"
-                  className={`w-full p-5 rounded-2xl border-2 text-left transition-all ${
+                  className={`w-full p-5 rounded-2xl border-2 text-left transition-all duration-150 ${
                     accountType === "adult"
-                      ? "border-stone-900 bg-gradient-to-br from-white to-stone-50 shadow-lg ring-4 ring-stone-900/5"
-                      : "border-stone-200 bg-white hover:border-stone-300 hover:shadow-md"
+                      ? "border-primary bg-card shadow-lg ring-4 ring-primary/5"
+                      : "border-border bg-card hover:border-muted-foreground/30 hover:shadow-md"
                   }`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-150 ${
                       accountType === "adult" 
-                        ? "bg-gradient-to-br from-stone-900 to-stone-700 shadow-lg" 
-                        : "bg-stone-100"
+                        ? "bg-primary shadow-lg" 
+                        : "bg-muted"
                     }`}>
-                      <User size={22} className={accountType === "adult" ? "text-white" : "text-stone-500"} />
+                      <User size={22} className={accountType === "adult" ? "text-primary-foreground" : "text-muted-foreground"} />
                     </div>
                     <div className="flex-1">
-                      <p className="font-semibold text-stone-900 text-lg mb-1">For myself</p>
-                      <p className="text-sm text-stone-500 leading-relaxed">
+                      <p className="font-semibold text-foreground text-lg mb-1">For myself</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
                         Personal investment fund. Perfect for weddings, graduations, or any milestone.
                       </p>
                     </div>
@@ -356,9 +328,10 @@ export default function GetStarted() {
                       <motion.div 
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        className="w-6 h-6 bg-stone-900 rounded-full flex items-center justify-center flex-shrink-0"
+                        transition={{ duration: 0.15 }}
+                        className="w-6 h-6 bg-primary rounded-full flex items-center justify-center flex-shrink-0"
                       >
-                        <Check size={14} className="text-white" />
+                        <Check size={14} className="text-primary-foreground" />
                       </motion.div>
                     )}
                   </div>
@@ -368,14 +341,14 @@ export default function GetStarted() {
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.2, duration: 0.15 }}
                 className="mt-8"
               >
                 <Button
                   onClick={handleNext}
                   disabled={!accountType}
                   size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800 disabled:opacity-40 shadow-lg shadow-stone-900/10"
+                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 disabled:opacity-40 shadow-lg"
                   data-testid="button-continue-choose"
                 >
                   Continue
@@ -386,7 +359,8 @@ export default function GetStarted() {
                   <motion.p 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="text-xs text-stone-400 text-center mt-4"
+                    transition={{ duration: 0.15 }}
+                    className="text-xs text-muted-foreground text-center mt-4"
                   >
                     You can add a personal fund for yourself later
                   </motion.p>
@@ -408,33 +382,28 @@ export default function GetStarted() {
             <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg mx-auto w-full">
               <div className="relative mb-8">
                 <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 0.5 }}
-                  className="absolute -top-10 -left-10 w-40 h-40 bg-gradient-to-br from-pink-100 to-rose-50 rounded-full blur-2xl"
-                />
-                <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  transition={{ duration: 0.2 }}
                   className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg ${
                     accountType === "parent" 
-                      ? "bg-gradient-to-br from-pink-400 to-rose-500" 
-                      : "bg-gradient-to-br from-stone-700 to-stone-900"
+                      ? "bg-[hsl(var(--kora-gold))]" 
+                      : "bg-primary"
                   }`}
                 >
                   {accountType === "parent" ? (
                     <Heart className="w-8 h-8 text-white" />
                   ) : (
-                    <User className="w-8 h-8 text-white" />
+                    <User className="w-8 h-8 text-primary-foreground" />
                   )}
                 </motion.div>
 
-                <h1 className="text-2xl md:text-3xl font-semibold text-stone-900 mb-3">
+                <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
                   {accountType === "parent" 
                     ? "What's your child's name?" 
                     : "What's your first name?"}
                 </h1>
-                <p className="text-stone-500">
+                <p className="text-muted-foreground">
                   {accountType === "parent"
                     ? "We'll create their personalized Future Fund"
                     : "We'll personalize your fund and shareable link"}
@@ -450,7 +419,7 @@ export default function GetStarted() {
                     placeholder={accountType === "parent" ? "e.g., Mila" : "e.g., Sarah"}
                     autoFocus
                     data-testid="input-recipient-name"
-                    className="w-full px-5 py-4 text-xl font-medium border-2 border-stone-200 rounded-2xl text-stone-900 placeholder:text-stone-300 focus:outline-none focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 transition-all bg-white"
+                    className="w-full px-5 py-4 text-xl font-medium border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-150 bg-card"
                   />
                 </div>
 
@@ -460,10 +429,11 @@ export default function GetStarted() {
                       initial={{ opacity: 0, y: 10, height: 0 }}
                       animate={{ opacity: 1, y: 0, height: "auto" }}
                       exit={{ opacity: 0, y: -10, height: 0 }}
+                      transition={{ duration: 0.15 }}
                       className="mt-4 overflow-hidden"
                     >
-                      <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100">
-                        <p className="text-sm text-emerald-800">
+                      <div className="p-4 rounded-2xl bg-success/10 border border-success/20">
+                        <p className="text-sm text-[hsl(var(--kora-evergreen))]">
                           <span className="font-semibold">{recipientName}'s Future Fund</span> — {accountType === "parent" ? "their" : "your"} personalized investment account
                         </p>
                       </div>
@@ -477,7 +447,7 @@ export default function GetStarted() {
                   onClick={handleNext}
                   disabled={!canProceed()}
                   size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800 disabled:opacity-40 shadow-lg shadow-stone-900/10"
+                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 disabled:opacity-40 shadow-lg"
                   data-testid="button-continue-personalize"
                 >
                   Continue
@@ -500,23 +470,18 @@ export default function GetStarted() {
             <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg mx-auto w-full">
               <div className="relative mb-6">
                 <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 0.5 }}
-                  className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-emerald-100 to-teal-50 rounded-full blur-2xl"
-                />
-                <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mb-6 shadow-lg"
+                  transition={{ duration: 0.2 }}
+                  className="w-16 h-16 rounded-2xl bg-success flex items-center justify-center mb-6 shadow-lg"
                 >
-                  <TrendingUp className="w-8 h-8 text-white" />
+                  <TrendingUp className="w-8 h-8 text-success-foreground" />
                 </motion.div>
 
-                <h1 className="text-2xl md:text-3xl font-semibold text-stone-900 mb-3">
+                <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
                   Watch {fundName}'s future grow
                 </h1>
-                <p className="text-stone-500">
+                <p className="text-muted-foreground">
                   See how gifts compound into something meaningful
                 </p>
               </div>
@@ -524,13 +489,13 @@ export default function GetStarted() {
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
+                transition={{ delay: 0.1, duration: 0.15 }}
                 className="flex-1"
               >
-                <div className="bg-white rounded-3xl p-6 shadow-xl border border-stone-100 mb-6">
+                <div className="bg-card rounded-3xl p-6 shadow-lg border border-border mb-6">
                   <div className="flex items-center justify-between mb-6">
-                    <span className="text-sm text-stone-500">Annual gifts</span>
-                    <span className="text-2xl font-bold text-stone-900">${projectedAmount}</span>
+                    <span className="text-sm text-muted-foreground">Annual gifts</span>
+                    <span className="text-2xl font-bold text-foreground">${projectedAmount}</span>
                   </div>
                   
                   <input
@@ -540,30 +505,31 @@ export default function GetStarted() {
                     step="100"
                     value={projectedAmount}
                     onChange={(e) => setProjectedAmount(Number(e.target.value))}
-                    className="w-full h-2 bg-stone-100 rounded-full appearance-none cursor-pointer accent-stone-900"
+                    className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-primary"
                     data-testid="slider-projection"
                   />
                   
-                  <div className="flex justify-between text-xs text-stone-400 mt-2">
+                  <div className="flex justify-between text-xs text-muted-foreground mt-2">
                     <span>$100</span>
                     <span>$2,000</span>
                   </div>
 
-                  <div className="mt-8 pt-6 border-t border-stone-100">
+                  <div className="mt-8 pt-6 border-t border-border">
                     <div className="flex items-end justify-between">
                       <div>
-                        <p className="text-sm text-stone-500 mb-1">In 15 years</p>
+                        <p className="text-sm text-muted-foreground mb-1">In 15 years</p>
                         <motion.p 
                           key={projectedGrowth}
-                          initial={{ scale: 1.1 }}
+                          initial={{ scale: 1.05 }}
                           animate={{ scale: 1 }}
-                          className="text-4xl font-bold text-emerald-600"
+                          transition={{ duration: 0.15 }}
+                          className="text-4xl font-bold text-success"
                         >
                           ${projectedGrowth.toLocaleString()}
                         </motion.p>
                       </div>
                       <div className="text-right">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 rounded-full text-emerald-700 text-sm font-medium">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-success/10 rounded-full text-success text-sm font-medium">
                           <TrendingUp size={14} />
                           {((projectedGrowth / (projectedAmount * 15) - 1) * 100).toFixed(0)}% growth
                         </div>
@@ -572,9 +538,9 @@ export default function GetStarted() {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-4 bg-stone-50 rounded-2xl border border-stone-100">
-                  <Sparkles className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-stone-600">
+                <div className="flex items-start gap-3 p-4 bg-muted rounded-2xl border border-border">
+                  <Sparkles className="w-5 h-5 text-[hsl(var(--kora-gold))] flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-muted-foreground">
                     Based on historical S&P 500 average returns of ~7% annually. Past performance doesn't guarantee future results.
                   </p>
                 </div>
@@ -584,7 +550,7 @@ export default function GetStarted() {
                 <Button
                   onClick={handleNext}
                   size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800 shadow-lg shadow-stone-900/10"
+                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 shadow-lg"
                   data-testid="button-continue-projection"
                 >
                   Continue
@@ -607,23 +573,18 @@ export default function GetStarted() {
             <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg mx-auto w-full">
               <div className="relative mb-8">
                 <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 0.5 }}
-                  className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-blue-100 to-indigo-50 rounded-full blur-2xl"
-                />
-                <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-stone-700 to-stone-900 flex items-center justify-center mb-6 shadow-lg"
+                  transition={{ duration: 0.2 }}
+                  className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-6 shadow-lg"
                 >
-                  <Wallet className="w-8 h-8 text-white" />
+                  <Wallet className="w-8 h-8 text-primary-foreground" />
                 </motion.div>
 
-                <h1 className="text-2xl md:text-3xl font-semibold text-stone-900 mb-3">
+                <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
                   Create your account
                 </h1>
-                <p className="text-stone-500">
+                <p className="text-muted-foreground">
                   {accountType === "parent" 
                     ? `You'll manage ${recipientName}'s fund from here`
                     : "Secure your fund with an account"}
@@ -637,7 +598,7 @@ export default function GetStarted() {
                 className="flex-1 space-y-5"
               >
                 <motion.div variants={fadeUp}>
-                  <label className="block text-sm font-medium text-stone-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Email address
                   </label>
                   <input
@@ -646,12 +607,12 @@ export default function GetStarted() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="you@example.com"
                     data-testid="input-email"
-                    className="w-full px-4 py-4 border-2 border-stone-200 rounded-2xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 transition-all bg-white"
+                    className="w-full px-4 py-4 border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-150 bg-card"
                   />
                 </motion.div>
 
                 <motion.div variants={fadeUp}>
-                  <label className="block text-sm font-medium text-stone-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Password
                   </label>
                   <input
@@ -660,12 +621,12 @@ export default function GetStarted() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Create a secure password"
                     data-testid="input-password"
-                    className="w-full px-4 py-4 border-2 border-stone-200 rounded-2xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 transition-all bg-white"
+                    className="w-full px-4 py-4 border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-150 bg-card"
                   />
-                  <p className="text-xs text-stone-400 mt-2">At least 8 characters</p>
+                  <p className="text-xs text-muted-foreground mt-2">At least 8 characters</p>
                 </motion.div>
 
-                <motion.div variants={fadeUp} className="pt-4 flex items-center justify-center gap-6 text-xs text-stone-400">
+                <motion.div variants={fadeUp} className="pt-4 flex items-center justify-center gap-6 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <Shield size={14} />
                     <span>SIPC protected</span>
@@ -682,13 +643,13 @@ export default function GetStarted() {
                   onClick={handleNext}
                   disabled={!canProceed() || isSubmitting}
                   size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800 disabled:opacity-40 shadow-lg shadow-stone-900/10"
+                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 disabled:opacity-40 shadow-lg"
                   data-testid="button-continue-account"
                 >
                   {isSubmitting ? (
                     <>
                       <motion.div 
-                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full mr-2"
+                        className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full mr-2"
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       />
@@ -718,23 +679,18 @@ export default function GetStarted() {
             <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg mx-auto w-full">
               <div className="relative mb-8">
                 <motion.div
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 0.5 }}
-                  className="absolute -top-10 -left-10 w-40 h-40 bg-gradient-to-br from-pink-100 to-rose-50 rounded-full blur-2xl"
-                />
-                <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center mb-6 shadow-lg"
+                  transition={{ duration: 0.2 }}
+                  className="w-16 h-16 rounded-2xl bg-[hsl(var(--kora-gold))] flex items-center justify-center mb-6 shadow-lg"
                 >
                   <Heart className="w-8 h-8 text-white" />
                 </motion.div>
 
-                <h1 className="text-2xl md:text-3xl font-semibold text-stone-900 mb-3">
+                <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
                   Confirm the details
                 </h1>
-                <p className="text-stone-500">
+                <p className="text-muted-foreground">
                   You can add more children later from your dashboard
                 </p>
               </div>
@@ -749,17 +705,17 @@ export default function GetStarted() {
                   <motion.div
                     key={child.id}
                     variants={fadeUp}
-                    className="bg-white rounded-2xl border-2 border-stone-200 p-5 shadow-sm"
+                    className="bg-card rounded-2xl border-2 border-border p-5 shadow-sm"
                   >
                     <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm font-medium text-stone-700">
+                      <span className="text-sm font-medium text-foreground">
                         Child {index + 1}
                       </span>
                       {children.length > 1 && (
                         <button
                           onClick={() => removeChild(child.id)}
                           data-testid={`button-remove-child-${index}`}
-                          className="text-stone-400 hover:text-stone-600 p-1"
+                          className="text-muted-foreground hover:text-foreground p-1 transition-colors duration-150"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -767,7 +723,7 @@ export default function GetStarted() {
                     </div>
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-sm text-stone-600 mb-2">
+                        <label className="block text-sm text-muted-foreground mb-2">
                           First name
                         </label>
                         <input
@@ -776,18 +732,18 @@ export default function GetStarted() {
                           onChange={(e) => updateChild(child.id, "name", e.target.value)}
                           placeholder="e.g., Mila"
                           data-testid={`input-child-name-${index}`}
-                          className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 transition-all bg-white"
+                          className="w-full px-4 py-3 border-2 border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-150 bg-card"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm text-stone-600 mb-2">
+                        <label className="block text-sm text-muted-foreground mb-2">
                           Your relationship
                         </label>
                         <select
                           value={child.relationship}
                           onChange={(e) => updateChild(child.id, "relationship", e.target.value)}
                           data-testid={`select-relationship-${index}`}
-                          className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl text-stone-900 bg-white focus:outline-none focus:border-stone-900 focus:ring-4 focus:ring-stone-900/5 transition-all"
+                          className="w-full px-4 py-3 border-2 border-border rounded-xl text-foreground bg-card focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-150"
                         >
                           <option value="Parent">Parent</option>
                           <option value="Legal guardian">Legal guardian</option>
@@ -802,7 +758,7 @@ export default function GetStarted() {
                   variants={fadeUp}
                   onClick={addChild}
                   data-testid="button-add-child"
-                  className="w-full py-4 border-2 border-dashed border-stone-300 rounded-2xl text-stone-500 hover:border-stone-400 hover:text-stone-700 hover:bg-white/50 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-4 border-2 border-dashed border-border rounded-2xl text-muted-foreground hover:border-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-150 flex items-center justify-center gap-2"
                 >
                   <Plus size={18} />
                   <span>Add another child</span>
@@ -814,13 +770,13 @@ export default function GetStarted() {
                   onClick={handleNext}
                   disabled={!canProceed() || isSubmitting}
                   size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800 disabled:opacity-40 shadow-lg shadow-stone-900/10"
+                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 disabled:opacity-40 shadow-lg"
                   data-testid="button-create-fund"
                 >
                   {isSubmitting ? (
                     <>
                       <motion.div 
-                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full mr-2"
+                        className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full mr-2"
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                       />
@@ -834,7 +790,7 @@ export default function GetStarted() {
                   )}
                 </Button>
 
-                <p className="text-xs text-stone-400 text-center mt-4 leading-relaxed">
+                <p className="text-xs text-muted-foreground text-center mt-4 leading-relaxed">
                   By continuing, you agree to Kora's Terms of Service and Privacy Policy
                 </p>
               </div>
@@ -848,48 +804,30 @@ export default function GetStarted() {
             key="success"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
             className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative"
           >
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 0.6 }}
-              transition={{ delay: 0.1 }}
-              className="absolute top-1/4 left-1/4 w-72 h-72 bg-gradient-to-br from-emerald-200/50 to-teal-100/40 rounded-full blur-3xl"
-            />
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 0.6 }}
-              transition={{ delay: 0.3 }}
-              className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-br from-amber-100/50 to-orange-100/40 rounded-full blur-3xl"
-            />
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 0.3 }}
-              transition={{ delay: 0.5 }}
-              className="absolute top-1/2 right-1/3 w-48 h-48 bg-gradient-to-br from-pink-100/40 to-rose-100/30 rounded-full blur-3xl"
-            />
-
             <div className="relative z-10 text-center max-w-sm w-full">
               <motion.div
                 initial={{ scale: 0, rotate: -180 }}
                 animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
-                className="w-28 h-28 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center mb-8 mx-auto shadow-2xl shadow-emerald-500/30 ring-4 ring-white/80"
+                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                className="w-28 h-28 rounded-full bg-success flex items-center justify-center mb-8 mx-auto shadow-lg"
               >
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ delay: 0.6, type: "spring", stiffness: 300 }}
+                  transition={{ delay: 0.3, duration: 0.15 }}
                 >
-                  <Check className="w-14 h-14 text-white" strokeWidth={3} />
+                  <Check className="w-14 h-14 text-success-foreground" strokeWidth={3} />
                 </motion.div>
               </motion.div>
 
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="text-3xl font-semibold text-stone-900 mb-3"
+                transition={{ delay: 0.2, duration: 0.15 }}
+                className="text-3xl font-semibold text-foreground mb-3"
               >
                 {accountType === "parent" && children.length > 1 
                   ? "Funds created!" 
@@ -899,8 +837,8 @@ export default function GetStarted() {
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                className="text-stone-500 mb-10 leading-relaxed"
+                transition={{ delay: 0.25, duration: 0.15 }}
+                className="text-muted-foreground mb-10 leading-relaxed"
               >
                 Share the link with family and friends to start receiving gifts that grow
               </motion.p>
@@ -908,7 +846,7 @@ export default function GetStarted() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
+                transition={{ delay: 0.3, duration: 0.15 }}
                 className="space-y-4"
               >
                 <Button
@@ -917,7 +855,7 @@ export default function GetStarted() {
                     setLocation(`/dashboard?type=${accountType === "parent" ? "child" : "personal"}&name=${encodeURIComponent(recipientName)}&children=${encodeURIComponent(childNames)}&new=true`);
                   }}
                   size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-stone-900 hover:bg-stone-800 shadow-xl shadow-stone-900/20"
+                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 shadow-lg"
                   data-testid="button-go-to-dashboard"
                 >
                   Go to dashboard
@@ -927,29 +865,27 @@ export default function GetStarted() {
                 <motion.button 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.8 }}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  transition={{ delay: 0.4, duration: 0.15 }}
                   onClick={() => {
                     const childNames = children.map(c => c.name).join(",");
                     setLocation(`/activate?type=${accountType === "parent" ? "child" : "personal"}&children=${encodeURIComponent(childNames)}`);
                   }}
                   data-testid="button-activate-investing"
-                  className="w-full bg-gradient-to-br from-white to-stone-50 rounded-2xl p-5 border border-stone-200/80 shadow-lg backdrop-blur-sm hover:border-stone-300 hover:shadow-xl transition-all cursor-pointer text-left"
+                  className="w-full bg-card rounded-2xl p-5 border border-border shadow-sm hover:border-muted-foreground/30 hover:shadow-md transition-all duration-150 cursor-pointer text-left"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20">
-                      <Shield size={18} className="text-white" />
+                    <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <Shield size={18} className="text-primary-foreground" />
                     </div>
                     <div className="text-left flex-1">
-                      <p className="text-sm font-medium text-stone-900 mb-1">
+                      <p className="text-sm font-medium text-foreground mb-1">
                         Next: Activate investing
                       </p>
-                      <p className="text-xs text-stone-500 leading-relaxed">
+                      <p className="text-xs text-muted-foreground leading-relaxed">
                         Complete a quick verification (~2 min) to start receiving real investments
                       </p>
                     </div>
-                    <ChevronRight size={16} className="text-stone-400 mt-3 flex-shrink-0" />
+                    <ChevronRight size={16} className="text-muted-foreground mt-3 flex-shrink-0" />
                   </div>
                 </motion.button>
               </motion.div>
@@ -957,8 +893,8 @@ export default function GetStarted() {
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 1 }}
-                className="text-xs text-stone-400 mt-8"
+                transition={{ delay: 0.5, duration: 0.15 }}
+                className="text-xs text-muted-foreground mt-8"
               >
                 Until activated, gifts are held as pledges
               </motion.p>

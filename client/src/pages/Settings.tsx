@@ -7,17 +7,19 @@ import { Switch } from "@/components/ui/switch";
 import { 
   User, Shield, Bell, CreditCard, FileText, Search, 
   ChevronRight, Check, LogOut, HelpCircle, ArrowLeft,
-  Smartphone, Mail, Eye, EyeOff, Lock, Globe, Users, Sparkles
+  Smartphone, Mail, Eye, EyeOff, Lock, Globe, Users, Sparkles,
+  MessageCircle, BookOpen, ExternalLink
 } from "lucide-react";
 
-type SettingsTab = "account" | "security" | "notifications" | "billing" | "documents";
+type SettingsTab = "profile" | "security" | "notifications" | "billing" | "legal" | "help";
 
 const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
-  { id: "account", label: "Account", icon: <User size={18} /> },
+  { id: "profile", label: "Profile", icon: <User size={18} /> },
   { id: "security", label: "Security", icon: <Shield size={18} /> },
   { id: "notifications", label: "Notifications", icon: <Bell size={18} /> },
-  { id: "billing", label: "Billing", icon: <CreditCard size={18} /> },
-  { id: "documents", label: "Documents", icon: <FileText size={18} /> },
+  { id: "billing", label: "Plans and billing", icon: <CreditCard size={18} /> },
+  { id: "legal", label: "Legal and documents", icon: <FileText size={18} /> },
+  { id: "help", label: "Help", icon: <HelpCircle size={18} /> },
 ];
 
 function AutoSaveInput({ 
@@ -50,7 +52,7 @@ function AutoSaveInput({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-stone-700">{label}</label>
+      <label className="text-sm font-medium text-foreground">{label}</label>
       <div className="relative">
         <input
           type={type}
@@ -59,15 +61,15 @@ function AutoSaveInput({
           onBlur={handleBlur}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300 transition-all ${disabled ? 'bg-stone-50 text-stone-500' : 'bg-white'}`}
+          className={`w-full px-3 py-2.5 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted transition-all ${disabled ? 'bg-muted text-muted-foreground' : 'bg-white'}`}
         />
         {saving && (
           <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-stone-300 border-t-stone-600 rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-muted border-t-muted-foreground rounded-full animate-spin" />
           </div>
         )}
       </div>
-      {hint && <p className="text-xs text-stone-400">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -97,12 +99,12 @@ function AutoSaveSelect({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-stone-700">{label}</label>
+      <label className="text-sm font-medium text-foreground">{label}</label>
       <div className="relative">
         <select 
           value={value}
           onChange={(e) => handleChange(e.target.value)}
-          className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 bg-white focus:outline-none focus:ring-2 focus:ring-stone-900/10 appearance-none pr-10"
+          className="w-full px-3 py-2.5 border border-border rounded-lg text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/10 appearance-none pr-10"
         >
           {options.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -110,23 +112,23 @@ function AutoSaveSelect({
         </select>
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
           {saving ? (
-            <div className="w-4 h-4 border-2 border-stone-300 border-t-stone-600 rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-muted border-t-muted-foreground rounded-full animate-spin" />
           ) : (
-            <ChevronRight size={16} className="text-stone-400 rotate-90" />
+            <ChevronRight size={16} className="text-muted-foreground rotate-90" />
           )}
         </div>
       </div>
-      {hint && <p className="text-xs text-stone-400">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }
 
 function SettingsSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-      <div className="px-5 py-4 border-b border-stone-100">
-        <h3 className="font-medium text-stone-900">{title}</h3>
-        {description && <p className="text-sm text-stone-500 mt-0.5">{description}</p>}
+    <div className="bg-white rounded-xl border border-border overflow-hidden">
+      <div className="px-5 py-4 border-b border-muted">
+        <h3 className="font-medium text-foreground">{title}</h3>
+        {description && <p className="text-sm text-muted-foreground mt-0.5">{description}</p>}
       </div>
       <div className="p-5 space-y-4">
         {children}
@@ -147,8 +149,8 @@ function ToggleRow({ label, description, defaultChecked, onChange }: { label: st
   return (
     <div className="flex items-start justify-between gap-4 py-2">
       <div>
-        <p className="text-sm font-medium text-stone-900">{label}</p>
-        {description && <p className="text-xs text-stone-500 mt-0.5">{description}</p>}
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
       </div>
       <Switch checked={checked} onCheckedChange={handleChange} />
     </div>
@@ -157,12 +159,12 @@ function ToggleRow({ label, description, defaultChecked, onChange }: { label: st
 
 function LinkRow({ label, description, href, onClick }: { label: string; description?: string; href?: string; onClick?: () => void }) {
   const content = (
-    <div className="flex items-center justify-between py-2 cursor-pointer hover:bg-stone-50 -mx-2 px-2 rounded-lg transition-colors">
+    <div className="flex items-center justify-between py-2 cursor-pointer hover:bg-muted -mx-2 px-2 rounded-lg transition-colors">
       <div>
-        <p className="text-sm font-medium text-stone-900">{label}</p>
-        {description && <p className="text-xs text-stone-500 mt-0.5">{description}</p>}
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
       </div>
-      <ChevronRight size={16} className="text-stone-400" />
+      <ChevronRight size={16} className="text-muted-foreground" />
     </div>
   );
 
@@ -172,10 +174,10 @@ function LinkRow({ label, description, href, onClick }: { label: string; descrip
   return <div onClick={onClick}>{content}</div>;
 }
 
-function AccountTab() {
+function ProfileTab() {
   return (
     <div className="space-y-6">
-      <SettingsSection title="Profile" description="Your personal information">
+      <SettingsSection title="Personal information" description="Your account details">
         <AutoSaveInput label="Name" value="Sarah Miller" />
         <AutoSaveInput label="Email" value="sarah@example.com" type="email" disabled hint="Contact support to change your email" />
         <AutoSaveInput label="Phone" value="" placeholder="+1 (555) 000-0000" hint="Optional. For SMS receipts and security alerts" />
@@ -205,21 +207,21 @@ function AccountTab() {
       <SettingsSection title="Household">
         <div className="flex items-center justify-between py-2">
           <div>
-            <p className="text-sm font-medium text-stone-900">Your role</p>
-            <p className="text-xs text-stone-500 mt-0.5">Based on your account setup</p>
+            <p className="text-sm font-medium text-foreground">Your role</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Based on your account setup</p>
           </div>
           <div className="flex items-center gap-2">
-            <Users size={14} className="text-stone-400" />
-            <span className="text-sm font-medium text-stone-700">Parent / Guardian</span>
+            <Users size={14} className="text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Parent / Guardian</span>
           </div>
         </div>
-        <div className="flex items-center justify-between py-2 border-t border-stone-100">
+        <div className="flex items-center justify-between py-2 border-t border-muted">
           <div>
-            <p className="text-sm font-medium text-stone-900">Children</p>
-            <p className="text-xs text-stone-500 mt-0.5">Mila (fund active)</p>
+            <p className="text-sm font-medium text-foreground">Children</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Mila (fund active)</p>
           </div>
           <Link href="/dashboard">
-            <button className="text-sm text-stone-600 hover:text-stone-900 font-medium">Manage</button>
+            <button className="text-sm text-muted-foreground hover:text-foreground font-medium">Manage</button>
           </Link>
         </div>
       </SettingsSection>
@@ -243,7 +245,7 @@ function SecurityTab() {
         <AutoSaveInput label="New password" value="" type="password" placeholder="Enter new password" hint="At least 8 characters" />
         <button 
           onClick={() => toast({ title: "Password updated", description: "Your password has been changed successfully" })}
-          className="px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-800 transition-colors"
+          className="px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
         >
           Update password
         </button>
@@ -257,15 +259,15 @@ function SecurityTab() {
       <SettingsSection title="Active sessions">
         <div className="flex items-center justify-between py-2">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center">
-              <Globe size={16} className="text-stone-600" />
+            <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+              <Globe size={16} className="text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-medium text-stone-900">Chrome on MacOS</p>
-              <p className="text-xs text-stone-500">San Francisco, CA · Active now</p>
+              <p className="text-sm font-medium text-foreground">Chrome on MacOS</p>
+              <p className="text-xs text-muted-foreground">San Francisco, CA · Active now</p>
             </div>
           </div>
-          <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded">Current</span>
+          <span className="text-xs text-success bg-success/10 px-2 py-1 rounded">Current</span>
         </div>
       </SettingsSection>
 
@@ -296,13 +298,13 @@ function SecurityTab() {
         />
       </SettingsSection>
 
-      <div className="p-4 bg-stone-50 rounded-xl border border-stone-100">
+      <div className="p-4 bg-muted rounded-xl border border-border">
         <div className="flex items-start gap-3">
-          <Shield size={18} className="text-stone-500 mt-0.5" />
+          <Shield size={18} className="text-muted-foreground mt-0.5" />
           <div>
-            <p className="text-sm font-medium text-stone-700">Brokerage custody & SIPC protection</p>
-            <p className="text-xs text-stone-500 mt-1">Your investments are held by Alpaca Securities LLC, member FINRA/SIPC. Assets are protected up to $500,000.</p>
-            <button className="text-xs text-stone-600 underline mt-2 hover:no-underline">Learn more</button>
+            <p className="text-sm font-medium text-foreground">Brokerage custody & SIPC protection</p>
+            <p className="text-xs text-muted-foreground mt-1">Your investments are held by Alpaca Securities LLC, member FINRA/SIPC. Assets are protected up to $500,000.</p>
+            <button className="text-xs text-muted-foreground underline mt-2 hover:no-underline">Learn more</button>
           </div>
         </div>
       </div>
@@ -351,24 +353,24 @@ function NotificationsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-        <div className="px-5 py-4 border-b border-stone-100">
-          <h3 className="font-medium text-stone-900">Notification preferences</h3>
-          <p className="text-sm text-stone-500 mt-0.5">Choose how you want to be notified</p>
+      <div className="bg-white rounded-xl border border-border overflow-hidden">
+        <div className="px-5 py-4 border-b border-muted">
+          <h3 className="font-medium text-foreground">Notification preferences</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">Choose how you want to be notified</p>
         </div>
         
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-stone-100">
-                <th className="text-left text-xs font-medium text-stone-400 uppercase tracking-wider px-5 py-3">Type</th>
-                <th className="text-center text-xs font-medium text-stone-400 uppercase tracking-wider px-3 py-3 w-20">
+              <tr className="border-b border-muted">
+                <th className="text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-5 py-3">Type</th>
+                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-3 w-20">
                   <div className="flex items-center justify-center gap-1">
                     <Mail size={14} />
                     <span>Email</span>
                   </div>
                 </th>
-                <th className="text-center text-xs font-medium text-stone-400 uppercase tracking-wider px-3 py-3 w-20">
+                <th className="text-center text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 py-3 w-20">
                   <div className="flex items-center justify-center gap-1">
                     <Smartphone size={14} />
                     <span>SMS</span>
@@ -379,18 +381,18 @@ function NotificationsTab() {
             <tbody>
               {categories.map(category => (
                 <>
-                  <tr key={category.id} className="bg-stone-50">
-                    <td colSpan={3} className="px-5 py-2 text-xs font-medium text-stone-500 uppercase tracking-wider">
+                  <tr key={category.id} className="bg-muted">
+                    <td colSpan={3} className="px-5 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       {category.label}
                     </td>
                   </tr>
                   {notificationTypes.filter(n => n.category === category.id).map(notification => (
-                    <tr key={notification.id} className="border-b border-stone-50 hover:bg-stone-50/50 transition-colors">
-                      <td className="px-5 py-3 text-sm text-stone-900">{notification.label}</td>
+                    <tr key={notification.id} className="border-b border-muted hover:bg-muted/50 transition-colors">
+                      <td className="px-5 py-3 text-sm text-foreground">{notification.label}</td>
                       <td className="px-3 py-3 text-center">
                         <button
                           onClick={() => toggle(notification.id, "email")}
-                          className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${preferences[notification.id]?.email ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-400 hover:bg-stone-200'}`}
+                          className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${preferences[notification.id]?.email ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border'}`}
                         >
                           {preferences[notification.id]?.email && <Check size={14} />}
                         </button>
@@ -398,7 +400,7 @@ function NotificationsTab() {
                       <td className="px-3 py-3 text-center">
                         <button
                           onClick={() => toggle(notification.id, "sms")}
-                          className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${preferences[notification.id]?.sms ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-400 hover:bg-stone-200'}`}
+                          className={`w-6 h-6 rounded-md flex items-center justify-center transition-colors ${preferences[notification.id]?.sms ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-border'}`}
                         >
                           {preferences[notification.id]?.sms && <Check size={14} />}
                         </button>
@@ -424,46 +426,46 @@ function BillingTab() {
   return (
     <div className="space-y-6">
       <SettingsSection title="Membership" description="Your household's account status">
-        <div className="p-5 bg-white rounded-xl border border-stone-200">
+        <div className="p-5 bg-white rounded-xl border border-border">
           <div className="flex items-center justify-between mb-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <p className="text-lg font-semibold text-stone-900">Free</p>
-                <span className="text-xs font-medium text-stone-500 bg-stone-100 px-2 py-0.5 rounded-full">Current</span>
+                <p className="text-lg font-semibold text-foreground">Free</p>
+                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Current</span>
               </div>
-              <p className="text-sm text-stone-500">Guests pay all fees at checkout</p>
+              <p className="text-sm text-muted-foreground">Guests pay all fees at checkout</p>
             </div>
           </div>
           
-          <div className="p-4 rounded-lg bg-gradient-to-br from-stone-900 to-stone-800 text-white">
+          <div className="p-4 rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <p className="font-semibold mb-0.5">Upgrade to Family</p>
-                <p className="text-sm text-stone-300">$199/year</p>
+                <p className="text-sm text-primary-foreground/70">$199/year</p>
               </div>
-              <Sparkles size={20} className="text-amber-400" />
+              <Sparkles size={20} className="text-[hsl(var(--kora-gold))]" />
             </div>
-            <ul className="text-sm text-stone-300 space-y-1.5 mb-4">
+            <ul className="text-sm text-primary-foreground/80 space-y-1.5 mb-4">
               <li className="flex items-center gap-2">
-                <Check size={14} className="text-emerald-400" />
+                <Check size={14} className="text-[hsl(var(--kora-evergreen-light))]" />
                 Platform fees waived up to $15,000/year
               </li>
               <li className="flex items-center gap-2">
-                <Check size={14} className="text-emerald-400" />
+                <Check size={14} className="text-[hsl(var(--kora-evergreen-light))]" />
                 Household dashboard for all your kids
               </li>
               <li className="flex items-center gap-2">
-                <Check size={14} className="text-emerald-400" />
+                <Check size={14} className="text-[hsl(var(--kora-evergreen-light))]" />
                 Recurring gift management
               </li>
               <li className="flex items-center gap-2">
-                <Check size={14} className="text-emerald-400" />
+                <Check size={14} className="text-[hsl(var(--kora-evergreen-light))]" />
                 Priority support
               </li>
             </ul>
             <button 
               onClick={() => toast({ title: "Upgrade to Family", description: "Family plan coming soon" })}
-              className="w-full py-2.5 bg-white text-stone-900 font-medium rounded-lg hover:bg-stone-100 transition-colors text-sm"
+              className="w-full py-2.5 bg-white text-foreground font-medium rounded-lg hover:bg-muted transition-colors text-sm"
             >
               Upgrade to Family
             </button>
@@ -472,12 +474,12 @@ function BillingTab() {
       </SettingsSection>
 
       <SettingsSection title="Event Passes" description="One-time upgrades for individual events">
-        <div className="p-4 bg-stone-50 rounded-lg border border-stone-100">
-          <p className="text-sm text-stone-500 mb-3">
+        <div className="p-4 bg-muted rounded-lg border border-border">
+          <p className="text-sm text-muted-foreground mb-3">
             Event Passes ($99 each) unlock premium features and waive platform fees for a single event. 
             Purchase when creating or editing an event.
           </p>
-          <div className="text-xs text-stone-400">
+          <div className="text-xs text-muted-foreground">
             No Event Passes purchased yet.
           </div>
         </div>
@@ -485,22 +487,22 @@ function BillingTab() {
 
       <SettingsSection title="How fees work" description="Two components shown at checkout">
         <div className="space-y-3">
-          <div className="p-3 rounded-lg bg-stone-50 border border-stone-100">
+          <div className="p-3 rounded-lg bg-muted border border-border">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-medium text-stone-700">Processing (pass-through)</p>
-              <p className="text-sm text-stone-500">~2.9% + $0.30</p>
+              <p className="text-sm font-medium text-foreground">Processing (pass-through)</p>
+              <p className="text-sm text-muted-foreground">~2.9% + $0.30</p>
             </div>
-            <p className="text-xs text-stone-400">Card network fees. Lower for ACH (~$0.75).</p>
+            <p className="text-xs text-muted-foreground">Card network fees. Lower for ACH (~$0.75).</p>
           </div>
-          <div className="p-3 rounded-lg bg-stone-50 border border-stone-100">
+          <div className="p-3 rounded-lg bg-muted border border-border">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-medium text-stone-700">Kora platform fee</p>
-              <p className="text-sm text-stone-500">1.5% ($1–$10)</p>
+              <p className="text-sm font-medium text-foreground">Kora platform fee</p>
+              <p className="text-sm text-muted-foreground">1.5% ($1–$10)</p>
             </div>
-            <p className="text-xs text-stone-400">Covers brokerage, KYC, support, and thank-you automation. 1.0% for ACH.</p>
+            <p className="text-xs text-muted-foreground">Covers brokerage, KYC, support, and thank-you automation. 1.0% for ACH.</p>
           </div>
         </div>
-        <p className="text-xs text-stone-400 pt-2">Example: $100 gift = $3.20 processing + $1.50 Kora fee = $4.70 total</p>
+        <p className="text-xs text-muted-foreground pt-2">Example: $100 gift = $3.20 processing + $1.50 Kora fee = $4.70 total</p>
       </SettingsSection>
 
       <SettingsSection title="Fee preferences" description="Default behavior for new events">
@@ -520,7 +522,7 @@ function BillingTab() {
             { value: "stop", label: "Stop accepting gifts at goal" },
           ]}
         />
-        <p className="text-xs text-stone-400">Guests always pay processing. You can cover that too per-event.</p>
+        <p className="text-xs text-muted-foreground">Guests always pay processing. You can cover that too per-event.</p>
       </SettingsSection>
 
       <SettingsSection title="Payment method">
@@ -528,25 +530,25 @@ function BillingTab() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-6 rounded bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center text-white text-[8px] font-bold">VISA</div>
             <div>
-              <p className="text-sm font-medium text-stone-900">•••• 4242</p>
-              <p className="text-xs text-stone-500">Expires 12/26</p>
+              <p className="text-sm font-medium text-foreground">•••• 4242</p>
+              <p className="text-xs text-muted-foreground">Expires 12/26</p>
             </div>
           </div>
           <button 
             onClick={() => toast({ title: "Update payment method", description: "Contact support to update your card" })}
-            className="text-sm text-stone-600 hover:text-stone-900"
+            className="text-sm text-muted-foreground hover:text-foreground"
           >Update</button>
         </div>
       </SettingsSection>
 
       <SettingsSection title="Invoices">
-        <p className="text-sm text-stone-500">No invoices yet. Invoices will appear here after you upgrade or cover fees.</p>
+        <p className="text-sm text-muted-foreground">No invoices yet. Invoices will appear here after you upgrade or cover fees.</p>
       </SettingsSection>
     </div>
   );
 }
 
-function DocumentsTab() {
+function LegalTab() {
   const documents = [
     { type: "statement", title: "Q4 2025 Statement", date: "Jan 2026", fund: "Mila's Fund" },
     { type: "statement", title: "Q3 2025 Statement", date: "Oct 2025", fund: "Mila's Fund" },
@@ -559,14 +561,14 @@ function DocumentsTab() {
       <SettingsSection title="Statements & Tax Documents" description="Provided by Alpaca Securities">
         <div className="space-y-2">
           {documents.filter(d => d.type === "statement" || d.type === "tax").map((doc, i) => (
-            <div key={i} className="flex items-center justify-between py-3 border-b border-stone-50 last:border-0">
+            <div key={i} className="flex items-center justify-between py-3 border-b border-muted last:border-0">
               <div>
-                <p className="text-sm font-medium text-stone-900">{doc.title}</p>
-                <p className="text-xs text-stone-500">{doc.date} · {doc.fund}</p>
+                <p className="text-sm font-medium text-foreground">{doc.title}</p>
+                <p className="text-xs text-muted-foreground">{doc.date} · {doc.fund}</p>
               </div>
               <button 
                 onClick={() => toast({ title: "Download started", description: "Your document is being prepared" })}
-                className="text-sm text-stone-600 hover:text-stone-900 font-medium"
+                className="text-sm text-muted-foreground hover:text-foreground font-medium"
               >Download</button>
             </div>
           ))}
@@ -576,14 +578,14 @@ function DocumentsTab() {
       <SettingsSection title="Gift Confirmations" description="Receipts for gifts received">
         <div className="space-y-2">
           {documents.filter(d => d.type === "confirmation").map((doc, i) => (
-            <div key={i} className="flex items-center justify-between py-3 border-b border-stone-50 last:border-0">
+            <div key={i} className="flex items-center justify-between py-3 border-b border-muted last:border-0">
               <div>
-                <p className="text-sm font-medium text-stone-900">{doc.title}</p>
-                <p className="text-xs text-stone-500">{doc.date} · {doc.fund}</p>
+                <p className="text-sm font-medium text-foreground">{doc.title}</p>
+                <p className="text-xs text-muted-foreground">{doc.date} · {doc.fund}</p>
               </div>
               <button 
                 onClick={() => toast({ title: "Download started", description: "Your document is being prepared" })}
-                className="text-sm text-stone-600 hover:text-stone-900 font-medium"
+                className="text-sm text-muted-foreground hover:text-foreground font-medium"
               >Download</button>
             </div>
           ))}
@@ -596,62 +598,130 @@ function DocumentsTab() {
         <LinkRow label="Terms of Service" description="Kora, Inc." />
         <LinkRow label="UTMA Custodial Agreement" description="If applicable" />
       </SettingsSection>
+    </div>
+  );
+}
 
-      <SettingsSection title="Support">
-        <LinkRow label="Help Center" description="FAQs and guides" />
-        <LinkRow label="Contact Support" description="support@kora.com" onClick={() => window.open('mailto:support@kora.com')} />
+function HelpTab() {
+  return (
+    <div className="space-y-6">
+      <SettingsSection title="Get help" description="We're here to help you succeed">
+        <div className="space-y-3">
+          <div 
+            onClick={() => window.open('mailto:support@kora.com')}
+            className="flex items-center gap-4 p-4 bg-muted rounded-lg border border-border cursor-pointer hover:bg-muted/80 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <MessageCircle size={20} className="text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Contact Support</p>
+              <p className="text-xs text-muted-foreground">Email support@kora.com</p>
+            </div>
+            <ExternalLink size={16} className="text-muted-foreground" />
+          </div>
+          
+          <div 
+            onClick={() => toast({ title: "Help Center", description: "Opening help center..." })}
+            className="flex items-center gap-4 p-4 bg-muted rounded-lg border border-border cursor-pointer hover:bg-muted/80 transition-colors"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <BookOpen size={20} className="text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Help Center</p>
+              <p className="text-xs text-muted-foreground">FAQs, guides, and tutorials</p>
+            </div>
+            <ChevronRight size={16} className="text-muted-foreground" />
+          </div>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title="Common questions">
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm font-medium text-foreground">How do I add a child to my account?</p>
+            <p className="text-xs text-muted-foreground mt-1">Go to your Dashboard and click "Add child" to create a new fund for another child in your household.</p>
+          </div>
+          <div className="border-t border-muted pt-4">
+            <p className="text-sm font-medium text-foreground">How do I withdraw funds?</p>
+            <p className="text-xs text-muted-foreground mt-1">Navigate to the child's fund page and click "Withdraw". Funds are transferred to your linked bank account within 3-5 business days.</p>
+          </div>
+          <div className="border-t border-muted pt-4">
+            <p className="text-sm font-medium text-foreground">What happens when my child turns 18?</p>
+            <p className="text-xs text-muted-foreground mt-1">The UTMA account transfers to your child's control. They'll receive instructions to set up their own brokerage account.</p>
+          </div>
+          <div className="border-t border-muted pt-4">
+            <p className="text-sm font-medium text-foreground">Are my investments safe?</p>
+            <p className="text-xs text-muted-foreground mt-1">Yes. Investments are held by Alpaca Securities LLC, member FINRA/SIPC. Assets are protected up to $500,000.</p>
+          </div>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title="About Kora">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between py-2">
+            <p className="text-sm text-muted-foreground">Version</p>
+            <p className="text-sm font-medium text-foreground">1.0.0</p>
+          </div>
+          <div className="flex items-center justify-between py-2 border-t border-muted">
+            <p className="text-sm text-muted-foreground">Brokerage partner</p>
+            <p className="text-sm font-medium text-foreground">Alpaca Securities LLC</p>
+          </div>
+        </div>
       </SettingsSection>
     </div>
   );
 }
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("account");
+  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
   const [searchQuery, setSearchQuery] = useState("");
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case "account": return <AccountTab />;
+      case "profile": return <ProfileTab />;
       case "security": return <SecurityTab />;
       case "notifications": return <NotificationsTab />;
       case "billing": return <BillingTab />;
-      case "documents": return <DocumentsTab />;
+      case "legal": return <LegalTab />;
+      case "help": return <HelpTab />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="sticky top-0 z-40 bg-white border-b border-stone-200">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 bg-white border-b border-border">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/dashboard">
-              <button className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-700">
+              <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
                 <ArrowLeft size={16} />
                 <span className="hidden sm:inline">Back</span>
               </button>
             </Link>
-            <Logo size="md" className="text-stone-900" />
+            <Logo size="md" className="text-foreground" />
           </div>
           <Link href="/dashboard">
-            <button className="text-sm text-stone-500 hover:text-stone-700">Dashboard</button>
+            <button className="text-sm text-muted-foreground hover:text-foreground">Dashboard</button>
           </Link>
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-stone-900">Settings</h1>
-          <p className="text-stone-500 mt-1">Manage your account and preferences</p>
+          <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+          <p className="text-muted-foreground mt-1">Manage your account and preferences</p>
         </div>
 
         <div className="relative mb-6">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search settings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted"
           />
         </div>
 
@@ -665,8 +735,8 @@ export default function Settings() {
                   data-testid={`settings-tab-${tab.id}`}
                   className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
                     activeTab === tab.id
-                      ? "bg-stone-900 text-white"
-                      : "text-stone-600 hover:bg-stone-100"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted"
                   }`}
                 >
                   {tab.icon}
@@ -675,13 +745,9 @@ export default function Settings() {
               ))}
             </div>
 
-            <div className="hidden lg:block mt-6 pt-6 border-t border-stone-200 space-y-1">
-              <button className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-stone-500 hover:bg-stone-100 hover:text-stone-700 w-full transition-colors">
-                <HelpCircle size={18} />
-                Help & Support
-              </button>
+            <div className="hidden lg:block mt-6 pt-6 border-t border-border space-y-1">
               <Link href="/login">
-                <button className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-stone-500 hover:bg-stone-100 hover:text-stone-700 w-full transition-colors">
+                <button className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-muted hover:text-foreground w-full transition-colors">
                   <LogOut size={18} />
                   Sign out
                 </button>
@@ -705,8 +771,8 @@ export default function Settings() {
         </div>
       </div>
 
-      <footer className="border-t border-stone-200 bg-white mt-12">
-        <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-stone-400">
+      <footer className="border-t border-border bg-white mt-12">
+        <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-4">
             <span>Brokerage by Alpaca Securities LLC</span>
             <span>Member FINRA/SIPC</span>
