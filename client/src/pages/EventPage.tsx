@@ -185,6 +185,9 @@ export default function EventPage() {
   const [customAmount, setCustomAmount] = useState("");
   const [message, setMessage] = useState("");
   const [giverName, setGiverName] = useState("");
+  const [giverEmail, setGiverEmail] = useState("");
+  const [giverPhone, setGiverPhone] = useState("");
+  const [wantsSmsUpdates, setWantsSmsUpdates] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showStockPicker, setShowStockPicker] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -632,7 +635,18 @@ export default function EventPage() {
                           onChange={(e) => setGiverName(e.target.value)}
                           placeholder="How they'll see you"
                           data-testid="input-name"
-                          className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400"
+                          className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-stone-500 mb-2">Your email</label>
+                        <input
+                          type="email"
+                          value={giverEmail}
+                          onChange={(e) => setGiverEmail(e.target.value)}
+                          placeholder="For your receipt"
+                          data-testid="input-email"
+                          className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
                         />
                       </div>
                       <div>
@@ -643,8 +657,61 @@ export default function EventPage() {
                           placeholder="A message for them..."
                           rows={3}
                           data-testid="input-message"
-                          className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded text-stone-900 focus:outline-none focus:border-stone-400 resize-none"
+                          className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 resize-none transition-all"
                         />
+                      </div>
+                      
+                      {/* SMS Updates Toggle */}
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setWantsSmsUpdates(!wantsSmsUpdates)}
+                          data-testid="toggle-sms-updates"
+                          className="w-full flex items-start gap-3 p-4 bg-gradient-to-br from-stone-50 to-white border border-stone-200 rounded-xl hover:border-stone-300 transition-all text-left"
+                        >
+                          <div className={`mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${
+                            wantsSmsUpdates 
+                              ? "bg-stone-900 border-stone-900" 
+                              : "border-stone-300 bg-white"
+                          }`}>
+                            {wantsSmsUpdates && (
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                              </svg>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-stone-900">Get text updates</p>
+                            <p className="text-xs text-stone-500 mt-0.5">Receive a text when the gift is invested and a personal thank-you from {recipientName}'s family</p>
+                          </div>
+                        </button>
+                        
+                        {/* Phone input - shown when SMS opted in */}
+                        <AnimatePresence>
+                          {wantsSmsUpdates && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="pt-3">
+                                <input
+                                  type="tel"
+                                  value={giverPhone}
+                                  onChange={(e) => setGiverPhone(e.target.value)}
+                                  placeholder="(555) 123-4567"
+                                  data-testid="input-phone"
+                                  className="w-full px-4 py-3 lg:py-4 bg-white border border-stone-200 rounded-xl text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 transition-all"
+                                />
+                                <p className="text-[11px] text-stone-400 mt-2 px-1">
+                                  By providing your number, you agree to receive SMS updates about this gift. Msg & data rates may apply.
+                                </p>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
 
@@ -668,9 +735,9 @@ export default function EventPage() {
                     <div className="space-y-3">
                       <button
                         onClick={handleGive}
-                        disabled={isProcessing || !giverName}
+                        disabled={isProcessing || !giverName || !giverEmail || (wantsSmsUpdates && !giverPhone)}
                         data-testid="button-apple-pay"
-                        className="w-full py-3 lg:py-4 bg-stone-900 text-stone-50 rounded font-medium disabled:opacity-40 hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-3 lg:py-4 bg-stone-900 text-stone-50 rounded-xl font-medium disabled:opacity-40 hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
                       >
                         {isProcessing ? "Processing..." : (
                           <>
@@ -683,9 +750,9 @@ export default function EventPage() {
                       </button>
                       <button
                         onClick={handleGive}
-                        disabled={isProcessing || !giverName}
+                        disabled={isProcessing || !giverName || !giverEmail || (wantsSmsUpdates && !giverPhone)}
                         data-testid="button-card"
-                        className="w-full py-3 lg:py-4 bg-white border border-stone-200 text-stone-900 rounded font-medium disabled:opacity-40 hover:bg-stone-50 transition-colors"
+                        className="w-full py-3 lg:py-4 bg-white border border-stone-200 text-stone-900 rounded-xl font-medium disabled:opacity-40 hover:bg-stone-50 transition-colors"
                       >
                         Pay with card
                       </button>

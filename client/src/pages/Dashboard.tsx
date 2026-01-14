@@ -88,6 +88,10 @@ export default function Dashboard() {
   const [thankYouDrafts, setThankYouDrafts] = useState<Record<string, string>>({});
   const [showContributors, setShowContributors] = useState(false);
   const [expandedContributor, setExpandedContributor] = useState<string | null>(null);
+  const [composingThankYou, setComposingThankYou] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<number>(0);
+  const [customMessage, setCustomMessage] = useState("");
+  const [sendingThankYou, setSendingThankYou] = useState(false);
   const [expandedActivity, setExpandedActivity] = useState<string | null>(null);
   const [showGainAsPercent, setShowGainAsPercent] = useState(false);
   const [showFundPreview, setShowFundPreview] = useState(false);
@@ -2007,22 +2011,141 @@ export default function Dashboard() {
                                         className="mt-4 pt-3 border-t border-stone-200/70"
                                       >
                                         {isThanked ? (
-                                          <div className="flex items-center gap-2 text-blue-600">
-                                            <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center">
-                                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                          <motion.div 
+                                            initial={{ scale: 0.9, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            className="flex items-center gap-2 text-emerald-600 bg-emerald-50 rounded-xl p-3"
+                                          >
+                                            <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center">
+                                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                                 <polyline points="20 6 9 17 4 12"></polyline>
                                               </svg>
                                             </div>
-                                            <span className="text-sm font-medium">Thank you sent</span>
-                                          </div>
+                                            <div>
+                                              <p className="text-sm font-medium">Thank you sent!</p>
+                                              <p className="text-xs text-emerald-500">{contribution.from.split(' ')[0]} will receive it shortly</p>
+                                            </div>
+                                          </motion.div>
+                                        ) : composingThankYou === contribution.id ? (
+                                          <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: "auto" }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="space-y-4"
+                                          >
+                                            <p className="text-sm font-medium text-stone-700">Choose a template</p>
+                                            
+                                            {/* Template options */}
+                                            <div className="space-y-2">
+                                              {[
+                                                { id: 0, emoji: "💝", label: "Warm & Grateful", preview: `Thank you so much for your generous gift to ${selectedFund.name}! Your investment in their future means the world to us.` },
+                                                { id: 1, emoji: "🌟", label: "Playful", preview: `${selectedFund.name} is going to do amazing things with your gift! Thank you for believing in their future!` },
+                                                { id: 2, emoji: "🙏", label: "Heartfelt", preview: `We're deeply grateful for your kindness and generosity. This gift will help build ${selectedFund.name}'s future, one share at a time.` }
+                                              ].map((template) => (
+                                                <button
+                                                  key={template.id}
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedTemplate(template.id);
+                                                    setCustomMessage(template.preview);
+                                                  }}
+                                                  className={`w-full p-3 rounded-xl text-left transition-all ${
+                                                    selectedTemplate === template.id 
+                                                      ? "bg-stone-900 text-white ring-2 ring-stone-900 ring-offset-2" 
+                                                      : "bg-white border border-stone-200 hover:border-stone-300 text-stone-700"
+                                                  }`}
+                                                >
+                                                  <div className="flex items-center gap-2 mb-1">
+                                                    <span>{template.emoji}</span>
+                                                    <span className="text-sm font-medium">{template.label}</span>
+                                                  </div>
+                                                  <p className={`text-xs leading-relaxed line-clamp-2 ${
+                                                    selectedTemplate === template.id ? "text-stone-300" : "text-stone-500"
+                                                  }`}>
+                                                    {template.preview}
+                                                  </p>
+                                                </button>
+                                              ))}
+                                            </div>
+                                            
+                                            {/* Custom message area */}
+                                            <div>
+                                              <label className="text-xs text-stone-500 mb-1.5 block">Personalize (optional)</label>
+                                              <textarea
+                                                value={customMessage}
+                                                onChange={(e) => setCustomMessage(e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                placeholder="Add a personal touch..."
+                                                rows={3}
+                                                className="w-full px-3 py-2.5 text-sm bg-white border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-400 resize-none"
+                                              />
+                                            </div>
+                                            
+                                            {/* Delivery info */}
+                                            <div className="flex items-center gap-2 text-xs text-stone-500 bg-stone-50 rounded-lg p-2.5">
+                                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                                <polyline points="22,6 12,13 2,6"></polyline>
+                                              </svg>
+                                              <span>Will be sent via email</span>
+                                            </div>
+                                            
+                                            {/* Action buttons */}
+                                            <div className="flex gap-2">
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setComposingThankYou(null);
+                                                  setCustomMessage("");
+                                                  setSelectedTemplate(0);
+                                                }}
+                                                className="flex-1 py-2.5 bg-stone-100 text-stone-700 rounded-xl text-sm font-medium hover:bg-stone-200 transition-colors"
+                                              >
+                                                Cancel
+                                              </button>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSendingThankYou(true);
+                                                  setTimeout(() => {
+                                                    setSentThankYous(prev => [...prev, contribution.id]);
+                                                    setComposingThankYou(null);
+                                                    setCustomMessage("");
+                                                    setSelectedTemplate(0);
+                                                    setSendingThankYou(false);
+                                                    toast({ 
+                                                      title: "Thank you sent! 💌",
+                                                      description: `${contribution.from.split(' ')[0]} will receive your message shortly.`
+                                                    });
+                                                  }, 800);
+                                                }}
+                                                disabled={sendingThankYou}
+                                                className="flex-1 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-medium hover:bg-stone-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                              >
+                                                {sendingThankYou ? (
+                                                  <>
+                                                    <motion.div
+                                                      animate={{ rotate: 360 }}
+                                                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                                                    />
+                                                    Sending...
+                                                  </>
+                                                ) : (
+                                                  <>Send to {contribution.from.split(' ')[0]}</>
+                                                )}
+                                              </button>
+                                            </div>
+                                          </motion.div>
                                         ) : (
                                           <button 
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              setSentThankYous(prev => [...prev, contribution.id]);
-                                              toast({ title: `Thank you sent to ${contribution.from.split(' ')[0]}!` });
+                                              setSelectedTemplate(0);
+                                              setCustomMessage(`Thank you so much for your generous gift to ${selectedFund.name}! Your investment in their future means the world to us.`);
+                                              setComposingThankYou(contribution.id);
                                             }}
-                                            className="w-full py-3 bg-stone-900 text-white rounded-xl text-sm font-medium hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                                            className="w-full py-3.5 bg-gradient-to-r from-stone-900 to-stone-800 text-white rounded-xl text-sm font-medium hover:from-stone-800 hover:to-stone-700 transition-all shadow-lg shadow-stone-900/20 flex items-center justify-center gap-2"
                                           >
                                             <span>💌</span>
                                             Send thank you to {contribution.from.split(' ')[0]}
