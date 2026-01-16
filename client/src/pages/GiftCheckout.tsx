@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Nav } from "@/components/layout/Nav";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { Celebration, SuccessGlow, CountUp } from "@/components/ui/celebration";
 import { bouncySpring, gentleSpring, successPop, easeOutExpo, springSnappy } from "@/lib/animations";
 
 const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
@@ -55,26 +56,28 @@ export default function GiftCheckout() {
     return (
       <div className="min-h-screen bg-background font-sans">
         <Nav />
+        <Celebration trigger={isComplete} intensity="grand" type="confetti" />
         <main className="container mx-auto px-4 py-12 max-w-md">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={bouncySpring}
-          >
-            <Card className="border-border shadow-xl text-center overflow-hidden">
-              <motion.div 
-                className="h-2 bg-success"
-                initial={{ scaleX: 0, originX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ delay: 0.2, duration: 0.6 }}
-              />
-              <CardContent className="p-8 space-y-6">
-                <motion.div
-                  className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto relative"
-                  variants={successPop}
-                  initial="hidden"
-                  animate="visible"
-                >
+          <SuccessGlow trigger={isComplete}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={bouncySpring}
+            >
+              <Card className="border-border shadow-xl text-center overflow-hidden">
+                <motion.div 
+                  className="h-2 bg-success"
+                  initial={{ scaleX: 0, originX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 0.2, duration: 0.6 }}
+                />
+                <CardContent className="p-8 space-y-6">
+                  <motion.div
+                    className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto relative"
+                    variants={successPop}
+                    initial="hidden"
+                    animate="visible"
+                  >
                   <motion.div
                     className="absolute inset-0 rounded-full bg-success/20"
                     initial={{ scale: 1, opacity: 0.5 }}
@@ -149,8 +152,9 @@ export default function GiftCheckout() {
                   Confirmation sent to {email}. Assets held by Alpaca Securities LLC, Member FINRA/SIPC.
                 </p>
               </CardContent>
-            </Card>
-          </motion.div>
+              </Card>
+            </motion.div>
+          </SuccessGlow>
         </main>
       </div>
     );
