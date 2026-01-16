@@ -259,15 +259,15 @@ export default function Dashboard() {
         </div>
       </header>
       
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 lg:py-12">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 lg:py-12 momentum-scroll">
         
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="mb-8 lg:mb-12"
+          className="mb-6 lg:mb-12"
         >
-          <div className="relative overflow-hidden rounded-2xl bg-[hsl(var(--kora-evergreen))] p-6 sm:p-8 lg:p-10">
+          <div className="relative overflow-hidden hero-immersive bg-[hsl(var(--kora-evergreen))] p-6 sm:p-8 lg:p-10">
             <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div className="flex items-center gap-4 sm:gap-6">
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-2xl sm:text-3xl font-medium shadow-lg">
@@ -292,22 +292,24 @@ export default function Dashboard() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
-                <button
+                <motion.button
                   onClick={() => setShowShareKit(true)}
                   data-testid="button-hero-share"
-                  className="px-6 py-3 bg-white text-primary font-medium rounded-xl hover:bg-secondary transition-colors duration-200 flex items-center justify-center gap-2"
+                  whileTap={{ scale: 0.97 }}
+                  className="px-8 py-4 bg-white text-primary font-semibold rounded-2xl shadow-lg shadow-black/10 transition-colors duration-200 flex items-center justify-center gap-2 touch-target btn-large"
                 >
-                  <Share2 size={18} />
+                  <Share2 size={20} />
                   Share fund
-                </button>
+                </motion.button>
                 <Link href="/event/create">
-                  <button
+                  <motion.button
                     data-testid="button-hero-create-event"
-                    className="w-full sm:w-auto px-6 py-3 bg-white/20 text-white font-medium rounded-xl hover:bg-white/30 transition-colors duration-200 flex items-center justify-center gap-2"
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full sm:w-auto px-8 py-4 bg-white/20 text-white font-semibold rounded-2xl backdrop-blur-sm transition-colors duration-200 flex items-center justify-center gap-2 touch-target btn-large"
                   >
-                    <Plus size={18} />
+                    <Plus size={20} />
                     Add event
-                  </button>
+                  </motion.button>
                 </Link>
               </div>
             </div>
@@ -395,38 +397,57 @@ export default function Dashboard() {
                 </motion.div>
               ) : (
                 <>
-                  <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 mb-6">
-                    <div className="text-center mb-6">
-                      <p className="text-4xl sm:text-5xl font-semibold text-foreground tracking-tight mb-2">
+                  <motion.div 
+                    className="bg-card border border-border rounded-3xl p-8 sm:p-10 mb-8 shadow-sm"
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                  >
+                    <div className="text-center mb-8">
+                      <motion.p 
+                        className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground tracking-tight mb-3"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1, duration: 0.2 }}
+                      >
                         <AnimatedValue value={portfolioValue} />
-                      </p>
-                      <p className="text-sm text-muted-foreground">Total Value</p>
+                      </motion.p>
+                      <p className="text-base text-muted-foreground font-medium">Total Value</p>
                       {marketChange > 0 && (
-                        <p className="text-sm text-[hsl(var(--kora-evergreen))] mt-1 flex items-center justify-center gap-1">
-                          <TrendingUp size={14} />
+                        <motion.p 
+                          className="text-base text-[hsl(var(--kora-evergreen))] mt-2 flex items-center justify-center gap-1.5 font-semibold"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.2 }}
+                        >
+                          <TrendingUp size={18} />
                           +${marketChange.toLocaleString()} growth
-                        </p>
+                        </motion.p>
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-3 gap-4 pt-6 border-t border-border">
+                    <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border">
                       <div className="text-center">
-                        <p className="text-xl sm:text-2xl font-semibold text-foreground">${investedAmount.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Invested</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-foreground">${investedAmount.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground mt-1.5 font-medium">Invested</p>
                       </div>
                       <div className="text-center border-x border-border">
-                        <p className="text-xl sm:text-2xl font-semibold text-[hsl(var(--kora-gold))]">${pendingAmount}</p>
-                        <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
-                          <Clock size={10} className="text-[hsl(var(--kora-gold))]" />
+                        <p className="text-2xl sm:text-3xl font-bold text-[hsl(var(--kora-gold))]">${pendingAmount}</p>
+                        <p className="text-sm text-muted-foreground mt-1.5 flex items-center justify-center gap-1.5 font-medium">
+                          <motion.span 
+                            className="w-2 h-2 rounded-full bg-[hsl(var(--kora-gold))]"
+                            animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
                           Pending
                         </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xl sm:text-2xl font-semibold text-foreground">${totalReceived.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Received</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-foreground">${totalReceived.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground mt-1.5 font-medium">Received</p>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
 
                   <Tabs defaultValue="gifts" className="w-full">
                     <TabsList className="grid w-full grid-cols-2 mb-4">
@@ -450,33 +471,33 @@ export default function Dashboard() {
                         allContributions.map((gift, index) => (
                           <motion.div 
                             key={gift.id}
-                            initial={{ opacity: 0, y: 8 }}
+                            initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.03, duration: 0.15, ease: "easeOut" }}
-                            whileHover={{ y: -2, boxShadow: "0 4px 12px -4px rgba(0,0,0,0.08)" }}
-                            whileTap={{ scale: 0.99 }}
-                            className="bg-card border border-border rounded-xl p-4 flex items-center justify-between cursor-pointer"
+                            transition={{ delay: index * 0.04, duration: 0.2, ease: "easeOut" }}
+                            whileHover={{ y: -3, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.12)" }}
+                            whileTap={{ scale: 0.98 }}
+                            className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between cursor-pointer touch-target swipe-hint"
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4">
                               <motion.div 
-                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
+                                className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-semibold ${
                                   gift.status === "pending" 
                                     ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
                                     : "bg-[hsl(var(--kora-evergreen)/0.15)] text-[hsl(var(--kora-evergreen))]"
                                 }`}
-                                whileHover={{ scale: 1.08 }}
+                                whileHover={{ scale: 1.05 }}
                                 transition={{ duration: 0.15 }}
                               >
                                 {gift.from.charAt(0)}
                               </motion.div>
                               <div>
-                                <p className="text-sm font-medium text-foreground">{gift.from}</p>
-                                <p className="text-xs text-muted-foreground">{formatRelativeTime(gift.date)}</p>
+                                <p className="text-base font-semibold text-foreground">{gift.from}</p>
+                                <p className="text-sm text-muted-foreground mt-0.5">{formatRelativeTime(gift.date)}</p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-semibold text-foreground">${gift.amount}</p>
-                              <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                              <p className="text-xl font-bold text-foreground">${gift.amount}</p>
+                              <span className={`text-xs font-medium px-2.5 py-1 rounded-full mt-1 inline-block ${
                                 gift.status === "pending"
                                   ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
                                   : "bg-success/15 text-success"
@@ -499,12 +520,12 @@ export default function Dashboard() {
                         holdings.map((holding, i) => (
                           <motion.div 
                             key={i}
-                            initial={{ opacity: 0, y: 8 }}
+                            initial={{ opacity: 0, y: 12 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.03, duration: 0.15, ease: "easeOut" }}
-                            whileHover={{ y: -2, boxShadow: "0 4px 12px -4px rgba(0,0,0,0.08)" }}
-                            whileTap={{ scale: 0.99 }}
-                            className="bg-card border border-border rounded-xl p-4 flex items-center justify-between cursor-pointer"
+                            transition={{ delay: i * 0.04, duration: 0.2, ease: "easeOut" }}
+                            whileHover={{ y: -3, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.12)" }}
+                            whileTap={{ scale: 0.98 }}
+                            className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between cursor-pointer touch-target"
                           >
                             <div className="flex items-center gap-3">
                               <motion.span 
@@ -683,8 +704,21 @@ export default function Dashboard() {
       {/* Trust Footer */}
       <TrustFooter />
 
+      {/* Floating Action Button - Share */}
+      <motion.button
+        onClick={() => setShowShareKit(true)}
+        className="fab bg-[hsl(var(--kora-gold))] text-[hsl(var(--kora-evergreen))] md:hidden"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.2, ease: "easeOut" }}
+        whileTap={{ scale: 0.9 }}
+        data-testid="fab-share"
+      >
+        <Share2 size={24} />
+      </motion.button>
+
       {/* Spacer for mobile nav */}
-      <div className="h-20 md:hidden" />
+      <div className="h-24 md:hidden" />
     </div>
   );
 }

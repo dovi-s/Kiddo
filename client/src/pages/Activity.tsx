@@ -119,15 +119,15 @@ export default function Activity() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6">
+      <main className="max-w-lg mx-auto px-4 py-6 momentum-scroll">
         {/* Title */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-foreground">Activity</h1>
-          <p className="text-muted-foreground mt-1">Recent updates across all funds</p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Activity</h1>
+          <p className="text-muted-foreground mt-2 text-base">Recent updates across all funds</p>
         </div>
 
-        {/* Filter chips */}
-        <div className="flex gap-2 mb-6">
+        {/* Filter chips - larger touch targets */}
+        <div className="flex gap-3 mb-8 overflow-x-auto pb-2 -mx-4 px-4">
           {[
             { value: "all", label: "All" },
             { value: "gifts", label: "Gifts" },
@@ -136,13 +136,12 @@ export default function Activity() {
             <motion.button
               key={option.value}
               onClick={() => setFilter(option.value as typeof filter)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
+              whileTap={{ scale: 0.95 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-150 ${
+              className={`px-6 py-3 rounded-2xl text-base font-semibold transition-colors duration-150 touch-target whitespace-nowrap ${
                 filter === option.value
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-border"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                  : "bg-muted text-muted-foreground"
               }`}
               data-testid={`filter-${option.value}`}
             >
@@ -168,53 +167,53 @@ export default function Activity() {
             <motion.div
               key={item.id}
               variants={{
-                hidden: { opacity: 0, y: 12, scale: 0.98 },
+                hidden: { opacity: 0, y: 16, scale: 0.97 },
                 visible: { opacity: 1, y: 0, scale: 1 }
               }}
-              whileHover={{ y: -2, boxShadow: "0 4px 12px -4px rgba(0,0,0,0.08)" }}
-              whileTap={{ scale: 0.99 }}
-              transition={{ duration: 0.15, ease: "easeOut" }}
-              className="bg-card border border-border rounded-xl p-4 cursor-pointer"
+              whileHover={{ y: -3, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.12)" }}
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="bg-card border border-border rounded-2xl p-5 cursor-pointer touch-target swipe-hint"
               data-testid={`activity-${item.id}`}
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-4">
                 <motion.div 
-                  className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0"
-                  whileHover={{ scale: 1.05 }}
+                  className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center shrink-0"
+                  whileTap={{ scale: 0.95 }}
                   transition={{ duration: 0.15 }}
                 >
                   {getActivityIcon(item.type)}
                 </motion.div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="font-medium text-foreground">{item.title}</p>
-                    <span className="text-xs text-muted-foreground shrink-0">
+                    <p className="text-base font-semibold text-foreground">{item.title}</p>
+                    <span className="text-sm text-muted-foreground shrink-0">
                       {formatRelativeTime(item.date)}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-0.5">{item.description}</p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                  <p className="text-base text-muted-foreground mt-1">{item.description}</p>
+                  <div className="flex items-center gap-2.5 mt-3">
+                    <span className="text-sm px-3 py-1 rounded-full bg-muted text-muted-foreground font-medium">
                       {item.fundName}
                     </span>
                     {item.status === "pending" && (
                       <motion.span 
-                        className="text-xs px-2 py-0.5 rounded-full bg-[hsl(var(--kora-gold)/0.1)] text-[hsl(var(--kora-gold))] flex items-center gap-1"
+                        className="text-sm px-3 py-1 rounded-full bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] flex items-center gap-1.5 font-medium"
                         animate={{ opacity: [0.7, 1, 0.7] }}
                         transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                       >
-                        <Clock size={10} />
+                        <Clock size={12} />
                         Pending
                       </motion.span>
                     )}
                   </div>
                 </div>
                 <motion.div
-                  className="shrink-0 mt-1"
-                  whileHover={{ x: 2 }}
+                  className="shrink-0 mt-2"
+                  whileTap={{ x: 4 }}
                   transition={{ duration: 0.15 }}
                 >
-                  <ChevronRight size={16} className="text-muted-foreground" />
+                  <ChevronRight size={20} className="text-muted-foreground" />
                 </motion.div>
               </div>
             </motion.div>
