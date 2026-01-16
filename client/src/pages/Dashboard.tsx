@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -576,11 +577,66 @@ export default function Dashboard() {
         </div>
       </main>
 
+      {/* Add Fund Sheet - Bottom on mobile, Dialog on desktop */}
+      <Sheet open={showAddFund} onOpenChange={setShowAddFund}>
+        <SheetContent side="bottom" className="md:hidden">
+          <SheetHeader className="text-left mb-6">
+            <SheetTitle className="text-xl font-bold">Add a fund</SheetTitle>
+            <p className="text-base text-muted-foreground">Each fund is a separate investment account</p>
+          </SheetHeader>
+          
+          <div className="space-y-4">
+            <motion.button
+              onClick={() => {
+                setShowAddFund(false);
+                setShowAddChild(true);
+              }}
+              whileTap={{ scale: 0.98 }}
+              data-testid="button-add-child-fund-mobile"
+              className="w-full p-5 rounded-2xl border-2 border-border bg-card text-left transition-all touch-target"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center">
+                  <Users size={24} className="text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-lg font-semibold text-foreground">Add a child</p>
+                  <p className="text-base text-muted-foreground mt-1">Open a custodial account (UTMA)</p>
+                </div>
+              </div>
+            </motion.button>
+
+            {!isPersonal && (
+              <motion.button
+                onClick={() => {
+                  setShowAddFund(false);
+                  setLocation("/get-started?intent=personal");
+                }}
+                whileTap={{ scale: 0.98 }}
+                data-testid="button-add-personal-fund-mobile"
+                className="w-full p-5 rounded-2xl border-2 border-border bg-card text-left transition-all touch-target"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center">
+                    <User size={24} className="text-muted-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-lg font-semibold text-foreground">Open a personal fund</p>
+                    <p className="text-base text-muted-foreground mt-1">For yourself (individual brokerage)</p>
+                  </div>
+                </div>
+              </motion.button>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop Dialog fallback */}
       <Dialog open={showAddFund} onOpenChange={setShowAddFund}>
-        <DialogContent className="max-w-md bg-white p-0 gap-0">
+        <DialogContent className="max-w-md bg-white p-0 gap-0 hidden md:block">
           <div className="p-5 border-b border-border">
             <DialogTitle className="font-medium text-foreground">Add a fund</DialogTitle>
-            <p className="text-sm text-muted-foreground mt-1">Each fund is a separate brokerage account</p>
+            <p className="text-sm text-muted-foreground mt-1">Each fund is a separate investment account</p>
           </div>
           
           <div className="p-5 space-y-3">
@@ -627,8 +683,75 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Add Child Sheet - Bottom on mobile */}
+      <Sheet open={showAddChild} onOpenChange={setShowAddChild}>
+        <SheetContent side="bottom" className="md:hidden">
+          <SheetHeader className="text-left mb-6">
+            <SheetTitle className="text-xl font-bold">Add a child</SheetTitle>
+            <p className="text-base text-muted-foreground">We'll create a custodial account for them</p>
+          </SheetHeader>
+          
+          <div className="space-y-6">
+            <div>
+              <label className="block text-base font-semibold text-foreground mb-2">Child's first name</label>
+              <input
+                type="text"
+                value={newChildName}
+                onChange={(e) => setNewChildName(e.target.value)}
+                placeholder="e.g., Mila"
+                data-testid="input-new-child-name-mobile"
+                className="w-full px-5 py-4 border border-border rounded-2xl text-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary touch-target"
+              />
+            </div>
+
+            <motion.button 
+              onClick={() => {
+                if (newChildName.trim()) {
+                  const name = newChildName.trim();
+                  if (funds.some(f => f.name.toLowerCase() === name.toLowerCase())) {
+                    toast({ title: "Fund already exists", description: `You already have a fund for ${name}` });
+                    return;
+                  }
+                  const newFund: StoredFund = {
+                    id: Date.now(),
+                    name: name,
+                    slug: name.toLowerCase().replace(/\s+/g, "-"),
+                    accountType: "UTMA",
+                    status: "draft",
+                    balance: 0,
+                    gain: 0,
+                    gainPercent: 0,
+                    contributors: 0,
+                    projection: 0,
+                    yearsLeft: 18,
+                    isNew: true,
+                    events: [
+                      { id: Date.now(), slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
+                    ]
+                  };
+                  const updatedFunds = [...funds, newFund];
+                  setFunds(updatedFunds);
+                  saveStoredFunds(updatedFunds);
+                  setSelectedFundSlug(newFund.slug);
+                  setShowAddChild(false);
+                  setNewChildName("");
+                  toast({ title: `${name}'s fund created`, description: "Activate investing to start growing gifts" });
+                }
+              }}
+              whileTap={{ scale: 0.98 }}
+              disabled={!newChildName.trim()}
+              data-testid="button-continue-add-child-mobile"
+              className="w-full py-4 bg-primary text-primary-foreground rounded-2xl text-lg font-semibold transition-colors disabled:opacity-40 touch-target"
+            >
+              Create fund
+            </motion.button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop Dialog fallback for Add Child */}
       <Dialog open={showAddChild} onOpenChange={setShowAddChild}>
-        <DialogContent className="max-w-md bg-white p-0 gap-0">
+        <DialogContent className="max-w-md bg-white p-0 gap-0 hidden md:block">
           <div className="p-5 border-b border-border">
             <DialogTitle className="font-medium text-foreground">Add a child</DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">We'll create a custodial account for them</p>
