@@ -199,7 +199,7 @@
 .active-elevate-2:active:not(:disabled) {
   transform: translateY(0.5px) scale(0.98);
   box-shadow: none;
-  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
 }
 
 /* Enhanced focus ring for inputs and buttons */

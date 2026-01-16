@@ -313,7 +313,7 @@ export const tactileButton: Variants = {
   tap: { 
     scale: 0.97,
     y: 1,
-    transition: { duration: 0.1, ease: "easeOut" }
+    transition: { duration: 0.15, ease: "easeOut" }
   }
 };
 

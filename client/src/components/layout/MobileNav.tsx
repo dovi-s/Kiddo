@@ -36,7 +36,7 @@ export function MobileNav() {
               <motion.div
                 whileTap={{ scale: 0.92, y: 1 }}
                 whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.1, ease: "easeOut" }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
                 className="flex flex-col items-center justify-center py-2 px-4 relative"
                 data-testid={`nav-${item.label.toLowerCase()}`}
               >

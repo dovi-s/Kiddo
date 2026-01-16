@@ -138,7 +138,7 @@ export default function Activity() {
               onClick={() => setFilter(option.value as typeof filter)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
-              transition={{ duration: 0.1, ease: "easeOut" }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-150 ${
                 filter === option.value
                   ? "bg-primary text-primary-foreground"
