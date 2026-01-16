@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Particle {
@@ -117,7 +117,7 @@ export function Celebration({
   );
 }
 
-export function SuccessGlow({ children, trigger }: { children: React.ReactNode; trigger: boolean }) {
+export function SuccessGlow({ children, trigger }: { children: ReactNode; trigger: boolean }) {
   return (
     <motion.div
       className="relative"
@@ -216,7 +216,7 @@ export function CountUp({
   );
 }
 
-export function Spotlight({ trigger, children }: { trigger: boolean; children: React.ReactNode }) {
+export function Spotlight({ trigger, children }: { trigger: boolean; children: ReactNode }) {
   return (
     <motion.div className="relative">
       <AnimatePresence>
