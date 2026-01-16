@@ -37,10 +37,10 @@ export default function Onboard() {
   const isPersonal = params.get("type") === "personal";
 
   return (
-    <div className="min-h-screen bg-stone-50 flex flex-col">
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-stone-100">
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-center">
-          <Logo size="md" className="text-stone-900" />
+          <Logo size="md" className="text-primary" />
         </div>
       </header>
 
@@ -53,17 +53,17 @@ export default function Onboard() {
           <motion.div
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 200, damping: 15 }}
-            className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6"
+            transition={{ duration: 0.2 }}
+            className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6"
           >
-            <Check size={32} className="text-emerald-600" />
+            <Check size={32} className="text-success" />
           </motion.div>
           
-          <h1 className="text-2xl font-semibold text-stone-900 mb-2">
+          <h1 className="text-2xl font-semibold text-foreground mb-2">
             {isPersonal ? "Your fund is ready" : childNames.length > 1 ? `${childNames.length} funds created` : `${childNames[0]}'s fund is ready`}
           </h1>
           
-          <p className="text-stone-500 mb-8">
+          <p className="text-muted-foreground mb-8">
             Setting up your dashboard...
           </p>
 
@@ -72,12 +72,12 @@ export default function Onboard() {
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             className="mx-auto w-6 h-6"
           >
-            <Loader2 size={24} className="text-stone-400" />
+            <Loader2 size={24} className="text-muted-foreground" />
           </motion.div>
 
-          <div className="mt-8 p-4 rounded-xl bg-stone-100 text-left">
-            <p className="text-sm text-stone-600">
-              <span className="font-medium text-stone-900">Next step:</span> Activate investing to start receiving gifts that become real investments.
+          <div className="mt-8 p-4 rounded-xl bg-muted text-left">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Next step:</span> Activate investing to start receiving gifts that become real investments.
             </p>
           </div>
         </motion.div>
