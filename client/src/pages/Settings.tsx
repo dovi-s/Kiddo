@@ -728,20 +728,30 @@ export default function Settings() {
         <div className="flex flex-col lg:flex-row gap-8">
           <nav className="lg:w-56 shrink-0">
             <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
-              {tabs.map((tab) => (
-                <button
+              {tabs.map((tab, index) => (
+                <motion.button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   data-testid={`settings-tab-${tab.id}`}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.03, duration: 0.15, ease: "easeOut" }}
+                  whileHover={{ scale: 1.02, x: 2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors relative ${
                     activeTab === tab.id
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  {tab.icon}
+                  <motion.span
+                    animate={activeTab === tab.id ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {tab.icon}
+                  </motion.span>
                   {tab.label}
-                </button>
+                </motion.button>
               ))}
             </div>
 

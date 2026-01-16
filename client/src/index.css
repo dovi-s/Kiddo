@@ -185,7 +185,104 @@
 }
 
 .animate-card-reveal {
-  animation: card-reveal 0.5s ease-out forwards;
+  animation: card-reveal 0.2s ease-out forwards;
+}
+
+/* Tactile button animations */
+.hover-elevate {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+.hover-elevate:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+}
+.active-elevate-2:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.98);
+  box-shadow: none;
+  transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+}
+
+/* Enhanced focus ring for inputs and buttons */
+.focus-ring {
+  transition: box-shadow 0.15s ease-out, border-color 0.15s ease-out;
+}
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.1);
+  border-color: hsl(var(--kora-evergreen) / 0.5);
+}
+
+/* Input focus glow animation */
+input:focus, textarea:focus, select:focus {
+  transition: box-shadow 0.15s ease-out, border-color 0.15s ease-out;
+}
+input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:disabled) {
+  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.08);
+  border-color: hsl(var(--kora-evergreen) / 0.4);
+  outline: none;
+}
+
+/* Smooth switch toggle */
+[role="switch"] {
+  transition: background-color 0.15s ease-out;
+}
+[role="switch"] > span {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+[role="switch"]:focus-visible {
+  box-shadow: 0 0 0 3px hsl(var(--kora-evergreen) / 0.1);
+  outline: none;
+}
+
+/* Checkbox tick animation */
+[role="checkbox"] {
+  transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
+}
+[role="checkbox"][data-state="checked"] {
+  animation: checkbox-pop 0.2s ease-out;
+}
+@keyframes checkbox-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Card hover lift */
+.card-hover {
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.08);
+}
+
+/* List item stagger entrance */
+.stagger-item {
+  animation: stagger-in 0.2s ease-out forwards;
+  animation-delay: calc(var(--stagger-index, 0) * 40ms);
+  opacity: 0;
+}
+@keyframes stagger-in {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Pulsing dot for pending states */
+.pulse-dot {
+  animation: pulse-dot 1.5s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Number tick up effect */
+.tick-up {
+  animation: tick-up 0.2s ease-out;
+}
+@keyframes tick-up {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 /* Subtle grain texture */
