@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { Logo } from "@/components/ui/logo";
 import { Switch } from "@/components/ui/switch";
+import { PageTransition } from "@/components/layout/PageTransition";
+import { springSnappy, easeOutExpo, cardTactile } from "@/lib/animations";
 import { 
   User, Shield, Bell, CreditCard, FileText, Search, 
   ChevronRight, Check, LogOut, HelpCircle, ArrowLeft,

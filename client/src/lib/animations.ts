@@ -1,23 +1,237 @@
 import { Variants, Transition, TargetAndTransition } from "framer-motion";
 
+// ============================================
+// MOTION TOKENS - Native iOS/Android feel
+// ============================================
+
+// Spring configurations for natural feel
+export const springSnappy = { type: "spring" as const, stiffness: 400, damping: 30 };
+export const springGentle = { type: "spring" as const, stiffness: 300, damping: 25 };
+export const springBouncy = { type: "spring" as const, stiffness: 500, damping: 20, mass: 0.8 };
+export const springSmooth = { type: "spring" as const, stiffness: 200, damping: 25 };
+
+// Easing curves (iOS-inspired) - typed as tuples for framer-motion
+export const easeOutExpo: [number, number, number, number] = [0.16, 1, 0.3, 1];
+export const easeOutBack: [number, number, number, number] = [0.34, 1.56, 0.64, 1];
+export const easeInOutCubic: [number, number, number, number] = [0.65, 0, 0.35, 1];
+
 export const microTransition: Transition = {
   duration: 0.15,
-  ease: "easeOut",
+  ease: easeOutExpo,
 };
 
 export const standardTransition: Transition = {
   duration: 0.2,
-  ease: "easeOut",
+  ease: easeOutExpo,
 };
 
 export const emphasisTransition: Transition = {
   duration: 0.25,
-  ease: "easeInOut",
+  ease: easeInOutCubic,
 };
 
 export const smoothEase: Transition = {
-  duration: 0.2,
-  ease: [0.25, 0.1, 0.25, 1],
+  duration: 0.22,
+  ease: easeOutExpo,
+};
+
+// ============================================
+// PAGE TRANSITIONS - iOS push/pop style
+// ============================================
+
+export const pageSlideRight: Variants = {
+  initial: { x: "100%", opacity: 0.8 },
+  animate: { 
+    x: 0, 
+    opacity: 1,
+    transition: { ...springGentle, opacity: { duration: 0.2 } }
+  },
+  exit: { 
+    x: "-30%", 
+    opacity: 0.5,
+    transition: { duration: 0.2, ease: easeOutExpo }
+  }
+};
+
+export const pageSlideLeft: Variants = {
+  initial: { x: "-30%", opacity: 0.5 },
+  animate: { 
+    x: 0, 
+    opacity: 1,
+    transition: { ...springGentle, opacity: { duration: 0.2 } }
+  },
+  exit: { 
+    x: "100%", 
+    opacity: 0.8,
+    transition: { duration: 0.25, ease: easeOutExpo }
+  }
+};
+
+export const pageFadeScale: Variants = {
+  initial: { opacity: 0, scale: 0.96, y: 8 },
+  animate: { 
+    opacity: 1, 
+    scale: 1, 
+    y: 0,
+    transition: { duration: 0.25, ease: easeOutExpo }
+  },
+  exit: { 
+    opacity: 0, 
+    scale: 0.98,
+    transition: { duration: 0.15, ease: "easeIn" }
+  }
+};
+
+export const pageModalUp: Variants = {
+  initial: { y: "100%", opacity: 0.9 },
+  animate: { 
+    y: 0, 
+    opacity: 1,
+    transition: springGentle
+  },
+  exit: { 
+    y: "100%", 
+    opacity: 0.9,
+    transition: { duration: 0.25, ease: easeOutExpo }
+  }
+};
+
+// ============================================
+// TACTILE FEEDBACK - Press depth effects
+// ============================================
+
+export const tactilePress = {
+  scale: 0.97,
+  transition: { duration: 0.1, ease: "easeOut" }
+};
+
+export const tactilePressDeep = {
+  scale: 0.95,
+  transition: { duration: 0.08, ease: "easeOut" }
+};
+
+export const tactileRelease = {
+  scale: 1,
+  transition: springSnappy
+};
+
+// Button press variants
+export const buttonTactile: Variants = {
+  rest: { scale: 1 },
+  pressed: { 
+    scale: 0.97,
+    transition: { duration: 0.08, ease: "easeOut" }
+  },
+  hover: { 
+    scale: 1.02,
+    transition: { duration: 0.15, ease: easeOutExpo }
+  }
+};
+
+export const cardTactile: Variants = {
+  rest: { 
+    scale: 1,
+    y: 0,
+    boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.08)"
+  },
+  pressed: { 
+    scale: 0.98,
+    y: 2,
+    boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+    transition: { duration: 0.1, ease: "easeOut" }
+  },
+  hover: { 
+    scale: 1.01,
+    y: -3,
+    boxShadow: "0 8px 25px -5px rgb(0 0 0 / 0.1)",
+    transition: { duration: 0.2, ease: easeOutExpo }
+  }
+};
+
+// ============================================
+// CELEBRATION ANIMATIONS
+// ============================================
+
+export const celebrationPulse: Variants = {
+  initial: { scale: 0.8, opacity: 0 },
+  animate: {
+    scale: [0.8, 1.15, 1],
+    opacity: [0, 1, 1],
+    transition: { duration: 0.5, ease: easeOutBack }
+  }
+};
+
+export const celebrationBurst: Variants = {
+  initial: { scale: 0, opacity: 0, rotate: -10 },
+  animate: {
+    scale: [0, 1.2, 1],
+    opacity: [0, 1, 1],
+    rotate: [-10, 5, 0],
+    transition: { duration: 0.6, ease: easeOutBack }
+  }
+};
+
+export const successCheck: Variants = {
+  initial: { scale: 0, opacity: 0 },
+  animate: {
+    scale: [0, 1.3, 1],
+    opacity: 1,
+    transition: { 
+      scale: { duration: 0.4, ease: easeOutBack },
+      opacity: { duration: 0.2 }
+    }
+  }
+};
+
+export const shimmerGlow = {
+  initial: { backgroundPosition: "-200% 0" },
+  animate: { 
+    backgroundPosition: "200% 0",
+    transition: { duration: 1.5, ease: "linear", repeat: Infinity }
+  }
+};
+
+// ============================================
+// GESTURE RESPONSES
+// ============================================
+
+export const swipeCardLeft: Variants = {
+  rest: { x: 0, opacity: 1 },
+  swiping: { 
+    opacity: 0.9,
+    transition: { duration: 0.1 }
+  },
+  swiped: { 
+    x: "-100%", 
+    opacity: 0,
+    transition: { duration: 0.25, ease: easeOutExpo }
+  }
+};
+
+export const swipeCardRight: Variants = {
+  rest: { x: 0, opacity: 1 },
+  swiping: { 
+    opacity: 0.9,
+    transition: { duration: 0.1 }
+  },
+  swiped: { 
+    x: "100%", 
+    opacity: 0,
+    transition: { duration: 0.25, ease: easeOutExpo }
+  }
+};
+
+export const pullToRefresh: Variants = {
+  rest: { y: 0, opacity: 0 },
+  pulling: { 
+    y: 0, 
+    opacity: 1,
+    transition: { duration: 0.1 }
+  },
+  refreshing: {
+    rotate: 360,
+    transition: { duration: 1, ease: "linear", repeat: Infinity }
+  }
 };
 
 export const fadeIn: Variants = {

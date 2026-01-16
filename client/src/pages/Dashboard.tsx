@@ -4,13 +4,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useSearch, useLocation } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
 import { Plus, User, Users, ChevronRight, Share2, TrendingUp, Clock, Gift, Shield } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ShareKit } from "@/components/ui/share-kit";
 import { TrustFooter, WhoControlsDrawer } from "@/components/ui/trust-elements";
+import { PageTransition } from "@/components/layout/PageTransition";
+import { springSnappy, springGentle, easeOutExpo, cardTactile, staggerFast } from "@/lib/animations";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -226,9 +228,15 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
-      <header className="sticky top-0 z-50 bg-background/95 border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+    <PageTransition>
+      <div className="min-h-screen bg-background pb-20 md:pb-0">
+        <motion.header 
+          className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-sm"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.2, ease: easeOutExpo }}
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Logo size="sm" className="text-primary" />
             {funds.length > 1 && (
@@ -258,7 +266,7 @@ export default function Dashboard() {
             </div>
           </Link>
         </div>
-      </header>
+      </motion.header>
       
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 lg:py-12 momentum-scroll">
         
@@ -840,8 +848,9 @@ export default function Dashboard() {
         <Share2 size={24} />
       </motion.button>
 
-      {/* Spacer for mobile nav */}
-      <div className="h-24 md:hidden" />
-    </div>
+        {/* Spacer for mobile nav */}
+        <div className="h-24 md:hidden" />
+      </div>
+    </PageTransition>
   );
 }

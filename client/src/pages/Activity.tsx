@@ -3,6 +3,8 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { Plus, Gift, TrendingUp, CheckCircle, Send, Clock, ChevronRight, Filter } from "lucide-react";
+import { PageTransition } from "@/components/layout/PageTransition";
+import { springSnappy, easeOutExpo, cardTactile } from "@/lib/animations";
 
 type ActivityItem = {
   id: string;
@@ -103,28 +105,40 @@ export default function Activity() {
   });
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b border-border">
-        <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
-          <Logo size="md" />
-          <Link href="/get-started">
-            <button 
-              className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
-              data-testid="button-create"
-            >
-              <Plus size={20} />
-            </button>
-          </Link>
-        </div>
-      </header>
+    <PageTransition>
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <motion.header 
+          className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/50"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.2, ease: easeOutExpo }}
+        >
+          <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
+            <Logo size="md" />
+            <Link href="/get-started">
+              <motion.button 
+                whileTap={{ scale: 0.9 }}
+                className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20"
+                data-testid="button-create"
+              >
+                <Plus size={22} />
+              </motion.button>
+            </Link>
+          </div>
+        </motion.header>
 
-      <main className="max-w-lg mx-auto px-4 py-6 momentum-scroll">
-        {/* Title */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">Activity</h1>
-          <p className="text-muted-foreground mt-2 text-base">Recent updates across all funds</p>
-        </div>
+        <main className="max-w-lg mx-auto px-4 py-6 momentum-scroll">
+          {/* Title */}
+          <motion.div 
+            className="mb-8"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05, duration: 0.25, ease: easeOutExpo }}
+          >
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">Activity</h1>
+            <p className="text-muted-foreground mt-2 text-base">Recent updates across all funds</p>
+          </motion.div>
 
         {/* Filter chips - larger touch targets */}
         <div className="flex gap-3 mb-8 overflow-x-auto pb-2 -mx-4 px-4">
@@ -230,8 +244,9 @@ export default function Activity() {
         )}
       </main>
 
-      {/* Spacer for mobile nav */}
-      <div className="h-20 md:hidden" />
-    </div>
+        {/* Spacer for mobile nav */}
+        <div className="h-24 md:hidden" />
+      </div>
+    </PageTransition>
   );
 }

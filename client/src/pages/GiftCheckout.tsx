@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Nav } from "@/components/layout/Nav";
-import { bouncySpring, gentleSpring, successPop } from "@/lib/animations";
+import { PageTransition } from "@/components/layout/PageTransition";
+import { bouncySpring, gentleSpring, successPop, easeOutExpo, springSnappy } from "@/lib/animations";
 
 const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
 
