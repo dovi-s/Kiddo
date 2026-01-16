@@ -133,9 +133,12 @@ export default function Activity() {
             { value: "gifts", label: "Gifts" },
             { value: "investments", label: "Investments" },
           ].map((option) => (
-            <button
+            <motion.button
               key={option.value}
               onClick={() => setFilter(option.value as typeof filter)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.1, ease: "easeOut" }}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-150 ${
                 filter === option.value
                   ? "bg-primary text-primary-foreground"
@@ -144,25 +147,44 @@ export default function Activity() {
               data-testid={`filter-${option.value}`}
             >
               {option.label}
-            </button>
+            </motion.button>
           ))}
         </div>
 
         {/* Activity list */}
-        <div className="space-y-3">
-          {filteredActivity.map((item, index) => (
+        <motion.div 
+          className="space-y-3"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.04, delayChildren: 0.02 }
+            }
+          }}
+        >
+          {filteredActivity.map((item) => (
             <motion.div
               key={item.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05, duration: 0.2 }}
-              className="bg-card border border-border rounded-xl p-4 hover:border-primary/20 transition-colors duration-150"
+              variants={{
+                hidden: { opacity: 0, y: 12, scale: 0.98 },
+                visible: { opacity: 1, y: 0, scale: 1 }
+              }}
+              whileHover={{ y: -2, boxShadow: "0 4px 12px -4px rgba(0,0,0,0.08)" }}
+              whileTap={{ scale: 0.99 }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className="bg-card border border-border rounded-xl p-4 cursor-pointer"
               data-testid={`activity-${item.id}`}
             >
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                <motion.div 
+                  className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ duration: 0.15 }}
+                >
                   {getActivityIcon(item.type)}
-                </div>
+                </motion.div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-medium text-foreground">{item.title}</p>
@@ -176,18 +198,28 @@ export default function Activity() {
                       {item.fundName}
                     </span>
                     {item.status === "pending" && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-[hsl(var(--kora-gold)/0.1)] text-[hsl(var(--kora-gold))] flex items-center gap-1">
+                      <motion.span 
+                        className="text-xs px-2 py-0.5 rounded-full bg-[hsl(var(--kora-gold)/0.1)] text-[hsl(var(--kora-gold))] flex items-center gap-1"
+                        animate={{ opacity: [0.7, 1, 0.7] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      >
                         <Clock size={10} />
                         Pending
-                      </span>
+                      </motion.span>
                     )}
                   </div>
                 </div>
-                <ChevronRight size={16} className="text-muted-foreground shrink-0 mt-1" />
+                <motion.div
+                  className="shrink-0 mt-1"
+                  whileHover={{ x: 2 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </motion.div>
               </div>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {filteredActivity.length === 0 && (
           <div className="text-center py-12">

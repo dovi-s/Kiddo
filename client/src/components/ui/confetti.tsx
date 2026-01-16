@@ -11,12 +11,12 @@ interface ConfettiPiece {
 }
 
 const colors = [
-  "#10b981", // emerald
-  "#6366f1", // indigo
-  "#f59e0b", // amber
-  "#ec4899", // pink
-  "#8b5cf6", // violet
-  "#14b8a6", // teal
+  "hsl(152, 45%, 25%)", // kora evergreen
+  "hsl(36, 72%, 52%)", // kora gold
+  "hsl(152, 35%, 35%)", // evergreen light
+  "hsl(36, 65%, 62%)", // gold light
+  "hsl(40, 30%, 85%)", // cream accent
+  "hsl(152, 40%, 42%)", // fresh green
 ];
 
 export function Confetti({ isActive }: { isActive: boolean }) {
@@ -81,18 +81,18 @@ export function SuccessCheckmark({ delay = 0 }: { delay?: number }) {
       className="relative"
     >
       <motion.div
-        className="absolute inset-0 rounded-full bg-emerald-500/20"
+        className="absolute inset-0 rounded-full bg-[hsl(var(--kora-evergreen))]/20"
         initial={{ scale: 1 }}
         animate={{ scale: 2, opacity: 0 }}
-        transition={{ delay: delay + 0.2, duration: 0.6 }}
+        transition={{ delay: delay + 0.2, duration: 0.25 }}
       />
       <motion.div
-        className="absolute inset-0 rounded-full bg-emerald-500/10"
+        className="absolute inset-0 rounded-full bg-[hsl(var(--kora-evergreen))]/10"
         initial={{ scale: 1 }}
         animate={{ scale: 2.5, opacity: 0 }}
-        transition={{ delay: delay + 0.3, duration: 0.8 }}
+        transition={{ delay: delay + 0.25, duration: 0.25 }}
       />
-      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+      <div className="w-20 h-20 rounded-full bg-[hsl(var(--kora-evergreen))] flex items-center justify-center shadow-lg shadow-[hsl(var(--kora-evergreen))]/30">
         <motion.svg
           className="w-10 h-10 text-white"
           viewBox="0 0 24 24"

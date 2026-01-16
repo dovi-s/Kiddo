@@ -447,19 +447,28 @@ export default function Dashboard() {
                           <p className="text-sm">No gifts yet. Share your fund to start receiving!</p>
                         </div>
                       ) : (
-                        allContributions.map((gift) => (
-                          <div 
+                        allContributions.map((gift, index) => (
+                          <motion.div 
                             key={gift.id}
-                            className="bg-card border border-border rounded-xl p-4 flex items-center justify-between"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.03, duration: 0.15, ease: "easeOut" }}
+                            whileHover={{ y: -2, boxShadow: "0 4px 12px -4px rgba(0,0,0,0.08)" }}
+                            whileTap={{ scale: 0.99 }}
+                            className="bg-card border border-border rounded-xl p-4 flex items-center justify-between cursor-pointer"
                           >
                             <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
-                                gift.status === "pending" 
-                                  ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
-                                  : "bg-[hsl(var(--kora-evergreen)/0.15)] text-[hsl(var(--kora-evergreen))]"
-                              }`}>
+                              <motion.div 
+                                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
+                                  gift.status === "pending" 
+                                    ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
+                                    : "bg-[hsl(var(--kora-evergreen)/0.15)] text-[hsl(var(--kora-evergreen))]"
+                                }`}
+                                whileHover={{ scale: 1.08 }}
+                                transition={{ duration: 0.15 }}
+                              >
                                 {gift.from.charAt(0)}
-                              </div>
+                              </motion.div>
                               <div>
                                 <p className="text-sm font-medium text-foreground">{gift.from}</p>
                                 <p className="text-xs text-muted-foreground">{formatRelativeTime(gift.date)}</p>
@@ -475,7 +484,7 @@ export default function Dashboard() {
                                 {gift.status === "pending" ? "Pending" : "Invested"}
                               </span>
                             </div>
-                          </div>
+                          </motion.div>
                         ))
                       )}
                     </TabsContent>
@@ -488,14 +497,23 @@ export default function Dashboard() {
                         </div>
                       ) : (
                         holdings.map((holding, i) => (
-                          <div 
+                          <motion.div 
                             key={i}
-                            className="bg-card border border-border rounded-xl p-4 flex items-center justify-between"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.03, duration: 0.15, ease: "easeOut" }}
+                            whileHover={{ y: -2, boxShadow: "0 4px 12px -4px rgba(0,0,0,0.08)" }}
+                            whileTap={{ scale: 0.99 }}
+                            className="bg-card border border-border rounded-xl p-4 flex items-center justify-between cursor-pointer"
                           >
                             <div className="flex items-center gap-3">
-                              <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1.5 rounded border border-border">
+                              <motion.span 
+                                className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1.5 rounded border border-border"
+                                whileHover={{ scale: 1.05, borderColor: "hsl(var(--kora-evergreen))" }}
+                                transition={{ duration: 0.15 }}
+                              >
                                 {holding.ticker}
-                              </span>
+                              </motion.span>
                               <div>
                                 <p className="text-sm font-medium text-foreground">{holding.name}</p>
                                 <p className="text-xs text-muted-foreground">{holding.shares} shares</p>
@@ -505,7 +523,7 @@ export default function Dashboard() {
                               <p className="text-sm font-semibold text-foreground">${holding.value.toLocaleString()}</p>
                               <p className="text-xs text-[hsl(var(--kora-evergreen))]">+${holding.gain}</p>
                             </div>
-                          </div>
+                          </motion.div>
                         ))
                       )}
                     </TabsContent>
