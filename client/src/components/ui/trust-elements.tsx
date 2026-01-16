@@ -48,17 +48,24 @@ export function TrustFooter() {
   );
 }
 
-export function WhoControlsDrawer() {
+interface WhoControlsDrawerProps {
+  variant?: "default" | "light";
+}
+
+export function WhoControlsDrawer({ variant = "default" }: WhoControlsDrawerProps) {
   return (
     <Sheet>
       <SheetTrigger asChild>
         <Button
           variant="ghost"
           size="sm"
-          className="text-muted-foreground hover:text-foreground gap-1.5"
+          className={variant === "light" 
+            ? "text-white/70 hover:text-white hover:bg-white/10 gap-1.5 h-auto py-1 px-2 text-xs"
+            : "text-muted-foreground hover:text-foreground gap-1.5"
+          }
           data-testid="button-who-controls"
         >
-          <HelpCircle className="h-4 w-4" />
+          <HelpCircle className="h-3 w-3" />
           Who controls this fund?
         </Button>
       </SheetTrigger>

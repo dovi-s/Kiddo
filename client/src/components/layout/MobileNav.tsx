@@ -21,7 +21,7 @@ export function MobileNav() {
     <motion.nav
       initial={{ y: 100 }}
       animate={{ y: 0 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/95 backdrop-blur-xl border-t border-border px-2 pb-safe"
     >
       <div className="flex items-center justify-around h-16">

@@ -9,16 +9,17 @@ import { QRCodeSVG } from "qrcode.react";
 import { Plus, User, Users, ChevronRight, Share2, TrendingUp, Clock, Gift, Shield } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ShareKit } from "@/components/ui/share-kit";
+import { TrustFooter, WhoControlsDrawer } from "@/components/ui/trust-elements";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
-    const duration = 1200;
+    const duration = 250;
     const startTime = Date.now();
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 4);
+      const eased = 1 - Math.pow(1 - progress, 3);
       setDisplay(Math.round(value * eased));
       if (progress < 1) requestAnimationFrame(animate);
     };
@@ -263,7 +264,7 @@ export default function Dashboard() {
         <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
           className="mb-8 lg:mb-12"
         >
           <div className="relative overflow-hidden rounded-2xl bg-[hsl(var(--kora-evergreen))] p-6 sm:p-8 lg:p-10">
@@ -317,7 +318,7 @@ export default function Dashboard() {
                 Assets held by Apex Clearing
               </span>
               <span>SIPC protected up to $500k</span>
-              <span>SEC registered</span>
+              {!isPersonal && <WhoControlsDrawer variant="light" />}
             </div>
           </div>
         </motion.section>
@@ -328,7 +329,7 @@ export default function Dashboard() {
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.8, delay: 0.1 }}
+              transition={{ duration: 0.2, delay: 0.05, ease: "easeOut" }}
               className="mb-8"
             >
               <div className="flex items-center gap-2 mb-6">
@@ -660,6 +661,12 @@ export default function Dashboard() {
         fundSlug={selectedFund.slug}
         recipientName={selectedFund.name}
       />
+
+      {/* Trust Footer */}
+      <TrustFooter />
+
+      {/* Spacer for mobile nav */}
+      <div className="h-20 md:hidden" />
     </div>
   );
 }
