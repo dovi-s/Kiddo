@@ -18,8 +18,8 @@ const TEMPLATES = [
     desc: "Build your own from scratch",
     icon: Plus, 
     amounts: ["25", "50", "100", "200"],
-    preview: "bg-gradient-to-br from-slate-50 to-slate-100",
-    accent: "border-dashed border-2 border-slate-300"
+    preview: "bg-gradient-to-br from-muted to-muted/50",
+    accent: "border-dashed border-2 border-border"
   },
   { 
     id: "minimal", 
@@ -27,8 +27,8 @@ const TEMPLATES = [
     desc: "Clean & modern",
     icon: Sparkles, 
     amounts: ["25", "50", "100", "200"],
-    preview: "bg-white",
-    accent: "border-l-4 border-l-slate-900"
+    preview: "bg-card",
+    accent: "border-l-4 border-l-primary"
   },
   { 
     id: "celebration", 
@@ -36,8 +36,8 @@ const TEMPLATES = [
     desc: "Bold & joyful",
     icon: Cake, 
     amounts: ["25", "50", "100", "150"],
-    preview: "bg-gradient-to-br from-amber-50 to-orange-50",
-    accent: "border-l-4 border-l-amber-500"
+    preview: "bg-gradient-to-br from-[hsl(var(--kora-gold))]/10 to-[hsl(var(--kora-gold))]/5",
+    accent: "border-l-4 border-l-[hsl(var(--kora-gold))]"
   },
   { 
     id: "milestone", 
@@ -45,8 +45,8 @@ const TEMPLATES = [
     desc: "For big achievements",
     icon: GraduationCap, 
     amounts: ["50", "100", "200", "500"],
-    preview: "bg-gradient-to-br from-blue-50 to-indigo-50",
-    accent: "border-l-4 border-l-blue-600"
+    preview: "bg-gradient-to-br from-accent/10 to-accent/5",
+    accent: "border-l-4 border-l-accent"
   },
   { 
     id: "tradition", 
@@ -54,8 +54,8 @@ const TEMPLATES = [
     desc: "Timeless & elegant",
     icon: Star, 
     amounts: ["54", "100", "180", "360"],
-    preview: "bg-gradient-to-br from-stone-50 to-stone-100",
-    accent: "border-l-4 border-l-stone-600"
+    preview: "bg-gradient-to-br from-muted to-muted/50",
+    accent: "border-l-4 border-l-muted-foreground"
   },
   { 
     id: "newlife", 
@@ -63,8 +63,8 @@ const TEMPLATES = [
     desc: "Soft & nurturing",
     icon: Baby, 
     amounts: ["25", "50", "100", "250"],
-    preview: "bg-gradient-to-br from-green-50 to-emerald-50",
-    accent: "border-l-4 border-l-emerald-500"
+    preview: "bg-gradient-to-br from-success/10 to-success/5",
+    accent: "border-l-4 border-l-success"
   },
   { 
     id: "love", 
@@ -72,8 +72,8 @@ const TEMPLATES = [
     desc: "Warm & romantic",
     icon: Heart, 
     amounts: ["100", "150", "250", "500"],
-    preview: "bg-gradient-to-br from-rose-50 to-pink-50",
-    accent: "border-l-4 border-l-rose-500"
+    preview: "bg-gradient-to-br from-destructive/10 to-destructive/5",
+    accent: "border-l-4 border-l-destructive"
   },
 ];
 
@@ -362,7 +362,7 @@ export default function MomentCreate() {
                     <div className={`rounded-xl overflow-hidden ${selectedTemplate?.preview} ${selectedTemplate?.accent} p-5`}>
                       {coverImage && (
                         <div className="h-24 -mx-5 -mt-5 mb-4 bg-cover bg-center" style={{ backgroundImage: `url(${coverImage})` }}>
-                          <div className="h-full w-full bg-gradient-to-t from-white/90 to-transparent" />
+                          <div className="h-full w-full bg-gradient-to-t from-card/90 to-transparent" />
                         </div>
                       )}
                       <div className="flex items-center gap-3 mb-3">
@@ -376,7 +376,7 @@ export default function MomentCreate() {
                       </div>
                       <div className="flex gap-2">
                         {amounts.slice(0, 3).map((amt) => (
-                          <div key={amt} className="flex-1 py-2 rounded-lg bg-white/80 text-center text-sm font-medium border">
+                          <div key={amt} className="flex-1 py-2 rounded-lg bg-card/80 text-center text-sm font-medium border">
                             ${amt}
                           </div>
                         ))}
@@ -434,7 +434,7 @@ export default function MomentCreate() {
                       {/* Thank you preview */}
                       <div className={`rounded-xl p-4 ${selectedTemplate?.preview} border`}>
                         <p className="text-xs text-muted-foreground mb-2">Preview</p>
-                        <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <div className="bg-card rounded-lg p-4 shadow-sm">
                           <p className="font-medium text-sm mb-1">Thank you, [Name]!</p>
                           <p className="text-xs text-muted-foreground">{thankYouMessage.slice(0, 100)}...</p>
                           <p className="text-xs text-primary mt-2 font-medium">— The {profileName.split(" ")[0]} Family</p>
@@ -465,7 +465,7 @@ export default function MomentCreate() {
                   <div className={`rounded-xl overflow-hidden ${selectedTemplate?.preview} ${selectedTemplate?.accent}`}>
                     {coverImage && (
                       <div className="h-28 bg-cover bg-center" style={{ backgroundImage: `url(${coverImage})` }}>
-                        <div className="h-full w-full bg-gradient-to-t from-white/90 to-transparent" />
+                        <div className="h-full w-full bg-gradient-to-t from-card/90 to-transparent" />
                       </div>
                     )}
                     <div className="p-5">
@@ -481,7 +481,7 @@ export default function MomentCreate() {
                       {story && <p className="text-sm text-muted-foreground mb-4">{story}</p>}
                       <div className="flex gap-2">
                         {amounts.map((amt) => (
-                          <div key={amt} className="flex-1 py-2.5 rounded-lg bg-white text-center text-sm font-medium border shadow-sm">
+                          <div key={amt} className="flex-1 py-2.5 rounded-lg bg-card text-center text-sm font-medium border shadow-sm">
                             ${amt}
                           </div>
                         ))}
@@ -489,15 +489,19 @@ export default function MomentCreate() {
                     </div>
                   </div>
 
-                  {/* Summary */}
-                  <div className="p-4 rounded-xl bg-muted/50 space-y-2 text-sm">
-                    <div className="flex justify-between">
+                  {/* Settings summary */}
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-muted-foreground">Template</span>
                       <span className="font-medium">{selectedTemplate?.name}</span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex justify-between py-2 border-b border-border">
+                      <span className="text-muted-foreground">Goal</span>
+                      <span className="font-medium">${Number(customGoal || goal).toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-border">
                       <span className="text-muted-foreground">Thank-you card</span>
-                      <span className="font-medium">{setupThankYou ? "Enabled" : "Skipped"}</span>
+                      <span className="font-medium">{setupThankYou ? "Enabled" : "Not set up"}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -506,33 +510,32 @@ export default function MomentCreate() {
           )}
         </AnimatePresence>
 
-        {/* Navigation */}
-        <div className="flex gap-3 mt-6">
+        {/* Navigation buttons */}
+        <div className="flex gap-3 mt-8">
           {step > 0 && (
             <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              <ArrowLeft className="h-4 w-4 mr-1" /> Back
             </Button>
           )}
           {step < steps.length - 1 ? (
             <Button onClick={() => setStep(step + 1)} className="flex-1">
-              Continue <ArrowRight className="ml-2 h-4 w-4" />
+              Next <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleCreate} className="flex-1" disabled={isCreating}>
-              {isCreating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : <>Create event <Check className="ml-2 h-4 w-4" /></>}
+            <Button onClick={handleCreate} disabled={isCreating} className="flex-1">
+              {isCreating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  Create Page <Check className="h-4 w-4 ml-1" />
+                </>
+              )}
             </Button>
           )}
         </div>
-
-        {/* Skip thank you */}
-        {step === 3 && setupThankYou && (
-          <button 
-            onClick={() => setStep(step + 1)} 
-            className="w-full text-center text-sm text-muted-foreground hover:text-foreground mt-3 underline"
-          >
-            Skip for now
-          </button>
-        )}
       </main>
     </div>
   );

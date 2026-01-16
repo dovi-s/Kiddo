@@ -19,13 +19,13 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-stone-100">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/">
-            <Logo size="md" className="text-stone-900" />
+            <Logo size="md" className="text-foreground" />
           </Link>
-          <div className="flex items-center gap-1 text-xs text-stone-400">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Lock size={12} />
             <span>Secure</span>
           </div>
@@ -39,14 +39,14 @@ export default function Login() {
           className="space-y-8"
         >
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-semibold text-stone-900">Welcome back</h1>
-            <p className="text-stone-500">Sign in to manage your funds</p>
+            <h1 className="text-2xl font-semibold text-foreground">Welcome back</h1>
+            <p className="text-muted-foreground">Sign in to manage your funds</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="bg-white rounded-2xl border border-stone-200 p-6 space-y-5">
+            <div className="bg-card rounded-2xl border border-border p-6 space-y-5">
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Email
                 </label>
                 <input
@@ -55,12 +55,12 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   data-testid="input-login-email"
-                  className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+                  className="w-full px-4 py-3 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted-foreground"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1.5">
+                <label className="block text-sm font-medium text-foreground mb-1.5">
                   Password
                 </label>
                 <input
@@ -69,7 +69,7 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Your password"
                   data-testid="input-login-password"
-                  className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+                  className="w-full px-4 py-3 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted-foreground"
                 />
               </div>
             </div>
@@ -78,11 +78,11 @@ export default function Login() {
               type="submit"
               disabled={!email || !password || isLoading}
               data-testid="button-login"
-              className="w-full py-4 bg-stone-900 text-white text-base font-medium rounded-xl hover:bg-stone-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                   <span>Signing in...</span>
                 </>
               ) : (
@@ -95,13 +95,13 @@ export default function Login() {
           </form>
 
           <div className="text-center space-y-4">
-            <button className="text-sm text-stone-500 hover:text-stone-700">
+            <button className="text-sm text-muted-foreground hover:text-foreground">
               Forgot password?
             </button>
-            <div className="text-sm text-stone-500">
+            <div className="text-sm text-muted-foreground">
               Don't have an account?{" "}
               <Link href="/get-started">
-                <span className="text-stone-900 font-medium hover:underline cursor-pointer">
+                <span className="text-foreground font-medium hover:underline cursor-pointer">
                   Get started
                 </span>
               </Link>

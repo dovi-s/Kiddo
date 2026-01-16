@@ -50,7 +50,7 @@ export default function Moment() {
   const finalAmount = customAmount ? parseInt(customAmount) : amount;
   const fee = Math.round(finalAmount * 0.03 * 100) / 100;
   const total = (finalAmount + fee).toFixed(2);
-  const projectedGrowth = Math.round(finalAmount * 4.6); // ~18 years at 7%
+  const projectedGrowth = Math.round(finalAmount * 4.6);
 
   const handleGive = () => {
     setIsProcessing(true);
@@ -61,7 +61,7 @@ export default function Moment() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50/50 via-background to-background dark:from-slate-950/20">
+    <div className="min-h-screen bg-gradient-to-b from-muted/50 via-background to-background dark:from-muted/20">
       {/* Header */}
       <header className="p-4 sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b">
         <div className="container mx-auto flex justify-between items-center max-w-lg">
@@ -91,7 +91,7 @@ export default function Moment() {
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
-                  className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-slate-700 to-slate-900 text-white flex items-center justify-center text-3xl font-semibold shadow-xl shadow-slate-500/25"
+                  className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-gradient-to-br from-primary/80 to-primary text-primary-foreground flex items-center justify-center text-3xl font-semibold shadow-xl shadow-primary/25"
                 >
                   {recipientName.charAt(0)}
                 </motion.div>
@@ -163,18 +163,18 @@ export default function Moment() {
                     {/* Future Value - The Magic */}
                     <motion.div 
                       layout
-                      className="p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white"
+                      className="p-5 rounded-2xl bg-gradient-to-br from-primary to-primary/90 text-primary-foreground"
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-slate-400 text-sm">This could become</p>
+                          <p className="text-primary-foreground/60 text-sm">This could become</p>
                           <p className="text-3xl font-light tracking-tight">
                             <AnimatedNumber value={projectedGrowth} prefix="$" />
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-slate-400 text-sm">in 18 years</p>
-                          <p className="text-emerald-400 text-sm font-medium">+{Math.round((projectedGrowth / finalAmount - 1) * 100)}% growth</p>
+                          <p className="text-primary-foreground/60 text-sm">in 18 years</p>
+                          <p className="text-[hsl(var(--kora-evergreen-light))] text-sm font-medium">+{Math.round((projectedGrowth / finalAmount - 1) * 100)}% growth</p>
                         </div>
                       </div>
                     </motion.div>
@@ -351,14 +351,14 @@ export default function Moment() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="mx-auto mb-8 h-24 w-24 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-xl shadow-slate-500/30"
+                className="mx-auto mb-8 h-24 w-24 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center shadow-xl shadow-primary/30"
               >
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ delay: 0.4, type: "spring" }}
                 >
-                  <Check className="h-12 w-12 text-white" strokeWidth={3} />
+                  <Check className="h-12 w-12 text-primary-foreground" strokeWidth={3} />
                 </motion.div>
               </motion.div>
 
@@ -389,7 +389,7 @@ export default function Moment() {
                 <Card className="border-0 shadow-xl shadow-black/5 overflow-hidden max-w-sm mx-auto">
                   <CardContent className="p-6">
                     <div className="flex items-center gap-4 mb-4">
-                      <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-xl font-semibold text-white">
+                      <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-xl font-semibold text-primary-foreground">
                         {recipientName.charAt(0)}
                       </div>
                       <div className="text-left">
@@ -398,13 +398,13 @@ export default function Moment() {
                       </div>
                     </div>
                     
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-primary to-primary/90 text-primary-foreground">
                       <div className="flex justify-between items-end">
                         <div>
-                          <p className="text-slate-400 text-sm">Your ${finalAmount} could become</p>
+                          <p className="text-primary-foreground/60 text-sm">Your ${finalAmount} could become</p>
                           <p className="text-2xl font-light">${projectedGrowth.toLocaleString()}</p>
                         </div>
-                        <p className="text-emerald-400 text-sm">in 18 years</p>
+                        <p className="text-[hsl(var(--kora-evergreen-light))] text-sm">in 18 years</p>
                       </div>
                     </div>
 

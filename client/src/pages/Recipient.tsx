@@ -100,11 +100,11 @@ export default function Recipient() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-50 to-stone-100">
-      <header className="sticky top-0 z-50 bg-stone-50/95 backdrop-blur-sm border-b border-stone-200">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted">
+      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <Logo size="sm" className="text-stone-900" />
-          <span className="text-xs text-stone-400">{recipientName}'s Fund</span>
+          <Logo size="sm" className="text-foreground" />
+          <span className="text-xs text-muted-foreground">{recipientName}'s Fund</span>
         </div>
       </header>
       
@@ -119,15 +119,15 @@ export default function Recipient() {
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
-            className="mx-auto mb-3 h-16 w-16 rounded-full bg-gradient-to-br from-stone-800 to-stone-900 text-stone-50 flex items-center justify-center text-2xl font-light shadow-lg"
+            className="mx-auto mb-3 h-16 w-16 rounded-full bg-gradient-to-br from-primary/80 to-primary text-primary-foreground flex items-center justify-center text-2xl font-light shadow-lg"
           >
             {recipientName.charAt(0)}
           </motion.div>
-          <h1 className="text-xl font-medium text-stone-900">{recipientName}'s Fund</h1>
+          <h1 className="text-xl font-medium text-foreground">{recipientName}'s Fund</h1>
         </motion.div>
 
         {/* Tab Navigation */}
-        <div className="flex gap-1 p-1 bg-stone-100 rounded-lg mb-6">
+        <div className="flex gap-1 p-1 bg-muted rounded-lg mb-6">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -135,8 +135,8 @@ export default function Recipient() {
               data-testid={`tab-${tab.id}`}
               className={`flex-1 py-2 px-3 text-sm font-medium rounded-md transition-all ${
                 activeTab === tab.id 
-                  ? "bg-white text-stone-900 shadow-sm" 
-                  : "text-stone-500 hover:text-stone-700"
+                  ? "bg-card text-foreground shadow-sm" 
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tab.label}
@@ -155,13 +155,13 @@ export default function Recipient() {
               transition={{ duration: 0.2 }}
             >
               {/* Balance Card */}
-              <div className="text-center p-6 rounded-2xl bg-white border border-stone-200 shadow-sm mb-6">
-                <p className="text-4xl font-light text-stone-900 tracking-tight mb-1">
+              <div className="text-center p-6 rounded-2xl bg-card border border-border shadow-sm mb-6">
+                <p className="text-4xl font-light text-foreground tracking-tight mb-1">
                   <AnimatedValue value={totalValue} />
                 </p>
                 <div className="flex items-center justify-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-600" />
-                  <span className="text-sm text-emerald-600 font-medium">
+                  <TrendingUp className="h-4 w-4 text-success" />
+                  <span className="text-sm text-success font-medium">
                     +${timeAdded.toLocaleString()} from time
                   </span>
                 </div>
@@ -169,12 +169,12 @@ export default function Recipient() {
 
               {/* Next Milestone */}
               {nextMilestone && (
-                <div className="p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-100 mb-6">
+                <div className="p-4 rounded-xl bg-gradient-to-r from-[hsl(var(--kora-gold))]/10 to-[hsl(var(--kora-gold))]/5 border border-[hsl(var(--kora-gold))]/20 mb-6">
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{nextMilestone.icon}</span>
                     <div>
-                      <p className="text-xs text-amber-600 font-medium uppercase tracking-wider">Next milestone</p>
-                      <p className="text-sm text-stone-900 font-medium">{nextMilestone.label}</p>
+                      <p className="text-xs text-[hsl(var(--kora-gold))] font-medium uppercase tracking-wider">Next milestone</p>
+                      <p className="text-sm text-foreground font-medium">{nextMilestone.label}</p>
                     </div>
                   </div>
                 </div>
@@ -183,17 +183,17 @@ export default function Recipient() {
               {/* What You Own */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="h-4 w-4 text-stone-400" />
-                  <h2 className="text-sm font-medium text-stone-900">What you own</h2>
+                  <Sparkles className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="text-sm font-medium text-foreground">What you own</h2>
                 </div>
                 <div className="flex gap-2">
                   {holdings.map((holding) => (
                     <div
                       key={holding.name}
-                      className="flex-1 p-3 rounded-xl bg-white border border-stone-200 text-center"
+                      className="flex-1 p-3 rounded-xl bg-card border border-border text-center"
                     >
                       <span className="text-xl mb-1 block">{holding.emoji}</span>
-                      <p className="text-xs text-stone-600">{holding.name}</p>
+                      <p className="text-xs text-muted-foreground">{holding.name}</p>
                     </div>
                   ))}
                 </div>
@@ -201,18 +201,18 @@ export default function Recipient() {
 
               {/* What Changed */}
               <div>
-                <h2 className="text-sm font-medium text-stone-900 mb-3">What changed</h2>
+                <h2 className="text-sm font-medium text-foreground mb-3">What changed</h2>
                 <div className="space-y-3">
                   {whatChanged.map((item, i) => (
-                    <div key={i} className="p-4 rounded-xl bg-white border border-stone-200">
+                    <div key={i} className="p-4 rounded-xl bg-card border border-border">
                       <div className="flex items-start justify-between mb-1">
-                        <p className="text-sm font-medium text-stone-900">{item.message}</p>
+                        <p className="text-sm font-medium text-foreground">{item.message}</p>
                         {item.amount && (
-                          <span className="text-xs text-emerald-600 font-medium shrink-0 ml-2 bg-emerald-50 px-2 py-0.5 rounded-full">+${item.amount}</span>
+                          <span className="text-xs text-success font-medium shrink-0 ml-2 bg-success/10 px-2 py-0.5 rounded-full">+${item.amount}</span>
                         )}
                       </div>
-                      <p className="text-xs text-stone-500 leading-relaxed mb-2">{item.detail}</p>
-                      <p className="text-[10px] text-stone-400">{item.time}</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed mb-2">{item.detail}</p>
+                      <p className="text-[10px] text-muted-foreground">{item.time}</p>
                     </div>
                   ))}
                 </div>
@@ -231,80 +231,80 @@ export default function Recipient() {
             >
               {/* Stats Row */}
               <div className="grid grid-cols-3 gap-3 mb-6">
-                <div className="p-4 rounded-xl bg-white border border-stone-200 text-center">
+                <div className="p-4 rounded-xl bg-card border border-border text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
-                    <Calendar className="h-4 w-4 text-blue-500" />
+                    <Calendar className="h-4 w-4 text-accent" />
                   </div>
-                  <p className="text-2xl font-light text-stone-900">{daysInvested}</p>
-                  <p className="text-xs text-stone-500">Days invested</p>
+                  <p className="text-2xl font-light text-foreground">{daysInvested}</p>
+                  <p className="text-xs text-muted-foreground">Days invested</p>
                 </div>
-                <div className="p-4 rounded-xl bg-white border border-stone-200 text-center">
+                <div className="p-4 rounded-xl bg-card border border-border text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
-                    <Flame className="h-4 w-4 text-orange-500" />
+                    <Flame className="h-4 w-4 text-[hsl(var(--kora-gold))]" />
                   </div>
-                  <p className="text-2xl font-light text-stone-900">{currentStreak}</p>
-                  <p className="text-xs text-stone-500">Month streak</p>
+                  <p className="text-2xl font-light text-foreground">{currentStreak}</p>
+                  <p className="text-xs text-muted-foreground">Month streak</p>
                 </div>
-                <div className="p-4 rounded-xl bg-white border border-stone-200 text-center">
+                <div className="p-4 rounded-xl bg-card border border-border text-center">
                   <div className="flex items-center justify-center gap-1 mb-1">
-                    <Trophy className="h-4 w-4 text-amber-500" />
+                    <Trophy className="h-4 w-4 text-[hsl(var(--kora-gold))]" />
                   </div>
-                  <p className="text-2xl font-light text-stone-900">{milestonesEarned}</p>
-                  <p className="text-xs text-stone-500">Milestones</p>
+                  <p className="text-2xl font-light text-foreground">{milestonesEarned}</p>
+                  <p className="text-xs text-muted-foreground">Milestones</p>
                 </div>
               </div>
 
               {/* Compounding Visual */}
-              <div className="p-5 rounded-xl bg-white border border-stone-200 mb-6">
-                <h3 className="text-sm font-medium text-stone-900 mb-4">How your fund grew</h3>
+              <div className="p-5 rounded-xl bg-card border border-border mb-6">
+                <h3 className="text-sm font-medium text-foreground mb-4">How your fund grew</h3>
                 <div className="flex items-end gap-4 h-32">
                   <div className="flex-1 flex flex-col items-center">
                     <div 
-                      className="w-full bg-stone-200 rounded-t-lg transition-all"
+                      className="w-full bg-border rounded-t-lg transition-all"
                       style={{ height: `${(totalReceived / totalValue) * 100}%` }}
                     />
-                    <p className="text-lg font-medium text-stone-900 mt-2">${totalReceived.toLocaleString()}</p>
-                    <p className="text-xs text-stone-500">What people added</p>
+                    <p className="text-lg font-medium text-foreground mt-2">${totalReceived.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">What people added</p>
                   </div>
                   <div className="flex-1 flex flex-col items-center">
                     <div 
-                      className="w-full bg-emerald-400 rounded-t-lg transition-all"
+                      className="w-full bg-success rounded-t-lg transition-all"
                       style={{ height: `${(timeAdded / totalValue) * 100}%` }}
                     />
-                    <p className="text-lg font-medium text-emerald-600 mt-2">+${timeAdded.toLocaleString()}</p>
-                    <p className="text-xs text-stone-500">What time added</p>
+                    <p className="text-lg font-medium text-success mt-2">+${timeAdded.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">What time added</p>
                   </div>
                 </div>
-                <p className="text-xs text-stone-400 text-center mt-4">
+                <p className="text-xs text-muted-foreground text-center mt-4">
                   Time is your superpower. The longer you stay invested, the more it grows.
                 </p>
               </div>
 
               {/* Milestones */}
               <div>
-                <h3 className="text-sm font-medium text-stone-900 mb-3">Milestones</h3>
+                <h3 className="text-sm font-medium text-foreground mb-3">Milestones</h3>
                 <div className="relative">
-                  <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-stone-200" />
+                  <div className="absolute left-4 top-4 bottom-4 w-0.5 bg-border" />
                   <div className="space-y-3">
                     {milestones.map((milestone) => (
                       <div key={milestone.id} className="flex items-center gap-3 pl-1">
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center z-10 text-sm ${
                           milestone.reached 
-                            ? "bg-emerald-100 border-2 border-emerald-500" 
-                            : "bg-stone-100 border-2 border-stone-300"
+                            ? "bg-success/10 border-2 border-success" 
+                            : "bg-muted border-2 border-border"
                         }`}>
                           {milestone.icon}
                         </div>
                         <div className="flex-1">
-                          <p className={`text-sm ${milestone.reached ? "text-stone-900 font-medium" : "text-stone-400"}`}>
+                          <p className={`text-sm ${milestone.reached ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                             {milestone.label}
                           </p>
                           {milestone.date && (
-                            <p className="text-xs text-stone-400">{milestone.date}</p>
+                            <p className="text-xs text-muted-foreground">{milestone.date}</p>
                           )}
                         </div>
                         {milestone.reached && (
-                          <span className="text-xs text-emerald-600 font-medium">✓</span>
+                          <span className="text-xs text-success font-medium">✓</span>
                         )}
                       </div>
                     ))}
@@ -324,27 +324,27 @@ export default function Recipient() {
               transition={{ duration: 0.2 }}
             >
               {/* People in your corner */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-100 mb-6">
+              <div className="p-4 rounded-xl bg-gradient-to-r from-destructive/10 to-destructive/5 border border-destructive/20 mb-6">
                 <div className="flex items-center gap-2 mb-1">
-                  <Heart className="h-4 w-4 text-rose-500" />
-                  <p className="text-sm font-medium text-stone-900">{contributorCount} people in your corner</p>
+                  <Heart className="h-4 w-4 text-destructive" />
+                  <p className="text-sm font-medium text-foreground">{contributorCount} people in your corner</p>
                 </div>
-                <p className="text-xs text-stone-500">They believe in your future</p>
+                <p className="text-xs text-muted-foreground">They believe in your future</p>
               </div>
 
               {/* Supporters */}
               <div className="mb-6">
-                <h3 className="text-sm font-medium text-stone-900 mb-3">Your supporters</h3>
+                <h3 className="text-sm font-medium text-foreground mb-3">Your supporters</h3>
                 <div className="flex flex-wrap gap-2">
                   {supporters.map((name) => (
                     <span 
                       key={name}
-                      className="inline-flex items-center gap-2 bg-white border border-stone-200 rounded-full px-3 py-1.5 text-sm"
+                      className="inline-flex items-center gap-2 bg-card border border-border rounded-full px-3 py-1.5 text-sm"
                     >
-                      <span className="h-5 w-5 rounded-full bg-stone-100 flex items-center justify-center text-xs font-medium text-stone-600">
+                      <span className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
                         {name.charAt(0)}
                       </span>
-                      <span className="text-stone-700">{name}</span>
+                      <span className="text-foreground">{name}</span>
                     </span>
                   ))}
                 </div>
@@ -352,15 +352,15 @@ export default function Recipient() {
 
               {/* Messages */}
               <div>
-                <h3 className="text-sm font-medium text-stone-900 mb-3">Messages</h3>
+                <h3 className="text-sm font-medium text-foreground mb-3">Messages</h3>
                 <div className="space-y-3">
                   {messages.map((item, i) => (
-                    <div key={i} className="p-4 rounded-xl bg-white border border-stone-200">
+                    <div key={i} className="p-4 rounded-xl bg-card border border-border">
                       <div className="flex items-start justify-between mb-1">
-                        <p className="font-medium text-sm text-stone-900">{item.from}</p>
-                        <span className="text-xs text-emerald-600 font-medium">+${item.amount}</span>
+                        <p className="font-medium text-sm text-foreground">{item.from}</p>
+                        <span className="text-xs text-success font-medium">+${item.amount}</span>
                       </div>
-                      <p className="text-sm text-stone-500 leading-relaxed">{item.message}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{item.message}</p>
                     </div>
                   ))}
                 </div>
@@ -374,12 +374,12 @@ export default function Recipient() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="text-center pt-8 mt-8 border-t border-stone-200"
+          className="text-center pt-8 mt-8 border-t border-border"
         >
-          <p className="text-xs text-stone-400 mb-1">
+          <p className="text-xs text-muted-foreground mb-1">
             Stay invested. Let time do the work.
           </p>
-          <p className="text-[10px] text-stone-300">
+          <p className="text-[10px] text-muted-foreground/60">
             Assets held by Apex Clearing, member FINRA/SIPC
           </p>
         </motion.div>

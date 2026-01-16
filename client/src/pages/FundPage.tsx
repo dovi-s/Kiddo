@@ -128,26 +128,26 @@ export default function FundPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-stone-50 via-stone-50 to-white pb-24 md:pb-0">
+    <div className="min-h-screen bg-gradient-to-b from-background via-background to-card pb-24 md:pb-0">
       {/* Hero Header */}
-      <div className="bg-gradient-to-br from-stone-900 via-stone-800 to-stone-900 text-white">
+      <div className="bg-gradient-to-br from-primary via-primary/90 to-primary text-primary-foreground">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           {/* Top nav */}
           <header className="flex items-center justify-between h-14">
             <button 
               onClick={() => window.history.back()}
               data-testid="button-back"
-              className="text-sm text-stone-400 hover:text-white transition-colors"
+              className="text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
             >
               ← Back
             </button>
             <motion.button 
               onClick={handleCopyLink}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 text-sm text-stone-400 hover:text-white transition-colors"
+              className="flex items-center gap-2 text-sm text-primary-foreground/60 hover:text-primary-foreground transition-colors"
               data-testid="button-share-fund"
             >
-              {copiedLink ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+              {copiedLink ? <Check className="w-4 h-4 text-[hsl(var(--kora-evergreen-light))]" /> : <Share2 className="w-4 h-4" />}
               {copiedLink ? "Copied!" : "Share"}
             </motion.button>
           </header>
@@ -163,14 +163,14 @@ export default function FundPage() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.1, ...bouncySpring }}
-              className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-white/20 to-white/5 backdrop-blur border border-white/20 flex items-center justify-center text-4xl md:text-5xl font-light mx-auto mb-6"
+              className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-primary-foreground/20 to-primary-foreground/5 backdrop-blur border border-primary-foreground/20 flex items-center justify-center text-4xl md:text-5xl font-light mx-auto mb-6"
             >
               {recipientName.charAt(0)}
             </motion.div>
             <h1 className="text-3xl md:text-4xl font-light mb-2">
               {recipientName}'s Future Fund
             </h1>
-            <p className="text-stone-400">
+            <p className="text-primary-foreground/60">
               Created by {fund.createdBy} • {fund.daysActive} days growing
             </p>
             
@@ -183,11 +183,11 @@ export default function FundPage() {
             >
               <div className="text-center">
                 <p className="text-3xl md:text-4xl font-light">${fund.totalRaised.toLocaleString()}</p>
-                <p className="text-sm text-stone-400 mt-1">total raised</p>
+                <p className="text-sm text-primary-foreground/60 mt-1">total raised</p>
               </div>
               <div className="text-center">
-                <p className="text-3xl md:text-4xl font-light text-emerald-400">${projectedValue.toLocaleString()}</p>
-                <p className="text-sm text-stone-400 mt-1">in 18 years*</p>
+                <p className="text-3xl md:text-4xl font-light text-[hsl(var(--kora-evergreen-light))]">${projectedValue.toLocaleString()}</p>
+                <p className="text-sm text-primary-foreground/60 mt-1">in 18 years*</p>
               </div>
             </motion.div>
           </motion.div>
@@ -201,12 +201,12 @@ export default function FundPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white rounded-2xl shadow-xl border border-stone-200 p-6 mb-8"
+          className="bg-card rounded-2xl shadow-xl border border-border p-6 mb-8"
         >
           <div className="flex flex-col sm:flex-row gap-3">
             <Link href={`/${fundSlug}/anytime`} className="flex-1">
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button className="w-full h-14 text-base rounded-xl bg-stone-900 hover:bg-stone-800" data-testid="button-give-now">
+                <Button className="w-full h-14 text-base rounded-xl bg-primary hover:bg-primary/90" data-testid="button-give-now">
                   <Gift className="w-5 h-5 mr-2" />
                   Give to {recipientName}
                 </Button>
@@ -232,32 +232,32 @@ export default function FundPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="bg-white rounded-2xl border border-stone-200 p-6"
+                className="bg-card rounded-2xl border border-border p-6"
               >
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="font-semibold text-stone-900">Next milestone</h2>
+                  <h2 className="font-semibold text-foreground">Next milestone</h2>
                   <span className="text-2xl">{nextMilestone.icon}</span>
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span className="text-stone-500">Progress to {nextMilestone.label}</span>
-                    <span className="font-medium text-stone-900">{Math.round(progress)}%</span>
+                    <span className="text-muted-foreground">Progress to {nextMilestone.label}</span>
+                    <span className="font-medium text-foreground">{Math.round(progress)}%</span>
                   </div>
-                  <div className="h-3 bg-stone-100 rounded-full overflow-hidden">
+                  <div className="h-3 bg-muted rounded-full overflow-hidden">
                     <motion.div 
-                      className="h-full bg-gradient-to-r from-stone-800 to-stone-600 rounded-full"
+                      className="h-full bg-gradient-to-r from-primary to-primary/80 rounded-full"
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(progress, 100)}%` }}
                       transition={{ delay: 0.6, duration: 1, ease: "easeOut" }}
                     />
                   </div>
-                  <p className="text-sm text-stone-500">
+                  <p className="text-sm text-muted-foreground">
                     ${(nextMilestone.amount - fund.totalRaised).toLocaleString()} to go
                   </p>
                 </div>
                 
                 {/* Milestone timeline */}
-                <div className="mt-6 pt-6 border-t border-stone-100">
+                <div className="mt-6 pt-6 border-t border-border">
                   <div className="flex items-center justify-between overflow-x-auto pb-2 gap-2">
                     {fund.milestones.slice(0, 5).map((milestone, i) => (
                       <motion.div
@@ -269,13 +269,13 @@ export default function FundPage() {
                       >
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
                           milestone.achieved 
-                            ? 'bg-emerald-100' 
-                            : 'bg-stone-100 grayscale opacity-50'
+                            ? 'bg-success/10' 
+                            : 'bg-muted grayscale opacity-50'
                         }`}>
                           {milestone.icon}
                         </div>
                         <span className={`text-[10px] mt-1 text-center ${
-                          milestone.achieved ? 'text-stone-700' : 'text-stone-400'
+                          milestone.achieved ? 'text-foreground' : 'text-muted-foreground'
                         }`}>
                           ${milestone.amount >= 1000 ? `${milestone.amount / 1000}k` : milestone.amount}
                         </span>
@@ -293,7 +293,7 @@ export default function FundPage() {
               animate="visible"
               className="space-y-3"
             >
-              <h2 className="font-semibold text-stone-900 mb-4">Choose an event</h2>
+              <h2 className="font-semibold text-foreground mb-4">Choose an event</h2>
               {fund.events.filter(e => e.active).map((event, i) => (
                 <motion.div
                   key={event.slug}
@@ -304,31 +304,31 @@ export default function FundPage() {
                 >
                   <Link href={`/${fundSlug}/${event.slug}`}>
                     <div 
-                      className="p-5 bg-white border border-stone-200 rounded-xl cursor-pointer group"
+                      className="p-5 bg-card border border-border rounded-xl cursor-pointer group"
                       data-testid={`event-${event.slug}`}
                     >
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium text-stone-900 group-hover:text-stone-700 transition-colors">
+                            <p className="font-medium text-foreground group-hover:text-foreground/80 transition-colors">
                               {event.title}
                             </p>
                             {event.date && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-[hsl(var(--kora-gold))]/10 text-[hsl(var(--kora-gold))]">
                                 {event.date}
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-stone-500 mt-0.5">{event.description}</p>
+                          <p className="text-sm text-muted-foreground mt-0.5">{event.description}</p>
                         </div>
-                        <ChevronRight className="w-5 h-5 text-stone-300 group-hover:text-stone-500 group-hover:translate-x-1 transition-all" />
+                        <ChevronRight className="w-5 h-5 text-border group-hover:text-muted-foreground group-hover:translate-x-1 transition-all" />
                       </div>
-                      <div className="mt-3 pt-3 border-t border-stone-100 flex gap-6 text-sm">
-                        <span className="text-stone-500">
-                          <span className="font-medium text-stone-700">${event.raised.toLocaleString()}</span> raised
+                      <div className="mt-3 pt-3 border-t border-border flex gap-6 text-sm">
+                        <span className="text-muted-foreground">
+                          <span className="font-medium text-foreground">${event.raised.toLocaleString()}</span> raised
                         </span>
-                        <span className="text-stone-500">
-                          <span className="font-medium text-stone-700">{event.gifts}</span> gifts
+                        <span className="text-muted-foreground">
+                          <span className="font-medium text-foreground">{event.gifts}</span> gifts
                         </span>
                       </div>
                     </div>
@@ -342,11 +342,11 @@ export default function FundPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="bg-white rounded-2xl border border-stone-200 p-6"
+              className="bg-card rounded-2xl border border-border p-6"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="font-semibold text-stone-900">People who believe in {recipientName}</h2>
-                <span className="text-sm text-stone-400">{fund.contributors} contributors</span>
+                <h2 className="font-semibold text-foreground">People who believe in {recipientName}</h2>
+                <span className="text-sm text-muted-foreground">{fund.contributors} contributors</span>
               </div>
               
               <motion.div 
@@ -362,16 +362,16 @@ export default function FundPage() {
                     custom={i}
                     className="flex items-start gap-4"
                   >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center text-sm font-medium text-stone-600 flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-muted to-border flex items-center justify-center text-sm font-medium text-muted-foreground flex-shrink-0">
                       {contributor.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-2">
-                        <p className="font-medium text-stone-900 truncate">{contributor.name}</p>
-                        <span className="text-xs text-stone-400 flex-shrink-0">{contributor.date}</span>
+                        <p className="font-medium text-foreground truncate">{contributor.name}</p>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{contributor.date}</span>
                       </div>
                       {contributor.message && (
-                        <p className="text-sm text-stone-500 mt-0.5">"{contributor.message}"</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">"{contributor.message}"</p>
                       )}
                     </div>
                   </motion.div>
@@ -379,7 +379,7 @@ export default function FundPage() {
               </motion.div>
               
               {fund.contributors > fund.recentContributors.length && (
-                <p className="text-sm text-stone-400 text-center mt-6 pt-4 border-t border-stone-100">
+                <p className="text-sm text-muted-foreground text-center mt-6 pt-4 border-t border-border">
                   + {fund.contributors - fund.recentContributors.length} more people
                 </p>
               )}
@@ -403,18 +403,18 @@ export default function FundPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.45 }}
-              className="bg-gradient-to-br from-stone-50 to-white rounded-2xl border border-stone-200 p-6"
+              className="bg-gradient-to-br from-muted to-card rounded-2xl border border-border p-6"
             >
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-stone-900">Milestones</h3>
-                <Trophy className="w-4 h-4 text-amber-500" />
+                <h3 className="font-semibold text-foreground">Milestones</h3>
+                <Trophy className="w-4 h-4 text-[hsl(var(--kora-gold))]" />
               </div>
               <div className="flex flex-wrap gap-2">
                 {getDefaultAchievements(fund.totalRaised, fund.contributors, fund.daysActive).slice(0, 4).map((achievement) => (
                   <AchievementBadge key={achievement.id} achievement={achievement} size="sm" />
                 ))}
               </div>
-              <p className="text-xs text-stone-400 mt-3">
+              <p className="text-xs text-muted-foreground mt-3">
                 {getDefaultAchievements(fund.totalRaised, fund.contributors, fund.daysActive).filter(a => a.unlocked).length} of 6 unlocked
               </p>
             </motion.div>
@@ -424,25 +424,25 @@ export default function FundPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5 }}
-              className="bg-white rounded-2xl border border-stone-200 p-6"
+              className="bg-card rounded-2xl border border-border p-6"
             >
-              <h3 className="font-semibold text-stone-900 mb-4">Fund details</h3>
+              <h3 className="font-semibold text-foreground mb-4">Fund details</h3>
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-stone-500">Invested</span>
-                  <span className="font-medium text-stone-900">${fund.invested.toLocaleString()}</span>
+                  <span className="text-muted-foreground">Invested</span>
+                  <span className="font-medium text-foreground">${fund.invested.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-stone-500">Pending</span>
-                  <span className="font-medium text-amber-600">${fund.pending.toLocaleString()}</span>
+                  <span className="text-muted-foreground">Pending</span>
+                  <span className="font-medium text-[hsl(var(--kora-gold))]">${fund.pending.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-stone-500">Account type</span>
-                  <span className="font-medium text-stone-900">{fund.accountType}</span>
+                  <span className="text-muted-foreground">Account type</span>
+                  <span className="font-medium text-foreground">{fund.accountType}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-stone-500">Days active</span>
-                  <span className="font-medium text-stone-900">{fund.daysActive}</span>
+                  <span className="text-muted-foreground">Days active</span>
+                  <span className="font-medium text-foreground">{fund.daysActive}</span>
                 </div>
               </div>
             </motion.div>
@@ -452,29 +452,29 @@ export default function FundPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.6 }}
-              className="bg-stone-50 rounded-2xl border border-stone-200 p-6"
+              className="bg-muted rounded-2xl border border-border p-6"
             >
-              <h3 className="font-semibold text-stone-900 mb-4">Protected & secure</h3>
+              <h3 className="font-semibold text-foreground mb-4">Protected & secure</h3>
               <div className="space-y-4 text-sm">
                 <div className="flex items-start gap-3">
-                  <Shield className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                  <Shield className="w-5 h-5 text-success flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-stone-900">SIPC Protected</p>
-                    <p className="text-stone-500">Up to $500,000 in coverage</p>
+                    <p className="font-medium text-foreground">SIPC Protected</p>
+                    <p className="text-muted-foreground">Up to $500,000 in coverage</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <TrendingUp className="w-5 h-5 text-stone-600 flex-shrink-0 mt-0.5" />
+                  <TrendingUp className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-stone-900">100% Invested</p>
-                    <p className="text-stone-500">Every gift grows over time</p>
+                    <p className="font-medium text-foreground">100% Invested</p>
+                    <p className="text-muted-foreground">Every gift grows over time</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Clock className="w-5 h-5 text-stone-600 flex-shrink-0 mt-0.5" />
+                  <Clock className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="font-medium text-stone-900">Long-term Focus</p>
-                    <p className="text-stone-500">Built for 18+ year horizons</p>
+                    <p className="font-medium text-foreground">Long-term Focus</p>
+                    <p className="text-muted-foreground">Built for 18+ year horizons</p>
                   </div>
                 </div>
               </div>
@@ -487,9 +487,9 @@ export default function FundPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="mt-12 pt-8 border-t border-stone-200 text-center"
+          className="mt-12 pt-8 border-t border-border text-center"
         >
-          <p className="text-xs text-stone-400">
+          <p className="text-xs text-muted-foreground">
             *Projected value assumes 7% annual returns. Past performance doesn't guarantee future results.<br />
             Brokerage services by Alpaca Securities LLC, Member FINRA/SIPC.
           </p>

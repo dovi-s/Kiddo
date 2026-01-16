@@ -77,12 +77,12 @@ export default function Claim() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-50">
-      <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-sm border-b border-stone-100">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Logo size="md" className="text-stone-900" />
+          <Logo size="md" className="text-foreground" />
           {step !== "success" && (
-            <div className="flex items-center gap-1.5 text-xs text-stone-400">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Lock size={12} />
               <span>Secure claim</span>
             </div>
@@ -101,43 +101,43 @@ export default function Claim() {
               className="space-y-8"
             >
               <div className="text-center space-y-3">
-                <div className="w-16 h-16 mx-auto bg-slate-100 rounded-full flex items-center justify-center">
-                  <GiftIcon className="w-8 h-8 text-slate-600" />
+                <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+                  <GiftIcon className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h1 className="text-2xl lg:text-3xl font-semibold text-stone-900">
+                <h1 className="text-2xl lg:text-3xl font-semibold text-foreground">
                   You've received a gift
                 </h1>
-                <p className="text-stone-500">
-                  from <span className="font-medium text-stone-700">{gift.senderName}</span>
+                <p className="text-muted-foreground">
+                  from <span className="font-medium text-foreground">{gift.senderName}</span>
                 </p>
               </div>
 
-              <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
+              <div className="bg-card rounded-2xl border border-border overflow-hidden">
                 <div className="p-6 lg:p-8 space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-stone-500 mb-1">
+                      <p className="text-sm text-muted-foreground mb-1">
                         {gift.assetType === "stock" ? "Stock gift" : "Cash gift"}
                       </p>
                       {gift.assetType === "stock" ? (
                         <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-semibold text-stone-900">
+                          <span className="text-3xl font-semibold text-foreground">
                             {gift.shares} shares
                           </span>
-                          <span className="text-lg text-stone-500">
+                          <span className="text-lg text-muted-foreground">
                             of {gift.stockSymbol}
                           </span>
                         </div>
                       ) : (
-                        <span className="text-3xl font-semibold text-stone-900">
+                        <span className="text-3xl font-semibold text-foreground">
                           ${gift.amount?.toFixed(2)}
                         </span>
                       )}
                     </div>
                     {gift.assetType === "stock" && (
                       <div className="text-right">
-                        <p className="text-sm text-stone-400">Current value</p>
-                        <p className="text-xl font-medium text-stone-900">
+                        <p className="text-sm text-muted-foreground">Current value</p>
+                        <p className="text-xl font-medium text-foreground">
                           ${giftValue.toFixed(2)}
                         </p>
                       </div>
@@ -145,36 +145,36 @@ export default function Claim() {
                   </div>
 
                   {gift.assetType === "stock" && (
-                    <div className="bg-stone-50 rounded-xl p-4">
+                    <div className="bg-muted rounded-xl p-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-sm font-bold text-stone-700 border border-stone-200">
+                        <div className="w-10 h-10 bg-card rounded-lg flex items-center justify-center text-sm font-bold text-foreground border border-border">
                           {gift.stockSymbol?.slice(0, 2)}
                         </div>
                         <div>
-                          <p className="font-medium text-stone-900">{gift.stockName}</p>
-                          <p className="text-sm text-stone-500">${gift.currentPrice?.toFixed(2)} per share</p>
+                          <p className="font-medium text-foreground">{gift.stockName}</p>
+                          <p className="text-sm text-muted-foreground">${gift.currentPrice?.toFixed(2)} per share</p>
                         </div>
                       </div>
                     </div>
                   )}
 
                   {gift.message && (
-                    <div className="border-t border-stone-100 pt-6">
-                      <p className="text-sm text-stone-400 mb-2">Personal message</p>
-                      <p className="text-stone-700 leading-relaxed italic">
+                    <div className="border-t border-border pt-6">
+                      <p className="text-sm text-muted-foreground mb-2">Personal message</p>
+                      <p className="text-foreground leading-relaxed italic">
                         "{gift.message}"
                       </p>
                     </div>
                   )}
 
-                  <div className="bg-slate-50 rounded-xl p-4">
+                  <div className="bg-muted rounded-xl p-4">
                     <div className="flex items-start gap-3">
-                      <TrendingUp className="w-5 h-5 text-slate-600 mt-0.5" />
+                      <TrendingUp className="w-5 h-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-slate-900">
+                        <p className="text-sm font-medium text-foreground">
                           Could grow to ${projectedValue.toLocaleString()}
                         </p>
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-muted-foreground">
                           Based on historical market performance over 18 years
                         </p>
                       </div>
@@ -182,22 +182,22 @@ export default function Claim() {
                   </div>
                 </div>
 
-                <div className="border-t border-stone-100 p-6 lg:p-8 bg-stone-50/50">
+                <div className="border-t border-border p-6 lg:p-8 bg-muted/50">
                   <button
                     onClick={() => setStep("auth")}
                     data-testid="button-claim-gift"
-                    className="w-full py-4 bg-stone-900 text-white text-base font-medium rounded-xl hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                    className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                   >
                     Claim your gift
                     <ChevronRight size={18} />
                   </button>
-                  <p className="text-center text-xs text-stone-400 mt-4">
+                  <p className="text-center text-xs text-muted-foreground mt-4">
                     Claim within {daysUntilExpiry} days · Protected by SIPC
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-center gap-6 text-xs text-stone-400">
+              <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
                   <Shield size={14} />
                   <span>SIPC protected</span>
@@ -220,32 +220,32 @@ export default function Claim() {
             >
               <button
                 onClick={() => setStep("preview")}
-                className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-700"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft size={16} />
                 Back
               </button>
 
               <div className="text-center space-y-2">
-                <h1 className="text-2xl font-semibold text-stone-900">
+                <h1 className="text-2xl font-semibold text-foreground">
                   {authMode === "signup" ? "Create your account" : "Welcome back"}
                 </h1>
-                <p className="text-stone-500">
+                <p className="text-muted-foreground">
                   {authMode === "signup" 
                     ? "To claim your gift, create a free account"
                     : "Sign in to claim your gift"}
                 </p>
               </div>
 
-              <div className="bg-white rounded-2xl border border-stone-200 p-6 lg:p-8 space-y-6">
-                <div className="flex rounded-lg bg-stone-100 p-1">
+              <div className="bg-card rounded-2xl border border-border p-6 lg:p-8 space-y-6">
+                <div className="flex rounded-lg bg-muted p-1">
                   <button
                     onClick={() => setAuthMode("signup")}
                     data-testid="tab-signup"
                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                       authMode === "signup" 
-                        ? "bg-white text-stone-900 shadow-sm" 
-                        : "text-stone-500"
+                        ? "bg-card text-foreground shadow-sm" 
+                        : "text-muted-foreground"
                     }`}
                   >
                     New here
@@ -255,8 +255,8 @@ export default function Claim() {
                     data-testid="tab-signin"
                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                       authMode === "signin" 
-                        ? "bg-white text-stone-900 shadow-sm" 
-                        : "text-stone-500"
+                        ? "bg-card text-foreground shadow-sm" 
+                        : "text-muted-foreground"
                     }`}
                   >
                     I have an account
@@ -265,7 +265,7 @@ export default function Claim() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1.5">
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
                       Email
                     </label>
                     <input
@@ -274,11 +274,11 @@ export default function Claim() {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
                       data-testid="input-email"
-                      className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+                      className="w-full px-4 py-3 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted-foreground"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-stone-700 mb-1.5">
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
                       Password
                     </label>
                     <input
@@ -287,7 +287,7 @@ export default function Claim() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder={authMode === "signup" ? "Create a password" : "Enter your password"}
                       data-testid="input-password"
-                      className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+                      className="w-full px-4 py-3 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted-foreground"
                     />
                   </div>
                 </div>
@@ -295,13 +295,13 @@ export default function Claim() {
                 <button
                   onClick={() => setStep("destination")}
                   data-testid="button-continue-auth"
-                  className="w-full py-4 bg-stone-900 text-white text-base font-medium rounded-xl hover:bg-stone-800 transition-colors"
+                  className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors"
                 >
                   {authMode === "signup" ? "Create account" : "Sign in"}
                 </button>
 
                 {authMode === "signup" && (
-                  <p className="text-xs text-stone-400 text-center">
+                  <p className="text-xs text-muted-foreground text-center">
                     By creating an account, you agree to our Terms of Service and Privacy Policy
                   </p>
                 )}
@@ -319,22 +319,22 @@ export default function Claim() {
             >
               <button
                 onClick={() => setStep("auth")}
-                className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-700"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft size={16} />
                 Back
               </button>
 
               <div className="text-center space-y-2">
-                <h1 className="text-2xl font-semibold text-stone-900">
+                <h1 className="text-2xl font-semibold text-foreground">
                   Where should we deposit this?
                 </h1>
-                <p className="text-stone-500">
+                <p className="text-muted-foreground">
                   Choose an existing fund or create a new one
                 </p>
               </div>
 
-              <div className="bg-white rounded-2xl border border-stone-200 p-6 lg:p-8 space-y-4">
+              <div className="bg-card rounded-2xl border border-border p-6 lg:p-8 space-y-4">
                 {mockFunds.map((fund) => (
                   <button
                     key={fund.id}
@@ -345,20 +345,20 @@ export default function Claim() {
                     data-testid={`fund-option-${fund.id}`}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
                       selectedFund === fund.id && !createNewFund
-                        ? "border-stone-900 bg-stone-50"
-                        : "border-stone-200 hover:border-stone-300"
+                        ? "border-primary bg-muted"
+                        : "border-border hover:border-muted-foreground"
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-medium text-stone-900">{fund.name}</p>
-                        <p className="text-sm text-stone-500">
+                        <p className="font-medium text-foreground">{fund.name}</p>
+                        <p className="text-sm text-muted-foreground">
                           Balance: ${fund.balance.toLocaleString()} · Since {fund.created}
                         </p>
                       </div>
                       {selectedFund === fund.id && !createNewFund && (
-                        <div className="w-6 h-6 bg-stone-900 rounded-full flex items-center justify-center">
-                          <Check size={14} className="text-white" />
+                        <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                          <Check size={14} className="text-primary-foreground" />
                         </div>
                       )}
                     </div>
@@ -373,19 +373,19 @@ export default function Claim() {
                   data-testid="button-create-new-fund"
                   className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
                     createNewFund
-                      ? "border-stone-900 bg-stone-50"
-                      : "border-dashed border-stone-200 hover:border-stone-300"
+                      ? "border-primary bg-muted"
+                      : "border-dashed border-border hover:border-muted-foreground"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      createNewFund ? "bg-stone-900" : "bg-stone-100"
+                      createNewFund ? "bg-primary" : "bg-muted"
                     }`}>
-                      <Plus size={20} className={createNewFund ? "text-white" : "text-stone-400"} />
+                      <Plus size={20} className={createNewFund ? "text-primary-foreground" : "text-muted-foreground"} />
                     </div>
                     <div>
-                      <p className="font-medium text-stone-900">Create new fund</p>
-                      <p className="text-sm text-stone-500">Start a fresh investment fund</p>
+                      <p className="font-medium text-foreground">Create new fund</p>
+                      <p className="text-sm text-muted-foreground">Start a fresh investment fund</p>
                     </div>
                   </div>
                 </button>
@@ -396,7 +396,7 @@ export default function Claim() {
                     animate={{ opacity: 1, height: "auto" }}
                     className="pt-4"
                   >
-                    <label className="block text-sm font-medium text-stone-700 mb-1.5">
+                    <label className="block text-sm font-medium text-foreground mb-1.5">
                       Fund name
                     </label>
                     <input
@@ -405,23 +405,23 @@ export default function Claim() {
                       onChange={(e) => setNewFundName(e.target.value)}
                       placeholder="e.g., My Future Fund"
                       data-testid="input-fund-name"
-                      className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+                      className="w-full px-4 py-3 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted-foreground"
                     />
                   </motion.div>
                 )}
               </div>
 
-              <div className="bg-stone-50 rounded-xl p-4 flex items-center justify-between">
+              <div className="bg-muted rounded-xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-stone-500">You're claiming</p>
-                  <p className="font-medium text-stone-900">
+                  <p className="text-sm text-muted-foreground">You're claiming</p>
+                  <p className="font-medium text-foreground">
                     {gift.assetType === "stock" 
                       ? `${gift.shares} shares of ${gift.stockSymbol}`
                       : `$${gift.amount?.toFixed(2)}`
                     }
                   </p>
                 </div>
-                <p className="text-lg font-semibold text-stone-900">
+                <p className="text-lg font-semibold text-foreground">
                   ${giftValue.toFixed(2)}
                 </p>
               </div>
@@ -430,11 +430,11 @@ export default function Claim() {
                 onClick={handleClaim}
                 disabled={isClaiming || (!selectedFund && !createNewFund) || (createNewFund && !newFundName)}
                 data-testid="button-confirm-claim"
-                className="w-full py-4 bg-stone-900 text-white text-base font-medium rounded-xl hover:bg-stone-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isClaiming ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                     <span>Claiming...</span>
                   </>
                 ) : (
@@ -470,10 +470,10 @@ export default function Claim() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
               >
-                <h1 className="text-2xl lg:text-3xl font-semibold text-stone-900">
+                <h1 className="text-2xl lg:text-3xl font-semibold text-foreground">
                   Gift claimed!
                 </h1>
-                <p className="text-stone-500">
+                <p className="text-muted-foreground">
                   {gift.assetType === "stock" 
                     ? `${gift.shares} shares of ${gift.stockSymbol} have been added to your fund`
                     : `$${gift.amount?.toFixed(2)} has been added to your fund`
@@ -481,45 +481,45 @@ export default function Claim() {
                 </p>
               </motion.div>
 
-              <div className="bg-white rounded-2xl border border-stone-200 p-6 max-w-sm mx-auto">
+              <div className="bg-card rounded-2xl border border-border p-6 max-w-sm mx-auto">
                 <div className="space-y-4">
                   <div className="flex justify-between">
-                    <span className="text-stone-500">Asset</span>
-                    <span className="font-medium text-stone-900">
+                    <span className="text-muted-foreground">Asset</span>
+                    <span className="font-medium text-foreground">
                       {gift.assetType === "stock" ? gift.stockSymbol : "Cash"}
                     </span>
                   </div>
                   {gift.assetType === "stock" && (
                     <div className="flex justify-between">
-                      <span className="text-stone-500">Shares</span>
-                      <span className="font-medium text-stone-900">{gift.shares}</span>
+                      <span className="text-muted-foreground">Shares</span>
+                      <span className="font-medium text-foreground">{gift.shares}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
-                    <span className="text-stone-500">Value</span>
-                    <span className="font-medium text-stone-900">${giftValue.toFixed(2)}</span>
+                    <span className="text-muted-foreground">Value</span>
+                    <span className="font-medium text-foreground">${giftValue.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-stone-500">From</span>
-                    <span className="font-medium text-stone-900">{gift.senderName}</span>
+                    <span className="text-muted-foreground">From</span>
+                    <span className="font-medium text-foreground">{gift.senderName}</span>
                   </div>
-                  <div className="border-t border-stone-100 pt-4 flex justify-between">
-                    <span className="text-stone-500">Deposited to</span>
-                    <span className="font-medium text-stone-900">
+                  <div className="border-t border-border pt-4 flex justify-between">
+                    <span className="text-muted-foreground">Deposited to</span>
+                    <span className="font-medium text-foreground">
                       {createNewFund ? newFundName : mockFunds.find(f => f.id === selectedFund)?.name}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-slate-50 rounded-xl p-4 max-w-sm mx-auto">
+              <div className="bg-muted rounded-xl p-4 max-w-sm mx-auto">
                 <div className="flex items-start gap-3">
-                  <TrendingUp className="w-5 h-5 text-slate-600 mt-0.5" />
+                  <TrendingUp className="w-5 h-5 text-muted-foreground mt-0.5" />
                   <div className="text-left">
-                    <p className="text-sm font-medium text-slate-900">
+                    <p className="text-sm font-medium text-foreground">
                       Projected to grow to ${projectedValue.toLocaleString()}
                     </p>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       Over 18 years based on historical returns
                     </p>
                   </div>
@@ -530,7 +530,7 @@ export default function Claim() {
                 <Link href="/dashboard">
                   <button
                     data-testid="button-go-dashboard"
-                    className="w-full py-4 bg-stone-900 text-white text-base font-medium rounded-xl hover:bg-stone-800 transition-colors"
+                    className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors"
                   >
                     Go to dashboard
                   </button>
@@ -538,7 +538,7 @@ export default function Claim() {
                 <Link href="/">
                   <button
                     data-testid="button-return-home"
-                    className="w-full py-3 text-stone-500 text-sm hover:text-stone-700 transition-colors"
+                    className="w-full py-3 text-muted-foreground text-sm hover:text-foreground transition-colors"
                   >
                     Return home
                   </button>
