@@ -174,7 +174,7 @@ export default function Dashboard() {
   const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
   const [expandedGift, setExpandedGift] = useState<string | null>(null);
   const [expandedHolding, setExpandedHolding] = useState<number | null>(null);
-  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showQuickActionsSheet, setShowQuickActionsSheet] = useState(false);
   const [showFundPicker, setShowFundPicker] = useState(false);
   
   const getStatusLabel = (status: FundStatus) => {
@@ -270,112 +270,37 @@ export default function Dashboard() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 lg:py-12 momentum-scroll">
         
         <motion.section
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="mb-6 lg:mb-12"
+          className="mb-8"
         >
-          <div className="relative overflow-hidden bg-[hsl(var(--kora-evergreen))] rounded-2xl p-5 sm:p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-xl font-semibold">
-                {selectedFund.name.charAt(0)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl sm:text-2xl font-semibold text-white truncate">
-                  {selectedFund.name}'s Future Fund
-                </h1>
-                <p className="text-white/60 text-sm">
-                  {isPersonal 
-                    ? "Your investment fund"
-                    : `${selectedFund.yearsLeft} years until 18`
-                  }
-                </p>
-              </div>
-              <motion.button
-                onClick={() => setShowQuickActions(!showQuickActions)}
-                data-testid="button-hero-quick-actions"
-                whileTap={{ scale: 0.95 }}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${showQuickActions ? "bg-white text-[hsl(var(--kora-evergreen))]" : "bg-white/15 text-white"}`}
-              >
-                <motion.div
-                  animate={{ rotate: showQuickActions ? 45 : 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <Plus size={18} />
-                </motion.div>
-              </motion.button>
-            </div>
-
-            <AnimatePresence>
-              {showQuickActions && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-                  className="overflow-hidden"
-                >
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <motion.button
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.05 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => {
-                        setShowQuickActions(false);
-                        setShowAddFund(true);
-                      }}
-                      className="bg-white/15 backdrop-blur-sm rounded-xl p-4 text-left border border-white/10"
-                      data-testid="button-quick-add-fund"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-3">
-                        <Users size={18} className="text-white" />
-                      </div>
-                      <p className="text-sm font-semibold text-white">Add fund</p>
-                      <p className="text-xs text-white/70 mt-0.5">New child or personal</p>
-                    </motion.button>
-
-                    <Link href="/event/create">
-                      <motion.button
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => setShowQuickActions(false)}
-                        className="bg-white/15 backdrop-blur-sm rounded-xl p-4 text-left border border-white/10 w-full"
-                        data-testid="button-quick-add-event"
-                      >
-                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-3">
-                          <Sparkles size={18} className="text-white" />
-                        </div>
-                        <p className="text-sm font-semibold text-white">Create event</p>
-                        <p className="text-xs text-white/70 mt-0.5">Birthday, holiday, etc.</p>
-                      </motion.button>
-                    </Link>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            
-            <motion.button
-              onClick={() => setShowShareKit(true)}
-              data-testid="button-hero-share"
-              whileTap={{ scale: 0.98 }}
-              className="w-full py-3.5 bg-white text-[hsl(var(--kora-evergreen))] font-semibold rounded-xl flex items-center justify-center gap-2 touch-target"
+          <div className="text-center py-4">
+            <motion.h1 
+              className="text-2xl font-bold text-foreground mb-1"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.05 }}
             >
-              <Share2 size={18} />
-              Share fund
-            </motion.button>
+              {selectedFund.name}'s Fund
+            </motion.h1>
+            <p className="text-sm text-muted-foreground">
+              {isPersonal 
+                ? "Your investment fund"
+                : `${selectedFund.yearsLeft} years until 18`
+              }
+            </p>
           </div>
           
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Shield size={12} />
-              Apex Clearing
-            </span>
-            <span>SIPC protected</span>
-            {!isPersonal && <WhoControlsDrawer variant="default" />}
-          </div>
+          <motion.button
+            onClick={() => setShowShareKit(true)}
+            data-testid="button-hero-share"
+            whileTap={{ scale: 0.98 }}
+            className="w-full py-4 bg-[hsl(var(--kora-evergreen))] text-white font-semibold rounded-2xl flex items-center justify-center gap-2.5 touch-target shadow-lg shadow-[hsl(var(--kora-evergreen)/0.2)]"
+          >
+            <Share2 size={18} />
+            Share fund link
+          </motion.button>
         </motion.section>
 
         <div className="lg:grid lg:grid-cols-3 lg:gap-12">
@@ -1101,18 +1026,64 @@ export default function Dashboard() {
       {/* Trust Footer */}
       <TrustFooter />
 
-      {/* Floating Action Button - Share */}
+      {/* Floating Action Button - Quick Actions */}
       <motion.button
-        onClick={() => setShowShareKit(true)}
-        className="fab bg-[hsl(var(--kora-gold))] text-[hsl(var(--kora-evergreen))] md:hidden"
+        onClick={() => setShowQuickActionsSheet(true)}
+        className="fab bg-primary text-primary-foreground md:hidden"
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.2, ease: "easeOut" }}
         whileTap={{ scale: 0.9 }}
-        data-testid="fab-share"
+        data-testid="fab-quick-actions"
       >
-        <Share2 size={24} />
+        <Plus size={24} />
       </motion.button>
+
+      {/* Quick Actions Sheet */}
+      <Sheet open={showQuickActionsSheet} onOpenChange={setShowQuickActionsSheet}>
+        <SheetContent side="bottom" className="rounded-t-3xl">
+          <SheetHeader className="text-left mb-4">
+            <SheetTitle className="text-lg font-semibold">Quick actions</SheetTitle>
+          </SheetHeader>
+          
+          <div className="space-y-2 pb-4">
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setShowQuickActionsSheet(false);
+                setShowAddFund(true);
+              }}
+              className="w-full p-4 rounded-xl bg-muted flex items-center gap-4 hover:bg-border transition-colors"
+              data-testid="quick-action-add-fund"
+            >
+              <div className="w-12 h-12 rounded-xl bg-[hsl(var(--kora-evergreen)/0.1)] flex items-center justify-center">
+                <Users size={20} className="text-[hsl(var(--kora-evergreen))]" />
+              </div>
+              <div className="text-left">
+                <p className="font-semibold text-foreground">Add fund</p>
+                <p className="text-sm text-muted-foreground">New child or personal account</p>
+              </div>
+            </motion.button>
+
+            <Link href="/event/create">
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowQuickActionsSheet(false)}
+                className="w-full p-4 rounded-xl bg-muted flex items-center gap-4 hover:bg-border transition-colors"
+                data-testid="quick-action-create-event"
+              >
+                <div className="w-12 h-12 rounded-xl bg-[hsl(var(--kora-gold)/0.1)] flex items-center justify-center">
+                  <Sparkles size={20} className="text-[hsl(var(--kora-gold))]" />
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-foreground">Create event</p>
+                  <p className="text-sm text-muted-foreground">Birthday, holiday, or occasion</p>
+                </div>
+              </motion.button>
+            </Link>
+          </div>
+        </SheetContent>
+      </Sheet>
 
         {/* Spacer for mobile nav */}
         <div className="h-24 md:hidden" />
