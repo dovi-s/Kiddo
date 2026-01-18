@@ -167,10 +167,10 @@ export default function GiftCheckout() {
       
       <main className="container mx-auto px-4 py-8 max-w-lg">
         <button 
-          onClick={() => setLocation(`/${fund}${event ? `/${event}` : ''}`)}
+          onClick={() => window.history.back()}
           className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to page
+          <ArrowLeft className="h-4 w-4" /> Back
         </button>
 
         <div className="text-center mb-6">

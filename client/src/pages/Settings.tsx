@@ -678,7 +678,6 @@ function HelpTab() {
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
-  const [searchQuery, setSearchQuery] = useState("");
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -692,109 +691,96 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 bg-white border-b border-border">
-        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <PageTransition>
+      <div className="min-h-screen bg-background pb-28">
+        <motion.header 
+          className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.2, ease: easeOutExpo }}
+        >
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
             <Link href="/dashboard">
-              <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-                <ArrowLeft size={16} />
-                <span className="hidden sm:inline">Back</span>
-              </button>
+              <motion.button 
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-2 text-muted-foreground"
+              >
+                <ArrowLeft size={20} />
+                <span className="text-sm">Back</span>
+              </motion.button>
             </Link>
-            <Logo size="md" className="text-foreground" />
+            <Logo size="sm" className="text-primary" />
           </div>
-          <Link href="/dashboard">
-            <button className="text-sm text-muted-foreground hover:text-foreground">Dashboard</button>
-          </Link>
-        </div>
-      </header>
+        </motion.header>
 
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
-          <p className="text-muted-foreground mt-1">Manage your account and preferences</p>
-        </div>
+        <main className="max-w-lg mx-auto px-4 py-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="mb-6"
+          >
+            <h1 className="text-2xl font-bold text-foreground mb-1">Settings</h1>
+            <p className="text-sm text-muted-foreground">Manage your account and preferences</p>
+          </motion.div>
 
-        <div className="relative mb-6">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search settings..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted"
-          />
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-8">
-          <nav className="lg:w-56 shrink-0">
-            <div className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
+          <div className="overflow-x-auto -mx-4 px-4 mb-6">
+            <div className="flex gap-2 min-w-max pb-2">
               {tabs.map((tab, index) => (
                 <motion.button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   data-testid={`settings-tab-${tab.id}`}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.03, duration: 0.15, ease: "easeOut" }}
-                  whileHover={{ scale: 1.02, x: 2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors relative ${
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.03, duration: 0.2 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                     activeTab === tab.id
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted"
+                      ? "bg-primary text-primary-foreground shadow-md"
+                      : "bg-muted text-muted-foreground"
                   }`}
                 >
-                  <motion.span
-                    animate={activeTab === tab.id ? { scale: [1, 1.1, 1] } : { scale: 1 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {tab.icon}
-                  </motion.span>
-                  {tab.label}
+                  {tab.icon}
+                  <span className="hidden sm:inline">{tab.label}</span>
                 </motion.button>
               ))}
             </div>
+          </div>
 
-            <div className="hidden lg:block mt-6 pt-6 border-t border-border space-y-1">
-              <Link href="/login">
-                <button className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-muted hover:text-foreground w-full transition-colors">
-                  <LogOut size={18} />
-                  Sign out
-                </button>
-              </Link>
-            </div>
-          </nav>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              {renderTabContent()}
+            </motion.div>
+          </AnimatePresence>
 
-          <main className="flex-1 min-w-0">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
+          <div className="mt-10 pt-6 border-t border-border">
+            <Link href="/login">
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                className="w-full p-4 rounded-xl bg-muted text-muted-foreground flex items-center justify-center gap-3 font-medium"
               >
-                {renderTabContent()}
-              </motion.div>
-            </AnimatePresence>
-          </main>
-        </div>
-      </div>
+                <LogOut size={18} />
+                Sign out
+              </motion.button>
+            </Link>
+          </div>
 
-      <footer className="border-t border-border bg-white mt-12">
-        <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-4">
-            <span>Brokerage by Alpaca Securities LLC</span>
-            <span>Member FINRA/SIPC</span>
+          <div className="mt-8 text-center text-xs text-muted-foreground space-y-1">
+            <p>Brokerage by Alpaca Securities LLC · Member FINRA/SIPC</p>
+            <p className="flex items-center justify-center gap-1.5">
+              <Lock size={10} />
+              256-bit encryption
+            </p>
           </div>
-          <div className="flex items-center gap-4">
-            <Lock size={12} />
-            <span>256-bit encryption</span>
-          </div>
-        </div>
-      </footer>
-    </div>
+        </main>
+      </div>
+    </PageTransition>
   );
 }
