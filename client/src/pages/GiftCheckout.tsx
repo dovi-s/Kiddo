@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Nav } from "@/components/layout/Nav";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Celebration, SuccessGlow, CountUp } from "@/components/ui/celebration";
-import { bouncySpring, gentleSpring, successPop, easeOutExpo, springSnappy } from "@/lib/animations";
+import { bouncySpring, gentleSpring, successPop, easeOutExpo, springSnappy, sharePulse, amountPop } from "@/lib/animations";
 
 const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
 
@@ -239,7 +239,7 @@ export default function GiftCheckout() {
               whileTap={{ scale: 0.98 }}
               onClick={handleSubmitPayment}
               disabled={!canQuickPay || isProcessing}
-              className="w-full h-14 bg-black text-white rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg"
+              className="w-full h-14 bg-black text-white rounded-2xl font-medium flex items-center justify-center gap-2 disabled:opacity-50 shadow-premium-lg magnetic-btn"
               data-testid="button-apple-pay"
             >
               {isProcessing ? (

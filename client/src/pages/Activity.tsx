@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { Plus, Gift, TrendingUp, CheckCircle, Send, Clock, ChevronDown, Filter, Calendar, MessageCircle, DollarSign } from "lucide-react";
 import { PageTransition } from "@/components/layout/PageTransition";
-import { springSnappy, easeOutExpo, cardTactile } from "@/lib/animations";
+import { springSnappy, easeOutExpo, cardTactile, staggerPremium, listItemSpring } from "@/lib/animations";
 
 type ActivityItem = {
   id: string;
@@ -183,13 +183,7 @@ export default function Activity() {
           className="space-y-3"
           initial="hidden"
           animate="visible"
-          variants={{
-            hidden: { opacity: 0 },
-            visible: {
-              opacity: 1,
-              transition: { staggerChildren: 0.04, delayChildren: 0.02 }
-            }
-          }}
+          variants={staggerPremium}
         >
           {filteredActivity.map((item) => {
             const isExpanded = expandedId === item.id;

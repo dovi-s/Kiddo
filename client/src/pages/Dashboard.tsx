@@ -12,24 +12,9 @@ import { Logo } from "@/components/ui/logo";
 import { ShareKit } from "@/components/ui/share-kit";
 import { TrustFooter, WhoControlsDrawer } from "@/components/ui/trust-elements";
 import { PageTransition } from "@/components/layout/PageTransition";
-import { springSnappy, springGentle, easeOutExpo, cardTactile, staggerFast } from "@/lib/animations";
-
-function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
-  const [display, setDisplay] = useState(0);
-  useEffect(() => {
-    const duration = 250;
-    const startTime = Date.now();
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplay(Math.round(value * eased));
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    animate();
-  }, [value]);
-  return <span>{prefix}{display.toLocaleString()}</span>;
-}
+import { springSnappy, springGentle, easeOutExpo, cardTactile, staggerFast, sharePulse, staggerPremium, listItemSpring } from "@/lib/animations";
+import { AnimatedValue } from "@/components/ui/animated-value";
+import { MagneticButton } from "@/components/ui/magnetic-button";
 
 type FundStatus = "draft" | "pending" | "active" | "needs_action";
 
@@ -291,15 +276,21 @@ export default function Dashboard() {
             </p>
           </div>
           
-          <motion.button
+          <MagneticButton
             onClick={() => setShowShareKit(true)}
             data-testid="button-hero-share"
-            whileTap={{ scale: 0.98 }}
-            className="w-full py-4 bg-[hsl(var(--kora-evergreen))] text-white font-semibold rounded-2xl flex items-center justify-center gap-2.5 touch-target shadow-lg shadow-[hsl(var(--kora-evergreen)/0.2)]"
+            className="w-full py-4 bg-[hsl(var(--kora-evergreen))] text-white font-semibold rounded-2xl flex items-center justify-center gap-2.5 touch-target shadow-premium-lg btn-premium"
           >
-            <Share2 size={18} />
-            Share fund link
-          </motion.button>
+            <motion.span
+              className="flex items-center gap-2.5"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15, duration: 0.18 }}
+            >
+              <Share2 size={18} />
+              Share fund link
+            </motion.span>
+          </MagneticButton>
         </motion.section>
 
         <div className="lg:grid lg:grid-cols-3 lg:gap-12">
@@ -375,10 +366,10 @@ export default function Dashboard() {
               ) : (
                 <>
                   <motion.div 
-                    className="bg-card border border-border rounded-3xl p-8 sm:p-10 mb-8 shadow-sm"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="bg-card border border-border rounded-3xl p-8 sm:p-10 mb-8 shadow-premium gradient-overlay overflow-hidden"
+                    initial={{ opacity: 0, scale: 0.97, y: 8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
                   >
                     <div className="text-center mb-8">
                       <motion.p 
@@ -403,27 +394,32 @@ export default function Dashboard() {
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-3 gap-6 pt-8 border-t border-border">
-                      <div className="text-center">
+                    <motion.div 
+                      className="grid grid-cols-3 gap-6 pt-8 border-t border-border"
+                      initial="hidden"
+                      animate="visible"
+                      variants={staggerPremium}
+                    >
+                      <motion.div variants={listItemSpring} className="text-center">
                         <p className="text-2xl sm:text-3xl font-bold text-foreground">${investedAmount.toLocaleString()}</p>
                         <p className="text-sm text-muted-foreground mt-1.5 font-medium">Invested</p>
-                      </div>
-                      <div className="text-center border-x border-border">
+                      </motion.div>
+                      <motion.div variants={listItemSpring} className="text-center border-x border-border">
                         <p className="text-2xl sm:text-3xl font-bold text-[hsl(var(--kora-gold))]">${pendingAmount}</p>
                         <p className="text-sm text-muted-foreground mt-1.5 flex items-center justify-center gap-1.5 font-medium">
                           <motion.span 
                             className="w-2 h-2 rounded-full bg-[hsl(var(--kora-gold))]"
-                            animate={{ scale: [1, 1.2, 1], opacity: [0.7, 1, 0.7] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
+                            animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                           />
                           Pending
                         </p>
-                      </div>
-                      <div className="text-center">
+                      </motion.div>
+                      <motion.div variants={listItemSpring} className="text-center">
                         <p className="text-2xl sm:text-3xl font-bold text-foreground">${totalReceived.toLocaleString()}</p>
                         <p className="text-sm text-muted-foreground mt-1.5 font-medium">Received</p>
-                      </div>
-                    </div>
+                      </motion.div>
+                    </motion.div>
                   </motion.div>
 
                   <Tabs defaultValue="gifts" className="w-full">

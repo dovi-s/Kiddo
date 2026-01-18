@@ -1,14 +1,16 @@
 import { Variants, Transition, TargetAndTransition } from "framer-motion";
 
 // ============================================
-// MOTION TOKENS - Native iOS/Android feel
+// MOTION TOKENS - Premium Native Feel
 // ============================================
 
-// Spring configurations for natural feel
+// Spring configurations - iOS/Android-calibrated
 export const springSnappy = { type: "spring" as const, stiffness: 400, damping: 30 };
 export const springGentle = { type: "spring" as const, stiffness: 300, damping: 25 };
 export const springBouncy = { type: "spring" as const, stiffness: 500, damping: 20, mass: 0.8 };
 export const springSmooth = { type: "spring" as const, stiffness: 200, damping: 25 };
+export const springValue = { type: "spring" as const, stiffness: 100, damping: 20, mass: 0.5 }; // For value counters
+export const springMagnetic = { type: "spring" as const, stiffness: 150, damping: 15, mass: 0.1 }; // For magnetic effects
 
 // Easing curves (iOS-inspired) - typed as tuples for framer-motion
 export const easeOutExpo: [number, number, number, number] = [0.16, 1, 0.3, 1];
@@ -155,9 +157,9 @@ export const cardTactile: Variants = {
 export const celebrationPulse: Variants = {
   initial: { scale: 0.8, opacity: 0 },
   animate: {
-    scale: [0.8, 1.15, 1],
+    scale: [0.8, 1.1, 1],
     opacity: [0, 1, 1],
-    transition: { duration: 0.5, ease: easeOutBack }
+    transition: { duration: 0.22, ease: easeOutBack }
   }
 };
 
@@ -690,5 +692,239 @@ export const slideTab: Variants = {
     opacity: 0,
     x: -8,
     transition: { duration: 0.15, ease: "easeIn" }
+  }
+};
+
+// ============================================
+// PREMIUM MICRO-INTERACTIONS
+// ============================================
+
+// Magnetic button - subtle tilt toward cursor
+export const magneticButton: Variants = {
+  rest: { 
+    scale: 1, 
+    y: 0,
+    rotateX: 0,
+    rotateY: 0,
+  },
+  hover: { 
+    scale: 1.02,
+    transition: { duration: 0.2, ease: easeOutExpo }
+  },
+  tap: { 
+    scale: 0.97,
+    y: 1,
+    transition: { duration: 0.1, ease: "easeOut" }
+  }
+};
+
+// Premium card entrance with scale + y offset
+export const cardEntrance: Variants = {
+  hidden: { 
+    opacity: 0, 
+    y: 16,
+    scale: 0.97
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { 
+      type: "spring",
+      stiffness: 300,
+      damping: 25,
+      mass: 0.8
+    }
+  }
+};
+
+// Hero value counter spring
+export const valueCounter: Variants = {
+  initial: { opacity: 0, y: 20, scale: 0.9 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      stiffness: 100,
+      damping: 15,
+      mass: 0.5
+    }
+  }
+};
+
+// Subtle icon rotation on hover
+export const iconRotate: Variants = {
+  rest: { rotate: 0 },
+  hover: { 
+    rotate: 12,
+    transition: { duration: 0.2, ease: easeOutExpo }
+  }
+};
+
+// Chevron bounce animation (single bounce 180-220ms, repeats)
+export const chevronBounce: Variants = {
+  rest: { y: 0 },
+  animate: {
+    y: [0, 2, 0],
+    transition: {
+      duration: 0.2,
+      repeat: Infinity,
+      repeatDelay: 2,
+      ease: "easeInOut"
+    }
+  }
+};
+
+// Premium share button pulse
+export const sharePulse: Variants = {
+  rest: { 
+    scale: 1,
+    boxShadow: "0 4px 20px -4px rgba(27, 67, 50, 0.3)"
+  },
+  hover: {
+    scale: 1.02,
+    boxShadow: "0 8px 30px -4px rgba(27, 67, 50, 0.4)",
+    transition: { duration: 0.2, ease: easeOutExpo }
+  },
+  tap: {
+    scale: 0.98,
+    boxShadow: "0 2px 10px -2px rgba(27, 67, 50, 0.3)",
+    transition: { duration: 0.1 }
+  }
+};
+
+// Stagger for list items with premium timing
+export const staggerPremium: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.1
+    }
+  }
+};
+
+// List item with spring entrance
+export const listItemSpring: Variants = {
+  hidden: { 
+    opacity: 0, 
+    y: 12,
+    scale: 0.98
+  },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { 
+      type: "spring",
+      stiffness: 300,
+      damping: 24
+    }
+  }
+};
+
+// Expand/collapse with spring (180-220ms range)
+export const expandCollapse: Variants = {
+  collapsed: { 
+    height: 0, 
+    opacity: 0,
+    transition: { 
+      height: { duration: 0.2, ease: [0.25, 0.1, 0.25, 1] },
+      opacity: { duration: 0.12 }
+    }
+  },
+  expanded: { 
+    height: "auto", 
+    opacity: 1,
+    transition: { 
+      height: { duration: 0.22, ease: [0.25, 0.1, 0.25, 1] },
+      opacity: { duration: 0.15, delay: 0.05 }
+    }
+  }
+};
+
+// Premium tab indicator slide
+export const tabIndicator: Variants = {
+  initial: { scaleX: 0 },
+  animate: { 
+    scaleX: 1,
+    transition: { 
+      type: "spring",
+      stiffness: 300,
+      damping: 25
+    }
+  }
+};
+
+// Ripple effect for buttons (180-220ms range)
+export const rippleEffect = {
+  initial: { scale: 0, opacity: 0.5 },
+  animate: { 
+    scale: 2.5, 
+    opacity: 0,
+    transition: { duration: 0.22, ease: "easeOut" }
+  }
+};
+
+// Premium notification badge (180-220ms range)
+export const notificationBadge: Variants = {
+  hidden: { scale: 0, opacity: 0 },
+  visible: {
+    scale: [0, 1.15, 1],
+    opacity: 1,
+    transition: { 
+      duration: 0.2,
+      times: [0, 0.6, 1],
+      ease: easeOutBack
+    }
+  }
+};
+
+// Subtle breathing animation for pending states
+export const breathe: Variants = {
+  initial: { opacity: 0.7 },
+  animate: {
+    opacity: [0.7, 1, 0.7],
+    transition: {
+      duration: 2,
+      repeat: Infinity,
+      ease: "easeInOut"
+    }
+  }
+};
+
+// Premium sheet animation (iOS-like)
+export const sheetPremium: Variants = {
+  hidden: { 
+    y: "100%",
+    transition: { 
+      type: "spring",
+      stiffness: 400,
+      damping: 40
+    }
+  },
+  visible: { 
+    y: 0,
+    transition: { 
+      type: "spring",
+      stiffness: 300,
+      damping: 30
+    }
+  }
+};
+
+// Amount selection pop
+export const amountPop: Variants = {
+  rest: { scale: 1 },
+  selected: {
+    scale: [1, 1.08, 1.03],
+    transition: { 
+      duration: 0.25,
+      times: [0, 0.4, 1],
+      ease: easeOutBack
+    }
   }
 };

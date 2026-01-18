@@ -5,7 +5,7 @@ import { Logo } from "@/components/ui/logo";
 import { Plus, CalendarHeart, Gift, ChevronDown, ChevronRight, Edit2, Trash2, Share2, MoreHorizontal, Sparkles } from "lucide-react";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { easeOutExpo } from "@/lib/animations";
+import { easeOutExpo, staggerPremium, listItemSpring, sharePulse } from "@/lib/animations";
 import { toast } from "@/hooks/use-toast";
 
 type Event = {
@@ -137,17 +137,20 @@ export default function Events() {
           {activeEvents.length > 0 && (
             <div className="mb-8">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Active Events</h2>
-              <div className="space-y-3">
+              <motion.div 
+                className="space-y-3"
+                initial="hidden"
+                animate="visible"
+                variants={staggerPremium}
+              >
                 {activeEvents.map((event, index) => {
                   const isExpanded = expandedId === event.id;
                   return (
                     <motion.div
                       key={event.id}
                       layout
-                      initial={{ opacity: 0, y: 12 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.04, duration: 0.2, layout: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] } }}
-                      className={`bg-card border rounded-2xl overflow-hidden ${isExpanded ? "border-[hsl(var(--kora-evergreen)/0.3)] shadow-lg" : "border-border"}`}
+                      variants={listItemSpring}
+                      className={`bg-card border rounded-2xl overflow-hidden transition-shadow duration-200 ${isExpanded ? "border-[hsl(var(--kora-evergreen)/0.3)] shadow-premium-lg" : "border-border shadow-premium-sm"}`}
                     >
                       <motion.div 
                         className="p-5 cursor-pointer"
@@ -250,7 +253,7 @@ export default function Events() {
                     </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
             </div>
           )}
 
