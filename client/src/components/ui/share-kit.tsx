@@ -55,7 +55,8 @@ export function ShareKit({
 }: ShareKitProps) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"link" | "qr" | "card">("link");
-  const [selectedShareId, setSelectedShareId] = useState<string>(defaultShareId || "anytime");
+  const [selectedShareId, setSelectedShareId] = useState<string>(defaultShareId || "fund");
+  const [showOptions, setShowOptions] = useState(false);
   
   const selectedOption = shareOptions?.find(o => o.id === selectedShareId);
   const currentEventSlug = selectedOption?.slug || eventSlug;
@@ -131,22 +132,75 @@ export function ShareKit({
         </div>
 
         {shareOptions && shareOptions.length > 1 && (
-          <div className="p-4 border-b border-border">
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-              {shareOptions.map((option) => (
-                <button
-                  key={option.id}
-                  onClick={() => setSelectedShareId(option.id)}
-                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                    selectedShareId === option.id
-                      ? "bg-[hsl(var(--kora-evergreen))] text-white shadow-sm"
-                      : "bg-muted text-muted-foreground hover:bg-border"
-                  }`}
-                >
-                  {option.isDefault ? <Gift size={14} /> : <Calendar size={14} />}
-                  {option.title}
-                </button>
-              ))}
+          <div className="px-5 py-3 border-b border-border bg-muted/30">
+            <p className="text-[11px] text-muted-foreground mb-2 uppercase tracking-wide font-medium">Sharing</p>
+            <div className="relative">
+              <button
+                onClick={() => setShowOptions(!showOptions)}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-card border border-border rounded-xl text-left hover:border-primary/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  {selectedOption?.isDefault ? (
+                    <div className="w-8 h-8 rounded-lg bg-[hsl(var(--kora-evergreen)/0.1)] flex items-center justify-center">
+                      <Gift size={16} className="text-[hsl(var(--kora-evergreen))]" />
+                    </div>
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Calendar size={16} className="text-primary" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{selectedOption?.title || "Gift anytime"}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedOption?.isDefault ? "Always open" : selectedOption?.date || "Event"}
+                    </p>
+                  </div>
+                </div>
+                <ChevronDown size={16} className={`text-muted-foreground transition-transform ${showOptions ? "rotate-180" : ""}`} />
+              </button>
+              
+              <AnimatePresence>
+                {showOptions && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-10"
+                  >
+                    {shareOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => { setSelectedShareId(option.id); setShowOptions(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                          selectedShareId === option.id
+                            ? "bg-[hsl(var(--kora-evergreen)/0.1)]"
+                            : "hover:bg-muted"
+                        }`}
+                      >
+                        {option.isDefault ? (
+                          <div className="w-8 h-8 rounded-lg bg-[hsl(var(--kora-evergreen)/0.1)] flex items-center justify-center">
+                            <Gift size={16} className="text-[hsl(var(--kora-evergreen))]" />
+                          </div>
+                        ) : (
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Calendar size={16} className="text-primary" />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">{option.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {option.isDefault ? "Always open" : option.date || "Event"}
+                          </p>
+                        </div>
+                        {selectedShareId === option.id && (
+                          <Check size={16} className="text-[hsl(var(--kora-evergreen))]" />
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         )}
