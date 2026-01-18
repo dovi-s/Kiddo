@@ -36,7 +36,7 @@ interface StoredFund {
   projection: number;
   yearsLeft: number;
   isNew: boolean;
-  events: { id: string; slug: string; title: string; raised: number; gifts: number; date?: string; active: boolean }[];
+  events: { id: string; slug: string; title: string; date?: string; active: boolean; isDefault?: boolean }[];
 }
 
 export default function Dashboard() {
@@ -53,6 +53,10 @@ export default function Dashboard() {
   const [showAddFund, setShowAddFund] = useState(false);
   const [showAddChild, setShowAddChild] = useState(false);
   const [newChildName, setNewChildName] = useState("");
+  const [selectedFundSlug, setSelectedFundSlug] = useState("");
+  const [expandedGift, setExpandedGift] = useState<string | null>(null);
+  const [expandedHolding, setExpandedHolding] = useState<number | null>(null);
+  const [showFundPicker, setShowFundPicker] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -124,11 +128,8 @@ export default function Dashboard() {
 
   const profileName = funds[0]?.name || user?.firstName || "My Fund";
   const isPersonal = funds[0]?.accountType === "Individual";
-  const [selectedFundSlug, setSelectedFundSlug] = useState(funds[0]?.slug || "");
-  const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
-  const [expandedGift, setExpandedGift] = useState<string | null>(null);
-  const [expandedHolding, setExpandedHolding] = useState<number | null>(null);
-    const [showFundPicker, setShowFundPicker] = useState(false);
+  const effectiveSelectedSlug = selectedFundSlug || funds[0]?.slug || "";
+  const selectedFund = funds.find(f => f.slug === effectiveSelectedSlug) || funds[0];
   
   const getStatusLabel = (status: FundStatus) => {
     switch (status) {
@@ -296,7 +297,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                   
-                  <Link href={`/activate?type=${accountType}&children=${childrenParam || ""}`}>
+                  <Link href={`/activate?fund=${selectedFund.slug}`}>
                     <Button 
                       data-testid="button-activate-investing"
                       size="lg"
@@ -827,34 +828,23 @@ export default function Dashboard() {
                     toast({ title: "Fund already exists", description: `You already have a fund for ${name}` });
                     return;
                   }
-                  const newFund: StoredFund = {
-                    id: Date.now(),
+                  createFundMutation.mutateAsync({
                     name: name,
                     slug: name.toLowerCase().replace(/\s+/g, "-"),
                     accountType: "UTMA",
                     status: "draft",
-                    balance: 0,
-                    gain: 0,
-                    gainPercent: 0,
-                    contributors: 0,
-                    projection: 0,
-                    yearsLeft: 18,
-                    isNew: true,
-                    events: [
-                      { id: Date.now(), slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
-                    ]
-                  };
-                  const updatedFunds = [...funds, newFund];
-                  setFunds(updatedFunds);
-                  saveStoredFunds(updatedFunds);
-                  setSelectedFundSlug(newFund.slug);
-                  setShowAddChild(false);
-                  setNewChildName("");
-                  toast({ title: `${name}'s fund created`, description: "Activate investing to start growing gifts" });
+                  }).then((newFund) => {
+                    setSelectedFundSlug(newFund.slug);
+                    setShowAddChild(false);
+                    setNewChildName("");
+                    toast({ title: `${name}'s fund created`, description: "Activate investing to start growing gifts" });
+                  }).catch(() => {
+                    toast({ title: "Error", description: "Could not create fund", variant: "destructive" });
+                  });
                 }
               }}
               whileTap={{ scale: 0.98 }}
-              disabled={!newChildName.trim()}
+              disabled={!newChildName.trim() || createFundMutation.isPending}
               data-testid="button-continue-add-child-mobile"
               className="w-full py-4 bg-primary text-primary-foreground rounded-2xl text-lg font-semibold transition-colors disabled:opacity-40 touch-target"
             >
@@ -895,33 +885,22 @@ export default function Dashboard() {
                     toast({ title: "Fund already exists", description: `You already have a fund for ${name}` });
                     return;
                   }
-                  const newFund: StoredFund = {
-                    id: Date.now(),
+                  createFundMutation.mutateAsync({
                     name: name,
                     slug: name.toLowerCase().replace(/\s+/g, "-"),
                     accountType: "UTMA",
                     status: "draft",
-                    balance: 0,
-                    gain: 0,
-                    gainPercent: 0,
-                    contributors: 0,
-                    projection: 0,
-                    yearsLeft: 18,
-                    isNew: true,
-                    events: [
-                      { id: Date.now(), slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
-                    ]
-                  };
-                  const updatedFunds = [...funds, newFund];
-                  setFunds(updatedFunds);
-                  saveStoredFunds(updatedFunds);
-                  setSelectedFundSlug(newFund.slug);
-                  setShowAddChild(false);
-                  setNewChildName("");
-                  toast({ title: `${name}'s fund created`, description: "Activate investing to start growing gifts" });
+                  }).then((newFund) => {
+                    setSelectedFundSlug(newFund.slug);
+                    setShowAddChild(false);
+                    setNewChildName("");
+                    toast({ title: `${name}'s fund created`, description: "Activate investing to start growing gifts" });
+                  }).catch(() => {
+                    toast({ title: "Error", description: "Could not create fund", variant: "destructive" });
+                  });
                 }
               }}
-              disabled={!newChildName.trim()}
+              disabled={!newChildName.trim() || createFundMutation.isPending}
               data-testid="button-continue-add-child"
               className="w-full py-3 bg-primary text-primary-foreground rounded-xl text-sm font-medium hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors disabled:opacity-40"
             >
