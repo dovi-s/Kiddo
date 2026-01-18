@@ -1,10 +1,11 @@
 import { Link } from "wouter";
-import { Menu, Settings } from "lucide-react";
+import { Menu, Settings, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
+import { useAuth } from "@/hooks/use-auth";
 
 interface NavProps {
   showDashboard?: boolean;
@@ -14,6 +15,9 @@ interface NavProps {
 
 export function Nav({ showDashboard, accountType, profileName }: NavProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth();
+  
+  const displayName = user?.firstName || profileName || "User";
 
   return (
     <motion.nav 
@@ -68,11 +72,11 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                 Pricing
                 <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-foreground transition-all group-hover:w-full" />
               </a>
-              <Link href="/dashboard">
+              <a href="/api/login">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button variant="ghost" size="sm" data-testid="button-login">Log in</Button>
                 </motion.div>
-              </Link>
+              </a>
               <Link href="/get-started">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Button size="sm" data-testid="button-get-started">Get started</Button>
@@ -107,7 +111,7 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                   <a href="/#how" onClick={() => setIsOpen(false)} className="font-medium">How it works</a>
                   <a href="/#pricing" onClick={() => setIsOpen(false)} className="font-medium">Pricing</a>
                   <hr />
-                  <Link href="/dashboard" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
+                  <a href="/api/login" onClick={() => setIsOpen(false)} className="font-medium">Log in</a>
                   <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Get started</Button></Link>
                 </>
               )}

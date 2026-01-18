@@ -2,13 +2,14 @@ import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { springGentle, easeOutExpo, easeOutBack } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
+import { useAuth } from "@/hooks/use-auth";
 
 function GrowthCalculator() {
   const [amount, setAmount] = useState(100);
@@ -142,6 +143,26 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 
 export default function Home() {
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
+  const { isAuthenticated, isLoading } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      setLocation("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, setLocation]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50/30 via-background to-background dark:from-slate-950/10">
