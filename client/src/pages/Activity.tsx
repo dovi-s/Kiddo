@@ -5,6 +5,7 @@ import { Logo } from "@/components/ui/logo";
 import { Plus, Gift, TrendingUp, CheckCircle, Send, Clock, ChevronDown, Filter, Calendar, MessageCircle, DollarSign } from "lucide-react";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, easeOutExpo, cardTactile, staggerPremium, listItemSpring } from "@/lib/animations";
+import { haptic } from "@/lib/haptics";
 
 type ActivityItem = {
   id: string;
@@ -196,8 +197,8 @@ export default function Activity() {
                   visible: { opacity: 1, y: 0, scale: 1 }
                 }}
                 transition={{ duration: 0.2, ease: "easeOut", layout: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] } }}
-                className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target ${isExpanded ? "border-[hsl(var(--kora-evergreen)/0.3)] shadow-lg" : "border-border"}`}
-                onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target shadow-premium-sm hover:shadow-premium transition-all duration-150 ${isExpanded ? "border-primary/20 shadow-premium-lg" : "border-border/50"}`}
+                onClick={() => { haptic('selection'); setExpandedId(isExpanded ? null : item.id); }}
                 data-testid={`activity-${item.id}`}
               >
                 <motion.div 

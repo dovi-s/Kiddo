@@ -5,6 +5,7 @@ import { Search, X, TrendingUp, DollarSign, Sparkles, Share2, Copy, Check } from
 import { Confetti } from "@/components/ui/confetti";
 import { bouncySpring, gentleSpring } from "@/lib/animations";
 import { LiveContributorTicker, ContributorBubbles, InvestmentReveal } from "@/components/ui/live-ticker";
+import { haptic } from "@/lib/haptics";
 
 const AMOUNTS = [25, 50, 100, 250];
 

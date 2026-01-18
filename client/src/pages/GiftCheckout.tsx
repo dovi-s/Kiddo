@@ -12,6 +12,7 @@ import { Nav } from "@/components/layout/Nav";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Celebration, SuccessGlow, CountUp } from "@/components/ui/celebration";
 import { bouncySpring, gentleSpring, successPop, easeOutExpo, springSnappy, sharePulse, amountPop } from "@/lib/animations";
+import { haptic } from "@/lib/haptics";
 
 const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
 
@@ -47,10 +48,12 @@ export default function GiftCheckout() {
 
   const handleSubmitPayment = () => {
     if (!canQuickPay && !canSubmit) return;
+    haptic('medium');
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);
       setIsComplete(true);
+      haptic('success');
     }, 2000);
   };
 
@@ -199,7 +202,7 @@ export default function GiftCheckout() {
                 >
                   <Button
                     variant={amount === amt && !customAmount ? "default" : "outline"}
-                    onClick={() => { setAmount(amt); setCustomAmount(""); }}
+                    onClick={() => { haptic('selection'); setAmount(amt); setCustomAmount(""); }}
                     className={`h-12 w-full transition-all ${
                       amount === amt && !customAmount 
                         ? 'bg-primary text-primary-foreground shadow-md' 
@@ -356,10 +359,10 @@ export default function GiftCheckout() {
                   
                   <div className="space-y-2">
                     <button
-                      onClick={() => setPaymentMethod('apple')}
-                      className={`w-full p-3.5 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                      onClick={() => { haptic('selection'); setPaymentMethod('apple'); }}
+                      className={`w-full p-3.5 rounded-xl border-2 transition-all flex items-center gap-3 active:scale-[0.98] ${
                         paymentMethod === 'apple' 
-                          ? 'border-primary bg-primary/5' 
+                          ? 'border-primary bg-primary/5 shadow-premium-sm' 
                           : 'border-border hover:border-muted-foreground/30'
                       }`}
                       data-testid="payment-apple"
@@ -377,10 +380,10 @@ export default function GiftCheckout() {
                     </button>
                     
                     <button
-                      onClick={() => setPaymentMethod('card')}
-                      className={`w-full p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                      onClick={() => { haptic('selection'); setPaymentMethod('card'); }}
+                      className={`w-full p-3.5 rounded-xl border-2 transition-all flex items-center gap-3 active:scale-[0.98] ${
                         paymentMethod === 'card' 
-                          ? 'border-primary bg-primary/5' 
+                          ? 'border-primary bg-primary/5 shadow-premium-sm' 
                           : 'border-border hover:border-muted-foreground/30'
                       }`}
                       data-testid="payment-card"
@@ -394,10 +397,10 @@ export default function GiftCheckout() {
                     </button>
                     
                     <button
-                      onClick={() => setPaymentMethod('bank')}
-                      className={`w-full p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                      onClick={() => { haptic('selection'); setPaymentMethod('bank'); }}
+                      className={`w-full p-3.5 rounded-xl border-2 transition-all flex items-center gap-3 active:scale-[0.98] ${
                         paymentMethod === 'bank' 
-                          ? 'border-primary bg-primary/5' 
+                          ? 'border-primary bg-primary/5 shadow-premium-sm' 
                           : 'border-border hover:border-muted-foreground/30'
                       }`}
                       data-testid="payment-bank"

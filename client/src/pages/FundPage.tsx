@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { staggerContainer, fadeInUp, liftCard, bouncySpring, gentleSpring } from "@/lib/animations";
 import { ContributorBubbles, LiveContributorTicker } from "@/components/ui/live-ticker";
 import { AchievementBadge, getDefaultAchievements } from "@/components/ui/achievements";
+import { haptic } from "@/lib/haptics";
 
 interface Milestone {
   id: string;

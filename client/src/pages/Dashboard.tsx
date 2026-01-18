@@ -15,6 +15,7 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, springGentle, easeOutExpo, cardTactile, staggerFast, sharePulse, staggerPremium, listItemSpring } from "@/lib/animations";
 import { AnimatedValue } from "@/components/ui/animated-value";
 import { MagneticButton } from "@/components/ui/magnetic-button";
+import { haptic } from "@/lib/haptics";
 
 type FundStatus = "draft" | "pending" | "active" | "needs_action";
 
@@ -450,8 +451,8 @@ export default function Dashboard() {
                               initial={{ opacity: 0, y: 12 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: index * 0.04, duration: 0.2, ease: "easeOut", layout: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] } }}
-                              className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target ${isExpanded ? "border-[hsl(var(--kora-evergreen)/0.3)] shadow-lg" : "border-border"}`}
-                              onClick={() => setExpandedGift(isExpanded ? null : gift.id)}
+                              className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target shadow-premium-sm hover:shadow-premium transition-all duration-150 ${isExpanded ? "border-primary/20 shadow-premium-lg" : "border-border/50"}`}
+                              onClick={() => { haptic('selection'); setExpandedGift(isExpanded ? null : gift.id); }}
                             >
                               <motion.div 
                                 className="p-5 flex items-center justify-between"

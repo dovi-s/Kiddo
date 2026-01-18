@@ -7,6 +7,7 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { easeOutExpo, staggerPremium, listItemSpring, sharePulse } from "@/lib/animations";
 import { toast } from "@/hooks/use-toast";
+import { haptic } from "@/lib/haptics";
 
 type Event = {
   id: string;
@@ -154,7 +155,7 @@ export default function Events() {
                     >
                       <motion.div 
                         className="p-5 cursor-pointer"
-                        onClick={() => setExpandedId(isExpanded ? null : event.id)}
+                        onClick={() => { haptic('selection'); setExpandedId(isExpanded ? null : event.id); }}
                         whileTap={{ scale: 0.98 }}
                       >
                         <div className="flex items-center gap-4">

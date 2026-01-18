@@ -6,6 +6,7 @@ import { Logo } from "@/components/ui/logo";
 import { Switch } from "@/components/ui/switch";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, easeOutExpo, cardTactile } from "@/lib/animations";
+import { haptic } from "@/lib/haptics";
 import { 
   User, Shield, Bell, CreditCard, FileText, Search, 
   ChevronRight, Check, LogOut, HelpCircle, ArrowLeft,
@@ -52,6 +53,10 @@ function AutoSaveInput({
     }
   };
 
+  const handleFocus = () => {
+    haptic('light');
+  };
+
   return (
     <div className="space-y-1.5">
       <label className="text-sm font-medium text-foreground">{label}</label>
@@ -61,17 +66,18 @@ function AutoSaveInput({
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onBlur={handleBlur}
+          onFocus={handleFocus}
           placeholder={placeholder}
           disabled={disabled}
-          className={`w-full px-3 py-2.5 border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted transition-all ${disabled ? 'bg-muted text-muted-foreground' : 'bg-white'}`}
+          className={`w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-premium-sm transition-all duration-150 ${disabled ? 'bg-muted text-muted-foreground' : 'bg-card'}`}
         />
         {saving && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-muted border-t-muted-foreground rounded-full animate-spin" />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <div className="w-4 h-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
           </div>
         )}
       </div>
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
     </div>
   );
 }
@@ -91,6 +97,7 @@ function AutoSaveSelect({
   const [saving, setSaving] = useState(false);
 
   const handleChange = (newValue: string) => {
+    haptic('selection');
     setValue(newValue);
     setSaving(true);
     setTimeout(() => {
@@ -106,31 +113,31 @@ function AutoSaveSelect({
         <select 
           value={value}
           onChange={(e) => handleChange(e.target.value)}
-          className="w-full px-3 py-2.5 border border-border rounded-lg text-foreground bg-white focus:outline-none focus:ring-2 focus:ring-primary/10 appearance-none pr-10"
+          className="w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-premium-sm appearance-none pr-10 transition-all duration-150"
         >
           {options.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
           {saving ? (
-            <div className="w-4 h-4 border-2 border-muted border-t-muted-foreground rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
           ) : (
             <ChevronRight size={16} className="text-muted-foreground rotate-90" />
           )}
         </div>
       </div>
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
     </div>
   );
 }
 
 function SettingsSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-border overflow-hidden">
-      <div className="px-5 py-4 border-b border-muted">
-        <h3 className="font-medium text-foreground">{title}</h3>
-        {description && <p className="text-sm text-muted-foreground mt-0.5">{description}</p>}
+    <div className="bg-card rounded-2xl border border-border/50 shadow-premium-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-muted/50">
+        <h3 className="font-semibold text-foreground">{title}</h3>
+        {description && <p className="text-sm text-muted-foreground mt-0.5 leading-relaxed">{description}</p>}
       </div>
       <div className="p-5 space-y-4">
         {children}
@@ -149,10 +156,10 @@ function ToggleRow({ label, description, defaultChecked, onChange }: { label: st
   };
 
   return (
-    <div className="flex items-start justify-between gap-4 py-2">
+    <div className="flex items-start justify-between gap-4 py-3">
       <div>
         <p className="text-sm font-medium text-foreground">{label}</p>
-        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+        {description && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>}
       </div>
       <Switch checked={checked} onCheckedChange={handleChange} />
     </div>
@@ -160,20 +167,25 @@ function ToggleRow({ label, description, defaultChecked, onChange }: { label: st
 }
 
 function LinkRow({ label, description, href, onClick }: { label: string; description?: string; href?: string; onClick?: () => void }) {
+  const handleTap = () => {
+    haptic('selection');
+    onClick?.();
+  };
+  
   const content = (
-    <div className="flex items-center justify-between py-2 cursor-pointer hover:bg-muted -mx-2 px-2 rounded-lg transition-colors">
+    <div className="flex items-center justify-between py-3 cursor-pointer hover:bg-muted/50 -mx-2 px-2 rounded-xl transition-all duration-150 active:scale-[0.99]">
       <div>
         <p className="text-sm font-medium text-foreground">{label}</p>
-        {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+        {description && <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{description}</p>}
       </div>
       <ChevronRight size={16} className="text-muted-foreground" />
     </div>
   );
 
   if (href) {
-    return <Link href={href}>{content}</Link>;
+    return <Link href={href} onClick={handleTap}>{content}</Link>;
   }
-  return <div onClick={onClick}>{content}</div>;
+  return <div onClick={handleTap}>{content}</div>;
 }
 
 function ProfileTab() {

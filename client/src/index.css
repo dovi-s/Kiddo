@@ -53,11 +53,59 @@
   /* Kora Design Tokens - Premium, Calm, Trustworthy */
   /* Palette: Deep Evergreen + Warm Gold + Soft Neutrals */
   
+  /* Premium Spacing Scale (4px base) */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  
+  /* Premium Typography Scale */
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.875rem;    /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.5rem;     /* 24px */
+  --text-3xl: 1.875rem;   /* 30px */
+  --text-4xl: 2.25rem;    /* 36px */
+  
+  /* Letter spacing for premium feel */
+  --tracking-tight: -0.025em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  
+  /* Line heights */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  
+  /* Premium transition timings */
+  --duration-instant: 100ms;
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  
   /* Kora Brand Colors */
   --kora-evergreen: 152 45% 18%;      /* Deep evergreen #1B4332 */
   --kora-evergreen-light: 152 35% 28%; /* Lighter evergreen */
+  --kora-evergreen-hover: 152 45% 22%; /* Hover state */
+  --kora-evergreen-active: 152 45% 15%; /* Active/pressed state */
   --kora-gold: 36 72% 52%;             /* Warm gold #D4A04A */
   --kora-gold-light: 40 65% 70%;       /* Light gold for accents */
+  --kora-gold-glow: 36 80% 60%;        /* Glowing gold */
   --kora-cream: 40 30% 97%;            /* Warm off-white */
   --kora-ink: 150 15% 12%;             /* Near-black with green tint */
   
