@@ -450,161 +450,118 @@ function BillingTab() {
 
   return (
     <div className="space-y-6">
-      {/* Current plan + fee explanation - updates dynamically */}
-      <SettingsSection title="How Kora fees work">
-        <div className="space-y-4">
-          {/* Dynamic current status based on selection */}
-          <motion.div 
-            key={whoPays}
-            initial={{ opacity: 0.8 }}
-            animate={{ opacity: 1 }}
-            className={`p-4 rounded-xl ${giverPays ? "bg-primary/5 border border-primary/20" : "bg-[hsl(var(--kora-evergreen)/0.05)] border border-[hsl(var(--kora-evergreen)/0.2)]"}`}
-          >
-            <p className="text-sm font-medium text-foreground mb-1">
-              {giverPays ? "You're on the Free plan" : "You're covering the Kora fee"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {giverPays 
-                ? "When someone sends a gift, they pay a small fee at checkout (~$4.70 on a $100 gift). You pay nothing."
-                : "When someone sends a gift, they only pay card processing (~$3.20 on a $100 gift). You pay the Kora fee (1.5%)."}
-            </p>
-          </motion.div>
-
-          {/* Want lower fees? */}
-          <div className="pt-2">
-            <p className="text-sm font-medium text-foreground mb-3">Want gift givers to pay even less?</p>
-            
-            <div className="space-y-2">
-              {/* Family option */}
-              <div 
-                onClick={() => toast({ title: "Upgrade to Family", description: "Family plan coming soon" })}
-                className="p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/30 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Sparkles size={18} className="text-[hsl(var(--kora-gold))]" />
-                    <div>
-                      <p className="font-medium text-foreground">Family: $199/year</p>
-                      <p className="text-xs text-muted-foreground">Best for multiple events or ongoing gifts</p>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} className="text-muted-foreground" />
-                </div>
-              </div>
-
-              {/* Event Pass option */}
-              <div 
-                onClick={() => toast({ title: "Event Pass", description: "Add when creating an event" })}
-                className="p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/30 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Calendar size={18} className="text-muted-foreground" />
-                    <div>
-                      <p className="font-medium text-foreground">Event Pass: $99 one-time</p>
-                      <p className="text-xs text-muted-foreground">Best for a single birthday or holiday</p>
-                    </div>
-                  </div>
-                  <ChevronRight size={16} className="text-muted-foreground" />
-                </div>
-              </div>
-            </div>
-
-            <p className="text-xs text-muted-foreground mt-3">
-              {giverPays 
-                ? "Both options waive the Kora fee so gift givers only pay card processing."
-                : "With these, you don't have to cover the fee yourself each time."}
-            </p>
-          </div>
-        </div>
-      </SettingsSection>
-
-      {/* Event Defaults */}
-      <SettingsSection title="Default event settings" description="Applied to new events you create">
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">Who pays the Kora fee?</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => { setWhoPays("guests"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
-                  whoPays === "guests" 
-                    ? "border-primary bg-primary/5" 
-                    : "border-border hover:border-primary/30"
-                }`}
-              >
-                <p className="text-sm font-medium text-foreground">Gift givers</p>
-                <p className="text-xs text-muted-foreground">They pay ~$4.70 on $100</p>
-              </button>
-              <button
-                onClick={() => { setWhoPays("host"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
-                  whoPays === "host" 
-                    ? "border-primary bg-primary/5" 
-                    : "border-border hover:border-primary/30"
-                }`}
-              >
-                <p className="text-sm font-medium text-foreground">I'll cover it</p>
-                <p className="text-xs text-muted-foreground">You pay 1.5% per gift</p>
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-foreground">When an event reaches its goal</label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => { setGoalBehavior("continue"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
-                  goalBehavior === "continue" 
-                    ? "border-primary bg-primary/5" 
-                    : "border-border hover:border-primary/30"
-                }`}
-              >
-                <p className="text-sm font-medium text-foreground">Keep going</p>
-                <p className="text-xs text-muted-foreground">Accept more gifts</p>
-              </button>
-              <button
-                onClick={() => { setGoalBehavior("stop"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
-                  goalBehavior === "stop" 
-                    ? "border-primary bg-primary/5" 
-                    : "border-border hover:border-primary/30"
-                }`}
-              >
-                <p className="text-sm font-medium text-foreground">Stop at goal</p>
-                <p className="text-xs text-muted-foreground">Close the event</p>
-              </button>
-            </div>
-          </div>
-        </div>
-      </SettingsSection>
-
-      {/* Fee Breakdown - Dynamic based on who pays */}
-      <SettingsSection title="What checkout looks like" description={giverPays ? "Gift giver pays all fees" : "You cover the Kora fee"}>
-        <div className="p-4 rounded-xl bg-muted border border-border">
-          <div className="flex items-center justify-between text-sm mb-3 pb-3 border-b border-border">
-            <span className="text-muted-foreground">Example: $100 gift</span>
-            <span className="font-medium text-foreground">Giver pays: {totalForGiver}</span>
-          </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Card processing</span>
-              <span className="text-foreground">$3.20</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Kora fee</span>
-              <span className={giverPays ? "text-foreground" : "text-primary font-medium"}>{koraFeeLabel}</span>
-            </div>
-          </div>
-          {!giverPays && (
-            <p className="text-xs text-primary mt-3 pt-3 border-t border-border">
-              You'll be billed $1.50 for this gift (1.5% of $100).
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
-            Bank transfers (ACH) have lower fees (~$1.50 total).
+      {/* Simple fee explanation */}
+      <SettingsSection title="How fees work">
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Every gift has two small fees: card processing (~3%) which always goes to the card network, and the Kora fee (~1.5%) which supports our platform.
           </p>
+          <div className="p-3 rounded-lg bg-muted/50 text-sm">
+            <p className="text-foreground font-medium">Example: $100 gift by card</p>
+            <p className="text-muted-foreground">Card processing: $3.20 + Kora fee: $1.50 = <span className="text-foreground font-medium">$4.70 total fees</span></p>
+          </div>
+        </div>
+      </SettingsSection>
+
+      {/* Who pays the Kora fee */}
+      <SettingsSection title="Who pays the Kora fee?" description="This applies to all gifts you receive">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => { setWhoPays("guests"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
+            className={`p-3 rounded-xl border-2 text-left transition-all ${
+              whoPays === "guests" 
+                ? "border-primary bg-primary/5" 
+                : "border-border hover:border-primary/30"
+            }`}
+          >
+            <p className="text-sm font-medium text-foreground">Gift givers</p>
+            <p className="text-xs text-muted-foreground">They pay ~$4.70 on $100</p>
+          </button>
+          <button
+            onClick={() => { setWhoPays("host"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
+            className={`p-3 rounded-xl border-2 text-left transition-all ${
+              whoPays === "host" 
+                ? "border-primary bg-primary/5" 
+                : "border-border hover:border-primary/30"
+            }`}
+          >
+            <p className="text-sm font-medium text-foreground">I'll cover it</p>
+            <p className="text-xs text-muted-foreground">They pay ~$3.20, you pay $1.50</p>
+          </button>
+        </div>
+      </SettingsSection>
+
+      {/* Plans to waive the Kora fee */}
+      <SettingsSection title="Want to waive the Kora fee entirely?">
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            With these plans, we cover the Kora fee for you. Gift givers only pay card processing.
+          </p>
+          
+          {/* Family option */}
+          <div 
+            onClick={() => toast({ title: "Upgrade to Family", description: "Family plan coming soon" })}
+            className="p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/30 transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Sparkles size={18} className="text-[hsl(var(--kora-gold))]" />
+                <div>
+                  <p className="font-medium text-foreground">Family: $199/year</p>
+                  <p className="text-xs text-muted-foreground">Covers all gifts up to $15k/year</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-muted-foreground" />
+            </div>
+          </div>
+
+          {/* Event Pass option */}
+          <div 
+            onClick={() => toast({ title: "Event Pass", description: "Add when creating an event" })}
+            className="p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/30 transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Calendar size={18} className="text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-foreground">Event Pass: $99 one-time</p>
+                  <p className="text-xs text-muted-foreground">Covers one event up to $7.5k in gifts</p>
+                </div>
+              </div>
+              <ChevronRight size={16} className="text-muted-foreground" />
+            </div>
+          </div>
+        </div>
+      </SettingsSection>
+
+      {/* Event Settings */}
+      <SettingsSection title="Event settings" description="Defaults for new events you create">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-foreground">When an event reaches its goal</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => { setGoalBehavior("continue"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
+              className={`p-3 rounded-xl border-2 text-left transition-all ${
+                goalBehavior === "continue" 
+                  ? "border-primary bg-primary/5" 
+                  : "border-border hover:border-primary/30"
+              }`}
+            >
+              <p className="text-sm font-medium text-foreground">Keep going</p>
+              <p className="text-xs text-muted-foreground">Accept more gifts</p>
+            </button>
+            <button
+              onClick={() => { setGoalBehavior("stop"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
+              className={`p-3 rounded-xl border-2 text-left transition-all ${
+                goalBehavior === "stop" 
+                  ? "border-primary bg-primary/5" 
+                  : "border-border hover:border-primary/30"
+              }`}
+            >
+              <p className="text-sm font-medium text-foreground">Stop at goal</p>
+              <p className="text-xs text-muted-foreground">Close the event</p>
+            </button>
+          </div>
         </div>
       </SettingsSection>
 
