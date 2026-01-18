@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Check, Loader2, Share2, Copy, Sparkles, CalendarHeart } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Share2, Copy, Sparkles, CalendarHeart, Zap, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { useKora } from "@/lib/KoraContext";
@@ -33,6 +33,7 @@ export default function MomentCreate() {
   const [isCreating, setIsCreating] = useState(false);
   const [created, setCreated] = useState(false);
   const [eventSlug, setEventSlug] = useState("");
+  const [addEventPass, setAddEventPass] = useState(false);
 
   const selectedType = EVENT_TYPES.find(t => t.id === eventType);
   const finalGoal = customGoal || goal;
@@ -82,7 +83,15 @@ export default function MomentCreate() {
               </motion.div>
               
               <h1 className="text-2xl font-bold text-foreground mb-2">Event created!</h1>
-              <p className="text-muted-foreground mb-8">{title} is ready to share</p>
+              <p className="text-muted-foreground mb-4">{title} is ready to share</p>
+              
+              {addEventPass && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] text-sm font-medium mb-6">
+                  <Zap size={14} />
+                  Event Pass active
+                </div>
+              )}
+              {!addEventPass && <div className="mb-4" />}
 
               <div className="bg-card border border-border rounded-2xl p-5 mb-6">
                 <p className="text-xs text-muted-foreground mb-3">Share this link with friends & family</p>
@@ -220,6 +229,45 @@ export default function MomentCreate() {
                   />
                 </div>
               </div>
+
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Waive platform fees</Label>
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { haptic('selection'); setAddEventPass(!addEventPass); }}
+                  className={`w-full p-4 rounded-2xl border-2 text-left transition-all ${
+                    addEventPass 
+                      ? "border-[hsl(var(--kora-gold))] bg-[hsl(var(--kora-gold)/0.05)]" 
+                      : "border-border hover:border-[hsl(var(--kora-gold)/0.3)]"
+                  }`}
+                  data-testid="button-event-pass"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      addEventPass ? "bg-[hsl(var(--kora-gold))]" : "bg-muted"
+                    }`}>
+                      {addEventPass ? (
+                        <Check size={20} className="text-background" />
+                      ) : (
+                        <Zap size={20} className="text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-foreground">Event Pass</span>
+                        <span className="text-sm font-bold text-[hsl(var(--kora-gold))]">$99</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        No Kora fee on gifts for this event (up to $7,500). One-time purchase.
+                      </p>
+                    </div>
+                  </div>
+                </motion.button>
+                <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                  <Info size={12} className="flex-shrink-0 mt-0.5" />
+                  Without Event Pass, gift givers pay a small platform fee (1.5%) or you can cover it in Settings.
+                </p>
+              </div>
             </div>
 
             <div className="mt-10">
@@ -235,6 +283,11 @@ export default function MomentCreate() {
                     <Loader2 className="h-5 w-5 animate-spin" />
                     Creating...
                   </>
+                ) : addEventPass ? (
+                  <>
+                    <Sparkles size={18} />
+                    Create event + Event Pass ($99)
+                  </>
                 ) : (
                   <>
                     <Sparkles size={18} />
@@ -243,7 +296,9 @@ export default function MomentCreate() {
                 )}
               </motion.button>
               <p className="text-xs text-muted-foreground text-center mt-4">
-                You can customize the page design later
+                {addEventPass 
+                  ? "You'll be charged $99 for the Event Pass" 
+                  : "You can customize the page design later"}
               </p>
             </div>
           </motion.div>
