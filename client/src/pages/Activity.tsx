@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
-import { Plus, Gift, TrendingUp, CheckCircle, Send, Clock, ChevronDown, Filter, Calendar, MessageCircle, DollarSign } from "lucide-react";
+import { Gift, TrendingUp, CheckCircle, Send, Clock, ChevronDown, Calendar, MessageCircle, DollarSign } from "lucide-react";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, easeOutExpo, cardTactile, staggerPremium, listItemSpring } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
@@ -129,17 +129,8 @@ export default function Activity() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
         >
-          <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
             <Logo size="sm" className="text-primary" />
-            <Link href="/get-started" onClick={() => haptic('selection')}>
-              <motion.button 
-                whileTap={{ scale: 0.9 }}
-                className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-premium active:scale-95 transition-all duration-150"
-                data-testid="button-create"
-              >
-                <Plus size={20} />
-              </motion.button>
-            </Link>
           </div>
         </motion.header>
 
