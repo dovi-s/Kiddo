@@ -166,7 +166,7 @@ export default function GiftCheckout() {
   }
 
   return (
-    <div className="min-h-screen bg-background font-sans">
+    <PageTransition className="min-h-screen bg-background font-sans">
       <Nav />
       
       <main className="container mx-auto px-4 py-8 max-w-lg">
@@ -496,6 +496,6 @@ export default function GiftCheckout() {
           </p>
         )}
       </main>
-    </div>
+    </PageTransition>
   );
 }

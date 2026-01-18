@@ -49,7 +49,7 @@ export function MobileNav() {
                   }`}
                 >
                   <motion.div
-                    animate={isActive ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+                    animate={{ scale: isActive ? 1.08 : 1 }}
                     transition={{ type: "spring", stiffness: 500, damping: 20 }}
                   >
                     <Icon 
