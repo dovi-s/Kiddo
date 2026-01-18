@@ -853,57 +853,51 @@ export default function GetStarted() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3, duration: 0.15 }}
-                className="space-y-4"
+                className="space-y-3"
               >
                 <Button
+                  onClick={() => {
+                    const childNames = children.map(c => c.name).join(",");
+                    setLocation(`/activate?type=${accountType === "parent" ? "child" : "personal"}&children=${encodeURIComponent(childNames)}`);
+                  }}
+                  size="lg"
+                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 shadow-lg"
+                  data-testid="button-activate-investing"
+                >
+                  <Shield className="mr-2 w-5 h-5" />
+                  Activate investing
+                </Button>
+                
+                <p className="text-xs text-muted-foreground text-center">
+                  Quick verification (~2 min) so gifts become real investments
+                </p>
+
+                <div className="relative py-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-border"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="px-3 bg-background text-xs text-muted-foreground">or</span>
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
                   onClick={() => {
                     const childNames = children.map(c => c.name).join(",");
                     setLocation(`/dashboard?type=${accountType === "parent" ? "child" : "personal"}&name=${encodeURIComponent(recipientName)}&children=${encodeURIComponent(childNames)}&new=true`);
                   }}
                   size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 shadow-lg"
+                  className="w-full h-12 text-base rounded-2xl"
                   data-testid="button-go-to-dashboard"
                 >
-                  Go to dashboard
-                  <ChevronRight className="ml-2 w-5 h-5" />
+                  Skip for now, go to dashboard
                 </Button>
-
-                <motion.button 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4, duration: 0.15 }}
-                  onClick={() => {
-                    const childNames = children.map(c => c.name).join(",");
-                    setLocation(`/activate?type=${accountType === "parent" ? "child" : "personal"}&children=${encodeURIComponent(childNames)}`);
-                  }}
-                  data-testid="button-activate-investing"
-                  className="w-full bg-card rounded-2xl p-5 border border-border shadow-sm hover:border-muted-foreground/30 hover:shadow-md transition-all duration-150 cursor-pointer text-left"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
-                      <Shield size={18} className="text-primary-foreground" />
-                    </div>
-                    <div className="text-left flex-1">
-                      <p className="text-sm font-medium text-foreground mb-1">
-                        Next: Activate investing
-                      </p>
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Complete a quick verification (~2 min) to start receiving real investments
-                      </p>
-                    </div>
-                    <ChevronRight size={16} className="text-muted-foreground mt-3 flex-shrink-0" />
-                  </div>
-                </motion.button>
+                
+                <p className="text-xs text-muted-foreground text-center">
+                  You can activate anytime from your dashboard
+                </p>
               </motion.div>
-
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5, duration: 0.15 }}
-                className="text-xs text-muted-foreground mt-8"
-              >
-                Until activated, gifts are held as pledges
-              </motion.p>
             </div>
           </motion.div>
         )}
