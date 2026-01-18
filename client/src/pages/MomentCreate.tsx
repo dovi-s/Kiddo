@@ -33,7 +33,7 @@ export default function MomentCreate() {
   const [isCreating, setIsCreating] = useState(false);
   const [created, setCreated] = useState(false);
   const [eventSlug, setEventSlug] = useState("");
-  const [addEventPass, setAddEventPass] = useState(false);
+  const hasFamilyPlan = false;
 
   const selectedType = EVENT_TYPES.find(t => t.id === eventType);
   const finalGoal = customGoal || goal;
@@ -85,13 +85,10 @@ export default function MomentCreate() {
               <h1 className="text-2xl font-bold text-foreground mb-2">Event created!</h1>
               <p className="text-muted-foreground mb-4">{title} is ready to share</p>
               
-              {addEventPass && (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] text-sm font-medium mb-6">
-                  <Zap size={14} />
-                  Event Pass active
-                </div>
-              )}
-              {!addEventPass && <div className="mb-4" />}
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] text-sm font-medium mb-6">
+                <Zap size={14} />
+                {hasFamilyPlan ? "Fee-free gifting" : "Event Pass active"}
+              </div>
 
               <div className="bg-card border border-border rounded-2xl p-5 mb-6">
                 <p className="text-xs text-muted-foreground mb-3">Share this link with friends & family</p>
@@ -231,42 +228,35 @@ export default function MomentCreate() {
               </div>
 
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Waive platform fees</Label>
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => { haptic('selection'); setAddEventPass(!addEventPass); }}
-                  className={`w-full p-4 rounded-2xl border-2 text-left transition-all ${
-                    addEventPass 
-                      ? "border-[hsl(var(--kora-gold))] bg-[hsl(var(--kora-gold)/0.05)]" 
-                      : "border-border hover:border-[hsl(var(--kora-gold)/0.3)]"
-                  }`}
-                  data-testid="button-event-pass"
-                >
+                <Label className="text-sm font-medium">Event pricing</Label>
+                <div className="p-4 rounded-2xl border-2 border-[hsl(var(--kora-gold))] bg-[hsl(var(--kora-gold)/0.05)]">
                   <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      addEventPass ? "bg-[hsl(var(--kora-gold))]" : "bg-muted"
-                    }`}>
-                      {addEventPass ? (
-                        <Check size={20} className="text-background" />
-                      ) : (
-                        <Zap size={20} className="text-muted-foreground" />
-                      )}
+                    <div className="w-10 h-10 rounded-xl bg-[hsl(var(--kora-gold))] flex items-center justify-center flex-shrink-0">
+                      <Zap size={20} className="text-background" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-foreground">Event Pass</span>
-                        <span className="text-sm font-bold text-[hsl(var(--kora-gold))]">$99</span>
+                        <span className="font-semibold text-foreground">Event Pass included</span>
+                        {hasFamilyPlan ? (
+                          <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">Covered by Family Plan</span>
+                        ) : (
+                          <span className="text-sm font-bold text-[hsl(var(--kora-gold))]">$99</span>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        No Kora fee on gifts for this event (up to $7,500). One-time purchase.
+                        {hasFamilyPlan 
+                          ? "No Kora fee on gifts for this event (up to $7,500)."
+                          : "No Kora fee on gifts for this event (up to $7,500). One-time purchase."}
                       </p>
                     </div>
                   </div>
-                </motion.button>
-                <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-                  <Info size={12} className="flex-shrink-0 mt-0.5" />
-                  Without Event Pass, gift givers pay a small platform fee (1.5%) or you can cover it in Settings.
-                </p>
+                </div>
+                {!hasFamilyPlan && (
+                  <p className="text-xs text-muted-foreground flex items-start gap-1.5">
+                    <Info size={12} className="flex-shrink-0 mt-0.5" />
+                    Upgrade to Family Plan ($199/year) to create unlimited events with no per-event fee.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -283,22 +273,22 @@ export default function MomentCreate() {
                     <Loader2 className="h-5 w-5 animate-spin" />
                     Creating...
                   </>
-                ) : addEventPass ? (
-                  <>
-                    <Sparkles size={18} />
-                    Create event + Event Pass ($99)
-                  </>
-                ) : (
+                ) : hasFamilyPlan ? (
                   <>
                     <Sparkles size={18} />
                     Create event
                   </>
+                ) : (
+                  <>
+                    <Sparkles size={18} />
+                    Create event ($99)
+                  </>
                 )}
               </motion.button>
               <p className="text-xs text-muted-foreground text-center mt-4">
-                {addEventPass 
-                  ? "You'll be charged $99 for the Event Pass" 
-                  : "You can customize the page design later"}
+                {hasFamilyPlan 
+                  ? "Covered by your Family Plan"
+                  : "Includes Event Pass for fee-free gifting"}
               </p>
             </div>
           </motion.div>
