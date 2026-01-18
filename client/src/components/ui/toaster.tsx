@@ -1,4 +1,5 @@
 import { useToast } from "@/hooks/use-toast"
+import { Check } from "lucide-react"
 import {
   Toast,
   ToastClose,
@@ -11,9 +12,12 @@ import {
 export function Toaster() {
   const { toasts } = useToast()
 
+  const savedToasts = toasts.filter(t => t.variant === "saved")
+  const regularToasts = toasts.filter(t => t.variant !== "saved")
+
   return (
     <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
+      {regularToasts.map(function ({ id, title, description, action, ...props }) {
         return (
           <Toast key={id} {...props}>
             <div className="grid gap-1">
@@ -24,6 +28,14 @@ export function Toaster() {
             </div>
             {action}
             <ToastClose />
+          </Toast>
+        )
+      })}
+      {savedToasts.map(function ({ id, title, ...props }) {
+        return (
+          <Toast key={id} {...props} duration={1200}>
+            <Check size={12} strokeWidth={3} />
+            <span>{title || "Saved"}</span>
           </Toast>
         )
       })}

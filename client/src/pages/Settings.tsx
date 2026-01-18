@@ -49,7 +49,7 @@ function AutoSaveInput({
       setSaving(true);
       setTimeout(() => {
         setSaving(false);
-        toast({ title: "Saved" });
+        toast({ title: "Saved", variant: "saved" });
       }, 500);
     }
   };
@@ -103,7 +103,7 @@ function AutoSaveSelect({
     setSaving(true);
     setTimeout(() => {
       setSaving(false);
-      toast({ title: "Saved" });
+      toast({ title: "Saved", variant: "saved" });
     }, 500);
   };
 
@@ -156,7 +156,7 @@ function ToggleRow({ label, description, defaultChecked, onChange }: { label: st
   const handleChange = (value: boolean) => {
     setChecked(value);
     onChange?.(value);
-    toast({ title: "Saved" });
+    toast({ title: "Saved", variant: "saved" });
   };
 
   return (
@@ -359,7 +359,7 @@ function NotificationsTab() {
       ...prev,
       [id]: { ...prev[id], [channel]: !prev[id][channel] }
     }));
-    toast({ title: "Saved" });
+    toast({ title: "Saved", variant: "saved" });
   };
 
   const categories = [
@@ -522,7 +522,7 @@ function BillingTab() {
             <label className="text-sm font-medium text-foreground">Who pays the Kora fee?</label>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => { setWhoPays("guests"); haptic('selection'); toast({ title: "Saved" }); }}
+                onClick={() => { setWhoPays("guests"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${
                   whoPays === "guests" 
                     ? "border-primary bg-primary/5" 
@@ -533,7 +533,7 @@ function BillingTab() {
                 <p className="text-xs text-muted-foreground">They pay ~$4.70 on $100</p>
               </button>
               <button
-                onClick={() => { setWhoPays("host"); haptic('selection'); toast({ title: "Saved" }); }}
+                onClick={() => { setWhoPays("host"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${
                   whoPays === "host" 
                     ? "border-primary bg-primary/5" 
@@ -550,7 +550,7 @@ function BillingTab() {
             <label className="text-sm font-medium text-foreground">When an event reaches its goal</label>
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => { setGoalBehavior("continue"); haptic('selection'); toast({ title: "Saved" }); }}
+                onClick={() => { setGoalBehavior("continue"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${
                   goalBehavior === "continue" 
                     ? "border-primary bg-primary/5" 
@@ -561,7 +561,7 @@ function BillingTab() {
                 <p className="text-xs text-muted-foreground">Accept more gifts</p>
               </button>
               <button
-                onClick={() => { setGoalBehavior("stop"); haptic('selection'); toast({ title: "Saved" }); }}
+                onClick={() => { setGoalBehavior("stop"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${
                   goalBehavior === "stop" 
                     ? "border-primary bg-primary/5" 
