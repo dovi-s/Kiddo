@@ -225,25 +225,8 @@ export default function Dashboard() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
         >
-          <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
             <Logo size="sm" className="text-primary" />
-            
-            <div className="flex items-center gap-2">
-              {funds.length > 1 && (
-                <motion.button
-                  onClick={() => setShowFundPicker(true)}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex items-center gap-2 text-sm font-medium text-foreground bg-muted hover:bg-border px-3 py-2 rounded-xl transition-colors"
-                  data-testid="button-fund-switcher"
-                >
-                  <div className="w-6 h-6 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-xs font-semibold">
-                    {selectedFund.name.charAt(0)}
-                  </div>
-                  <span className="max-w-[100px] truncate">{selectedFund.name}</span>
-                  <ChevronDown size={14} className="text-muted-foreground" />
-                </motion.button>
-              )}
-            </div>
           </div>
       </motion.header>
       
@@ -256,14 +239,33 @@ export default function Dashboard() {
           className="mb-8"
         >
           <div className="text-center py-4">
-            <motion.h1 
-              className="text-2xl font-bold text-foreground mb-1"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.05 }}
-            >
-              {selectedFund.name}'s Fund
-            </motion.h1>
+            {funds.length > 1 ? (
+              <motion.button
+                onClick={() => { haptic('selection'); setShowFundPicker(true); }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-flex items-center gap-2 mb-1"
+                data-testid="button-fund-switcher"
+              >
+                <motion.h1 
+                  className="text-2xl font-bold text-foreground"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.05 }}
+                >
+                  {selectedFund.name}'s Fund
+                </motion.h1>
+                <ChevronDown size={20} className="text-muted-foreground" />
+              </motion.button>
+            ) : (
+              <motion.h1 
+                className="text-2xl font-bold text-foreground mb-1"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.05 }}
+              >
+                {selectedFund.name}'s Fund
+              </motion.h1>
+            )}
             <p className="text-sm text-muted-foreground">
               {isPersonal 
                 ? "Your investment fund"
