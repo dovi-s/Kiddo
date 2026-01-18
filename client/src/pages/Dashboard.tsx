@@ -173,6 +173,7 @@ export default function Dashboard() {
   const [selectedFundSlug, setSelectedFundSlug] = useState(funds[0]?.slug || profileName.toLowerCase().replace(/\s+/g, "-"));
   const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
   const [expandedGift, setExpandedGift] = useState<string | null>(null);
+  const [expandedHolding, setExpandedHolding] = useState<number | null>(null);
   
   const getStatusLabel = (status: FundStatus) => {
     switch (status) {
@@ -608,35 +609,121 @@ export default function Dashboard() {
                           <p className="text-sm">No holdings yet. Activate investing to get started!</p>
                         </div>
                       ) : (
-                        holdings.map((holding, i) => (
-                          <motion.div 
-                            key={i}
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.04, duration: 0.2, ease: "easeOut" }}
-                            whileHover={{ y: -3, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.12)" }}
-                            whileTap={{ scale: 0.98 }}
-                            className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between cursor-pointer touch-target"
-                          >
-                            <div className="flex items-center gap-3">
-                              <motion.span 
-                                className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1.5 rounded border border-border"
-                                whileHover={{ scale: 1.05, borderColor: "hsl(var(--kora-evergreen))" }}
-                                transition={{ duration: 0.15 }}
+                        holdings.map((holding, i) => {
+                          const isExpanded = expandedHolding === i;
+                          const pricePerShare = (holding.value / holding.shares).toFixed(2);
+                          const costBasis = holding.value - holding.gain;
+                          const gainPercent = ((holding.gain / costBasis) * 100).toFixed(1);
+                          
+                          return (
+                            <motion.div
+                              key={i}
+                              layout
+                              initial={{ opacity: 0, y: 12 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.04, duration: 0.2, ease: "easeOut", layout: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] } }}
+                              className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target ${isExpanded ? "border-[hsl(var(--kora-evergreen)/0.3)] shadow-lg" : "border-border"}`}
+                              onClick={() => setExpandedHolding(isExpanded ? null : i)}
+                            >
+                              <motion.div 
+                                className="p-5 flex items-center justify-between"
+                                whileTap={{ scale: isExpanded ? 1 : 0.98 }}
                               >
-                                {holding.ticker}
-                              </motion.span>
-                              <div>
-                                <p className="text-sm font-medium text-foreground">{holding.name}</p>
-                                <p className="text-xs text-muted-foreground">{holding.shares} shares</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-sm font-semibold text-foreground">${holding.value.toLocaleString()}</p>
-                              <p className="text-xs text-[hsl(var(--kora-evergreen))]">+${holding.gain}</p>
-                            </div>
-                          </motion.div>
-                        ))
+                                <div className="flex items-center gap-3">
+                                  <motion.span 
+                                    layout="position"
+                                    className="text-xs font-bold text-foreground bg-muted px-3 py-2 rounded-lg border border-border"
+                                  >
+                                    {holding.ticker}
+                                  </motion.span>
+                                  <div>
+                                    <p className="text-sm font-medium text-foreground">{holding.name}</p>
+                                    <p className="text-xs text-muted-foreground">{holding.shares} shares</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right">
+                                    <p className="text-base font-bold text-foreground">${holding.value.toLocaleString()}</p>
+                                    <p className="text-xs text-[hsl(var(--kora-evergreen))] font-medium">+${holding.gain} ({gainPercent}%)</p>
+                                  </div>
+                                  <motion.div
+                                    animate={{ rotate: isExpanded ? 180 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                  >
+                                    <ChevronDown size={18} className="text-muted-foreground" />
+                                  </motion.div>
+                                </div>
+                              </motion.div>
+
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="px-5 pb-5 pt-0 space-y-4 border-t border-border/50">
+                                      <div className="pt-4 grid grid-cols-3 gap-3">
+                                        <motion.div
+                                          initial={{ opacity: 0, y: 8 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          transition={{ delay: 0.05 }}
+                                          className="bg-muted/50 rounded-xl p-3 text-center"
+                                        >
+                                          <p className="text-lg font-bold text-foreground">${pricePerShare}</p>
+                                          <p className="text-xs text-muted-foreground">Per share</p>
+                                        </motion.div>
+                                        <motion.div
+                                          initial={{ opacity: 0, y: 8 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          transition={{ delay: 0.1 }}
+                                          className="bg-muted/50 rounded-xl p-3 text-center"
+                                        >
+                                          <p className="text-lg font-bold text-foreground">${costBasis.toLocaleString()}</p>
+                                          <p className="text-xs text-muted-foreground">Cost basis</p>
+                                        </motion.div>
+                                        <motion.div
+                                          initial={{ opacity: 0, y: 8 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          transition={{ delay: 0.15 }}
+                                          className="bg-[hsl(var(--kora-evergreen)/0.1)] rounded-xl p-3 text-center"
+                                        >
+                                          <p className="text-lg font-bold text-[hsl(var(--kora-evergreen))]">+{gainPercent}%</p>
+                                          <p className="text-xs text-muted-foreground">Return</p>
+                                        </motion.div>
+                                      </div>
+
+                                      <motion.div
+                                        initial={{ opacity: 0, y: 8 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.2 }}
+                                        className="bg-gradient-to-r from-[hsl(var(--kora-evergreen)/0.08)] to-transparent rounded-xl p-4"
+                                      >
+                                        <div className="flex items-center gap-2 mb-2">
+                                          <TrendingUp size={14} className="text-[hsl(var(--kora-evergreen))]" />
+                                          <p className="text-xs font-medium text-[hsl(var(--kora-evergreen))]">Performance</p>
+                                        </div>
+                                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                          <motion.div 
+                                            className="h-full bg-[hsl(var(--kora-evergreen))] rounded-full"
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${Math.min(100, (holding.value / 3000) * 100)}%` }}
+                                            transition={{ delay: 0.3, duration: 0.5, ease: "easeOut" }}
+                                          />
+                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                          {((holding.value / portfolioValue) * 100).toFixed(0)}% of portfolio
+                                        </p>
+                                      </motion.div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </motion.div>
+                          );
+                        })
                       )}
                     </TabsContent>
                   </Tabs>
