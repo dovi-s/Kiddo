@@ -1074,7 +1074,7 @@ export default function Dashboard() {
       <TrustFooter />
 
         {/* Spacer for mobile nav */}
-        <div className="h-24 md:hidden" />
+        <div className="h-4 md:hidden" />
       </div>
     </PageTransition>
   );
