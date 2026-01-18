@@ -34,7 +34,7 @@ export function TrustFooter() {
           </div>
           <div className="flex items-center">
             <a
-              href="/security"
+              href="/settings?tab=security"
               className="inline-flex items-center gap-1 text-primary hover:underline"
               data-testid="link-security-learn-more"
             >

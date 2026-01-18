@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { Logo } from "@/components/ui/logo";
@@ -689,7 +689,20 @@ function HelpTab() {
 }
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
+  const [location] = useLocation();
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab") as SettingsTab;
+    return tabs.find(t => t.id === tab) ? tab : "profile";
+  });
+  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab") as SettingsTab;
+    if (tab && tabs.find(t => t.id === tab)) {
+      setActiveTab(tab);
+    }
+  }, [location]);
 
   const renderTabContent = () => {
     switch (activeTab) {
