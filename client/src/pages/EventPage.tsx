@@ -255,9 +255,9 @@ export default function EventPage() {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm pb-2">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 h-16 flex items-center justify-between">
           <button 
-            onClick={() => window.history.back()}
+            onClick={() => { haptic('light'); window.history.back(); }}
             data-testid="button-back"
-            className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all shadow-sm"
+            className="w-10 h-10 rounded-full bg-card border border-border/50 shadow-premium-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 active:scale-95"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -286,7 +286,7 @@ export default function EventPage() {
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="relative overflow-hidden bg-card border border-border rounded-2xl p-8 mb-8 shadow-lg"
+              className="relative overflow-hidden bg-card border border-border/50 rounded-2xl p-8 mb-8 shadow-premium-lg"
             >
               <div className="relative z-10">
                 {!photo && (
@@ -311,7 +311,7 @@ export default function EventPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="mb-8 p-6 bg-card rounded-2xl border border-border shadow-lg"
+                className="mb-8 p-6 bg-card rounded-2xl border border-border/50 shadow-premium"
               >
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-sm font-semibold text-foreground">Group goal</span>
@@ -362,7 +362,7 @@ export default function EventPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="p-5 rounded-2xl bg-card border border-border space-y-4"
+              className="p-5 rounded-2xl bg-card border border-border/50 shadow-premium-sm space-y-4"
             >
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-[hsl(var(--kora-evergreen)/0.1)] flex items-center justify-center">
@@ -444,7 +444,7 @@ export default function EventPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="mb-8 p-4 rounded-2xl bg-card border border-border shadow-lg"
+                        className="mb-8 p-4 rounded-2xl bg-card border border-border/50 shadow-premium-sm"
                       >
                         <div className="flex justify-between text-sm mb-3">
                           <span className="font-semibold text-foreground">${currentAmount.toLocaleString()}</span>
@@ -467,7 +467,7 @@ export default function EventPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="relative overflow-hidden bg-card border border-border rounded-2xl p-6 shadow-lg"
+                    className="relative overflow-hidden bg-card border border-border/50 rounded-2xl p-6 shadow-premium"
                   >
                     <div className="relative z-10">
                       <h2 className="text-lg font-semibold text-foreground mb-6">Choose an amount</h2>
@@ -476,12 +476,12 @@ export default function EventPage() {
                         {AMOUNTS.map((a) => (
                           <button
                             key={a}
-                            onClick={() => { setAmount(a); setCustomAmount(""); }}
+                            onClick={() => { haptic('selection'); setAmount(a); setCustomAmount(""); }}
                             data-testid={`amount-${a}`}
-                            className={`py-4 rounded-xl text-sm font-semibold transition-all ${
+                            className={`py-4 rounded-xl text-sm font-semibold transition-all duration-150 active:scale-[0.97] ${
                               amount === a && !customAmount
-                                ? "bg-primary text-primary-foreground shadow-lg"
-                                : "bg-card border border-border text-foreground hover:border-muted-foreground hover:shadow-md"
+                                ? "bg-primary text-primary-foreground shadow-premium"
+                                : "bg-card border-2 border-border/50 text-foreground hover:border-primary/50 shadow-premium-sm"
                             }`}
                           >
                             ${a}
@@ -497,8 +497,9 @@ export default function EventPage() {
                           placeholder="Other amount"
                           value={customAmount}
                           onChange={(e) => setCustomAmount(e.target.value.replace(/[^0-9]/g, ""))}
+                          onFocus={() => haptic('light')}
                           data-testid="input-custom-amount"
-                          className="w-full pl-8 pr-4 py-4 bg-card border border-border rounded-xl text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                          className="w-full h-14 pl-8 pr-4 bg-card border-2 border-border/50 rounded-xl text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 shadow-premium-sm transition-all duration-150"
                         />
                       </div>
 
@@ -516,9 +517,9 @@ export default function EventPage() {
 
                       <div className="mb-6">
                         <button
-                          onClick={() => setShowStockPicker(true)}
+                          onClick={() => { haptic('selection'); setShowStockPicker(true); }}
                           data-testid="button-open-stock-picker"
-                          className="w-full p-4 bg-card border border-border rounded-xl hover:border-muted-foreground hover:shadow-md transition-all group"
+                          className="w-full p-4 bg-card border-2 border-border/50 rounded-xl hover:border-primary/50 shadow-premium-sm transition-all duration-150 group active:scale-[0.99]"
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -568,10 +569,10 @@ export default function EventPage() {
                       </div>
 
                       <button
-                        onClick={() => setStep(1)}
+                        onClick={() => { haptic('medium'); setStep(1); }}
                         disabled={finalAmount < 5}
                         data-testid="button-continue"
-                        className="w-full py-4 bg-primary text-primary-foreground rounded-2xl font-semibold disabled:opacity-40 hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors shadow-xl"
+                        className="w-full h-14 bg-primary text-primary-foreground rounded-2xl font-semibold disabled:opacity-40 hover:bg-primary/90 transition-all duration-150 shadow-premium active:scale-[0.98]"
                       >
                         {buttonText}
                       </button>

@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, Lock } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { haptic } from "@/lib/haptics";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -12,10 +13,16 @@ export default function Login() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    haptic('medium');
     setIsLoading(true);
     setTimeout(() => {
+      haptic('success');
       setLocation("/dashboard?type=child&name=Mila");
     }, 800);
+  };
+  
+  const handleFocus = () => {
+    haptic('light');
   };
 
   return (
@@ -43,42 +50,45 @@ export default function Login() {
             <p className="text-muted-foreground">Sign in to manage your funds</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="bg-card rounded-2xl border border-border p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-6 space-y-5">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
                   Email
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onFocus={handleFocus}
                   placeholder="you@example.com"
                   data-testid="input-login-email"
-                  className="w-full px-4 py-3 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted-foreground"
+                  className="w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-premium-sm transition-all duration-150"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
                   Password
                 </label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onFocus={handleFocus}
                   placeholder="Your password"
                   data-testid="input-login-password"
-                  className="w-full px-4 py-3 border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-muted-foreground"
+                  className="w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-premium-sm transition-all duration-150"
                 />
               </div>
             </div>
 
-            <button
+            <motion.button
               type="submit"
               disabled={!email || !password || isLoading}
               data-testid="button-login"
-              className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              whileTap={{ scale: 0.97 }}
+              className="w-full h-14 bg-primary text-primary-foreground text-base font-semibold rounded-xl hover:bg-primary/90 shadow-premium transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.97]"
             >
               {isLoading ? (
                 <>
@@ -91,11 +101,14 @@ export default function Login() {
                   <ArrowRight size={18} />
                 </>
               )}
-            </button>
+            </motion.button>
           </form>
 
           <div className="text-center space-y-4">
-            <button className="text-sm text-muted-foreground hover:text-foreground">
+            <button 
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+              onClick={() => haptic('light')}
+            >
               Forgot password?
             </button>
             <div className="text-sm text-muted-foreground">

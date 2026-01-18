@@ -54,16 +54,16 @@ export default function Onboard() {
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.2 }}
-            className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-6"
+            className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-8 shadow-premium"
           >
-            <Check size={32} className="text-success" />
+            <Check size={36} className="text-success" />
           </motion.div>
           
-          <h1 className="text-2xl font-semibold text-foreground mb-2">
+          <h1 className="text-2xl font-semibold text-foreground mb-3 tracking-tight">
             {isPersonal ? "Your fund is ready" : childNames.length > 1 ? `${childNames.length} funds created` : `${childNames[0]}'s fund is ready`}
           </h1>
           
-          <p className="text-muted-foreground mb-8">
+          <p className="text-muted-foreground mb-10 leading-relaxed">
             Setting up your dashboard...
           </p>
 
@@ -72,12 +72,12 @@ export default function Onboard() {
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
             className="mx-auto w-6 h-6"
           >
-            <Loader2 size={24} className="text-muted-foreground" />
+            <Loader2 size={24} className="text-primary" />
           </motion.div>
 
-          <div className="mt-8 p-4 rounded-xl bg-muted text-left">
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Next step:</span> Activate investing to start receiving gifts that become real investments.
+          <div className="mt-10 p-5 rounded-2xl bg-card border border-border/50 shadow-premium-sm text-left">
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              <span className="font-semibold text-foreground">Next step:</span> Activate investing to start receiving gifts that become real investments.
             </p>
           </div>
         </motion.div>

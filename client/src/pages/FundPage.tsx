@@ -202,19 +202,28 @@ export default function FundPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-card rounded-2xl shadow-xl border border-border p-6 mb-8"
+          className="bg-card rounded-2xl shadow-premium-lg border border-border/50 p-6 mb-8"
         >
           <div className="flex flex-col sm:flex-row gap-3">
             <Link href={`/${fundSlug}/anytime`} className="flex-1">
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button className="w-full h-14 text-base rounded-xl bg-primary hover:bg-primary/90" data-testid="button-give-now">
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+                <Button 
+                  className="w-full h-14 text-base font-semibold rounded-xl bg-primary hover:bg-primary/90 shadow-premium transition-all duration-150" 
+                  data-testid="button-give-now"
+                  onClick={() => haptic('selection')}
+                >
                   <Gift className="w-5 h-5 mr-2" />
                   Give to {recipientName}
                 </Button>
               </motion.div>
             </Link>
-            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Button variant="outline" onClick={handleCopyLink} className="h-14 px-6 rounded-xl" data-testid="button-copy-link">
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}>
+              <Button 
+                variant="outline" 
+                onClick={() => { haptic('selection'); handleCopyLink(); }} 
+                className="h-14 px-6 rounded-xl shadow-premium-sm transition-all duration-150" 
+                data-testid="button-copy-link"
+              >
                 {copiedLink ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
               </Button>
             </motion.div>
@@ -233,7 +242,7 @@ export default function FundPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
-                className="bg-card rounded-2xl border border-border p-6"
+                className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-6"
               >
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="font-semibold text-foreground">Next milestone</h2>
@@ -300,12 +309,12 @@ export default function FundPage() {
                   key={event.slug}
                   variants={fadeInUp}
                   custom={i}
-                  whileHover={{ y: -2, boxShadow: "0 8px 30px -10px rgba(0,0,0,0.1)" }}
+                  whileHover={{ y: -2 }}
                   transition={gentleSpring}
                 >
-                  <Link href={`/${fundSlug}/${event.slug}`}>
+                  <Link href={`/${fundSlug}/${event.slug}`} onClick={() => haptic('selection')}>
                     <div 
-                      className="p-5 bg-card border border-border rounded-xl cursor-pointer group"
+                      className="p-5 bg-card border border-border/50 rounded-2xl shadow-premium-sm cursor-pointer group hover:shadow-premium transition-all duration-150 active:scale-[0.99]"
                       data-testid={`event-${event.slug}`}
                     >
                       <div className="flex justify-between items-start">
@@ -343,7 +352,7 @@ export default function FundPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="bg-card rounded-2xl border border-border p-6"
+              className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-6"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-semibold text-foreground">People who believe in {recipientName}</h2>

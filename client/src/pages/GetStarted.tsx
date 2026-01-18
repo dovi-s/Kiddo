@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, Check, Lock, Shield, Plus, Trash2, User, Users, Sparkles, TrendingUp, Heart, Gift, Star, ChevronRight, Wallet } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
+import { haptic } from "@/lib/haptics";
 
 type AccountType = "parent" | "adult" | null;
 
@@ -75,6 +76,7 @@ export default function GetStarted() {
   };
 
   const handleNext = () => {
+    haptic('selection');
     if (step === "hook") setStep("choose");
     else if (step === "choose") setStep("personalize");
     else if (step === "personalize") setStep("projection");
@@ -94,14 +96,17 @@ export default function GetStarted() {
   };
 
   const handleSubmit = () => {
+    haptic('medium');
     setIsSubmitting(true);
     setTimeout(() => {
+      haptic('success');
       setStep("success");
       setIsSubmitting(false);
     }, 1500);
   };
 
   const handleBack = () => {
+    haptic('light');
     if (step === "choose") setStep("hook");
     else if (step === "personalize") setStep("choose");
     else if (step === "projection") setStep("personalize");
@@ -416,10 +421,11 @@ export default function GetStarted() {
                     type="text"
                     value={recipientName}
                     onChange={(e) => setRecipientName(e.target.value)}
+                    onFocus={() => haptic('light')}
                     placeholder={accountType === "parent" ? "e.g., Mila" : "e.g., Sarah"}
                     autoFocus
                     data-testid="input-recipient-name"
-                    className="w-full px-5 py-4 text-xl font-medium border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-150 bg-card"
+                    className="w-full h-14 px-5 text-xl font-medium border-2 border-border/50 rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 shadow-premium-sm transition-all duration-150 bg-card"
                   />
                 </div>
 
