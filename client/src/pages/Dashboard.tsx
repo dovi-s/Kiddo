@@ -18,6 +18,7 @@ import { MagneticButton } from "@/components/ui/magnetic-button";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds, useFundEvents, useFundHoldings, useFundGifts, useCreateFund } from "@/hooks/use-funds";
+import { useEvents } from "@/hooks/use-events";
 import type { Fund, Event, Holding, Gift as GiftType } from "@shared/schema";
 
 type FundStatus = "draft" | "pending" | "active" | "needs_action";
@@ -45,6 +46,7 @@ export default function Dashboard() {
   
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { data: apiFunds = [], isLoading: fundsLoading } = useFunds();
+  const { data: apiEvents = [], isLoading: eventsLoading } = useEvents();
   const createFundMutation = useCreateFund();
 
   const [showShareKit, setShowShareKit] = useState(false);
@@ -58,25 +60,38 @@ export default function Dashboard() {
     }
   }, [authLoading, isAuthenticated]);
 
-  const funds: StoredFund[] = apiFunds.map(f => ({
-    id: f.id,
-    name: f.name,
-    slug: f.slug,
-    accountType: f.accountType,
-    status: (f.status || "active") as FundStatus,
-    balance: parseFloat(f.balance || "0"),
-    gain: parseFloat(f.totalGain || "0"),
-    gainPercent: parseFloat(f.gainPercent || "0"),
-    contributors: f.contributorCount || 0,
-    projection: parseFloat(f.projectedValue || "0"),
-    yearsLeft: f.yearsUntilMaturity || 18,
-    isNew: f.status === "draft",
-    events: [],
-  }));
+  const funds: StoredFund[] = apiFunds.map(f => {
+    const fundEvents = apiEvents
+      .filter(e => e.fundId === f.id)
+      .map(e => ({
+        id: e.id,
+        slug: e.slug,
+        title: e.name,
+        date: e.eventDate ? new Date(e.eventDate).toLocaleDateString() : undefined,
+        active: e.status === "active",
+        isDefault: e.isPermanent,
+      }));
+    
+    return {
+      id: f.id,
+      name: f.name,
+      slug: f.slug,
+      accountType: f.accountType,
+      status: (f.status || "active") as FundStatus,
+      balance: parseFloat(f.balance || "0"),
+      gain: parseFloat(f.totalGain || "0"),
+      gainPercent: parseFloat(f.gainPercent || "0"),
+      contributors: f.contributorCount || 0,
+      projection: parseFloat(f.projectedValue || "0"),
+      yearsLeft: f.yearsUntilMaturity || 18,
+      isNew: f.status === "draft",
+      events: fundEvents,
+    };
+  });
 
   const isNewAccount = funds.length === 0 || funds.every(f => f.status === "draft");
 
-  if (authLoading || fundsLoading) {
+  if (authLoading || fundsLoading || eventsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
