@@ -1,14 +1,15 @@
 import { 
-  funds, events, holdings, gifts, activities, subscriptions,
+  funds, events, holdings, gifts, activities, subscriptions, transactions,
   type Fund, type InsertFund,
   type Event, type InsertEvent,
   type Holding, type InsertHolding,
   type Gift, type InsertGift,
   type Activity, type InsertActivity,
   type Subscription, type InsertSubscription,
+  type Transaction, type InsertTransaction,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 
 export interface IStorage {
   getFund(id: string): Promise<Fund | undefined>;
@@ -44,6 +45,14 @@ export interface IStorage {
   getSubscriptionByStripeId(stripeSubscriptionId: string): Promise<Subscription | undefined>;
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
   updateSubscription(id: string, subscription: Partial<InsertSubscription>): Promise<Subscription | undefined>;
+  upsertSubscription(subscription: InsertSubscription): Promise<Subscription>;
+
+  getGiftByPaymentIntent(paymentIntentId: string): Promise<Gift | undefined>;
+  incrementEventGiftStats(eventId: string, amount: number): Promise<void>;
+
+  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  getTransactionsByUser(userId: string, limit?: number): Promise<Transaction[]>;
+  updateTransaction(id: string, transaction: Partial<InsertTransaction>): Promise<Transaction | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -174,6 +183,42 @@ export class DatabaseStorage implements IStorage {
 
   async updateSubscription(id: string, subscription: Partial<InsertSubscription>): Promise<Subscription | undefined> {
     const [updated] = await db.update(subscriptions).set({ ...subscription, updatedAt: new Date() }).where(eq(subscriptions.id, id)).returning();
+    return updated;
+  }
+
+  async upsertSubscription(subscription: InsertSubscription): Promise<Subscription> {
+    const existing = await this.getSubscription(subscription.userId);
+    if (existing) {
+      const updated = await this.updateSubscription(existing.id, subscription);
+      return updated!;
+    }
+    return this.createSubscription(subscription);
+  }
+
+  async getGiftByPaymentIntent(paymentIntentId: string): Promise<Gift | undefined> {
+    const [gift] = await db.select().from(gifts).where(eq(gifts.stripePaymentIntentId, paymentIntentId));
+    return gift;
+  }
+
+  async incrementEventGiftStats(eventId: string, amount: number): Promise<void> {
+    await db.update(events).set({
+      giftVolume: sql`${events.giftVolume} + ${amount}`,
+      giftCount: sql`${events.giftCount} + 1`,
+      updatedAt: new Date(),
+    }).where(eq(events.id, eventId));
+  }
+
+  async createTransaction(transaction: InsertTransaction): Promise<Transaction> {
+    const [created] = await db.insert(transactions).values(transaction).returning();
+    return created;
+  }
+
+  async getTransactionsByUser(userId: string, limit = 50): Promise<Transaction[]> {
+    return db.select().from(transactions).where(eq(transactions.userId, userId)).orderBy(desc(transactions.createdAt)).limit(limit);
+  }
+
+  async updateTransaction(id: string, transaction: Partial<InsertTransaction>): Promise<Transaction | undefined> {
+    const [updated] = await db.update(transactions).set({ ...transaction, updatedAt: new Date() }).where(eq(transactions.id, id)).returning();
     return updated;
   }
 }

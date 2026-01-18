@@ -147,12 +147,50 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   user: one(users, { fields: [subscriptions.userId], references: [users.id] }),
 }));
 
+export const transactions = pgTable("transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id),
+  type: text("type").notNull(),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripeCheckoutSessionId: text("stripe_checkout_session_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeInvoiceId: text("stripe_invoice_id"),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("usd"),
+  status: text("status").notNull().default("pending"),
+  description: text("description"),
+  metadata: text("metadata"),
+  giftId: varchar("gift_id").references(() => gifts.id),
+  eventId: varchar("event_id").references(() => events.id),
+  fundId: varchar("fund_id").references(() => funds.id),
+  failureReason: text("failure_reason"),
+  refundedAmount: decimal("refunded_amount", { precision: 12, scale: 2 }),
+  refundedAt: timestamp("refunded_at"),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("transactions_user_id_idx").on(table.userId),
+  index("transactions_stripe_payment_intent_idx").on(table.stripePaymentIntentId),
+  index("transactions_type_idx").on(table.type),
+  index("transactions_status_idx").on(table.status),
+]);
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+  user: one(users, { fields: [transactions.userId], references: [users.id] }),
+  gift: one(gifts, { fields: [transactions.giftId], references: [gifts.id] }),
+  event: one(events, { fields: [transactions.eventId], references: [events.id] }),
+  fund: one(funds, { fields: [transactions.fundId], references: [funds.id] }),
+}));
+
 export const insertFundSchema = createInsertSchema(funds).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertHoldingSchema = createInsertSchema(holdings).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertGiftSchema = createInsertSchema(gifts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertActivitySchema = createInsertSchema(activities).omit({ id: true, createdAt: true });
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true, updatedAt: true });
 
 export type InsertFund = z.infer<typeof insertFundSchema>;
 export type Fund = typeof funds.$inferSelect;
@@ -166,3 +204,5 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Activity = typeof activities.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type Transaction = typeof transactions.$inferSelect;

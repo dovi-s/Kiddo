@@ -356,7 +356,7 @@ export async function registerRoutes(
         'subscription',
         `${baseUrl}/settings?tab=billing&success=family`,
         `${baseUrl}/settings?tab=billing&canceled=true`,
-        { userId }
+        { userId, type: 'family_plan' }
       );
       
       res.json({ url: session.url });
@@ -390,13 +390,141 @@ export async function registerRoutes(
         'payment',
         `${baseUrl}/events?success=event-pass&eventId=${eventId || ''}`,
         `${baseUrl}/event/create?canceled=true`,
-        { eventId: eventId || '', eventName: eventName || '', userId }
+        { eventId: eventId || '', eventName: eventName || '', userId, type: 'event_pass' }
       );
       
       res.json({ url: session.url });
     } catch (error) {
       console.error('Error creating checkout session:', error);
       res.status(500).json({ error: 'Failed to create checkout session' });
+    }
+  });
+
+  app.get('/api/stripe/publishable-key', async (req, res) => {
+    try {
+      const key = await stripeService.getPublishableKey();
+      res.json({ publishableKey: key });
+    } catch (error) {
+      console.error('Error getting publishable key:', error);
+      res.status(500).json({ error: 'Failed to get publishable key' });
+    }
+  });
+
+  app.post('/api/stripe/calculate-fees', async (req, res) => {
+    try {
+      const { amount, coverFees, eventId, fundId } = req.body;
+      
+      let hasEventPass = false;
+      let hasFamilyPlan = false;
+      
+      if (eventId) {
+        const event = await storage.getEvent(eventId);
+        if (event?.hasEventPass) {
+          hasEventPass = true;
+        }
+      }
+      
+      if (fundId) {
+        const fund = await storage.getFund(fundId);
+        if (fund?.userId) {
+          const subscription = await storage.getSubscription(fund.userId);
+          if (subscription?.plan === 'family' && subscription?.status === 'active') {
+            hasFamilyPlan = true;
+          }
+        }
+      }
+      
+      const fees = stripeService.calculateFees(
+        parseFloat(amount) || 0, 
+        coverFees || false, 
+        hasEventPass, 
+        hasFamilyPlan
+      );
+      res.json({ ...fees, hasEventPass, hasFamilyPlan });
+    } catch (error) {
+      console.error('Error calculating fees:', error);
+      res.status(500).json({ error: 'Failed to calculate fees' });
+    }
+  });
+
+  app.post('/api/stripe/checkout/gift', async (req, res) => {
+    try {
+      const { fundId, eventId, amount, senderName, senderEmail, message, coverFees } = req.body;
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      
+      if (!fundId || !amount || !senderName) {
+        return res.status(400).json({ error: 'Missing required fields: fundId, amount, senderName' });
+      }
+
+      const fund = await storage.getFund(fundId);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+
+      let hasEventPass = false;
+      let hasFamilyPlan = false;
+      
+      if (eventId) {
+        const event = await storage.getEvent(eventId);
+        if (event?.hasEventPass) {
+          hasEventPass = true;
+        }
+      }
+      
+      if (fund.userId) {
+        const subscription = await storage.getSubscription(fund.userId);
+        if (subscription?.plan === 'family' && subscription?.status === 'active') {
+          hasFamilyPlan = true;
+        }
+      }
+
+      const session = await stripeService.createGiftCheckoutSession({
+        fundId,
+        eventId,
+        amount: parseFloat(amount),
+        senderName,
+        senderEmail,
+        message,
+        coverFees: coverFees || false,
+        hasEventPass,
+        hasFamilyPlan,
+        fundUserId: fund.userId,
+        successUrl: `${baseUrl}/gift/success?fundId=${fundId}&eventId=${eventId || ''}`,
+        cancelUrl: `${baseUrl}/gift/${eventId || fundId}?canceled=true`,
+      });
+
+      res.json({ url: session.url, sessionId: session.id });
+    } catch (error) {
+      console.error('Error creating gift checkout session:', error);
+      res.status(500).json({ error: 'Failed to create checkout session' });
+    }
+  });
+
+  app.get('/api/stripe/session/:sessionId', async (req, res) => {
+    try {
+      const session = await stripeService.getCheckoutSession(req.params.sessionId);
+      res.json({
+        id: session.id,
+        status: session.status,
+        paymentStatus: session.payment_status,
+        amountTotal: session.amount_total,
+        metadata: session.metadata,
+      });
+    } catch (error) {
+      console.error('Error getting checkout session:', error);
+      res.status(500).json({ error: 'Failed to get checkout session' });
+    }
+  });
+
+  app.get('/api/transactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const transactions = await storage.getTransactionsByUser(userId, limit);
+      res.json(transactions);
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+      res.status(500).json({ error: 'Failed to fetch transactions' });
     }
   });
 
