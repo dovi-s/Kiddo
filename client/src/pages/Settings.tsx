@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { Logo } from "@/components/ui/logo";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, easeOutExpo, cardTactile } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
@@ -106,27 +107,30 @@ function AutoSaveSelect({
     }, 500);
   };
 
+  const selectedLabel = options.find(opt => opt.value === value)?.label;
+
   return (
     <div className="space-y-1.5">
       <label className="text-sm font-medium text-foreground">{label}</label>
-      <div className="relative">
-        <select 
-          value={value}
-          onChange={(e) => handleChange(e.target.value)}
-          className="w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-premium-sm appearance-none pr-10 transition-all duration-150"
-        >
+      <Select value={value} onValueChange={handleChange}>
+        <SelectTrigger className="w-full h-12 px-4 border border-border rounded-xl bg-card text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-150">
+          <div className="flex items-center gap-2">
+            {saving && <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" />}
+            <SelectValue placeholder="Select...">{selectedLabel}</SelectValue>
+          </div>
+        </SelectTrigger>
+        <SelectContent className="rounded-xl border border-border shadow-lg bg-card">
           {options.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <SelectItem 
+              key={opt.value} 
+              value={opt.value}
+              className="rounded-lg cursor-pointer py-3 px-4 focus:bg-primary/10 data-[highlighted]:bg-primary/10"
+            >
+              {opt.label}
+            </SelectItem>
           ))}
-        </select>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-          {saving ? (
-            <div className="w-4 h-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
-          ) : (
-            <ChevronRight size={16} className="text-muted-foreground rotate-90" />
-          )}
-        </div>
-      </div>
+        </SelectContent>
+      </Select>
       {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
     </div>
   );
