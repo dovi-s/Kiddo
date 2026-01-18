@@ -441,6 +441,13 @@ function NotificationsTab() {
 }
 
 function BillingTab() {
+  const [whoPays, setWhoPays] = useState<"guests" | "host">("guests");
+  const [goalBehavior, setGoalBehavior] = useState("continue");
+
+  const giverPays = whoPays === "guests";
+  const totalForGiver = giverPays ? "$104.70" : "$103.20";
+  const koraFeeLabel = giverPays ? "$1.50" : "You pay";
+
   return (
     <div className="space-y-6">
       {/* Current Plan */}
@@ -509,12 +516,73 @@ function BillingTab() {
         </div>
       </SettingsSection>
 
-      {/* Fee Breakdown - Simplified */}
-      <SettingsSection title="What gift givers pay" description="Shown at checkout">
+      {/* Event Defaults */}
+      <SettingsSection title="Default event settings" description="Applied to new events you create">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">Who pays the Kora fee?</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { setWhoPays("guests"); haptic('selection'); toast({ title: "Saved" }); }}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${
+                  whoPays === "guests" 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border hover:border-primary/30"
+                }`}
+              >
+                <p className="text-sm font-medium text-foreground">Gift givers</p>
+                <p className="text-xs text-muted-foreground">They pay ~$4.70 on $100</p>
+              </button>
+              <button
+                onClick={() => { setWhoPays("host"); haptic('selection'); toast({ title: "Saved" }); }}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${
+                  whoPays === "host" 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border hover:border-primary/30"
+                }`}
+              >
+                <p className="text-sm font-medium text-foreground">I'll cover it</p>
+                <p className="text-xs text-muted-foreground">You pay 1.5% per gift</p>
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-foreground">When an event reaches its goal</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { setGoalBehavior("continue"); haptic('selection'); toast({ title: "Saved" }); }}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${
+                  goalBehavior === "continue" 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border hover:border-primary/30"
+                }`}
+              >
+                <p className="text-sm font-medium text-foreground">Keep going</p>
+                <p className="text-xs text-muted-foreground">Accept more gifts</p>
+              </button>
+              <button
+                onClick={() => { setGoalBehavior("stop"); haptic('selection'); toast({ title: "Saved" }); }}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${
+                  goalBehavior === "stop" 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border hover:border-primary/30"
+                }`}
+              >
+                <p className="text-sm font-medium text-foreground">Stop at goal</p>
+                <p className="text-xs text-muted-foreground">Close the event</p>
+              </button>
+            </div>
+          </div>
+        </div>
+      </SettingsSection>
+
+      {/* Fee Breakdown - Dynamic based on who pays */}
+      <SettingsSection title="What checkout looks like" description={giverPays ? "Gift giver pays all fees" : "You cover the Kora fee"}>
         <div className="p-4 rounded-xl bg-muted border border-border">
           <div className="flex items-center justify-between text-sm mb-3 pb-3 border-b border-border">
             <span className="text-muted-foreground">Example: $100 gift</span>
-            <span className="font-medium text-foreground">Total: $104.70</span>
+            <span className="font-medium text-foreground">Giver pays: {totalForGiver}</span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
@@ -522,37 +590,19 @@ function BillingTab() {
               <span className="text-foreground">$3.20</span>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className="text-muted-foreground">Kora fee</span>
-                <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">waived with upgrade</span>
-              </div>
-              <span className="text-foreground">$1.50</span>
+              <span className="text-muted-foreground">Kora fee</span>
+              <span className={giverPays ? "text-foreground" : "text-primary font-medium"}>{koraFeeLabel}</span>
             </div>
           </div>
+          {!giverPays && (
+            <p className="text-xs text-primary mt-3 pt-3 border-t border-border">
+              You'll be billed $1.50 for this gift (1.5% of $100).
+            </p>
+          )}
           <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
             Bank transfers (ACH) have lower fees (~$1.50 total).
           </p>
         </div>
-      </SettingsSection>
-
-      {/* Preferences - Cleaner */}
-      <SettingsSection title="Your preferences">
-        <AutoSaveSelect 
-          label="Who pays Kora fee" 
-          value="guests" 
-          options={[
-            { value: "guests", label: "Gift givers pay (default)" },
-            { value: "host", label: "I'll cover it (1.5% per gift)" },
-          ]}
-        />
-        <AutoSaveSelect 
-          label="When goal is reached" 
-          value="continue" 
-          options={[
-            { value: "continue", label: "Keep accepting gifts" },
-            { value: "stop", label: "Stop at goal" },
-          ]}
-        />
       </SettingsSection>
 
       {/* Payment Method */}
