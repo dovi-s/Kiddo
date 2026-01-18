@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Gift, CreditCard, Building2, Check, ChevronDown, Lock, Shield, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Gift, CreditCard, Building2, Check, ChevronDown, Lock, Shield, Eye, EyeOff, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +21,7 @@ export default function GiftCheckout() {
   
   const [amount, setAmount] = useState("50");
   const [customAmount, setCustomAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank'>('card');
+  const [paymentMethod, setPaymentMethod] = useState<'apple' | 'card' | 'bank'>('apple');
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
@@ -34,8 +34,9 @@ export default function GiftCheckout() {
   const numAmount = parseFloat(displayAmount) || 0;
   
   const cardFee = Math.max(1, Math.min(10, numAmount * 0.015));
-  const processingFee = paymentMethod === 'card' ? numAmount * 0.029 + 0.30 : 0.75;
-  const platformFee = paymentMethod === 'card' ? cardFee : Math.max(0.75, Math.min(10, numAmount * 0.01));
+  const isCardPayment = paymentMethod === 'card' || paymentMethod === 'apple';
+  const processingFee = isCardPayment ? numAmount * 0.029 + 0.30 : 0.75;
+  const platformFee = isCardPayment ? cardFee : Math.max(0.75, Math.min(10, numAmount * 0.01));
   const total = numAmount + processingFee + platformFee;
   
   const recipientName = fund ? fund.charAt(0).toUpperCase() + fund.slice(1) : "Recipient";
@@ -345,6 +346,27 @@ export default function GiftCheckout() {
                   <h2 className="text-sm font-semibold text-foreground mb-3">Payment method</h2>
                   
                   <div className="space-y-2">
+                    <button
+                      onClick={() => setPaymentMethod('apple')}
+                      className={`w-full p-3.5 rounded-lg border-2 transition-all flex items-center gap-3 ${
+                        paymentMethod === 'apple' 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border hover:border-muted-foreground/30'
+                      }`}
+                      data-testid="payment-apple"
+                    >
+                      <div className={`w-5 h-5 flex items-center justify-center ${paymentMethod === 'apple' ? 'text-primary' : 'text-muted-foreground'}`}>
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                          <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                        </svg>
+                      </div>
+                      <div className="text-left flex-1">
+                        <p className="text-sm font-medium text-foreground">Apple Pay</p>
+                        <p className="text-xs text-muted-foreground">Fastest · 2.9% + $0.30</p>
+                      </div>
+                      {paymentMethod === 'apple' && <Check className="w-4 h-4 text-primary" />}
+                    </button>
+                    
                     <button
                       onClick={() => setPaymentMethod('card')}
                       className={`w-full p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
