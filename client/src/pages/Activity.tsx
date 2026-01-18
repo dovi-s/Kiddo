@@ -178,59 +178,60 @@ export default function Activity() {
           }}
         >
           {filteredActivity.map((item) => (
-            <motion.div
-              key={item.id}
-              variants={{
-                hidden: { opacity: 0, y: 16, scale: 0.97 },
-                visible: { opacity: 1, y: 0, scale: 1 }
-              }}
-              whileHover={{ y: -3, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.12)" }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-card border border-border rounded-2xl p-5 cursor-pointer touch-target swipe-hint"
-              data-testid={`activity-${item.id}`}
-            >
-              <div className="flex items-start gap-4">
-                <motion.div 
-                  className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center shrink-0"
-                  whileTap={{ scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  {getActivityIcon(item.type)}
-                </motion.div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-base font-semibold text-foreground">{item.title}</p>
-                    <span className="text-sm text-muted-foreground shrink-0">
-                      {formatRelativeTime(item.date)}
-                    </span>
+            <Link href={`/activity/${item.id}`} key={item.id}>
+              <motion.div
+                variants={{
+                  hidden: { opacity: 0, y: 16, scale: 0.97 },
+                  visible: { opacity: 1, y: 0, scale: 1 }
+                }}
+                whileHover={{ y: -3, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.12)" }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="bg-card border border-border rounded-2xl p-5 cursor-pointer touch-target swipe-hint"
+                data-testid={`activity-${item.id}`}
+              >
+                <div className="flex items-start gap-4">
+                  <motion.div 
+                    className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center shrink-0"
+                    whileTap={{ scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    {getActivityIcon(item.type)}
+                  </motion.div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-base font-semibold text-foreground">{item.title}</p>
+                      <span className="text-sm text-muted-foreground shrink-0">
+                        {formatRelativeTime(item.date)}
+                      </span>
+                    </div>
+                    <p className="text-base text-muted-foreground mt-1">{item.description}</p>
+                    <div className="flex items-center gap-2.5 mt-3">
+                      <span className="text-sm px-3 py-1 rounded-full bg-muted text-muted-foreground font-medium">
+                        {item.fundName}
+                      </span>
+                      {item.status === "pending" && (
+                        <motion.span 
+                          className="text-sm px-3 py-1 rounded-full bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] flex items-center gap-1.5 font-medium"
+                          animate={{ opacity: [0.7, 1, 0.7] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                          <Clock size={12} />
+                          Pending
+                        </motion.span>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-base text-muted-foreground mt-1">{item.description}</p>
-                  <div className="flex items-center gap-2.5 mt-3">
-                    <span className="text-sm px-3 py-1 rounded-full bg-muted text-muted-foreground font-medium">
-                      {item.fundName}
-                    </span>
-                    {item.status === "pending" && (
-                      <motion.span 
-                        className="text-sm px-3 py-1 rounded-full bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] flex items-center gap-1.5 font-medium"
-                        animate={{ opacity: [0.7, 1, 0.7] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                      >
-                        <Clock size={12} />
-                        Pending
-                      </motion.span>
-                    )}
-                  </div>
+                  <motion.div
+                    className="shrink-0 mt-2"
+                    whileTap={{ x: 4 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <ChevronRight size={20} className="text-muted-foreground" />
+                  </motion.div>
                 </div>
-                <motion.div
-                  className="shrink-0 mt-2"
-                  whileTap={{ x: 4 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <ChevronRight size={20} className="text-muted-foreground" />
-                </motion.div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </Link>
           ))}
         </motion.div>
 
