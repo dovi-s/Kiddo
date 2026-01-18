@@ -128,15 +128,15 @@ export default function Activity() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
         >
-          <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
-            <Logo size="md" />
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+            <Logo size="sm" className="text-primary" />
             <Link href="/get-started">
               <motion.button 
                 whileTap={{ scale: 0.9 }}
-                className="w-11 h-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20"
+                className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20"
                 data-testid="button-create"
               >
-                <Plus size={22} />
+                <Plus size={20} />
               </motion.button>
             </Link>
           </div>
@@ -150,8 +150,8 @@ export default function Activity() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05, duration: 0.25, ease: easeOutExpo }}
           >
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Activity</h1>
-            <p className="text-muted-foreground mt-2 text-base">Recent updates across all funds</p>
+            <h1 className="text-2xl font-bold text-foreground mb-2">Activity</h1>
+            <p className="text-muted-foreground">Recent updates across all funds</p>
           </motion.div>
 
         {/* Filter chips - larger touch targets */}

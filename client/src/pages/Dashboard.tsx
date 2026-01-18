@@ -239,7 +239,7 @@ export default function Dashboard() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
             <Logo size="sm" className="text-primary" />
             
             <div className="flex items-center gap-2">
@@ -266,7 +266,7 @@ export default function Dashboard() {
           </div>
       </motion.header>
       
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 lg:py-12 momentum-scroll">
+      <main className="max-w-lg mx-auto px-4 py-6 momentum-scroll">
         
         <motion.section
           initial={{ opacity: 0, y: 10 }}
