@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
-import { Plus, Gift, TrendingUp, CheckCircle, Send, Clock, ChevronRight, Filter } from "lucide-react";
+import { Plus, Gift, TrendingUp, CheckCircle, Send, Clock, ChevronDown, Filter, Calendar, MessageCircle, DollarSign } from "lucide-react";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, easeOutExpo, cardTactile } from "@/lib/animations";
 
@@ -15,6 +15,10 @@ type ActivityItem = {
   date: Date;
   fundName: string;
   status: "completed" | "pending";
+  senderName?: string;
+  message?: string;
+  eventName?: string;
+  holdings?: { ticker: string; shares: string }[];
 };
 
 const sampleActivity: ActivityItem[] = [
@@ -26,7 +30,11 @@ const sampleActivity: ActivityItem[] = [
     amount: 100,
     date: new Date(Date.now() - 1000 * 60 * 30),
     fundName: "Mila",
-    status: "completed"
+    status: "completed",
+    senderName: "Sarah Johnson",
+    message: "Happy birthday Mila! Can't wait to watch this grow with you.",
+    eventName: "5th Birthday",
+    holdings: [{ ticker: "VTI", shares: "0.37" }, { ticker: "VXUS", shares: "0.12" }]
   },
   {
     id: "2",
@@ -36,7 +44,8 @@ const sampleActivity: ActivityItem[] = [
     amount: 100,
     date: new Date(Date.now() - 1000 * 60 * 60 * 2),
     fundName: "Mila",
-    status: "completed"
+    status: "completed",
+    holdings: [{ ticker: "VTI", shares: "0.37" }]
   },
   {
     id: "3",
@@ -45,7 +54,8 @@ const sampleActivity: ActivityItem[] = [
     description: "To Sarah Johnson",
     date: new Date(Date.now() - 1000 * 60 * 60 * 3),
     fundName: "Mila",
-    status: "completed"
+    status: "completed",
+    senderName: "Sarah Johnson"
   },
   {
     id: "4",
@@ -55,7 +65,10 @@ const sampleActivity: ActivityItem[] = [
     amount: 50,
     date: new Date(Date.now() - 1000 * 60 * 60 * 24),
     fundName: "Noah",
-    status: "pending"
+    status: "pending",
+    senderName: "Mike Chen",
+    message: "For Noah's future!",
+    eventName: "Baby Shower"
   },
   {
     id: "5",
@@ -96,6 +109,7 @@ function getActivityIcon(type: ActivityItem["type"]) {
 
 export default function Activity() {
   const [filter, setFilter] = useState<"all" | "gifts" | "investments">("all");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filteredActivity = sampleActivity.filter(item => {
     if (filter === "all") return true;
@@ -177,62 +191,181 @@ export default function Activity() {
             }
           }}
         >
-          {filteredActivity.map((item) => (
-            <Link href={`/activity/${item.id}`} key={item.id}>
+          {filteredActivity.map((item) => {
+            const isExpanded = expandedId === item.id;
+            return (
               <motion.div
+                key={item.id}
+                layout
                 variants={{
                   hidden: { opacity: 0, y: 16, scale: 0.97 },
                   visible: { opacity: 1, y: 0, scale: 1 }
                 }}
-                whileHover={{ y: -3, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.12)" }}
-                whileTap={{ scale: 0.98 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-                className="bg-card border border-border rounded-2xl p-5 cursor-pointer touch-target swipe-hint"
+                transition={{ duration: 0.2, ease: "easeOut", layout: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] } }}
+                className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target ${isExpanded ? "border-[hsl(var(--kora-evergreen)/0.3)] shadow-lg" : "border-border"}`}
+                onClick={() => setExpandedId(isExpanded ? null : item.id)}
                 data-testid={`activity-${item.id}`}
               >
-                <div className="flex items-start gap-4">
-                  <motion.div 
-                    className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center shrink-0"
-                    whileTap={{ scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    {getActivityIcon(item.type)}
-                  </motion.div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-base font-semibold text-foreground">{item.title}</p>
-                      <span className="text-sm text-muted-foreground shrink-0">
-                        {formatRelativeTime(item.date)}
-                      </span>
-                    </div>
-                    <p className="text-base text-muted-foreground mt-1">{item.description}</p>
-                    <div className="flex items-center gap-2.5 mt-3">
-                      <span className="text-sm px-3 py-1 rounded-full bg-muted text-muted-foreground font-medium">
-                        {item.fundName}
-                      </span>
-                      {item.status === "pending" && (
-                        <motion.span 
-                          className="text-sm px-3 py-1 rounded-full bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] flex items-center gap-1.5 font-medium"
-                          animate={{ opacity: [0.7, 1, 0.7] }}
-                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                          <Clock size={12} />
-                          Pending
-                        </motion.span>
-                      )}
+                <motion.div 
+                  className="p-5"
+                  whileTap={{ scale: isExpanded ? 1 : 0.98 }}
+                >
+                  <div className="flex items-start gap-4">
+                    <motion.div 
+                      layout="position"
+                      className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center shrink-0"
+                    >
+                      {getActivityIcon(item.type)}
+                    </motion.div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-base font-semibold text-foreground">{item.title}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground shrink-0">
+                            {formatRelativeTime(item.date)}
+                          </span>
+                          <motion.div
+                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <ChevronDown size={18} className="text-muted-foreground" />
+                          </motion.div>
+                        </div>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground font-medium">
+                          {item.fundName}
+                        </span>
+                        {item.status === "pending" && (
+                          <motion.span 
+                            className="text-xs px-2.5 py-1 rounded-full bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] flex items-center gap-1.5 font-medium"
+                            animate={{ opacity: [0.7, 1, 0.7] }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                          >
+                            <Clock size={10} />
+                            Pending
+                          </motion.span>
+                        )}
+                        {item.status === "completed" && item.type === "gift_received" && (
+                          <span className="text-xs px-2.5 py-1 rounded-full bg-success/15 text-success font-medium">
+                            Invested
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <motion.div
-                    className="shrink-0 mt-2"
-                    whileTap={{ x: 4 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <ChevronRight size={20} className="text-muted-foreground" />
-                  </motion.div>
-                </div>
+                </motion.div>
+
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-5 pb-5 pt-0 space-y-4 border-t border-border/50">
+                        <div className="pt-4 grid grid-cols-2 gap-3">
+                          {item.amount && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.05 }}
+                              className="flex items-center gap-2.5"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                                <DollarSign size={14} className="text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Amount</p>
+                                <p className="text-sm font-semibold text-foreground">${item.amount}</p>
+                              </div>
+                            </motion.div>
+                          )}
+                          {item.eventName && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.1 }}
+                              className="flex items-center gap-2.5"
+                            >
+                              <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                                <Calendar size={14} className="text-muted-foreground" />
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Event</p>
+                                <p className="text-sm font-medium text-foreground">{item.eventName}</p>
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
+
+                        {item.message && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.15 }}
+                            className="bg-[hsl(var(--kora-gold)/0.08)] rounded-xl p-4"
+                          >
+                            <div className="flex items-center gap-2 mb-2">
+                              <MessageCircle size={14} className="text-[hsl(var(--kora-gold))]" />
+                              <p className="text-xs font-medium text-[hsl(var(--kora-gold))]">Message from {item.senderName}</p>
+                            </div>
+                            <p className="text-sm text-foreground">"{item.message}"</p>
+                          </motion.div>
+                        )}
+
+                        {item.holdings && item.holdings.length > 0 && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="bg-[hsl(var(--kora-evergreen)/0.08)] rounded-xl p-4"
+                          >
+                            <div className="flex items-center gap-2 mb-3">
+                              <TrendingUp size={14} className="text-[hsl(var(--kora-evergreen))]" />
+                              <p className="text-xs font-medium text-[hsl(var(--kora-evergreen))]">
+                                {item.type === "investment_placed" ? "Holdings purchased" : "Invested in"}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {item.holdings.map((h, idx) => (
+                                <span key={idx} className="text-xs px-2.5 py-1.5 rounded-lg bg-background border border-border text-foreground font-medium">
+                                  {h.ticker} <span className="text-muted-foreground font-normal">({h.shares} shares)</span>
+                                </span>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {item.status === "pending" && (
+                          <motion.p 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.25 }}
+                            className="text-xs text-muted-foreground text-center pt-2"
+                          >
+                            Invests at next market open (9:30 AM ET)
+                          </motion.p>
+                        )}
+
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.3 }}
+                          className="text-xs text-muted-foreground text-center"
+                        >
+                          {item.date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} at {item.date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                        </motion.p>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.div>
-            </Link>
-          ))}
+            );
+          })}
         </motion.div>
 
         {filteredActivity.length === 0 && (
