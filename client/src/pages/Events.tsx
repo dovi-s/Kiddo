@@ -24,9 +24,21 @@ type Event = {
   gifts: number;
   active: boolean;
   type: "birthday" | "holiday" | "anytime" | "custom";
+  isDefault?: boolean;
 };
 
 const sampleEvents: Event[] = [
+  {
+    id: "mila-anytime",
+    title: "Gift anytime",
+    fundName: "Mila",
+    fundSlug: "mila",
+    raised: 150,
+    gifts: 2,
+    active: true,
+    type: "anytime",
+    isDefault: true
+  },
   {
     id: "1",
     title: "5th Birthday",
@@ -50,14 +62,15 @@ const sampleEvents: Event[] = [
     type: "holiday"
   },
   {
-    id: "3",
-    title: "Open anytime",
-    fundName: "Mila",
-    fundSlug: "mila",
-    raised: 150,
-    gifts: 2,
+    id: "noah-anytime",
+    title: "Gift anytime",
+    fundName: "Noah",
+    fundSlug: "noah",
+    raised: 75,
+    gifts: 1,
     active: true,
-    type: "anytime"
+    type: "anytime",
+    isDefault: true
   },
   {
     id: "4",
@@ -97,6 +110,12 @@ export default function Events() {
   const pastEvents = events.filter(e => !e.active);
 
   const handleDelete = (id: string) => {
+    const event = events.find(e => e.id === id);
+    if (event?.isDefault) {
+      toast({ title: "Can't delete", description: "This is your permanent gift link", variant: "destructive" });
+      setActionEventId(null);
+      return;
+    }
     setEvents(events.filter(e => e.id !== id));
     setActionEventId(null);
     toast({ title: "Event deleted" });
@@ -174,9 +193,16 @@ export default function Events() {
                             {getEventIcon(event.type)}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-foreground truncate">{event.title}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-foreground truncate">{event.title}</p>
+                              {event.isDefault && (
+                                <span className="text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                                  Permanent
+                                </span>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground">
-                              {event.fundName} · {event.date || "Always open"}
+                              {event.fundName} · {event.isDefault ? "Always open" : (event.date || "Always open")}
                             </p>
                           </div>
                           <div className="flex items-center gap-3">
