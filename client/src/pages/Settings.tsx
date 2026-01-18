@@ -526,7 +526,9 @@ function BillingTab() {
             </div>
             <div className="pt-3 border-t border-border flex items-center justify-between">
               <span className="font-medium text-foreground">Your child's fund gets</span>
-              <span className="text-lg font-bold text-primary">$100.00</span>
+              <span className="text-lg font-bold text-primary">
+                {giverPays ? "$100.00" : "$98.50"}
+              </span>
             </div>
           </div>
         </motion.div>
