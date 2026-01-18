@@ -130,27 +130,22 @@ export function ShareKit({
           </div>
         </div>
 
-        {shareOptions && shareOptions.length > 0 && (
+        {shareOptions && shareOptions.length > 1 && (
           <div className="p-4 border-b border-border bg-muted/30">
             <p className="text-xs text-muted-foreground mb-2 font-medium">What are you sharing?</p>
-            <div className="flex flex-wrap gap-2">
-              {shareOptions.map((option) => (
-                <button
-                  key={option.id}
-                  onClick={() => setSelectedShareId(option.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
-                    selectedShareId === option.id
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card border border-border text-foreground hover:border-primary/30"
-                  }`}
-                >
-                  {option.isDefault ? <Gift size={14} /> : <Calendar size={14} />}
-                  <span>{option.title}</span>
-                  {option.isDefault && (
-                    <span className="text-[10px] opacity-70">Always open</span>
-                  )}
-                </button>
-              ))}
+            <div className="relative">
+              <select
+                value={selectedShareId}
+                onChange={(e) => setSelectedShareId(e.target.value)}
+                className="w-full appearance-none bg-card border border-border rounded-xl px-4 py-3 pr-10 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+              >
+                {shareOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.isDefault ? `${option.title} (always open)` : `${option.title}${option.date ? ` - ${option.date}` : ""}`}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
             </div>
           </div>
         )}
