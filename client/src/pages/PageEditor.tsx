@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Image, Type, Palette, Eye, Save, Trash2, Plus, Check, Pencil, X, ChevronUp, ChevronDown } from "lucide-react";
 import { haptic } from "@/lib/haptics";
+import { PageTransition } from "@/components/layout/PageTransition";
 
 interface PageData {
   title: string;
@@ -143,7 +144,7 @@ export default function PageEditor() {
 
   const ControlPanel = () => (
     <div className="flex flex-col h-full">
-      <div className="flex border-b border-stone-200">
+      <div className="flex border-b border-border">
         {[
           { id: "content", label: "Content", icon: Type },
           { id: "style", label: "Style", icon: Palette },
@@ -155,8 +156,8 @@ export default function PageEditor() {
             data-testid={`tab-${tab.id}`}
             className={`flex-1 py-3 text-sm font-medium flex items-center justify-center gap-2 border-b-2 transition-colors ${
               activeTab === tab.id
-                ? "text-stone-900 border-stone-900"
-                : "text-stone-400 border-transparent hover:text-stone-600"
+                ? "text-foreground border-primary"
+                : "text-muted-foreground border-transparent hover:text-foreground"
             }`}
           >
             <tab.icon size={14} />
@@ -169,7 +170,7 @@ export default function PageEditor() {
         {activeTab === "content" && (
           <div className="space-y-5">
             <div>
-              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                 Event Name
               </label>
               <input
@@ -177,28 +178,28 @@ export default function PageEditor() {
                 value={pageData.title}
                 onChange={(e) => setPageData(prev => ({ ...prev, title: e.target.value }))}
                 data-testid="input-event-name"
-                className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
+                className="w-full px-3 py-2.5 border border-border rounded-xl bg-muted/50 text-foreground focus:outline-none focus:border-primary/50"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                 URL Slug
               </label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-stone-400">kora.com/{fundSlug}/</span>
+                <span className="text-sm text-muted-foreground">kora.com/{fundSlug}/</span>
                 <input
                   type="text"
                   value={pageData.slug}
                   onChange={(e) => setPageData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
                   data-testid="input-slug"
-                  className="flex-1 px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
+                  className="flex-1 px-3 py-2.5 border border-border rounded-xl bg-muted/50 text-foreground focus:outline-none focus:border-primary/50"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                 Logo Letter
               </label>
               <input
@@ -207,13 +208,13 @@ export default function PageEditor() {
                 onChange={(e) => setPageData(prev => ({ ...prev, displayInitial: e.target.value.slice(0, 1).toUpperCase() }))}
                 maxLength={1}
                 data-testid="input-logo-letter"
-                className="w-16 px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400 text-center text-lg font-semibold"
+                className="w-16 px-3 py-2.5 border border-border rounded-xl bg-muted/50 text-foreground focus:outline-none focus:border-primary/50 text-center text-lg font-semibold"
               />
-              <p className="text-xs text-stone-400 mt-1">The letter shown in the logo circle</p>
+              <p className="text-xs text-muted-foreground mt-1">The letter shown in the logo circle</p>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                 Headline
               </label>
               <textarea
@@ -221,12 +222,12 @@ export default function PageEditor() {
                 onChange={(e) => setPageData(prev => ({ ...prev, headline: e.target.value }))}
                 rows={2}
                 data-testid="input-headline"
-                className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400 resize-none"
+                className="w-full px-3 py-2.5 border border-border rounded-xl bg-muted/50 text-foreground focus:outline-none focus:border-primary/50 resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                 Description
               </label>
               <textarea
@@ -234,12 +235,12 @@ export default function PageEditor() {
                 onChange={(e) => setPageData(prev => ({ ...prev, description: e.target.value }))}
                 rows={3}
                 data-testid="input-description"
-                className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400 resize-none"
+                className="w-full px-3 py-2.5 border border-border rounded-xl bg-muted/50 text-foreground focus:outline-none focus:border-primary/50 resize-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                 Button Text
               </label>
               <input
@@ -247,19 +248,19 @@ export default function PageEditor() {
                 value={pageData.buttonText}
                 onChange={(e) => setPageData(prev => ({ ...prev, buttonText: e.target.value }))}
                 data-testid="input-button-text"
-                className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
+                className="w-full px-3 py-2.5 border border-border rounded-xl bg-muted/50 text-foreground focus:outline-none focus:border-primary/50"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-stone-500 uppercase tracking-wider">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   Show Goal Progress
                 </label>
                 <button
                   onClick={() => setPageData(prev => ({ ...prev, showAmount: !prev.showAmount }))}
                   data-testid="toggle-show-goal"
-                  className={`w-10 h-6 rounded-full transition-colors ${pageData.showAmount ? 'bg-stone-900' : 'bg-stone-200'}`}
+                  className={`w-10 h-6 rounded-full transition-colors ${pageData.showAmount ? 'bg-primary' : 'bg-muted'}`}
                 >
                   <div className={`w-4 h-4 bg-white rounded-full transition-transform mx-1 ${pageData.showAmount ? 'translate-x-4' : ''}`} />
                 </button>
@@ -267,13 +268,13 @@ export default function PageEditor() {
               {pageData.showAmount && (
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <p className="text-xs text-stone-400 mb-1">Goal</p>
+                    <p className="text-xs text-muted-foreground mb-1">Goal</p>
                     <input
                       type="number"
                       value={pageData.goalAmount}
                       onChange={(e) => setPageData(prev => ({ ...prev, goalAmount: Number(e.target.value) }))}
                       data-testid="input-goal-amount"
-                      className="w-full px-3 py-2 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
+                      className="w-full px-3 py-2 border border-border rounded-xl bg-muted/50 text-foreground focus:outline-none focus:border-primary/50"
                     />
                   </div>
                 </div>
@@ -285,7 +286,7 @@ export default function PageEditor() {
         {activeTab === "style" && (
           <div className="space-y-5">
             <div>
-              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-3">
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
                 Theme
               </label>
               <div className="grid grid-cols-3 gap-2">
@@ -294,23 +295,23 @@ export default function PageEditor() {
                     key={theme.id}
                     onClick={() => setPageData(prev => ({ ...prev, theme: theme.id }))}
                     data-testid={`theme-${theme.id}`}
-                    className={`p-2.5 rounded-lg border-2 transition-all ${
+                    className={`p-2.5 rounded-xl border-2 transition-all ${
                       pageData.theme === theme.id
-                        ? "border-stone-900"
-                        : "border-stone-200 hover:border-stone-300"
+                        ? "border-primary"
+                        : "border-border hover:border-muted-foreground/50"
                     }`}
                   >
                     <div className={`h-6 rounded ${theme.bg} mb-1.5 flex items-center justify-center`}>
                       <div className={`w-5 h-0.5 rounded ${theme.accent}`} />
                     </div>
-                    <p className="text-[10px] text-stone-600">{theme.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{theme.name}</p>
                   </button>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-3">
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
                 Layout
               </label>
               <div className="space-y-2">
@@ -319,16 +320,16 @@ export default function PageEditor() {
                     key={layout.id}
                     onClick={() => setPageData(prev => ({ ...prev, layout: layout.id }))}
                     data-testid={`layout-${layout.id}`}
-                    className={`w-full p-2.5 rounded-lg border-2 flex items-center gap-3 transition-all ${
+                    className={`w-full p-2.5 rounded-xl border-2 flex items-center gap-3 transition-all ${
                       pageData.layout === layout.id
-                        ? "border-stone-900 bg-stone-50"
-                        : "border-stone-200 hover:border-stone-300"
+                        ? "border-primary bg-muted"
+                        : "border-border hover:border-muted-foreground/50"
                     }`}
                   >
                     <span className="text-lg">{layout.icon}</span>
-                    <span className="text-sm text-stone-700">{layout.name}</span>
+                    <span className="text-sm text-foreground">{layout.name}</span>
                     {pageData.layout === layout.id && (
-                      <Check size={14} className="ml-auto text-stone-900" />
+                      <Check size={14} className="ml-auto text-primary" />
                     )}
                   </button>
                 ))}
@@ -344,28 +345,28 @@ export default function PageEditor() {
                 <img
                   src={pageData.photo}
                   alt="Event"
-                  className="w-full aspect-video object-cover rounded-lg"
+                  className="w-full aspect-video object-cover rounded-xl"
                 />
                 <button
                   onClick={() => setPageData(prev => ({ ...prev, photo: null }))}
                   data-testid="button-remove-photo"
-                  className="absolute top-2 right-2 p-2 bg-white/90 rounded-lg hover:bg-white"
+                  className="absolute top-2 right-2 p-2 bg-card/90 rounded-lg hover:bg-card"
                 >
-                  <Trash2 size={14} className="text-stone-600" />
+                  <Trash2 size={14} className="text-muted-foreground" />
                 </button>
               </div>
             ) : (
               <button
                 onClick={handlePhotoUpload}
                 data-testid="button-add-photo"
-                className="w-full aspect-video border-2 border-dashed border-stone-300 rounded-lg flex flex-col items-center justify-center gap-2 hover:border-stone-400 transition-colors"
+                className="w-full aspect-video border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 hover:border-muted-foreground/50 transition-colors"
               >
-                <Plus size={24} className="text-stone-400" />
-                <span className="text-sm text-stone-500">Add photo</span>
+                <Plus size={24} className="text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Add photo</span>
               </button>
             )}
 
-            <p className="text-xs text-stone-400 text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Photos help tell your story and increase contributions by 40%
             </p>
 
@@ -373,7 +374,7 @@ export default function PageEditor() {
               <button
                 onClick={handlePhotoUpload}
                 data-testid="button-replace-photo"
-                className="w-full py-2.5 border border-stone-200 rounded-lg text-sm text-stone-600 hover:bg-stone-50"
+                className="w-full py-2.5 border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted"
               >
                 Replace photo
               </button>
@@ -618,16 +619,17 @@ export default function PageEditor() {
   );
 
   return (
-    <div className="min-h-screen bg-stone-100 flex flex-col lg:flex-row">
+    <PageTransition>
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
       
       {/* Desktop: Left Panel - Controls */}
-      <div className="hidden lg:flex w-80 bg-white border-r border-stone-200 flex-col">
-        <div className="p-4 border-b border-stone-200">
+      <div className="hidden lg:flex w-80 bg-card border-r border-border flex-col">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
             <button 
               onClick={() => window.history.back()}
               data-testid="button-back-desktop"
-              className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-900 transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <ArrowLeft size={16} />
               <span>Back</span>
@@ -636,7 +638,7 @@ export default function PageEditor() {
               onClick={handleSave}
               disabled={isSaving}
               data-testid="button-save-desktop"
-              className="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white text-sm rounded-lg hover:bg-stone-800 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-sm rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               {isSaving ? (
                 <span>Saving...</span>
@@ -651,20 +653,20 @@ export default function PageEditor() {
 
           <div className="text-xs flex items-center gap-1.5 mb-4">
             <Link href="/dashboard">
-              <span className="text-stone-400 hover:text-stone-600">Dashboard</span>
+              <span className="text-muted-foreground hover:text-foreground">Dashboard</span>
             </Link>
-            <span className="text-stone-300">/</span>
+            <span className="text-muted-foreground/50">/</span>
             <Link href={`/${fundSlug}`}>
-              <span className="text-stone-400 hover:text-stone-600">{fundName}</span>
+              <span className="text-muted-foreground hover:text-foreground">{fundName}</span>
             </Link>
-            <span className="text-stone-300">/</span>
-            <span className="text-stone-600">{pageData.title}</span>
+            <span className="text-muted-foreground/50">/</span>
+            <span className="text-foreground">{pageData.title}</span>
           </div>
           
           <div className="space-y-2">
-            <p className="text-xs text-stone-400">Event URL</p>
-            <div className="flex items-center gap-0 border border-stone-200 rounded-lg overflow-hidden bg-white">
-              <span className="text-xs text-stone-400 bg-stone-50 px-3 py-2.5 border-r border-stone-200 whitespace-nowrap">
+            <p className="text-xs text-muted-foreground">Event URL</p>
+            <div className="flex items-center gap-0 border border-border rounded-xl overflow-hidden bg-muted/50">
+              <span className="text-xs text-muted-foreground bg-muted px-3 py-2.5 border-r border-border whitespace-nowrap">
                 kora.com/{fundSlug}/
               </span>
               <input
@@ -672,7 +674,7 @@ export default function PageEditor() {
                 value={pageData.slug}
                 onChange={(e) => setPageData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") }))}
                 data-testid="input-event-slug"
-                className="flex-1 text-sm text-stone-900 px-3 py-2 focus:outline-none min-w-0"
+                className="flex-1 text-sm text-foreground px-3 py-2 focus:outline-none min-w-0 bg-transparent"
                 placeholder="event-name"
               />
             </div>
@@ -681,11 +683,11 @@ export default function PageEditor() {
 
         <ControlPanel />
 
-        <div className="p-4 border-t border-stone-200">
+        <div className="p-4 border-t border-border">
           <Link href={`/${fundSlug}/${pageData.slug}`} className="block">
             <button 
               data-testid="button-preview-desktop"
-              className="w-full py-2.5 border border-stone-200 rounded-lg text-sm text-stone-600 hover:bg-stone-50 flex items-center justify-center gap-2 transition-colors"
+              className="w-full py-2.5 border border-border rounded-xl text-sm text-muted-foreground hover:bg-muted flex items-center justify-center gap-2 transition-colors"
             >
               <Eye size={14} />
               Full Preview
@@ -695,22 +697,22 @@ export default function PageEditor() {
       </div>
 
       {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-50 bg-white border-b border-stone-200">
+      <header className="lg:hidden sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50">
         <div className="px-4 h-14 flex items-center justify-between">
           <button 
             onClick={() => window.history.back()}
             data-testid="button-back-mobile"
-            className="flex items-center gap-1.5 text-sm text-stone-500"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground"
           >
             <ArrowLeft size={16} />
             <span>Back</span>
           </button>
-          <span className="text-sm font-medium text-stone-900 truncate max-w-32">{pageData.title}</span>
+          <span className="text-sm font-medium text-foreground truncate max-w-32">{pageData.title}</span>
           <button
             onClick={handleSave}
             disabled={isSaving}
             data-testid="button-save-mobile"
-            className="px-3 py-1.5 bg-stone-900 text-white text-sm rounded-lg disabled:opacity-50"
+            className="px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-lg disabled:opacity-50"
           >
             {isSaving ? "..." : "Save"}
           </button>
@@ -723,27 +725,27 @@ export default function PageEditor() {
           
           {/* Desktop Preview Header */}
           <div className="hidden lg:flex items-center justify-between mb-4">
-            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Live Preview</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Live Preview</p>
             <div className="flex items-center gap-3">
               <div className="flex text-xs">
                 <button 
                   onClick={() => setPreviewStep(0)}
                   data-testid="preview-tab-give"
-                  className={`px-3 py-1.5 rounded-l border transition-colors ${previewStep === 0 ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'}`}
+                  className={`px-3 py-1.5 rounded-l border transition-colors ${previewStep === 0 ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
                 >
                   Give
                 </button>
                 <button 
                   onClick={() => setPreviewStep(1)}
                   data-testid="preview-tab-details"
-                  className={`px-3 py-1.5 border-t border-b transition-colors ${previewStep === 1 ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'}`}
+                  className={`px-3 py-1.5 border-t border-b transition-colors ${previewStep === 1 ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
                 >
                   Details
                 </button>
                 <button 
                   onClick={() => setPreviewStep(2)}
                   data-testid="preview-tab-done"
-                  className={`px-3 py-1.5 rounded-r border transition-colors ${previewStep === 2 ? 'bg-stone-900 text-white border-stone-900' : 'bg-white text-stone-500 border-stone-200 hover:bg-stone-50'}`}
+                  className={`px-3 py-1.5 rounded-r border transition-colors ${previewStep === 2 ? 'bg-primary text-primary-foreground border-primary' : 'bg-card text-muted-foreground border-border hover:bg-muted'}`}
                 >
                   Done
                 </button>
@@ -752,7 +754,7 @@ export default function PageEditor() {
           </div>
 
           {/* Phone Frame - Desktop */}
-          <div className="hidden lg:block bg-stone-900 rounded-[2.5rem] p-3 shadow-2xl">
+          <div className="hidden lg:block bg-foreground rounded-[2.5rem] p-3 shadow-2xl">
             <div className={`rounded-[2rem] overflow-hidden ${currentTheme.bg}`}>
               <Preview />
             </div>
@@ -773,7 +775,7 @@ export default function PageEditor() {
               initial={{ height: 0 }}
               animate={{ height: "60vh" }}
               exit={{ height: 0 }}
-              className="bg-white border-t border-stone-200 overflow-hidden"
+              className="bg-card border-t border-border overflow-hidden"
             >
               <div className="h-full overflow-auto">
                 <ControlPanel />
@@ -782,11 +784,11 @@ export default function PageEditor() {
           )}
         </AnimatePresence>
         
-        <div className="bg-white border-t border-stone-200 px-4 py-3 flex items-center justify-between gap-3">
+        <div className="bg-card border-t border-border px-4 py-3 flex items-center justify-between gap-3">
           <button
             onClick={() => setMobileControlsOpen(!mobileControlsOpen)}
             data-testid="button-toggle-controls"
-            className="flex-1 py-2.5 border border-stone-200 rounded-lg text-sm text-stone-600 flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 border border-border rounded-xl text-sm text-muted-foreground flex items-center justify-center gap-2"
           >
             {mobileControlsOpen ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
             <span>{mobileControlsOpen ? "Close" : "Edit"}</span>
@@ -794,7 +796,7 @@ export default function PageEditor() {
           <Link href={`/${fundSlug}/${pageData.slug}`} className="flex-1">
             <button 
               data-testid="button-preview-mobile"
-              className="w-full py-2.5 bg-stone-900 text-white rounded-lg text-sm flex items-center justify-center gap-2"
+              className="w-full py-2.5 bg-primary text-primary-foreground rounded-xl text-sm flex items-center justify-center gap-2"
             >
               <Eye size={14} />
               <span>Preview</span>
@@ -803,5 +805,6 @@ export default function PageEditor() {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 }
