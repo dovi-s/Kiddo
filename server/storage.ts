@@ -1,38 +1,181 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { 
+  funds, events, holdings, gifts, activities, subscriptions,
+  type Fund, type InsertFund,
+  type Event, type InsertEvent,
+  type Holding, type InsertHolding,
+  type Gift, type InsertGift,
+  type Activity, type InsertActivity,
+  type Subscription, type InsertSubscription,
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getFund(id: string): Promise<Fund | undefined>;
+  getFundBySlug(slug: string): Promise<Fund | undefined>;
+  getFundsByUser(userId: string): Promise<Fund[]>;
+  createFund(fund: InsertFund): Promise<Fund>;
+  updateFund(id: string, fund: Partial<InsertFund>): Promise<Fund | undefined>;
+  deleteFund(id: string): Promise<void>;
+
+  getEvent(id: string): Promise<Event | undefined>;
+  getEventBySlug(slug: string): Promise<Event | undefined>;
+  getEventsByFund(fundId: string): Promise<Event[]>;
+  getEventsByUser(userId: string): Promise<Event[]>;
+  createEvent(event: InsertEvent): Promise<Event>;
+  updateEvent(id: string, event: Partial<InsertEvent>): Promise<Event | undefined>;
+  deleteEvent(id: string): Promise<void>;
+
+  getHoldingsByFund(fundId: string): Promise<Holding[]>;
+  createHolding(holding: InsertHolding): Promise<Holding>;
+  updateHolding(id: string, holding: Partial<InsertHolding>): Promise<Holding | undefined>;
+
+  getGift(id: string): Promise<Gift | undefined>;
+  getGiftsByFund(fundId: string): Promise<Gift[]>;
+  getGiftsByEvent(eventId: string): Promise<Gift[]>;
+  createGift(gift: InsertGift): Promise<Gift>;
+  updateGift(id: string, gift: Partial<InsertGift>): Promise<Gift | undefined>;
+
+  getActivitiesByUser(userId: string, limit?: number): Promise<Activity[]>;
+  getActivitiesByFund(fundId: string, limit?: number): Promise<Activity[]>;
+  createActivity(activity: InsertActivity): Promise<Activity>;
+
+  getSubscription(userId: string): Promise<Subscription | undefined>;
+  getSubscriptionByStripeId(stripeSubscriptionId: string): Promise<Subscription | undefined>;
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  updateSubscription(id: string, subscription: Partial<InsertSubscription>): Promise<Subscription | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getFund(id: string): Promise<Fund | undefined> {
+    const [fund] = await db.select().from(funds).where(eq(funds.id, id));
+    return fund;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getFundBySlug(slug: string): Promise<Fund | undefined> {
+    const [fund] = await db.select().from(funds).where(eq(funds.slug, slug));
+    return fund;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getFundsByUser(userId: string): Promise<Fund[]> {
+    return db.select().from(funds).where(eq(funds.userId, userId)).orderBy(desc(funds.createdAt));
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async createFund(fund: InsertFund): Promise<Fund> {
+    const [created] = await db.insert(funds).values(fund).returning();
+    return created;
+  }
+
+  async updateFund(id: string, fund: Partial<InsertFund>): Promise<Fund | undefined> {
+    const [updated] = await db.update(funds).set({ ...fund, updatedAt: new Date() }).where(eq(funds.id, id)).returning();
+    return updated;
+  }
+
+  async deleteFund(id: string): Promise<void> {
+    await db.delete(funds).where(eq(funds.id, id));
+  }
+
+  async getEvent(id: string): Promise<Event | undefined> {
+    const [event] = await db.select().from(events).where(eq(events.id, id));
+    return event;
+  }
+
+  async getEventBySlug(slug: string): Promise<Event | undefined> {
+    const [event] = await db.select().from(events).where(eq(events.slug, slug));
+    return event;
+  }
+
+  async getEventsByFund(fundId: string): Promise<Event[]> {
+    return db.select().from(events).where(eq(events.fundId, fundId)).orderBy(desc(events.createdAt));
+  }
+
+  async getEventsByUser(userId: string): Promise<Event[]> {
+    return db.select().from(events).where(eq(events.userId, userId)).orderBy(desc(events.createdAt));
+  }
+
+  async createEvent(event: InsertEvent): Promise<Event> {
+    const [created] = await db.insert(events).values(event).returning();
+    return created;
+  }
+
+  async updateEvent(id: string, event: Partial<InsertEvent>): Promise<Event | undefined> {
+    const [updated] = await db.update(events).set({ ...event, updatedAt: new Date() }).where(eq(events.id, id)).returning();
+    return updated;
+  }
+
+  async deleteEvent(id: string): Promise<void> {
+    await db.delete(events).where(eq(events.id, id));
+  }
+
+  async getHoldingsByFund(fundId: string): Promise<Holding[]> {
+    return db.select().from(holdings).where(eq(holdings.fundId, fundId));
+  }
+
+  async createHolding(holding: InsertHolding): Promise<Holding> {
+    const [created] = await db.insert(holdings).values(holding).returning();
+    return created;
+  }
+
+  async updateHolding(id: string, holding: Partial<InsertHolding>): Promise<Holding | undefined> {
+    const [updated] = await db.update(holdings).set({ ...holding, updatedAt: new Date() }).where(eq(holdings.id, id)).returning();
+    return updated;
+  }
+
+  async getGift(id: string): Promise<Gift | undefined> {
+    const [gift] = await db.select().from(gifts).where(eq(gifts.id, id));
+    return gift;
+  }
+
+  async getGiftsByFund(fundId: string): Promise<Gift[]> {
+    return db.select().from(gifts).where(eq(gifts.fundId, fundId)).orderBy(desc(gifts.createdAt));
+  }
+
+  async getGiftsByEvent(eventId: string): Promise<Gift[]> {
+    return db.select().from(gifts).where(eq(gifts.eventId, eventId)).orderBy(desc(gifts.createdAt));
+  }
+
+  async createGift(gift: InsertGift): Promise<Gift> {
+    const [created] = await db.insert(gifts).values(gift).returning();
+    return created;
+  }
+
+  async updateGift(id: string, gift: Partial<InsertGift>): Promise<Gift | undefined> {
+    const [updated] = await db.update(gifts).set({ ...gift, updatedAt: new Date() }).where(eq(gifts.id, id)).returning();
+    return updated;
+  }
+
+  async getActivitiesByUser(userId: string, limit = 50): Promise<Activity[]> {
+    return db.select().from(activities).where(eq(activities.userId, userId)).orderBy(desc(activities.createdAt)).limit(limit);
+  }
+
+  async getActivitiesByFund(fundId: string, limit = 50): Promise<Activity[]> {
+    return db.select().from(activities).where(eq(activities.fundId, fundId)).orderBy(desc(activities.createdAt)).limit(limit);
+  }
+
+  async createActivity(activity: InsertActivity): Promise<Activity> {
+    const [created] = await db.insert(activities).values(activity).returning();
+    return created;
+  }
+
+  async getSubscription(userId: string): Promise<Subscription | undefined> {
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId));
+    return sub;
+  }
+
+  async getSubscriptionByStripeId(stripeSubscriptionId: string): Promise<Subscription | undefined> {
+    const [sub] = await db.select().from(subscriptions).where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId));
+    return sub;
+  }
+
+  async createSubscription(subscription: InsertSubscription): Promise<Subscription> {
+    const [created] = await db.insert(subscriptions).values(subscription).returning();
+    return created;
+  }
+
+  async updateSubscription(id: string, subscription: Partial<InsertSubscription>): Promise<Subscription | undefined> {
+    const [updated] = await db.update(subscriptions).set({ ...subscription, updatedAt: new Date() }).where(eq(subscriptions.id, id)).returning();
+    return updated;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

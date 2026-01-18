@@ -1,18 +1,168 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { sql, relations } from "drizzle-orm";
+import { pgTable, text, varchar, integer, decimal, timestamp, boolean, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+export * from "./models/auth";
+import { users } from "./models/auth";
+
+export const funds = pgTable("funds", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  accountType: text("account_type").notNull().default("UTMA"),
+  status: text("status").notNull().default("draft"),
+  balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default("0"),
+  pendingBalance: decimal("pending_balance", { precision: 12, scale: 2 }).notNull().default("0"),
+  totalGain: decimal("total_gain", { precision: 12, scale: 2 }).notNull().default("0"),
+  gainPercent: decimal("gain_percent", { precision: 6, scale: 2 }).notNull().default("0"),
+  contributorCount: integer("contributor_count").notNull().default(0),
+  projectedValue: decimal("projected_value", { precision: 12, scale: 2 }).notNull().default("0"),
+  yearsUntilMaturity: integer("years_until_maturity"),
+  recipientBirthdate: timestamp("recipient_birthdate"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
+export const fundsRelations = relations(funds, ({ one, many }) => ({
+  user: one(users, { fields: [funds.userId], references: [users.id] }),
+  events: many(events),
+  holdings: many(holdings),
+  gifts: many(gifts),
+}));
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export const events = pgTable("events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fundId: varchar("fund_id").notNull().references(() => funds.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  eventDate: timestamp("event_date"),
+  isPermanent: boolean("is_permanent").notNull().default(false),
+  hasEventPass: boolean("has_event_pass").notNull().default(false),
+  eventPassPurchasedAt: timestamp("event_pass_purchased_at"),
+  giftVolume: decimal("gift_volume", { precision: 12, scale: 2 }).notNull().default("0"),
+  giftCount: integer("gift_count").notNull().default(0),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("events_fund_id_idx").on(table.fundId),
+  index("events_slug_idx").on(table.slug),
+]);
+
+export const eventsRelations = relations(events, ({ one, many }) => ({
+  fund: one(funds, { fields: [events.fundId], references: [funds.id] }),
+  user: one(users, { fields: [events.userId], references: [users.id] }),
+  gifts: many(gifts),
+}));
+
+export const holdings = pgTable("holdings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fundId: varchar("fund_id").notNull().references(() => funds.id),
+  ticker: text("ticker").notNull(),
+  name: text("name").notNull(),
+  shares: decimal("shares", { precision: 12, scale: 6 }).notNull().default("0"),
+  costBasis: decimal("cost_basis", { precision: 12, scale: 2 }).notNull().default("0"),
+  currentValue: decimal("current_value", { precision: 12, scale: 2 }).notNull().default("0"),
+  gain: decimal("gain", { precision: 12, scale: 2 }).notNull().default("0"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("holdings_fund_id_idx").on(table.fundId),
+]);
+
+export const holdingsRelations = relations(holdings, ({ one }) => ({
+  fund: one(funds, { fields: [holdings.fundId], references: [funds.id] }),
+}));
+
+export const gifts = pgTable("gifts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fundId: varchar("fund_id").notNull().references(() => funds.id),
+  eventId: varchar("event_id").references(() => events.id),
+  senderName: text("sender_name").notNull(),
+  senderEmail: text("sender_email"),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  processingFee: decimal("processing_fee", { precision: 12, scale: 2 }).notNull().default("0"),
+  koraFee: decimal("kora_fee", { precision: 12, scale: 2 }).notNull().default("0"),
+  netAmount: decimal("net_amount", { precision: 12, scale: 2 }).notNull(),
+  message: text("message"),
+  status: text("status").notNull().default("pending"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  investedAt: timestamp("invested_at"),
+  settledAt: timestamp("settled_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("gifts_fund_id_idx").on(table.fundId),
+  index("gifts_event_id_idx").on(table.eventId),
+  index("gifts_status_idx").on(table.status),
+]);
+
+export const giftsRelations = relations(gifts, ({ one }) => ({
+  fund: one(funds, { fields: [gifts.fundId], references: [funds.id] }),
+  event: one(events, { fields: [gifts.eventId], references: [events.id] }),
+}));
+
+export const activities = pgTable("activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  fundId: varchar("fund_id").references(() => funds.id),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  amount: decimal("amount", { precision: 12, scale: 2 }),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("activities_user_id_idx").on(table.userId),
+  index("activities_fund_id_idx").on(table.fundId),
+]);
+
+export const activitiesRelations = relations(activities, ({ one }) => ({
+  user: one(users, { fields: [activities.userId], references: [users.id] }),
+  fund: one(funds, { fields: [activities.fundId], references: [funds.id] }),
+}));
+
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  stripeSubscriptionId: text("stripe_subscription_id").unique(),
+  stripeCustomerId: text("stripe_customer_id"),
+  plan: text("plan").notNull().default("free"),
+  status: text("status").notNull().default("active"),
+  currentPeriodStart: timestamp("current_period_start"),
+  currentPeriodEnd: timestamp("current_period_end"),
+  canceledAt: timestamp("canceled_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("subscriptions_user_id_idx").on(table.userId),
+]);
+
+export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
+  user: one(users, { fields: [subscriptions.userId], references: [users.id] }),
+}));
+
+export const insertFundSchema = createInsertSchema(funds).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertHoldingSchema = createInsertSchema(holdings).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertGiftSchema = createInsertSchema(gifts).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertActivitySchema = createInsertSchema(activities).omit({ id: true, createdAt: true });
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true, createdAt: true, updatedAt: true });
+
+export type InsertFund = z.infer<typeof insertFundSchema>;
+export type Fund = typeof funds.$inferSelect;
+export type InsertEvent = z.infer<typeof insertEventSchema>;
+export type Event = typeof events.$inferSelect;
+export type InsertHolding = z.infer<typeof insertHoldingSchema>;
+export type Holding = typeof holdings.$inferSelect;
+export type InsertGift = z.infer<typeof insertGiftSchema>;
+export type Gift = typeof gifts.$inferSelect;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type Activity = typeof activities.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;

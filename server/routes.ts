@@ -1,15 +1,292 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
+import { type Server } from "http";
 import { storage } from "./storage";
 import { stripeService } from "./stripeService";
 import { sql } from "drizzle-orm";
 import { db } from "./db";
+import { isAuthenticated } from "./replit_integrations/auth";
+import { insertFundSchema, insertEventSchema, insertGiftSchema } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Stripe products and prices
+  
+  // ===== FUNDS =====
+  app.get('/api/funds', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const funds = await storage.getFundsByUser(userId);
+      res.json(funds);
+    } catch (error) {
+      console.error('Error fetching funds:', error);
+      res.status(500).json({ error: 'Failed to fetch funds' });
+    }
+  });
+
+  app.get('/api/funds/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.id);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      if (fund.userId !== req.user.claims.sub) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      res.json(fund);
+    } catch (error) {
+      console.error('Error fetching fund:', error);
+      res.status(500).json({ error: 'Failed to fetch fund' });
+    }
+  });
+
+  app.post('/api/funds', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = insertFundSchema.parse({ ...req.body, userId });
+      const fund = await storage.createFund(data);
+      
+      // Create permanent "Gift anytime" link for the fund
+      await storage.createEvent({
+        fundId: fund.id,
+        userId,
+        name: "Gift anytime",
+        slug: `${fund.slug}-anytime`,
+        isPermanent: true,
+        status: "active",
+      });
+      
+      res.status(201).json(fund);
+    } catch (error) {
+      console.error('Error creating fund:', error);
+      res.status(500).json({ error: 'Failed to create fund' });
+    }
+  });
+
+  app.patch('/api/funds/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.id);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      if (fund.userId !== req.user.claims.sub) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const updated = await storage.updateFund(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating fund:', error);
+      res.status(500).json({ error: 'Failed to update fund' });
+    }
+  });
+
+  // ===== EVENTS =====
+  app.get('/api/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const events = await storage.getEventsByUser(userId);
+      res.json(events);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      res.status(500).json({ error: 'Failed to fetch events' });
+    }
+  });
+
+  app.get('/api/funds/:fundId/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      if (fund.userId !== req.user.claims.sub) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const events = await storage.getEventsByFund(req.params.fundId);
+      res.json(events);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      res.status(500).json({ error: 'Failed to fetch events' });
+    }
+  });
+
+  app.get('/api/events/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      res.json(event);
+    } catch (error) {
+      console.error('Error fetching event:', error);
+      res.status(500).json({ error: 'Failed to fetch event' });
+    }
+  });
+
+  // Public event page (no auth required for gift givers)
+  app.get('/api/public/events/:slug', async (req, res) => {
+    try {
+      const event = await storage.getEventBySlug(req.params.slug);
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      const fund = await storage.getFund(event.fundId);
+      res.json({ 
+        event: {
+          id: event.id,
+          name: event.name,
+          description: event.description,
+          imageUrl: event.imageUrl,
+          eventDate: event.eventDate,
+        },
+        fundName: fund?.name,
+      });
+    } catch (error) {
+      console.error('Error fetching public event:', error);
+      res.status(500).json({ error: 'Failed to fetch event' });
+    }
+  });
+
+  app.post('/api/events', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = insertEventSchema.parse({ ...req.body, userId });
+      const event = await storage.createEvent(data);
+      res.status(201).json(event);
+    } catch (error) {
+      console.error('Error creating event:', error);
+      res.status(500).json({ error: 'Failed to create event' });
+    }
+  });
+
+  app.patch('/api/events/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      if (event.userId !== req.user.claims.sub) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const updated = await storage.updateEvent(req.params.id, req.body);
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating event:', error);
+      res.status(500).json({ error: 'Failed to update event' });
+    }
+  });
+
+  app.delete('/api/events/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+      }
+      if (event.userId !== req.user.claims.sub) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      if (event.isPermanent) {
+        return res.status(400).json({ error: 'Cannot delete permanent link' });
+      }
+      await storage.deleteEvent(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      res.status(500).json({ error: 'Failed to delete event' });
+    }
+  });
+
+  // ===== HOLDINGS =====
+  app.get('/api/funds/:fundId/holdings', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      if (fund.userId !== req.user.claims.sub) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const holdings = await storage.getHoldingsByFund(req.params.fundId);
+      res.json(holdings);
+    } catch (error) {
+      console.error('Error fetching holdings:', error);
+      res.status(500).json({ error: 'Failed to fetch holdings' });
+    }
+  });
+
+  // ===== GIFTS =====
+  app.get('/api/funds/:fundId/gifts', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      if (fund.userId !== req.user.claims.sub) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const gifts = await storage.getGiftsByFund(req.params.fundId);
+      res.json(gifts);
+    } catch (error) {
+      console.error('Error fetching gifts:', error);
+      res.status(500).json({ error: 'Failed to fetch gifts' });
+    }
+  });
+
+  // Create gift (public, for gift givers)
+  app.post('/api/public/gifts', async (req, res) => {
+    try {
+      const data = insertGiftSchema.parse(req.body);
+      const gift = await storage.createGift(data);
+      res.status(201).json(gift);
+    } catch (error) {
+      console.error('Error creating gift:', error);
+      res.status(500).json({ error: 'Failed to create gift' });
+    }
+  });
+
+  // ===== ACTIVITIES =====
+  app.get('/api/activities', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const activities = await storage.getActivitiesByUser(userId, limit);
+      res.json(activities);
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      res.status(500).json({ error: 'Failed to fetch activities' });
+    }
+  });
+
+  app.get('/api/funds/:fundId/activities', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      if (fund.userId !== req.user.claims.sub) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const limit = parseInt(req.query.limit as string) || 50;
+      const activities = await storage.getActivitiesByFund(req.params.fundId, limit);
+      res.json(activities);
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      res.status(500).json({ error: 'Failed to fetch activities' });
+    }
+  });
+
+  // ===== SUBSCRIPTION =====
+  app.get('/api/subscription', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const subscription = await storage.getSubscription(userId);
+      res.json(subscription || { plan: 'free', status: 'active' });
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+      res.status(500).json({ error: 'Failed to fetch subscription' });
+    }
+  });
+
+  // ===== STRIPE =====
   app.get('/api/stripe/products', async (req, res) => {
     try {
       const result = await db.execute(sql`
@@ -56,12 +333,11 @@ export async function registerRoutes(
     }
   });
 
-  // Create checkout session for Family Plan (subscription)
-  app.post('/api/stripe/checkout/family-plan', async (req, res) => {
+  app.post('/api/stripe/checkout/family-plan', isAuthenticated, async (req: any, res) => {
     try {
       const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const userId = req.user.claims.sub;
       
-      // Get Family Plan price from database
       const result = await db.execute(sql`
         SELECT pr.id as price_id
         FROM stripe.products p
@@ -79,7 +355,8 @@ export async function registerRoutes(
         priceId,
         'subscription',
         `${baseUrl}/settings?tab=billing&success=family`,
-        `${baseUrl}/settings?tab=billing&canceled=true`
+        `${baseUrl}/settings?tab=billing&canceled=true`,
+        { userId }
       );
       
       res.json({ url: session.url });
@@ -89,13 +366,12 @@ export async function registerRoutes(
     }
   });
 
-  // Create checkout session for Event Pass (one-time)
-  app.post('/api/stripe/checkout/event-pass', async (req, res) => {
+  app.post('/api/stripe/checkout/event-pass', isAuthenticated, async (req: any, res) => {
     try {
       const { eventId, eventName } = req.body;
       const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const userId = req.user.claims.sub;
       
-      // Get Event Pass price from database
       const result = await db.execute(sql`
         SELECT pr.id as price_id
         FROM stripe.products p
@@ -114,7 +390,7 @@ export async function registerRoutes(
         'payment',
         `${baseUrl}/events?success=event-pass&eventId=${eventId || ''}`,
         `${baseUrl}/event/create?canceled=true`,
-        { eventId: eventId || '', eventName: eventName || '' }
+        { eventId: eventId || '', eventName: eventName || '', userId }
       );
       
       res.json({ url: session.url });
