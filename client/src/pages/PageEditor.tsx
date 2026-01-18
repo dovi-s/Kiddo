@@ -8,6 +8,7 @@ import { haptic } from "@/lib/haptics";
 interface PageData {
   title: string;
   slug: string;
+  displayInitial: string;
   headline: string;
   description: string;
   buttonText: string;
@@ -108,6 +109,7 @@ export default function PageEditor() {
     return {
       title: initialData.title,
       slug: eventSlug,
+      displayInitial: fundName.charAt(0),
       headline: initialData.headline,
       description: initialData.description,
       buttonText: "Give a gift",
@@ -177,6 +179,37 @@ export default function PageEditor() {
                 data-testid="input-event-name"
                 className="w-full px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-2">
+                URL Slug
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-stone-400">kora.com/{fundSlug}/</span>
+                <input
+                  type="text"
+                  value={pageData.slug}
+                  onChange={(e) => setPageData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                  data-testid="input-slug"
+                  className="flex-1 px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-stone-500 uppercase tracking-wider mb-2">
+                Logo Letter
+              </label>
+              <input
+                type="text"
+                value={pageData.displayInitial}
+                onChange={(e) => setPageData(prev => ({ ...prev, displayInitial: e.target.value.slice(0, 1).toUpperCase() }))}
+                maxLength={1}
+                data-testid="input-logo-letter"
+                className="w-16 px-3 py-2.5 border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:border-stone-400 text-center text-lg font-semibold"
+              />
+              <p className="text-xs text-stone-400 mt-1">The letter shown in the logo circle</p>
             </div>
 
             <div>
@@ -373,7 +406,7 @@ export default function PageEditor() {
 
             {!pageData.photo && (
               <div className={`w-12 h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center text-base lg:text-lg font-light mb-3 lg:mb-4 ${currentTheme.accent} ${pageData.theme === "dark" ? "text-stone-900" : "text-white"} ${pageData.layout === "centered" ? "mx-auto" : ""}`}>
-                {fundName.charAt(0)}
+                {pageData.displayInitial || fundName.charAt(0)}
               </div>
             )}
             
