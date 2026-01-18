@@ -9,7 +9,7 @@ import { springSnappy, easeOutExpo, cardTactile } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
 import { 
   User, Shield, Bell, CreditCard, FileText, Search, 
-  ChevronRight, Check, LogOut, HelpCircle, ArrowLeft,
+  ChevronRight, Check, LogOut, HelpCircle,
   Smartphone, Mail, Eye, EyeOff, Lock, Globe, Users, Sparkles,
   MessageCircle, BookOpen, ExternalLink
 } from "lucide-react";
@@ -711,16 +711,7 @@ export default function Settings() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
         >
-          <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-            <Link href="/dashboard">
-              <motion.button 
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center gap-2 text-muted-foreground"
-              >
-                <ArrowLeft size={20} />
-                <span className="text-sm">Back</span>
-              </motion.button>
-            </Link>
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
             <Logo size="sm" className="text-primary" />
           </div>
         </motion.header>
