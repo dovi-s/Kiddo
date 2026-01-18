@@ -452,8 +452,8 @@ function BillingTab() {
       {/* Who pays toggle with integrated breakdown */}
       <div>
         <div className="mb-4">
-          <h3 className="font-semibold text-foreground text-lg">When someone gives $100</h3>
-          <p className="text-sm text-muted-foreground">Choose who covers the small platform fee</p>
+          <h3 className="font-semibold text-foreground text-lg">Who covers the platform fee?</h3>
+          <p className="text-sm text-muted-foreground">This applies to all gifts you receive</p>
         </div>
         
         <div className="grid grid-cols-2 gap-3 mb-5">
@@ -507,6 +507,7 @@ function BillingTab() {
           animate={{ opacity: 1, y: 0 }}
           className="bg-muted/50 rounded-2xl p-4 border border-border"
         >
+          <p className="text-xs text-muted-foreground mb-3">Example: $100 gift by card</p>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Gift giver pays</span>
