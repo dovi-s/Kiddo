@@ -5,55 +5,43 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, Shield, Lock } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
-
-const updateFundStatus = (status: "active" | "pending") => {
-  try {
-    const stored = localStorage.getItem("kora_funds");
-    if (stored) {
-      const funds = JSON.parse(stored);
-      const updated = funds.map((f: any) => ({
-        ...f,
-        status: f.status === "draft" ? status : f.status,
-        balance: status === "active" && f.balance === 0 ? 0 : f.balance,
-      }));
-      localStorage.setItem("kora_funds", JSON.stringify(updated));
-    }
-  } catch {}
-};
-
-const getFundNames = (): string[] => {
-  try {
-    const stored = localStorage.getItem("kora_funds");
-    if (stored) {
-      const funds = JSON.parse(stored);
-      return funds.filter((f: any) => f.status === "draft" || f.status === "pending" || f.status === "active").map((f: any) => f.name);
-    }
-  } catch {}
-  return [];
-};
+import { useFunds } from "@/hooks/use-funds";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 type Step = "intro" | "brokerage" | "identity" | "child" | "agreements" | "processing" | "complete";
 
 export default function ActivateInvesting() {
   const search = useSearch();
   const params = new URLSearchParams(search);
-  const accountType = params.get("type") || "child";
-  const childrenParam = params.get("children");
-  const urlChildNames = childrenParam ? decodeURIComponent(childrenParam).split(",") : [];
+  const fundSlug = params.get("fund");
+  const queryClient = useQueryClient();
+  
+  const { data: funds = [], isLoading: fundsLoading } = useFunds();
+  
+  const targetFund = fundSlug 
+    ? funds.find(f => f.slug === fundSlug)
+    : funds.find(f => f.status === "draft");
+  
+  const accountType = targetFund?.accountType === "Individual" ? "personal" : "child";
   const isPersonal = accountType === "personal";
   
-  const [activatedFundNames, setActivatedFundNames] = useState<string[]>([]);
+  const childNames = targetFund && targetFund.accountType === "UTMA" ? [targetFund.name] : [];
   
-  useEffect(() => {
-    const names = getFundNames();
-    if (names.length > 0) {
-      setActivatedFundNames(names);
-    } else if (urlChildNames.length > 0) {
-      setActivatedFundNames(urlChildNames);
-    }
-  }, []);
-  
-  const childNames = activatedFundNames.length > 0 ? activatedFundNames : urlChildNames;
+  const activateFundMutation = useMutation({
+    mutationFn: async (fundId: string) => {
+      const response = await fetch(`/api/funds/${fundId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: "active" }),
+      });
+      if (!response.ok) throw new Error("Failed to activate fund");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+    },
+  });
   
   const [, setLocation] = useLocation();
   const [step, setStep] = useState<Step>("intro");
@@ -111,12 +99,23 @@ export default function ActivateInvesting() {
     } else if (step === "agreements") {
       haptic('medium');
       setStep("processing");
-      updateFundStatus("pending");
-      setTimeout(() => {
-        haptic('success');
-        updateFundStatus("active");
-        setStep("complete");
-      }, 2500);
+      if (targetFund) {
+        activateFundMutation.mutate(targetFund.id, {
+          onSuccess: () => {
+            haptic('success');
+            setStep("complete");
+          },
+          onError: () => {
+            haptic('error');
+            setStep("complete");
+          },
+        });
+      } else {
+        setTimeout(() => {
+          haptic('success');
+          setStep("complete");
+        }, 2500);
+      }
     }
   };
 
@@ -164,6 +163,14 @@ export default function ActivateInvesting() {
     if (digits.length <= 4) return digits;
     return "•".repeat(digits.length - 4) + digits.slice(-4);
   };
+
+  if (fundsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -809,7 +816,7 @@ export default function ActivateInvesting() {
                   className="space-y-4"
                 >
                   <Button 
-                    onClick={() => setLocation(`/dashboard?type=${accountType}&children=${childrenParam || ""}`)}
+                    onClick={() => setLocation(targetFund ? `/dashboard?fund=${targetFund.slug}` : "/dashboard")}
                     data-testid="button-go-to-dashboard"
                     size="lg"
                     className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 shadow-lg"
