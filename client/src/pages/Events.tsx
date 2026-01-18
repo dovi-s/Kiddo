@@ -216,7 +216,7 @@ export default function Events() {
                             className="overflow-hidden"
                           >
                             <div className="px-5 pb-5 pt-0 border-t border-border/50">
-                              <div className="pt-4 grid grid-cols-3 gap-2">
+                              <div className={`pt-4 grid gap-2 ${event.isDefault ? 'grid-cols-2' : 'grid-cols-3'}`}>
                                 <motion.button
                                   initial={{ opacity: 0, y: 8 }}
                                   animate={{ opacity: 1, y: 0 }}
@@ -229,47 +229,67 @@ export default function Events() {
                                   <Share2 size={18} />
                                   <span className="text-xs font-medium">Share</span>
                                 </motion.button>
-                                <Link href={`/edit/${event.fundSlug}/${event.id}`}>
+                                {!event.isDefault && (
+                                  <Link href={`/edit/${event.fundSlug}/${event.id}`}>
+                                    <motion.button
+                                      initial={{ opacity: 0, y: 8 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ delay: 0.1 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      className="w-full flex flex-col items-center gap-2 p-3 rounded-xl bg-muted text-muted-foreground hover:bg-border transition-colors"
+                                      data-testid={`button-edit-${event.id}`}
+                                    >
+                                      <Edit2 size={18} />
+                                      <span className="text-xs font-medium">Edit</span>
+                                    </motion.button>
+                                  </Link>
+                                )}
+                                {!event.isDefault ? (
                                   <motion.button
                                     initial={{ opacity: 0, y: 8 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.1 }}
+                                    transition={{ delay: 0.15 }}
                                     whileTap={{ scale: 0.95 }}
-                                    className="w-full flex flex-col items-center gap-2 p-3 rounded-xl bg-muted text-muted-foreground hover:bg-border transition-colors"
-                                    data-testid={`button-edit-${event.id}`}
+                                    onClick={() => setActionEventId(event.id)}
+                                    className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted text-muted-foreground hover:bg-border transition-colors"
+                                    data-testid={`button-more-${event.id}`}
                                   >
-                                    <Edit2 size={18} />
-                                    <span className="text-xs font-medium">Edit</span>
+                                    <MoreHorizontal size={18} />
+                                    <span className="text-xs font-medium">More</span>
                                   </motion.button>
-                                </Link>
-                                <motion.button
-                                  initial={{ opacity: 0, y: 8 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: 0.15 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  onClick={() => setActionEventId(event.id)}
-                                  className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted text-muted-foreground hover:bg-border transition-colors"
-                                  data-testid={`button-more-${event.id}`}
-                                >
-                                  <MoreHorizontal size={18} />
-                                  <span className="text-xs font-medium">More</span>
-                                </motion.button>
+                                ) : (
+                                  <Link href={`/checkout/${event.fundSlug}/${event.id}`}>
+                                    <motion.button
+                                      initial={{ opacity: 0, y: 8 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ delay: 0.1 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      className="w-full flex flex-col items-center gap-2 p-3 rounded-xl bg-[hsl(var(--kora-gold)/0.1)] text-[hsl(var(--kora-gold))]"
+                                      data-testid={`button-view-${event.id}`}
+                                    >
+                                      <Gift size={18} />
+                                      <span className="text-xs font-medium">View</span>
+                                    </motion.button>
+                                  </Link>
+                                )}
                               </div>
 
-                              <Link href={`/checkout/${event.fundSlug}/${event.id}`}>
-                                <motion.div
-                                  initial={{ opacity: 0, y: 8 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: 0.2 }}
-                                  className="mt-4 p-4 rounded-xl bg-[hsl(var(--kora-gold)/0.1)] flex items-center justify-between cursor-pointer"
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <Gift size={18} className="text-[hsl(var(--kora-gold))]" />
-                                    <span className="text-sm font-medium text-[hsl(var(--kora-gold))]">View gift page</span>
-                                  </div>
-                                  <ChevronRight size={16} className="text-[hsl(var(--kora-gold))]" />
-                                </motion.div>
-                              </Link>
+                              {!event.isDefault && (
+                                <Link href={`/checkout/${event.fundSlug}/${event.id}`}>
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                    className="mt-4 p-4 rounded-xl bg-[hsl(var(--kora-gold)/0.1)] flex items-center justify-between cursor-pointer"
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <Gift size={18} className="text-[hsl(var(--kora-gold))]" />
+                                      <span className="text-sm font-medium text-[hsl(var(--kora-gold))]">View gift page</span>
+                                    </div>
+                                    <ChevronRight size={16} className="text-[hsl(var(--kora-gold))]" />
+                                  </motion.div>
+                                </Link>
+                              )}
                             </div>
                           </motion.div>
                         )}

@@ -15,12 +15,12 @@ const navItems = [
 export function MobileNav() {
   const [location] = useLocation();
   const { isAuthenticated, isLoading } = useAuth();
-  const { funds, isLoading: fundsLoading } = useFunds();
+  const { data: funds = [], isLoading: fundsLoading } = useFunds();
   
   const hiddenPaths = ["/checkout", "/get-started", "/onboard", "/activate", "/login", "/claim", "/give"];
   const shouldHide = hiddenPaths.some(path => location.startsWith(path));
   
-  const hasActiveFund = funds?.some(f => f.status === 'active');
+  const hasActiveFund = funds.some((f: { status: string }) => f.status === 'active');
   
   if (shouldHide || isLoading || fundsLoading || !isAuthenticated || !hasActiveFund) return null;
 
