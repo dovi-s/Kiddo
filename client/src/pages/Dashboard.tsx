@@ -174,8 +174,7 @@ export default function Dashboard() {
   const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
   const [expandedGift, setExpandedGift] = useState<string | null>(null);
   const [expandedHolding, setExpandedHolding] = useState<number | null>(null);
-  const [showQuickActionsSheet, setShowQuickActionsSheet] = useState(false);
-  const [showFundPicker, setShowFundPicker] = useState(false);
+    const [showFundPicker, setShowFundPicker] = useState(false);
   
   const getStatusLabel = (status: FundStatus) => {
     switch (status) {
@@ -1043,65 +1042,6 @@ export default function Dashboard() {
 
       {/* Trust Footer */}
       <TrustFooter />
-
-      {/* Floating Action Button - Quick Actions */}
-      <motion.button
-        onClick={() => setShowQuickActionsSheet(true)}
-        className="fab bg-primary text-primary-foreground md:hidden"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.3, duration: 0.2, ease: "easeOut" }}
-        whileTap={{ scale: 0.9 }}
-        data-testid="fab-quick-actions"
-      >
-        <Plus size={24} />
-      </motion.button>
-
-      {/* Quick Actions Sheet */}
-      <Sheet open={showQuickActionsSheet} onOpenChange={setShowQuickActionsSheet}>
-        <SheetContent side="bottom" className="rounded-t-3xl">
-          <SheetHeader className="text-left mb-4">
-            <SheetTitle className="text-lg font-semibold">Quick actions</SheetTitle>
-          </SheetHeader>
-          
-          <div className="space-y-2 pb-4">
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                setShowQuickActionsSheet(false);
-                setShowAddFund(true);
-              }}
-              className="w-full p-4 rounded-xl bg-muted flex items-center gap-4 hover:bg-border transition-colors"
-              data-testid="quick-action-add-fund"
-            >
-              <div className="w-12 h-12 rounded-xl bg-[hsl(var(--kora-evergreen)/0.1)] flex items-center justify-center">
-                <Users size={20} className="text-[hsl(var(--kora-evergreen))]" />
-              </div>
-              <div className="text-left">
-                <p className="font-semibold text-foreground">Add fund</p>
-                <p className="text-sm text-muted-foreground">New child or personal account</p>
-              </div>
-            </motion.button>
-
-            <Link href="/event/create">
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShowQuickActionsSheet(false)}
-                className="w-full p-4 rounded-xl bg-muted flex items-center gap-4 hover:bg-border transition-colors"
-                data-testid="quick-action-create-event"
-              >
-                <div className="w-12 h-12 rounded-xl bg-[hsl(var(--kora-gold)/0.1)] flex items-center justify-center">
-                  <Sparkles size={20} className="text-[hsl(var(--kora-gold))]" />
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-foreground">Create event</p>
-                  <p className="text-sm text-muted-foreground">Birthday, holiday, or occasion</p>
-                </div>
-              </motion.button>
-            </Link>
-          </div>
-        </SheetContent>
-      </Sheet>
 
         {/* Spacer for mobile nav */}
         <div className="h-24 md:hidden" />
