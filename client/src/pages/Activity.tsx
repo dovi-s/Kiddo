@@ -417,7 +417,14 @@ export default function Activity() {
                   </div>
                   <div className="flex-1 text-left">
                     <p className="font-semibold text-foreground">{fund.name}'s Fund</p>
-                    <p className="text-sm text-muted-foreground">{fund.accountType}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted-foreground/10 text-muted-foreground">
+                        {fund.accountType === "UTMA" ? "Custodial" : fund.accountType === "Personal" ? "Personal" : fund.accountType}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {fund.accountType === "UTMA" ? "You manage for " + fund.name : "Your account"}
+                      </span>
+                    </div>
                   </div>
                   {fund.slug === selectedFundSlug && (
                     <div className="w-6 h-6 rounded-full bg-[hsl(var(--kora-evergreen))] flex items-center justify-center">
