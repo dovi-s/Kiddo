@@ -484,7 +484,7 @@ function BillingTab() {
                   <div className="flex items-center gap-3">
                     <Sparkles size={18} className="text-[hsl(var(--kora-gold))]" />
                     <div>
-                      <p className="font-medium text-foreground">Family — $199/year</p>
+                      <p className="font-medium text-foreground">Family: $199/year</p>
                       <p className="text-xs text-muted-foreground">Best for multiple events or ongoing gifts</p>
                     </div>
                   </div>
@@ -501,7 +501,7 @@ function BillingTab() {
                   <div className="flex items-center gap-3">
                     <Calendar size={18} className="text-muted-foreground" />
                     <div>
-                      <p className="font-medium text-foreground">Event Pass — $99 one-time</p>
+                      <p className="font-medium text-foreground">Event Pass: $99 one-time</p>
                       <p className="text-xs text-muted-foreground">Best for a single birthday or holiday</p>
                     </div>
                   </div>
@@ -510,7 +510,7 @@ function BillingTab() {
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground mt-3">Both options waive the Kora fee completely—gift givers only pay card processing.</p>
+            <p className="text-xs text-muted-foreground mt-3">Both options waive the Kora fee completely. Gift givers only pay card processing.</p>
           </div>
         </div>
       </SettingsSection>
