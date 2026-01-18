@@ -8,6 +8,7 @@ import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { springGentle, easeOutExpo, easeOutBack } from "@/lib/animations";
+import { haptic } from "@/lib/haptics";
 
 function GrowthCalculator() {
   const [amount, setAmount] = useState(100);

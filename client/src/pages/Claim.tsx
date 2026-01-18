@@ -5,6 +5,7 @@ import { ArrowLeft, Check, TrendingUp, Gift as GiftIcon, Shield, Lock, ChevronRi
 import { Logo } from "@/components/ui/logo";
 import { Confetti } from "@/components/ui/confetti";
 import { InvestmentReveal } from "@/components/ui/live-ticker";
+import { haptic } from "@/lib/haptics";
 
 interface GiftData {
   id: string;
@@ -69,8 +70,10 @@ export default function Claim() {
   const daysUntilExpiry = Math.ceil((gift.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 
   const handleClaim = () => {
+    haptic('medium');
     setIsClaiming(true);
     setTimeout(() => {
+      haptic('success');
       setStep("success");
       setIsClaiming(false);
     }, 1500);

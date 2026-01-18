@@ -131,10 +131,10 @@ export default function Activity() {
         >
           <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
             <Logo size="sm" className="text-primary" />
-            <Link href="/get-started">
+            <Link href="/get-started" onClick={() => haptic('selection')}>
               <motion.button 
                 whileTap={{ scale: 0.9 }}
-                className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20"
+                className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-premium active:scale-95 transition-all duration-150"
                 data-testid="button-create"
               >
                 <Plus size={20} />

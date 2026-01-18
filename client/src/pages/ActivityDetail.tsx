@@ -4,6 +4,7 @@ import { ArrowLeft, Gift, TrendingUp, Clock, Check, Share2, MessageCircle, Calen
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Nav } from "@/components/layout/Nav";
+import { haptic } from "@/lib/haptics";
 
 const ACTIVITY_DATA: Record<string, {
   id: string;
@@ -155,10 +156,10 @@ export default function ActivityDetail() {
         
         <main className="max-w-lg mx-auto px-4 py-6">
           <motion.button
-            onClick={() => setLocation("/activity")}
+            onClick={() => { haptic('light'); setLocation("/activity"); }}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-2 text-muted-foreground mb-6 touch-target"
+            className="flex items-center gap-2 text-muted-foreground mb-6 touch-target transition-all duration-150 active:scale-95"
             data-testid="button-back"
           >
             <ArrowLeft size={20} />
@@ -171,7 +172,7 @@ export default function ActivityDetail() {
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            <div className="bg-card border border-border rounded-2xl p-6">
+            <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-premium-sm">
               <div className="flex items-start gap-4 mb-6">
                 <div className={`w-14 h-14 rounded-2xl ${activity.type === "gift" ? "bg-[hsl(var(--kora-gold)/0.15)]" : activity.type === "milestone" ? "bg-purple-100" : "bg-[hsl(var(--kora-evergreen)/0.15)]"} flex items-center justify-center`}>
                   {activity.type === "gift" && <Gift size={24} className="text-[hsl(var(--kora-gold))]" />}

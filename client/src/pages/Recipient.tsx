@@ -3,6 +3,7 @@ import { useSearch } from "wouter";
 import { useState, useEffect } from "react";
 import { TrendingUp, Heart, Flame, Calendar, Trophy, Sparkles } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { haptic } from "@/lib/haptics";
 
 function AnimatedValue({ value, prefix = "$" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);

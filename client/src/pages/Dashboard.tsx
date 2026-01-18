@@ -317,7 +317,7 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
-                  className="bg-card border border-border rounded-2xl p-6 sm:p-8"
+                  className="bg-card border border-border/50 rounded-2xl p-6 sm:p-8 shadow-premium-sm"
                 >
                   <div className="flex items-start gap-4 mb-6">
                     <div className="w-14 h-14 rounded-2xl bg-[hsl(var(--kora-evergreen))] flex items-center justify-center">
@@ -348,7 +348,7 @@ export default function Dashboard() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25 }}
-                  className="bg-card border border-border rounded-2xl p-6 sm:p-8"
+                  className="bg-card border border-border/50 rounded-2xl p-6 sm:p-8 shadow-premium-sm"
                 >
                   <div className="flex items-center gap-4 mb-4">
                     <div className="w-14 h-14 rounded-2xl bg-[hsl(var(--kora-gold))] flex items-center justify-center">

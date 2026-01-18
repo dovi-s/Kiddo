@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { useKora } from "@/lib/KoraContext";
 import { toast } from "@/hooks/use-toast";
+import { haptic } from "@/lib/haptics";
 
 const EVENT_TYPES = [
   { id: "birthday", label: "Birthday", emoji: "🎂" },
@@ -42,17 +43,20 @@ export default function MomentCreate() {
       return;
     }
 
+    haptic('medium');
     setIsCreating(true);
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     setEventSlug(slug);
     
     setTimeout(() => {
+      haptic('success');
       setIsCreating(false);
       setCreated(true);
     }, 1200);
   };
 
   const handleCopyLink = () => {
+    haptic('selection');
     const url = `${window.location.origin}/checkout/${profileName.toLowerCase().replace(/\s/g, "-")}/${eventSlug}`;
     navigator.clipboard.writeText(url);
     toast({ title: "Link copied!" });

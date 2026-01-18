@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Lock, CheckCircle2, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { haptic } from "@/lib/haptics";
 
 const STOCKS = [
   { symbol: "AAPL", name: "Apple", price: 178.50 },
@@ -54,8 +55,10 @@ export default function Send() {
   };
 
   const handleSend = () => {
+    haptic('medium');
     setIsProcessing(true);
     setTimeout(() => {
+      haptic('success');
       setStep(3);
       setIsProcessing(false);
     }, 1500);
@@ -96,8 +99,9 @@ export default function Send() {
                   type="text"
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
+                  onFocus={() => haptic('light')}
                   data-testid="input-recipient-name"
-                  className="w-full px-4 py-4 bg-card border border-border rounded-xl text-foreground text-lg focus:outline-none focus:border-muted-foreground focus:ring-4 focus:ring-primary/5 transition-all"
+                  className="w-full h-14 px-4 bg-card border-2 border-border/50 rounded-xl text-foreground text-lg focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 shadow-premium-sm transition-all duration-150"
                   placeholder="Their name"
                 />
                 <div className="relative">

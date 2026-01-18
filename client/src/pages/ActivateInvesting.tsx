@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Check, Shield, Lock } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { haptic } from "@/lib/haptics";
 
 const updateFundStatus = (status: "active" | "pending") => {
   try {
@@ -89,6 +90,7 @@ export default function ActivateInvesting() {
   const [brokerageChoice, setBrokerageChoice] = useState<"embedded" | "external">("embedded");
 
   const handleNext = () => {
+    haptic('selection');
     if (step === "intro") {
       setStep("brokerage");
     } else if (step === "brokerage") {
@@ -107,9 +109,11 @@ export default function ActivateInvesting() {
         setStep("agreements");
       }
     } else if (step === "agreements") {
+      haptic('medium');
       setStep("processing");
       updateFundStatus("pending");
       setTimeout(() => {
+        haptic('success');
         updateFundStatus("active");
         setStep("complete");
       }, 2500);
@@ -117,6 +121,7 @@ export default function ActivateInvesting() {
   };
 
   const handleBack = () => {
+    haptic('light');
     if (step === "brokerage") {
       setStep("intro");
     } else if (step === "identity") {
@@ -207,7 +212,7 @@ export default function ActivateInvesting() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.15 }}
-                className="bg-card rounded-2xl border border-border p-6 space-y-5 shadow-sm relative"
+                className="bg-card rounded-2xl border border-border/50 p-6 space-y-5 shadow-premium-sm relative"
               >
                 <div className="flex items-start gap-4">
                   <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm">
@@ -260,7 +265,7 @@ export default function ActivateInvesting() {
                 <Button 
                   onClick={handleNext}
                   data-testid="button-start-kyc"
-                  className="w-full h-14 text-base rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg"
+                  className="w-full h-14 text-base font-semibold rounded-2xl bg-primary text-primary-foreground hover:bg-primary/90 shadow-premium transition-all duration-150 active:scale-[0.98]"
                 >
                   Continue
                 </Button>
@@ -288,9 +293,9 @@ export default function ActivateInvesting() {
 
               <div className="space-y-3">
                 <button
-                  onClick={() => setBrokerageChoice("embedded")}
+                  onClick={() => { haptic('selection'); setBrokerageChoice("embedded"); }}
                   data-testid="option-embedded-brokerage"
-                  className={`w-full p-5 rounded-xl border-2 text-left transition-all duration-150 ${
+                  className={`w-full p-5 rounded-xl border-2 text-left transition-all duration-150 active:scale-[0.99] shadow-premium-sm ${
                     brokerageChoice === "embedded"
                       ? "border-primary bg-muted"
                       : "border-border hover:border-muted-foreground/30 bg-card"

@@ -3,6 +3,7 @@ import { Link, useParams } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, Image, Type, Palette, Eye, Save, Trash2, Plus, Check, Pencil, X, ChevronUp, ChevronDown } from "lucide-react";
+import { haptic } from "@/lib/haptics";
 
 interface PageData {
   title: string;

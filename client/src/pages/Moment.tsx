@@ -10,6 +10,7 @@ import { Link, useSearch } from "wouter";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
+import { haptic } from "@/lib/haptics";
 
 const AMOUNTS = [25, 50, 100, 250];
 
@@ -53,8 +54,10 @@ export default function Moment() {
   const projectedGrowth = Math.round(finalAmount * 4.6);
 
   const handleGive = () => {
+    haptic('medium');
     setIsProcessing(true);
     setTimeout(() => {
+      haptic('success');
       setStep(2);
       setIsProcessing(false);
     }, 2000);

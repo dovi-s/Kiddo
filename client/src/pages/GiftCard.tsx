@@ -5,6 +5,7 @@ import { Share2, Download, Heart, Sparkles, Copy, Check, MessageCircle } from "l
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import { haptic } from "@/lib/haptics";
 
 interface GiftCardData {
   id: string;
@@ -61,10 +62,12 @@ export default function GiftCard() {
   const projectedValue = Math.round(card.amount * 4.6);
 
   const handleReveal = () => {
+    haptic('success');
     setRevealed(true);
   };
 
   const handleCopy = () => {
+    haptic('selection');
     navigator.clipboard?.writeText(window.location.href);
     setCopied(true);
     toast({ title: "Link copied!" });
