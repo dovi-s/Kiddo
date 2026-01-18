@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, CalendarHeart, Activity, Settings } from "lucide-react";
 import { haptic } from "@/lib/haptics";
+import { useAuth } from "@/hooks/use-auth";
 
 const navItems = [
   { href: "/dashboard", icon: Wallet, label: "Fund" },
@@ -12,11 +13,12 @@ const navItems = [
 
 export function MobileNav() {
   const [location] = useLocation();
+  const { isAuthenticated, isLoading } = useAuth();
   
-  const hiddenPaths = ["/checkout", "/get-started", "/onboard", "/activate", "/login", "/claim"];
+  const hiddenPaths = ["/checkout", "/get-started", "/onboard", "/activate", "/login", "/claim", "/give"];
   const shouldHide = hiddenPaths.some(path => location.startsWith(path));
   
-  if (shouldHide) return null;
+  if (shouldHide || isLoading || !isAuthenticated) return null;
 
   return (
     <motion.nav
