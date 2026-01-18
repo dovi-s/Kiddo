@@ -13,7 +13,7 @@ import {
   ChevronRight, Check, LogOut, HelpCircle,
   Smartphone, Mail, Eye, EyeOff, Lock, Globe, Users, Sparkles,
   MessageCircle, BookOpen, ExternalLink, Calendar, Gift,
-  DollarSign, Heart
+  DollarSign, Heart, Loader2
 } from "lucide-react";
 
 type SettingsTab = "profile" | "security" | "notifications" | "billing" | "legal" | "help";
@@ -444,8 +444,30 @@ function NotificationsTab() {
 function BillingTab() {
   const [whoPays, setWhoPays] = useState<"guests" | "host">("guests");
   const [goalBehavior, setGoalBehavior] = useState("continue");
+  const [isLoadingFamily, setIsLoadingFamily] = useState(false);
 
   const giverPays = whoPays === "guests";
+
+  const handleFamilyPlanCheckout = async () => {
+    setIsLoadingFamily(true);
+    haptic('medium');
+    try {
+      const response = await fetch('/api/stripe/checkout/family-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Error", description: data.error || "Failed to start checkout", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to connect to payment service", variant: "destructive" });
+    } finally {
+      setIsLoadingFamily(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -545,8 +567,8 @@ function BillingTab() {
           {/* Family Plan - Premium */}
           <motion.div 
             whileTap={{ scale: 0.98 }}
-            onClick={() => toast({ title: "Upgrade to Family", description: "Family plan coming soon" })}
-            className="relative p-5 rounded-2xl bg-gradient-to-br from-[hsl(var(--kora-gold))]/20 via-[hsl(var(--kora-gold))]/10 to-transparent border border-[hsl(var(--kora-gold))]/30 cursor-pointer group overflow-hidden"
+            onClick={handleFamilyPlanCheckout}
+            className={`relative p-5 rounded-2xl bg-gradient-to-br from-[hsl(var(--kora-gold))]/20 via-[hsl(var(--kora-gold))]/10 to-transparent border border-[hsl(var(--kora-gold))]/30 cursor-pointer group overflow-hidden ${isLoadingFamily ? 'opacity-70 pointer-events-none' : ''}`}
           >
             <div className="absolute top-0 right-0 px-3 py-1 bg-[hsl(var(--kora-gold))] text-[10px] font-bold uppercase tracking-wider rounded-bl-lg text-background">
               Best Value
@@ -575,35 +597,40 @@ function BillingTab() {
                   </span>
                 </div>
               </div>
-              <ChevronRight size={20} className="text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-1" />
+              {isLoadingFamily ? (
+                <Loader2 size={20} className="animate-spin text-[hsl(var(--kora-gold))] flex-shrink-0 mt-1" />
+              ) : (
+                <ChevronRight size={20} className="text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-1" />
+              )}
             </div>
           </motion.div>
 
           {/* Event Pass */}
-          <motion.div 
-            whileTap={{ scale: 0.98 }}
-            onClick={() => toast({ title: "Event Pass", description: "Add when creating an event" })}
-            className="p-5 rounded-2xl border border-border bg-card cursor-pointer group hover:border-primary/30 transition-colors"
-          >
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center flex-shrink-0">
-                <Calendar size={24} className="text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-xl font-bold text-foreground">$99</span>
-                  <span className="text-sm text-muted-foreground">one-time</span>
+          <Link href="/event/create">
+            <motion.div 
+              whileTap={{ scale: 0.98 }}
+              className="p-5 rounded-2xl border border-border bg-card cursor-pointer group hover:border-primary/30 transition-colors"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center flex-shrink-0">
+                  <Calendar size={24} className="text-muted-foreground" />
                 </div>
-                <p className="font-semibold text-foreground mb-1">Event Pass</p>
-                <p className="text-sm text-muted-foreground">
-                  {giverPays
-                    ? "No Kora fee for one event, up to $7.5k in gifts."
-                    : "We cover the Kora fee for one event, up to $7.5k in gifts."}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 mb-1">
+                    <span className="text-xl font-bold text-foreground">$99</span>
+                    <span className="text-sm text-muted-foreground">one-time</span>
+                  </div>
+                  <p className="font-semibold text-foreground mb-1">Event Pass</p>
+                  <p className="text-sm text-muted-foreground">
+                    {giverPays
+                      ? "No Kora fee for one event, up to $7.5k in gifts."
+                      : "We cover the Kora fee for one event, up to $7.5k in gifts."}
+                  </p>
+                </div>
+                <ChevronRight size={20} className="text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-1" />
               </div>
-              <ChevronRight size={20} className="text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-1" />
-            </div>
-          </motion.div>
+            </motion.div>
+          </Link>
         </div>
       </div>
 
