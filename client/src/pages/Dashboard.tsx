@@ -175,6 +175,7 @@ export default function Dashboard() {
   const [expandedGift, setExpandedGift] = useState<string | null>(null);
   const [expandedHolding, setExpandedHolding] = useState<number | null>(null);
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showFundPicker, setShowFundPicker] = useState(false);
   
   const getStatusLabel = (status: FundStatus) => {
     switch (status) {
@@ -242,31 +243,27 @@ export default function Dashboard() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
             <Logo size="sm" className="text-primary" />
             
-            {funds.length > 1 ? (
-              <div className="flex items-center gap-2">
-                <select 
-                  value={selectedFundSlug}
-                  onChange={(e) => setSelectedFundSlug(e.target.value)}
-                  className="text-sm font-medium text-foreground bg-muted px-3 py-1.5 rounded-lg border-0 cursor-pointer hover:bg-border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  data-testid="select-fund-switcher"
+            <div className="flex items-center gap-2">
+              {funds.length > 1 && (
+                <motion.button
+                  onClick={() => setShowFundPicker(true)}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex items-center gap-2 text-sm font-medium text-foreground bg-muted hover:bg-border px-3 py-2 rounded-xl transition-colors"
+                  data-testid="button-fund-switcher"
                 >
-                  {funds.map(f => (
-                    <option key={f.slug} value={f.slug}>{f.name}</option>
-                  ))}
-                </select>
-                <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
-                  <div className="w-9 h-9 rounded-full bg-muted hover:bg-border flex items-center justify-center text-muted-foreground transition-colors" data-testid="button-account">
-                    <User size={16} />
+                  <div className="w-6 h-6 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-xs font-semibold">
+                    {selectedFund.name.charAt(0)}
                   </div>
-                </Link>
-              </div>
-            ) : (
+                  <span className="max-w-[100px] truncate">{selectedFund.name}</span>
+                  <ChevronDown size={14} className="text-muted-foreground" />
+                </motion.button>
+              )}
               <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
                 <div className="w-9 h-9 rounded-full bg-muted hover:bg-border flex items-center justify-center text-muted-foreground transition-colors" data-testid="button-account">
                   <User size={16} />
                 </div>
               </Link>
-            )}
+            </div>
           </div>
       </motion.header>
       
@@ -1047,6 +1044,51 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Fund Picker Sheet */}
+      <Sheet open={showFundPicker} onOpenChange={setShowFundPicker}>
+        <SheetContent side="bottom" className="rounded-t-3xl">
+          <SheetHeader className="text-left mb-4">
+            <SheetTitle className="text-lg font-semibold">Switch fund</SheetTitle>
+          </SheetHeader>
+          
+          <div className="space-y-2 pb-4">
+            {funds.map((fund) => (
+              <motion.button
+                key={fund.slug}
+                onClick={() => {
+                  setSelectedFundSlug(fund.slug);
+                  setShowFundPicker(false);
+                }}
+                whileTap={{ scale: 0.98 }}
+                className={`w-full p-4 rounded-xl flex items-center gap-4 transition-colors ${
+                  fund.slug === selectedFundSlug
+                    ? "bg-[hsl(var(--kora-evergreen)/0.1)] border-2 border-[hsl(var(--kora-evergreen))]"
+                    : "bg-muted border-2 border-transparent hover:bg-border"
+                }`}
+                data-testid={`fund-option-${fund.slug}`}
+              >
+                <div className="w-12 h-12 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-lg font-semibold">
+                  {fund.name.charAt(0)}
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-foreground">{fund.name}'s Fund</p>
+                  <p className="text-sm text-muted-foreground">
+                    {fund.accountType} · {fund.status === "active" ? "Active" : fund.status === "draft" ? "Not activated" : "Pending"}
+                  </p>
+                </div>
+                {fund.slug === selectedFundSlug && (
+                  <div className="w-6 h-6 rounded-full bg-[hsl(var(--kora-evergreen))] flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                )}
+              </motion.button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <ShareKit 
         isOpen={showShareKit} 
