@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, CalendarHeart, Activity, Settings } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
+import { useFunds } from "@/hooks/use-funds";
 
 const navItems = [
   { href: "/dashboard", icon: Wallet, label: "Fund" },
@@ -14,11 +15,14 @@ const navItems = [
 export function MobileNav() {
   const [location] = useLocation();
   const { isAuthenticated, isLoading } = useAuth();
+  const { funds, isLoading: fundsLoading } = useFunds();
   
   const hiddenPaths = ["/checkout", "/get-started", "/onboard", "/activate", "/login", "/claim", "/give"];
   const shouldHide = hiddenPaths.some(path => location.startsWith(path));
   
-  if (shouldHide || isLoading || !isAuthenticated) return null;
+  const hasActiveFund = funds?.some(f => f.status === 'active');
+  
+  if (shouldHide || isLoading || fundsLoading || !isAuthenticated || !hasActiveFund) return null;
 
   return (
     <motion.nav
