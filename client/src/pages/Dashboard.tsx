@@ -7,7 +7,7 @@ import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Plus, User, Users, ChevronRight, ChevronDown, Share2, TrendingUp, Clock, Gift, Shield, MessageCircle, Calendar, X, Sparkles } from "lucide-react";
+import { Plus, User, Users, ChevronRight, ChevronDown, Share2, TrendingUp, Clock, Gift, Shield, MessageCircle, Calendar, X, Sparkles, Lock } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ShareKit } from "@/components/ui/share-kit";
 import { TrustFooter, WhoControlsDrawer } from "@/components/ui/trust-elements";
@@ -280,34 +280,104 @@ export default function Dashboard() {
               
               {selectedFund.status === "draft" ? (
                 <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25 }}
-                  className="bg-card border border-border/50 rounded-2xl p-6 sm:p-8 shadow-premium-sm"
+                  initial={{ opacity: 0, scale: 0.96 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  className="relative overflow-hidden"
                 >
-                  <div className="flex items-start gap-4 mb-6">
-                    <div className="w-14 h-14 rounded-2xl bg-[hsl(var(--kora-evergreen))] flex items-center justify-center">
-                      <Shield size={24} className="text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-foreground mb-1">One more step</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {selectedFund.name}'s fund is ready. Activate investing to start receiving real gifts.
-                      </p>
+                  <div className="bg-gradient-to-br from-[hsl(var(--kora-evergreen))] via-[hsl(var(--kora-evergreen))] to-[hsl(var(--kora-evergreen-light))] rounded-3xl p-8 sm:p-10 text-white relative overflow-hidden shadow-premium-lg">
+                    <motion.div 
+                      className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl"
+                      animate={{ 
+                        scale: [1, 1.2, 1],
+                        opacity: [0.3, 0.5, 0.3],
+                      }}
+                      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    <motion.div 
+                      className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full blur-2xl"
+                      animate={{ 
+                        scale: [1.2, 1, 1.2],
+                        opacity: [0.2, 0.4, 0.2],
+                      }}
+                      transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    
+                    <div className="relative z-10">
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1, duration: 0.3 }}
+                        className="mb-6"
+                      >
+                        <motion.div 
+                          className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center mb-5 border border-white/20"
+                          initial={{ scale: 0, rotate: -20 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ delay: 0.15, type: "spring", stiffness: 200, damping: 15 }}
+                        >
+                          <Sparkles size={28} className="text-white" />
+                        </motion.div>
+                        <motion.h2 
+                          className="text-2xl sm:text-3xl font-bold mb-2"
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.2, duration: 0.3 }}
+                        >
+                          Ready to grow
+                        </motion.h2>
+                        <motion.p 
+                          className="text-white/80 text-base sm:text-lg leading-relaxed"
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.25, duration: 0.3 }}
+                        >
+                          {selectedFund.name}'s fund is set up. Complete a quick verification to start receiving gifts that invest automatically.
+                        </motion.p>
+                      </motion.div>
+                      
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3, duration: 0.3 }}
+                      >
+                        <Link href={`/activate?fund=${selectedFund.slug}`}>
+                          <MagneticButton 
+                            data-testid="button-activate-investing"
+                            className="w-full h-14 text-base font-semibold rounded-2xl bg-white text-[hsl(var(--kora-evergreen))] hover:bg-white/95 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+                          >
+                            <span>Activate investing</span>
+                            <motion.span
+                              animate={{ x: [0, 4, 0] }}
+                              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                              <ChevronRight className="w-5 h-5" />
+                            </motion.span>
+                          </MagneticButton>
+                        </Link>
+                        <p className="text-white/60 text-sm mt-4 text-center">
+                          Takes about 2 minutes
+                        </p>
+                      </motion.div>
                     </div>
                   </div>
                   
-                  <Link href={`/activate?fund=${selectedFund.slug}`}>
-                    <Button 
-                      data-testid="button-activate-investing"
-                      size="lg"
-                      className="w-full h-14 text-base rounded-2xl bg-primary text-primary-foreground hover:bg-[hsl(var(--kora-evergreen-light))] transition-colors duration-200"
-                    >
-                      Activate investing
-                      <ChevronRight className="ml-2 w-5 h-5" />
-                    </Button>
-                  </Link>
-                  <p className="text-xs text-muted-foreground mt-4 text-center">Takes about 2 minutes. Identity verification required.</p>
+                  <motion.div 
+                    className="mt-4 flex items-center justify-center gap-4 text-xs text-muted-foreground"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4, duration: 0.3 }}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Shield size={12} />
+                      <span>SIPC Protected</span>
+                    </div>
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                    <div className="flex items-center gap-1.5">
+                      <Lock size={12} />
+                      <span>256-bit encryption</span>
+                    </div>
+                  </motion.div>
                 </motion.div>
               ) : selectedFund.status === "pending" ? (
                 <motion.div
