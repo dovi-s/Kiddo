@@ -380,7 +380,7 @@ export default function Events() {
             transition={{ type: "spring", stiffness: 400, damping: 25, delay: 0.2 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => haptic('medium')}
-            className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-premium-lg z-50"
+            className="fixed bottom-36 right-4 w-14 h-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-premium-lg z-50"
             data-testid="button-create-event"
           >
             <Plus size={24} />
