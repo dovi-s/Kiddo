@@ -128,23 +128,21 @@ export default function Events() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className="mb-6"
+            className="mb-8"
           >
-            {funds.length > 1 && (
+            {funds.length > 1 ? (
               <motion.button
                 onClick={() => { haptic('selection'); setShowFundPicker(true); }}
-                whileTap={{ scale: 0.97 }}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted hover:bg-border transition-colors mb-4"
+                whileTap={{ scale: 0.98 }}
+                className="inline-flex items-center gap-2 mb-2"
                 data-testid="button-fund-context"
               >
-                <div className="w-5 h-5 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-[10px] font-bold">
-                  {selectedFund.name.charAt(0)}
-                </div>
-                <span className="text-sm font-medium text-foreground">{selectedFund.name}'s Fund</span>
-                <ChevronDown size={14} className="text-muted-foreground" />
+                <h1 className="text-2xl font-bold text-foreground">{selectedFund.name}'s Events</h1>
+                <ChevronDown size={20} className="text-muted-foreground" />
               </motion.button>
+            ) : (
+              <h1 className="text-2xl font-bold text-foreground mb-2">Events</h1>
             )}
-            <h1 className="text-2xl font-bold text-foreground mb-2">Events</h1>
             <p className="text-muted-foreground">Create gift occasions for birthdays, holidays, and more</p>
           </motion.div>
 
