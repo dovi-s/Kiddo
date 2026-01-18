@@ -236,7 +236,7 @@ export default function MomentCreate() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-foreground">Event Pass included</span>
+                        <span className="font-semibold text-foreground">Event Pass</span>
                         {hasFamilyPlan ? (
                           <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">Covered by Family Plan</span>
                         ) : (
@@ -246,7 +246,7 @@ export default function MomentCreate() {
                       <p className="text-xs text-muted-foreground">
                         {hasFamilyPlan 
                           ? "No Kora fee on gifts for this event (up to $7,500)."
-                          : "No Kora fee on gifts for this event (up to $7,500). One-time purchase."}
+                          : "Waives the Kora fee on all gifts for this event (up to $7,500)."}
                       </p>
                     </div>
                   </div>
