@@ -243,11 +243,6 @@ export default function Dashboard() {
                   <ChevronDown size={14} className="text-muted-foreground" />
                 </motion.button>
               )}
-              <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
-                <div className="w-9 h-9 rounded-full bg-muted hover:bg-border flex items-center justify-center text-muted-foreground transition-colors" data-testid="button-account">
-                  <User size={16} />
-                </div>
-              </Link>
             </div>
           </div>
       </motion.header>
