@@ -449,75 +449,14 @@ function BillingTab() {
 
   return (
     <div className="space-y-8">
-      {/* Visual Fee Breakdown */}
-      <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-2xl p-5 border border-primary/20"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-            <DollarSign size={16} className="text-primary" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">How fees work</h3>
-            <p className="text-xs text-muted-foreground">On a $100 gift by card</p>
-          </div>
-        </div>
-        
-        <div className="space-y-3">
-          {/* Visual breakdown */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1">
-              <div className="h-3 rounded-full bg-muted overflow-hidden flex">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: "68%" }}
-                  transition={{ delay: 0.2, duration: 0.5 }}
-                  className="h-full bg-primary/40 rounded-l-full"
-                />
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: "32%" }}
-                  transition={{ delay: 0.4, duration: 0.3 }}
-                  className="h-full bg-[hsl(var(--kora-gold))] rounded-r-full"
-                />
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-primary/40" />
-              <div>
-                <p className="font-medium text-foreground">$3.20</p>
-                <p className="text-xs text-muted-foreground">Card processing</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[hsl(var(--kora-gold))]" />
-              <div>
-                <p className="font-medium text-foreground">$1.50</p>
-                <p className="text-xs text-muted-foreground">Kora fee</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="pt-3 border-t border-primary/10 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Total fees on $100</span>
-            <span className="text-lg font-bold text-foreground">$4.70</span>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Who pays toggle - more prominent */}
+      {/* Who pays toggle with integrated breakdown */}
       <div>
-        <div className="flex items-center gap-2 mb-3">
-          <h3 className="font-semibold text-foreground">Who pays the fees?</h3>
-          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">All gifts</span>
+        <div className="mb-4">
+          <h3 className="font-semibold text-foreground text-lg">When someone gives $100</h3>
+          <p className="text-sm text-muted-foreground">Choose who covers the small platform fee</p>
         </div>
         
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 mb-5">
           <motion.button
             whileTap={{ scale: 0.98 }}
             onClick={() => { setWhoPays("guests"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
@@ -535,12 +474,8 @@ function BillingTab() {
                 <Check size={12} className="text-primary-foreground" />
               </motion.div>
             )}
-            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-3">
-              <Users size={20} className="text-muted-foreground" />
-            </div>
-            <p className="font-semibold text-foreground mb-0.5">Gift givers</p>
-            <p className="text-xs text-muted-foreground">They pay $104.70 total</p>
-            <p className="text-xs text-primary mt-2 font-medium">You receive $100</p>
+            <p className="font-semibold text-foreground mb-1">They cover it</p>
+            <p className="text-xs text-muted-foreground">Most common choice</p>
           </motion.button>
           
           <motion.button
@@ -560,14 +495,41 @@ function BillingTab() {
                 <Check size={12} className="text-primary-foreground" />
               </motion.div>
             )}
-            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-3">
-              <Heart size={20} className="text-muted-foreground" />
-            </div>
-            <p className="font-semibold text-foreground mb-0.5">I'll cover it</p>
-            <p className="text-xs text-muted-foreground">They pay $103.20</p>
-            <p className="text-xs text-primary mt-2 font-medium">You receive $98.50</p>
+            <p className="font-semibold text-foreground mb-1">I'll cover it</p>
+            <p className="text-xs text-muted-foreground">Lower cost for givers</p>
           </motion.button>
         </div>
+
+        {/* Dynamic breakdown based on selection */}
+        <motion.div 
+          key={whoPays}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-muted/50 rounded-2xl p-4 border border-border"
+        >
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Your friend sends</span>
+              <span className="text-sm font-semibold text-foreground">
+                {giverPays ? "$104.70" : "$103.20"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Card processing (Visa/Mastercard)</span>
+              <span className="text-muted-foreground">-$3.20</span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Kora platform fee</span>
+              <span className="text-muted-foreground">
+                {giverPays ? "-$1.50" : "You pay $1.50"}
+              </span>
+            </div>
+            <div className="pt-3 border-t border-border flex items-center justify-between">
+              <span className="font-medium text-foreground">Your child's fund gets</span>
+              <span className="text-lg font-bold text-primary">$100.00</span>
+            </div>
+          </div>
+        </motion.div>
       </div>
 
       {/* Upgrade plans - premium cards */}
