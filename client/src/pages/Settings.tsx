@@ -565,7 +565,7 @@ function BillingTab() {
             </div>
             <p className="font-semibold text-foreground mb-0.5">I'll cover it</p>
             <p className="text-xs text-muted-foreground">They pay $103.20</p>
-            <p className="text-xs text-primary mt-2 font-medium">You pay $1.50/gift</p>
+            <p className="text-xs text-primary mt-2 font-medium">You receive $98.50</p>
           </motion.button>
         </div>
       </div>
