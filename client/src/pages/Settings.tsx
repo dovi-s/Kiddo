@@ -439,47 +439,52 @@ function NotificationsTab() {
 function BillingTab() {
   return (
     <div className="space-y-6">
-      <SettingsSection title="Membership" description="Your household's account status">
-        <div className="p-5 bg-white rounded-xl border border-border">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <p className="text-lg font-semibold text-foreground">Free</p>
-                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">Current</span>
+      {/* Current Plan */}
+      <SettingsSection title="Your plan" description="Choose how you want to handle fees">
+        <div className="space-y-3">
+          {/* Free - Current */}
+          <div className="p-4 rounded-xl border-2 border-primary bg-primary/5">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <p className="font-semibold text-foreground">Free</p>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-wide">Current</span>
               </div>
-              <p className="text-sm text-muted-foreground">Guests pay all fees at checkout</p>
+              <p className="text-sm font-medium text-foreground">$0</p>
             </div>
+            <p className="text-sm text-muted-foreground">Gift givers see a small fee at checkout (~$4.70 on a $100 gift). You pay nothing.</p>
           </div>
           
-          <div className="p-4 rounded-lg bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <p className="font-semibold mb-0.5">Upgrade to Family</p>
-                <p className="text-sm text-primary-foreground/70">$199/year</p>
+          {/* Family Plan */}
+          <div className="p-4 rounded-xl border border-border bg-card hover:border-primary/30 transition-colors">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="text-[hsl(var(--kora-gold))]" />
+                <p className="font-semibold text-foreground">Family</p>
               </div>
-              <Sparkles size={20} className="text-[hsl(var(--kora-gold))]" />
+              <p className="text-sm font-medium text-foreground">$199<span className="text-muted-foreground font-normal">/year</span></p>
             </div>
-            <ul className="text-sm text-primary-foreground/80 space-y-1.5 mb-4">
-              <li className="flex items-center gap-2">
-                <Check size={14} className="text-[hsl(var(--kora-evergreen-light))]" />
-                Platform fees waived up to $15,000/year
-              </li>
-              <li className="flex items-center gap-2">
-                <Check size={14} className="text-[hsl(var(--kora-evergreen-light))]" />
-                Household dashboard for all your kids
-              </li>
-              <li className="flex items-center gap-2">
-                <Check size={14} className="text-[hsl(var(--kora-evergreen-light))]" />
-                Recurring gift management
-              </li>
-              <li className="flex items-center gap-2">
-                <Check size={14} className="text-[hsl(var(--kora-evergreen-light))]" />
-                Priority support
-              </li>
-            </ul>
+            <p className="text-sm text-muted-foreground mb-3">We cover the Kora fee for gift givers (up to $15k/year in gifts).</p>
+            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-4">
+              <div className="flex items-center gap-1.5">
+                <Check size={12} className="text-[hsl(var(--kora-evergreen))]" />
+                <span>Lower checkout fees</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Check size={12} className="text-[hsl(var(--kora-evergreen))]" />
+                <span>Manage all your kids</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Check size={12} className="text-[hsl(var(--kora-evergreen))]" />
+                <span>Recurring gifts</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Check size={12} className="text-[hsl(var(--kora-evergreen))]" />
+                <span>Priority support</span>
+              </div>
+            </div>
             <button 
               onClick={() => toast({ title: "Upgrade to Family", description: "Family plan coming soon" })}
-              className="w-full py-2.5 bg-white text-foreground font-medium rounded-lg hover:bg-muted transition-colors text-sm"
+              className="w-full py-2.5 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors text-sm"
             >
               Upgrade to Family
             </button>
@@ -487,59 +492,67 @@ function BillingTab() {
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Event Passes" description="One-time upgrades for individual events">
-        <div className="p-4 bg-muted rounded-lg border border-border">
+      {/* Event Pass */}
+      <SettingsSection title="Event Pass" description="One-time option for a single event">
+        <div className="p-4 rounded-xl border border-[hsl(var(--kora-gold)/0.3)] bg-[hsl(var(--kora-gold)/0.05)]">
+          <div className="flex items-center justify-between mb-2">
+            <p className="font-semibold text-foreground">$99 per event</p>
+          </div>
           <p className="text-sm text-muted-foreground mb-3">
-            Event Passes ($99 each) unlock premium features and waive platform fees for a single event. 
-            Purchase when creating or editing an event.
+            Perfect for birthdays or holidays. Waives the Kora fee for that event (up to $7,500 in gifts) plus premium themes and thank-you automation.
           </p>
-          <div className="text-xs text-muted-foreground">
-            No Event Passes purchased yet.
-          </div>
+          <p className="text-xs text-muted-foreground">Add when creating or editing an event.</p>
         </div>
       </SettingsSection>
 
-      <SettingsSection title="How fees work" description="Two components shown at checkout">
-        <div className="space-y-3">
-          <div className="p-3 rounded-lg bg-muted border border-border">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-medium text-foreground">Processing (pass-through)</p>
-              <p className="text-sm text-muted-foreground">~2.9% + $0.30</p>
-            </div>
-            <p className="text-xs text-muted-foreground">Card network fees. Lower for ACH (~$0.75).</p>
+      {/* Fee Breakdown - Simplified */}
+      <SettingsSection title="What gift givers pay" description="Shown at checkout">
+        <div className="p-4 rounded-xl bg-muted border border-border">
+          <div className="flex items-center justify-between text-sm mb-3 pb-3 border-b border-border">
+            <span className="text-muted-foreground">Example: $100 gift</span>
+            <span className="font-medium text-foreground">Total: $104.70</span>
           </div>
-          <div className="p-3 rounded-lg bg-muted border border-border">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-medium text-foreground">Kora platform fee</p>
-              <p className="text-sm text-muted-foreground">1.5% ($1–$10)</p>
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Card processing</span>
+              <span className="text-foreground">$3.20</span>
             </div>
-            <p className="text-xs text-muted-foreground">Covers brokerage, KYC, support, and thank-you automation. 1.0% for ACH.</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">Kora fee</span>
+                <span className="text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded">waived with upgrade</span>
+              </div>
+              <span className="text-foreground">$1.50</span>
+            </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-border">
+            Bank transfers (ACH) have lower fees (~$1.50 total).
+          </p>
         </div>
-        <p className="text-xs text-muted-foreground pt-2">Example: $100 gift = $3.20 processing + $1.50 Kora fee = $4.70 total</p>
       </SettingsSection>
 
-      <SettingsSection title="Fee preferences" description="Default behavior for new events">
+      {/* Preferences - Cleaner */}
+      <SettingsSection title="Your preferences">
         <AutoSaveSelect 
-          label="Who pays Kora platform fee" 
+          label="Who pays Kora fee" 
           value="guests" 
           options={[
-            { value: "guests", label: "Guests pay platform fee (default)" },
-            { value: "host", label: "I cover platform fee (billed 1.5% per gift)" },
+            { value: "guests", label: "Gift givers pay (default)" },
+            { value: "host", label: "I'll cover it (1.5% per gift)" },
           ]}
         />
         <AutoSaveSelect 
           label="When goal is reached" 
           value="continue" 
           options={[
-            { value: "continue", label: "Continue accepting gifts" },
-            { value: "stop", label: "Stop accepting gifts at goal" },
+            { value: "continue", label: "Keep accepting gifts" },
+            { value: "stop", label: "Stop at goal" },
           ]}
         />
-        <p className="text-xs text-muted-foreground">Guests always pay processing. You can cover that too per-event.</p>
       </SettingsSection>
 
-      <SettingsSection title="Payment method">
+      {/* Payment Method */}
+      <SettingsSection title="Payment method" description="Used when you cover fees">
         <div className="flex items-center justify-between py-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-6 rounded bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center text-white text-[8px] font-bold">VISA</div>
@@ -550,13 +563,14 @@ function BillingTab() {
           </div>
           <button 
             onClick={() => toast({ title: "Update payment method", description: "Contact support to update your card" })}
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="text-sm text-primary font-medium"
           >Update</button>
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Invoices">
-        <p className="text-sm text-muted-foreground">No invoices yet. Invoices will appear here after you upgrade or cover fees.</p>
+      {/* Invoices */}
+      <SettingsSection title="Billing history">
+        <p className="text-sm text-muted-foreground py-2">No charges yet. Your history will appear here.</p>
       </SettingsSection>
     </div>
   );
