@@ -16,11 +16,14 @@ import { springSnappy, springGentle, easeOutExpo, cardTactile, staggerFast, shar
 import { AnimatedValue } from "@/components/ui/animated-value";
 import { MagneticButton } from "@/components/ui/magnetic-button";
 import { haptic } from "@/lib/haptics";
+import { useAuth } from "@/hooks/use-auth";
+import { useFunds, useFundEvents, useFundHoldings, useFundGifts, useCreateFund } from "@/hooks/use-funds";
+import type { Fund, Event, Holding, Gift as GiftType } from "@shared/schema";
 
 type FundStatus = "draft" | "pending" | "active" | "needs_action";
 
 interface StoredFund {
-  id: number;
+  id: string;
   name: string;
   slug: string;
   accountType: string;
@@ -32,131 +35,81 @@ interface StoredFund {
   projection: number;
   yearsLeft: number;
   isNew: boolean;
-  events: { id: number; slug: string; title: string; raised: number; gifts: number; date?: string; active: boolean }[];
+  events: { id: string; slug: string; title: string; raised: number; gifts: number; date?: string; active: boolean }[];
 }
-
-const loadStoredFunds = (): StoredFund[] => {
-  try {
-    const stored = localStorage.getItem("kora_funds");
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-};
-
-const saveStoredFunds = (funds: StoredFund[]) => {
-  try {
-    localStorage.setItem("kora_funds", JSON.stringify(funds));
-  } catch {}
-};
 
 export default function Dashboard() {
   const search = useSearch();
   const params = new URLSearchParams(search);
-  const accountType = params.get("type") || "child";
-  const profileName = decodeURIComponent(params.get("name") || "Mila");
-  const childrenParam = params.get("children");
-  const isPersonal = accountType === "personal";
-  const isNewFund = params.get("new") === "true";
-  const newFundName = params.get("newFund");
-
   const [, setLocation] = useLocation();
+  
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: apiFunds = [], isLoading: fundsLoading } = useFunds();
+  const createFundMutation = useCreateFund();
+
   const [showShareKit, setShowShareKit] = useState(false);
   const [showAddFund, setShowAddFund] = useState(false);
   const [showAddChild, setShowAddChild] = useState(false);
   const [newChildName, setNewChildName] = useState("");
 
-  const [funds, setFunds] = useState<StoredFund[]>(() => {
-    const stored = loadStoredFunds();
-    if (stored.length > 0) return stored;
-    
-    const childNames = childrenParam ? decodeURIComponent(childrenParam).split(",") : [profileName];
-    const isNewAccount = isNewFund;
-    
-    if (isPersonal) {
-      return [{
-        id: 1,
-        name: profileName,
-        slug: profileName.toLowerCase().replace(/\s+/g, "-"),
-        accountType: "Individual",
-        status: (isNewAccount ? "draft" : "active") as FundStatus,
-        balance: isNewAccount ? 0 : 4250,
-        gain: isNewAccount ? 0 : 472,
-        gainPercent: isNewAccount ? 0 : 12.5,
-        contributors: isNewAccount ? 0 : 18,
-        projection: isNewAccount ? 0 : 28400,
-        yearsLeft: 20,
-        isNew: isNewAccount,
-        events: isNewAccount ? [
-          { id: 1, slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
-        ] : [
-          { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
-          { id: 2, slug: "30th-birthday", title: "30th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
-          { id: 3, slug: "mba-graduation", title: "MBA Graduation", raised: 650, gifts: 4, date: "May 2026", active: true },
-        ]
-      }];
-    }
-    
-    return childNames.map((name, index) => ({
-      id: index + 1,
-      name: name.trim(),
-      slug: name.trim().toLowerCase().replace(/\s+/g, "-"),
-      accountType: "UTMA",
-      status: (isNewAccount ? "draft" : "active") as FundStatus,
-      balance: isNewAccount ? 0 : (index === 0 ? 4250 : index === 1 ? 1820 : 650),
-      gain: isNewAccount ? 0 : (index === 0 ? 472 : index === 1 ? 156 : 42),
-      gainPercent: isNewAccount ? 0 : (index === 0 ? 12.5 : index === 1 ? 9.4 : 6.9),
-      contributors: isNewAccount ? 0 : (index === 0 ? 18 : index === 1 ? 8 : 3),
-      projection: isNewAccount ? 0 : (index === 0 ? 28400 : index === 1 ? 12200 : 4350),
-      yearsLeft: index === 0 ? 14 : index === 1 ? 16 : 17,
-      isNew: isNewAccount,
-      events: isNewAccount ? [
-        { id: index * 10 + 1, slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
-      ] : (index === 0 ? [
-        { id: 1, slug: "anytime", title: "Open anytime", raised: 2180, gifts: 12, active: true },
-        { id: 2, slug: "5th-birthday", title: "5th Birthday", raised: 1420, gifts: 8, date: "Dec 2025", active: false },
-        { id: 3, slug: "kindergarten-graduation", title: "Kindergarten", raised: 650, gifts: 4, date: "May 2026", active: true },
-      ] : index === 1 ? [
-        { id: 4, slug: "anytime", title: "Open anytime", raised: 1200, gifts: 6, active: true },
-        { id: 5, slug: "3rd-birthday", title: "3rd Birthday", raised: 620, gifts: 4, date: "Mar 2025", active: true },
-      ] : [
-        { id: 6, slug: "anytime", title: "Open anytime", raised: 650, gifts: 3, active: true },
-      ])
-    }));
-  });
-
   useEffect(() => {
-    if (newFundName && !funds.some(f => f.name.toLowerCase() === newFundName.toLowerCase())) {
-      const newFund: StoredFund = {
-        id: funds.length + 1,
-        name: newFundName,
-        slug: newFundName.toLowerCase().replace(/\s+/g, "-"),
-        accountType: "UTMA",
-        status: "draft",
-        balance: 0,
-        gain: 0,
-        gainPercent: 0,
-        contributors: 0,
-        projection: 0,
-        yearsLeft: 18,
-        isNew: true,
-        events: [
-          { id: Date.now(), slug: "anytime", title: "Open anytime", raised: 0, gifts: 0, active: true },
-        ]
-      };
-      const updatedFunds = [...funds, newFund];
-      setFunds(updatedFunds);
-      saveStoredFunds(updatedFunds);
-      toast({ title: `${newFundName}'s fund created`, description: "Activate investing to start growing gifts" });
+    if (!authLoading && !isAuthenticated) {
+      window.location.href = "/api/login";
     }
-  }, [newFundName]);
+  }, [authLoading, isAuthenticated]);
 
-  useEffect(() => {
-    if (funds.length > 0) {
-      saveStoredFunds(funds);
-    }
-  }, [funds]);
+  const funds: StoredFund[] = apiFunds.map(f => ({
+    id: f.id,
+    name: f.name,
+    slug: f.slug,
+    accountType: f.accountType,
+    status: (f.status || "active") as FundStatus,
+    balance: parseFloat(f.balance || "0"),
+    gain: parseFloat(f.totalGain || "0"),
+    gainPercent: parseFloat(f.gainPercent || "0"),
+    contributors: f.contributorCount || 0,
+    projection: parseFloat(f.projectedValue || "0"),
+    yearsLeft: f.yearsUntilMaturity || 18,
+    isNew: f.status === "draft",
+    events: [],
+  }));
 
-  const isNewAccount = funds.every(f => f.isNew);
-  const [selectedFundSlug, setSelectedFundSlug] = useState(funds[0]?.slug || profileName.toLowerCase().replace(/\s+/g, "-"));
+  const isNewAccount = funds.length === 0 || funds.every(f => f.status === "draft");
+
+  if (authLoading || fundsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  if (funds.length === 0) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+          <Logo size="lg" className="text-foreground mb-8" />
+          <h1 className="text-2xl font-semibold mb-4">Welcome to Kora</h1>
+          <p className="text-muted-foreground text-center max-w-md mb-8">
+            Create your first investment fund to start receiving gifts that grow over time.
+          </p>
+          <Link href="/get-started">
+            <Button size="lg" className="h-12 px-8" data-testid="button-create-first-fund">
+              Create your first fund
+            </Button>
+          </Link>
+        </div>
+      </PageTransition>
+    );
+  }
+
+  const profileName = funds[0]?.name || user?.firstName || "My Fund";
+  const isPersonal = funds[0]?.accountType === "Individual";
+  const [selectedFundSlug, setSelectedFundSlug] = useState(funds[0]?.slug || "");
   const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
   const [expandedGift, setExpandedGift] = useState<string | null>(null);
   const [expandedHolding, setExpandedHolding] = useState<number | null>(null);

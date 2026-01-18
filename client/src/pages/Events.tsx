@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
@@ -8,13 +8,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { easeOutExpo, staggerPremium, listItemSpring, sharePulse } from "@/lib/animations";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { useAuth } from "@/hooks/use-auth";
+import { useEvents } from "@/hooks/use-events";
+import { useFunds } from "@/hooks/use-funds";
 
-const funds = [
-  { slug: "mila", name: "Mila", accountType: "UTMA Custodial" },
-  { slug: "noah", name: "Noah", accountType: "UTMA Custodial" },
-];
-
-type Event = {
+type EventItem = {
   id: string;
   title: string;
   fundName: string;
@@ -27,65 +25,7 @@ type Event = {
   isDefault?: boolean;
 };
 
-const sampleEvents: Event[] = [
-  {
-    id: "mila-anytime",
-    title: "Gift anytime",
-    fundName: "Mila",
-    fundSlug: "mila",
-    raised: 150,
-    gifts: 2,
-    active: true,
-    type: "anytime",
-    isDefault: true
-  },
-  {
-    id: "1",
-    title: "5th Birthday",
-    fundName: "Mila",
-    fundSlug: "mila",
-    date: "March 15, 2026",
-    raised: 450,
-    gifts: 6,
-    active: true,
-    type: "birthday"
-  },
-  {
-    id: "2",
-    title: "Christmas 2025",
-    fundName: "Mila",
-    fundSlug: "mila",
-    date: "December 25, 2025",
-    raised: 200,
-    gifts: 3,
-    active: false,
-    type: "holiday"
-  },
-  {
-    id: "noah-anytime",
-    title: "Gift anytime",
-    fundName: "Noah",
-    fundSlug: "noah",
-    raised: 75,
-    gifts: 1,
-    active: true,
-    type: "anytime",
-    isDefault: true
-  },
-  {
-    id: "4",
-    title: "Baby Shower",
-    fundName: "Noah",
-    fundSlug: "noah",
-    date: "February 1, 2026",
-    raised: 50,
-    gifts: 1,
-    active: true,
-    type: "custom"
-  },
-];
-
-function getEventIcon(type: Event["type"]) {
+function getEventIcon(type: EventItem["type"]) {
   switch (type) {
     case "birthday":
       return "🎂";
@@ -99,12 +39,47 @@ function getEventIcon(type: Event["type"]) {
 }
 
 export default function Events() {
-  const [events, setEvents] = useState(sampleEvents);
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: apiFunds = [], isLoading: fundsLoading } = useFunds();
+  const { data: apiEvents = [], isLoading: eventsLoading } = useEvents();
+  
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [selectedFundSlug, setSelectedFundSlug] = useState("mila");
+  const [selectedFundSlug, setSelectedFundSlug] = useState("");
   const [showFundPicker, setShowFundPicker] = useState(false);
-  const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
   const [actionEventId, setActionEventId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      window.location.href = "/api/login";
+    }
+  }, [authLoading, isAuthenticated]);
+
+  useEffect(() => {
+    if (apiFunds.length > 0 && !selectedFundSlug) {
+      setSelectedFundSlug(apiFunds[0].slug);
+    }
+  }, [apiFunds, selectedFundSlug]);
+
+  const funds = apiFunds.map(f => ({
+    slug: f.slug,
+    name: f.name,
+    accountType: f.accountType,
+  }));
+
+  const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
+
+  const events: EventItem[] = apiEvents.map(e => ({
+    id: e.id,
+    title: e.name,
+    fundName: selectedFund?.name || "Fund",
+    fundSlug: selectedFund?.slug || "",
+    date: e.eventDate ? new Date(e.eventDate).toLocaleDateString() : undefined,
+    raised: parseFloat(e.giftVolume || "0"),
+    gifts: e.giftCount || 0,
+    active: e.status === "active",
+    type: e.isPermanent ? "anytime" as const : "custom" as const,
+    isDefault: e.isPermanent,
+  }));
 
   const activeEvents = events.filter(e => e.active);
   const pastEvents = events.filter(e => !e.active);
@@ -116,17 +91,28 @@ export default function Events() {
       setActionEventId(null);
       return;
     }
-    setEvents(events.filter(e => e.id !== id));
-    setActionEventId(null);
     toast({ title: "Event deleted" });
+    setActionEventId(null);
   };
 
-  const handleShare = (event: Event) => {
+  const handleShare = (event: EventItem) => {
     const url = `${window.location.origin}/give/${event.fundSlug}/${event.id}`;
     navigator.clipboard.writeText(url);
     setActionEventId(null);
     toast({ title: "Link copied!", description: "Share this link with friends and family" });
   };
+
+  if (authLoading || fundsLoading || eventsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <PageTransition>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
@@ -7,11 +7,9 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { springSnappy, easeOutExpo, cardTactile, staggerPremium, listItemSpring } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
-
-const funds = [
-  { slug: "mila", name: "Mila", accountType: "UTMA Custodial" },
-  { slug: "noah", name: "Noah", accountType: "UTMA Custodial" },
-];
+import { useAuth } from "@/hooks/use-auth";
+import { useActivities } from "@/hooks/use-activities";
+import { useFunds } from "@/hooks/use-funds";
 
 type ActivityItem = {
   id: string;
@@ -27,66 +25,6 @@ type ActivityItem = {
   eventName?: string;
   holdings?: { ticker: string; shares: string }[];
 };
-
-const sampleActivity: ActivityItem[] = [
-  {
-    id: "1",
-    type: "gift_received",
-    title: "Gift received",
-    description: "Sarah Johnson sent $100",
-    amount: 100,
-    date: new Date(Date.now() - 1000 * 60 * 30),
-    fundName: "Mila",
-    status: "completed",
-    senderName: "Sarah Johnson",
-    message: "Happy birthday Mila! Can't wait to watch this grow with you.",
-    eventName: "5th Birthday",
-    holdings: [{ ticker: "VTI", shares: "0.37" }, { ticker: "VXUS", shares: "0.12" }]
-  },
-  {
-    id: "2",
-    type: "investment_placed",
-    title: "Investment placed",
-    description: "Bought 0.37 shares of VTI",
-    amount: 100,
-    date: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    fundName: "Mila",
-    status: "completed",
-    holdings: [{ ticker: "VTI", shares: "0.37" }]
-  },
-  {
-    id: "3",
-    type: "thank_you_sent",
-    title: "Thank you sent",
-    description: "To Sarah Johnson",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 3),
-    fundName: "Mila",
-    status: "completed",
-    senderName: "Sarah Johnson"
-  },
-  {
-    id: "4",
-    type: "gift_received",
-    title: "Gift received",
-    description: "Mike Chen sent $50",
-    amount: 50,
-    date: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    fundName: "Noah",
-    status: "pending",
-    senderName: "Mike Chen",
-    message: "For Noah's future!",
-    eventName: "Baby Shower"
-  },
-  {
-    id: "5",
-    type: "verification",
-    title: "Verification approved",
-    description: "Account is now active",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
-    fundName: "All funds",
-    status: "completed"
-  },
-];
 
 function formatRelativeTime(date: Date): string {
   const now = new Date();
@@ -115,18 +53,64 @@ function getActivityIcon(type: ActivityItem["type"]) {
 }
 
 export default function Activity() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: apiFunds = [], isLoading: fundsLoading } = useFunds();
+  const { data: apiActivities = [], isLoading: activitiesLoading } = useActivities();
+  
   const [filter, setFilter] = useState<"all" | "gifts" | "investments">("all");
-  const [selectedFundSlug, setSelectedFundSlug] = useState("mila");
+  const [selectedFundSlug, setSelectedFundSlug] = useState("");
   const [showFundPicker, setShowFundPicker] = useState(false);
-  const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const filteredActivity = sampleActivity.filter(item => {
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      window.location.href = "/api/login";
+    }
+  }, [authLoading, isAuthenticated]);
+
+  useEffect(() => {
+    if (apiFunds.length > 0 && !selectedFundSlug) {
+      setSelectedFundSlug(apiFunds[0].slug);
+    }
+  }, [apiFunds, selectedFundSlug]);
+
+  const funds = apiFunds.map(f => ({
+    slug: f.slug,
+    name: f.name,
+    accountType: f.accountType,
+  }));
+
+  const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
+
+  const activities: ActivityItem[] = apiActivities.map(a => ({
+    id: a.id,
+    type: (a.type as ActivityItem["type"]) || "gift_received",
+    title: a.title,
+    description: a.description || "",
+    amount: a.amount ? parseFloat(a.amount) : undefined,
+    date: new Date(a.createdAt || Date.now()),
+    fundName: selectedFund?.name || "Fund",
+    status: "completed" as const,
+  }));
+
+  const filteredActivity = activities.filter(item => {
     if (filter === "all") return true;
     if (filter === "gifts") return item.type === "gift_received";
     if (filter === "investments") return item.type === "investment_placed";
     return true;
   });
+
+  if (authLoading || fundsLoading || activitiesLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <PageTransition>
