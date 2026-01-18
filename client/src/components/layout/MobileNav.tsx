@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, CalendarHeart, Activity, Settings } from "lucide-react";
+import { haptic } from "@/lib/haptics";
 
 const navItems = [
   { href: "/dashboard", icon: Wallet, label: "Fund" },
@@ -35,29 +36,47 @@ export function MobileNav() {
           return (
             <Link key={item.href} href={item.href}>
               <motion.div
-                whileTap={{ scale: 0.9 }}
-                transition={{ duration: 0.15, ease: "easeOut" }}
+                whileTap={{ scale: 0.88 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                onClick={() => !isActive && haptic('selection')}
                 className="flex flex-col items-center justify-center py-3 px-5 relative touch-target"
                 data-testid={`nav-${item.label.toLowerCase()}`}
               >
                 <motion.div
-                  animate={isActive ? { scale: [1, 1.15, 1] } : { scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className={`p-2 rounded-2xl transition-colors duration-150 ${
-                    isActive ? "bg-primary/10" : ""
+                  layout
+                  className={`p-2 rounded-2xl transition-colors duration-200 ${
+                    isActive ? "bg-primary/12" : ""
                   }`}
                 >
-                  <Icon 
-                    className={`w-7 h-7 transition-colors duration-150 ${
-                      isActive ? "text-primary" : "text-muted-foreground"
-                    }`} 
-                  />
+                  <motion.div
+                    animate={isActive ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                  >
+                    <Icon 
+                      className={`w-6 h-6 transition-colors duration-200 ${
+                        isActive ? "text-primary" : "text-muted-foreground"
+                      }`} 
+                      strokeWidth={isActive ? 2.5 : 2}
+                    />
+                  </motion.div>
                 </motion.div>
-                <span className={`text-xs mt-1.5 transition-colors duration-150 font-medium ${
-                  isActive ? "text-primary" : "text-muted-foreground"
+                <span className={`text-[11px] mt-1 transition-all duration-200 ${
+                  isActive ? "text-primary font-semibold" : "text-muted-foreground font-medium"
                 }`}>
                   {item.label}
                 </span>
+                <AnimatePresence>
+                  {isActive && (
+                    <motion.div
+                      layoutId="nav-indicator"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      className="absolute -top-0.5 w-1 h-1 rounded-full bg-primary"
+                    />
+                  )}
+                </AnimatePresence>
               </motion.div>
             </Link>
           );
