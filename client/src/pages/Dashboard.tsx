@@ -468,43 +468,44 @@ export default function Dashboard() {
                         </div>
                       ) : (
                         allContributions.map((gift, index) => (
-                          <motion.div 
-                            key={gift.id}
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.04, duration: 0.2, ease: "easeOut" }}
-                            whileHover={{ y: -3, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.12)" }}
-                            whileTap={{ scale: 0.98 }}
-                            className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between cursor-pointer touch-target swipe-hint"
-                          >
-                            <div className="flex items-center gap-4">
-                              <motion.div 
-                                className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-semibold ${
-                                  gift.status === "pending" 
-                                    ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
-                                    : "bg-[hsl(var(--kora-evergreen)/0.15)] text-[hsl(var(--kora-evergreen))]"
-                                }`}
-                                whileHover={{ scale: 1.05 }}
-                                transition={{ duration: 0.15 }}
-                              >
-                                {gift.from.charAt(0)}
-                              </motion.div>
-                              <div>
-                                <p className="text-base font-semibold text-foreground">{gift.from}</p>
-                                <p className="text-sm text-muted-foreground mt-0.5">{formatRelativeTime(gift.date)}</p>
+                          <Link href={`/activity/${gift.id}`} key={gift.id}>
+                            <motion.div 
+                              initial={{ opacity: 0, y: 12 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: index * 0.04, duration: 0.2, ease: "easeOut" }}
+                              whileHover={{ y: -3, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.12)" }}
+                              whileTap={{ scale: 0.98 }}
+                              className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between cursor-pointer touch-target swipe-hint"
+                            >
+                              <div className="flex items-center gap-4">
+                                <motion.div 
+                                  className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-semibold ${
+                                    gift.status === "pending" 
+                                      ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
+                                      : "bg-[hsl(var(--kora-evergreen)/0.15)] text-[hsl(var(--kora-evergreen))]"
+                                  }`}
+                                  whileHover={{ scale: 1.05 }}
+                                  transition={{ duration: 0.15 }}
+                                >
+                                  {gift.from.charAt(0)}
+                                </motion.div>
+                                <div>
+                                  <p className="text-base font-semibold text-foreground">{gift.from}</p>
+                                  <p className="text-sm text-muted-foreground mt-0.5">{formatRelativeTime(gift.date)}</p>
+                                </div>
                               </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xl font-bold text-foreground">${gift.amount}</p>
-                              <span className={`text-xs font-medium px-2.5 py-1 rounded-full mt-1 inline-block ${
-                                gift.status === "pending"
-                                  ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
-                                  : "bg-success/15 text-success"
-                              }`}>
-                                {gift.status === "pending" ? "Pending" : "Invested"}
-                              </span>
-                            </div>
-                          </motion.div>
+                              <div className="text-right">
+                                <p className="text-xl font-bold text-foreground">${gift.amount}</p>
+                                <span className={`text-xs font-medium px-2.5 py-1 rounded-full mt-1 inline-block ${
+                                  gift.status === "pending"
+                                    ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
+                                    : "bg-success/15 text-success"
+                                }`}>
+                                  {gift.status === "pending" ? "Pending" : "Invested"}
+                                </span>
+                              </div>
+                            </motion.div>
+                          </Link>
                         ))
                       )}
                     </TabsContent>
@@ -631,7 +632,7 @@ export default function Dashboard() {
 
       {/* Desktop Dialog fallback */}
       <Dialog open={showAddFund} onOpenChange={setShowAddFund}>
-        <DialogContent className="max-w-md bg-white p-0 gap-0 hidden md:block">
+        <DialogContent className="max-w-md bg-white p-0 gap-0 hidden md:block" aria-describedby={undefined}>
           <div className="p-5 border-b border-border">
             <DialogTitle className="font-medium text-foreground">Add a fund</DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">Each fund is a separate investment account</p>
@@ -749,7 +750,7 @@ export default function Dashboard() {
 
       {/* Desktop Dialog fallback for Add Child */}
       <Dialog open={showAddChild} onOpenChange={setShowAddChild}>
-        <DialogContent className="max-w-md bg-white p-0 gap-0 hidden md:block">
+        <DialogContent className="max-w-md bg-white p-0 gap-0 hidden md:block" aria-describedby={undefined}>
           <div className="p-5 border-b border-border">
             <DialogTitle className="font-medium text-foreground">Add a child</DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">We'll create a custodial account for them</p>
