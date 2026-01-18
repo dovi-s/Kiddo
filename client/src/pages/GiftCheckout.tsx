@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Gift, CreditCard, Building2, Check, ChevronDown, Lock, Shield, Eye, EyeOff } from "lucide-react";
+import { Gift, CreditCard, Building2, Check, ChevronDown, Lock, Shield, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Nav } from "@/components/layout/Nav";
+import { Logo } from "@/components/ui/logo";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Celebration, SuccessGlow } from "@/components/ui/celebration";
 import { bouncySpring, successPop, easeOutExpo } from "@/lib/animations";
@@ -60,7 +60,15 @@ export default function GiftCheckout() {
   if (isComplete) {
     return (
       <div className="min-h-screen bg-background font-sans">
-        <Nav />
+        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50">
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+            <Logo size="sm" className="text-primary" />
+            <div className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded-full">
+              <Lock size={12} className="text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Secure</span>
+            </div>
+          </div>
+        </header>
         <Celebration trigger={isComplete} intensity="grand" type="confetti" />
         <main className="container mx-auto px-4 py-12 max-w-md">
           <SuccessGlow trigger={isComplete}>
@@ -174,24 +182,10 @@ export default function GiftCheckout() {
         transition={{ duration: 0.2, ease: easeOutExpo }}
       >
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          <motion.button
-            onClick={() => { 
-              haptic('light'); 
-              if (window.history.length > 1) {
-                window.history.back();
-              } else {
-                setLocation('/');
-              }
-            }}
-            whileTap={{ scale: 0.9 }}
-            className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-foreground"
-            data-testid="button-back"
-          >
-            <ArrowLeft size={20} />
-          </motion.button>
-          <div className="flex items-center gap-1.5">
+          <Logo size="sm" className="text-primary" />
+          <div className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded-full">
             <Lock size={12} className="text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">Secure checkout</span>
+            <span className="text-xs font-medium text-muted-foreground">Secure</span>
           </div>
         </div>
       </motion.header>
