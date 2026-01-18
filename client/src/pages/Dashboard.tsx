@@ -974,7 +974,7 @@ export default function Dashboard() {
       <Sheet open={showFundPicker} onOpenChange={setShowFundPicker}>
         <SheetContent side="bottom" className="rounded-t-3xl">
           <SheetHeader className="text-left mb-4">
-            <SheetTitle className="text-lg font-semibold">Switch fund</SheetTitle>
+            <SheetTitle className="text-lg font-semibold">Your funds</SheetTitle>
           </SheetHeader>
           
           <div className="space-y-2 pb-4">
@@ -1011,6 +1011,24 @@ export default function Dashboard() {
                 )}
               </motion.button>
             ))}
+
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                setShowFundPicker(false);
+                setShowAddFund(true);
+              }}
+              className="w-full p-4 rounded-xl border-2 border-dashed border-border flex items-center gap-4 hover:border-muted-foreground/50 transition-colors"
+              data-testid="fund-picker-add-fund"
+            >
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                <Plus size={20} />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-semibold text-foreground">Add a fund</p>
+                <p className="text-sm text-muted-foreground">New child or personal account</p>
+              </div>
+            </motion.button>
           </div>
         </SheetContent>
       </Sheet>
