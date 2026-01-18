@@ -276,61 +276,51 @@ export default function Dashboard() {
           transition={{ duration: 0.2, ease: "easeOut" }}
           className="mb-6 lg:mb-12"
         >
-          <div className="relative overflow-hidden hero-immersive bg-[hsl(var(--kora-evergreen))] p-6 sm:p-8 lg:p-10">
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-              <div className="flex items-center gap-4 sm:gap-6">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-2xl sm:text-3xl font-medium shadow-lg">
-                  {selectedFund.name.charAt(0)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <h1 className="text-2xl sm:text-3xl lg:text-4xl font-light text-white tracking-tight">
-                      {selectedFund.name}'s Future Fund
-                    </h1>
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/20 text-white/80">
-                      Growth Strategy
-                    </span>
-                  </div>
-                  <p className="text-white/70 text-sm sm:text-base">
-                    {isPersonal 
-                      ? "Building your financial future, one gift at a time"
-                      : `${selectedFund.yearsLeft} years until ${selectedFund.name} turns 18`
-                    }
-                  </p>
-                </div>
+          <div className="relative overflow-hidden bg-[hsl(var(--kora-evergreen))] rounded-2xl p-5 sm:p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-xl font-semibold">
+                {selectedFund.name.charAt(0)}
               </div>
-              
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl sm:text-2xl font-semibold text-white truncate">
+                  {selectedFund.name}'s Future Fund
+                </h1>
+                <p className="text-white/60 text-sm">
+                  {isPersonal 
+                    ? "Your investment fund"
+                    : `${selectedFund.yearsLeft} years until 18`
+                  }
+                </p>
+              </div>
+              <Link href="/event/create">
                 <motion.button
-                  onClick={() => setShowShareKit(true)}
-                  data-testid="button-hero-share"
-                  whileTap={{ scale: 0.97 }}
-                  className="px-8 py-4 bg-white text-primary font-semibold rounded-2xl shadow-lg shadow-black/10 transition-colors duration-200 flex items-center justify-center gap-2 touch-target btn-large"
+                  data-testid="button-hero-create-event"
+                  whileTap={{ scale: 0.95 }}
+                  className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white"
                 >
-                  <Share2 size={20} />
-                  Share fund
+                  <Plus size={18} />
                 </motion.button>
-                <Link href="/event/create">
-                  <motion.button
-                    data-testid="button-hero-create-event"
-                    whileTap={{ scale: 0.97 }}
-                    className="w-full sm:w-auto px-8 py-4 bg-white/20 text-white font-semibold rounded-2xl backdrop-blur-sm transition-colors duration-200 flex items-center justify-center gap-2 touch-target btn-large"
-                  >
-                    <Plus size={20} />
-                    Add event
-                  </motion.button>
-                </Link>
-              </div>
+              </Link>
             </div>
             
-            <div className="relative z-10 mt-6 pt-6 border-t border-white/20 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-white/70">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-[hsl(var(--kora-gold))]"></span>
-                Assets held by Apex Clearing
-              </span>
-              <span>SIPC protected up to $500k</span>
-              {!isPersonal && <WhoControlsDrawer variant="light" />}
-            </div>
+            <motion.button
+              onClick={() => setShowShareKit(true)}
+              data-testid="button-hero-share"
+              whileTap={{ scale: 0.98 }}
+              className="w-full py-3.5 bg-white text-[hsl(var(--kora-evergreen))] font-semibold rounded-xl flex items-center justify-center gap-2 touch-target"
+            >
+              <Share2 size={18} />
+              Share fund
+            </motion.button>
+          </div>
+          
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-4 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <Shield size={12} />
+              Apex Clearing
+            </span>
+            <span>SIPC protected</span>
+            {!isPersonal && <WhoControlsDrawer variant="default" />}
           </div>
         </motion.section>
 
