@@ -187,7 +187,7 @@ export default function Dashboard() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-background pb-20 md:pb-0">
+      <div className={`min-h-screen bg-background md:pb-0 ${selectedFund.status === 'active' ? 'pb-24' : 'pb-4'}`}>
         <motion.header 
           className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-sm"
           initial={{ y: -20, opacity: 0 }}
@@ -1054,9 +1054,6 @@ export default function Dashboard() {
 
       {/* Trust Footer */}
       <TrustFooter />
-
-        {/* Spacer for mobile nav */}
-        <div className="h-4 md:hidden" />
       </div>
     </PageTransition>
   );
