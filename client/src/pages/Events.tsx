@@ -110,17 +110,8 @@ export default function Events() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
         >
-          <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
             <Logo size="sm" className="text-primary" />
-            <Link href="/event/create">
-              <motion.button 
-                whileTap={{ scale: 0.9 }}
-                className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20"
-                data-testid="button-create-event"
-              >
-                <Plus size={20} />
-              </motion.button>
-            </Link>
           </div>
         </motion.header>
 
@@ -335,6 +326,20 @@ export default function Events() {
             </div>
           </SheetContent>
         </Sheet>
+
+        <Link href="/event/create">
+          <motion.button
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25, delay: 0.2 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => haptic('medium')}
+            className="fixed bottom-28 right-6 w-14 h-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-premium-lg z-40"
+            data-testid="button-create-event"
+          >
+            <Plus size={24} />
+          </motion.button>
+        </Link>
       </div>
     </PageTransition>
   );
