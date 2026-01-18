@@ -510,7 +510,11 @@ function BillingTab() {
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground mt-3">Both options waive the Kora fee completely. Gift givers only pay card processing.</p>
+            <p className="text-xs text-muted-foreground mt-3">
+              {giverPays 
+                ? "Both options waive the Kora fee so gift givers only pay card processing."
+                : "With these, you don't have to cover the fee yourself each time."}
+            </p>
           </div>
         </div>
       </SettingsSection>
