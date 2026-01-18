@@ -1040,6 +1040,14 @@ export default function Dashboard() {
         fundName={selectedFund.name}
         fundSlug={selectedFund.slug}
         recipientName={selectedFund.name}
+        shareOptions={selectedFund.events?.filter(e => e.active).map(e => ({
+          id: e.slug,
+          title: e.title,
+          slug: e.slug,
+          isDefault: e.slug === "anytime" || e.title.toLowerCase().includes("anytime"),
+          date: e.date
+        })) || []}
+        defaultShareId="anytime"
       />
 
       {/* Trust Footer */}

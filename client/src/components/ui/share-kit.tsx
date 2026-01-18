@@ -12,12 +12,23 @@ import {
   CreditCard,
   QrCode,
   Sparkles,
-  X
+  X,
+  ChevronDown,
+  Calendar,
+  Gift
 } from "lucide-react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 const canShare = typeof navigator !== "undefined" && "share" in navigator;
+
+interface ShareOption {
+  id: string;
+  title: string;
+  slug: string;
+  isDefault?: boolean;
+  date?: string;
+}
 
 interface ShareKitProps {
   fundName: string;
@@ -27,6 +38,8 @@ interface ShareKitProps {
   recipientName: string;
   isOpen: boolean;
   onClose: () => void;
+  shareOptions?: ShareOption[];
+  defaultShareId?: string;
 }
 
 export function ShareKit({ 
@@ -36,20 +49,27 @@ export function ShareKit({
   eventSlug, 
   recipientName,
   isOpen,
-  onClose
+  onClose,
+  shareOptions,
+  defaultShareId
 }: ShareKitProps) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"link" | "qr" | "card">("link");
+  const [selectedShareId, setSelectedShareId] = useState<string>(defaultShareId || "anytime");
+  
+  const selectedOption = shareOptions?.find(o => o.id === selectedShareId);
+  const currentEventSlug = selectedOption?.slug || eventSlug;
+  const currentEventTitle = selectedOption?.title || eventTitle;
   
   const shareUrl = useMemo(() => {
     if (typeof window === "undefined") return `/${fundSlug}`;
-    return eventSlug 
-      ? `${window.location.origin}/${fundSlug}/${eventSlug}`
+    return currentEventSlug 
+      ? `${window.location.origin}/${fundSlug}/${currentEventSlug}`
       : `${window.location.origin}/${fundSlug}`;
-  }, [fundSlug, eventSlug]);
+  }, [fundSlug, currentEventSlug]);
   
-  const shareTitle = eventTitle 
-    ? `Gift to ${recipientName}'s ${eventTitle}`
+  const shareTitle = currentEventTitle 
+    ? `Gift to ${recipientName}'s ${currentEventTitle}`
     : `Gift to ${recipientName}'s Future Fund`;
 
   const handleCopy = () => {
@@ -109,6 +129,31 @@ export function ShareKit({
             </button>
           </div>
         </div>
+
+        {shareOptions && shareOptions.length > 0 && (
+          <div className="p-4 border-b border-border bg-muted/30">
+            <p className="text-xs text-muted-foreground mb-2 font-medium">What are you sharing?</p>
+            <div className="flex flex-wrap gap-2">
+              {shareOptions.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setSelectedShareId(option.id)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-all ${
+                    selectedShareId === option.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card border border-border text-foreground hover:border-primary/30"
+                  }`}
+                >
+                  {option.isDefault ? <Gift size={14} /> : <Calendar size={14} />}
+                  <span>{option.title}</span>
+                  {option.isDefault && (
+                    <span className="text-[10px] opacity-70">Always open</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="flex border-b border-border">
           {tabs.map((tab) => (
