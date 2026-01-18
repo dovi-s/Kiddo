@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Check, Shield, Lock } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
@@ -625,20 +626,25 @@ export default function ActivateInvesting() {
 
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">Your relationship</label>
-                  <select
+                  <Select
                     value={childInfo[currentChildIndex]?.relationship || ""}
-                    onChange={(e) => setChildInfo({
+                    onValueChange={(value) => setChildInfo({
                       ...childInfo,
-                      [currentChildIndex]: { ...childInfo[currentChildIndex], relationship: e.target.value }
+                      [currentChildIndex]: { ...childInfo[currentChildIndex], relationship: value }
                     })}
-                    data-testid="select-relationship"
-                    className="w-full px-4 py-3 border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/30 bg-card transition-all duration-150"
                   >
-                    <option value="">Select relationship</option>
-                    <option value="parent">Parent</option>
-                    <option value="grandparent">Grandparent</option>
-                    <option value="guardian">Legal Guardian</option>
-                  </select>
+                    <SelectTrigger 
+                      data-testid="select-relationship"
+                      className="w-full h-12 px-4 border border-border rounded-xl text-foreground bg-card"
+                    >
+                      <SelectValue placeholder="Select relationship" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="parent">Parent</SelectItem>
+                      <SelectItem value="grandparent">Grandparent</SelectItem>
+                      <SelectItem value="guardian">Legal Guardian</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="p-3 rounded-lg bg-muted border border-border">
