@@ -21,12 +21,12 @@ export default function ActivateInvesting() {
   
   const targetFund = fundSlug 
     ? funds.find(f => f.slug === fundSlug)
-    : funds.find(f => f.status === "draft");
+    : null;
   
-  const accountType = targetFund?.accountType === "Individual" ? "personal" : "child";
-  const isPersonal = accountType === "personal";
+  const isPersonal = targetFund?.accountType === "Individual" || targetFund?.accountType === "Personal";
+  const isUTMA = targetFund?.accountType === "UTMA";
   
-  const childNames = targetFund && targetFund.accountType === "UTMA" ? [targetFund.name] : [];
+  const childName = isUTMA && targetFund ? targetFund.name : null;
   
   const activateFundMutation = useMutation({
     mutationFn: async (fundId: string) => {
@@ -85,18 +85,13 @@ export default function ActivateInvesting() {
     } else if (step === "brokerage") {
       setStep("identity");
     } else if (step === "identity") {
-      if (!isPersonal && childNames.length > 0) {
+      if (isUTMA && childName) {
         setStep("child");
-        setCurrentChildIndex(0);
       } else {
         setStep("agreements");
       }
     } else if (step === "child") {
-      if (currentChildIndex < childNames.length - 1) {
-        setCurrentChildIndex(currentChildIndex + 1);
-      } else {
-        setStep("agreements");
-      }
+      setStep("agreements");
     } else if (step === "agreements") {
       haptic('medium');
       setStep("processing");
@@ -133,9 +128,8 @@ export default function ActivateInvesting() {
         setStep("identity");
       }
     } else if (step === "agreements") {
-      if (!isPersonal && childNames.length > 0) {
+      if (isUTMA && childName) {
         setStep("child");
-        setCurrentChildIndex(childNames.length - 1);
       } else {
         setStep("identity");
       }
@@ -169,6 +163,38 @@ export default function ActivateInvesting() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!fundSlug || !targetFund) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-50 bg-background pb-2">
+          <div className="max-w-xl mx-auto px-4 pt-4 h-14 flex items-center justify-center">
+            <Logo size="sm" className="text-primary" linkTo="/dashboard" />
+          </div>
+        </header>
+        <main className="max-w-xl mx-auto px-4 py-8">
+          <div className="text-center space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto">
+              <Shield size={28} className="text-muted-foreground" />
+            </div>
+            <h1 className="text-xl font-medium text-foreground">No fund selected</h1>
+            <p className="text-muted-foreground">
+              {!fundSlug 
+                ? "Please select a fund to activate from your dashboard."
+                : "The fund you're looking for doesn't exist or has already been activated."
+              }
+            </p>
+            <Button 
+              onClick={() => setLocation("/dashboard")}
+              className="mt-4"
+            >
+              Go to dashboard
+            </Button>
+          </div>
+        </main>
       </div>
     );
   }
@@ -231,22 +257,22 @@ export default function ActivateInvesting() {
                     <p className="text-sm text-muted-foreground">Name, date of birth, address, and SSN</p>
                   </div>
                 </div>
-                {!isPersonal && childNames.length > 0 && (
+                {isUTMA && childName && (
                   <div className="flex items-start gap-4">
                     <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm">
                       <span className="text-xs font-bold text-primary-foreground">2</span>
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">Child information</p>
+                      <p className="font-medium text-foreground">{childName}'s information</p>
                       <p className="text-sm text-muted-foreground">
-                        {childNames.length === 1 ? `Details for ${childNames[0]}'s custodial account` : `Details for ${childNames.length} custodial accounts`}
+                        Details for {childName}'s custodial account
                       </p>
                     </div>
                   </div>
                 )}
                 <div className="flex items-start gap-4">
                   <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-sm">
-                    <span className="text-xs font-bold text-primary-foreground">{!isPersonal && childNames.length > 0 ? "3" : "2"}</span>
+                    <span className="text-xs font-bold text-primary-foreground">{isUTMA && childName ? "3" : "2"}</span>
                   </div>
                   <div>
                     <p className="font-medium text-foreground">Review and accept</p>
@@ -545,10 +571,7 @@ export default function ActivateInvesting() {
               className="space-y-6"
             >
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-                  Child {currentChildIndex + 1} of {childNames.length}
-                </p>
-                <h1 className="text-xl font-medium text-foreground mb-1">{childNames[currentChildIndex]}'s information</h1>
+                <h1 className="text-xl font-medium text-foreground mb-1">{childName}'s information</h1>
                 <p className="text-sm text-muted-foreground">Required for the custodial account</p>
               </div>
 
@@ -558,7 +581,7 @@ export default function ActivateInvesting() {
                     <label className="block text-sm font-medium text-foreground mb-1.5">Legal first name</label>
                     <input
                       type="text"
-                      value={childInfo[currentChildIndex]?.legalFirstName || childNames[currentChildIndex]}
+                      value={childInfo[0]?.legalFirstName || childName || ""}
                       onChange={(e) => setChildInfo({
                         ...childInfo,
                         [currentChildIndex]: { ...childInfo[currentChildIndex], legalFirstName: e.target.value }
@@ -649,7 +672,7 @@ export default function ActivateInvesting() {
 
                 <div className="p-3 rounded-lg bg-muted border border-border">
                   <p className="text-xs text-muted-foreground">
-                    As the custodian, you will manage this account until {childNames[currentChildIndex]} reaches the age of majority (18-21, depending on state).
+                    As the custodian, you will manage this account until {childName} reaches the age of majority (18-21, depending on state).
                   </p>
                 </div>
               </div>
@@ -660,7 +683,7 @@ export default function ActivateInvesting() {
                 data-testid="button-continue-child"
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
               >
-                {currentChildIndex < childNames.length - 1 ? "Next child" : "Continue"}
+                Continue
               </Button>
             </motion.div>
           )}
@@ -807,11 +830,9 @@ export default function ActivateInvesting() {
                 >
                   {isPersonal 
                     ? "Your fund is now active and ready to receive gifts."
-                    : childNames.length === 0
-                      ? "Your fund is now active and ready to receive gifts."
-                      : childNames.length === 1 
-                        ? `${childNames[0]}'s fund is now active and ready to receive gifts.`
-                        : `All ${childNames.length} funds are now active and ready to receive gifts.`
+                    : childName 
+                      ? `${childName}'s fund is now active and ready to receive gifts.`
+                      : "Your fund is now active and ready to receive gifts."
                   }
                 </motion.p>
 
