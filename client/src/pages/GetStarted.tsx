@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Check, Lock, Shield, Plus, Trash2, User, Users, 
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
+import { useCreateFund } from "@/hooks/use-funds";
 
 type AccountType = "parent" | "adult" | null;
 
@@ -35,6 +36,7 @@ const fadeUp = {
 
 export default function GetStarted() {
   const [, setLocation] = useLocation();
+  const createFundMutation = useCreateFund();
   const [step, setStep] = useState<Step>("hook");
   const [accountType, setAccountType] = useState<AccountType>(null);
   const [email, setEmail] = useState("");
@@ -95,14 +97,38 @@ export default function GetStarted() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     haptic('medium');
     setIsSubmitting(true);
-    setTimeout(() => {
+    
+    try {
+      if (accountType === "parent") {
+        const childrenToCreate = children.filter(c => c.name.trim());
+        for (const child of childrenToCreate) {
+          await createFundMutation.mutateAsync({
+            name: child.name.trim(),
+            slug: child.name.trim().toLowerCase().replace(/\s+/g, '-'),
+            accountType: "UTMA",
+            status: "draft",
+          });
+        }
+      } else {
+        await createFundMutation.mutateAsync({
+          name: recipientName.trim() || "My Fund",
+          slug: (recipientName.trim() || "my-fund").toLowerCase().replace(/\s+/g, '-'),
+          accountType: "Individual",
+          status: "draft",
+        });
+      }
+      
       haptic('success');
       setStep("success");
+    } catch (error) {
+      console.error("Failed to create fund:", error);
+      haptic('error');
+    } finally {
       setIsSubmitting(false);
-    }, 1500);
+    }
   };
 
   const handleBack = () => {
