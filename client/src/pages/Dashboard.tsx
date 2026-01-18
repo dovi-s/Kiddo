@@ -239,36 +239,35 @@ export default function Dashboard() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
             <Logo size="sm" className="text-primary" />
-            {funds.length > 1 && (
-              <select 
-                value={selectedFundSlug}
-                onChange={(e) => setSelectedFundSlug(e.target.value)}
-                className="text-sm text-muted-foreground bg-transparent border-0 cursor-pointer hover:text-foreground transition-colors duration-200 focus:outline-none focus:ring-0"
-                data-testid="select-fund-switcher"
-              >
-                {funds.map(f => (
-                  <option key={f.slug} value={f.slug}>{f.name}'s Fund</option>
-                ))}
-              </select>
+            
+            {funds.length > 1 ? (
+              <div className="flex items-center gap-2">
+                <select 
+                  value={selectedFundSlug}
+                  onChange={(e) => setSelectedFundSlug(e.target.value)}
+                  className="text-sm font-medium text-foreground bg-muted px-3 py-1.5 rounded-lg border-0 cursor-pointer hover:bg-border transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  data-testid="select-fund-switcher"
+                >
+                  {funds.map(f => (
+                    <option key={f.slug} value={f.slug}>{f.name}</option>
+                  ))}
+                </select>
+                <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
+                  <div className="w-9 h-9 rounded-full bg-muted hover:bg-border flex items-center justify-center text-muted-foreground transition-colors" data-testid="button-account">
+                    <User size={16} />
+                  </div>
+                </Link>
+              </div>
+            ) : (
+              <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
+                <div className="w-9 h-9 rounded-full bg-muted hover:bg-border flex items-center justify-center text-muted-foreground transition-colors" data-testid="button-account">
+                  <User size={16} />
+                </div>
+              </Link>
             )}
-            <button
-              onClick={() => setShowAddFund(true)}
-              data-testid="button-add-fund"
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-200 flex items-center gap-1"
-            >
-              <Plus size={14} />
-              <span className="hidden sm:inline">Add fund</span>
-            </button>
           </div>
-          <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
-            <div className="w-8 h-8 rounded-full bg-muted hover:bg-border flex items-center justify-center text-muted-foreground transition-colors duration-200" data-testid="button-account">
-              <User size={16} />
-            </div>
-          </Link>
-        </div>
       </motion.header>
       
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 lg:py-12 momentum-scroll">
