@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, easeOutExpo, cardTactile } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
+import { useAuth } from "@/hooks/use-auth";
+import { useFunds } from "@/hooks/use-funds";
 import { 
   User, Shield, Bell, CreditCard, FileText, Search, 
   ChevronRight, Check, LogOut, HelpCircle,
@@ -193,12 +195,20 @@ function LinkRow({ label, description, href, onClick }: { label: string; descrip
   return <div onClick={handleTap}>{content}</div>;
 }
 
-function ProfileTab() {
+function ProfileTab({ user, funds }: { user: { firstName?: string | null; lastName?: string | null; email?: string | null } | null; funds: { name: string; status: string; accountType: string }[] }) {
+  const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User' : 'User';
+  const userEmail = user?.email || '';
+  const utmaFunds = funds.filter(f => f.accountType === 'UTMA');
+  const hasChildren = utmaFunds.length > 0;
+  const childrenSummary = utmaFunds.length > 0 
+    ? utmaFunds.map(f => `${f.name} (${f.status === 'active' ? 'fund active' : 'draft'})`).join(', ')
+    : 'No children added';
+
   return (
     <div className="space-y-6">
       <SettingsSection title="Personal information" description="Your account details">
-        <AutoSaveInput label="Name" value="Sarah Miller" />
-        <AutoSaveInput label="Email" value="sarah@example.com" type="email" disabled hint="Contact support to change your email" />
+        <AutoSaveInput label="Name" value={userName} />
+        <AutoSaveInput label="Email" value={userEmail} type="email" disabled hint="Contact support to change your email" />
         <AutoSaveInput label="Phone" value="" placeholder="+1 (555) 000-0000" hint="Optional. For SMS receipts and security alerts" />
       </SettingsSection>
 
@@ -231,18 +241,20 @@ function ProfileTab() {
           </div>
           <div className="flex items-center gap-2">
             <Users size={14} className="text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground">Parent / Guardian</span>
+            <span className="text-sm font-medium text-foreground">{hasChildren ? 'Parent / Guardian' : 'Account Owner'}</span>
           </div>
         </div>
-        <div className="flex items-center justify-between py-2 border-t border-muted">
-          <div>
-            <p className="text-sm font-medium text-foreground">Children</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Mila (fund active)</p>
+        {hasChildren && (
+          <div className="flex items-center justify-between py-2 border-t border-muted">
+            <div>
+              <p className="text-sm font-medium text-foreground">Children</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{childrenSummary}</p>
+            </div>
+            <Link href="/dashboard">
+              <button className="text-sm text-muted-foreground hover:text-foreground font-medium">Manage</button>
+            </Link>
           </div>
-          <Link href="/dashboard">
-            <button className="text-sm text-muted-foreground hover:text-foreground font-medium">Manage</button>
-          </Link>
-        </div>
+        )}
       </SettingsSection>
 
       <SettingsSection title="Account">
@@ -825,11 +837,20 @@ function HelpTab() {
 
 export default function Settings() {
   const [location] = useLocation();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: apiFunds = [], isLoading: fundsLoading } = useFunds();
+  
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab") as SettingsTab;
     return tabs.find(t => t.id === tab) ? tab : "profile";
   });
+  
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      window.location.href = "/api/login";
+    }
+  }, [authLoading, isAuthenticated]);
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -839,9 +860,15 @@ export default function Settings() {
     }
   }, [location]);
 
+  const funds = apiFunds.map(f => ({
+    name: f.name,
+    status: f.status || 'draft',
+    accountType: f.accountType,
+  }));
+
   const renderTabContent = () => {
     switch (activeTab) {
-      case "profile": return <ProfileTab />;
+      case "profile": return <ProfileTab user={user || null} funds={funds} />;
       case "security": return <SecurityTab />;
       case "notifications": return <NotificationsTab />;
       case "billing": return <BillingTab />;
@@ -849,6 +876,18 @@ export default function Settings() {
       case "help": return <HelpTab />;
     }
   };
+
+  if (authLoading || fundsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <PageTransition>
