@@ -450,18 +450,29 @@ function BillingTab() {
 
   return (
     <div className="space-y-6">
-      {/* Simple fee explanation */}
+      {/* Current plan + fee explanation - updates dynamically */}
       <SettingsSection title="How Kora fees work">
         <div className="space-y-4">
-          {/* Current status */}
-          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-            <p className="text-sm font-medium text-foreground mb-1">You're on the Free plan</p>
-            <p className="text-sm text-muted-foreground">When someone sends a gift, they pay a small fee at checkout (~$4.70 on a $100 gift). You pay nothing.</p>
-          </div>
+          {/* Dynamic current status based on selection */}
+          <motion.div 
+            key={whoPays}
+            initial={{ opacity: 0.8 }}
+            animate={{ opacity: 1 }}
+            className={`p-4 rounded-xl ${giverPays ? "bg-primary/5 border border-primary/20" : "bg-[hsl(var(--kora-evergreen)/0.05)] border border-[hsl(var(--kora-evergreen)/0.2)]"}`}
+          >
+            <p className="text-sm font-medium text-foreground mb-1">
+              {giverPays ? "You're on the Free plan" : "You're covering the Kora fee"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {giverPays 
+                ? "When someone sends a gift, they pay a small fee at checkout (~$4.70 on a $100 gift). You pay nothing."
+                : "When someone sends a gift, they only pay card processing (~$3.20 on a $100 gift). You pay the Kora fee (1.5%)."}
+            </p>
+          </motion.div>
 
           {/* Want lower fees? */}
           <div className="pt-2">
-            <p className="text-sm font-medium text-foreground mb-3">Want gift givers to pay less?</p>
+            <p className="text-sm font-medium text-foreground mb-3">Want gift givers to pay even less?</p>
             
             <div className="space-y-2">
               {/* Family option */}
@@ -499,7 +510,7 @@ function BillingTab() {
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground mt-3">Both options waive the Kora fee so gift givers only pay card processing (~$3.20 on $100).</p>
+            <p className="text-xs text-muted-foreground mt-3">Both options waive the Kora fee completely—gift givers only pay card processing.</p>
           </div>
         </div>
       </SettingsSection>
