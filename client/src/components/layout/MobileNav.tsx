@@ -1,10 +1,10 @@
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { Home, Wallet, Activity, Settings } from "lucide-react";
+import { Wallet, CalendarHeart, Activity, Settings } from "lucide-react";
 
 const navItems = [
-  { href: "/", icon: Home, label: "Home" },
-  { href: "/dashboard", icon: Wallet, label: "Funds" },
+  { href: "/dashboard", icon: Wallet, label: "Fund" },
+  { href: "/events", icon: CalendarHeart, label: "Events" },
   { href: "/activity", icon: Activity, label: "Activity" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
@@ -28,6 +28,7 @@ export function MobileNav() {
         {navItems.map((item) => {
           const isActive = location === item.href || 
             (item.href === "/dashboard" && location.startsWith("/dashboard")) ||
+            (item.href === "/events" && (location.startsWith("/events") || location.startsWith("/event"))) ||
             (item.href === "/activity" && location.startsWith("/activity"));
           const Icon = item.icon;
           

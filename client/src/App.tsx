@@ -26,6 +26,7 @@ import ActivateInvesting from "@/pages/ActivateInvesting";
 import GiftCard from "@/pages/GiftCard";
 import GiftCheckout from "@/pages/GiftCheckout";
 import Login from "@/pages/Login";
+import Events from "@/pages/Events";
 
 function Router() {
   return (
@@ -38,6 +39,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/activity" component={Activity} />
       <Route path="/activity/:id" component={ActivityDetail} />
+      <Route path="/events" component={Events} />
       <Route path="/give" component={Give} />
       <Route path="/give/:id" component={Give} />
       <Route path="/event/create" component={MomentCreate} />
