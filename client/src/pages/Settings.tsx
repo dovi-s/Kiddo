@@ -450,124 +450,58 @@ function BillingTab() {
 
   return (
     <div className="space-y-6">
-      {/* Current Plan */}
-      <SettingsSection title="Your plan" description="Choose how you want to handle fees">
-        <div className="space-y-3">
-          {/* Free - Current */}
-          <div className="p-4 rounded-xl border-2 border-primary bg-primary/5">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <p className="font-semibold text-foreground">Free</p>
-                <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full uppercase tracking-wide">Current</span>
-              </div>
-              <p className="text-sm font-medium text-foreground">$0</p>
-            </div>
-            <p className="text-sm text-muted-foreground">Gift givers see a small fee at checkout (~$4.70 on a $100 gift). You pay nothing.</p>
+      {/* Simple fee explanation */}
+      <SettingsSection title="How Kora fees work">
+        <div className="space-y-4">
+          {/* Current status */}
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+            <p className="text-sm font-medium text-foreground mb-1">You're on the Free plan</p>
+            <p className="text-sm text-muted-foreground">When someone sends a gift, they pay a small fee at checkout (~$4.70 on a $100 gift). You pay nothing.</p>
           </div>
-          
-          {/* Family Plan */}
-          <div className="p-4 rounded-xl border border-border bg-card hover:border-primary/30 transition-colors">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Sparkles size={16} className="text-[hsl(var(--kora-gold))]" />
-                <p className="font-semibold text-foreground">Family</p>
+
+          {/* Want lower fees? */}
+          <div className="pt-2">
+            <p className="text-sm font-medium text-foreground mb-3">Want gift givers to pay less?</p>
+            
+            <div className="space-y-2">
+              {/* Family option */}
+              <div 
+                onClick={() => toast({ title: "Upgrade to Family", description: "Family plan coming soon" })}
+                className="p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/30 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Sparkles size={18} className="text-[hsl(var(--kora-gold))]" />
+                    <div>
+                      <p className="font-medium text-foreground">Family — $199/year</p>
+                      <p className="text-xs text-muted-foreground">Best for multiple events or ongoing gifts</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </div>
               </div>
-              <p className="text-sm font-medium text-foreground">$199<span className="text-muted-foreground font-normal">/year</span></p>
+
+              {/* Event Pass option */}
+              <div 
+                onClick={() => toast({ title: "Event Pass", description: "Add when creating an event" })}
+                className="p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/30 transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Calendar size={18} className="text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-foreground">Event Pass — $99 one-time</p>
+                      <p className="text-xs text-muted-foreground">Best for a single birthday or holiday</p>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-muted-foreground" />
+                </div>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">We cover the Kora fee for gift givers (up to $15k/year in gifts).</p>
-            <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mb-4">
-              <div className="flex items-center gap-1.5">
-                <Check size={12} className="text-[hsl(var(--kora-evergreen))]" />
-                <span>Lower checkout fees</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Check size={12} className="text-[hsl(var(--kora-evergreen))]" />
-                <span>Manage all your kids</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Check size={12} className="text-[hsl(var(--kora-evergreen))]" />
-                <span>Recurring gifts</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Check size={12} className="text-[hsl(var(--kora-evergreen))]" />
-                <span>Priority support</span>
-              </div>
-            </div>
-            <button 
-              onClick={() => toast({ title: "Upgrade to Family", description: "Family plan coming soon" })}
-              className="w-full py-2.5 bg-primary text-primary-foreground font-medium rounded-lg hover:bg-primary/90 transition-colors text-sm"
-            >
-              Upgrade to Family
-            </button>
+
+            <p className="text-xs text-muted-foreground mt-3">Both options waive the Kora fee so gift givers only pay card processing (~$3.20 on $100).</p>
           </div>
         </div>
-      </SettingsSection>
-
-      {/* How to waive fees */}
-      <SettingsSection title="Ways to waive the Kora fee" description="Choose what works best for you">
-        <div className="space-y-3">
-          {/* Option 1: Family plan */}
-          <div className="p-4 rounded-xl border border-border bg-card">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Users size={16} className="text-primary" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-semibold text-foreground">Family plan</p>
-                  <p className="text-sm font-medium text-foreground">$199/year</p>
-                </div>
-                <p className="text-sm text-muted-foreground">Waived on all events, up to $15k in gifts/year. Best if you expect 2+ events or ongoing gifts.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Option 2: Event Pass */}
-          <div className="p-4 rounded-xl border border-[hsl(var(--kora-gold)/0.3)] bg-[hsl(var(--kora-gold)/0.05)]">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-[hsl(var(--kora-gold)/0.2)] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Calendar size={16} className="text-[hsl(var(--kora-gold))]" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-semibold text-foreground">Event Pass</p>
-                  <p className="text-sm font-medium text-foreground">$99/event</p>
-                </div>
-                <p className="text-sm text-muted-foreground">Waived on one event, up to $7.5k in gifts. Best for a single birthday or holiday.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Divider with "or" */}
-          <div className="relative py-2">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border"></div>
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-background px-3 text-xs text-muted-foreground">or stay on Free</span>
-            </div>
-          </div>
-
-          {/* Option 3: Stay free */}
-          <div className="p-4 rounded-xl border border-border bg-muted/30">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Gift size={16} className="text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-semibold text-foreground">Stay on Free</p>
-                  <p className="text-sm font-medium text-muted-foreground">$0</p>
-                </div>
-                <p className="text-sm text-muted-foreground">Gift givers pay the small Kora fee at checkout (~$1.50 on $100). You pay nothing.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
-          <strong>Note:</strong> If you have Family plan, you don't need Event Passes—they're an alternative, not an add-on.
-        </p>
       </SettingsSection>
 
       {/* Event Defaults */}
