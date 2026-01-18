@@ -2,12 +2,17 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
-import { Plus, CalendarHeart, Gift, ChevronDown, ChevronRight, Edit2, Trash2, Share2, MoreHorizontal, Sparkles } from "lucide-react";
+import { Plus, CalendarHeart, Gift, ChevronDown, ChevronRight, Edit2, Trash2, Share2, MoreHorizontal, Sparkles, Check } from "lucide-react";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { easeOutExpo, staggerPremium, listItemSpring, sharePulse } from "@/lib/animations";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+
+const funds = [
+  { slug: "mila", name: "Mila", accountType: "UTMA Custodial" },
+  { slug: "noah", name: "Noah", accountType: "UTMA Custodial" },
+];
 
 type Event = {
   id: string;
@@ -83,6 +88,9 @@ function getEventIcon(type: Event["type"]) {
 export default function Events() {
   const [events, setEvents] = useState(sampleEvents);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedFundSlug, setSelectedFundSlug] = useState("mila");
+  const [showFundPicker, setShowFundPicker] = useState(false);
+  const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
   const [actionEventId, setActionEventId] = useState<string | null>(null);
 
   const activeEvents = events.filter(e => e.active);
@@ -120,8 +128,22 @@ export default function Events() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
-            className="mb-8"
+            className="mb-6"
           >
+            {funds.length > 1 && (
+              <motion.button
+                onClick={() => { haptic('selection'); setShowFundPicker(true); }}
+                whileTap={{ scale: 0.97 }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted hover:bg-border transition-colors mb-4"
+                data-testid="button-fund-context"
+              >
+                <div className="w-5 h-5 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-[10px] font-bold">
+                  {selectedFund.name.charAt(0)}
+                </div>
+                <span className="text-sm font-medium text-foreground">{selectedFund.name}'s Fund</span>
+                <ChevronDown size={14} className="text-muted-foreground" />
+              </motion.button>
+            )}
             <h1 className="text-2xl font-bold text-foreground mb-2">Events</h1>
             <p className="text-muted-foreground">Create gift occasions for birthdays, holidays, and more</p>
           </motion.div>
@@ -340,6 +362,48 @@ export default function Events() {
             <Plus size={24} />
           </motion.button>
         </Link>
+
+        {/* Fund Picker Sheet */}
+        <Sheet open={showFundPicker} onOpenChange={setShowFundPicker}>
+          <SheetContent side="bottom" className="rounded-t-3xl">
+            <SheetHeader className="text-left mb-4">
+              <SheetTitle className="text-lg font-semibold">Select fund</SheetTitle>
+            </SheetHeader>
+            
+            <div className="space-y-2 pb-4">
+              {funds.map((fund) => (
+                <motion.button
+                  key={fund.slug}
+                  onClick={() => {
+                    haptic('selection');
+                    setSelectedFundSlug(fund.slug);
+                    setShowFundPicker(false);
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`w-full p-4 rounded-xl flex items-center gap-4 transition-colors ${
+                    fund.slug === selectedFundSlug
+                      ? "bg-[hsl(var(--kora-evergreen)/0.1)] border-2 border-[hsl(var(--kora-evergreen))]"
+                      : "bg-muted border-2 border-transparent hover:bg-border"
+                  }`}
+                  data-testid={`fund-option-${fund.slug}`}
+                >
+                  <div className="w-12 h-12 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-lg font-semibold">
+                    {fund.name.charAt(0)}
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-semibold text-foreground">{fund.name}'s Fund</p>
+                    <p className="text-sm text-muted-foreground">{fund.accountType}</p>
+                  </div>
+                  {fund.slug === selectedFundSlug && (
+                    <div className="w-6 h-6 rounded-full bg-[hsl(var(--kora-evergreen))] flex items-center justify-center">
+                      <Check size={14} className="text-white" />
+                    </div>
+                  )}
+                </motion.button>
+              ))}
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </PageTransition>
   );
