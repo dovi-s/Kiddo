@@ -42,10 +42,11 @@ export default function GiftCheckout() {
   const recipientName = fund ? fund.charAt(0).toUpperCase() + fund.slice(1) : "Recipient";
   const eventTitle = event ? event.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null;
 
-  const canSubmit = numAmount >= 5 && name && email;
+  const canQuickPay = numAmount >= 5 && paymentMethod === 'apple';
+  const canSubmit = numAmount >= 5 && (paymentMethod === 'apple' || (name && email));
 
   const handleSubmitPayment = () => {
-    if (!canSubmit) return;
+    if (!canQuickPay && !canSubmit) return;
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);
@@ -228,37 +229,45 @@ export default function GiftCheckout() {
           </CardContent>
         </Card>
 
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          className="mb-4"
-        >
-          <Button
-            variant="default"
-            className="w-full h-14 text-base bg-foreground text-background hover:bg-foreground/90 rounded-xl font-medium"
-            onClick={handleSubmitPayment}
-            disabled={!canSubmit || isProcessing}
-            data-testid="button-apple-pay"
+        {paymentMethod === 'apple' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4"
           >
-            {isProcessing ? (
-              <>Processing...</>
-            ) : (
-              <>
-                 Pay · ${total.toFixed(2)}
-              </>
-            )}
-          </Button>
-          <p className="text-[10px] text-muted-foreground text-center mt-2">
-            Secure checkout powered by Stripe
-          </p>
-        </motion.div>
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSubmitPayment}
+              disabled={!canQuickPay || isProcessing}
+              className="w-full h-14 bg-black text-white rounded-xl font-medium flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg"
+              data-testid="button-apple-pay"
+            >
+              {isProcessing ? (
+                <span>Processing...</span>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                  </svg>
+                  <span>Pay · ${total.toFixed(2)}</span>
+                </>
+              )}
+            </motion.button>
+            <p className="text-[10px] text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
+              <Lock className="w-3 h-3" />
+              Instant checkout with Apple Pay
+            </p>
+          </motion.div>
+        )}
 
         <button
           onClick={() => setShowDetails(!showDetails)}
           className="w-full flex items-center justify-between p-4 rounded-xl bg-muted mb-4 transition-colors hover:bg-muted/80"
           data-testid="button-show-details"
         >
-          <span className="text-sm font-medium text-foreground">Your details & payment options</span>
+          <span className="text-sm font-medium text-foreground">
+            {paymentMethod === 'apple' ? 'Add a note or change payment' : 'Your details & payment'}
+          </span>
           <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showDetails ? 'rotate-180' : ''}`} />
         </button>
 
