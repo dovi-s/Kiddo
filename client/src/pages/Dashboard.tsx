@@ -7,7 +7,7 @@ import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Plus, User, Users, ChevronRight, Share2, TrendingUp, Clock, Gift, Shield } from "lucide-react";
+import { Plus, User, Users, ChevronRight, ChevronDown, Share2, TrendingUp, Clock, Gift, Shield, MessageCircle, Calendar, X } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ShareKit } from "@/components/ui/share-kit";
 import { TrustFooter, WhoControlsDrawer } from "@/components/ui/trust-elements";
@@ -172,6 +172,7 @@ export default function Dashboard() {
   const isNewAccount = funds.every(f => f.isNew);
   const [selectedFundSlug, setSelectedFundSlug] = useState(funds[0]?.slug || profileName.toLowerCase().replace(/\s+/g, "-"));
   const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
+  const [expandedGift, setExpandedGift] = useState<string | null>(null);
   
   const getStatusLabel = (status: FundStatus) => {
     switch (status) {
@@ -467,46 +468,136 @@ export default function Dashboard() {
                           <p className="text-sm">No gifts yet. Share your fund to start receiving!</p>
                         </div>
                       ) : (
-                        allContributions.map((gift, index) => (
-                          <Link href={`/activity/${gift.id}`} key={gift.id}>
-                            <motion.div 
+                        allContributions.map((gift, index) => {
+                          const isExpanded = expandedGift === gift.id;
+                          return (
+                            <motion.div
+                              key={gift.id}
+                              layout
                               initial={{ opacity: 0, y: 12 }}
                               animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.04, duration: 0.2, ease: "easeOut" }}
-                              whileHover={{ y: -3, boxShadow: "0 8px 24px -8px rgba(0,0,0,0.12)" }}
-                              whileTap={{ scale: 0.98 }}
-                              className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between cursor-pointer touch-target swipe-hint"
+                              transition={{ delay: index * 0.04, duration: 0.2, ease: "easeOut", layout: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] } }}
+                              className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target ${isExpanded ? "border-[hsl(var(--kora-evergreen)/0.3)] shadow-lg" : "border-border"}`}
+                              onClick={() => setExpandedGift(isExpanded ? null : gift.id)}
                             >
-                              <div className="flex items-center gap-4">
-                                <motion.div 
-                                  className={`w-14 h-14 rounded-2xl flex items-center justify-center text-lg font-semibold ${
-                                    gift.status === "pending" 
-                                      ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
-                                      : "bg-[hsl(var(--kora-evergreen)/0.15)] text-[hsl(var(--kora-evergreen))]"
-                                  }`}
-                                  whileHover={{ scale: 1.05 }}
-                                  transition={{ duration: 0.15 }}
-                                >
-                                  {gift.from.charAt(0)}
-                                </motion.div>
-                                <div>
-                                  <p className="text-base font-semibold text-foreground">{gift.from}</p>
-                                  <p className="text-sm text-muted-foreground mt-0.5">{formatRelativeTime(gift.date)}</p>
+                              <motion.div 
+                                className="p-5 flex items-center justify-between"
+                                whileTap={{ scale: isExpanded ? 1 : 0.98 }}
+                              >
+                                <div className="flex items-center gap-4">
+                                  <motion.div 
+                                    layout="position"
+                                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-base font-semibold ${
+                                      gift.status === "pending" 
+                                        ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
+                                        : "bg-[hsl(var(--kora-evergreen)/0.15)] text-[hsl(var(--kora-evergreen))]"
+                                    }`}
+                                  >
+                                    {gift.from.charAt(0)}
+                                  </motion.div>
+                                  <div>
+                                    <p className="text-base font-semibold text-foreground">{gift.from}</p>
+                                    <p className="text-sm text-muted-foreground">{formatRelativeTime(gift.date)}</p>
+                                  </div>
                                 </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-xl font-bold text-foreground">${gift.amount}</p>
-                                <span className={`text-xs font-medium px-2.5 py-1 rounded-full mt-1 inline-block ${
-                                  gift.status === "pending"
-                                    ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
-                                    : "bg-success/15 text-success"
-                                }`}>
-                                  {gift.status === "pending" ? "Pending" : "Invested"}
-                                </span>
-                              </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right">
+                                    <p className="text-lg font-bold text-foreground">${gift.amount}</p>
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                                      gift.status === "pending"
+                                        ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
+                                        : "bg-success/15 text-success"
+                                    }`}>
+                                      {gift.status === "pending" ? "Pending" : "Invested"}
+                                    </span>
+                                  </div>
+                                  <motion.div
+                                    animate={{ rotate: isExpanded ? 180 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                  >
+                                    <ChevronDown size={18} className="text-muted-foreground" />
+                                  </motion.div>
+                                </div>
+                              </motion.div>
+
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="px-5 pb-5 pt-0 space-y-4 border-t border-border/50">
+                                      <div className="pt-4 grid grid-cols-2 gap-4">
+                                        <div className="flex items-center gap-2.5">
+                                          <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                                            <Calendar size={14} className="text-muted-foreground" />
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-muted-foreground">Event</p>
+                                            <p className="text-sm font-medium text-foreground">{gift.event}</p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2.5">
+                                          <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                                            <Clock size={14} className="text-muted-foreground" />
+                                          </div>
+                                          <div>
+                                            <p className="text-xs text-muted-foreground">Status</p>
+                                            <p className={`text-sm font-medium ${gift.status === "pending" ? "text-[hsl(var(--kora-gold))]" : "text-[hsl(var(--kora-evergreen))]"}`}>
+                                              {gift.status === "pending" ? "Pending investment" : "Invested"}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {gift.note && (
+                                        <motion.div
+                                          initial={{ opacity: 0, y: 8 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          transition={{ delay: 0.1 }}
+                                          className="bg-[hsl(var(--kora-gold)/0.08)] rounded-xl p-4"
+                                        >
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <MessageCircle size={14} className="text-[hsl(var(--kora-gold))]" />
+                                            <p className="text-xs font-medium text-[hsl(var(--kora-gold))]">Message</p>
+                                          </div>
+                                          <p className="text-sm text-foreground">"{gift.note}"</p>
+                                        </motion.div>
+                                      )}
+
+                                      {gift.status === "invested" && (
+                                        <motion.div
+                                          initial={{ opacity: 0, y: 8 }}
+                                          animate={{ opacity: 1, y: 0 }}
+                                          transition={{ delay: 0.15 }}
+                                          className="bg-[hsl(var(--kora-evergreen)/0.08)] rounded-xl p-4"
+                                        >
+                                          <div className="flex items-center gap-2 mb-3">
+                                            <TrendingUp size={14} className="text-[hsl(var(--kora-evergreen))]" />
+                                            <p className="text-xs font-medium text-[hsl(var(--kora-evergreen))]">Invested in</p>
+                                          </div>
+                                          <div className="flex flex-wrap gap-2">
+                                            <span className="text-xs px-2.5 py-1 rounded-md bg-background border border-border text-foreground">VTI</span>
+                                            <span className="text-xs px-2.5 py-1 rounded-md bg-background border border-border text-foreground">VXUS</span>
+                                          </div>
+                                        </motion.div>
+                                      )}
+
+                                      {gift.status === "pending" && (
+                                        <p className="text-xs text-muted-foreground text-center pt-2">
+                                          Invests at next market open (9:30 AM ET)
+                                        </p>
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </motion.div>
-                          </Link>
-                        ))
+                          );
+                        })
                       )}
                     </TabsContent>
                     
