@@ -131,21 +131,22 @@ export function ShareKit({
         </div>
 
         {shareOptions && shareOptions.length > 1 && (
-          <div className="p-4 border-b border-border bg-muted/30">
-            <p className="text-xs text-muted-foreground mb-2 font-medium">What are you sharing?</p>
-            <div className="relative">
-              <select
-                value={selectedShareId}
-                onChange={(e) => setSelectedShareId(e.target.value)}
-                className="w-full appearance-none bg-card border border-border rounded-xl px-4 py-3 pr-10 text-sm font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
-              >
-                {shareOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.isDefault ? `${option.title} (always open)` : `${option.title}${option.date ? ` - ${option.date}` : ""}`}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <div className="p-4 border-b border-border">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {shareOptions.map((option) => (
+                <button
+                  key={option.id}
+                  onClick={() => setSelectedShareId(option.id)}
+                  className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                    selectedShareId === option.id
+                      ? "bg-[hsl(var(--kora-evergreen))] text-white shadow-sm"
+                      : "bg-muted text-muted-foreground hover:bg-border"
+                  }`}
+                >
+                  {option.isDefault ? <Gift size={14} /> : <Calendar size={14} />}
+                  {option.title}
+                </button>
+              ))}
             </div>
           </div>
         )}
