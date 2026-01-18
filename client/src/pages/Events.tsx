@@ -206,7 +206,7 @@ export default function Events() {
                                   <Share2 size={18} />
                                   <span className="text-xs font-medium">Share</span>
                                 </motion.button>
-                                <Link href={`/event/edit/${event.id}`}>
+                                <Link href={`/edit/${event.fundSlug}/${event.id}`}>
                                   <motion.button
                                     initial={{ opacity: 0, y: 8 }}
                                     animate={{ opacity: 1, y: 0 }}
