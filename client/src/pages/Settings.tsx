@@ -509,23 +509,23 @@ function BillingTab() {
         >
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Your friend sends</span>
+              <span className="text-sm text-muted-foreground">Gift giver pays</span>
               <span className="text-sm font-semibold text-foreground">
                 {giverPays ? "$104.70" : "$103.20"}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Card processing (Visa/Mastercard)</span>
+              <span className="text-muted-foreground">Card processing</span>
               <span className="text-muted-foreground">-$3.20</span>
             </div>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Kora platform fee</span>
+              <span className="text-muted-foreground">Kora fee</span>
               <span className="text-muted-foreground">
                 {giverPays ? "-$1.50" : "You pay $1.50"}
               </span>
             </div>
             <div className="pt-3 border-t border-border flex items-center justify-between">
-              <span className="font-medium text-foreground">Your child's fund gets</span>
+              <span className="font-medium text-foreground">Fund receives</span>
               <span className="text-lg font-bold text-primary">
                 {giverPays ? "$100.00" : "$98.50"}
               </span>
