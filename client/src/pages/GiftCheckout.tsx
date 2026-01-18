@@ -175,7 +175,14 @@ export default function GiftCheckout() {
       >
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <motion.button
-            onClick={() => { haptic('light'); window.history.back(); }}
+            onClick={() => { 
+              haptic('light'); 
+              if (window.history.length > 1) {
+                window.history.back();
+              } else {
+                setLocation('/');
+              }
+            }}
             whileTap={{ scale: 0.9 }}
             className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-foreground"
             data-testid="button-back"
