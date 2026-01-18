@@ -7,7 +7,7 @@ import { Link, useSearch, useLocation } from "wouter";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
-import { Plus, User, Users, ChevronRight, ChevronDown, Share2, TrendingUp, Clock, Gift, Shield, MessageCircle, Calendar, X } from "lucide-react";
+import { Plus, User, Users, ChevronRight, ChevronDown, Share2, TrendingUp, Clock, Gift, Shield, MessageCircle, Calendar, X, Sparkles } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ShareKit } from "@/components/ui/share-kit";
 import { TrustFooter, WhoControlsDrawer } from "@/components/ui/trust-elements";
@@ -174,6 +174,7 @@ export default function Dashboard() {
   const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
   const [expandedGift, setExpandedGift] = useState<string | null>(null);
   const [expandedHolding, setExpandedHolding] = useState<number | null>(null);
+  const [showQuickActions, setShowQuickActions] = useState(false);
   
   const getStatusLabel = (status: FundStatus) => {
     switch (status) {
@@ -294,16 +295,71 @@ export default function Dashboard() {
                   }
                 </p>
               </div>
-              <Link href="/event/create">
-                <motion.button
-                  data-testid="button-hero-create-event"
-                  whileTap={{ scale: 0.95 }}
-                  className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white"
+              <motion.button
+                onClick={() => setShowQuickActions(!showQuickActions)}
+                data-testid="button-hero-quick-actions"
+                whileTap={{ scale: 0.95 }}
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${showQuickActions ? "bg-white text-[hsl(var(--kora-evergreen))]" : "bg-white/15 text-white"}`}
+              >
+                <motion.div
+                  animate={{ rotate: showQuickActions ? 45 : 0 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <Plus size={18} />
-                </motion.button>
-              </Link>
+                </motion.div>
+              </motion.button>
             </div>
+
+            <AnimatePresence>
+              {showQuickActions && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <motion.button
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => {
+                        setShowQuickActions(false);
+                        setShowAddFund(true);
+                      }}
+                      className="bg-white/15 backdrop-blur-sm rounded-xl p-4 text-left border border-white/10"
+                      data-testid="button-quick-add-fund"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-3">
+                        <Users size={18} className="text-white" />
+                      </div>
+                      <p className="text-sm font-semibold text-white">Add fund</p>
+                      <p className="text-xs text-white/70 mt-0.5">New child or personal</p>
+                    </motion.button>
+
+                    <Link href="/event/create">
+                      <motion.button
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setShowQuickActions(false)}
+                        className="bg-white/15 backdrop-blur-sm rounded-xl p-4 text-left border border-white/10 w-full"
+                        data-testid="button-quick-add-event"
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-3">
+                          <Sparkles size={18} className="text-white" />
+                        </div>
+                        <p className="text-sm font-semibold text-white">Create event</p>
+                        <p className="text-xs text-white/70 mt-0.5">Birthday, holiday, etc.</p>
+                      </motion.button>
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             <motion.button
               onClick={() => setShowShareKit(true)}
