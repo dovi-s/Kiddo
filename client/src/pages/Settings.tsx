@@ -12,7 +12,7 @@ import {
   User, Shield, Bell, CreditCard, FileText, Search, 
   ChevronRight, Check, LogOut, HelpCircle,
   Smartphone, Mail, Eye, EyeOff, Lock, Globe, Users, Sparkles,
-  MessageCircle, BookOpen, ExternalLink
+  MessageCircle, BookOpen, ExternalLink, Calendar, Gift
 } from "lucide-react";
 
 type SettingsTab = "profile" | "security" | "notifications" | "billing" | "legal" | "help";
@@ -503,17 +503,71 @@ function BillingTab() {
         </div>
       </SettingsSection>
 
-      {/* Event Pass */}
-      <SettingsSection title="Event Pass" description="One-time option for a single event">
-        <div className="p-4 rounded-xl border border-[hsl(var(--kora-gold)/0.3)] bg-[hsl(var(--kora-gold)/0.05)]">
-          <div className="flex items-center justify-between mb-2">
-            <p className="font-semibold text-foreground">$99 per event</p>
+      {/* How to waive fees */}
+      <SettingsSection title="Ways to waive the Kora fee" description="Choose what works best for you">
+        <div className="space-y-3">
+          {/* Option 1: Family plan */}
+          <div className="p-4 rounded-xl border border-border bg-card">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Users size={16} className="text-primary" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-semibold text-foreground">Family plan</p>
+                  <p className="text-sm font-medium text-foreground">$199/year</p>
+                </div>
+                <p className="text-sm text-muted-foreground">Waived on all events, up to $15k in gifts/year. Best if you expect 2+ events or ongoing gifts.</p>
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground mb-3">
-            Perfect for birthdays or holidays. Waives the Kora fee for that event (up to $7,500 in gifts) plus premium themes and thank-you automation.
-          </p>
-          <p className="text-xs text-muted-foreground">Add when creating or editing an event.</p>
+
+          {/* Option 2: Event Pass */}
+          <div className="p-4 rounded-xl border border-[hsl(var(--kora-gold)/0.3)] bg-[hsl(var(--kora-gold)/0.05)]">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-[hsl(var(--kora-gold)/0.2)] flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Calendar size={16} className="text-[hsl(var(--kora-gold))]" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-semibold text-foreground">Event Pass</p>
+                  <p className="text-sm font-medium text-foreground">$99/event</p>
+                </div>
+                <p className="text-sm text-muted-foreground">Waived on one event, up to $7.5k in gifts. Best for a single birthday or holiday.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Divider with "or" */}
+          <div className="relative py-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-background px-3 text-xs text-muted-foreground">or stay on Free</span>
+            </div>
+          </div>
+
+          {/* Option 3: Stay free */}
+          <div className="p-4 rounded-xl border border-border bg-muted/30">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Gift size={16} className="text-muted-foreground" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-semibold text-foreground">Stay on Free</p>
+                  <p className="text-sm font-medium text-muted-foreground">$0</p>
+                </div>
+                <p className="text-sm text-muted-foreground">Gift givers pay the small Kora fee at checkout (~$1.50 on $100). You pay nothing.</p>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
+          <strong>Note:</strong> If you have Family plan, you don't need Event Passes—they're an alternative, not an add-on.
+        </p>
       </SettingsSection>
 
       {/* Event Defaults */}
