@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Gift, CreditCard, Building2, Check, ChevronDown, Lock, Shield, Eye, EyeOff, Smartphone } from "lucide-react";
+import { ArrowLeft, Gift, CreditCard, Building2, Check, ChevronDown, Lock, Shield, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Nav } from "@/components/layout/Nav";
 import { PageTransition } from "@/components/layout/PageTransition";
-import { Celebration, SuccessGlow, CountUp } from "@/components/ui/celebration";
-import { bouncySpring, gentleSpring, successPop, easeOutExpo, springSnappy, sharePulse, amountPop } from "@/lib/animations";
+import { Celebration, SuccessGlow } from "@/components/ui/celebration";
+import { bouncySpring, successPop, easeOutExpo } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
 
 const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
@@ -166,113 +166,163 @@ export default function GiftCheckout() {
   }
 
   return (
-    <PageTransition className="min-h-screen bg-background font-sans">
-      <Nav />
-      
-      <main className="container mx-auto px-4 py-8 max-w-lg">
-        <button 
-          onClick={() => { haptic('light'); window.history.back(); }}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors duration-150"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
-
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-full bg-[hsl(var(--kora-gold))]/15 flex items-center justify-center mx-auto mb-3">
-            <Gift className="w-7 h-7 text-[hsl(var(--kora-gold))]" />
+    <PageTransition className="min-h-screen bg-background font-sans pb-8">
+      <motion.header
+        className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50"
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.2, ease: easeOutExpo }}
+      >
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <motion.button
+            onClick={() => { haptic('light'); window.history.back(); }}
+            whileTap={{ scale: 0.9 }}
+            className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-foreground"
+            data-testid="button-back"
+          >
+            <ArrowLeft size={20} />
+          </motion.button>
+          <div className="flex items-center gap-1.5">
+            <Lock size={12} className="text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">Secure checkout</span>
           </div>
-          <h1 className="text-xl font-semibold text-foreground">
-            Gift to {recipientName}'s Future Fund
+        </div>
+      </motion.header>
+      
+      <main className="max-w-lg mx-auto px-4 py-6">
+        <motion.div 
+          className="text-center mb-8"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: 0.05 }}
+        >
+          <motion.div 
+            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[hsl(var(--kora-gold))] to-[hsl(var(--kora-gold)/0.7)] flex items-center justify-center mx-auto mb-4 shadow-premium"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25, delay: 0.1 }}
+          >
+            <Gift className="w-8 h-8 text-white" />
+          </motion.div>
+          <h1 className="text-2xl font-bold text-foreground mb-1">
+            Gift to {recipientName}'s Future
           </h1>
           {eventTitle && (
-            <p className="text-sm text-muted-foreground mt-1">{eventTitle}</p>
+            <p className="text-sm text-muted-foreground">{eventTitle}</p>
           )}
-        </div>
+        </motion.div>
 
-        <Card className="border-border/50 shadow-premium-sm mb-4">
-          <CardContent className="p-6">
-            <Label className="text-sm font-medium text-foreground mb-3 block">Choose amount</Label>
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              {SUGGESTED_AMOUNTS.map((amt) => (
-                <motion.div
-                  key={amt}
-                  whileTap={{ scale: 0.95 }}
-                  whileHover={{ scale: 1.02 }}
-                  transition={gentleSpring}
-                >
-                  <Button
-                    variant={amount === amt && !customAmount ? "default" : "outline"}
-                    onClick={() => { haptic('selection'); setAmount(amt); setCustomAmount(""); }}
-                    className={`h-12 w-full transition-all ${
-                      amount === amt && !customAmount 
-                        ? 'bg-primary text-primary-foreground shadow-md' 
-                        : 'border-border text-foreground hover:bg-muted'
-                    }`}
-                    data-testid={`amount-${amt}`}
-                  >
-                    ${amt}
-                  </Button>
-                </motion.div>
-              ))}
-            </div>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-              <Input
-                type="number"
-                placeholder="Other amount"
-                value={customAmount}
-                onChange={(e) => setCustomAmount(e.target.value)}
-                className="pl-7 h-12 border-border bg-card text-foreground placeholder:text-muted-foreground"
-                data-testid="input-custom-amount"
-              />
-            </div>
-            {numAmount > 0 && numAmount < 5 && (
-              <p className="text-xs text-muted-foreground mt-2">Minimum gift is $5</p>
-            )}
-          </CardContent>
-        </Card>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: 0.1 }}
+        >
+          <Card className="border-border/50 shadow-premium-sm rounded-2xl mb-4 overflow-hidden">
+            <CardContent className="p-6">
+              <Label className="text-sm font-semibold text-foreground mb-4 block">Choose amount</Label>
+              <div className="grid grid-cols-4 gap-3 mb-4">
+                {SUGGESTED_AMOUNTS.map((amt, i) => {
+                  const isSelected = amount === amt && !customAmount;
+                  return (
+                    <motion.button
+                      key={amt}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.15 + i * 0.03, type: "spring", stiffness: 400, damping: 25 }}
+                      whileTap={{ scale: 0.92 }}
+                      onClick={() => { haptic('selection'); setAmount(amt); setCustomAmount(""); }}
+                      className={`h-14 rounded-xl font-semibold text-base transition-all duration-150 ${
+                        isSelected 
+                          ? 'bg-primary text-primary-foreground shadow-premium-lg ring-2 ring-primary/20' 
+                          : 'bg-muted text-foreground hover:bg-border'
+                      }`}
+                      data-testid={`amount-${amt}`}
+                    >
+                      ${amt}
+                    </motion.button>
+                  );
+                })}
+              </div>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                <Input
+                  type="number"
+                  placeholder="Other amount"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                  className="pl-8 h-14 border-border bg-muted/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
+                  data-testid="input-custom-amount"
+                />
+              </div>
+              {numAmount > 0 && numAmount < 5 && (
+                <p className="text-xs text-destructive mt-3">Minimum gift is $5</p>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
         {paymentMethod === 'apple' && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4"
+            transition={{ delay: 0.15 }}
+            className="mb-5"
           >
             <motion.button
-              whileTap={{ scale: 0.98 }}
+              whileTap={{ scale: 0.97 }}
               onClick={handleSubmitPayment}
               disabled={!canQuickPay || isProcessing}
-              className="w-full h-14 bg-black text-white rounded-2xl font-medium flex items-center justify-center gap-2 disabled:opacity-50 shadow-premium-lg magnetic-btn"
+              className="w-full h-16 bg-black text-white rounded-2xl font-semibold text-lg flex items-center justify-center gap-3 disabled:opacity-50 shadow-premium-lg"
               data-testid="button-apple-pay"
             >
               {isProcessing ? (
-                <span>Processing...</span>
+                <motion.div
+                  className="flex items-center gap-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  <motion.div
+                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  />
+                  <span>Processing...</span>
+                </motion.div>
               ) : (
                 <>
-                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
                     <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
                   </svg>
                   <span>Pay · ${total.toFixed(2)}</span>
                 </>
               )}
             </motion.button>
-            <p className="text-[10px] text-muted-foreground text-center mt-2 flex items-center justify-center gap-1">
+            <p className="text-xs text-muted-foreground text-center mt-3 flex items-center justify-center gap-1.5">
               <Lock className="w-3 h-3" />
               Instant checkout with Apple Pay
             </p>
           </motion.div>
         )}
 
-        <button
-          onClick={() => setShowDetails(!showDetails)}
-          className="w-full flex items-center justify-between p-4 rounded-xl bg-muted mb-4 transition-colors hover:bg-muted/80"
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={() => { haptic('light'); setShowDetails(!showDetails); }}
+          className="w-full flex items-center justify-between p-4 rounded-2xl bg-muted/70 mb-4 transition-colors hover:bg-muted"
           data-testid="button-show-details"
         >
           <span className="text-sm font-medium text-foreground">
             {paymentMethod === 'apple' ? 'Add a note or change payment' : 'Your details & payment'}
           </span>
-          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showDetails ? 'rotate-180' : ''}`} />
-        </button>
+          <motion.div
+            animate={{ rotate: showDetails ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          </motion.div>
+        </motion.button>
 
         <AnimatePresence>
           {showDetails && (
@@ -280,9 +330,10 @@ export default function GiftCheckout() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
               className="space-y-4 overflow-hidden"
             >
-              <Card className="border-border shadow-sm">
+              <Card className="border-border/50 shadow-premium-sm rounded-2xl overflow-hidden">
                 <CardContent className="p-5 space-y-4">
                   <h2 className="text-sm font-semibold text-foreground">Your details</h2>
                   <p className="text-xs text-muted-foreground -mt-2">So {recipientName} knows who sent this gift</p>
@@ -339,21 +390,21 @@ export default function GiftCheckout() {
                 </CardContent>
               </Card>
 
-              <Card className="border-border shadow-sm">
+              <Card className="border-border/50 shadow-premium-sm rounded-2xl overflow-hidden">
                 <CardContent className="p-5 space-y-4">
-                  <Label className="text-sm font-medium text-foreground">Add a note (optional)</Label>
+                  <Label className="text-sm font-semibold text-foreground">Add a note (optional)</Label>
                   <Textarea
                     placeholder="Happy birthday! This is for your future..."
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    className="resize-none border-border bg-card text-foreground placeholder:text-muted-foreground"
+                    className="resize-none border-border bg-muted/50 text-foreground placeholder:text-muted-foreground rounded-xl"
                     rows={3}
                     data-testid="input-note"
                   />
                 </CardContent>
               </Card>
 
-              <Card className="border-border shadow-sm">
+              <Card className="border-border/50 shadow-premium-sm rounded-2xl overflow-hidden">
                 <CardContent className="p-5">
                   <h2 className="text-sm font-semibold text-foreground mb-3">Payment method</h2>
                   
@@ -417,72 +468,78 @@ export default function GiftCheckout() {
               </Card>
 
               {paymentMethod === 'card' && (
-                <Card className="border-border shadow-sm">
+                <Card className="border-border/50 shadow-premium-sm rounded-2xl overflow-hidden">
                   <CardContent className="p-5 space-y-4">
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-foreground">Card number</Label>
-                      <Input placeholder="4242 4242 4242 4242" className="h-11 border-border bg-card" data-testid="input-card-number" />
+                      <Input placeholder="4242 4242 4242 4242" className="h-12 border-border bg-muted/50 rounded-xl" data-testid="input-card-number" />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-foreground">Expiry</Label>
-                        <Input placeholder="MM/YY" className="h-11 border-border bg-card" data-testid="input-card-expiry" />
+                        <Input placeholder="MM/YY" className="h-12 border-border bg-muted/50 rounded-xl" data-testid="input-card-expiry" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-foreground">CVC</Label>
-                        <Input placeholder="123" className="h-11 border-border bg-card" data-testid="input-card-cvc" />
+                        <Input placeholder="123" className="h-12 border-border bg-muted/50 rounded-xl" data-testid="input-card-cvc" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              <Card className="border-border shadow-sm bg-muted">
-                <CardContent className="p-4">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Gift amount</span>
-                      <span className="text-foreground">${numAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Processing fee</span>
-                      <span className="text-foreground">${processingFee.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Kora fee</span>
-                      <span className="text-foreground">${platformFee.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between font-medium pt-2 border-t border-border">
-                      <span className="text-foreground">Total</span>
-                      <span className="text-foreground">${total.toFixed(2)}</span>
-                    </div>
+              <div className="bg-muted/70 rounded-2xl p-5">
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Gift amount</span>
+                    <span className="font-medium text-foreground">${numAmount.toFixed(2)}</span>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Processing fee</span>
+                    <span className="text-foreground">${processingFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Kora fee</span>
+                    <span className="text-foreground">${platformFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold pt-3 border-t border-border">
+                    <span className="text-foreground">Total</span>
+                    <span className="text-foreground text-lg">${total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
 
-              <Button 
-                className="w-full h-12 text-base bg-primary hover:bg-primary/90"
+              <motion.button
+                whileTap={{ scale: 0.98 }}
                 onClick={handleSubmitPayment}
                 disabled={!canSubmit || isProcessing}
+                className="w-full h-14 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 shadow-premium-lg"
                 data-testid="button-complete-gift"
               >
                 {isProcessing ? (
-                  <>Processing...</>
+                  <motion.div className="flex items-center gap-2">
+                    <motion.div
+                      className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    />
+                    <span>Processing...</span>
+                  </motion.div>
                 ) : (
                   <>
-                    <Lock className="w-4 h-4 mr-2" />
+                    <Lock className="w-4 h-4" />
                     Complete gift · ${total.toFixed(2)}
                   </>
                 )}
-              </Button>
+              </motion.button>
 
-              <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
+              <div className="flex items-center justify-center gap-5 text-xs text-muted-foreground py-2">
+                <div className="flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
                   <span>Secure payment</span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Shield className="w-3 h-3" />
+                <div className="flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" />
                   <span>SIPC protected</span>
                 </div>
               </div>
