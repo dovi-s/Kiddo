@@ -229,7 +229,7 @@ export default function Events() {
                                 </motion.button>
                               </div>
 
-                              <Link href={`/give/${event.fundSlug}/${event.id}`}>
+                              <Link href={`/checkout/${event.fundSlug}/${event.id}`}>
                                 <motion.div
                                   initial={{ opacity: 0, y: 8 }}
                                   animate={{ opacity: 1, y: 0 }}
