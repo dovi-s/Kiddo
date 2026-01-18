@@ -492,10 +492,12 @@ function BillingTab() {
       </SettingsSection>
 
       {/* Plans to waive the Kora fee */}
-      <SettingsSection title="Want to waive the Kora fee entirely?">
+      <SettingsSection title={giverPays ? "Want to waive the Kora fee entirely?" : "Want us to cover it instead of you?"}>
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            With these plans, we cover the Kora fee for you. Gift givers only pay card processing.
+            {giverPays 
+              ? "With these plans, gift givers only pay card processing. No Kora fee."
+              : "With these plans, you don't have to pay the fee yourself each time."}
           </p>
           
           {/* Family option */}
