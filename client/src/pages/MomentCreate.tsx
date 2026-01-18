@@ -1,542 +1,250 @@
 import { useState } from "react";
-import { Nav } from "@/components/layout/Nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
-import { Link, useLocation, useSearch } from "wouter";
-import { ArrowLeft, ArrowRight, Check, Cake, GraduationCap, Heart, Baby, Star, Sparkles, QrCode, Copy, Share2, ExternalLink, Loader2, Upload, Image, Palette, MessageSquare, Pencil, Plus, X } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { ArrowLeft, Check, Loader2, Share2, Copy, Sparkles, CalendarHeart } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { PageTransition } from "@/components/layout/PageTransition";
+import { useKora } from "@/lib/KoraContext";
+import { toast } from "@/hooks/use-toast";
 
-const TEMPLATES = [
-  { 
-    id: "custom", 
-    name: "Start Fresh", 
-    desc: "Build your own from scratch",
-    icon: Plus, 
-    amounts: ["25", "50", "100", "200"],
-    preview: "bg-gradient-to-br from-muted to-muted/50",
-    accent: "border-dashed border-2 border-border"
-  },
-  { 
-    id: "minimal", 
-    name: "Minimal", 
-    desc: "Clean & modern",
-    icon: Sparkles, 
-    amounts: ["25", "50", "100", "200"],
-    preview: "bg-card",
-    accent: "border-l-4 border-l-primary"
-  },
-  { 
-    id: "celebration", 
-    name: "Celebration", 
-    desc: "Bold & joyful",
-    icon: Cake, 
-    amounts: ["25", "50", "100", "150"],
-    preview: "bg-gradient-to-br from-[hsl(var(--kora-gold))]/10 to-[hsl(var(--kora-gold))]/5",
-    accent: "border-l-4 border-l-[hsl(var(--kora-gold))]"
-  },
-  { 
-    id: "milestone", 
-    name: "Milestone", 
-    desc: "For big achievements",
-    icon: GraduationCap, 
-    amounts: ["50", "100", "200", "500"],
-    preview: "bg-gradient-to-br from-accent/10 to-accent/5",
-    accent: "border-l-4 border-l-accent"
-  },
-  { 
-    id: "tradition", 
-    name: "Tradition", 
-    desc: "Timeless & elegant",
-    icon: Star, 
-    amounts: ["54", "100", "180", "360"],
-    preview: "bg-gradient-to-br from-muted to-muted/50",
-    accent: "border-l-4 border-l-muted-foreground"
-  },
-  { 
-    id: "newlife", 
-    name: "New Life", 
-    desc: "Soft & nurturing",
-    icon: Baby, 
-    amounts: ["25", "50", "100", "250"],
-    preview: "bg-gradient-to-br from-success/10 to-success/5",
-    accent: "border-l-4 border-l-success"
-  },
-  { 
-    id: "love", 
-    name: "Love", 
-    desc: "Warm & romantic",
-    icon: Heart, 
-    amounts: ["100", "150", "250", "500"],
-    preview: "bg-gradient-to-br from-destructive/10 to-destructive/5",
-    accent: "border-l-4 border-l-destructive"
-  },
+const EVENT_TYPES = [
+  { id: "birthday", label: "Birthday", emoji: "🎂" },
+  { id: "holiday", label: "Holiday", emoji: "🎄" },
+  { id: "anytime", label: "Anytime", emoji: "💝" },
+  { id: "graduation", label: "Graduation", emoji: "🎓" },
+  { id: "baby", label: "Baby Shower", emoji: "👶" },
+  { id: "other", label: "Other", emoji: "✨" },
 ];
 
-const THANK_YOU_STYLES = [
-  { id: "match", name: "Match event style", desc: "Same style as your page" },
-  { id: "photo", name: "Photo card", desc: "Feature your own image" },
-  { id: "minimal", name: "Simple text", desc: "Clean & personal" },
-];
+const GOAL_OPTIONS = ["500", "1000", "2500", "5000"];
 
 export default function MomentCreate() {
-  const [, setLocation] = useLocation();
-  const search = useSearch();
-  const params = new URLSearchParams(search);
-  const profileName = decodeURIComponent(params.get("name") || "Mila");
-  const accountType = params.get("type") || "child";
-
-  const [step, setStep] = useState(0);
-  const [template, setTemplate] = useState("minimal");
-  const [title, setTitle] = useState(`${profileName}'s Celebration`);
-  const [story, setStory] = useState("");
+  const { selectedFund, funds } = useKora();
+  const [, navigate] = useLocation();
+  const profileName = selectedFund?.name || funds[0]?.name || "Your Child";
+  
+  const [eventType, setEventType] = useState("birthday");
+  const [title, setTitle] = useState("");
   const [goal, setGoal] = useState("1000");
   const [customGoal, setCustomGoal] = useState("");
-  const [coverImage, setCoverImage] = useState<string | null>(null);
-  const [customAmounts, setCustomAmounts] = useState<string[]>([]);
-  const [thankYouStyle, setThankYouStyle] = useState("match");
-  const [thankYouMessage, setThankYouMessage] = useState(`Thank you so much for contributing to ${profileName}'s future. Your generosity means the world to us.`);
-  const [setupThankYou, setSetupThankYou] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [created, setCreated] = useState(false);
+  const [eventSlug, setEventSlug] = useState("");
 
-  const selectedTemplate = TEMPLATES.find(t => t.id === template);
-  const steps = ["Template", "Details", "Design", "Thank You", "Review"];
-  const progress = ((step + 1) / steps.length) * 100;
-  const amounts = customAmounts.length > 0 ? customAmounts : (selectedTemplate?.amounts || ["25", "50", "100", "200"]);
-
-  const handleImageUpload = () => {
-    setCoverImage("https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=600&h=400&fit=crop");
-  };
+  const selectedType = EVENT_TYPES.find(t => t.id === eventType);
+  const finalGoal = customGoal || goal;
 
   const handleCreate = () => {
+    if (!title.trim()) {
+      toast({ title: "Please enter a title", variant: "destructive" });
+      return;
+    }
+
     setIsCreating(true);
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    setEventSlug(slug);
+    
     setTimeout(() => {
       setIsCreating(false);
       setCreated(true);
-    }, 1500);
+    }, 1200);
+  };
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/checkout/${profileName.toLowerCase().replace(/\s/g, "-")}/${eventSlug}`;
+    navigator.clipboard.writeText(url);
+    toast({ title: "Link copied!" });
   };
 
   if (created) {
     return (
-      <div className="min-h-screen bg-background font-sans">
-        <Nav />
-        <main className="container mx-auto px-4 py-12 max-w-md">
-          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
-            <Card className="border-none shadow-lg text-center">
-              <CardContent className="p-8 space-y-6">
-                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                  <Check className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold mb-1">Your event page is live!</h2>
-                  <p className="text-muted-foreground">{title}</p>
-                </div>
+      <PageTransition>
+        <div className="min-h-screen bg-background">
+          <main className="max-w-lg mx-auto px-4 py-12">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center"
+            >
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                className="w-20 h-20 rounded-full bg-[hsl(var(--kora-evergreen))] flex items-center justify-center mx-auto mb-6"
+              >
+                <Check className="w-10 h-10 text-white" />
+              </motion.div>
+              
+              <h1 className="text-2xl font-bold text-foreground mb-2">Event created!</h1>
+              <p className="text-muted-foreground mb-8">{title} is ready to share</p>
 
-                <div className="p-4 rounded-xl bg-muted/50 text-left space-y-2">
-                  <p className="text-xs text-muted-foreground">Share link</p>
-                  <div className="flex gap-2">
-                    <Input value={`kora.com/${profileName.toLowerCase().replace(/\s/g, "-")}`} readOnly className="text-sm" />
-                    <Button variant="outline" size="icon"><Copy className="h-4 w-4" /></Button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <Button variant="outline" className="flex-col h-auto py-3">
-                    <QrCode className="h-5 w-5 mb-1" />
-                    <span className="text-xs">QR Code</span>
+              <div className="bg-card border border-border rounded-2xl p-5 mb-6">
+                <p className="text-xs text-muted-foreground mb-3">Share this link with friends & family</p>
+                <div className="flex gap-2">
+                  <Input 
+                    value={`kora.com/${profileName.toLowerCase().replace(/\s/g, "-")}/${eventSlug}`} 
+                    readOnly 
+                    className="text-sm bg-muted" 
+                  />
+                  <Button variant="outline" size="icon" onClick={handleCopyLink}>
+                    <Copy className="h-4 w-4" />
                   </Button>
-                  <Button variant="outline" className="flex-col h-auto py-3">
-                    <Share2 className="h-5 w-5 mb-1" />
-                    <span className="text-xs">Share</span>
-                  </Button>
-                  <Link href={`/${profileName.toLowerCase().replace(/\s/g, "-")}/${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
-                    <Button variant="outline" className="flex-col h-auto py-3 w-full">
-                      <ExternalLink className="h-5 w-5 mb-1" />
-                      <span className="text-xs">Preview</span>
-                    </Button>
-                  </Link>
                 </div>
+              </div>
 
-                {setupThankYou && (
-                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/10 text-left">
-                    <div className="flex items-center gap-2 mb-1">
-                      <MessageSquare className="h-4 w-4 text-primary" />
-                      <p className="text-sm font-medium">Thank-you card ready</p>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Auto-sends when contributions come in. Edit anytime in settings.</p>
-                  </div>
-                )}
-
-                <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName)}`}>
-                  <Button className="w-full">Go to Dashboard</Button>
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleCopyLink}
+                  className="p-4 rounded-xl bg-[hsl(var(--kora-evergreen))] text-white flex flex-col items-center gap-2"
+                >
+                  <Share2 size={20} />
+                  <span className="text-sm font-medium">Share link</span>
+                </motion.button>
+                <Link href="/events">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full p-4 rounded-xl bg-muted text-foreground flex flex-col items-center gap-2"
+                  >
+                    <CalendarHeart size={20} />
+                    <span className="text-sm font-medium">View events</span>
+                  </motion.button>
                 </Link>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </main>
-      </div>
+              </div>
+
+              <Link href="/dashboard">
+                <Button variant="ghost" className="w-full">
+                  Back to dashboard
+                </Button>
+              </Link>
+            </motion.div>
+          </main>
+        </div>
+      </PageTransition>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background font-sans">
-      <Nav />
-      
-      <main className="container mx-auto px-4 py-8 max-w-lg">
-        <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName)}`} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6">
-          <ArrowLeft className="h-4 w-4" /> Back to dashboard
-        </Link>
-
-        <div className="mb-8">
-          <h1 className="text-2xl font-semibold mb-2">Create an event page</h1>
-          <p className="text-muted-foreground text-sm">Pick a style for your shareable page</p>
-          
-          {/* Step indicator */}
-          <div className="flex items-center gap-2 mt-5">
-            {steps.map((s, i) => (
-              <div key={s} className="flex items-center">
-                <div className={`h-2 w-2 rounded-full transition-colors ${i <= step ? "bg-primary" : "bg-muted"}`} />
-                {i < steps.length - 1 && <div className={`h-0.5 w-8 transition-colors ${i < step ? "bg-primary" : "bg-muted"}`} />}
-              </div>
-            ))}
+    <PageTransition>
+      <div className="min-h-screen bg-background pb-28">
+        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50">
+          <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
+            <Link href="/events" className="flex items-center gap-2 text-muted-foreground">
+              <ArrowLeft size={20} />
+              <span className="text-sm">Back</span>
+            </Link>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">{steps[step]}</p>
-        </div>
+        </header>
 
-        <AnimatePresence mode="wait">
-          {/* Step 0: Template */}
-          {step === 0 && (
-            <motion.div key="template" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+        <main className="max-w-lg mx-auto px-4 py-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <h1 className="text-2xl font-bold text-foreground mb-2">Create an event</h1>
+            <p className="text-muted-foreground mb-8">Set up a gift occasion for {profileName}</p>
+
+            <div className="space-y-6">
               <div className="space-y-3">
-                {TEMPLATES.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => { setTemplate(t.id); setTitle(`${profileName}'s ${t.id === "custom" ? "Celebration" : t.name}`); }}
-                    className={`w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${
-                      template === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                    }`}
-                    data-testid={`template-${t.id}`}
-                  >
-                    <div className={`h-14 w-14 rounded-lg ${t.preview} ${t.accent} flex items-center justify-center shrink-0`}>
-                      <t.icon className={`h-6 w-6 ${template === t.id ? "text-primary" : "text-muted-foreground"}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{t.name}</p>
-                      <p className="text-xs text-muted-foreground">{t.desc}</p>
-                    </div>
-                    {template === t.id && <Check className="h-5 w-5 text-primary shrink-0" />}
-                  </button>
-                ))}
+                <Label className="text-sm font-medium">What's the occasion?</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {EVENT_TYPES.map((type) => (
+                    <motion.button
+                      key={type.id}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setEventType(type.id);
+                        if (!title) setTitle(`${profileName}'s ${type.label}`);
+                      }}
+                      className={`p-3 rounded-xl border-2 text-center transition-all ${
+                        eventType === type.id 
+                          ? "border-[hsl(var(--kora-evergreen))] bg-[hsl(var(--kora-evergreen)/0.05)]" 
+                          : "border-border hover:border-muted-foreground"
+                      }`}
+                      data-testid={`event-type-${type.id}`}
+                    >
+                      <span className="text-2xl mb-1 block">{type.emoji}</span>
+                      <span className="text-xs font-medium text-foreground">{type.label}</span>
+                    </motion.button>
+                  ))}
+                </div>
               </div>
-            </motion.div>
-          )}
 
-          {/* Step 1: Details */}
-          {step === 1 && (
-            <motion.div key="details" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <Card className="border-none shadow-sm">
-                <CardContent className="p-6 space-y-5">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Title</Label>
-                    <Input value={title} onChange={(e) => setTitle(e.target.value)} className="h-12 text-base" placeholder="Mila's 5th Birthday" data-testid="input-title" />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Story <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                    <Textarea 
-                      placeholder="Share what makes this event special..."
-                      value={story}
-                      onChange={(e) => setStory(e.target.value)}
-                      rows={3}
-                      className="resize-none"
-                      data-testid="input-story"
-                    />
-                  </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Event title</Label>
+                <Input 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)} 
+                  className="h-12 text-base rounded-xl" 
+                  placeholder={`${profileName}'s ${selectedType?.label || "Event"}`}
+                  data-testid="input-event-title"
+                />
+              </div>
 
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Goal</Label>
-                    <div className="grid grid-cols-5 gap-2">
-                      {["500", "1000", "2500", "5000"].map((amt) => (
-                        <Button
-                          key={amt}
-                          variant={goal === amt && !customGoal ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => { setGoal(amt); setCustomGoal(""); }}
-                          className="h-10"
-                        >
-                          ${Number(amt).toLocaleString()}
-                        </Button>
-                      ))}
-                      <Button
-                        variant={goal === "custom" ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setGoal("custom")}
-                        className="h-10"
-                      >
-                        Custom
-                      </Button>
-                    </div>
-                    {goal === "custom" && (
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                        <Input 
-                          placeholder="Enter amount" 
-                          value={customGoal} 
-                          onChange={(e) => setCustomGoal(e.target.value.replace(/[^0-9]/g, ""))}
-                          className="h-11 pl-7 text-base"
-                          autoFocus
-                        />
-                      </div>
-                    )}
-                  </div>
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Gift goal <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {GOAL_OPTIONS.map((amt) => (
+                    <motion.button
+                      key={amt}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => { setGoal(amt); setCustomGoal(""); }}
+                      className={`py-3 rounded-xl border-2 text-sm font-medium transition-all ${
+                        goal === amt && !customGoal 
+                          ? "border-[hsl(var(--kora-evergreen))] bg-[hsl(var(--kora-evergreen)/0.05)] text-[hsl(var(--kora-evergreen))]" 
+                          : "border-border text-foreground"
+                      }`}
+                    >
+                      ${Number(amt).toLocaleString()}
+                    </motion.button>
+                  ))}
+                </div>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input 
+                    placeholder="Custom amount" 
+                    value={customGoal} 
+                    onChange={(e) => {
+                      setCustomGoal(e.target.value.replace(/[^0-9]/g, ""));
+                      if (e.target.value) setGoal("custom");
+                    }}
+                    className="h-12 pl-8 text-base rounded-xl"
+                    data-testid="input-custom-goal"
+                  />
+                </div>
+              </div>
+            </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Suggested amounts</Label>
-                      <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setCustomAmounts(amounts)}>
-                        <Pencil className="h-3 w-3 mr-1" /> Customize
-                      </Button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {amounts.map((amt, i) => (
-                        <div key={i} className="relative">
-                          <div className="px-3 py-1.5 rounded-full bg-muted text-sm font-medium">
-                            ${amt}
-                          </div>
-                          {customAmounts.length > 0 && (
-                            <button 
-                              onClick={() => setCustomAmounts(customAmounts.filter((_, idx) => idx !== i))}
-                              className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-foreground text-background flex items-center justify-center"
-                            >
-                              <X className="h-2.5 w-2.5" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Step 2: Design */}
-          {step === 2 && (
-            <motion.div key="design" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <Card className="border-none shadow-sm">
-                <CardContent className="p-6 space-y-5">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Cover image <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                    {coverImage ? (
-                      <div className="relative rounded-xl overflow-hidden">
-                        <img src={coverImage} alt="Cover" className="w-full h-40 object-cover" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                        <div className="absolute bottom-3 left-3 right-3 flex gap-2">
-                          <Button size="sm" variant="secondary" className="flex-1" onClick={handleImageUpload}>
-                            <Image className="h-3 w-3 mr-1" /> Change
-                          </Button>
-                          <Button size="sm" variant="secondary" onClick={() => setCoverImage(null)}>
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={handleImageUpload}
-                        className="w-full h-32 rounded-xl border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
-                      >
-                        <Upload className="h-6 w-6" />
-                        <span className="text-sm">Upload a photo</span>
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Live preview */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium">Preview</Label>
-                    <div className={`rounded-xl overflow-hidden ${selectedTemplate?.preview} ${selectedTemplate?.accent} p-5`}>
-                      {coverImage && (
-                        <div className="h-24 -mx-5 -mt-5 mb-4 bg-cover bg-center" style={{ backgroundImage: `url(${coverImage})` }}>
-                          <div className="h-full w-full bg-gradient-to-t from-card/90 to-transparent" />
-                        </div>
-                      )}
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
-                          {profileName.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-sm">{title || "Your Title"}</p>
-                          <p className="text-xs text-muted-foreground">{story ? story.slice(0, 50) + "..." : "Your story here"}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        {amounts.slice(0, 3).map((amt) => (
-                          <div key={amt} className="flex-1 py-2 rounded-lg bg-card/80 text-center text-sm font-medium border">
-                            ${amt}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Step 3: Thank You Card */}
-          {step === 3 && (
-            <motion.div key="thankyou" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <Card className="border-none shadow-sm">
-                <CardContent className="p-6 space-y-5">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm">Set up thank-you card</p>
-                      <p className="text-xs text-muted-foreground">Auto-send after each contribution</p>
-                    </div>
-                    <Switch checked={setupThankYou} onCheckedChange={setSetupThankYou} />
-                  </div>
-
-                  {setupThankYou && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4">
-                      <div className="space-y-3">
-                        <Label className="text-sm font-medium">Style</Label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {THANK_YOU_STYLES.map((s) => (
-                            <button
-                              key={s.id}
-                              onClick={() => setThankYouStyle(s.id)}
-                              className={`p-3 rounded-xl border-2 text-center transition-all ${
-                                thankYouStyle === s.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
-                              }`}
-                            >
-                              <p className="font-medium text-xs">{s.name}</p>
-                              <p className="text-[10px] text-muted-foreground mt-0.5">{s.desc}</p>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium">Message</Label>
-                        <Textarea 
-                          value={thankYouMessage}
-                          onChange={(e) => setThankYouMessage(e.target.value)}
-                          rows={3}
-                          className="resize-none text-sm"
-                        />
-                      </div>
-
-                      {/* Thank you preview */}
-                      <div className={`rounded-xl p-4 ${selectedTemplate?.preview} border`}>
-                        <p className="text-xs text-muted-foreground mb-2">Preview</p>
-                        <div className="bg-card rounded-lg p-4 shadow-sm">
-                          <p className="font-medium text-sm mb-1">Thank you, [Name]!</p>
-                          <p className="text-xs text-muted-foreground">{thankYouMessage.slice(0, 100)}...</p>
-                          <p className="text-xs text-primary mt-2 font-medium">— The {profileName.split(" ")[0]} Family</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {!setupThankYou && (
-                    <p className="text-xs text-muted-foreground text-center py-4">
-                      You can set this up later in Settings → Thank You Cards
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Step 4: Review */}
-          {step === 4 && (
-            <motion.div key="review" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-              <Card className="border-none shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-lg">Review</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Full preview */}
-                  <div className={`rounded-xl overflow-hidden ${selectedTemplate?.preview} ${selectedTemplate?.accent}`}>
-                    {coverImage && (
-                      <div className="h-28 bg-cover bg-center" style={{ backgroundImage: `url(${coverImage})` }}>
-                        <div className="h-full w-full bg-gradient-to-t from-card/90 to-transparent" />
-                      </div>
-                    )}
-                    <div className="p-5">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-lg font-semibold text-primary">
-                          {profileName.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-semibold">{title}</p>
-                          <p className="text-sm text-muted-foreground">Goal: ${Number(customGoal || goal).toLocaleString()}</p>
-                        </div>
-                      </div>
-                      {story && <p className="text-sm text-muted-foreground mb-4">{story}</p>}
-                      <div className="flex gap-2">
-                        {amounts.map((amt) => (
-                          <div key={amt} className="flex-1 py-2.5 rounded-lg bg-card text-center text-sm font-medium border shadow-sm">
-                            ${amt}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Settings summary */}
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between py-2 border-b border-border">
-                      <span className="text-muted-foreground">Template</span>
-                      <span className="font-medium">{selectedTemplate?.name}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border">
-                      <span className="text-muted-foreground">Goal</span>
-                      <span className="font-medium">${Number(customGoal || goal).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between py-2 border-b border-border">
-                      <span className="text-muted-foreground">Thank-you card</span>
-                      <span className="font-medium">{setupThankYou ? "Enabled" : "Not set up"}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Navigation buttons */}
-        <div className="flex gap-3 mt-8">
-          {step > 0 && (
-            <Button variant="outline" onClick={() => setStep(step - 1)} className="flex-1">
-              <ArrowLeft className="h-4 w-4 mr-1" /> Back
-            </Button>
-          )}
-          {step < steps.length - 1 ? (
-            <Button onClick={() => setStep(step + 1)} className="flex-1">
-              Next <ArrowRight className="h-4 w-4 ml-1" />
-            </Button>
-          ) : (
-            <Button onClick={handleCreate} disabled={isCreating} className="flex-1">
-              {isCreating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  Create Page <Check className="h-4 w-4 ml-1" />
-                </>
-              )}
-            </Button>
-          )}
-        </div>
-      </main>
-    </div>
+            <div className="mt-10">
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={handleCreate}
+                disabled={isCreating || !title.trim()}
+                className="w-full py-4 bg-primary text-primary-foreground font-semibold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20"
+                data-testid="button-create-event"
+              >
+                {isCreating ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={18} />
+                    Create event
+                  </>
+                )}
+              </motion.button>
+              <p className="text-xs text-muted-foreground text-center mt-4">
+                You can customize the page design later
+              </p>
+            </div>
+          </motion.div>
+        </main>
+      </div>
+    </PageTransition>
   );
 }
