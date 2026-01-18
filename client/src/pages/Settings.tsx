@@ -12,7 +12,8 @@ import {
   User, Shield, Bell, CreditCard, FileText, Search, 
   ChevronRight, Check, LogOut, HelpCircle,
   Smartphone, Mail, Eye, EyeOff, Lock, Globe, Users, Sparkles,
-  MessageCircle, BookOpen, ExternalLink, Calendar, Gift
+  MessageCircle, BookOpen, ExternalLink, Calendar, Gift,
+  DollarSign, Heart
 } from "lucide-react";
 
 type SettingsTab = "profile" | "security" | "notifications" | "billing" | "legal" | "help";
@@ -445,148 +446,260 @@ function BillingTab() {
   const [goalBehavior, setGoalBehavior] = useState("continue");
 
   const giverPays = whoPays === "guests";
-  const totalForGiver = giverPays ? "$104.70" : "$103.20";
-  const koraFeeLabel = giverPays ? "$1.50" : "You pay";
 
   return (
-    <div className="space-y-6">
-      {/* Simple fee explanation */}
-      <SettingsSection title="How fees work">
-        <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Every gift has two small fees: card processing (~3%) which always goes to the card network, and the Kora fee (~1.5%) which supports our platform.
-          </p>
-          <div className="p-3 rounded-lg bg-muted/50 text-sm">
-            <p className="text-foreground font-medium">Example: $100 gift by card</p>
-            <p className="text-muted-foreground">Card processing: $3.20 + Kora fee: $1.50 = <span className="text-foreground font-medium">$4.70 total fees</span></p>
+    <div className="space-y-8">
+      {/* Visual Fee Breakdown */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-2xl p-5 border border-primary/20"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+            <DollarSign size={16} className="text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">How fees work</h3>
+            <p className="text-xs text-muted-foreground">On a $100 gift by card</p>
           </div>
         </div>
-      </SettingsSection>
+        
+        <div className="space-y-3">
+          {/* Visual breakdown */}
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <div className="h-3 rounded-full bg-muted overflow-hidden flex">
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: "68%" }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                  className="h-full bg-primary/40 rounded-l-full"
+                />
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: "32%" }}
+                  transition={{ delay: 0.4, duration: 0.3 }}
+                  className="h-full bg-[hsl(var(--kora-gold))] rounded-r-full"
+                />
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-primary/40" />
+              <div>
+                <p className="font-medium text-foreground">$3.20</p>
+                <p className="text-xs text-muted-foreground">Card processing</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-[hsl(var(--kora-gold))]" />
+              <div>
+                <p className="font-medium text-foreground">$1.50</p>
+                <p className="text-xs text-muted-foreground">Kora fee</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="pt-3 border-t border-primary/10 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Total fees on $100</span>
+            <span className="text-lg font-bold text-foreground">$4.70</span>
+          </div>
+        </div>
+      </motion.div>
 
-      {/* Who pays the Kora fee */}
-      <SettingsSection title="Who pays the Kora fee?" description="This applies to all gifts you receive">
-        <div className="grid grid-cols-2 gap-2">
-          <button
+      {/* Who pays toggle - more prominent */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="font-semibold text-foreground">Who pays the fees?</h3>
+          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">All gifts</span>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             onClick={() => { setWhoPays("guests"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
-            className={`p-3 rounded-xl border-2 text-left transition-all ${
+            className={`relative p-4 rounded-2xl border-2 text-left transition-all overflow-hidden ${
               whoPays === "guests" 
                 ? "border-primary bg-primary/5" 
-                : "border-border hover:border-primary/30"
+                : "border-border hover:border-primary/30 bg-card"
             }`}
           >
-            <p className="text-sm font-medium text-foreground">Gift givers</p>
-            <p className="text-xs text-muted-foreground">They pay ~$4.70 on $100</p>
-          </button>
-          <button
+            {whoPays === "guests" && (
+              <motion.div 
+                layoutId="who-pays-indicator"
+                className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center"
+              >
+                <Check size={12} className="text-primary-foreground" />
+              </motion.div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-3">
+              <Users size={20} className="text-muted-foreground" />
+            </div>
+            <p className="font-semibold text-foreground mb-0.5">Gift givers</p>
+            <p className="text-xs text-muted-foreground">They pay $104.70 total</p>
+            <p className="text-xs text-primary mt-2 font-medium">You receive $100</p>
+          </motion.button>
+          
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             onClick={() => { setWhoPays("host"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
-            className={`p-3 rounded-xl border-2 text-left transition-all ${
+            className={`relative p-4 rounded-2xl border-2 text-left transition-all overflow-hidden ${
               whoPays === "host" 
                 ? "border-primary bg-primary/5" 
-                : "border-border hover:border-primary/30"
+                : "border-border hover:border-primary/30 bg-card"
             }`}
           >
-            <p className="text-sm font-medium text-foreground">I'll cover it</p>
-            <p className="text-xs text-muted-foreground">They pay ~$3.20, you pay $1.50</p>
-          </button>
+            {whoPays === "host" && (
+              <motion.div 
+                layoutId="who-pays-indicator"
+                className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center"
+              >
+                <Check size={12} className="text-primary-foreground" />
+              </motion.div>
+            )}
+            <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mb-3">
+              <Heart size={20} className="text-muted-foreground" />
+            </div>
+            <p className="font-semibold text-foreground mb-0.5">I'll cover it</p>
+            <p className="text-xs text-muted-foreground">They pay $103.20</p>
+            <p className="text-xs text-primary mt-2 font-medium">You pay $1.50/gift</p>
+          </motion.button>
         </div>
-      </SettingsSection>
+      </div>
 
-      {/* Plans to waive the Kora fee */}
-      <SettingsSection title={giverPays ? "Want to waive the Kora fee entirely?" : "Want us to cover it instead of you?"}>
+      {/* Upgrade plans - premium cards */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-foreground">Waive the Kora fee</h3>
+        </div>
+        
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            {giverPays 
-              ? "With these plans, gift givers only pay card processing. No Kora fee."
-              : "With these plans, you don't have to pay the fee yourself each time."}
-          </p>
-          
-          {/* Family option */}
-          <div 
+          {/* Family Plan - Premium */}
+          <motion.div 
+            whileTap={{ scale: 0.98 }}
             onClick={() => toast({ title: "Upgrade to Family", description: "Family plan coming soon" })}
-            className="p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/30 transition-colors"
+            className="relative p-5 rounded-2xl bg-gradient-to-br from-[hsl(var(--kora-gold))]/20 via-[hsl(var(--kora-gold))]/10 to-transparent border border-[hsl(var(--kora-gold))]/30 cursor-pointer group overflow-hidden"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Sparkles size={18} className="text-[hsl(var(--kora-gold))]" />
-                <div>
-                  <p className="font-medium text-foreground">Family: $199/year</p>
-                  <p className="text-xs text-muted-foreground">Covers all gifts up to $15k/year</p>
+            <div className="absolute top-0 right-0 px-3 py-1 bg-[hsl(var(--kora-gold))] text-[10px] font-bold uppercase tracking-wider rounded-bl-lg text-background">
+              Best Value
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[hsl(var(--kora-gold))]/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles size={24} className="text-[hsl(var(--kora-gold))]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-xl font-bold text-foreground">$199</span>
+                  <span className="text-sm text-muted-foreground">/year</span>
+                </div>
+                <p className="font-semibold text-foreground mb-1">Family Plan</p>
+                <p className="text-sm text-muted-foreground">
+                  {giverPays 
+                    ? "Gift givers only pay card processing. No Kora fee on gifts up to $15k/year."
+                    : "We cover the Kora fee for you. No more $1.50 per gift up to $15k/year."}
+                </p>
+                <div className="flex items-center gap-4 mt-3 text-xs">
+                  <span className="flex items-center gap-1 text-[hsl(var(--kora-gold))]">
+                    <Check size={12} /> All children
+                  </span>
+                  <span className="flex items-center gap-1 text-[hsl(var(--kora-gold))]">
+                    <Check size={12} /> All events
+                  </span>
                 </div>
               </div>
-              <ChevronRight size={16} className="text-muted-foreground" />
+              <ChevronRight size={20} className="text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-1" />
             </div>
-          </div>
+          </motion.div>
 
-          {/* Event Pass option */}
-          <div 
+          {/* Event Pass */}
+          <motion.div 
+            whileTap={{ scale: 0.98 }}
             onClick={() => toast({ title: "Event Pass", description: "Add when creating an event" })}
-            className="p-4 rounded-xl border border-border bg-card cursor-pointer hover:border-primary/30 transition-colors"
+            className="p-5 rounded-2xl border border-border bg-card cursor-pointer group hover:border-primary/30 transition-colors"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Calendar size={18} className="text-muted-foreground" />
-                <div>
-                  <p className="font-medium text-foreground">Event Pass: $99 one-time</p>
-                  <p className="text-xs text-muted-foreground">Covers one event up to $7.5k in gifts</p>
-                </div>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center flex-shrink-0">
+                <Calendar size={24} className="text-muted-foreground" />
               </div>
-              <ChevronRight size={16} className="text-muted-foreground" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2 mb-1">
+                  <span className="text-xl font-bold text-foreground">$99</span>
+                  <span className="text-sm text-muted-foreground">one-time</span>
+                </div>
+                <p className="font-semibold text-foreground mb-1">Event Pass</p>
+                <p className="text-sm text-muted-foreground">
+                  {giverPays
+                    ? "No Kora fee for one event, up to $7.5k in gifts."
+                    : "We cover the Kora fee for one event, up to $7.5k in gifts."}
+                </p>
+              </div>
+              <ChevronRight size={20} className="text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-1" />
             </div>
-          </div>
+          </motion.div>
         </div>
-      </SettingsSection>
+      </div>
 
-      {/* Event Settings */}
-      <SettingsSection title="Event settings" description="Defaults for new events you create">
+      {/* Event Settings - Cleaner */}
+      <SettingsSection title="Event defaults">
         <div className="space-y-1.5">
-          <label className="text-sm font-medium text-foreground">When an event reaches its goal</label>
+          <label className="text-sm text-muted-foreground">When a goal is reached</label>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => { setGoalBehavior("continue"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
-              className={`p-3 rounded-xl border-2 text-left transition-all ${
+              className={`p-3 rounded-xl border-2 text-center transition-all ${
                 goalBehavior === "continue" 
                   ? "border-primary bg-primary/5" 
                   : "border-border hover:border-primary/30"
               }`}
             >
-              <p className="text-sm font-medium text-foreground">Keep going</p>
-              <p className="text-xs text-muted-foreground">Accept more gifts</p>
+              <p className="text-sm font-medium text-foreground">Keep accepting</p>
             </button>
             <button
               onClick={() => { setGoalBehavior("stop"); haptic('selection'); toast({ title: "Saved", variant: "saved" }); }}
-              className={`p-3 rounded-xl border-2 text-left transition-all ${
+              className={`p-3 rounded-xl border-2 text-center transition-all ${
                 goalBehavior === "stop" 
                   ? "border-primary bg-primary/5" 
                   : "border-border hover:border-primary/30"
               }`}
             >
               <p className="text-sm font-medium text-foreground">Stop at goal</p>
-              <p className="text-xs text-muted-foreground">Close the event</p>
             </button>
           </div>
         </div>
       </SettingsSection>
 
-      {/* Payment Method */}
-      <SettingsSection title="Payment method" description="Used when you cover fees">
-        <div className="flex items-center justify-between py-2">
+      {/* Payment Method - Cleaner */}
+      <SettingsSection title="Payment method">
+        <motion.div 
+          whileTap={{ scale: 0.98 }}
+          className="flex items-center justify-between p-4 rounded-xl bg-muted/50 cursor-pointer"
+          onClick={() => toast({ title: "Update card", description: "Contact support to update" })}
+        >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-6 rounded bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center text-white text-[8px] font-bold">VISA</div>
+            <div className="w-12 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-[9px] font-bold shadow-md">
+              VISA
+            </div>
             <div>
               <p className="text-sm font-medium text-foreground">•••• 4242</p>
               <p className="text-xs text-muted-foreground">Expires 12/26</p>
             </div>
           </div>
-          <button 
-            onClick={() => toast({ title: "Update payment method", description: "Contact support to update your card" })}
-            className="text-sm text-primary font-medium"
-          >Update</button>
-        </div>
+          <ChevronRight size={16} className="text-muted-foreground" />
+        </motion.div>
       </SettingsSection>
 
-      {/* Invoices */}
+      {/* Billing history */}
       <SettingsSection title="Billing history">
-        <p className="text-sm text-muted-foreground py-2">No charges yet. Your history will appear here.</p>
+        <div className="py-6 text-center">
+          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+            <FileText size={20} className="text-muted-foreground" />
+          </div>
+          <p className="text-sm text-muted-foreground">No charges yet</p>
+          <p className="text-xs text-muted-foreground/70">Your billing history will appear here</p>
+        </div>
       </SettingsSection>
     </div>
   );
