@@ -9,6 +9,7 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { useKora } from "@/lib/KoraContext";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { useQuery, useMutation } from "@tanstack/react-query";
 
 const EVENT_TYPES = [
   { id: "birthday", label: "Birthday", emoji: "🎂" },
@@ -25,6 +26,7 @@ export default function MomentCreate() {
   const { selectedFund, funds } = useKora();
   const [, navigate] = useLocation();
   const profileName = selectedFund?.name || funds[0]?.name || "Your Child";
+  const fundId = selectedFund?.id || funds[0]?.id;
   
   const [eventType, setEventType] = useState("birthday");
   const [title, setTitle] = useState("");
@@ -33,12 +35,50 @@ export default function MomentCreate() {
   const [isCreating, setIsCreating] = useState(false);
   const [created, setCreated] = useState(false);
   const [eventSlug, setEventSlug] = useState("");
-  const hasFamilyPlan = false;
+
+  const { data: subscription } = useQuery({
+    queryKey: ['subscription'],
+    queryFn: async () => {
+      const res = await fetch('/api/subscription');
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+  
+  const hasFamilyPlan = subscription?.plan === 'family' && subscription?.status === 'active';
 
   const selectedType = EVENT_TYPES.find(t => t.id === eventType);
   const finalGoal = customGoal || goal;
 
-  const handleCreate = () => {
+  const createEventMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fundId,
+          name: title,
+          eventType,
+          goalAmount: parseInt(finalGoal),
+          hasEventPass: hasFamilyPlan,
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to create event');
+      return res.json();
+    },
+    onSuccess: (event) => {
+      haptic('success');
+      setEventSlug(event.slug);
+      setCreated(true);
+      setIsCreating(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to create event", variant: "destructive" });
+      setIsCreating(false);
+    },
+  });
+
+  const handleCreate = async () => {
     if (!title.trim()) {
       toast({ title: "Please enter a title", variant: "destructive" });
       return;
@@ -48,12 +88,36 @@ export default function MomentCreate() {
     setIsCreating(true);
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     setEventSlug(slug);
-    
-    setTimeout(() => {
-      haptic('success');
-      setIsCreating(false);
-      setCreated(true);
-    }, 1200);
+
+    if (hasFamilyPlan) {
+      createEventMutation.mutate();
+    } else {
+      try {
+        const res = await fetch('/api/stripe/checkout/event-pass', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventName: title,
+            fundId,
+            eventType,
+            goalAmount: parseInt(finalGoal),
+          }),
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || 'Failed to start checkout');
+        }
+        
+        const { url } = await res.json();
+        if (url) {
+          window.location.href = url;
+        }
+      } catch (error: any) {
+        toast({ title: error.message || "Failed to start checkout", variant: "destructive" });
+        setIsCreating(false);
+      }
+    }
   };
 
   const handleCopyLink = () => {
