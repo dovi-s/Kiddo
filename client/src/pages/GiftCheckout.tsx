@@ -17,22 +17,129 @@ import { useQuery } from "@tanstack/react-query";
 
 const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
 
-const POPULAR_STOCKS = [
-  { symbol: "VTI", name: "Total US Market", price: 268.45, change: 0.42 },
-  { symbol: "VOO", name: "S&P 500", price: 489.12, change: 0.38 },
-  { symbol: "AAPL", name: "Apple", price: 178.50, change: 1.24 },
-  { symbol: "MSFT", name: "Microsoft", price: 425.22, change: 0.89 },
-  { symbol: "GOOGL", name: "Google", price: 175.98, change: -0.32 },
-  { symbol: "AMZN", name: "Amazon", price: 185.60, change: 1.15 },
-  { symbol: "DIS", name: "Disney", price: 112.45, change: 0.67 },
-  { symbol: "TSLA", name: "Tesla", price: 248.50, change: -1.82 },
-  { symbol: "NVDA", name: "NVIDIA", price: 875.28, change: 3.45 },
-  { symbol: "META", name: "Meta", price: 505.75, change: 1.28 },
-  { symbol: "NFLX", name: "Netflix", price: 628.90, change: 2.14 },
-  { symbol: "JPM", name: "JPMorgan", price: 198.45, change: 0.56 },
+const ALL_STOCKS = [
+  // Index ETFs
+  { symbol: "VTI", name: "Total US Stock Market", price: 268.45, category: "Index" },
+  { symbol: "VOO", name: "S&P 500 Index", price: 489.12, category: "Index" },
+  { symbol: "QQQ", name: "Nasdaq 100", price: 485.30, category: "Index" },
+  { symbol: "SPY", name: "S&P 500 SPDR", price: 512.45, category: "Index" },
+  { symbol: "IWM", name: "Russell 2000", price: 198.75, category: "Index" },
+  { symbol: "DIA", name: "Dow Jones", price: 389.20, category: "Index" },
+  { symbol: "VEA", name: "International Developed", price: 48.92, category: "Index" },
+  { symbol: "VWO", name: "Emerging Markets", price: 42.15, category: "Index" },
+  // Tech Giants
+  { symbol: "AAPL", name: "Apple", price: 178.50, category: "Tech" },
+  { symbol: "MSFT", name: "Microsoft", price: 425.22, category: "Tech" },
+  { symbol: "GOOGL", name: "Alphabet (Google)", price: 175.98, category: "Tech" },
+  { symbol: "GOOG", name: "Alphabet Class C", price: 177.45, category: "Tech" },
+  { symbol: "AMZN", name: "Amazon", price: 185.60, category: "Tech" },
+  { symbol: "META", name: "Meta (Facebook)", price: 505.75, category: "Tech" },
+  { symbol: "NVDA", name: "NVIDIA", price: 875.28, category: "Tech" },
+  { symbol: "TSLA", name: "Tesla", price: 248.50, category: "Tech" },
+  { symbol: "NFLX", name: "Netflix", price: 628.90, category: "Tech" },
+  { symbol: "AMD", name: "AMD", price: 156.80, category: "Tech" },
+  { symbol: "INTC", name: "Intel", price: 42.15, category: "Tech" },
+  { symbol: "CRM", name: "Salesforce", price: 278.90, category: "Tech" },
+  { symbol: "ORCL", name: "Oracle", price: 125.40, category: "Tech" },
+  { symbol: "ADBE", name: "Adobe", price: 498.75, category: "Tech" },
+  { symbol: "PYPL", name: "PayPal", price: 62.30, category: "Tech" },
+  { symbol: "SQ", name: "Block (Square)", price: 68.45, category: "Tech" },
+  { symbol: "SHOP", name: "Shopify", price: 78.90, category: "Tech" },
+  { symbol: "UBER", name: "Uber", price: 72.15, category: "Tech" },
+  { symbol: "LYFT", name: "Lyft", price: 12.45, category: "Tech" },
+  { symbol: "SNAP", name: "Snap", price: 11.20, category: "Tech" },
+  { symbol: "PINS", name: "Pinterest", price: 32.80, category: "Tech" },
+  { symbol: "SPOT", name: "Spotify", price: 312.45, category: "Tech" },
+  { symbol: "ZM", name: "Zoom", price: 68.90, category: "Tech" },
+  { symbol: "DOCU", name: "DocuSign", price: 58.75, category: "Tech" },
+  { symbol: "TWLO", name: "Twilio", price: 62.30, category: "Tech" },
+  { symbol: "NET", name: "Cloudflare", price: 92.45, category: "Tech" },
+  { symbol: "PLTR", name: "Palantir", price: 24.80, category: "Tech" },
+  { symbol: "COIN", name: "Coinbase", price: 245.60, category: "Tech" },
+  { symbol: "RBLX", name: "Roblox", price: 42.15, category: "Tech" },
+  { symbol: "U", name: "Unity Software", price: 22.30, category: "Tech" },
+  // Consumer & Entertainment
+  { symbol: "DIS", name: "Disney", price: 112.45, category: "Consumer" },
+  { symbol: "NKE", name: "Nike", price: 98.75, category: "Consumer" },
+  { symbol: "SBUX", name: "Starbucks", price: 92.30, category: "Consumer" },
+  { symbol: "MCD", name: "McDonald's", price: 278.90, category: "Consumer" },
+  { symbol: "KO", name: "Coca-Cola", price: 62.45, category: "Consumer" },
+  { symbol: "PEP", name: "PepsiCo", price: 168.90, category: "Consumer" },
+  { symbol: "WMT", name: "Walmart", price: 165.80, category: "Consumer" },
+  { symbol: "TGT", name: "Target", price: 142.30, category: "Consumer" },
+  { symbol: "COST", name: "Costco", price: 725.40, category: "Consumer" },
+  { symbol: "HD", name: "Home Depot", price: 352.80, category: "Consumer" },
+  { symbol: "LOW", name: "Lowe's", price: 225.60, category: "Consumer" },
+  { symbol: "LULU", name: "Lululemon", price: 385.20, category: "Consumer" },
+  { symbol: "CMG", name: "Chipotle", price: 2850.00, category: "Consumer" },
+  { symbol: "YUM", name: "Yum! Brands", price: 138.45, category: "Consumer" },
+  { symbol: "ABNB", name: "Airbnb", price: 145.80, category: "Consumer" },
+  { symbol: "BKNG", name: "Booking Holdings", price: 3680.00, category: "Consumer" },
+  { symbol: "MAR", name: "Marriott", price: 235.60, category: "Consumer" },
+  // Healthcare
+  { symbol: "JNJ", name: "Johnson & Johnson", price: 158.90, category: "Healthcare" },
+  { symbol: "PFE", name: "Pfizer", price: 28.45, category: "Healthcare" },
+  { symbol: "MRNA", name: "Moderna", price: 98.75, category: "Healthcare" },
+  { symbol: "UNH", name: "UnitedHealth", price: 525.80, category: "Healthcare" },
+  { symbol: "ABBV", name: "AbbVie", price: 168.90, category: "Healthcare" },
+  { symbol: "LLY", name: "Eli Lilly", price: 785.40, category: "Healthcare" },
+  { symbol: "MRK", name: "Merck", price: 125.60, category: "Healthcare" },
+  { symbol: "BMY", name: "Bristol-Myers", price: 52.30, category: "Healthcare" },
+  // Financial
+  { symbol: "JPM", name: "JPMorgan Chase", price: 198.45, category: "Financial" },
+  { symbol: "BAC", name: "Bank of America", price: 38.90, category: "Financial" },
+  { symbol: "WFC", name: "Wells Fargo", price: 58.75, category: "Financial" },
+  { symbol: "GS", name: "Goldman Sachs", price: 475.60, category: "Financial" },
+  { symbol: "MS", name: "Morgan Stanley", price: 98.45, category: "Financial" },
+  { symbol: "V", name: "Visa", price: 278.90, category: "Financial" },
+  { symbol: "MA", name: "Mastercard", price: 458.75, category: "Financial" },
+  { symbol: "AXP", name: "American Express", price: 228.60, category: "Financial" },
+  { symbol: "BRK.B", name: "Berkshire Hathaway", price: 398.45, category: "Financial" },
+  { symbol: "C", name: "Citigroup", price: 62.30, category: "Financial" },
+  // Energy & Industrial
+  { symbol: "XOM", name: "Exxon Mobil", price: 108.90, category: "Energy" },
+  { symbol: "CVX", name: "Chevron", price: 152.45, category: "Energy" },
+  { symbol: "COP", name: "ConocoPhillips", price: 118.75, category: "Energy" },
+  { symbol: "NEE", name: "NextEra Energy", price: 72.30, category: "Energy" },
+  { symbol: "BA", name: "Boeing", price: 198.45, category: "Industrial" },
+  { symbol: "CAT", name: "Caterpillar", price: 325.80, category: "Industrial" },
+  { symbol: "GE", name: "GE Aerospace", price: 168.90, category: "Industrial" },
+  { symbol: "UPS", name: "UPS", price: 142.30, category: "Industrial" },
+  { symbol: "FDX", name: "FedEx", price: 268.75, category: "Industrial" },
+  // Communications
+  { symbol: "T", name: "AT&T", price: 18.45, category: "Telecom" },
+  { symbol: "VZ", name: "Verizon", price: 42.30, category: "Telecom" },
+  { symbol: "TMUS", name: "T-Mobile", price: 168.90, category: "Telecom" },
+  { symbol: "CMCSA", name: "Comcast", price: 42.15, category: "Telecom" },
+  // Gaming
+  { symbol: "EA", name: "Electronic Arts", price: 138.90, category: "Gaming" },
+  { symbol: "TTWO", name: "Take-Two Interactive", price: 158.45, category: "Gaming" },
+  { symbol: "ATVI", name: "Activision Blizzard", price: 82.30, category: "Gaming" },
+  { symbol: "GME", name: "GameStop", price: 18.75, category: "Gaming" },
+  // Real Estate
+  { symbol: "VNQ", name: "Real Estate ETF", price: 88.45, category: "Real Estate" },
+  { symbol: "O", name: "Realty Income", price: 58.90, category: "Real Estate" },
+  // Specialty ETFs
+  { symbol: "ARKK", name: "ARK Innovation", price: 48.75, category: "Thematic" },
+  { symbol: "ICLN", name: "Clean Energy", price: 14.20, category: "Thematic" },
+  { symbol: "SOXX", name: "Semiconductor ETF", price: 225.80, category: "Thematic" },
+  { symbol: "XLF", name: "Financial Sector", price: 42.30, category: "Thematic" },
+  { symbol: "XLE", name: "Energy Sector", price: 88.45, category: "Thematic" },
+  { symbol: "XLK", name: "Technology Sector", price: 198.75, category: "Thematic" },
+  { symbol: "XLV", name: "Healthcare Sector", price: 142.30, category: "Thematic" },
+  { symbol: "XLY", name: "Consumer Discretionary", price: 178.90, category: "Thematic" },
+  { symbol: "XLP", name: "Consumer Staples", price: 78.45, category: "Thematic" },
+  // Bonds & Safe Haven
+  { symbol: "BND", name: "Total Bond Market", price: 72.30, category: "Bonds" },
+  { symbol: "AGG", name: "US Aggregate Bond", price: 98.45, category: "Bonds" },
+  { symbol: "TLT", name: "20+ Year Treasury", price: 92.80, category: "Bonds" },
+  { symbol: "GLD", name: "Gold", price: 185.60, category: "Commodities" },
+  { symbol: "SLV", name: "Silver", price: 22.45, category: "Commodities" },
 ];
 
-type Stock = typeof POPULAR_STOCKS[0];
+const TOP_PICKS = ["VTI", "VOO", "AAPL", "MSFT", "DIS", "GOOGL"];
+
+type Stock = typeof ALL_STOCKS[0];
 
 interface FeeCalculation {
   baseAmount: number;
@@ -66,14 +173,19 @@ export default function GiftCheckout() {
   const displayAmount = customAmount || amount;
   const numAmount = parseFloat(displayAmount) || 0;
   
+  const topPicks = useMemo(() => 
+    ALL_STOCKS.filter(s => TOP_PICKS.includes(s.symbol)), 
+  []);
+  
   const filteredStocks = useMemo(() => {
-    if (!stockSearch.trim()) return POPULAR_STOCKS;
+    if (!stockSearch.trim()) return topPicks;
     const q = stockSearch.toLowerCase();
-    return POPULAR_STOCKS.filter(s => 
+    return ALL_STOCKS.filter((s: Stock) => 
       s.symbol.toLowerCase().includes(q) || 
-      s.name.toLowerCase().includes(q)
-    );
-  }, [stockSearch]);
+      s.name.toLowerCase().includes(q) ||
+      s.category.toLowerCase().includes(q)
+    ).slice(0, 20);
+  }, [stockSearch, topPicks]);
   
   const estimatedShares = selectedStock ? (numAmount / selectedStock.price).toFixed(4) : null;
 
@@ -295,90 +407,124 @@ export default function GiftCheckout() {
         >
           <Card className="border-border/50 shadow-premium-sm rounded-2xl mb-4 overflow-hidden">
             <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <Label className="text-sm font-semibold text-foreground">Choose investment</Label>
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <Label className="text-sm font-semibold text-foreground">Pick a stock to gift</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">We'll invest this in their account</p>
+                </div>
                 {selectedStock && (
                   <motion.button
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     onClick={() => { haptic('light'); setSelectedStock(null); }}
-                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    className="text-xs text-primary hover:text-primary/80 font-medium transition-colors"
                     data-testid="button-clear-stock"
                   >
-                    Clear
+                    Change
                   </motion.button>
                 )}
               </div>
               
               {!showStockPicker && !selectedStock ? (
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => { haptic('light'); setShowStockPicker(true); }}
-                  className="w-full p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 transition-all flex items-center justify-center gap-3 text-muted-foreground hover:text-foreground"
-                  data-testid="button-open-stock-picker"
-                >
-                  <Search className="w-5 h-5" />
-                  <span className="font-medium">Search stocks & ETFs</span>
-                </motion.button>
+                <div className="space-y-3 mt-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search any stock or ETF..."
+                      value={stockSearch}
+                      onChange={(e) => { setStockSearch(e.target.value); setShowStockPicker(true); }}
+                      onFocus={() => setShowStockPicker(true)}
+                      className="pl-10 h-12 border-border bg-muted/50 text-foreground placeholder:text-muted-foreground rounded-xl"
+                      data-testid="input-stock-search"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Popular picks</p>
+                    <div className="flex flex-wrap gap-2">
+                      {topPicks.map((stock) => (
+                        <motion.button
+                          key={stock.symbol}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => { haptic('selection'); setSelectedStock(stock); }}
+                          className="px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-sm font-medium text-foreground"
+                          data-testid={`quick-pick-${stock.symbol}`}
+                        >
+                          {stock.symbol}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               ) : selectedStock ? (
-                <motion.div
+                <motion.button
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-4 rounded-xl bg-primary/5 border-2 border-primary/30"
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { haptic('light'); setShowStockPicker(true); setSelectedStock(null); }}
+                  className="w-full p-4 rounded-xl bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 mt-3 text-left"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
-                      <TrendingUp className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-sm">
+                      <span className="text-white font-bold text-sm">{selectedStock.symbol.slice(0, 2)}</span>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-foreground">{selectedStock.symbol}</span>
-                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${selectedStock.change >= 0 ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
-                          {selectedStock.change >= 0 ? '+' : ''}{selectedStock.change}%
+                        <span className="font-bold text-foreground text-lg">{selectedStock.symbol}</span>
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                          {selectedStock.category}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground">{selectedStock.name}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-foreground">${selectedStock.price}</p>
+                      <p className="font-semibold text-foreground">${selectedStock.price.toLocaleString()}</p>
                       {estimatedShares && numAmount >= 5 && (
-                        <p className="text-xs text-muted-foreground">~{estimatedShares} shares</p>
+                        <p className="text-xs text-primary font-semibold">~{estimatedShares} shares</p>
                       )}
                     </div>
                   </div>
-                </motion.div>
+                </motion.button>
               ) : (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="space-y-3"
+                  className="space-y-3 mt-3"
                 >
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       autoFocus
-                      placeholder="Search Apple, VTI, Tesla..."
+                      placeholder="Search any stock or ETF..."
                       value={stockSearch}
                       onChange={(e) => setStockSearch(e.target.value)}
-                      className="pl-10 h-12 border-border bg-muted/50 text-foreground placeholder:text-muted-foreground rounded-xl"
+                      className="pl-10 pr-10 h-12 border-border bg-muted/50 text-foreground placeholder:text-muted-foreground rounded-xl"
                       data-testid="input-stock-search"
                     />
                     <button
                       onClick={() => { setShowStockPicker(false); setStockSearch(''); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                   
-                  <div className="max-h-64 overflow-y-auto space-y-1 -mx-1 px-1">
+                  {!stockSearch.trim() && (
+                    <p className="text-xs font-medium text-muted-foreground">Popular picks</p>
+                  )}
+                  {stockSearch.trim() && filteredStocks.length > 0 && (
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {filteredStocks.length} result{filteredStocks.length !== 1 ? 's' : ''} for "{stockSearch}"
+                    </p>
+                  )}
+                  
+                  <div className="max-h-72 overflow-y-auto space-y-1 -mx-1 px-1">
                     {filteredStocks.map((stock, i) => (
                       <motion.button
                         key={stock.symbol}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.02 }}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.015 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => {
                           haptic('selection');
@@ -386,26 +532,31 @@ export default function GiftCheckout() {
                           setShowStockPicker(false);
                           setStockSearch('');
                         }}
-                        className="w-full p-3 rounded-xl hover:bg-muted/80 transition-colors flex items-center gap-3 text-left"
+                        className="w-full p-3 rounded-xl hover:bg-muted/80 active:bg-muted transition-colors flex items-center gap-3 text-left"
                         data-testid={`stock-${stock.symbol}`}
                       >
                         <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-muted to-border flex items-center justify-center text-xs font-bold text-foreground">
                           {stock.symbol.slice(0, 2)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-foreground truncate">{stock.symbol}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-foreground">{stock.symbol}</p>
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                              {stock.category}
+                            </span>
+                          </div>
                           <p className="text-sm text-muted-foreground truncate">{stock.name}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium text-foreground">${stock.price}</p>
-                          <p className={`text-xs ${stock.change >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                            {stock.change >= 0 ? '+' : ''}{stock.change}%
-                          </p>
+                          <p className="font-medium text-foreground">${stock.price.toLocaleString()}</p>
                         </div>
                       </motion.button>
                     ))}
-                    {filteredStocks.length === 0 && (
-                      <p className="text-center py-4 text-sm text-muted-foreground">No stocks found</p>
+                    {filteredStocks.length === 0 && stockSearch.trim() && (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-muted-foreground mb-1">No results for "{stockSearch}"</p>
+                        <p className="text-xs text-muted-foreground">Try searching by ticker symbol or company name</p>
+                      </div>
                     )}
                   </div>
                 </motion.div>
