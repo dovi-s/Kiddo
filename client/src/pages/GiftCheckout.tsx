@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, CreditCard, Building2, Check, ChevronDown, Lock, Shield, Eye, EyeOff, Sparkles } from "lucide-react";
+import { Gift, CreditCard, Building2, Check, ChevronDown, Lock, Shield, Eye, EyeOff, Sparkles, Search, TrendingUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,23 @@ import { haptic } from "@/lib/haptics";
 import { useQuery } from "@tanstack/react-query";
 
 const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
+
+const POPULAR_STOCKS = [
+  { symbol: "VTI", name: "Total US Market", price: 268.45, change: 0.42 },
+  { symbol: "VOO", name: "S&P 500", price: 489.12, change: 0.38 },
+  { symbol: "AAPL", name: "Apple", price: 178.50, change: 1.24 },
+  { symbol: "MSFT", name: "Microsoft", price: 425.22, change: 0.89 },
+  { symbol: "GOOGL", name: "Google", price: 175.98, change: -0.32 },
+  { symbol: "AMZN", name: "Amazon", price: 185.60, change: 1.15 },
+  { symbol: "DIS", name: "Disney", price: 112.45, change: 0.67 },
+  { symbol: "TSLA", name: "Tesla", price: 248.50, change: -1.82 },
+  { symbol: "NVDA", name: "NVIDIA", price: 875.28, change: 3.45 },
+  { symbol: "META", name: "Meta", price: 505.75, change: 1.28 },
+  { symbol: "NFLX", name: "Netflix", price: 628.90, change: 2.14 },
+  { symbol: "JPM", name: "JPMorgan", price: 198.45, change: 0.56 },
+];
+
+type Stock = typeof POPULAR_STOCKS[0];
 
 interface FeeCalculation {
   baseAmount: number;
@@ -42,9 +59,23 @@ export default function GiftCheckout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [coverFees, setCoverFees] = useState(true);
+  const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
+  const [stockSearch, setStockSearch] = useState("");
+  const [showStockPicker, setShowStockPicker] = useState(false);
   
   const displayAmount = customAmount || amount;
   const numAmount = parseFloat(displayAmount) || 0;
+  
+  const filteredStocks = useMemo(() => {
+    if (!stockSearch.trim()) return POPULAR_STOCKS;
+    const q = stockSearch.toLowerCase();
+    return POPULAR_STOCKS.filter(s => 
+      s.symbol.toLowerCase().includes(q) || 
+      s.name.toLowerCase().includes(q)
+    );
+  }, [stockSearch]);
+  
+  const estimatedShares = selectedStock ? (numAmount / selectedStock.price).toFixed(4) : null;
 
   const { data: feeData } = useQuery<FeeCalculation>({
     queryKey: ['fees', fund, event, numAmount, coverFees],
@@ -260,11 +291,139 @@ export default function GiftCheckout() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, delay: 0.08 }}
+        >
+          <Card className="border-border/50 shadow-premium-sm rounded-2xl mb-4 overflow-hidden">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-sm font-semibold text-foreground">Choose investment</Label>
+                {selectedStock && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    onClick={() => { haptic('light'); setSelectedStock(null); }}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    data-testid="button-clear-stock"
+                  >
+                    Clear
+                  </motion.button>
+                )}
+              </div>
+              
+              {!showStockPicker && !selectedStock ? (
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => { haptic('light'); setShowStockPicker(true); }}
+                  className="w-full p-4 rounded-xl border-2 border-dashed border-border hover:border-primary/50 transition-all flex items-center justify-center gap-3 text-muted-foreground hover:text-foreground"
+                  data-testid="button-open-stock-picker"
+                >
+                  <Search className="w-5 h-5" />
+                  <span className="font-medium">Search stocks & ETFs</span>
+                </motion.button>
+              ) : selectedStock ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 rounded-xl bg-primary/5 border-2 border-primary/30"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+                      <TrendingUp className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-foreground">{selectedStock.symbol}</span>
+                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${selectedStock.change >= 0 ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+                          {selectedStock.change >= 0 ? '+' : ''}{selectedStock.change}%
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{selectedStock.name}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-foreground">${selectedStock.price}</p>
+                      {estimatedShares && numAmount >= 5 && (
+                        <p className="text-xs text-muted-foreground">~{estimatedShares} shares</p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-3"
+                >
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      autoFocus
+                      placeholder="Search Apple, VTI, Tesla..."
+                      value={stockSearch}
+                      onChange={(e) => setStockSearch(e.target.value)}
+                      className="pl-10 h-12 border-border bg-muted/50 text-foreground placeholder:text-muted-foreground rounded-xl"
+                      data-testid="input-stock-search"
+                    />
+                    <button
+                      onClick={() => { setShowStockPicker(false); setStockSearch(''); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="max-h-64 overflow-y-auto space-y-1 -mx-1 px-1">
+                    {filteredStocks.map((stock, i) => (
+                      <motion.button
+                        key={stock.symbol}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          haptic('selection');
+                          setSelectedStock(stock);
+                          setShowStockPicker(false);
+                          setStockSearch('');
+                        }}
+                        className="w-full p-3 rounded-xl hover:bg-muted/80 transition-colors flex items-center gap-3 text-left"
+                        data-testid={`stock-${stock.symbol}`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-muted to-border flex items-center justify-center text-xs font-bold text-foreground">
+                          {stock.symbol.slice(0, 2)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground truncate">{stock.symbol}</p>
+                          <p className="text-sm text-muted-foreground truncate">{stock.name}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-foreground">${stock.price}</p>
+                          <p className={`text-xs ${stock.change >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                            {stock.change >= 0 ? '+' : ''}{stock.change}%
+                          </p>
+                        </div>
+                      </motion.button>
+                    ))}
+                    {filteredStocks.length === 0 && (
+                      <p className="text-center py-4 text-sm text-muted-foreground">No stocks found</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2, delay: 0.1 }}
         >
           <Card className="border-border/50 shadow-premium-sm rounded-2xl mb-4 overflow-hidden">
             <CardContent className="p-6">
-              <Label className="text-sm font-semibold text-foreground mb-4 block">Choose amount</Label>
+              <Label className="text-sm font-semibold text-foreground mb-4 block">
+                {selectedStock ? `Gift amount of ${selectedStock.symbol}` : 'Choose amount'}
+              </Label>
               <div className="grid grid-cols-4 gap-3 mb-4">
                 {SUGGESTED_AMOUNTS.map((amt, i) => {
                   const isSelected = amount === amt && !customAmount;
