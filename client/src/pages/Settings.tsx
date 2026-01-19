@@ -849,46 +849,21 @@ function BillingTab() {
 }
 
 function LegalTab() {
-  const documents = [
-    { type: "statement", title: "Q4 2025 Statement", date: "Jan 2026", fund: "Mila's Fund" },
-    { type: "statement", title: "Q3 2025 Statement", date: "Oct 2025", fund: "Mila's Fund" },
-    { type: "tax", title: "2024 Tax Summary (1099)", date: "Feb 2025", fund: "All Funds" },
-    { type: "confirmation", title: "Gift Confirmation #4827", date: "Dec 2025", fund: "Mila's Fund" },
-  ];
-
   return (
     <div className="space-y-6">
       <SettingsSection title="Statements & Tax Documents" description="Provided by Alpaca Securities">
-        <div className="space-y-2">
-          {documents.filter(d => d.type === "statement" || d.type === "tax").map((doc, i) => (
-            <div key={i} className="flex items-center justify-between py-3 border-b border-muted last:border-0">
-              <div>
-                <p className="text-sm font-medium text-foreground">{doc.title}</p>
-                <p className="text-xs text-muted-foreground">{doc.date} · {doc.fund}</p>
-              </div>
-              <button 
-                onClick={() => toast({ title: "Download started", description: "Your document is being prepared" })}
-                className="text-sm text-muted-foreground hover:text-foreground font-medium"
-              >Download</button>
-            </div>
-          ))}
+        <div className="text-center py-6">
+          <FileText size={32} className="mx-auto text-muted-foreground/50 mb-3" />
+          <p className="text-sm text-muted-foreground">No statements yet</p>
+          <p className="text-xs text-muted-foreground mt-1">Statements will appear here after your first month of activity</p>
         </div>
       </SettingsSection>
 
       <SettingsSection title="Gift Confirmations" description="Receipts for gifts received">
-        <div className="space-y-2">
-          {documents.filter(d => d.type === "confirmation").map((doc, i) => (
-            <div key={i} className="flex items-center justify-between py-3 border-b border-muted last:border-0">
-              <div>
-                <p className="text-sm font-medium text-foreground">{doc.title}</p>
-                <p className="text-xs text-muted-foreground">{doc.date} · {doc.fund}</p>
-              </div>
-              <button 
-                onClick={() => toast({ title: "Download started", description: "Your document is being prepared" })}
-                className="text-sm text-muted-foreground hover:text-foreground font-medium"
-              >Download</button>
-            </div>
-          ))}
+        <div className="text-center py-6">
+          <Gift size={32} className="mx-auto text-muted-foreground/50 mb-3" />
+          <p className="text-sm text-muted-foreground">No gift receipts yet</p>
+          <p className="text-xs text-muted-foreground mt-1">Receipts will appear here when you receive gifts</p>
         </div>
       </SettingsSection>
 
