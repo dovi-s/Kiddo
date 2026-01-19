@@ -8,8 +8,6 @@ import { MobileNav } from "@/components/layout/MobileNav";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
-import Moment from "@/pages/Moment";
-import Recipient from "@/pages/Recipient";
 import Settings from "@/pages/Settings";
 import Activity from "@/pages/Activity";
 import ActivityDetail from "@/pages/ActivityDetail";
@@ -20,7 +18,6 @@ import PageEditor from "@/pages/PageEditor";
 import Claim from "@/pages/Claim";
 import GetStarted from "@/pages/GetStarted";
 import ActivateInvesting from "@/pages/ActivateInvesting";
-import GiftCard from "@/pages/GiftCard";
 import GiftCheckout from "@/pages/GiftCheckout";
 import Login from "@/pages/Login";
 import Events from "@/pages/Events";
@@ -37,17 +34,10 @@ function Router() {
       <Route path="/activity" component={Activity} />
       <Route path="/activity/:id" component={ActivityDetail} />
       <Route path="/events" component={Events} />
-      <Route path="/give/:fund" component={GiftCheckout} />
-      <Route path="/give/:fund/:event" component={GiftCheckout} />
       <Route path="/event/create" component={MomentCreate} />
-      <Route path="/moment" component={Moment} />
-      <Route path="/moment/:id" component={Moment} />
       <Route path="/send" component={Send} />
       <Route path="/claim/:token" component={Claim} />
-      <Route path="/card/:id" component={GiftCard} />
-            <Route path="/edit/:fund/:event" component={PageEditor} />
-      <Route path="/recipient" component={Recipient} />
-      <Route path="/recipient/:id" component={Recipient} />
+      <Route path="/edit/:fund/:event" component={PageEditor} />
       <Route path="/settings" component={Settings} />
       <Route path="/:fund" component={GiftCheckout} />
       <Route path="/:fund/:event" component={GiftCheckout} />

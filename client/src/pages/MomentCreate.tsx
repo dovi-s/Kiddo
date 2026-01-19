@@ -58,7 +58,7 @@ export default function MomentCreate() {
 
   const handleCopyLink = () => {
     haptic('selection');
-    const url = `${window.location.origin}/give/${profileName.toLowerCase().replace(/\s/g, "-")}/${eventSlug}`;
+    const url = `${window.location.origin}/${profileName.toLowerCase().replace(/\s/g, "-")}/${eventSlug}`;
     navigator.clipboard.writeText(url);
     toast({ title: "Link copied!" });
   };

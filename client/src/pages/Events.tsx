@@ -98,7 +98,7 @@ export default function Events() {
   };
 
   const handleShare = (event: EventItem) => {
-    const url = `${window.location.origin}/give/${event.fundSlug}/${event.slug}`;
+    const url = `${window.location.origin}/${event.fundSlug}/${event.slug}`;
     navigator.clipboard.writeText(url);
     setActionEventId(null);
     toast({ title: "Link copied!", description: "Share this link with friends and family" });
@@ -260,7 +260,7 @@ export default function Events() {
                                     <span className="text-xs font-medium">More</span>
                                   </motion.button>
                                 ) : (
-                                  <Link href={`/give/${event.fundSlug}/${event.slug}`}>
+                                  <Link href={`/${event.fundSlug}/${event.slug}`}>
                                     <motion.button
                                       initial={{ opacity: 0, y: 8 }}
                                       animate={{ opacity: 1, y: 0 }}
@@ -277,7 +277,7 @@ export default function Events() {
                               </div>
 
                               {!event.isDefault && (
-                                <Link href={`/give/${event.fundSlug}/${event.slug}`}>
+                                <Link href={`/${event.fundSlug}/${event.slug}`}>
                                   <motion.div
                                     initial={{ opacity: 0, y: 8 }}
                                     animate={{ opacity: 1, y: 0 }}
