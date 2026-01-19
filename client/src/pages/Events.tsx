@@ -14,6 +14,7 @@ import { useFunds } from "@/hooks/use-funds";
 
 type EventItem = {
   id: string;
+  slug: string;
   title: string;
   fundName: string;
   fundSlug: string;
@@ -70,6 +71,7 @@ export default function Events() {
 
   const events: EventItem[] = apiEvents.map(e => ({
     id: e.id,
+    slug: e.slug,
     title: e.name,
     fundName: selectedFund?.name || "Fund",
     fundSlug: selectedFund?.slug || "",
@@ -96,7 +98,7 @@ export default function Events() {
   };
 
   const handleShare = (event: EventItem) => {
-    const url = `${window.location.origin}/give/${event.fundSlug}/${event.id}`;
+    const url = `${window.location.origin}/give/${event.fundSlug}/${event.slug}`;
     navigator.clipboard.writeText(url);
     setActionEventId(null);
     toast({ title: "Link copied!", description: "Share this link with friends and family" });
@@ -258,7 +260,7 @@ export default function Events() {
                                     <span className="text-xs font-medium">More</span>
                                   </motion.button>
                                 ) : (
-                                  <Link href={`/checkout/${event.fundSlug}/${event.id}`}>
+                                  <Link href={`/give/${event.fundSlug}/${event.slug}`}>
                                     <motion.button
                                       initial={{ opacity: 0, y: 8 }}
                                       animate={{ opacity: 1, y: 0 }}
@@ -275,7 +277,7 @@ export default function Events() {
                               </div>
 
                               {!event.isDefault && (
-                                <Link href={`/checkout/${event.fundSlug}/${event.id}`}>
+                                <Link href={`/give/${event.fundSlug}/${event.slug}`}>
                                   <motion.div
                                     initial={{ opacity: 0, y: 8 }}
                                     animate={{ opacity: 1, y: 0 }}
