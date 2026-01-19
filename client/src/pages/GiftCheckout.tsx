@@ -178,20 +178,31 @@ export default function GiftCheckout() {
                 )}
 
                 <div className="space-y-2">
-                  <Button 
-                    className="w-full bg-primary hover:bg-primary/90"
+                  <motion.button 
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium flex items-center justify-center gap-2"
                     onClick={() => {
+                      haptic('light');
                       navigator.share?.({ 
                         title: `I just gifted to ${recipientName}'s Future Fund!`,
                         url: window.location.origin + `/${fund}`
                       }).catch(() => {});
                     }}
+                    data-testid="button-share-gift"
                   >
                     Share this gift
-                  </Button>
-                  <Link href="/">
-                    <Button variant="outline" className="w-full border-border text-foreground hover:bg-muted">Done</Button>
-                  </Link>
+                  </motion.button>
+                  <motion.button 
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full h-11 border border-border text-foreground hover:bg-muted rounded-xl font-medium"
+                    onClick={() => {
+                      haptic('light');
+                      setLocation('/');
+                    }}
+                    data-testid="button-done"
+                  >
+                    Done
+                  </motion.button>
                 </div>
 
                 <p className="text-[10px] text-muted-foreground">
