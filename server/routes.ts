@@ -412,25 +412,35 @@ export async function registerRoutes(
 
   app.post('/api/stripe/calculate-fees', async (req, res) => {
     try {
-      const { amount, coverFees, eventId, fundId } = req.body;
+      const { amount, coverFees, eventId, fundId, fundSlug, eventSlug } = req.body;
       
       let hasEventPass = false;
       let hasFamilyPlan = false;
+      let resolvedFund = null;
+      
+      if (fundId) {
+        resolvedFund = await storage.getFund(fundId);
+      } else if (fundSlug) {
+        resolvedFund = await storage.getFundBySlug(fundSlug);
+      }
       
       if (eventId) {
         const event = await storage.getEvent(eventId);
         if (event?.hasEventPass) {
           hasEventPass = true;
         }
+      } else if (eventSlug && resolvedFund) {
+        const events = await storage.getEventsByFund(resolvedFund.id);
+        const event = events.find((e: any) => e.slug === eventSlug);
+        if (event?.hasEventPass) {
+          hasEventPass = true;
+        }
       }
       
-      if (fundId) {
-        const fund = await storage.getFund(fundId);
-        if (fund?.userId) {
-          const subscription = await storage.getSubscription(fund.userId);
-          if (subscription?.plan === 'family' && subscription?.status === 'active') {
-            hasFamilyPlan = true;
-          }
+      if (resolvedFund?.userId) {
+        const subscription = await storage.getSubscription(resolvedFund.userId);
+        if (subscription?.plan === 'family' && subscription?.status === 'active') {
+          hasFamilyPlan = true;
         }
       }
       

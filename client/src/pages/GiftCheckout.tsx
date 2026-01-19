@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, CreditCard, Building2, Check, ChevronDown, Lock, Shield, Eye, EyeOff } from "lucide-react";
+import { Gift, CreditCard, Building2, Check, ChevronDown, Lock, Shield, Eye, EyeOff, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,8 +13,19 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { Celebration, SuccessGlow } from "@/components/ui/celebration";
 import { bouncySpring, successPop, easeOutExpo } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
+import { useQuery } from "@tanstack/react-query";
 
 const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
+
+interface FeeCalculation {
+  baseAmount: number;
+  processingFee: number;
+  koraFee: number;
+  totalCharge: number;
+  netToFund: number;
+  hasEventPass: boolean;
+  hasFamilyPlan: boolean;
+}
 
 export default function GiftCheckout() {
   const { fund, event } = useParams<{ fund: string; event?: string }>();
@@ -30,15 +41,37 @@ export default function GiftCheckout() {
   const [showDetails, setShowDetails] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [coverFees, setCoverFees] = useState(true);
   
   const displayAmount = customAmount || amount;
   const numAmount = parseFloat(displayAmount) || 0;
-  
-  const cardFee = Math.max(1, Math.min(10, numAmount * 0.015));
-  const isCardPayment = paymentMethod === 'card' || paymentMethod === 'apple';
-  const processingFee = isCardPayment ? numAmount * 0.029 + 0.30 : 0.75;
-  const platformFee = isCardPayment ? cardFee : Math.max(0.75, Math.min(10, numAmount * 0.01));
-  const total = numAmount + processingFee + platformFee;
+
+  const { data: feeData } = useQuery<FeeCalculation>({
+    queryKey: ['fees', fund, event, numAmount, coverFees],
+    queryFn: async () => {
+      const res = await fetch('/api/stripe/calculate-fees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          fundSlug: fund, 
+          eventSlug: event, 
+          amount: numAmount,
+          coverFees 
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to calculate fees');
+      return res.json();
+    },
+    enabled: numAmount >= 5,
+    staleTime: 5000,
+  });
+
+  const processingFee = feeData?.processingFee ?? (numAmount * 0.029 + 0.30);
+  const platformFee = feeData?.koraFee ?? Math.max(1, Math.min(10, numAmount * 0.015));
+  const total = feeData?.totalCharge ?? (numAmount + processingFee + platformFee);
+  const hasEventPass = feeData?.hasEventPass ?? false;
+  const hasFamilyPlan = feeData?.hasFamilyPlan ?? false;
+  const feeWaived = hasEventPass || hasFamilyPlan;
   
   const recipientName = fund ? fund.charAt(0).toUpperCase() + fund.slice(1) : "Recipient";
   const eventTitle = event ? event.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null;
@@ -490,6 +523,14 @@ export default function GiftCheckout() {
               )}
 
               <div className="bg-muted/70 rounded-2xl p-5">
+                {feeWaived && (
+                  <div className="flex items-center gap-2 mb-4 p-3 bg-[hsl(var(--kora-evergreen)/0.1)] rounded-xl">
+                    <Sparkles size={16} className="text-[hsl(var(--kora-evergreen))]" />
+                    <span className="text-sm font-medium text-[hsl(var(--kora-evergreen))]">
+                      {hasEventPass ? "Event Pass active" : "Family Plan active"} — platform fee waived!
+                    </span>
+                  </div>
+                )}
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Gift amount</span>
@@ -501,7 +542,14 @@ export default function GiftCheckout() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Kora fee</span>
-                    <span className="text-foreground">${platformFee.toFixed(2)}</span>
+                    {feeWaived ? (
+                      <span className="text-[hsl(var(--kora-evergreen))] flex items-center gap-1">
+                        <span className="line-through text-muted-foreground">${(Math.max(1, Math.min(10, numAmount * 0.015))).toFixed(2)}</span>
+                        $0.00
+                      </span>
+                    ) : (
+                      <span className="text-foreground">${platformFee.toFixed(2)}</span>
+                    )}
                   </div>
                   <div className="flex justify-between font-semibold pt-3 border-t border-border">
                     <span className="text-foreground">Total</span>
