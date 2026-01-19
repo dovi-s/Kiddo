@@ -1053,13 +1053,30 @@ export default function Settings() {
             </div>
           </div>
 
-          <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.1}
+              onDragEnd={(_, info) => {
+                const threshold = 50;
+                const tabIds = tabs.map(t => t.id);
+                const currentIndex = tabIds.indexOf(activeTab);
+                
+                if (info.offset.x < -threshold && currentIndex < tabIds.length - 1) {
+                  haptic('light');
+                  setActiveTab(tabIds[currentIndex + 1]);
+                } else if (info.offset.x > threshold && currentIndex > 0) {
+                  haptic('light');
+                  setActiveTab(tabIds[currentIndex - 1]);
+                }
+              }}
+              className="touch-pan-y"
             >
               {renderTabContent()}
             </motion.div>
