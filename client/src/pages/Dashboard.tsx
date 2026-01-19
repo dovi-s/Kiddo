@@ -57,6 +57,10 @@ export default function Dashboard() {
   const [expandedGift, setExpandedGift] = useState<string | null>(null);
   const [expandedHolding, setExpandedHolding] = useState<number | null>(null);
   const [showFundPicker, setShowFundPicker] = useState(false);
+  
+  const firstFundId = apiFunds[0]?.id || "";
+  const { data: fundGifts = [] } = useFundGifts(firstFundId);
+  const { data: fundHoldings = [] } = useFundHoldings(firstFundId);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -152,24 +156,32 @@ export default function Dashboard() {
   const portfolioValue = selectedFund?.balance || 0;
   const marketChange = selectedFund?.gain || 0;
   const totalReceived = portfolioValue - marketChange;
-  const investedAmount = Math.round(portfolioValue * 0.85);
-  const pendingAmount = isNewAccount ? 0 : 180;
+  
+  const pendingGifts = fundGifts.filter(g => g.status === "pending" || g.status === "processing");
+  const investedGifts = fundGifts.filter(g => g.status === "invested" || g.status === "completed");
+  const pendingAmount = pendingGifts.reduce((sum, g) => sum + parseFloat(g.amount || "0"), 0);
+  const investedAmount = investedGifts.reduce((sum, g) => sum + parseFloat(g.amount || "0"), 0);
 
-  const holdings = isNewAccount ? [] : [
-    { ticker: "VTI", name: "US Total Market ETF", shares: 12.4, value: 2125, gain: 245 },
-    { ticker: "VXUS", name: "International ETF", shares: 8.2, value: 850, gain: 72 },
-    { ticker: "DIS", name: "Disney", shares: 3.5, value: 425, gain: 38 },
-    { ticker: "AAPL", name: "Apple", shares: 2.1, value: 400, gain: 85 },
-  ];
+  const holdings = fundHoldings.map(h => ({
+    ticker: h.ticker,
+    name: h.name,
+    shares: parseFloat(h.shares || "0"),
+    value: parseFloat(h.currentValue || "0"),
+    gain: parseFloat(h.gain || "0"),
+  }));
 
-  const allContributions = isNewAccount ? [] : [
-    { id: "gift_1", from: "Dave Chen", amount: 180, event: "5th Birthday", date: new Date(Date.now() - 2 * 60 * 60 * 1000), note: "So proud of you", status: "pending" as const },
-    { id: "gift_2", from: "Ruth Stein", amount: 500, event: "Open anytime", date: new Date(Date.now() - 24 * 60 * 60 * 1000), note: "With love", status: "invested" as const },
-    { id: "gift_3", from: "Michael Park", amount: 100, event: "Open anytime", date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), note: null, status: "invested" as const },
-    { id: "gift_4", from: "Sarah Johnson", amount: 250, event: "5th Birthday", date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), note: "Happy birthday sweetie!", status: "invested" as const },
-    { id: "gift_5", from: "The Goldbergs", amount: 100, event: "5th Birthday", date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), note: "Wishing you the best!", status: "invested" as const },
-    { id: "gift_6", from: "Uncle James", amount: 300, event: "Open anytime", date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), note: "For your future", status: "invested" as const },
-  ];
+  const allContributions = fundGifts.map(g => {
+    const eventForGift = apiEvents.find(e => e.id === g.eventId);
+    return {
+      id: g.id,
+      from: g.senderName || "Anonymous",
+      amount: parseFloat(g.amount || "0"),
+      event: eventForGift?.name || "Gift",
+      date: new Date(g.createdAt || Date.now()),
+      note: g.message || null,
+      status: (g.status === "invested" || g.status === "completed" ? "invested" : "pending") as "invested" | "pending",
+    };
+  });
 
   const formatRelativeTime = (date: Date) => {
     const now = Date.now();
