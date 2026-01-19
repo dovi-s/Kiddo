@@ -58,9 +58,10 @@ export default function Dashboard() {
   const [expandedHolding, setExpandedHolding] = useState<number | null>(null);
   const [showFundPicker, setShowFundPicker] = useState(false);
   
-  const firstFundId = apiFunds[0]?.id || "";
-  const { data: fundGifts = [] } = useFundGifts(firstFundId);
-  const { data: fundHoldings = [] } = useFundHoldings(firstFundId);
+  const effectiveSlug = selectedFundSlug || apiFunds[0]?.slug || "";
+  const currentFundId = apiFunds.find(f => f.slug === effectiveSlug)?.id || apiFunds[0]?.id || "";
+  const { data: fundGifts = [] } = useFundGifts(currentFundId);
+  const { data: fundHoldings = [] } = useFundHoldings(currentFundId);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
