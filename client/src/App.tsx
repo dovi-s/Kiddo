@@ -42,6 +42,7 @@ function Router() {
       <Route path="/events" component={Events} />
       <Route path="/give" component={Give} />
       <Route path="/give/:id" component={Give} />
+      <Route path="/give/:fundSlug/:eventId" component={GiftCheckout} />
       <Route path="/event/create" component={MomentCreate} />
       <Route path="/moment" component={Moment} />
       <Route path="/moment/:id" component={Moment} />
