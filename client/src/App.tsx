@@ -16,8 +16,6 @@ import ActivityDetail from "@/pages/ActivityDetail";
 import Onboard from "@/pages/Onboard";
 import MomentCreate from "@/pages/MomentCreate";
 import Send from "@/pages/Send";
-import FundPage from "@/pages/FundPage";
-import EventPage from "@/pages/EventPage";
 import PageEditor from "@/pages/PageEditor";
 import Claim from "@/pages/Claim";
 import GetStarted from "@/pages/GetStarted";
@@ -51,8 +49,8 @@ function Router() {
       <Route path="/recipient" component={Recipient} />
       <Route path="/recipient/:id" component={Recipient} />
       <Route path="/settings" component={Settings} />
-      <Route path="/:slug" component={FundPage} />
-      <Route path="/:slug/:event" component={EventPage} />
+      <Route path="/:fund" component={GiftCheckout} />
+      <Route path="/:fund/:event" component={GiftCheckout} />
       <Route component={NotFound} />
     </Switch>
   );
