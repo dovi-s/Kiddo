@@ -137,7 +137,8 @@ const ALL_STOCKS = [
   { symbol: "SLV", name: "Silver", price: 22.45, category: "Commodities" },
 ];
 
-const TOP_PICKS = ["VTI", "VOO", "AAPL", "MSFT", "DIS", "GOOGL"];
+const TOP_PICKS = ["VTI", "VOO", "DIS"];
+const SHOW_MORE_PICKS = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA", "NVDA"];
 
 type Stock = typeof ALL_STOCKS[0];
 
@@ -169,12 +170,17 @@ export default function GiftCheckout() {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [stockSearch, setStockSearch] = useState("");
   const [showStockPicker, setShowStockPicker] = useState(false);
+  const [showMoreStocks, setShowMoreStocks] = useState(false);
   
   const displayAmount = customAmount || amount;
   const numAmount = parseFloat(displayAmount) || 0;
   
   const topPicks = useMemo(() => 
     ALL_STOCKS.filter(s => TOP_PICKS.includes(s.symbol)), 
+  []);
+  
+  const morePicks = useMemo(() =>
+    ALL_STOCKS.filter(s => SHOW_MORE_PICKS.includes(s.symbol)),
   []);
   
   const filteredStocks = useMemo(() => {
@@ -426,34 +432,69 @@ export default function GiftCheckout() {
               </div>
               
               {!showStockPicker && !selectedStock ? (
-                <div className="space-y-3 mt-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search any stock or ETF..."
-                      value={stockSearch}
-                      onChange={(e) => { setStockSearch(e.target.value); setShowStockPicker(true); }}
-                      onFocus={() => setShowStockPicker(true)}
-                      className="pl-10 h-12 border-border bg-muted/50 text-foreground placeholder:text-muted-foreground rounded-xl"
-                      data-testid="input-stock-search"
-                    />
+                <div className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    {topPicks.map((stock) => (
+                      <motion.button
+                        key={stock.symbol}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => { haptic('selection'); setSelectedStock(stock); }}
+                        className="w-full p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors flex items-center gap-3 text-left"
+                        data-testid={`quick-pick-${stock.symbol}`}
+                      >
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                          <span className="text-primary font-bold text-sm">{stock.symbol.slice(0, 2)}</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground">{stock.symbol}</p>
+                          <p className="text-xs text-muted-foreground">{stock.name}</p>
+                        </div>
+                        <p className="text-sm font-medium text-foreground">${stock.price.toLocaleString()}</p>
+                      </motion.button>
+                    ))}
                   </div>
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Popular picks</p>
-                    <div className="flex flex-wrap gap-2">
-                      {topPicks.map((stock) => (
-                        <motion.button
-                          key={stock.symbol}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => { haptic('selection'); setSelectedStock(stock); }}
-                          className="px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-sm font-medium text-foreground"
-                          data-testid={`quick-pick-${stock.symbol}`}
-                        >
-                          {stock.symbol}
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
+                  
+                  {!showMoreStocks ? (
+                    <button
+                      onClick={() => { haptic('light'); setShowMoreStocks(true); }}
+                      className="w-full text-center text-sm text-primary font-medium py-2 hover:underline"
+                      data-testid="button-show-more-stocks"
+                    >
+                      Or pick a specific stock
+                    </button>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="space-y-3"
+                    >
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          autoFocus
+                          placeholder="Search any stock..."
+                          value={stockSearch}
+                          onChange={(e) => { setStockSearch(e.target.value); if (e.target.value) setShowStockPicker(true); }}
+                          onFocus={() => setShowStockPicker(true)}
+                          className="pl-10 h-11 border-border bg-muted/50 text-foreground placeholder:text-muted-foreground rounded-xl text-sm"
+                          data-testid="input-stock-search"
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {morePicks.map((stock) => (
+                          <motion.button
+                            key={stock.symbol}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => { haptic('selection'); setSelectedStock(stock); setShowMoreStocks(false); }}
+                            className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 transition-colors text-xs font-medium text-foreground"
+                            data-testid={`more-pick-${stock.symbol}`}
+                          >
+                            {stock.symbol}
+                          </motion.button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
               ) : selectedStock ? (
                 <motion.button
@@ -913,6 +954,12 @@ export default function GiftCheckout() {
                   <span>SIPC protected</span>
                 </div>
               </div>
+              
+              <p className="text-[10px] text-muted-foreground text-center leading-relaxed mt-3">
+                Brokerage services provided by Alpaca Securities LLC, member{' '}
+                <span className="font-medium">FINRA/SIPC</span>. 
+                Investments involve risk and are not FDIC insured.
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -922,6 +969,13 @@ export default function GiftCheckout() {
             Expand "Your details" above to enter your name and email
           </p>
         )}
+        
+        <footer className="mt-8 pt-4 border-t border-border/50">
+          <p className="text-[10px] text-muted-foreground text-center leading-relaxed">
+            Brokerage services provided by Alpaca Securities LLC, member FINRA/SIPC. 
+            SIPC protects against broker-dealer failure up to $500k, not market losses.
+          </p>
+        </footer>
       </main>
     </PageTransition>
   );
