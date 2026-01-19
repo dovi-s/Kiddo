@@ -15,15 +15,16 @@ import {
   ChevronRight, Check, LogOut, HelpCircle,
   Smartphone, Mail, Eye, EyeOff, Lock, Globe, Users, Sparkles,
   MessageCircle, BookOpen, ExternalLink, Calendar, Gift,
-  DollarSign, Heart, Loader2
+  DollarSign, Heart, Loader2, Building2, TrendingUp, Link2
 } from "lucide-react";
 
-type SettingsTab = "profile" | "security" | "notifications" | "billing" | "legal" | "help";
+type SettingsTab = "profile" | "security" | "notifications" | "brokerage" | "billing" | "legal" | "help";
 
 const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
   { id: "profile", label: "Profile", icon: <User size={18} /> },
   { id: "security", label: "Security", icon: <Shield size={18} /> },
   { id: "notifications", label: "Notifications", icon: <Bell size={18} /> },
+  { id: "brokerage", label: "Brokerage", icon: <Building2 size={18} /> },
   { id: "billing", label: "Plans and billing", icon: <CreditCard size={18} /> },
   { id: "legal", label: "Legal and documents", icon: <FileText size={18} /> },
   { id: "help", label: "Help", icon: <HelpCircle size={18} /> },
@@ -336,6 +337,144 @@ function SecurityTab() {
             <p className="text-sm font-medium text-foreground">Brokerage custody & SIPC protection</p>
             <p className="text-xs text-muted-foreground mt-1">Your investments are held by Alpaca Securities LLC, member FINRA/SIPC. Assets are protected up to $500,000.</p>
             <button className="text-xs text-muted-foreground underline mt-2 hover:no-underline">Learn more</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BrokerageTab({ funds }: { funds: { name: string; status: string; accountType: string }[] }) {
+  const activeFunds = funds.filter(f => f.status === 'active');
+  
+  return (
+    <div className="space-y-6">
+      <SettingsSection title="Investment accounts" description="Manage your brokerage connections">
+        <div className="space-y-3">
+          <div className="bg-[hsl(var(--kora-evergreen)/0.05)] border border-[hsl(var(--kora-evergreen)/0.2)] rounded-xl p-4">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-[hsl(var(--kora-evergreen))] flex items-center justify-center text-white font-bold text-lg">
+                K
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-foreground">Kora Brokerage</p>
+                  <span className="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full font-medium">Active</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">Powered by Alpaca Securities LLC</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {activeFunds.length} active {activeFunds.length === 1 ? 'fund' : 'funds'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title="Connected accounts" description="Link external brokerage accounts">
+        <div className="space-y-3">
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            className="w-full p-4 bg-card border-2 border-dashed border-border rounded-xl hover:border-muted-foreground/50 transition-colors"
+            onClick={() => toast({ title: "Coming soon", description: "External brokerage connections will be available soon" })}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
+                <Link2 size={20} className="text-muted-foreground" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-foreground">Connect external brokerage</p>
+                <p className="text-sm text-muted-foreground">Link Schwab, Fidelity, or other accounts</p>
+              </div>
+              <ChevronRight size={18} className="text-muted-foreground" />
+            </div>
+          </motion.button>
+        </div>
+        
+        <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+          <p className="text-xs text-muted-foreground">
+            Connecting external brokerages allows you to receive gifts directly into your existing investment accounts. Coming Q2 2026.
+          </p>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title="Account details">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between py-2 border-b border-border/50">
+            <span className="text-sm text-muted-foreground">Custodian</span>
+            <span className="text-sm font-medium text-foreground">Alpaca Securities LLC</span>
+          </div>
+          <div className="flex items-center justify-between py-2 border-b border-border/50">
+            <span className="text-sm text-muted-foreground">Account type</span>
+            <span className="text-sm font-medium text-foreground">
+              {funds[0]?.accountType === 'Individual' ? 'Individual Brokerage' : 'UTMA Custodial'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between py-2 border-b border-border/50">
+            <span className="text-sm text-muted-foreground">Member</span>
+            <span className="text-sm font-medium text-foreground">FINRA / SIPC</span>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-muted-foreground">Protection</span>
+            <span className="text-sm font-medium text-foreground">Up to $500,000 SIPC</span>
+          </div>
+        </div>
+      </SettingsSection>
+
+      <SettingsSection title="Statements & documents">
+        <div className="space-y-2">
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            className="w-full p-4 bg-card border border-border rounded-xl hover:bg-muted/30 transition-colors flex items-center justify-between"
+            onClick={() => toast({ title: "Account statements", description: "Your statements will appear here after your first month of activity" })}
+          >
+            <div className="flex items-center gap-3">
+              <FileText size={18} className="text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Account statements</span>
+            </div>
+            <ChevronRight size={16} className="text-muted-foreground" />
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            className="w-full p-4 bg-card border border-border rounded-xl hover:bg-muted/30 transition-colors flex items-center justify-between"
+            onClick={() => toast({ title: "Tax documents", description: "Tax documents will be available in January for the previous tax year" })}
+          >
+            <div className="flex items-center gap-3">
+              <DollarSign size={18} className="text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Tax documents (1099)</span>
+            </div>
+            <ChevronRight size={16} className="text-muted-foreground" />
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            className="w-full p-4 bg-card border border-border rounded-xl hover:bg-muted/30 transition-colors flex items-center justify-between"
+            onClick={() => toast({ title: "Trade confirmations", description: "View all your trade confirmations and receipts" })}
+          >
+            <div className="flex items-center gap-3">
+              <TrendingUp size={18} className="text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Trade confirmations</span>
+            </div>
+            <ChevronRight size={16} className="text-muted-foreground" />
+          </motion.button>
+        </div>
+      </SettingsSection>
+
+      <div className="p-4 bg-muted rounded-xl border border-border">
+        <div className="flex items-start gap-3">
+          <Shield size={18} className="text-[hsl(var(--kora-evergreen))] mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-foreground">Your assets are protected</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Securities in your account are protected up to $500,000 (including $250,000 for cash claims) by SIPC. 
+              Kora does not hold your assets — they are custodied by Alpaca Securities LLC.
+            </p>
+            <button 
+              onClick={() => window.open('https://www.sipc.org', '_blank')}
+              className="text-xs text-muted-foreground underline mt-2 hover:no-underline flex items-center gap-1"
+            >
+              Learn more about SIPC
+              <ExternalLink size={10} />
+            </button>
           </div>
         </div>
       </div>
@@ -871,6 +1010,7 @@ export default function Settings() {
       case "profile": return <ProfileTab user={user || null} funds={funds} />;
       case "security": return <SecurityTab />;
       case "notifications": return <NotificationsTab />;
+      case "brokerage": return <BrokerageTab funds={funds} />;
       case "billing": return <BillingTab />;
       case "legal": return <LegalTab />;
       case "help": return <HelpTab />;
