@@ -193,7 +193,6 @@ export default function GiftCheckout() {
     ).slice(0, 20);
   }, [stockSearch, topPicks]);
   
-  const estimatedShares = selectedStock ? (numAmount / selectedStock.price).toFixed(4) : null;
 
   const { data: feeData } = useQuery<FeeCalculation>({
     queryKey: ['fees', fund, event, numAmount, coverFees],
@@ -300,7 +299,7 @@ export default function GiftCheckout() {
                       <Gift className="w-5 h-5 text-[hsl(var(--kora-gold))]" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">${displayAmount}</p>
+                      <p className="text-sm font-medium text-foreground">${displayAmount}{selectedStock ? ` of ${selectedStock.symbol}` : ''}</p>
                       <p className="text-xs text-muted-foreground">Will invest at next market open</p>
                     </div>
                   </div>
@@ -449,7 +448,7 @@ export default function GiftCheckout() {
                           <p className="font-semibold text-foreground">{stock.symbol}</p>
                           <p className="text-xs text-muted-foreground">{stock.name}</p>
                         </div>
-                        <p className="text-sm font-medium text-foreground">${stock.price.toLocaleString()}</p>
+                        <ChevronDown className="w-4 h-4 text-muted-foreground -rotate-90" />
                       </motion.button>
                     ))}
                   </div>
@@ -517,12 +516,7 @@ export default function GiftCheckout() {
                       </div>
                       <p className="text-sm text-muted-foreground">{selectedStock.name}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-foreground">${selectedStock.price.toLocaleString()}</p>
-                      {estimatedShares && numAmount >= 5 && (
-                        <p className="text-xs text-primary font-semibold">~{estimatedShares} shares</p>
-                      )}
-                    </div>
+                    <span className="text-xs text-primary font-medium">Change</span>
                   </div>
                 </motion.button>
               ) : (
@@ -587,9 +581,6 @@ export default function GiftCheckout() {
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground truncate">{stock.name}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-foreground">${stock.price.toLocaleString()}</p>
                         </div>
                       </motion.button>
                     ))}
