@@ -19,122 +19,122 @@ const SUGGESTED_AMOUNTS = ["25", "50", "100", "250"];
 
 const ALL_STOCKS = [
   // Index ETFs
-  { symbol: "VTI", name: "Total US Stock Market", price: 268.45, category: "Index" },
-  { symbol: "VOO", name: "S&P 500 Index", price: 489.12, category: "Index" },
-  { symbol: "QQQ", name: "Nasdaq 100", price: 485.30, category: "Index" },
-  { symbol: "SPY", name: "S&P 500 SPDR", price: 512.45, category: "Index" },
-  { symbol: "IWM", name: "Russell 2000", price: 198.75, category: "Index" },
-  { symbol: "DIA", name: "Dow Jones", price: 389.20, category: "Index" },
-  { symbol: "VEA", name: "International Developed", price: 48.92, category: "Index" },
-  { symbol: "VWO", name: "Emerging Markets", price: 42.15, category: "Index" },
+  { symbol: "VTI", name: "Total US Stock Market", price: 302.15, category: "Index" },
+  { symbol: "VOO", name: "S&P 500 Index", price: 554.80, category: "Index" },
+  { symbol: "QQQ", name: "Nasdaq 100", price: 528.40, category: "Index" },
+  { symbol: "SPY", name: "S&P 500 SPDR", price: 602.30, category: "Index" },
+  { symbol: "IWM", name: "Russell 2000", price: 228.45, category: "Index" },
+  { symbol: "DIA", name: "Dow Jones", price: 442.60, category: "Index" },
+  { symbol: "VEA", name: "International Developed", price: 51.35, category: "Index" },
+  { symbol: "VWO", name: "Emerging Markets", price: 44.80, category: "Index" },
   // Tech Giants
-  { symbol: "AAPL", name: "Apple", price: 178.50, category: "Tech" },
-  { symbol: "MSFT", name: "Microsoft", price: 425.22, category: "Tech" },
-  { symbol: "GOOGL", name: "Alphabet (Google)", price: 175.98, category: "Tech" },
-  { symbol: "GOOG", name: "Alphabet Class C", price: 177.45, category: "Tech" },
-  { symbol: "AMZN", name: "Amazon", price: 185.60, category: "Tech" },
-  { symbol: "META", name: "Meta (Facebook)", price: 505.75, category: "Tech" },
-  { symbol: "NVDA", name: "NVIDIA", price: 875.28, category: "Tech" },
-  { symbol: "TSLA", name: "Tesla", price: 248.50, category: "Tech" },
-  { symbol: "NFLX", name: "Netflix", price: 628.90, category: "Tech" },
-  { symbol: "AMD", name: "AMD", price: 156.80, category: "Tech" },
-  { symbol: "INTC", name: "Intel", price: 42.15, category: "Tech" },
-  { symbol: "CRM", name: "Salesforce", price: 278.90, category: "Tech" },
-  { symbol: "ORCL", name: "Oracle", price: 125.40, category: "Tech" },
-  { symbol: "ADBE", name: "Adobe", price: 498.75, category: "Tech" },
-  { symbol: "PYPL", name: "PayPal", price: 62.30, category: "Tech" },
-  { symbol: "SQ", name: "Block (Square)", price: 68.45, category: "Tech" },
-  { symbol: "SHOP", name: "Shopify", price: 78.90, category: "Tech" },
-  { symbol: "UBER", name: "Uber", price: 72.15, category: "Tech" },
-  { symbol: "LYFT", name: "Lyft", price: 12.45, category: "Tech" },
-  { symbol: "SNAP", name: "Snap", price: 11.20, category: "Tech" },
-  { symbol: "PINS", name: "Pinterest", price: 32.80, category: "Tech" },
-  { symbol: "SPOT", name: "Spotify", price: 312.45, category: "Tech" },
-  { symbol: "ZM", name: "Zoom", price: 68.90, category: "Tech" },
-  { symbol: "DOCU", name: "DocuSign", price: 58.75, category: "Tech" },
-  { symbol: "TWLO", name: "Twilio", price: 62.30, category: "Tech" },
-  { symbol: "NET", name: "Cloudflare", price: 92.45, category: "Tech" },
-  { symbol: "PLTR", name: "Palantir", price: 24.80, category: "Tech" },
-  { symbol: "COIN", name: "Coinbase", price: 245.60, category: "Tech" },
-  { symbol: "RBLX", name: "Roblox", price: 42.15, category: "Tech" },
-  { symbol: "U", name: "Unity Software", price: 22.30, category: "Tech" },
+  { symbol: "AAPL", name: "Apple", price: 232.80, category: "Tech" },
+  { symbol: "MSFT", name: "Microsoft", price: 415.60, category: "Tech" },
+  { symbol: "GOOGL", name: "Alphabet (Google)", price: 196.42, category: "Tech" },
+  { symbol: "GOOG", name: "Alphabet Class C", price: 198.10, category: "Tech" },
+  { symbol: "AMZN", name: "Amazon", price: 235.45, category: "Tech" },
+  { symbol: "META", name: "Meta (Facebook)", price: 698.50, category: "Tech" },
+  { symbol: "NVDA", name: "NVIDIA", price: 128.90, category: "Tech" },
+  { symbol: "TSLA", name: "Tesla", price: 378.20, category: "Tech" },
+  { symbol: "NFLX", name: "Netflix", price: 982.40, category: "Tech" },
+  { symbol: "AMD", name: "AMD", price: 118.35, category: "Tech" },
+  { symbol: "INTC", name: "Intel", price: 20.15, category: "Tech" },
+  { symbol: "CRM", name: "Salesforce", price: 328.75, category: "Tech" },
+  { symbol: "ORCL", name: "Oracle", price: 178.60, category: "Tech" },
+  { symbol: "ADBE", name: "Adobe", price: 420.30, category: "Tech" },
+  { symbol: "PYPL", name: "PayPal", price: 88.45, category: "Tech" },
+  { symbol: "SQ", name: "Block (Square)", price: 92.15, category: "Tech" },
+  { symbol: "SHOP", name: "Shopify", price: 118.90, category: "Tech" },
+  { symbol: "UBER", name: "Uber", price: 73.20, category: "Tech" },
+  { symbol: "LYFT", name: "Lyft", price: 14.85, category: "Tech" },
+  { symbol: "SNAP", name: "Snap", price: 12.40, category: "Tech" },
+  { symbol: "PINS", name: "Pinterest", price: 36.75, category: "Tech" },
+  { symbol: "SPOT", name: "Spotify", price: 485.20, category: "Tech" },
+  { symbol: "ZM", name: "Zoom", price: 82.60, category: "Tech" },
+  { symbol: "DOCU", name: "DocuSign", price: 92.40, category: "Tech" },
+  { symbol: "TWLO", name: "Twilio", price: 108.75, category: "Tech" },
+  { symbol: "NET", name: "Cloudflare", price: 118.50, category: "Tech" },
+  { symbol: "PLTR", name: "Palantir", price: 78.40, category: "Tech" },
+  { symbol: "COIN", name: "Coinbase", price: 305.80, category: "Tech" },
+  { symbol: "RBLX", name: "Roblox", price: 62.30, category: "Tech" },
+  { symbol: "U", name: "Unity Software", price: 25.40, category: "Tech" },
   // Consumer & Entertainment
-  { symbol: "DIS", name: "Disney", price: 112.45, category: "Consumer" },
-  { symbol: "NKE", name: "Nike", price: 98.75, category: "Consumer" },
-  { symbol: "SBUX", name: "Starbucks", price: 92.30, category: "Consumer" },
-  { symbol: "MCD", name: "McDonald's", price: 278.90, category: "Consumer" },
-  { symbol: "KO", name: "Coca-Cola", price: 62.45, category: "Consumer" },
-  { symbol: "PEP", name: "PepsiCo", price: 168.90, category: "Consumer" },
-  { symbol: "WMT", name: "Walmart", price: 165.80, category: "Consumer" },
-  { symbol: "TGT", name: "Target", price: 142.30, category: "Consumer" },
-  { symbol: "COST", name: "Costco", price: 725.40, category: "Consumer" },
-  { symbol: "HD", name: "Home Depot", price: 352.80, category: "Consumer" },
-  { symbol: "LOW", name: "Lowe's", price: 225.60, category: "Consumer" },
-  { symbol: "LULU", name: "Lululemon", price: 385.20, category: "Consumer" },
-  { symbol: "CMG", name: "Chipotle", price: 2850.00, category: "Consumer" },
-  { symbol: "YUM", name: "Yum! Brands", price: 138.45, category: "Consumer" },
-  { symbol: "ABNB", name: "Airbnb", price: 145.80, category: "Consumer" },
-  { symbol: "BKNG", name: "Booking Holdings", price: 3680.00, category: "Consumer" },
-  { symbol: "MAR", name: "Marriott", price: 235.60, category: "Consumer" },
+  { symbol: "DIS", name: "Disney", price: 108.70, category: "Consumer" },
+  { symbol: "NKE", name: "Nike", price: 71.25, category: "Consumer" },
+  { symbol: "SBUX", name: "Starbucks", price: 105.40, category: "Consumer" },
+  { symbol: "MCD", name: "McDonald's", price: 295.80, category: "Consumer" },
+  { symbol: "KO", name: "Coca-Cola", price: 60.85, category: "Consumer" },
+  { symbol: "PEP", name: "PepsiCo", price: 148.30, category: "Consumer" },
+  { symbol: "WMT", name: "Walmart", price: 98.15, category: "Consumer" },
+  { symbol: "TGT", name: "Target", price: 132.40, category: "Consumer" },
+  { symbol: "COST", name: "Costco", price: 958.70, category: "Consumer" },
+  { symbol: "HD", name: "Home Depot", price: 398.50, category: "Consumer" },
+  { symbol: "LOW", name: "Lowe's", price: 252.80, category: "Consumer" },
+  { symbol: "LULU", name: "Lululemon", price: 405.60, category: "Consumer" },
+  { symbol: "CMG", name: "Chipotle", price: 58.45, category: "Consumer" },
+  { symbol: "YUM", name: "Yum! Brands", price: 135.20, category: "Consumer" },
+  { symbol: "ABNB", name: "Airbnb", price: 138.50, category: "Consumer" },
+  { symbol: "BKNG", name: "Booking Holdings", price: 5125.00, category: "Consumer" },
+  { symbol: "MAR", name: "Marriott", price: 278.40, category: "Consumer" },
   // Healthcare
-  { symbol: "JNJ", name: "Johnson & Johnson", price: 158.90, category: "Healthcare" },
-  { symbol: "PFE", name: "Pfizer", price: 28.45, category: "Healthcare" },
-  { symbol: "MRNA", name: "Moderna", price: 98.75, category: "Healthcare" },
-  { symbol: "UNH", name: "UnitedHealth", price: 525.80, category: "Healthcare" },
-  { symbol: "ABBV", name: "AbbVie", price: 168.90, category: "Healthcare" },
-  { symbol: "LLY", name: "Eli Lilly", price: 785.40, category: "Healthcare" },
-  { symbol: "MRK", name: "Merck", price: 125.60, category: "Healthcare" },
-  { symbol: "BMY", name: "Bristol-Myers", price: 52.30, category: "Healthcare" },
+  { symbol: "JNJ", name: "Johnson & Johnson", price: 148.60, category: "Healthcare" },
+  { symbol: "PFE", name: "Pfizer", price: 27.20, category: "Healthcare" },
+  { symbol: "MRNA", name: "Moderna", price: 38.45, category: "Healthcare" },
+  { symbol: "UNH", name: "UnitedHealth", price: 545.30, category: "Healthcare" },
+  { symbol: "ABBV", name: "AbbVie", price: 192.80, category: "Healthcare" },
+  { symbol: "LLY", name: "Eli Lilly", price: 825.40, category: "Healthcare" },
+  { symbol: "MRK", name: "Merck", price: 98.75, category: "Healthcare" },
+  { symbol: "BMY", name: "Bristol-Myers", price: 55.80, category: "Healthcare" },
   // Financial
-  { symbol: "JPM", name: "JPMorgan Chase", price: 198.45, category: "Financial" },
-  { symbol: "BAC", name: "Bank of America", price: 38.90, category: "Financial" },
-  { symbol: "WFC", name: "Wells Fargo", price: 58.75, category: "Financial" },
-  { symbol: "GS", name: "Goldman Sachs", price: 475.60, category: "Financial" },
-  { symbol: "MS", name: "Morgan Stanley", price: 98.45, category: "Financial" },
-  { symbol: "V", name: "Visa", price: 278.90, category: "Financial" },
-  { symbol: "MA", name: "Mastercard", price: 458.75, category: "Financial" },
-  { symbol: "AXP", name: "American Express", price: 228.60, category: "Financial" },
-  { symbol: "BRK.B", name: "Berkshire Hathaway", price: 398.45, category: "Financial" },
-  { symbol: "C", name: "Citigroup", price: 62.30, category: "Financial" },
+  { symbol: "JPM", name: "JPMorgan Chase", price: 279.20, category: "Financial" },
+  { symbol: "BAC", name: "Bank of America", price: 47.35, category: "Financial" },
+  { symbol: "WFC", name: "Wells Fargo", price: 78.60, category: "Financial" },
+  { symbol: "GS", name: "Goldman Sachs", price: 625.40, category: "Financial" },
+  { symbol: "MS", name: "Morgan Stanley", price: 138.50, category: "Financial" },
+  { symbol: "V", name: "Visa", price: 338.75, category: "Financial" },
+  { symbol: "MA", name: "Mastercard", price: 548.20, category: "Financial" },
+  { symbol: "AXP", name: "American Express", price: 312.40, category: "Financial" },
+  { symbol: "BRK.B", name: "Berkshire Hathaway", price: 472.80, category: "Financial" },
+  { symbol: "C", name: "Citigroup", price: 78.45, category: "Financial" },
   // Energy & Industrial
-  { symbol: "XOM", name: "Exxon Mobil", price: 108.90, category: "Energy" },
-  { symbol: "CVX", name: "Chevron", price: 152.45, category: "Energy" },
-  { symbol: "COP", name: "ConocoPhillips", price: 118.75, category: "Energy" },
-  { symbol: "NEE", name: "NextEra Energy", price: 72.30, category: "Energy" },
-  { symbol: "BA", name: "Boeing", price: 198.45, category: "Industrial" },
-  { symbol: "CAT", name: "Caterpillar", price: 325.80, category: "Industrial" },
-  { symbol: "GE", name: "GE Aerospace", price: 168.90, category: "Industrial" },
-  { symbol: "UPS", name: "UPS", price: 142.30, category: "Industrial" },
-  { symbol: "FDX", name: "FedEx", price: 268.75, category: "Industrial" },
+  { symbol: "XOM", name: "Exxon Mobil", price: 108.40, category: "Energy" },
+  { symbol: "CVX", name: "Chevron", price: 155.20, category: "Energy" },
+  { symbol: "COP", name: "ConocoPhillips", price: 105.30, category: "Energy" },
+  { symbol: "NEE", name: "NextEra Energy", price: 72.85, category: "Energy" },
+  { symbol: "BA", name: "Boeing", price: 178.40, category: "Industrial" },
+  { symbol: "CAT", name: "Caterpillar", price: 385.60, category: "Industrial" },
+  { symbol: "GE", name: "GE Aerospace", price: 198.50, category: "Industrial" },
+  { symbol: "UPS", name: "UPS", price: 128.40, category: "Industrial" },
+  { symbol: "FDX", name: "FedEx", price: 275.80, category: "Industrial" },
   // Communications
-  { symbol: "T", name: "AT&T", price: 18.45, category: "Telecom" },
-  { symbol: "VZ", name: "Verizon", price: 42.30, category: "Telecom" },
-  { symbol: "TMUS", name: "T-Mobile", price: 168.90, category: "Telecom" },
-  { symbol: "CMCSA", name: "Comcast", price: 42.15, category: "Telecom" },
+  { symbol: "T", name: "AT&T", price: 25.60, category: "Telecom" },
+  { symbol: "VZ", name: "Verizon", price: 40.85, category: "Telecom" },
+  { symbol: "TMUS", name: "T-Mobile", price: 238.50, category: "Telecom" },
+  { symbol: "CMCSA", name: "Comcast", price: 38.20, category: "Telecom" },
   // Gaming
-  { symbol: "EA", name: "Electronic Arts", price: 138.90, category: "Gaming" },
-  { symbol: "TTWO", name: "Take-Two Interactive", price: 158.45, category: "Gaming" },
-  { symbol: "ATVI", name: "Activision Blizzard", price: 82.30, category: "Gaming" },
-  { symbol: "GME", name: "GameStop", price: 18.75, category: "Gaming" },
+  { symbol: "EA", name: "Electronic Arts", price: 158.30, category: "Gaming" },
+  { symbol: "TTWO", name: "Take-Two Interactive", price: 198.45, category: "Gaming" },
+  { symbol: "ATVI", name: "Activision Blizzard", price: 95.60, category: "Gaming" },
+  { symbol: "GME", name: "GameStop", price: 28.45, category: "Gaming" },
   // Real Estate
-  { symbol: "VNQ", name: "Real Estate ETF", price: 88.45, category: "Real Estate" },
-  { symbol: "O", name: "Realty Income", price: 58.90, category: "Real Estate" },
+  { symbol: "VNQ", name: "Real Estate ETF", price: 88.30, category: "Real Estate" },
+  { symbol: "O", name: "Realty Income", price: 55.40, category: "Real Estate" },
   // Specialty ETFs
-  { symbol: "ARKK", name: "ARK Innovation", price: 48.75, category: "Thematic" },
-  { symbol: "ICLN", name: "Clean Energy", price: 14.20, category: "Thematic" },
-  { symbol: "SOXX", name: "Semiconductor ETF", price: 225.80, category: "Thematic" },
-  { symbol: "XLF", name: "Financial Sector", price: 42.30, category: "Thematic" },
-  { symbol: "XLE", name: "Energy Sector", price: 88.45, category: "Thematic" },
-  { symbol: "XLK", name: "Technology Sector", price: 198.75, category: "Thematic" },
-  { symbol: "XLV", name: "Healthcare Sector", price: 142.30, category: "Thematic" },
-  { symbol: "XLY", name: "Consumer Discretionary", price: 178.90, category: "Thematic" },
-  { symbol: "XLP", name: "Consumer Staples", price: 78.45, category: "Thematic" },
+  { symbol: "ARKK", name: "ARK Innovation", price: 58.90, category: "Thematic" },
+  { symbol: "ICLN", name: "Clean Energy", price: 13.85, category: "Thematic" },
+  { symbol: "SOXX", name: "Semiconductor ETF", price: 232.40, category: "Thematic" },
+  { symbol: "XLF", name: "Financial Sector", price: 50.85, category: "Thematic" },
+  { symbol: "XLE", name: "Energy Sector", price: 88.20, category: "Thematic" },
+  { symbol: "XLK", name: "Technology Sector", price: 235.60, category: "Thematic" },
+  { symbol: "XLV", name: "Healthcare Sector", price: 145.80, category: "Thematic" },
+  { symbol: "XLY", name: "Consumer Discretionary", price: 218.40, category: "Thematic" },
+  { symbol: "XLP", name: "Consumer Staples", price: 82.30, category: "Thematic" },
   // Bonds & Safe Haven
-  { symbol: "BND", name: "Total Bond Market", price: 72.30, category: "Bonds" },
-  { symbol: "AGG", name: "US Aggregate Bond", price: 98.45, category: "Bonds" },
-  { symbol: "TLT", name: "20+ Year Treasury", price: 92.80, category: "Bonds" },
-  { symbol: "GLD", name: "Gold", price: 185.60, category: "Commodities" },
-  { symbol: "SLV", name: "Silver", price: 22.45, category: "Commodities" },
+  { symbol: "BND", name: "Total Bond Market", price: 71.80, category: "Bonds" },
+  { symbol: "AGG", name: "US Aggregate Bond", price: 97.45, category: "Bonds" },
+  { symbol: "TLT", name: "20+ Year Treasury", price: 88.60, category: "Bonds" },
+  { symbol: "GLD", name: "Gold", price: 258.40, category: "Commodities" },
+  { symbol: "SLV", name: "Silver", price: 29.85, category: "Commodities" },
 ];
 
 const TOP_PICKS = ["VTI", "VOO", "DIS"];
@@ -193,6 +193,7 @@ export default function GiftCheckout() {
     ).slice(0, 20);
   }, [stockSearch, topPicks]);
   
+  const estimatedShares = selectedStock ? (numAmount / selectedStock.price).toFixed(4) : null;
 
   const { data: feeData } = useQuery<FeeCalculation>({
     queryKey: ['fees', fund, event, numAmount, coverFees],
@@ -448,7 +449,7 @@ export default function GiftCheckout() {
                           <p className="font-semibold text-foreground">{stock.symbol}</p>
                           <p className="text-xs text-muted-foreground">{stock.name}</p>
                         </div>
-                        <ChevronDown className="w-4 h-4 text-muted-foreground -rotate-90" />
+                        <p className="text-sm font-medium text-foreground">${stock.price.toLocaleString()}</p>
                       </motion.button>
                     ))}
                   </div>
@@ -516,7 +517,12 @@ export default function GiftCheckout() {
                       </div>
                       <p className="text-sm text-muted-foreground">{selectedStock.name}</p>
                     </div>
-                    <span className="text-xs text-primary font-medium">Change</span>
+                    <div className="text-right">
+                      <p className="font-semibold text-foreground">${selectedStock.price.toLocaleString()}</p>
+                      {estimatedShares && numAmount >= 5 && (
+                        <p className="text-xs text-primary font-semibold">~{estimatedShares} shares</p>
+                      )}
+                    </div>
                   </div>
                 </motion.button>
               ) : (
@@ -582,6 +588,9 @@ export default function GiftCheckout() {
                           </div>
                           <p className="text-sm text-muted-foreground truncate">{stock.name}</p>
                         </div>
+                        <div className="text-right">
+                          <p className="font-medium text-foreground">${stock.price.toLocaleString()}</p>
+                        </div>
                       </motion.button>
                     ))}
                     {filteredStocks.length === 0 && stockSearch.trim() && (
@@ -607,6 +616,9 @@ export default function GiftCheckout() {
               <Label className="text-sm font-semibold text-foreground mb-4 block">
                 {selectedStock ? `Gift amount of ${selectedStock.symbol}` : 'Choose amount'}
               </Label>
+              {selectedStock && (
+                <p className="text-[10px] text-muted-foreground -mt-2 mb-3">Price at market open may vary</p>
+              )}
               <div className="grid grid-cols-4 gap-3 mb-4">
                 {SUGGESTED_AMOUNTS.map((amt, i) => {
                   const isSelected = amount === amt && !customAmount;
