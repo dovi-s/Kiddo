@@ -128,7 +128,7 @@ export function SuccessGlow({ children, trigger }: { children: ReactNode; trigge
     >
       {trigger && (
         <motion.div
-          className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[hsl(var(--kora-evergreen))] to-[hsl(var(--kora-gold))]"
+          className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[hsl(var(--kora-evergreen))] to-[hsl(var(--kora-gold))] pointer-events-none"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ 
             opacity: [0, 0.3, 0],
