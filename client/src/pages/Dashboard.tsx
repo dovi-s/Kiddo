@@ -15,7 +15,7 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, springGentle, easeOutExpo, cardTactile, staggerFast, sharePulse, staggerPremium, listItemSpring } from "@/lib/animations";
 import { AnimatedValue } from "@/components/ui/animated-value";
 import { MagneticButton } from "@/components/ui/magnetic-button";
-import { GeminiGradient, ThinkingOrb, CircularAvatar, EnergyRing } from "@/components/ui/gemini";
+import { GeminiBalanceGlow, GradientText, ThinkingOrb } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds, useFundEvents, useFundHoldings, useFundGifts, useCreateFund } from "@/hooks/use-funds";
@@ -267,7 +267,7 @@ export default function Dashboard() {
           <MagneticButton
             onClick={() => setShowShareKit(true)}
             data-testid="button-hero-share"
-            className="w-full py-4 bg-[hsl(var(--kora-evergreen))] text-white font-semibold rounded-2xl flex items-center justify-center gap-2.5 touch-target shadow-premium-lg btn-premium"
+            className="gemini-btn-shimmer w-full py-4 bg-[hsl(var(--kora-evergreen))] text-white font-semibold rounded-2xl flex items-center justify-center gap-2.5 touch-target shadow-premium-lg btn-premium"
           >
             <motion.span
               className="flex items-center gap-2.5"
@@ -353,7 +353,7 @@ export default function Dashboard() {
                         <Link href={`/activate?fund=${selectedFund.slug}`}>
                           <MagneticButton 
                             data-testid="button-activate-investing"
-                            className="w-full h-14 text-base font-semibold rounded-2xl bg-white text-[hsl(var(--kora-evergreen))] hover:bg-white/95 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
+                            className="gemini-btn-shimmer w-full h-14 text-base font-semibold rounded-2xl bg-white text-[hsl(var(--kora-evergreen))] hover:bg-white/95 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg"
                           >
                             <span>Continue</span>
                             <ChevronRight className="w-5 h-5" />
@@ -411,7 +411,7 @@ export default function Dashboard() {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
                   >
-                    <GeminiGradient variant="ambient" intensity={0.06} className="absolute inset-0 pointer-events-none" />
+                    <GeminiBalanceGlow />
                     <div className="relative z-10 text-center mb-8">
                       <motion.p 
                         className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground tracking-tight mb-3 gemini-value-glow"
@@ -448,11 +448,7 @@ export default function Dashboard() {
                       <motion.div variants={listItemSpring} className="text-center border-x border-border">
                         <p className="text-2xl sm:text-3xl font-bold text-[hsl(var(--kora-gold))]">${pendingAmount}</p>
                         <p className="text-sm text-muted-foreground mt-1.5 flex items-center justify-center gap-1.5 font-medium">
-                          <motion.span 
-                            className="w-2 h-2 rounded-full bg-[hsl(var(--kora-gold))]"
-                            animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                          />
+                          <span className="gemini-pulse-dot" />
                           Pending
                         </p>
                       </motion.div>
@@ -491,7 +487,7 @@ export default function Dashboard() {
                               initial={{ opacity: 0, y: 12 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: index * 0.04, duration: 0.2, ease: "easeOut", layout: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] } }}
-                              className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target shadow-premium-sm hover:shadow-premium transition-all duration-150 ${isExpanded ? "border-primary/20 shadow-premium-lg" : "border-border/50"}`}
+                              className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target shadow-premium-sm gemini-hover-glow transition-all duration-150 ${isExpanded ? "border-primary/20 shadow-premium-lg" : "border-border/50"}`}
                               onClick={() => { haptic('selection'); setExpandedGift(isExpanded ? null : gift.id); }}
                             >
                               <motion.div 
@@ -635,7 +631,7 @@ export default function Dashboard() {
                               initial={{ opacity: 0, y: 12 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: i * 0.04, duration: 0.2, ease: "easeOut", layout: { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] } }}
-                              className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target ${isExpanded ? "border-[hsl(var(--kora-evergreen)/0.3)] shadow-lg" : "border-border"}`}
+                              className={`bg-card border rounded-2xl overflow-hidden cursor-pointer touch-target gemini-hover-glow ${isExpanded ? "border-[hsl(var(--kora-evergreen)/0.3)] shadow-lg" : "border-border"}`}
                               onClick={() => setExpandedHolding(isExpanded ? null : i)}
                             >
                               <motion.div 

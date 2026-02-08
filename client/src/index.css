@@ -997,3 +997,200 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   background: linear-gradient(90deg, hsl(var(--kora-evergreen)), hsl(var(--kora-gold)));
   transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ============================================ */
+/* GEMINI DRAMATIC EFFECTS                      */
+/* ============================================ */
+
+/* Shimmer sweep across CTA buttons - visible light sweep */
+.gemini-btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.gemini-btn-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: gemini-shimmer 3s ease-in-out infinite;
+}
+@keyframes gemini-shimmer {
+  0% { left: -100%; }
+  50% { left: 150%; }
+  100% { left: 150%; }
+}
+
+/* Section glow - ambient gradient behind sections */
+.gemini-section-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.gemini-section-glow::before {
+  content: '';
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(var(--kora-evergreen) / 0.06) 0%, transparent 70%);
+  top: -200px;
+  right: -100px;
+  animation: gemini-float-slow 15s ease-in-out infinite;
+}
+.gemini-section-glow::after {
+  content: '';
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(var(--kora-gold) / 0.05) 0%, transparent 70%);
+  bottom: -150px;
+  left: -50px;
+  animation: gemini-float-slow 18s ease-in-out infinite reverse;
+}
+
+@keyframes gemini-float-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.1); }
+  66% { transform: translate(-20px, 15px) scale(0.95); }
+}
+
+/* CTA section ambient glow */
+.gemini-cta-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.gemini-cta-glow::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(var(--kora-evergreen)) 0%, transparent 60%);
+  opacity: 0.06;
+  top: -300px;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: gemini-pulse-cta 8s ease-in-out infinite;
+}
+@keyframes gemini-pulse-cta {
+  0%, 100% { opacity: 0.04; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.08; transform: translateX(-50%) scale(1.2); }
+}
+
+/* Gradient border glow on hover for cards */
+.gemini-hover-glow {
+  position: relative;
+  transition: all 0.3s ease;
+}
+.gemini-hover-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--kora-evergreen) / 0.2),
+    hsl(var(--kora-gold) / 0.15),
+    hsl(180, 30%, 40% / 0.1),
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: -1;
+}
+.gemini-hover-glow:hover::before {
+  opacity: 1;
+}
+.gemini-hover-glow:hover {
+  border-color: hsl(var(--kora-evergreen) / 0.15);
+  box-shadow: 0 0 20px hsl(var(--kora-evergreen) / 0.06), 0 4px 20px rgba(0,0,0,0.04);
+}
+
+/* Animated gradient border that rotates for featured items */
+.gemini-featured-border {
+  position: relative;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.gemini-featured-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--gemini-angle, 0deg),
+    hsl(var(--kora-evergreen)),
+    hsl(var(--kora-gold)),
+    hsl(180, 30%, 40%),
+    hsl(var(--kora-evergreen))
+  );
+  z-index: -1;
+  animation: gemini-border-rotate 6s linear infinite;
+}
+.gemini-featured-border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: hsl(var(--card));
+  z-index: -1;
+}
+
+/* Pulsing dot for pending states - larger, more visible */
+.gemini-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--kora-gold));
+  animation: gemini-pulse-dot 2s ease-in-out infinite;
+  box-shadow: 0 0 8px hsl(var(--kora-gold) / 0.4);
+}
+@keyframes gemini-pulse-dot {
+  0%, 100% { transform: scale(0.8); opacity: 0.6; box-shadow: 0 0 4px hsl(var(--kora-gold) / 0.3); }
+  50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px hsl(var(--kora-gold) / 0.5); }
+}
+
+/* Text shimmer for key values */
+.gemini-text-shimmer {
+  background-image: linear-gradient(
+    110deg,
+    hsl(var(--foreground)) 35%,
+    hsl(var(--kora-evergreen)) 50%,
+    hsl(var(--foreground)) 65%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gemini-text-shine 4s ease-in-out infinite;
+}
+@keyframes gemini-text-shine {
+  0%, 100% { background-position: 100% 50%; }
+  50% { background-position: 0% 50%; }
+}
+
+/* Active card with breathing border */
+.gemini-active-card {
+  border: 1px solid hsl(var(--kora-evergreen) / 0.2);
+  box-shadow:
+    0 0 0 1px hsl(var(--kora-evergreen) / 0.05),
+    0 4px 20px rgba(0, 0, 0, 0.04);
+  animation: gemini-card-breathe 4s ease-in-out infinite;
+}
+@keyframes gemini-card-breathe {
+  0%, 100% { border-color: hsl(var(--kora-evergreen) / 0.15); box-shadow: 0 0 0 1px hsl(var(--kora-evergreen) / 0.03), 0 4px 16px rgba(0,0,0,0.03); }
+  50% { border-color: hsl(var(--kora-evergreen) / 0.3); box-shadow: 0 0 0 1px hsl(var(--kora-evergreen) / 0.08), 0 4px 24px rgba(0,0,0,0.05); }
+}

@@ -29,30 +29,35 @@ export function GeminiGradient({
           colors: [GEMINI_COLORS.evergreen, GEMINI_COLORS.gold, GEMINI_COLORS.teal],
           duration: 4,
           blur: 60,
+          size: "50%",
         };
       case "thinking":
         return {
           colors: [GEMINI_COLORS.evergreen, GEMINI_COLORS.sky, GEMINI_COLORS.evergreenLight],
           duration: 2.5,
           blur: 40,
+          size: "45%",
         };
       case "success":
         return {
           colors: [GEMINI_COLORS.evergreen, GEMINI_COLORS.gold, GEMINI_COLORS.evergreen],
           duration: 3,
           blur: 50,
+          size: "50%",
         };
       case "hero":
         return {
           colors: [GEMINI_COLORS.evergreen, GEMINI_COLORS.gold, GEMINI_COLORS.teal, GEMINI_COLORS.evergreenLight],
-          duration: 8,
+          duration: 6,
           blur: 80,
+          size: "55%",
         };
       default:
         return {
-          colors: [GEMINI_COLORS.evergreen, GEMINI_COLORS.evergreenLight],
+          colors: [GEMINI_COLORS.evergreen, GEMINI_COLORS.evergreenLight, GEMINI_COLORS.gold],
           duration: 6,
           blur: 70,
+          size: "50%",
         };
     }
   }, [variant]);
@@ -68,8 +73,8 @@ export function GeminiGradient({
               background: `radial-gradient(circle, ${color} 0%, transparent 70%)`,
               opacity: intensity,
               filter: `blur(${gradientConfig.blur}px)`,
-              width: "60%",
-              height: "60%",
+              width: gradientConfig.size,
+              height: gradientConfig.size,
             }}
             animate={{
               x: [
@@ -95,6 +100,110 @@ export function GeminiGradient({
         ))}
       </div>
       {children && <div className="relative z-10">{children}</div>}
+    </div>
+  );
+}
+
+export function GeminiHeroGradient({ className = "" }: { className?: string }) {
+  return (
+    <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: "600px",
+          height: "600px",
+          background: `radial-gradient(circle, ${GEMINI_COLORS.evergreen} 0%, transparent 65%)`,
+          opacity: 0.12,
+          filter: "blur(80px)",
+          left: "-5%",
+          top: "-20%",
+        }}
+        animate={{
+          x: ["0%", "15%", "5%", "0%"],
+          y: ["0%", "10%", "-5%", "0%"],
+          scale: [1, 1.15, 0.95, 1],
+        }}
+        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: "500px",
+          height: "500px",
+          background: `radial-gradient(circle, ${GEMINI_COLORS.gold} 0%, transparent 65%)`,
+          opacity: 0.1,
+          filter: "blur(70px)",
+          right: "-10%",
+          top: "10%",
+        }}
+        animate={{
+          x: ["0%", "-20%", "-5%", "0%"],
+          y: ["0%", "15%", "-10%", "0%"],
+          scale: [1, 0.9, 1.1, 1],
+        }}
+        transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: "400px",
+          height: "400px",
+          background: `radial-gradient(circle, ${GEMINI_COLORS.teal} 0%, transparent 65%)`,
+          opacity: 0.08,
+          filter: "blur(60px)",
+          left: "30%",
+          bottom: "-10%",
+        }}
+        animate={{
+          x: ["0%", "10%", "-15%", "0%"],
+          y: ["0%", "-15%", "5%", "0%"],
+          scale: [0.9, 1.1, 1, 0.9],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  );
+}
+
+export function GeminiBalanceGlow({ className = "" }: { className?: string }) {
+  return (
+    <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: "300px",
+          height: "300px",
+          background: `radial-gradient(circle, ${GEMINI_COLORS.evergreen} 0%, transparent 70%)`,
+          opacity: 0.08,
+          filter: "blur(50px)",
+          left: "-20%",
+          top: "-30%",
+        }}
+        animate={{
+          x: ["0%", "30%", "0%"],
+          y: ["0%", "20%", "0%"],
+          opacity: [0.06, 0.12, 0.06],
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute rounded-full"
+        style={{
+          width: "250px",
+          height: "250px",
+          background: `radial-gradient(circle, ${GEMINI_COLORS.gold} 0%, transparent 70%)`,
+          opacity: 0.06,
+          filter: "blur(45px)",
+          right: "-15%",
+          bottom: "-20%",
+        }}
+        animate={{
+          x: ["0%", "-25%", "0%"],
+          y: ["0%", "-15%", "0%"],
+          opacity: [0.04, 0.1, 0.04],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      />
     </div>
   );
 }
@@ -257,7 +366,7 @@ export function GeminiCard({
         <motion.div
           className="absolute inset-0 pointer-events-none rounded-2xl"
           style={{
-            background: `linear-gradient(135deg, ${GEMINI_COLORS.evergreen}08, ${GEMINI_COLORS.gold}06, transparent)`,
+            background: `linear-gradient(135deg, ${GEMINI_COLORS.evergreen}15, ${GEMINI_COLORS.gold}10, transparent)`,
           }}
           variants={{
             rest: { opacity: 0 },
@@ -293,7 +402,7 @@ export function GeminiButton({
 
   return (
     <motion.button
-      className={`relative overflow-hidden rounded-xl px-6 py-3 font-semibold text-sm ${bgClass} ${className}`}
+      className={`relative overflow-hidden rounded-2xl px-6 py-3 font-semibold text-sm ${bgClass} ${className}`}
       whileHover={{ scale: disabled ? 1 : 1.01 }}
       whileTap={{ scale: disabled ? 1 : 0.97 }}
       transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
@@ -305,15 +414,15 @@ export function GeminiButton({
         <motion.div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent)`,
+            background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)`,
           }}
           animate={{
             x: ["-100%", "200%"],
           }}
           transition={{
-            duration: 3,
+            duration: 2.5,
             repeat: Infinity,
-            repeatDelay: 2,
+            repeatDelay: 1.5,
             ease: "easeInOut",
           }}
         />
@@ -362,7 +471,7 @@ export function BreathingGlow({
 export function GradientText({
   children,
   className = "",
-  animate = true,
+  animate: shouldAnimate = true,
 }: {
   children: ReactNode;
   className?: string;
@@ -372,9 +481,9 @@ export function GradientText({
     <motion.span
       className={`bg-clip-text text-transparent gemini-text-gradient ${className}`}
       style={{
-        backgroundSize: animate ? "200% 100%" : "100% 100%",
+        backgroundSize: shouldAnimate ? "200% 100%" : "100% 100%",
       }}
-      animate={animate ? {
+      animate={shouldAnimate ? {
         backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
       } : {}}
       transition={{

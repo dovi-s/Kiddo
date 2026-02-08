@@ -968,7 +968,7 @@ export default function GiftCheckout() {
                 whileTap={{ scale: 0.98 }}
                 onClick={handleSubmitPayment}
                 disabled={!canSubmit || isProcessing}
-                className="w-full h-14 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 shadow-premium-lg"
+                className="gemini-btn-shimmer w-full h-14 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90 rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 shadow-premium-lg"
                 data-testid="button-complete-gift"
               >
                 {isProcessing ? (

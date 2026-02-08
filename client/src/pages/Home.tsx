@@ -7,7 +7,7 @@ import { ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { PageTransition } from "@/components/layout/PageTransition";
-import { GeminiGradient, ThinkingOrb } from "@/components/ui/gemini";
+import { GeminiHeroGradient, GradientText, ThinkingOrb } from "@/components/ui/gemini";
 import { springGentle, easeOutExpo, easeOutBack } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
@@ -171,7 +171,7 @@ export default function Home() {
       
       {/* Hero */}
       <section className="relative pt-24 pb-28 md:pt-36 md:pb-40 overflow-hidden">
-        <GeminiGradient variant="ambient" intensity={0.08} className="absolute inset-0 pointer-events-none" />
+        <GeminiHeroGradient />
         <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
@@ -188,7 +188,7 @@ export default function Home() {
               The gift that grows
             </motion.p>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.05] text-foreground tracking-tight mb-6">
-              Give a gift they'll still<br className="hidden sm:block" /> have in twenty years.
+              Give a gift they'll still<br className="hidden sm:block" /> have in <GradientText className="text-4xl md:text-5xl lg:text-6xl font-semibold">twenty years</GradientText>.
             </h1>
             <motion.p 
               initial={{ opacity: 0 }}
@@ -206,7 +206,7 @@ export default function Home() {
             >
               <Link href="/get-started">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button size="lg" className="h-14 px-10 text-base rounded-2xl shadow-lg shadow-primary/20" data-testid="button-create-fund">
+                  <Button size="lg" className="gemini-btn-shimmer h-14 px-10 text-base rounded-2xl shadow-lg shadow-primary/20" data-testid="button-create-fund">
                     Get started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -256,7 +256,7 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <FadeIn className="text-center mb-16">
-              <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">How it works</h2>
+              <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">How it <GradientText>works</GradientText></h2>
             </FadeIn>
             <div className="grid md:grid-cols-3 gap-12 md:gap-8">
               {[
@@ -282,11 +282,12 @@ export default function Home() {
       </section>
 
       {/* The math - Interactive */}
-      <section className="py-24 bg-card border-t">
-        <div className="container mx-auto px-4">
+      <section className="relative py-24 bg-card border-t overflow-hidden">
+        <div className="gemini-section-glow" />
+        <div className="container mx-auto px-4 relative z-10">
           <div className="max-w-2xl mx-auto text-center">
             <FadeIn>
-              <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight mb-4">Time does the work.</h2>
+              <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight mb-4"><GradientText>Time does the work.</GradientText></h2>
               <p className="text-muted-foreground mb-12">See how a gift today becomes something real.</p>
             </FadeIn>
             
@@ -330,7 +331,7 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
             <FadeIn className="text-center mb-12">
-              <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Two ways to give ownership.</h2>
+              <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Two ways to give <GradientText>ownership</GradientText>.</h2>
             </FadeIn>
             
             <div className="grid md:grid-cols-2 gap-6">
@@ -339,7 +340,7 @@ export default function Home() {
                 <Link href="/get-started">
                   <motion.div 
                     whileHover={{ y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.1)" }}
-                    className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full"
+                    className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full gemini-hover-glow"
                   >
                     <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-2xl mb-6 shadow-lg shadow-primary/20">
                       <svg className="w-7 h-7 text-white" viewBox="0 0 32 32" fill="none">
@@ -367,7 +368,7 @@ export default function Home() {
                 <Link href="/send">
                   <motion.div 
                     whileHover={{ y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.1)" }}
-                    className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full"
+                    className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full gemini-hover-glow"
                   >
                     <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[hsl(var(--kora-gold))] to-[hsl(var(--kora-gold-dark,40,60%,40%))] flex items-center justify-center text-2xl mb-6 shadow-lg shadow-[hsl(var(--kora-gold)/0.3)]">
                       📈
@@ -513,8 +514,9 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 border-t bg-foreground text-background overflow-hidden rounded-t-[2rem]">
-        <div className="container mx-auto px-4 text-center">
+      <section className="relative py-24 border-t bg-foreground text-background overflow-hidden rounded-t-[2rem]">
+        <div className="gemini-cta-glow" />
+        <div className="container mx-auto px-4 text-center relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
