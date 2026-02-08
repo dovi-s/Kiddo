@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Lock, CheckCircle2, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { haptic } from "@/lib/haptics";
+import { ThinkingOrb } from "@/components/ui/gemini";
 
 const STOCKS = [
   { symbol: "AAPL", name: "Apple", price: 178.50 },
@@ -388,7 +389,7 @@ export default function Send() {
               >
                 {isProcessing ? (
                   <span className="flex items-center justify-center gap-2">
-                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    <ThinkingOrb size={16} variant="processing" />
                     Sending...
                   </span>
                 ) : (

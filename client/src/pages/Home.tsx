@@ -7,6 +7,7 @@ import { ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { GeminiGradient, ThinkingOrb } from "@/components/ui/gemini";
 import { springGentle, easeOutExpo, easeOutBack } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
@@ -59,9 +60,9 @@ function GrowthCalculator() {
       {/* Bars */}
       <div className="flex items-end justify-center gap-6 md:gap-10">
         {[
-          { value: amount, label: "Today", height: baseHeight, color: "bg-slate-100 dark:bg-slate-900/30" },
-          { value: growth10, label: "10 years", height: height10, color: "bg-slate-200 dark:bg-slate-800/40" },
-          { value: growth18, label: "18 years", height: height18, color: "bg-slate-300 dark:bg-slate-700/50" },
+          { value: amount, label: "Today", height: baseHeight, color: "bg-primary/10" },
+          { value: growth10, label: "10 years", height: height10, color: "bg-gradient-to-t from-primary/20 to-primary/10" },
+          { value: growth18, label: "18 years", height: height18, color: "bg-gradient-to-t from-[hsl(var(--kora-evergreen))] to-[hsl(var(--kora-evergreen-light))]" },
         ].map((bar, i) => (
           <motion.div 
             key={i}
@@ -71,7 +72,7 @@ function GrowthCalculator() {
             transition={{ delay: i * 0.1 }}
           >
             <motion.div 
-              className={`w-20 md:w-24 ${bar.color} rounded-t-lg flex items-end justify-center pb-3 transition-all duration-500 ease-out`}
+              className={`w-20 md:w-24 ${bar.color} rounded-t-2xl flex items-end justify-center pb-3 transition-all duration-500 ease-out`}
               style={{ height: bar.height }}
               layout
             >
@@ -79,7 +80,7 @@ function GrowthCalculator() {
                 key={bar.value}
                 initial={{ opacity: 0.5 }}
                 animate={{ opacity: 1 }}
-                className="text-base font-semibold text-slate-900 dark:text-slate-100"
+                className="text-base font-semibold text-foreground"
               >
                 ${bar.value.toLocaleString()}
               </motion.span>
@@ -154,8 +155,8 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <ThinkingOrb size={48} variant="default" />
       </div>
     );
   }
@@ -165,12 +166,13 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50/30 via-background to-background dark:from-slate-950/10">
+    <div className="min-h-screen bg-background">
       <Nav />
       
       {/* Hero */}
-      <section className="pt-24 pb-28 md:pt-36 md:pb-40">
-        <div className="container mx-auto px-4">
+      <section className="relative pt-24 pb-28 md:pt-36 md:pb-40 overflow-hidden">
+        <GeminiGradient variant="ambient" intensity={0.08} className="absolute inset-0 pointer-events-none" />
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -204,7 +206,7 @@ export default function Home() {
             >
               <Link href="/get-started">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button size="lg" className="h-14 px-10 text-base rounded-xl shadow-lg shadow-primary/20" data-testid="button-create-fund">
+                  <Button size="lg" className="h-14 px-10 text-base rounded-2xl shadow-lg shadow-primary/20" data-testid="button-create-fund">
                     Get started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -212,7 +214,7 @@ export default function Home() {
               </Link>
               <Link href="/send">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button variant="outline" size="lg" className="h-14 px-10 text-base rounded-xl" data-testid="button-send-gift">
+                  <Button variant="outline" size="lg" className="h-14 px-10 text-base rounded-2xl" data-testid="button-send-gift">
                     Send stock
                   </Button>
                 </motion.div>
@@ -268,7 +270,7 @@ export default function Home() {
                     whileHover={{ x: 4 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">{step.num}</p>
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary mb-1 group-hover:bg-primary/15 transition-colors">{step.num}</div>
                     <h3 className="text-xl font-semibold text-foreground">{step.title}</h3>
                     <p className="text-muted-foreground leading-relaxed">{step.desc}</p>
                   </motion.div>
@@ -339,7 +341,7 @@ export default function Home() {
                     whileHover={{ y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.1)" }}
                     className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full"
                   >
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-900 flex items-center justify-center text-2xl mb-6 shadow-lg shadow-slate-500/20">
+                    <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-2xl mb-6 shadow-lg shadow-primary/20">
                       <svg className="w-7 h-7 text-white" viewBox="0 0 32 32" fill="none">
                         <path d="M8 6v20M8 16l10-10M8 16l10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
@@ -367,7 +369,7 @@ export default function Home() {
                     whileHover={{ y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.1)" }}
                     className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full"
                   >
-                    <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-2xl mb-6 shadow-lg shadow-violet-500/20">
+                    <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[hsl(var(--kora-gold))] to-[hsl(var(--kora-gold-dark,40,60%,40%))] flex items-center justify-center text-2xl mb-6 shadow-lg shadow-[hsl(var(--kora-gold)/0.3)]">
                       📈
                     </div>
                     <h3 className="text-xl font-semibold mb-2">Send stock directly</h3>
@@ -379,7 +381,7 @@ export default function Home() {
                         <span key={tag} className="text-xs px-2 py-1 rounded-full bg-muted">{tag}</span>
                       ))}
                     </div>
-                    <span className="text-sm font-medium text-violet-600 flex items-center gap-1">
+                    <span className="text-sm font-medium text-[hsl(var(--kora-gold))] flex items-center gap-1">
                       Send stock now <ArrowRight className="h-4 w-4" />
                     </span>
                   </motion.div>
@@ -465,9 +467,9 @@ export default function Home() {
                     onHoverStart={() => setHoveredPlan(plan.id)}
                     onHoverEnd={() => setHoveredPlan(null)}
                     whileHover={{ x: 4 }}
-                    className={`flex flex-col md:flex-row md:items-center justify-between p-6 rounded-lg transition-all ${
+                    className={`flex flex-col md:flex-row md:items-center justify-between p-6 rounded-2xl transition-all ${
                       plan.featured 
-                        ? "border-2 border-foreground" 
+                        ? "border-2 border-primary gemini-card-soft" 
                         : `border ${hoveredPlan === plan.id ? "border-foreground/30 bg-foreground/[0.02]" : ""}`
                     }`}
                   >
@@ -511,7 +513,7 @@ export default function Home() {
       </section>
 
       {/* CTA */}
-      <section className="py-24 border-t bg-foreground text-background overflow-hidden">
+      <section className="py-24 border-t bg-foreground text-background overflow-hidden rounded-t-[2rem]">
         <div className="container mx-auto px-4 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}

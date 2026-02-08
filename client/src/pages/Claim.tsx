@@ -6,6 +6,7 @@ import { Logo } from "@/components/ui/logo";
 import { Confetti } from "@/components/ui/confetti";
 import { InvestmentReveal } from "@/components/ui/live-ticker";
 import { haptic } from "@/lib/haptics";
+import { ThinkingOrb } from "@/components/ui/gemini";
 
 interface GiftData {
   id: string;
@@ -437,7 +438,7 @@ export default function Claim() {
               >
                 {isClaiming ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    <ThinkingOrb size={16} variant="processing" />
                     <span>Claiming...</span>
                   </>
                 ) : (

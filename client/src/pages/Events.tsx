@@ -11,6 +11,7 @@ import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 import { useEvents } from "@/hooks/use-events";
 import { useFunds } from "@/hooks/use-funds";
+import { ThinkingOrb } from "@/components/ui/gemini";
 
 type EventItem = {
   id: string;
@@ -107,7 +108,7 @@ export default function Events() {
   if (authLoading || fundsLoading || eventsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <ThinkingOrb size={40} variant="default" />
       </div>
     );
   }

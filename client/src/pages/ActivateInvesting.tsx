@@ -8,6 +8,7 @@ import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
 import { useFunds } from "@/hooks/use-funds";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ThinkingOrb } from "@/components/ui/gemini";
 
 type Step = "intro" | "brokerage" | "identity" | "child" | "agreements" | "processing" | "complete";
 
@@ -162,7 +163,7 @@ export default function ActivateInvesting() {
   if (fundsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <ThinkingOrb size={40} variant="default" />
       </div>
     );
   }

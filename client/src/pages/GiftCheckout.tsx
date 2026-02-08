@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Logo } from "@/components/ui/logo";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Celebration, SuccessGlow } from "@/components/ui/celebration";
+import { GeminiGradient, ThinkingOrb, CircularAvatar, GradientText, ProcessingState } from "@/components/ui/gemini";
 import { bouncySpring, successPop, easeOutExpo } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
 import { useQuery } from "@tanstack/react-query";
@@ -253,40 +254,55 @@ export default function GiftCheckout() {
         </header>
         <Celebration trigger={isComplete} intensity="grand" type="confetti" />
         <main className="container mx-auto px-4 py-12 max-w-md">
+          <GeminiGradient variant="success" intensity={0.08} className="absolute inset-0 pointer-events-none" />
           <SuccessGlow trigger={isComplete}>
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={bouncySpring}
             >
-              <Card className="border-border shadow-xl text-center overflow-hidden">
+              <Card className="border-border gemini-card-soft text-center overflow-hidden">
                 <motion.div 
-                  className="h-2 bg-success"
+                  className="h-1.5 gemini-progress-fill"
+                  style={{ background: "linear-gradient(90deg, hsl(var(--kora-evergreen)), hsl(var(--kora-gold)))" }}
                   initial={{ scaleX: 0, originX: 0 }}
                   animate={{ scaleX: 1 }}
                   transition={{ delay: 0.2, duration: 0.6 }}
                 />
                 <CardContent className="p-8 space-y-6">
                   <motion.div
-                    className="h-16 w-16 rounded-full bg-success/10 flex items-center justify-center mx-auto relative"
+                    className="relative mx-auto"
+                    style={{ width: 72, height: 72 }}
                     variants={successPop}
                     initial="hidden"
                     animate="visible"
                   >
-                  <motion.div
-                    className="absolute inset-0 rounded-full bg-success/20"
-                    initial={{ scale: 1, opacity: 0.5 }}
-                    animate={{ scale: 1.5, opacity: 0 }}
-                    transition={{ duration: 0.6, delay: 0.3 }}
-                  />
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.2, ...bouncySpring }}
-                  >
-                    <Check className="h-8 w-8 text-success" />
+                    <motion.div
+                      className="absolute inset-0 rounded-full"
+                      style={{ background: "conic-gradient(from 0deg, hsl(var(--kora-evergreen)), hsl(var(--kora-gold)), hsl(180, 30%, 40%), hsl(var(--kora-evergreen)))" }}
+                      animate={{ rotate: [0, 360] }}
+                      transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                    />
+                    <div className="absolute inset-[3px] rounded-full bg-background flex items-center justify-center">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, ...bouncySpring }}
+                      >
+                        <Check className="h-8 w-8 text-[hsl(var(--kora-evergreen))]" />
+                      </motion.div>
+                    </div>
+                    <motion.div
+                      className="absolute inset-0 rounded-full"
+                      style={{
+                        background: "conic-gradient(from 0deg, hsl(var(--kora-evergreen)), hsl(var(--kora-gold)), transparent)",
+                        filter: "blur(12px)",
+                      }}
+                      initial={{ scale: 1, opacity: 0.5 }}
+                      animate={{ scale: 1.6, opacity: 0 }}
+                      transition={{ duration: 0.8, delay: 0.3 }}
+                    />
                   </motion.div>
-                </motion.div>
                 <div>
                   <h2 className="text-xl font-semibold mb-1 text-foreground">Gift sent!</h2>
                   <p className="text-muted-foreground">
@@ -294,21 +310,25 @@ export default function GiftCheckout() {
                   </p>
                 </div>
                 
-                <div className="p-4 rounded-xl bg-muted text-left">
+                <div className="p-4 rounded-2xl bg-muted/50 text-left gemini-energy-border">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-full bg-[hsl(var(--kora-gold))]/20 flex items-center justify-center">
+                    <CircularAvatar size={40}>
                       <Gift className="w-5 h-5 text-[hsl(var(--kora-gold))]" />
-                    </div>
+                    </CircularAvatar>
                     <div>
                       <p className="text-sm font-medium text-foreground">${displayAmount}{selectedStock ? ` of ${selectedStock.symbol}` : ''}</p>
                       <p className="text-xs text-muted-foreground">Will invest at next market open</p>
                     </div>
                   </div>
-                  <div className="space-y-1 text-xs text-muted-foreground border-t border-border pt-3">
+                  <div className="space-y-1 text-xs text-muted-foreground border-t border-border/50 pt-3">
                     <div className="flex justify-between">
                       <span>Status</span>
                       <span className="text-[hsl(var(--kora-gold))] font-medium flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--kora-gold))] animate-pulse"></span>
+                        <motion.span
+                          className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--kora-gold))]"
+                          animate={{ scale: [1, 1.3, 1], opacity: [0.7, 1, 0.7] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                        />
                         Processing
                       </span>
                     </div>
@@ -320,7 +340,7 @@ export default function GiftCheckout() {
                 </div>
 
                 {note && (
-                  <div className="p-3 rounded-lg bg-[hsl(var(--kora-gold))]/10 border border-[hsl(var(--kora-gold))]/20 text-left">
+                  <div className="p-3 rounded-2xl bg-[hsl(var(--kora-gold))]/10 border border-[hsl(var(--kora-gold))]/20 text-left">
                     <p className="text-xs text-[hsl(var(--kora-gold))] mb-1">Your message</p>
                     <p className="text-sm text-foreground">"{note}"</p>
                   </div>
@@ -328,8 +348,9 @@ export default function GiftCheckout() {
 
                 <div className="space-y-2">
                   <motion.button 
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl font-medium flex items-center justify-center gap-2"
+                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.01 }}
+                    className="w-full h-12 gemini-btn-primary rounded-2xl font-medium flex items-center justify-center gap-2 relative overflow-hidden"
                     onClick={() => {
                       haptic('light');
                       navigator.share?.({ 
@@ -339,11 +360,17 @@ export default function GiftCheckout() {
                     }}
                     data-testid="button-share-gift"
                   >
-                    Share this gift
+                    <motion.div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)" }}
+                      animate={{ x: ["-100%", "200%"] }}
+                      transition={{ duration: 3, repeat: Infinity, repeatDelay: 2, ease: "easeInOut" }}
+                    />
+                    <span className="relative z-10">Share this gift</span>
                   </motion.button>
                   <motion.button 
-                    whileTap={{ scale: 0.98 }}
-                    className="w-full h-11 border border-border text-foreground hover:bg-muted rounded-xl font-medium"
+                    whileTap={{ scale: 0.97 }}
+                    className="w-full h-12 border border-border text-foreground hover:bg-muted rounded-2xl font-medium"
                     onClick={() => {
                       haptic('light');
                       setLocation('/');
@@ -391,12 +418,21 @@ export default function GiftCheckout() {
           transition={{ duration: 0.2, delay: 0.05 }}
         >
           <motion.div 
-            className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[hsl(var(--kora-gold))] to-[hsl(var(--kora-gold)/0.7)] flex items-center justify-center mx-auto mb-4 shadow-premium"
+            className="relative mx-auto mb-4"
+            style={{ width: 64, height: 64 }}
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 400, damping: 25, delay: 0.1 }}
           >
-            <Gift className="w-8 h-8 text-white" />
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ background: "conic-gradient(from 0deg, hsl(var(--kora-gold)), hsl(var(--kora-evergreen)), hsl(180, 30%, 40%), hsl(var(--kora-gold)))" }}
+              animate={{ rotate: [0, 360] }}
+              transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+            />
+            <div className="absolute inset-[2px] rounded-full bg-gradient-to-br from-[hsl(var(--kora-gold))] to-[hsl(var(--kora-gold)/0.7)] flex items-center justify-center">
+              <Gift className="w-7 h-7 text-white" />
+            </div>
           </motion.div>
           <h1 className="text-2xl font-bold text-foreground mb-1">
             Gift to {recipientName}'s Future
@@ -434,15 +470,19 @@ export default function GiftCheckout() {
               {!showStockPicker && !selectedStock ? (
                 <div className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    {topPicks.map((stock) => (
+                    {topPicks.map((stock, i) => (
                       <motion.button
                         key={stock.symbol}
-                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.06, type: "spring", stiffness: 280, damping: 24 }}
+                        whileTap={{ scale: 0.97 }}
+                        whileHover={{ y: -1 }}
                         onClick={() => { haptic('selection'); setSelectedStock(stock); }}
-                        className="w-full p-3 rounded-xl bg-muted/50 hover:bg-muted transition-colors flex items-center gap-3 text-left"
+                        className="w-full p-3.5 rounded-2xl bg-muted/40 hover:bg-muted/70 transition-colors flex items-center gap-3 text-left gemini-glow"
                         data-testid={`quick-pick-${stock.symbol}`}
                       >
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                        <div className="w-11 h-11 rounded-full bg-gradient-to-br from-primary/15 to-accent/10 flex items-center justify-center">
                           <span className="text-primary font-bold text-sm">{stock.symbol.slice(0, 2)}</span>
                         </div>
                         <div className="flex-1">
@@ -576,7 +616,7 @@ export default function GiftCheckout() {
                         className="w-full p-3 rounded-xl hover:bg-muted/80 active:bg-muted transition-colors flex items-center gap-3 text-left"
                         data-testid={`stock-${stock.symbol}`}
                       >
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-muted to-border flex items-center justify-center text-xs font-bold text-foreground">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/10 to-accent/5 flex items-center justify-center text-xs font-bold text-foreground">
                           {stock.symbol.slice(0, 2)}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -676,16 +716,17 @@ export default function GiftCheckout() {
             >
               {isProcessing ? (
                 <motion.div
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-3"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                 >
-                  <motion.div
-                    className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  />
-                  <span>Processing...</span>
+                  <ThinkingOrb size={20} variant="processing" />
+                  <motion.span
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    Processing...
+                  </motion.span>
                 </motion.div>
               ) : (
                 <>
@@ -931,13 +972,14 @@ export default function GiftCheckout() {
                 data-testid="button-complete-gift"
               >
                 {isProcessing ? (
-                  <motion.div className="flex items-center gap-2">
-                    <motion.div
-                      className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    />
-                    <span>Processing...</span>
+                  <motion.div className="flex items-center gap-3">
+                    <ThinkingOrb size={20} variant="processing" />
+                    <motion.span
+                      animate={{ opacity: [0.7, 1, 0.7] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      Processing...
+                    </motion.span>
                   </motion.div>
                 ) : (
                   <>

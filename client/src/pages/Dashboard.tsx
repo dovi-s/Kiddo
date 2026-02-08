@@ -15,6 +15,7 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, springGentle, easeOutExpo, cardTactile, staggerFast, sharePulse, staggerPremium, listItemSpring } from "@/lib/animations";
 import { AnimatedValue } from "@/components/ui/animated-value";
 import { MagneticButton } from "@/components/ui/magnetic-button";
+import { GeminiGradient, ThinkingOrb, CircularAvatar, EnergyRing } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds, useFundEvents, useFundHoldings, useFundGifts, useCreateFund } from "@/hooks/use-funds";
@@ -102,8 +103,15 @@ export default function Dashboard() {
 
   if (authLoading || fundsLoading || eventsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <ThinkingOrb size={48} variant="default" />
+        <motion.p
+          className="text-sm text-muted-foreground"
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        >
+          Loading your fund...
+        </motion.p>
       </div>
     );
   }
@@ -300,7 +308,7 @@ export default function Dashboard() {
                 >
                   <div className="bg-gradient-to-br from-[hsl(var(--kora-evergreen))] to-[hsl(var(--kora-evergreen-light))] rounded-3xl p-8 sm:p-10 text-white shadow-premium-lg">
                     <div className="flex items-start gap-5 mb-6">
-                      <div className="w-14 h-14 rounded-2xl bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-xl font-bold shadow-md">
+                      <div className="w-14 h-14 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-xl font-bold shadow-md">
                         {selectedFund.name.charAt(0)}
                       </div>
                       <div className="flex-1">
@@ -382,30 +390,31 @@ export default function Dashboard() {
                   className="bg-card border border-border/50 rounded-2xl p-6 sm:p-8 shadow-premium-sm"
                 >
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="w-14 h-14 rounded-2xl bg-[hsl(var(--kora-gold))] flex items-center justify-center">
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                        className="w-7 h-7 border-3 border-white/30 border-t-white rounded-full"
-                      />
-                    </div>
+                    <ThinkingOrb size={56} variant="processing" />
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-foreground mb-1">Verifying your identity</h3>
-                      <p className="text-sm text-muted-foreground">This usually takes under 2 minutes</p>
+                      <motion.p
+                        className="text-sm text-muted-foreground"
+                        animate={{ opacity: [0.6, 1, 0.6] }}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        This usually takes under 2 minutes
+                      </motion.p>
                     </div>
                   </div>
                 </motion.div>
               ) : (
                 <>
                   <motion.div 
-                    className="bg-card border border-border rounded-3xl p-8 sm:p-10 mb-8 shadow-premium gradient-overlay overflow-hidden"
+                    className="relative bg-card border border-border rounded-3xl p-8 sm:p-10 mb-8 gemini-card-soft overflow-hidden"
                     initial={{ opacity: 0, scale: 0.97, y: 8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 25 }}
                   >
-                    <div className="text-center mb-8">
+                    <GeminiGradient variant="ambient" intensity={0.06} className="absolute inset-0 pointer-events-none" />
+                    <div className="relative z-10 text-center mb-8">
                       <motion.p 
-                        className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground tracking-tight mb-3"
+                        className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground tracking-tight mb-3 gemini-value-glow"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1, duration: 0.2 }}
@@ -427,7 +436,7 @@ export default function Dashboard() {
                     </div>
                     
                     <motion.div 
-                      className="grid grid-cols-3 gap-6 pt-8 border-t border-border"
+                      className="relative z-10 grid grid-cols-3 gap-6 pt-8 border-t border-border/50"
                       initial="hidden"
                       animate="visible"
                       variants={staggerPremium}
@@ -492,7 +501,7 @@ export default function Dashboard() {
                                 <div className="flex items-center gap-4">
                                   <motion.div 
                                     layout="position"
-                                    className={`w-12 h-12 rounded-xl flex items-center justify-center text-base font-semibold ${
+                                    className={`w-12 h-12 rounded-full flex items-center justify-center text-base font-semibold ${
                                       gift.status === "pending" 
                                         ? "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
                                         : "bg-[hsl(var(--kora-evergreen)/0.15)] text-[hsl(var(--kora-evergreen))]"
@@ -636,9 +645,9 @@ export default function Dashboard() {
                                 <div className="flex items-center gap-3">
                                   <motion.span 
                                     layout="position"
-                                    className="text-xs font-bold text-foreground bg-muted px-3 py-2 rounded-lg border border-border"
+                                    className="w-10 h-10 flex items-center justify-center text-xs font-bold text-foreground bg-gradient-to-br from-primary/10 to-accent/5 rounded-full border border-border/50"
                                   >
-                                    {holding.ticker}
+                                    {holding.ticker.slice(0, 2)}
                                   </motion.span>
                                   <div>
                                     <p className="text-sm font-medium text-foreground">{holding.name}</p>
@@ -709,9 +718,9 @@ export default function Dashboard() {
                                           <TrendingUp size={14} className="text-[hsl(var(--kora-evergreen))]" />
                                           <p className="text-xs font-medium text-[hsl(var(--kora-evergreen))]">Performance</p>
                                         </div>
-                                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                        <div className="gemini-progress">
                                           <motion.div 
-                                            className="h-full bg-[hsl(var(--kora-evergreen))] rounded-full"
+                                            className="gemini-progress-fill"
                                             initial={{ width: 0 }}
                                             animate={{ width: `${Math.min(100, (holding.value / 3000) * 100)}%` }}
                                             transition={{ delay: 0.3, duration: 0.5, ease: "easeOut" }}

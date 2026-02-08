@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, Lock } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { ThinkingOrb } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 
 export default function Login() {
@@ -88,13 +89,18 @@ export default function Login() {
               disabled={!email || !password || isLoading}
               data-testid="button-login"
               whileTap={{ scale: 0.97 }}
-              className="w-full h-14 bg-primary text-primary-foreground text-base font-semibold rounded-xl hover:bg-primary/90 shadow-premium transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.97]"
+              className="w-full h-14 bg-primary text-primary-foreground text-base font-semibold rounded-2xl hover:bg-primary/90 shadow-premium transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.97]"
             >
               {isLoading ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  <span>Signing in...</span>
-                </>
+                <motion.div className="flex items-center gap-3">
+                  <ThinkingOrb size={20} variant="processing" />
+                  <motion.span
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    Signing in...
+                  </motion.span>
+                </motion.div>
               ) : (
                 <>
                   <span>Sign in</span>

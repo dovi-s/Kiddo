@@ -10,6 +10,7 @@ import { springSnappy, easeOutExpo, cardTactile } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
+import { ThinkingOrb } from "@/components/ui/gemini";
 import { 
   User, Shield, Bell, CreditCard, FileText, Search, 
   ChevronRight, Check, LogOut, HelpCircle,
@@ -78,7 +79,7 @@ function AutoSaveInput({
         />
         {saving && (
           <div className="absolute right-4 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-muted border-t-primary rounded-full animate-spin" />
+            <ThinkingOrb size={16} variant="processing" />
           </div>
         )}
       </div>
@@ -119,7 +120,7 @@ function AutoSaveSelect({
       <Select value={value} onValueChange={handleChange}>
         <SelectTrigger className="w-full h-12 px-4 border border-border rounded-xl bg-card text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all duration-150">
           <div className="flex items-center gap-2">
-            {saving && <div className="w-3 h-3 border-2 border-muted border-t-primary rounded-full animate-spin" />}
+            {saving && <ThinkingOrb size={16} variant="processing" />}
             <SelectValue placeholder="Select...">{selectedLabel}</SelectValue>
           </div>
         </SelectTrigger>
@@ -995,7 +996,7 @@ export default function Settings() {
   if (authLoading || fundsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <ThinkingOrb size={40} variant="default" />
       </div>
     );
   }

@@ -765,3 +765,235 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   0%, 100% { opacity: 0.7; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.05); }
 }
+
+/* ============================================ */
+/* GEMINI-INSPIRED DESIGN SYSTEM */
+/* ============================================ */
+
+/* Gemini gradient text */
+.gemini-text-gradient {
+  background-image: linear-gradient(
+    135deg,
+    hsl(var(--kora-evergreen)) 0%,
+    hsl(152, 35%, 28%) 25%,
+    hsl(var(--kora-gold)) 50%,
+    hsl(180, 30%, 40%) 75%,
+    hsl(var(--kora-evergreen)) 100%
+  );
+}
+
+/* Gemini button primary with flowing gradient */
+.gemini-btn-primary {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--kora-evergreen)) 0%,
+    hsl(152, 45%, 22%) 50%,
+    hsl(152, 40%, 20%) 100%
+  );
+  color: hsl(var(--primary-foreground));
+  position: relative;
+  overflow: hidden;
+}
+.gemini-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--kora-evergreen-hover)) 0%,
+    hsl(152, 45%, 25%) 50%,
+    hsl(152, 40%, 23%) 100%
+  );
+}
+
+/* Gemini ring around avatars */
+.gemini-ring {
+  background: conic-gradient(
+    from 0deg,
+    hsl(var(--kora-evergreen)),
+    hsl(var(--kora-gold)),
+    hsl(180, 30%, 40%),
+    hsl(var(--kora-evergreen))
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), black calc(100% - 2px + 0.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), black calc(100% - 2px + 0.5px));
+}
+
+/* Gemini ambient glow for cards */
+.gemini-glow {
+  position: relative;
+}
+.gemini-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--kora-evergreen) / 0.12),
+    hsl(var(--kora-gold) / 0.08),
+    hsl(180, 30%, 40% / 0.06),
+    transparent
+  );
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.gemini-glow:hover::before {
+  opacity: 1;
+}
+
+/* Gemini energy border - animated gradient border */
+.gemini-energy-border {
+  position: relative;
+  z-index: 0;
+}
+.gemini-energy-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    var(--gemini-angle, 135deg),
+    hsl(var(--kora-evergreen) / 0.3),
+    hsl(var(--kora-gold) / 0.2),
+    hsl(180, 30%, 40% / 0.15),
+    transparent
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: gemini-border-rotate 6s linear infinite;
+}
+
+@property --gemini-angle {
+  syntax: '<angle>';
+  initial-value: 135deg;
+  inherits: false;
+}
+
+@keyframes gemini-border-rotate {
+  to { --gemini-angle: 495deg; }
+}
+
+/* Gemini soft card - more rounded, softer shadows */
+.gemini-card-soft {
+  border-radius: 20px;
+  background: hsl(var(--card));
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    0 0 0 1px hsl(var(--border) / 0.5);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.gemini-card-soft:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.03),
+    0 8px 24px rgba(0, 0, 0, 0.06),
+    0 0 0 1px hsl(var(--kora-evergreen) / 0.08);
+}
+
+/* Gemini thinking dots */
+.gemini-thinking-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.gemini-thinking-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: hsl(var(--kora-evergreen));
+  animation: gemini-dot-bounce 1.4s ease-in-out infinite;
+}
+.gemini-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.gemini-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes gemini-dot-bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Gemini section divider with gradient */
+.gemini-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    hsl(var(--border)),
+    hsl(var(--kora-evergreen) / 0.15),
+    hsl(var(--border)),
+    transparent
+  );
+}
+
+/* Gemini ambient background for hero sections */
+.gemini-ambient-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, hsl(var(--kora-evergreen) / 0.04), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 60%, hsl(var(--kora-gold) / 0.03), transparent),
+    radial-gradient(ellipse 50% 30% at 50% 80%, hsl(180, 30%, 40% / 0.02), transparent);
+}
+
+.dark .gemini-ambient-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 40%, hsl(var(--kora-evergreen) / 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 60%, hsl(var(--kora-gold) / 0.05), transparent),
+    radial-gradient(ellipse 50% 30% at 50% 80%, hsl(180, 30%, 40% / 0.04), transparent);
+}
+
+/* Gemini glass card */
+.gemini-glass {
+  background: hsl(var(--background) / 0.7);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid hsl(var(--border) / 0.5);
+  border-radius: 20px;
+}
+
+/* Gemini value highlight - soft glow behind important numbers */
+.gemini-value-glow {
+  text-shadow: 0 0 40px hsl(var(--kora-evergreen) / 0.15);
+}
+.dark .gemini-value-glow {
+  text-shadow: 0 0 40px hsl(var(--kora-evergreen) / 0.25);
+}
+
+/* Gemini orb - soft circular shape for backgrounds */
+.gemini-orb {
+  border-radius: 50%;
+  filter: blur(40px);
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Softer radius everywhere */
+.gemini-rounded {
+  border-radius: 20px;
+}
+.gemini-rounded-sm {
+  border-radius: 14px;
+}
+.gemini-rounded-lg {
+  border-radius: 24px;
+}
+.gemini-rounded-full {
+  border-radius: 9999px;
+}
+
+/* Gemini progress bar with gradient */
+.gemini-progress {
+  height: 6px;
+  border-radius: 3px;
+  background: hsl(var(--muted));
+  overflow: hidden;
+}
+.gemini-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, hsl(var(--kora-evergreen)), hsl(var(--kora-gold)));
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}

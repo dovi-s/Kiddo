@@ -10,6 +10,7 @@ import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 import { useActivities } from "@/hooks/use-activities";
 import { useFunds } from "@/hooks/use-funds";
+import { ThinkingOrb } from "@/components/ui/gemini";
 
 type ActivityItem = {
   id: string;
@@ -103,7 +104,7 @@ export default function Activity() {
   if (authLoading || fundsLoading || activitiesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <ThinkingOrb size={40} variant="default" />
       </div>
     );
   }
