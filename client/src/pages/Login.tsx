@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, Lock } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
-import { ThinkingOrb } from "@/components/ui/gemini";
+import { ThinkingOrb, GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 
 export default function Login() {
@@ -27,7 +27,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background gemini-warm-section relative overflow-hidden">
+      <GeminiHeroGradient />
       <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/">
@@ -47,12 +48,12 @@ export default function Login() {
           className="space-y-8"
         >
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-semibold text-foreground">Welcome back</h1>
+            <h1 className="text-2xl font-semibold text-foreground">Welcome <GradientText>back</GradientText></h1>
             <p className="text-muted-foreground">Sign in to manage your funds</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-6 space-y-5">
+            <div className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-6 space-y-5 gemini-soft-container">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-foreground">
                   Email
@@ -89,7 +90,7 @@ export default function Login() {
               disabled={!email || !password || isLoading}
               data-testid="button-login"
               whileTap={{ scale: 0.97 }}
-              className="w-full h-14 bg-primary text-primary-foreground text-base font-semibold rounded-2xl hover:bg-primary/90 shadow-premium transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.97]"
+              className="gemini-btn-shimmer w-full h-14 bg-primary text-primary-foreground text-base font-semibold rounded-2xl hover:bg-primary/90 shadow-premium transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.97]"
             >
               {isLoading ? (
                 <motion.div className="flex items-center gap-3">

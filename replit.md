@@ -54,3 +54,48 @@ The platform emphasizes transparency regarding asset holding (e.g., Apex Clearin
 *   **Authentication & Sessions**: Passport.js (local strategy), express-session, connect-pg-simple.
 *   **Brokerage Integration**: Embedded broker-dealer model with partners like Apex Clearing or DriveWealth for KYC/AML, custody, clearing, settlement, and tax reporting.
 *   **Frontend Libraries**: qrcode.react, date-fns, react-hook-form with @hookform/resolvers.
+
+## Gemini Design System
+
+The platform implements Google Gemini-inspired visual design based on detailed design analysis. Key principles: softness and glow, ethereal blur, circular warmth, intentional motion, and trustworthy fintech aesthetics.
+
+### Component Library (`client/src/components/ui/gemini.tsx`)
+*   **GeminiSparkle**: Animated sparkle icon (the ubiquitous Gemini motif) with configurable size, color, delay
+*   **SparkleCluster**: Multiple sparkles arranged in a spread pattern
+*   **SparkleBurst**: Particle explosion animation for reward/success feedback
+*   **SpectrumWave**: Animated gradient bars for activity/loading states
+*   **GeminiHeroGradient**: Large floating gradient orbs for hero sections
+*   **GeminiBalanceGlow**: Subtle gradient for dashboard balance cards
+*   **ThinkingOrb**: Rotating conic gradient ring with glow halo for loading
+*   **EnergyRing**: Rotating gradient ring around content
+*   **EtherealCard / GeminiCard**: Cards with warm hover glow using radial gradients
+*   **GradientText**: Animated gradient text with Kora brand colors
+*   **ProcessingState**: Full processing view with ThinkingOrb + sparkles + spectrum wave
+*   **SuccessState**: Success view with checkmark, sparkle burst, gradient text
+*   **EnlighteningReveal**: Entrance animation with blur-to-clear reveal
+*   **ExpandReveal**: Height-based expand/collapse with fade
+*   **GlowHalo**: Standalone breathing glow orb
+*   **BreathingGlow**: Wrapper that adds breathing glow behind children
+
+### CSS Classes (`client/src/index.css`)
+*   `gemini-btn-shimmer`: Gentle light sweep on CTA buttons
+*   `gemini-hover-glow`: Warm ethereal border glow on hover (radial gradient)
+*   `gemini-pulse-dot`: Gentle breathing indicator for pending states
+*   `gemini-warm-section`: Spatial warmth with fuzzy radial gradients
+*   `gemini-soft-container`: Ambient warmth around card containers
+*   `gemini-glass-warm`: Frosted glass with warmth and saturation
+*   `gemini-ethereal-card`: Backdrop blur card with subtle border
+*   `gemini-sparkle-hint`: Tiny sparkle icon that peeks on interactive elements
+*   `gemini-ripple`: Radial ripple feedback on tap/click
+*   `gemini-intro-glow`: Feature introduction sweep bar animation
+*   `gemini-featured-border`: Rotating conic gradient border
+*   `gemini-active-card`: Breathing border with soft halo
+*   `gemini-text-shimmer`: Subtle text highlight shimmer
+
+### Motion Variants
+*   `geminiEntrance`: Spring entrance with blur-to-clear
+*   `geminiStagger`: Staggered children reveal
+*   `geminiCard`: Card entrance with blur
+*   `geminiFloat`: Gentle floating animation
+*   `geminiBreathe`: Scale + opacity breathing
+*   `geminiExpand`: Expansion-based reveal with blur

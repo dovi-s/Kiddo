@@ -15,7 +15,7 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, springGentle, easeOutExpo, cardTactile, staggerFast, sharePulse, staggerPremium, listItemSpring } from "@/lib/animations";
 import { AnimatedValue } from "@/components/ui/animated-value";
 import { MagneticButton } from "@/components/ui/magnetic-button";
-import { GeminiBalanceGlow, GradientText, ThinkingOrb } from "@/components/ui/gemini";
+import { GeminiBalanceGlow, GradientText, ThinkingOrb, GeminiSparkle, SparkleCluster, EnlighteningReveal } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds, useFundEvents, useFundHoldings, useFundGifts, useCreateFund } from "@/hooks/use-funds";

@@ -7,7 +7,7 @@ import { ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { PageTransition } from "@/components/layout/PageTransition";
-import { GeminiHeroGradient, GradientText, ThinkingOrb } from "@/components/ui/gemini";
+import { GeminiHeroGradient, GradientText, ThinkingOrb, SparkleCluster, GeminiSparkle, EnlighteningReveal } from "@/components/ui/gemini";
 import { springGentle, easeOutExpo, easeOutBack } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
@@ -183,9 +183,11 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="text-sm font-medium text-primary dark:text-primary mb-4"
+              className="text-sm font-medium text-primary dark:text-primary mb-4 inline-flex items-center gap-1.5"
             >
+              <GeminiSparkle size={14} color="hsl(152, 45%, 18%)" />
               The gift that grows
+              <GeminiSparkle size={14} color="hsl(36, 72%, 52%)" delay={0.3} />
             </motion.p>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.05] text-foreground tracking-tight mb-6">
               Give a gift they'll still<br className="hidden sm:block" /> have in <GradientText className="text-4xl md:text-5xl lg:text-6xl font-semibold">twenty years</GradientText>.
@@ -252,7 +254,7 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section className="py-24" id="how">
+      <section className="py-24 gemini-warm-section" id="how">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <FadeIn className="text-center mb-16">
@@ -420,11 +422,11 @@ export default function Home() {
       </section>
 
       {/* Pricing */}
-      <section className="py-24 border-t" id="pricing">
+      <section className="py-24 border-t gemini-warm-section" id="pricing">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
             <FadeIn className="text-center mb-16">
-              <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight">Pricing</h2>
+              <h2 className="text-2xl md:text-3xl font-semibold text-foreground tracking-tight"><GradientText>Pricing</GradientText></h2>
               <p className="text-muted-foreground mt-3 max-w-md mx-auto">
                 Start free. Upgrade when you want to cover fees for guests.
               </p>
@@ -523,7 +525,7 @@ export default function Home() {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">Start in two minutes.</h2>
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-4">Start in <GradientText>two minutes</GradientText>.</h2>
             <p className="text-background/70 mb-8 max-w-md mx-auto">
               Free to create. Share it with anyone. Watch their future grow.
             </p>

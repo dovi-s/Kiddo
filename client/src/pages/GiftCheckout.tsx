@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Logo } from "@/components/ui/logo";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Celebration, SuccessGlow } from "@/components/ui/celebration";
-import { GeminiGradient, ThinkingOrb, CircularAvatar, GradientText, ProcessingState } from "@/components/ui/gemini";
+import { GeminiGradient, ThinkingOrb, CircularAvatar, GradientText, ProcessingState, SparkleBurst, SuccessState, GeminiSparkle } from "@/components/ui/gemini";
 import { bouncySpring, successPop, easeOutExpo } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
 import { useQuery } from "@tanstack/react-query";
@@ -292,6 +292,7 @@ export default function GiftCheckout() {
                         <Check className="h-8 w-8 text-[hsl(var(--kora-evergreen))]" />
                       </motion.div>
                     </div>
+                    <SparkleBurst active={isComplete} />
                     <motion.div
                       className="absolute inset-0 rounded-full"
                       style={{
