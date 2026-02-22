@@ -70,19 +70,29 @@ export default function Events() {
 
   const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
 
-  const events: EventItem[] = apiEvents.map(e => ({
-    id: e.id,
-    slug: e.slug,
-    title: e.name,
-    fundName: selectedFund?.name || "Fund",
-    fundSlug: selectedFund?.slug || "",
-    date: e.eventDate ? new Date(e.eventDate).toLocaleDateString() : undefined,
-    raised: parseFloat(e.giftVolume || "0"),
-    gifts: e.giftCount || 0,
-    active: e.status === "active",
-    type: e.isPermanent ? "anytime" as const : "custom" as const,
-    isDefault: e.isPermanent,
-  }));
+  const fundLookup = Object.fromEntries(apiFunds.map(f => [f.id, f]));
+
+  const events: EventItem[] = apiEvents
+    .filter(e => {
+      const eventFund = fundLookup[e.fundId];
+      return eventFund && eventFund.slug === selectedFundSlug;
+    })
+    .map(e => {
+      const eventFund = fundLookup[e.fundId];
+      return {
+        id: e.id,
+        slug: e.slug,
+        title: e.name,
+        fundName: eventFund?.name || "Fund",
+        fundSlug: eventFund?.slug || "",
+        date: e.eventDate ? new Date(e.eventDate).toLocaleDateString() : undefined,
+        raised: parseFloat(e.giftVolume || "0"),
+        gifts: e.giftCount || 0,
+        active: e.status === "active",
+        type: e.isPermanent ? "anytime" as const : "custom" as const,
+        isDefault: e.isPermanent,
+      };
+    });
 
   const activeEvents = events.filter(e => e.active);
   const pastEvents = events.filter(e => !e.active);
