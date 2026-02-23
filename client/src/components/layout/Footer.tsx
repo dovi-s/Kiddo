@@ -48,7 +48,7 @@ export function Footer() {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <Mascot size="sm" context="footer" />
-              <Logo size="sm" className="text-foreground" linkTo={null} />
+              <Logo size="md" className="text-foreground" linkTo={null} />
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[200px]">
               Give something that grows.
