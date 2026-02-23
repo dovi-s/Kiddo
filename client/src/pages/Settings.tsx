@@ -1007,19 +1007,19 @@ export default function Settings() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-background pb-28">
+      <div className="min-h-screen bg-background pb-28 md:ml-[220px] lg:ml-[260px]">
         <motion.header 
           className="sticky top-0 z-50 gemini-glass-nav"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
         >
-          <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
-            <Logo size="sm" className="text-primary" />
+          <div className="max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-4 h-14 flex items-center">
+            <div className="md:hidden"><Logo size="sm" className="text-primary" /></div>
           </div>
         </motion.header>
 
-        <main className="max-w-lg mx-auto px-4 py-6">
+        <main className="max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1030,58 +1030,62 @@ export default function Settings() {
             <p className="text-sm text-muted-foreground">Manage your account and preferences</p>
           </motion.div>
 
-          <div className="overflow-x-auto -mx-4 px-4 mb-6">
-            <div className="flex gap-2 min-w-max pb-2">
-              {tabs.map((tab, index) => (
-                <motion.button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  data-testid={`settings-tab-${tab.id}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.03, duration: 0.2 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                    activeTab === tab.id
-                      ? "bg-primary text-primary-foreground shadow-md"
-                      : "bg-muted text-muted-foreground"
-                  }`}
+          <div className="md:flex md:gap-8">
+            <div className="overflow-x-auto -mx-4 px-4 mb-6 md:mx-0 md:px-0 md:mb-0 md:w-56 md:flex-shrink-0">
+              <div className="flex gap-2 min-w-max pb-2 md:flex-col md:min-w-0 md:pb-0 md:sticky md:top-20">
+                {tabs.map((tab, index) => (
+                  <motion.button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    data-testid={`settings-tab-${tab.id}`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.03, duration: 0.2 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-full md:rounded-xl text-sm font-medium whitespace-nowrap transition-all md:justify-start ${
+                      activeTab === tab.id
+                        ? "bg-primary text-primary-foreground shadow-md"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {tab.icon}
+                    <span className="hidden sm:inline">{tab.label}</span>
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
+            <div className="md:flex-1 md:min-w-0">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -50 }}
+                  transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.1}
+                  onDragEnd={(_, info) => {
+                    const threshold = 50;
+                    const tabIds = tabs.map(t => t.id);
+                    const currentIndex = tabIds.indexOf(activeTab);
+                    
+                    if (info.offset.x < -threshold && currentIndex < tabIds.length - 1) {
+                      haptic('light');
+                      setActiveTab(tabIds[currentIndex + 1]);
+                    } else if (info.offset.x > threshold && currentIndex > 0) {
+                      haptic('light');
+                      setActiveTab(tabIds[currentIndex - 1]);
+                    }
+                  }}
+                  className="touch-pan-y"
                 >
-                  {tab.icon}
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </motion.button>
-              ))}
+                  {renderTabContent()}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
-
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.1}
-              onDragEnd={(_, info) => {
-                const threshold = 50;
-                const tabIds = tabs.map(t => t.id);
-                const currentIndex = tabIds.indexOf(activeTab);
-                
-                if (info.offset.x < -threshold && currentIndex < tabIds.length - 1) {
-                  haptic('light');
-                  setActiveTab(tabIds[currentIndex + 1]);
-                } else if (info.offset.x > threshold && currentIndex > 0) {
-                  haptic('light');
-                  setActiveTab(tabIds[currentIndex - 1]);
-                }
-              }}
-              className="touch-pan-y"
-            >
-              {renderTabContent()}
-            </motion.div>
-          </AnimatePresence>
 
           <div className="mt-10 pt-6 border-t border-border">
             <Link href="/login">

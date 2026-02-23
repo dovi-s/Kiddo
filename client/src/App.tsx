@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { KoraProvider } from "./lib/KoraContext";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
@@ -94,6 +95,7 @@ function App() {
         <TooltipProvider>
           {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
           <Toaster />
+          <DesktopSidebar />
           <Router />
           <MobileNav />
         </TooltipProvider>

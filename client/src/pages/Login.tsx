@@ -31,7 +31,7 @@ export default function Login() {
     <div className="min-h-screen bg-background gemini-warm-section relative overflow-hidden">
       <GeminiHeroGradient />
       <header className="sticky top-0 z-40 gemini-glass-nav">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-lg md:max-w-xl mx-auto px-4 h-14 flex items-center justify-between">
           <Logo size="md" className="text-foreground" />
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Lock size={12} />
@@ -40,7 +40,7 @@ export default function Login() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-16">
+      <main className="max-w-lg md:max-w-xl mx-auto px-4 py-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -244,7 +244,7 @@ export default function GiftCheckout() {
     return (
       <div className="min-h-screen bg-background font-sans">
         <header className="sticky top-0 z-50 gemini-glass-nav">
-          <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
             <Logo size="sm" className="text-primary" />
             <div className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded-full">
               <Lock size={12} className="text-muted-foreground" />
@@ -402,7 +402,7 @@ export default function GiftCheckout() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.2, ease: easeOutExpo }}
       >
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <Logo size="sm" className="text-primary" />
           <div className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded-full">
             <Lock size={12} className="text-muted-foreground" />
@@ -411,7 +411,7 @@ export default function GiftCheckout() {
         </div>
       </motion.header>
       
-      <main className="max-w-lg mx-auto px-4 py-6">
+      <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-6">
         <motion.div 
           className="text-center mb-8"
           initial={{ opacity: 0, y: 10 }}

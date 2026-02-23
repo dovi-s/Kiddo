@@ -154,7 +154,7 @@ export default function GetStarted() {
 
   const PremiumHeader = ({ showBack = true }: { showBack?: boolean }) => (
     <header className="sticky top-0 z-40 gemini-glass-nav">
-      <div className="max-w-lg mx-auto px-4 flex items-center justify-between">
+      <div className="max-w-lg md:max-w-2xl mx-auto px-4 flex items-center justify-between">
         {showBack ? (
           <button 
             onClick={handleBack} 
@@ -274,7 +274,7 @@ export default function GetStarted() {
           >
             <PremiumHeader />
 
-            <main className="flex-1 px-6 pb-12 max-w-lg mx-auto w-full">
+            <main className="flex-1 px-6 pb-12 max-w-lg md:max-w-2xl mx-auto w-full">
               <div className="relative mb-8">
                 <motion.div {...fadeUp} className="relative">
                   <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
@@ -411,7 +411,7 @@ export default function GetStarted() {
           >
             <PremiumHeader />
 
-            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg mx-auto w-full">
+            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg md:max-w-2xl mx-auto w-full">
               <div className="relative mb-8">
                 <motion.div
                   initial={{ scale: 0 }}
@@ -500,7 +500,7 @@ export default function GetStarted() {
           >
             <PremiumHeader />
 
-            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg mx-auto w-full">
+            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg md:max-w-2xl mx-auto w-full">
               <div className="relative mb-6">
                 <motion.div
                   initial={{ scale: 0 }}
@@ -603,7 +603,7 @@ export default function GetStarted() {
           >
             <PremiumHeader />
 
-            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg mx-auto w-full">
+            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg md:max-w-2xl mx-auto w-full">
               <div className="relative mb-8">
                 <motion.div
                   initial={{ scale: 0 }}
@@ -709,7 +709,7 @@ export default function GetStarted() {
           >
             <PremiumHeader />
 
-            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg mx-auto w-full">
+            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg md:max-w-2xl mx-auto w-full">
               <div className="relative mb-8">
                 <motion.div
                   initial={{ scale: 0 }}

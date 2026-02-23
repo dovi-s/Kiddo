@@ -132,7 +132,7 @@ export default function MomentCreate() {
     return (
       <PageTransition>
         <div className="min-h-screen bg-background">
-          <main className="max-w-lg mx-auto px-4 py-12">
+          <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-12">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }} 
               animate={{ opacity: 1, scale: 1 }}
@@ -205,7 +205,7 @@ export default function MomentCreate() {
     <PageTransition>
       <div className="min-h-screen bg-background pb-28">
         <header className="sticky top-0 z-50 gemini-glass-nav">
-          <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
+          <div className="max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center">
             <Link href="/events" className="flex items-center gap-2 text-muted-foreground">
               <ArrowLeft size={20} />
               <span className="text-sm">Back</span>
@@ -213,7 +213,7 @@ export default function MomentCreate() {
           </div>
         </header>
 
-        <main className="max-w-lg mx-auto px-4 py-6">
+        <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}

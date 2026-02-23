@@ -130,19 +130,19 @@ export default function Events() {
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-background pb-28">
+      <div className="min-h-screen bg-background pb-28 md:ml-[220px] lg:ml-[260px]">
         <motion.header 
           className="sticky top-0 z-50 gemini-glass-nav"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
         >
-          <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
-            <Logo size="sm" className="text-primary" />
+          <div className="max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-4 h-14 flex items-center">
+            <div className="md:hidden"><Logo size="sm" className="text-primary" /></div>
           </div>
         </motion.header>
 
-        <main className="max-w-lg mx-auto px-4 py-6">
+        <main className="max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-6">
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -169,7 +169,7 @@ export default function Events() {
             <div className="mb-8">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Active Events</h2>
               <motion.div 
-                className="space-y-3"
+                className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4"
                 initial="hidden"
                 animate="visible"
                 variants={staggerPremium}
@@ -318,7 +318,7 @@ export default function Events() {
           {pastEvents.length > 0 && (
             <div className="mb-8">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Past Events</h2>
-              <div className="space-y-3">
+              <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
                 {pastEvents.map((event, index) => (
                   <motion.div
                     key={event.id}

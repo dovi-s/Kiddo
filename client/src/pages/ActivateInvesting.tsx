@@ -173,11 +173,11 @@ export default function ActivateInvesting() {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-50 gemini-glass-nav">
-          <div className="max-w-xl mx-auto px-4 h-14 flex items-center justify-center">
+          <div className="max-w-xl md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-center">
             <Logo size="sm" className="text-primary" linkTo="/dashboard" />
           </div>
         </header>
-        <main className="max-w-xl mx-auto px-4 py-8">
+        <main className="max-w-xl md:max-w-2xl mx-auto px-4 py-8">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto">
               <Shield size={28} className="text-muted-foreground" />
@@ -204,7 +204,7 @@ export default function ActivateInvesting() {
   return (
     <div className="min-h-screen bg-background overflow-hidden">
       <header className="sticky top-0 z-50 gemini-glass-nav">
-        <div className="max-w-xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-xl md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           {step !== "intro" && step !== "brokerage" && step !== "processing" && step !== "complete" ? (
             <button 
               onClick={handleBack} 
@@ -220,7 +220,7 @@ export default function ActivateInvesting() {
         </div>
       </header>
 
-      <main className="max-w-xl mx-auto px-4 py-8">
+      <main className="max-w-xl md:max-w-2xl mx-auto px-4 py-8">
         <AnimatePresence mode="wait">
           {step === "intro" && (
             <motion.div

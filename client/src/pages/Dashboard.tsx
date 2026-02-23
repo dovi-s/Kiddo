@@ -209,19 +209,19 @@ export default function Dashboard() {
 
   return (
     <PageTransition>
-      <div className={`min-h-screen bg-background md:pb-0 ${selectedFund.status === 'active' ? 'pb-24' : 'pb-4'}`}>
+      <div className={`min-h-screen bg-background md:ml-[220px] lg:ml-[260px] md:pb-0 ${selectedFund.status === 'active' ? 'pb-24' : 'pb-4'}`}>
         <motion.header 
           className="sticky top-0 z-50 gemini-glass-nav"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
         >
-          <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
-            <Logo size="sm" className="text-primary" />
+          <div className="max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-4 h-14 flex items-center">
+            <Logo size="sm" className="text-primary md:hidden" />
           </div>
       </motion.header>
       
-      <main className="max-w-lg mx-auto px-4 py-6 momentum-scroll">
+      <main className="max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-6 momentum-scroll">
         
         <motion.section
           initial={{ opacity: 0, y: 10 }}
@@ -282,8 +282,8 @@ export default function Dashboard() {
           </MagneticButton>
         </motion.section>
 
-        <div className="lg:grid lg:grid-cols-3 lg:gap-12">
-          <div className="lg:col-span-2">
+        <div className="md:grid md:grid-cols-3 md:gap-8 lg:gap-12">
+          <div className="md:col-span-2">
             
             <motion.div 
               initial={{ opacity: 0 }}

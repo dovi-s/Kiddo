@@ -69,7 +69,7 @@ export default function Send() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 gemini-glass-nav">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+        <div className="max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/">
             <span className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</span>
           </Link>
@@ -80,7 +80,7 @@ export default function Send() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-6">
+      <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-6">
         <AnimatePresence mode="wait">
           
           {step === 0 && (

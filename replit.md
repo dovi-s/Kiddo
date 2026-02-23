@@ -55,6 +55,28 @@ The platform emphasizes transparency regarding asset holding (e.g., Apex Clearin
 *   **Brokerage Integration**: Embedded broker-dealer model with partners like Apex Clearing or DriveWealth for KYC/AML, custody, clearing, settlement, and tax reporting.
 *   **Frontend Libraries**: qrcode.react, date-fns, react-hook-form with @hookform/resolvers.
 
+## Responsive Layout Architecture
+
+### Desktop Sidebar (`client/src/components/layout/DesktopSidebar.tsx`)
+*   Shows on md+ screens for authenticated users on main app pages
+*   Fixed left sidebar: 220px on md, 260px on lg
+*   Nav items: Fund, Events, Activity, Settings + user profile + logout
+*   Hidden on: Home, auth/flow pages (login, get-started, onboard, activate, claim, send)
+
+### Responsive Breakpoints
+*   **Mobile** (<768px): Bottom tab nav (MobileNav), max-w-lg content
+*   **Tablet** (md: 768px+): Desktop sidebar, max-w-3xl content, grids activate
+*   **Desktop** (lg: 1024px+): Wider sidebar (260px), max-w-5xl content
+*   Logged-in pages offset content with `md:ml-[220px] lg:ml-[260px]`
+*   Form/flow pages use centered `md:max-w-2xl` containers
+
+### Brand Assets
+*   **Logo**: `client/src/assets/kora-logo-cropped.png` (brushstroke K mark)
+*   **Mascot**: `client/src/assets/kora-mascot.png` (green sprout character)
+*   **Brand Mark**: `client/src/assets/kora-brand-mark.png` (mascot + K + wordmark combo)
+*   **OG Image**: `client/public/kora-og-image.png` (social sharing preview)
+*   **Splash Screen**: Shows brand mark on first app load (1.8s), sessionStorage gated
+
 ## Gemini Design System
 
 The platform implements Google Gemini-inspired visual design based on detailed design analysis. Key principles: softness and glow, ethereal blur, circular warmth, intentional motion, and trustworthy fintech aesthetics.

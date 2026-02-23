@@ -109,7 +109,7 @@ export default function ActivityDetail() {
       <PageTransition>
         <div className="min-h-screen bg-background">
           <Nav />
-          <main className="max-w-lg mx-auto px-4 py-12 text-center">
+          <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-12 text-center">
             <p className="text-muted-foreground">Activity not found</p>
             <Link href="/activity">
               <Button variant="outline" className="mt-4">Back to Activity</Button>
@@ -154,7 +154,7 @@ export default function ActivityDetail() {
       <div className="min-h-screen bg-background">
         <Nav />
         
-        <main className="max-w-lg mx-auto px-4 py-6">
+        <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-6">
           <motion.button
             onClick={() => { haptic('light'); setLocation("/activity"); }}
             initial={{ opacity: 0, x: -10 }}

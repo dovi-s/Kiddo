@@ -39,7 +39,7 @@ export default function Onboard() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-40 gemini-glass-nav">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-center">
+        <div className="max-w-lg md:max-w-xl mx-auto px-4 h-14 flex items-center justify-center">
           <Logo size="md" className="text-primary" />
         </div>
       </header>
