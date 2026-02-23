@@ -4,8 +4,8 @@ import { storage } from "./storage";
 import { stripeService } from "./stripeService";
 import { sql } from "drizzle-orm";
 import { db } from "./db";
-import { isAuthenticated } from "./replit_integrations/auth";
-import { insertFundSchema, insertEventSchema, insertGiftSchema } from "@shared/schema";
+import { isAuthenticated } from "./auth";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -15,7 +15,7 @@ export async function registerRoutes(
   // ===== FUNDS =====
   app.get('/api/funds', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any).id;
       const funds = await storage.getFundsByUser(userId);
       res.json(funds);
     } catch (error) {
@@ -30,7 +30,7 @@ export async function registerRoutes(
       if (!fund) {
         return res.status(404).json({ error: 'Fund not found' });
       }
-      if (fund.userId !== req.user.claims.sub) {
+      if (fund.userId !== (req.user as any).id) {
         return res.status(403).json({ error: 'Forbidden' });
       }
       res.json(fund);
@@ -42,7 +42,7 @@ export async function registerRoutes(
 
   app.post('/api/funds', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any).id;
       const data = insertFundSchema.parse({ ...req.body, userId });
       const fund = await storage.createFund(data);
       
@@ -69,7 +69,7 @@ export async function registerRoutes(
       if (!fund) {
         return res.status(404).json({ error: 'Fund not found' });
       }
-      if (fund.userId !== req.user.claims.sub) {
+      if (fund.userId !== (req.user as any).id) {
         return res.status(403).json({ error: 'Forbidden' });
       }
       const updated = await storage.updateFund(req.params.id, req.body);
@@ -83,7 +83,7 @@ export async function registerRoutes(
   // ===== EVENTS =====
   app.get('/api/events', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any).id;
       const events = await storage.getEventsByUser(userId);
       res.json(events);
     } catch (error) {
@@ -98,7 +98,7 @@ export async function registerRoutes(
       if (!fund) {
         return res.status(404).json({ error: 'Fund not found' });
       }
-      if (fund.userId !== req.user.claims.sub) {
+      if (fund.userId !== (req.user as any).id) {
         return res.status(403).json({ error: 'Forbidden' });
       }
       const events = await storage.getEventsByFund(req.params.fundId);
@@ -122,7 +122,6 @@ export async function registerRoutes(
     }
   });
 
-  // Public event page (no auth required for gift givers)
   app.get('/api/public/events/:slug', async (req, res) => {
     try {
       const event = await storage.getEventBySlug(req.params.slug);
@@ -130,6 +129,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: 'Event not found' });
       }
       const fund = await storage.getFund(event.fundId);
+      const gifts = await storage.getGiftsByEvent(event.id);
       res.json({ 
         event: {
           id: event.id,
@@ -137,8 +137,18 @@ export async function registerRoutes(
           description: event.description,
           imageUrl: event.imageUrl,
           eventDate: event.eventDate,
+          eventType: event.eventType,
+          goalAmount: event.goalAmount,
+          giftVolume: event.giftVolume,
+          giftCount: event.giftCount,
         },
-        fundName: fund?.name,
+        fund: {
+          id: fund?.id,
+          name: fund?.name,
+          recipientFirstName: fund?.recipientFirstName,
+          accountType: fund?.accountType,
+        },
+        giftCount: gifts.length,
       });
     } catch (error) {
       console.error('Error fetching public event:', error);
@@ -146,9 +156,33 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/public/funds/:slug', async (req, res) => {
+    try {
+      const fund = await storage.getFundBySlug(req.params.slug);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      const events = await storage.getEventsByFund(fund.id);
+      const permanentEvent = events.find(e => e.isPermanent);
+      res.json({ 
+        fund: {
+          id: fund.id,
+          name: fund.name,
+          recipientFirstName: fund.recipientFirstName,
+          accountType: fund.accountType,
+        },
+        permanentEventSlug: permanentEvent?.slug,
+        eventCount: events.filter(e => !e.isPermanent).length,
+      });
+    } catch (error) {
+      console.error('Error fetching public fund:', error);
+      res.status(500).json({ error: 'Failed to fetch fund' });
+    }
+  });
+
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any).id;
       const data = insertEventSchema.parse({ ...req.body, userId });
       const event = await storage.createEvent(data);
       res.status(201).json(event);
@@ -164,7 +198,7 @@ export async function registerRoutes(
       if (!event) {
         return res.status(404).json({ error: 'Event not found' });
       }
-      if (event.userId !== req.user.claims.sub) {
+      if (event.userId !== (req.user as any).id) {
         return res.status(403).json({ error: 'Forbidden' });
       }
       const updated = await storage.updateEvent(req.params.id, req.body);
@@ -181,7 +215,7 @@ export async function registerRoutes(
       if (!event) {
         return res.status(404).json({ error: 'Event not found' });
       }
-      if (event.userId !== req.user.claims.sub) {
+      if (event.userId !== (req.user as any).id) {
         return res.status(403).json({ error: 'Forbidden' });
       }
       if (event.isPermanent) {
@@ -202,7 +236,7 @@ export async function registerRoutes(
       if (!fund) {
         return res.status(404).json({ error: 'Fund not found' });
       }
-      if (fund.userId !== req.user.claims.sub) {
+      if (fund.userId !== (req.user as any).id) {
         return res.status(403).json({ error: 'Forbidden' });
       }
       const holdings = await storage.getHoldingsByFund(req.params.fundId);
@@ -220,7 +254,7 @@ export async function registerRoutes(
       if (!fund) {
         return res.status(404).json({ error: 'Fund not found' });
       }
-      if (fund.userId !== req.user.claims.sub) {
+      if (fund.userId !== (req.user as any).id) {
         return res.status(403).json({ error: 'Forbidden' });
       }
       const gifts = await storage.getGiftsByFund(req.params.fundId);
@@ -246,7 +280,7 @@ export async function registerRoutes(
   // ===== ACTIVITIES =====
   app.get('/api/activities', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any).id;
       const limit = parseInt(req.query.limit as string) || 50;
       const activities = await storage.getActivitiesByUser(userId, limit);
       res.json(activities);
@@ -262,7 +296,7 @@ export async function registerRoutes(
       if (!fund) {
         return res.status(404).json({ error: 'Fund not found' });
       }
-      if (fund.userId !== req.user.claims.sub) {
+      if (fund.userId !== (req.user as any).id) {
         return res.status(403).json({ error: 'Forbidden' });
       }
       const limit = parseInt(req.query.limit as string) || 50;
@@ -277,7 +311,7 @@ export async function registerRoutes(
   // ===== SUBSCRIPTION =====
   app.get('/api/subscription', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any).id;
       const subscription = await storage.getSubscription(userId);
       res.json(subscription || { plan: 'free', status: 'active' });
     } catch (error) {
@@ -336,7 +370,7 @@ export async function registerRoutes(
   app.post('/api/stripe/checkout/family-plan', isAuthenticated, async (req: any, res) => {
     try {
       const baseUrl = `${req.protocol}://${req.get('host')}`;
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any).id;
       
       const result = await db.execute(sql`
         SELECT pr.id as price_id
@@ -370,7 +404,7 @@ export async function registerRoutes(
     try {
       const { eventId, eventName } = req.body;
       const baseUrl = `${req.protocol}://${req.get('host')}`;
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any).id;
       
       const result = await db.execute(sql`
         SELECT pr.id as price_id
@@ -528,13 +562,59 @@ export async function registerRoutes(
 
   app.get('/api/transactions', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = (req.user as any).id;
       const limit = parseInt(req.query.limit as string) || 50;
       const transactions = await storage.getTransactionsByUser(userId, limit);
       res.json(transactions);
     } catch (error) {
       console.error('Error fetching transactions:', error);
       res.status(500).json({ error: 'Failed to fetch transactions' });
+    }
+  });
+
+  // ===== MEMORY ENTRIES =====
+  app.get('/api/funds/:fundId/memory', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      if (fund.userId !== (req.user as any).id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const entries = await storage.getMemoryEntriesByFund(req.params.fundId);
+      res.json(entries);
+    } catch (error) {
+      console.error('Error fetching memory entries:', error);
+      res.status(500).json({ error: 'Failed to fetch memory entries' });
+    }
+  });
+
+  app.post('/api/funds/:fundId/memory', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      if (fund.userId !== (req.user as any).id) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const data = insertMemoryEntrySchema.parse({ ...req.body, fundId: req.params.fundId });
+      const entry = await storage.createMemoryEntry(data);
+      res.status(201).json(entry);
+    } catch (error) {
+      console.error('Error creating memory entry:', error);
+      res.status(500).json({ error: 'Failed to create memory entry' });
+    }
+  });
+
+  app.delete('/api/memory/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteMemoryEntry(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting memory entry:', error);
+      res.status(500).json({ error: 'Failed to delete memory entry' });
     }
   });
 

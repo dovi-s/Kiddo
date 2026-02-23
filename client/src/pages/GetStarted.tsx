@@ -6,6 +6,7 @@ import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 import { useCreateFund } from "@/hooks/use-funds";
+import { useAuth } from "@/hooks/use-auth";
 import { Mascot } from "@/components/ui/mascot";
 
 type AccountType = "parent" | "adult" | null;
@@ -38,7 +39,9 @@ const fadeUp = {
 export default function GetStarted() {
   const [, setLocation] = useLocation();
   const createFundMutation = useCreateFund();
+  const { register, isAuthenticated } = useAuth();
   const [step, setStep] = useState<Step>("hook");
+  const [authError, setAuthError] = useState("");
   const [accountType, setAccountType] = useState<AccountType>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -78,13 +81,25 @@ export default function GetStarted() {
     return true;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     haptic('selection');
     if (step === "hook") setStep("choose");
     else if (step === "choose") setStep("personalize");
     else if (step === "personalize") setStep("projection");
     else if (step === "projection") setStep("account");
     else if (step === "account") {
+      if (!isAuthenticated) {
+        setIsSubmitting(true);
+        setAuthError("");
+        try {
+          await register({ email, password });
+        } catch (err: any) {
+          setAuthError(err.message || "Failed to create account");
+          setIsSubmitting(false);
+          return;
+        }
+        setIsSubmitting(false);
+      }
       if (accountType === "parent") {
         if (recipientName) {
           setChildren([{ id: "1", name: recipientName, relationship: "Parent" }]);
@@ -107,16 +122,18 @@ export default function GetStarted() {
         const childrenToCreate = children.filter(c => c.name.trim());
         for (const child of childrenToCreate) {
           await createFundMutation.mutateAsync({
-            name: child.name.trim(),
-            slug: child.name.trim().toLowerCase().replace(/\s+/g, '-'),
+            name: `${child.name.trim()}'s Future`,
+            slug: child.name.trim().toLowerCase().replace(/\s+/g, '-') + '-fund',
             accountType: "UTMA",
             status: "draft",
+            recipientFirstName: child.name.trim(),
+            recipientRelation: child.relationship || "Parent",
           });
         }
       } else {
         await createFundMutation.mutateAsync({
-          name: recipientName.trim() || "My Fund",
-          slug: (recipientName.trim() || "my-fund").toLowerCase().replace(/\s+/g, '-'),
+          name: recipientName.trim() ? `${recipientName.trim()}'s Fund` : "My Fund",
+          slug: (recipientName.trim() || "my-fund").toLowerCase().replace(/\s+/g, '-') + '-fund',
           accountType: "Individual",
           status: "draft",
         });
@@ -623,6 +640,16 @@ export default function GetStarted() {
                     : "Secure your fund with an account"}
                 </p>
               </div>
+
+              {authError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-sm text-destructive text-center"
+                >
+                  {authError}
+                </motion.div>
+              )}
 
               <motion.div 
                 variants={staggerChildren}

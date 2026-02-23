@@ -53,7 +53,7 @@ export default function Events() {
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      window.location.href = "/api/login";
+      window.location.href = "/login";
     }
   }, [authLoading, isAuthenticated]);
 

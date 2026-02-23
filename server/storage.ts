@@ -1,5 +1,5 @@
 import { 
-  funds, events, holdings, gifts, activities, subscriptions, transactions,
+  funds, events, holdings, gifts, activities, subscriptions, transactions, memoryEntries,
   type Fund, type InsertFund,
   type Event, type InsertEvent,
   type Holding, type InsertHolding,
@@ -7,6 +7,7 @@ import {
   type Activity, type InsertActivity,
   type Subscription, type InsertSubscription,
   type Transaction, type InsertTransaction,
+  type MemoryEntry, type InsertMemoryEntry,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -53,6 +54,10 @@ export interface IStorage {
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   getTransactionsByUser(userId: string, limit?: number): Promise<Transaction[]>;
   updateTransaction(id: string, transaction: Partial<InsertTransaction>): Promise<Transaction | undefined>;
+
+  getMemoryEntriesByFund(fundId: string): Promise<MemoryEntry[]>;
+  createMemoryEntry(entry: InsertMemoryEntry): Promise<MemoryEntry>;
+  deleteMemoryEntry(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -220,6 +225,19 @@ export class DatabaseStorage implements IStorage {
   async updateTransaction(id: string, transaction: Partial<InsertTransaction>): Promise<Transaction | undefined> {
     const [updated] = await db.update(transactions).set({ ...transaction, updatedAt: new Date() }).where(eq(transactions.id, id)).returning();
     return updated;
+  }
+
+  async getMemoryEntriesByFund(fundId: string): Promise<MemoryEntry[]> {
+    return db.select().from(memoryEntries).where(eq(memoryEntries.fundId, fundId)).orderBy(desc(memoryEntries.createdAt));
+  }
+
+  async createMemoryEntry(entry: InsertMemoryEntry): Promise<MemoryEntry> {
+    const [created] = await db.insert(memoryEntries).values(entry).returning();
+    return created;
+  }
+
+  async deleteMemoryEntry(id: string): Promise<void> {
+    await db.delete(memoryEntries).where(eq(memoryEntries.id, id));
   }
 }
 

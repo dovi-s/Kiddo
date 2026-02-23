@@ -20,7 +20,10 @@ export const funds = pgTable("funds", {
   contributorCount: integer("contributor_count").notNull().default(0),
   projectedValue: decimal("projected_value", { precision: 12, scale: 2 }).notNull().default("0"),
   yearsUntilMaturity: integer("years_until_maturity"),
+  recipientFirstName: text("recipient_first_name"),
+  recipientRelation: text("recipient_relation"),
   recipientBirthdate: timestamp("recipient_birthdate"),
+  investmentStrategy: text("investment_strategy").default("auto_invest"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -40,6 +43,9 @@ export const events = pgTable("events", {
   slug: text("slug").notNull(),
   description: text("description"),
   imageUrl: text("image_url"),
+  eventType: text("event_type").default("birthday"),
+  theme: text("theme").default("default"),
+  goalAmount: decimal("goal_amount", { precision: 12, scale: 2 }),
   eventDate: timestamp("event_date"),
   isPermanent: boolean("is_permanent").notNull().default(false),
   hasEventPass: boolean("has_event_pass").notNull().default(false),
@@ -90,6 +96,9 @@ export const gifts = pgTable("gifts", {
   koraFee: decimal("kora_fee", { precision: 12, scale: 2 }).notNull().default("0"),
   netAmount: decimal("net_amount", { precision: 12, scale: 2 }).notNull(),
   message: text("message"),
+  photoUrl: text("photo_url"),
+  executionModel: text("execution_model").default("auto_invest"),
+  selectedTicker: text("selected_ticker"),
   status: text("status").notNull().default("pending"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   investedAt: timestamp("invested_at"),
@@ -105,6 +114,24 @@ export const gifts = pgTable("gifts", {
 export const giftsRelations = relations(gifts, ({ one }) => ({
   fund: one(funds, { fields: [gifts.fundId], references: [funds.id] }),
   event: one(events, { fields: [gifts.eventId], references: [events.id] }),
+}));
+
+export const memoryEntries = pgTable("memory_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fundId: varchar("fund_id").notNull().references(() => funds.id),
+  giftId: varchar("gift_id").references(() => gifts.id),
+  type: text("type").notNull().default("gift_message"),
+  content: text("content"),
+  authorName: text("author_name"),
+  photoUrl: text("photo_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("memory_entries_fund_id_idx").on(table.fundId),
+]);
+
+export const memoryEntriesRelations = relations(memoryEntries, ({ one }) => ({
+  fund: one(funds, { fields: [memoryEntries.fundId], references: [funds.id] }),
+  gift: one(gifts, { fields: [memoryEntries.giftId], references: [gifts.id] }),
 }));
 
 export const activities = pgTable("activities", {
@@ -191,6 +218,7 @@ export const insertGiftSchema = createInsertSchema(gifts).omit({ id: true, creat
 export const insertActivitySchema = createInsertSchema(activities).omit({ id: true, createdAt: true });
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertMemoryEntrySchema = createInsertSchema(memoryEntries).omit({ id: true, createdAt: true });
 
 export type InsertFund = z.infer<typeof insertFundSchema>;
 export type Fund = typeof funds.$inferSelect;
@@ -206,3 +234,5 @@ export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
+export type InsertMemoryEntry = z.infer<typeof insertMemoryEntrySchema>;
+export type MemoryEntry = typeof memoryEntries.$inferSelect;

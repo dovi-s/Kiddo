@@ -1,26 +1,30 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight, Lock, Mail, Eye, EyeOff } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ThinkingOrb, GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
+import { useAuth } from "@/hooks/use-auth";
 import brandMark from "@/assets/kora-brand-mark.png";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const { login, isLoggingIn, loginError } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     haptic('medium');
-    setIsLoading(true);
-    setTimeout(() => {
+    try {
+      await login({ email, password });
       haptic('success');
-      setLocation("/dashboard?type=child&name=Mila");
-    }, 800);
+      setLocation("/dashboard");
+    } catch {
+      haptic('error');
+    }
   };
   
   const handleFocus = () => {
@@ -62,47 +66,74 @@ export default function Login() {
             </div>
           </div>
 
+          {loginError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-sm text-destructive text-center"
+              data-testid="text-login-error"
+            >
+              {loginError}
+            </motion.div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-6 space-y-5 gemini-soft-container">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-foreground">
                   Email
                 </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onFocus={handleFocus}
-                  placeholder="you@example.com"
-                  data-testid="input-login-email"
-                  className="w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-premium-sm transition-all duration-150"
-                />
+                <div className="relative">
+                  <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onFocus={handleFocus}
+                    placeholder="you@example.com"
+                    data-testid="input-login-email"
+                    className="w-full h-12 pl-10 pr-4 border-2 border-border/50 rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-premium-sm transition-all duration-150"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-foreground">
                   Password
                 </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onFocus={handleFocus}
-                  placeholder="Your password"
-                  data-testid="input-login-password"
-                  className="w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-premium-sm transition-all duration-150"
-                />
+                <div className="relative">
+                  <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onFocus={handleFocus}
+                    placeholder="Your password"
+                    data-testid="input-login-password"
+                    className="w-full h-12 pl-10 pr-12 border-2 border-border/50 rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 shadow-premium-sm transition-all duration-150"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    data-testid="button-toggle-password"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
             </div>
 
             <motion.button
               type="submit"
-              disabled={!email || !password || isLoading}
+              disabled={!email || !password || isLoggingIn}
               data-testid="button-login"
               whileTap={{ scale: 0.97 }}
               className="gemini-btn-shimmer w-full h-14 bg-primary text-primary-foreground text-base font-semibold rounded-2xl hover:bg-primary/90 shadow-premium transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.97]"
             >
-              {isLoading ? (
+              {isLoggingIn ? (
                 <motion.div className="flex items-center gap-3">
                   <ThinkingOrb size={20} variant="processing" />
                   <motion.span
