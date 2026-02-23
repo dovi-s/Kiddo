@@ -185,7 +185,7 @@ export default function Home() {
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
               <Link href="/get-started">
-                <Button size="lg" className="h-14 px-10 text-base" data-testid="button-start-fund" onClick={() => haptic('medium')}>
+                <Button size="lg" className="h-14 px-10 text-base w-full sm:w-52" data-testid="button-start-fund" onClick={() => haptic('medium')}>
                   Start a fund
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -193,7 +193,7 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="lg"
-                className="h-14 px-10 text-base"
+                className="h-14 px-10 text-base w-full sm:w-52"
                 data-testid="button-how-it-works"
                 onClick={() => {
                   haptic('light');
