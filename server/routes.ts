@@ -292,12 +292,16 @@ export async function registerRoutes(
         }
       }
 
-      const data = insertEventSchema.parse({ ...req.body, userId });
+      const { stripeSessionId, ...eventBody } = req.body;
+      const data = insertEventSchema.parse({ ...eventBody, userId });
       const event = await storage.createEvent(data);
       res.status(201).json(event);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating event:', error);
-      res.status(500).json({ error: 'Failed to create event' });
+      if (error?.name === 'ZodError') {
+        return res.status(400).json({ error: 'Invalid event data', message: error.errors?.[0]?.message || 'Validation failed' });
+      }
+      res.status(500).json({ error: 'Failed to create event', message: 'Please try again' });
     }
   });
 

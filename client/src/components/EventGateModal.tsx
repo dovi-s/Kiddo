@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
+import { useToast } from "@/hooks/use-toast";
 import { GradientText } from "@/components/ui/gemini";
 import { Star, Crown, Check, Gift, ArrowRight } from "lucide-react";
 
@@ -12,6 +13,7 @@ interface EventGateModalProps {
 
 export function EventGateModal({ open, onClose }: EventGateModalProps) {
   const [loading, setLoading] = useState<"event-pass" | "family" | null>(null);
+  const { toast } = useToast();
 
   const handleEventPass = async () => {
     setLoading("event-pass");
@@ -24,8 +26,14 @@ export function EventGateModal({ open, onClose }: EventGateModalProps) {
         body: JSON.stringify({}),
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Could not start checkout", description: data.error || "Please try again", variant: "destructive" });
+        setLoading(null);
+      }
     } catch {
+      toast({ title: "Could not start checkout", description: "Please try again", variant: "destructive" });
       setLoading(null);
     }
   };
@@ -40,8 +48,14 @@ export function EventGateModal({ open, onClose }: EventGateModalProps) {
         headers: { "Content-Type": "application/json" },
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Could not start checkout", description: data.error || "Please try again", variant: "destructive" });
+        setLoading(null);
+      }
     } catch {
+      toast({ title: "Could not start checkout", description: "Please try again", variant: "destructive" });
       setLoading(null);
     }
   };

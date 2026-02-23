@@ -22,7 +22,10 @@ async function createEvent(data: Partial<InsertEvent>): Promise<Event> {
     credentials: "include",
     body: JSON.stringify(data),
   });
-  if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+  if (!response.ok) {
+    const err = await response.json().catch(() => null);
+    throw new Error(err?.message || err?.error || `${response.status}: ${response.statusText}`);
+  }
   return response.json();
 }
 
