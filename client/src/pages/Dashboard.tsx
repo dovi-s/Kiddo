@@ -169,12 +169,13 @@ export default function Dashboard() {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/30 md:hidden">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Logo size="sm" className="text-primary" />
-          <div
+          <button
+            onClick={() => setLocation("/settings")}
             className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary"
             data-testid="avatar-user-initial"
           >
             {userInitial}
-          </div>
+          </button>
         </div>
       </header>
 
