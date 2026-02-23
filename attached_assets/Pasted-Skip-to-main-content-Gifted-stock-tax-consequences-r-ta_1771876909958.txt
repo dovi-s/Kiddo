@@ -1,0 +1,291 @@
+Skip to main content
+Gifted stock tax consequences : r/tax
+
+Open menu
+
+
+r/tax
+Search in r/tax
+Log In
+
+Expand user menu
+r/tax icon
+Go to tax
+r/tax
+•
+1y ago
+perchfisher99
+
+Gifted stock tax consequences
+I posted this in investing, but better location:
+
+I had some stocks that had appreciated over the years. I gifted to my daughter, under the annual limit for gifts, and she immediately sold the stocks, and invest the value in CDs. As the CDs mature, she will use the money for living expenses, or re-invest in CDs. The value of the stocks as given and value as sold were the same, so zero appreciation since she took possession. My question: since value had not changed, does she owe any taxes on sale of stocks? As I said, it was under the annual gift limit. Will I owe any? I thought an appreciated gift, under the annual limits, did not have any taxes due. We're in the US.
+
+4
+·
+8
+u/goarmy avatar
+goarmy
+•
+Promoted
+
+Learn skills to stay ahead in your career. It’s Your Time with the U.S. Army Reserve.
+Learn More
+goarmyreserve.com
+Thumbnail image: Learn skills to stay ahead in your career. It’s Your Time with the U.S. Army Reserve.
+Comments Section
+u/wild_b_cat avatar
+wild_b_cat
+•
+1y ago
+Gift taxes aren't the issue. Even if they were over the annual limit you still wouldn't owe gift taxes (just some reporting paperwork).
+
+But gifting stocks doesn't magically wipe out the potential taxes from appreciation. Her cost basis is the same as yours, so she owes capital gain taxes on the full amount of appreciation.
+
+(If she is not subject to the kiddie tax then she will owe based on her own income. If she is then she will owe taxes as if you had sold the stocks yourself. See https://www.irs.gov/taxtopics/tc553).
+
+
+8
+u/AnwarNamtut avatar
+AnwarNamtut
+•
+1y ago
+This is the correct answer. Emphasize again that her basis (cost) is the same as yours.
+
+5
+perchfisher99
+OP
+•
+1y ago
+Thanks. Makes sense. SHe's not subject to kiddie tax, adult of 26. She will have to cash in a CD to pay the tax. Comment Image
+
+
+3
+u/MuddieMaeSuggins avatar
+MuddieMaeSuggins
+•
+1y ago
+Does she have other income? Along with your basis she gets to use the same holding period so her gains are long term. Depending on her total taxable income, her LTCG tax may be $0. 
+
+1
+Redditusero4334950
+•
+1y ago
+Just to add, the holding period transfers with the basis, too, so it sounds like those are long term capital gains that are taxed at the lower rate, and if her income is low enough, that rate is 0%.
+
+
+5
+perchfisher99
+OP
+•
+1y ago
+Thank you for that information.
+
+
+1
+Redditusero4334950
+•
+1y ago
+You're welcome.
+
+2
+[deleted]
+•
+1y ago
+You’re confusing capital gains income with 709 filing obligations.
+
+As said already, her cost basis is your cost basis in the stock and she’ll pay capital gains tax on the difference.
+
+Gifting stock at fair market value under the annual gifting exclusion (19,000 in 2025) will only prevent you from having to file a gift return (Form 709) that reports the gift, it does not curb the tax. Even if you gifted stock valued over 19,000 and subsequently were required to file a 709, she still has to pay the tax. You don’t have to pay any tax because you weren’t the one that sold it, and there are no taxes on gifts up until the lifetime exclusion (roughly 13 million). The 709, had you gifted above the annual exclusion, is purely an informational/ compliance return at this point.
+
+2
+More posts you may like
+How does the IRS even know the original basis on gifted stock?
+r/personalfinance
+•
+1y ago
+How does the IRS even know the original basis on gifted stock?
+201 upvotes · 54 comments
+Tax consequences of gifting appreciated stock to young adult child?
+r/tax icon
+r/tax
+•
+2y ago
+Tax consequences of gifting appreciated stock to young adult child?
+4 upvotes · 28 comments
+Was gifted stock, sold it. Reporting necessary?
+r/tax icon
+r/tax
+•
+1y ago
+Was gifted stock, sold it. Reporting necessary?
+12 comments
+Promoted
+
+sidebar promoted post thumbnail
+Income tax from gifted stocks
+r/tax icon
+r/tax
+•
+8mo ago
+Income tax from gifted stocks
+4 upvotes · 11 comments
+Cost basis when selling stocks that were gifted
+r/tax icon
+r/tax
+•
+1y ago
+Cost basis when selling stocks that were gifted
+3 upvotes · 6 comments
+Taxes on gifted money
+r/askfinance
+•
+2mo ago
+Taxes on gifted money
+149 upvotes · 70 comments
+Step-father gifted thousands of shares of stock to me, what happens next?
+r/personalfinance
+•
+1y ago
+Step-father gifted thousands of shares of stock to me, what happens next?
+313 upvotes · 87 comments
+Fellow college students with stocks beware the kiddie tax. Don’t make my mistake
+r/tax icon
+r/tax
+•
+6d ago
+Fellow college students with stocks beware the kiddie tax. Don’t make my mistake
+104 upvotes · 40 comments
+Promoted
+
+sidebar promoted post thumbnail
+Gifting stocks to parents to sell - Taxes?
+r/tax icon
+r/tax
+•
+1mo ago
+Gifting stocks to parents to sell - Taxes?
+10 upvotes · 9 comments
+Gift tax on assets of negative value
+r/tax icon
+r/tax
+•
+3mo ago
+Gift tax on assets of negative value
+6 upvotes · 11 comments
+Gifting Stocks and avoiding capital gains tax?
+r/personalfinance
+•
+3y ago
+Gifting Stocks and avoiding capital gains tax?
+2 upvotes · 6 comments
+Don’t understand taxes well, am I gonna be screwed?
+r/tax icon
+r/tax
+•
+17d ago
+Don’t understand taxes well, am I gonna be screwed?
+4 upvotes · 5 comments
+Avoiding Capital Gains on Stock by Gifting?
+r/tax icon
+r/tax
+•
+2y ago
+Avoiding Capital Gains on Stock by Gifting?
+5 upvotes · 16 comments
+I Am Getting Absolutely Wrecked In Taxes. Am I Doing Something Wrong?
+r/tax icon
+r/tax
+•
+3mo ago
+I Am Getting Absolutely Wrecked In Taxes. Am I Doing Something Wrong?
+150 comments
+Idk how to do taxes
+r/tax icon
+r/tax
+•
+19d ago
+Idk how to do taxes
+20 comments
+I messed up my taxes really bad...
+r/tax icon
+r/tax
+•
+4d ago
+I messed up my taxes really bad...
+2 upvotes · 12 comments
+Can you give someone stock as a gift?
+r/investing icon
+r/investing
+•
+3mo ago
+Can you give someone stock as a gift?
+7 upvotes · 30 comments
+i made $52k last year and just did my taxes with 1 kid
+r/tax icon
+r/tax
+•
+1mo ago
+i made $52k last year and just did my taxes with 1 kid
+18 comments
+I owe a significant amount of Tax this year almost $22,000
+r/tax icon
+r/tax
+•
+6d ago
+I owe a significant amount of Tax this year almost $22,000
+62 upvotes · 89 comments
+Why are 529s so much more popular than gifting appreciated stock?
+r/personalfinance
+•
+2y ago
+Why are 529s so much more popular than gifting appreciated stock?
+54 upvotes · 51 comments
+Do I need to file taxes?
+r/tax icon
+r/tax
+•
+1mo ago
+Do I need to file taxes?
+r/tax - Do I need to file taxes?
+159 upvotes · 135 comments
+I made around $78k this year and gave my parent about $25k to help them financially. Is any of that deductible for tax purposes?
+r/tax icon
+r/tax
+•
+1mo ago
+I made around $78k this year and gave my parent about $25k to help them financially. Is any of that deductible for tax purposes?
+1 upvote · 23 comments
+Inherited stocks, will I be taxed on capital gains if I sell?
+r/personalfinance
+•
+10d ago
+Inherited stocks, will I be taxed on capital gains if I sell?
+21 upvotes · 18 comments
+Life hack : if they fire you now that means you don’t have to work thru the tax season
+r/Accounting icon
+r/Accounting
+•
+18d ago
+Life hack : if they fire you now that means you don’t have to work thru the tax season
+234 upvotes · 8 comments
+Capital Gains, any smart way to legally offset them?
+r/tax icon
+r/tax
+•
+4mo ago
+Capital Gains, any smart way to legally offset them?
+77 comments
+Top Posts
+Reddit
+reReddit: Top posts of February 6, 2025
+Reddit
+reReddit: Top posts of February 2025
+Reddit
+reReddit: Top posts of 2025
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.

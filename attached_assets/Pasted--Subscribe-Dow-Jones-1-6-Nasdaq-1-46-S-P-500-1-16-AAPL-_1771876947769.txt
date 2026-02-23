@@ -1,0 +1,286 @@
+
+Subscribe
+
+Dow Jones
+-1.6%
+Nasdaq
+-1.46%
+S&P 500
+-1.16%
+AAPL
++0.7%
+NVDA
++0.42%
+MSFT
+-3.36%
+AMZN
+-2.74%
+META
+-2.66%
+TSLA
+-3.87%
+Dow Jones
+-1.6%
+Nasdaq
+-1.46%
+S&P 500
+-1.16%
+AAPL
++0.7%
+NVDA
++0.42%
+MSFT
+-3.36%
+AMZN
+-2.74%
+META
+-2.66%
+TSLA
+-3.87%
+
+Search Business Insider
+
+
+Business
+
+Tech
+
+Markets
+
+Lifestyle
+
+Politics
+
+Reviews
+
+Video
+Subscribe
+Log in
+Newsletters
+US edition
+Get the app
+Finance
+Robinhood, Fidelity, and Charles Schwab are racing to give customers the chance to buy $1 slices of stocks. We talked to a dozen insiders about who wins, who loses, and what it says about trading today.
+By Rebecca Ungarino and Dan DeFrancesco
+wall street 2030 4x3
+
+At a moment when every last tool, feature, and asset class offering is a differentiator in an industry where price no longer is, brokerages have been forced to plow resources into building out fractional share trading.Samantha Lee/Business Insider
+Feb 21, 2020, 12:13 PM ET
+
+Share
+SaveSaved
+The rise of self-directed fractional-share trading is a product of the fiercely competitive, margin-pressured environment that startup and legacy brokerages alike are operating in today.
+Players like Robinhood, Fidelity, and Charles Schwab have raced to announce their own offerings — marketed largely at customers still building up wealth — in recent months, or have hinted at launches it in the press. 
+At a moment when every last bell and whistle is a differentiator in a zero-commission moment, brokerages have been plowing resources into building out fractional-share trading. 
+We spoke with nearly a dozen insiders and execs about the feature's rise in mainstream retail investing to understand who wins, who loses, and what it says about the industry today.
+Visit BI Prime for more stories.
+Life moves fast in the discount brokerage universe, where every announcement and product launch sparks a new arms race.
+
+The chain reactions can be swift. Interactive Brokers said last September it would roll out a zero-commission trading offering for US stocks and ETFs, a move that's eaten into the firm's revenue. Competitors raced to match it. 
+
+Rivals came out with their own announcements in the days that followed, spurring sharp share price moves in brokerage names. It ultimately upended the industry, culminating in Charles Schwab's announcement weeks later that it planned to buy TD Ameritrade in the largest brokerage deal on record.
+
+A similar domino effect is playing out across the business, with buzz and fast follows around another move aimed at a generation of customers still building up wealth: fractional-share trading.
+
+At a time when some of the most popular stocks are at all-time highs, fractional-share trading allows customer exposure to companies they might not typically be able to afford whole shares in. Consider shares of Amazon, trading this week north of $2,000.
+
+First Trade
+Your daily guide to what's moving markets — straight to your inbox.
+
+Enter your email
+Sign up
+To be sure, trading stock slivers has been available in different forms for years, mainly via dividend reinvestment plans (DRIPs.)
+
+But for the first time, firms are executing fractional share trades in real-time, versus a complex trading method that firms typically carried out once a day. Interactive Brokers, Robinhood and Fidelity have launched a real-time offering in recent months.
+
+Charles Schwab, the biggest publicly-traded discount broker, has said its set to introduce fractional shares in the spring, but has not elaborated on its plans. 
+
+But unlike zero-commission trades, this battle didn't involve just a price tag — it adds a layer of complexity for the brokerages and potential added costs to capture what are by nature relatively small-dollar trades, which could cost customers as little as a dollar.
+
+Vlad Tenev, co-founder and co-CEO of Robinhood
+Vlad Tenev, the cofounder and co-chief executive of Robinhood. Brendan McDermid/Reuters
+"When the client goes in and says, 'I want to buy some Apple,' they're clicking the dollar button instead of shares when they place the trade. They're choosing to transact in that way," Scott Ignall, the head of retail brokerage at Fidelity, told us. "We think it's a really powerful piece of functionality, and we're seeing people vote with their feet on that."
+
+As opposed to axing online trading commissions, trading fractional shares in real-time has required a heavier lift — and spend. Firms are either taking the splitting up of shares on themselves, or working with firms like DriveWealth and Apex Clearing, while big market makers steer clear for the time being. 
+
+We spoke with nearly a dozen insiders and executives about the feature's rise in mainstream retail investing to understand who wins, who loses, and what it says about the industry today. 
+
+Targeting a younger demo 
+Fidelity, the privately held, Boston-based financial services behemoth, said in late January that it would immediately begin rolling out real-time fractional share trading.
+
+In an interview, Fidelity's Ignall said his team began building out the capability in summer 2019, months before it announced zero-commission trades, and that the two features were unrelated. He called the feature a "break-even" operation, adding that the firm does not intend to generate revenue from the fractional trades.
+
+He's now seeing "activity ramp up every day," but declined to provide adoption figures among the firm's 23 million brokerage accounts. Ignall, who joined Fidelity six years ago, said that his team had built out "a very complex order-entry engine" to handle the transactions, and that part of the reason for the launch was attracting younger customers.
+
+"The bar is being reset on digital experiences every day," he said. "The financial services industry needs to keep up with that." 
+
+The bar is being reset on digital experiences every day. The financial services industry needs to keep up with that.
+The feature highlights the lengths to which firms have gone to bring a new, younger set of clients in the door — who might one day pay for premium offerings, like wealth management fees — as stocks hit all-time highs and fewer large companies execute stock splits.
+
+To offer real-time fractional-share trading, some brokerages have chosen to hold an inventory of stocks in order to immediately fill customers' fractional orders. 
+
+Some insiders we spoke with said the process of holding shares of sometimes volatile stocks could pose a risk. Others dismissed any chance of meaningful systematic risk due to the small amount brokerages would likely be holding to meet customer demand. 
+
+Terry Hendershott, a professor at the Haas School of Business at University of California, Berkeley, told Business Insider fractional shares essentially forge diversified portfolios by the very nature of the small stock slivers, therefore the risk taken on by brokers in this kind of offering as rather small.
+
+In his eyes, the high price of stocks and low cost of building out the technology has spurred the feature's spread. 
+
+"It's hard to see how this is going to be a big money-maker right from the get-go," said Hendershott, who previously served as the chair of the Nasdaq's Economic Advisory Board. 
+
+Interactive Brokers, the Connecticut-based brokerage, was the first of its large competitors to roll out the feature when it announced the offering last fall. The firm said that Virtu, the market-making giant, clears some of Interactive Brokers' fractional trades, but figures around that trade volume is not tracked. 
+
+Thomas Peterffy, the founder and chairman of Interactive Brokers.
+Thomas Peterffy, the founder and chairman of Interactive Brokers. Lucas Jackson/Reuters
+"All fractional share orders (like regular orders) get executed at the best price available for the IBKR Pro service level, and are sold to market makers for IBKR Lite client orders," Steve Sanders, the executive vice president of marketing and product development, said in a statement.
+
+Speaking to us about the catalyst for launching fractional shares, chairman and former chief executive Thomas Peterffy told us recently: "Many of the 'FANG' stocks are rising in price and not splitting them, as used to be the convention of Wall Street, when a stock would go much above $100."
+
+"In relatively small portfolios where the owners would like to allocate their money among several issues, they cannot afford to buy whole shares," he added. 
+
+The brokerages' ambitions 
+Robinhood, the California-based trading app popular with younger investors, built out its offering when it brought clearing capabilities in-house. So far, only some users have access to the feature. 
+
+The startup is handling fractional trading in-house as opposed to working with a clearing brokerage, something that sets it apart among fintechs. Robinhood chose to self-clear in October 2018, having previously worked with Apex Clearing, which services some of the most popular fintechs. 
+
+A Robinhood spokesperson declined to comment specifically on the build-out process, or precisely how many users currently have access to the feature. Similarly, Fidelity is also rolling out the capability gradually.  
+
+Abhishek Fatehpuria, a product manager at the $7.6 billion startup, told Business Insider in December that fractional shares was something Robinhood thought about "for a while," but declined to provide additional details. 
+
+The startup isn't the only one that's tight-lipped when it comes to the feature.
+
+Charles Schwab, founder of the eponymous firm, told Bloomberg News in November the firm planned to introduce fractional shares in the spring, according to a video interview published on Wednesday.
+
+A company spokesperson said "we do expect to launch fractional shares soon," though did not provide a firm timeline for launch. 
+
+Charles Schwab
+Charles R. Schwab, his namesake firm's chairman and founder. Chip Somodevilla/Getty
+TD Ameritrade, which Charles Schwab said it would buy for $26 billion in a deal set to close later this year, has given no indication it will jump into the fractional-shares waters either. A spokesperson said that "we are always evaluating new products and services based on client feedback."
+
+E-Trade, the smallest of the major discount brokerages by market capitalization, does not currently offer it. A company spokesperson did not respond to a request for comment around whether it was a product in the works.
+
+Brokers have been cagey about many fronts on the broker wars, given the intensely competitive nature of the business. 
+
+For fintechs, an opportunity in real-time trades 
+Before larger firms and Robinhood embraced the feature, some smaller fintechs had tacked it on as an offering. M1, Stash, SoFi, and Square's Cash App are among the fintechs that let users trade fractional shares, though not all offer real-time trading.
+
+But the concept of executing fractional share trades in real-time is pretty new. Traditionally, fractional trading wasn't done in real-time but instead handled in batches. 
+
+A fintech would collect orders for fractional shares throughout the day, choosing a specific time to round up to the nearest whole number and put in an order.
+
+Once executed, the orders would be broken up on the back-end. 
+
+The push for real-time fractional share trading, meaning an order is executed immediately when a customer puts it in, has led to more complexity. In order to fill a fractional share in real-time, a firm must hold an inventory of stocks, essentially creating a market.  
+
+The players powering fractional trades
+But not every firm is willing or capable of taking on that task itself — that's where a player like DriveWealth comes in.
+
+The fintech, which is backed by Point72 Ventures and Route 66 Ventures, serves as a clearing brokerage for fintechs in the wealth management space. It's also zeroed in on the rise of fractional share trading in real time, touting the service atop its website.
+
+John Shammas, chief product officer at DriveWealth, told Business Insider that more than 90% of its client base, which includes MoneyLion, Cash App, and Revolut, consistently trades in fractional shares. 
+
+Shammas said the firm has an internal tool called "the fracker" that balances DriveWealth's inventory of stocks to ensure they hold as little as possible while still being able to manage customer's orders throughout the day.
+
+"We've seen partners try to do it themselves in the past on platforms, and besides the risk it's also just messy having to manage all of that, buying and selling the inventory count themselves," he told Business Insider. "So that's what we really wanted to automate."
+
+DriveWealth tries to keep its inventory at about one share for each stock throughout the day, though Shammas said those numbers tend to rise early in the trading day when activity is high. The fracker can allow DriveWealth to build up its inventory if it wanted to, but for now Shammas said the goal is to minimize risk.
+
+There's probably a point where there is so much volume where it's a real revenue line item for us.
+While offering fractional share trading is an important feature for DriveWealth's customers, Shammas said the revenue generated via actually trading in a fractional way is "pretty insignificant" — but that could change as business grows.
+
+"There's probably a point where there is so much volume where it's a real revenue line item for us," he said.
+
+DriveWealth isn't alone in seeing opportunity in offering fractional-share trading for fintechs.
+
+Apex, which has worked with Betterment and Stash, has created its own offering. Bill Capuzzi, the chief executive of Apex, told Business Insider the company spent the better half of 2019 working on offering fractional shares in real-time. 
+
+Part of that was understanding how to manage an inventory of fractional shares in real-time. Apex also worked on being able to offer it through an application programming interface (API), Capuzzi said, which is the method that most fintechs prefer to consume information.
+
+Capuzzi said building out a real-time fractional shares offering was a product of customer desire as opposed to any potential revenue opportunity. Ideally, he'd like to maintain a perfectly hedged book at all times, holding as little inventory as possible.
+
+"There's risk for me, as Apex, to hold those securities because they're obviously dynamic and the prices change," Capuzzi said. "There's so much that goes into being a market-maker and so much risk, that I think it's just dangerous for people to take that on."
+
+Squaring fractional shares and market makers 
+How do the market makers — the large trading firms tasked with providing liquidity to the wider market, particularly for retail customers, along with price discovery and managing risk — fit into the equation? 
+
+It's a difficult question. Nobody knows how much fractional-share trading it would take to make it a worthwhile venture for market makers to pursue trying to build out some type of fractional share service, and none of the brokerages have publicly reported what type of volume they've seen from fractional shares. 
+
+Also, most brokerages and fintechs already have agreements in place to sell their customers' order flow to market makers as opposed to going directly to exchanges. 
+
+Regardless of whether a firm chooses to fractionalize shares or not, most brokerages will still source liquidity from market makers, as has been the case for years. 
+
+"Our goal is to help our brokerage clients create the best possible trading experience for retail investors by providing price improvement and exceptional execution for their orders," Joe Mecane, head of execution services at Citadel Securities, told Business Insider in an email. "We hope that fractional share trading will create even more opportunities for retail investors to participate in the market and we are committed to helping them trade at the best prices when they do."
+
+Stock market
+It's hard to know where market-makers would fit into the equation. Carl Court/GettyImages
+"Fractional share trading is an innovative, market-led solution that makes high-priced stocks accessible to more investors," a Virtu spokesperson said. 
+
+As for the actual exchanges, it seems unlikely they'd be open to allowing stocks to be traded fractionally on their own marketplaces. 
+
+Even Cboe Markets, which is working on pushing through changes around how equity markets are structured, such as the handling of odd-lots — that is, orders of less than 100 shares — doesn't seem open to the idea.
+
+Edward Tilly, the exchange group's chairman, president and chief executive, dismissed listing fractional shares at an event in January that Business Insider attended.
+
+"Buy one share and be protected, rather than breaking them up," Tilly said.  
+
+Read next
+
+Business Insider tells the innovative stories you want to know
+
+Business Insider tells the innovative stories you want to know
+
+Business Insider tells the innovative stories you want to know
+Business Insider
+Download on the App Store
+Get it on Google Play
+Legal & Privacy
+Terms of Service
+Terms of Sale
+Privacy Policy
+Accessibility
+Code of Ethics Policy
+Reprints & Permissions
+Disclaimer
+Advertising Policies
+Conflict of Interest Policy
+Commerce Policy
+Coupons Privacy Policy
+Coupons Terms
+Your Privacy Choices
+Company
+About Us
+Careers
+Advertise With Us
+Contact Us
+News Tips
+Company News
+Awards
+Masthead
+Other
+Sitemap
+Stock quotes by finanzen.net
+Corrections
+Community Guidelines
+AI Use
+International Editions
+AT
+DE
+ES
+JP
+PL
+TW
+Copyright © 2026 Insider Inc. All rights reserved. Registration on or use of this site constitutes acceptance of our Terms of Service and Privacy Policy.
+Insider.com TM Logo
+Insider
+Insider-Inc Logo
+Tech Insider Logo
+Business Insider DE Logo
+Insider Media Logo
+Insider Media Logo
+News Insider Logo
+Silicon Alley Logo
+Jump to
+
+Main content
+Search
+Account
+Jump to top of page

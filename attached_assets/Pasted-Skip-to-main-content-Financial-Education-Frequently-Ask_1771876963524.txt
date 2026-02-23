@@ -1,0 +1,130 @@
+Skip to main content
+
+Financial Education
+Frequently Asked Questions – DriveWealth Migration – Updated June 4, 2025
+Published at 09/06/2025
+Blog
+Financial Education
+Frequently Asked Questions – DriveWealth Migration – Updated June 4, 2025
+Who is DriveWealth?
+-DriveWealth is a global B2B financial technology platform. Their core business is providing Brokerage-as-a-Service, powering the investing and trading experiences for banks, broker dealers, asset managers, digital wallets, and consumer brands.
+
+-For more information on DriveWealth visit: https://www.drivewealth.com/company/who-we-are/
+
+Why is Inter&Co Securities migrating their clearing broker to DriveWealth?
+-Inter&Co Securities evaluated several clearing brokers, and we have decided to move from Apex Clearing to DriveWealth, as they will allow us to effectively grow as a firm.
+
+How will the migration impact my Inter brokerage account?
+-If you would like to continue using Inter&Co Securities, you do not need to take any action with your brokerage account. For the month immediately following the transition to DriveWealth, you will receive two account statements. The first will be from Apex and the second will be from DriveWealth.
+
+-You will be given the opportunity to opt out of the migration, as described further below.
+
+Will trading be halted during the migration?
+-Yes, there will be a trading halt (freeze) for 2-business days during the migration. Customers will not be able to trade on Friday July 11th, 2025 h and Monday July 14th, 2025. Trading will resume on Tuesday July 15th, 2025.
+
+Are there any fees associated with this migration?
+-No, there are no fees or charges for this migration.
+
+How can I opt-out of the migration?
+-Written instructions to opt-out must be sent to securities_optout@inter.co.
+
+-If you choose to ACAT (transfer) your position to another brokerage, we must receive all required documentation by July 1, 2025. If you choose to sell your securities in your investments account, all sell trades (liquidations) must be placed and executed prior to US market close on July 8, 2025 and all cash balances must be withdrawn by 3:00PM ET on July 10th, 2025.
+
+What is the last day that I can trade prior to the 2-day trading halt?
+-Customers can continue regular trading during US market hours until market close on July 10th, 2025. Trading will be frozen on July 11th and July 14th to help facilitate this migration.
+
+When will trading resume at DriveWealth?
+-Trading will resume on Tuesday July 15th, 2025 at US market open.
+
+If I do not want my positions to move to DriveWealth, what are my options?
+-There are two (2) options if you choose not to move your positions to DriveWealth. Please note the respective deadlines for each of the options.
+
+You may choose to sell the securities in your account and withdraw the funds to your linked bank account. All liquidation (sell) trades must be placed and executed prior to US market close on July 8, 2025 and all cash must be withdrawn from your Inter US Investments Account by 3:00PM ET on July 10, 2025. Please note that liquidating your account may have tax consequences. We recommend that you consult with a tax professional before proceeding.
+You may choose to transfer your account to a different brokerage firm. To do this, you will need to initiate an ACAT transfer by contacting the receiving broker. Fees normally associated with an outgoing ACAT will be covered by Inter&Co Securities during this period. Please note that all ACAT requests must be submitted with all required documentation to Inter prior to July 3, 2025. After that date ACATs cannot be facilitated at Apex, but ACATs can be processed at DriveWealth beginning July 15, 2025. Fees for all ACATs will be waived at DriveWealth until July 31, 2025, after that date ACAT fees are $65.
+What is the last day that I can submit my outgoing ACAT (transfer) instructions?
+-All outgoing ACAT requests must be submitted to Inter (Apex Clearing) with all required documentation by July 1st, 2025.
+
+If I choose to liquidate (sell) all my securities/positions, what is the deadline to complete this?
+-You may choose to sell the securities in your account and withdraw the funds to your linked bank account. All liquidation (sell) trades must be placed and executed prior to US market close on July 8, 2025 and all cash must be withdrawn from your Inter US Investments account by 3:00PM ET on July 10, 2025.
+
+Are there any tax implications if I choose to liquidate my positions?
+-Please note that liquidating your account may have tax consequences. We recommend that you consult with a tax professional before proceeding.
+
+https://static.bancointer.com.br/blog-us/author/images/6646b1ae5c98433caf3d5e5e76c6a6ac_interco-logo-orange-blog.png
+Inter
+Communications
+Inter (NASDAQ: INTR) is the pioneer financial super app serving over 40 million consumers across the Americas. The Inter ecosystem offers a broad array of services, including banking, investments, mortgages, credit, gift cards, and cross-border tools. The super app also boasts a dynamic marketplace, linking consumers with shopping discounts, cashback rewards, and exclusive access to marquee events across the globe. The company is expanding rapidly in the United States, as evidenced by its naming rights sponsorship of the Inter&Co Stadium that hosts soccer teams “Orlando City” and “Orlando Pride”. Focused on innovation and captivating member experiences, Inter&Co delivers comprehensive financial and lifestyle solutions to meet the evolving needs of modern consumers.
+
+Access LinkedIn profile
+Did you like it? Share
+X Logo
+INTER & CO PAYMENTS, INC., doing business as Inter (“Inter”), is a financial technology company, a registered money services business (MSB) and a licensed money transmitter, not a bank (NMLS ID #907330). Massachusetts Foreign Transmittal Agency (License #FT114374-100). Rhode Island Currency Transmitter (License # 20203960CT). Click here to access our NMLS licenses.
+
+Banking services are provided by Community Federal Savings Bank (“CFSB”), Member FDIC and deposits are held by CFSB and Wells Fargo Bank, Members FDIC. Inter is not a depository institution, deposits held at CFSB and Wells Fargo are not eligible for FDIC insurance.
+
+The Inter US Checking account is provided by Continental Bank, Member FDIC. Inter US Checking accounts are FDIC-insured up to US$250,000. Inter US Checking account funds are eligible for FDIC insurance up to the allowable limit through Continental Bank, Member FDIC, and other program banks. Coverage is subject to aggregation of all of each account holder's funds held on deposit at Continental Bank or at each of its program banks. Funds generated through Inter's payment processing services are generally available in the Inter US Checking account balance immediately after a payment is processed. Fund availability times may vary due to technical issues. Inter is not a bank. Inter US Checking accounts do not provide monthly paper statements and do not issue physical paper checks. Inter US Checking accounts are not interest-bearing accounts.
+
+FDIC deposit insurance coverage only protects against the failure of an FDIC-insured deposit institution. If you have an Inter US Checking account, up to US$250,000 of your balance may be covered by FDIC insurance on a pass through basis through Continental Bank, Member FDIC, subject to aggregation of the account holder's funds held at Continental Bank and if certain conditions have been met.
+
+Please see your account information to know where your account is maintained. Inter US Checking accounts at Continental Bank are only available for US residents, upon informing a Social Security or Individual Taxpayer Identification number.
+
+For more information regarding your Inter Account, view the Inter Account Agreement at https://us.inter.co/compliance?interandco-account-agreement .
+
+For more information regarding your Inter US Checking account, view the Inter US Checking Account Agreement at https://us.inter.co/compliance?inter-us-checking-account-agreement .
+
+For more information regarding FDIC insurance, please visit the FDIC website at https://www.fdic.gov/resources/deposit-insurance .
+
+To provide you with the Inter Account and the Inter US Checking account, we share your information with CFSB and Continental. View the CFSB Privacy Notice here and the Continental Privacy Notice here for details.
+
+Mortgage services are provided by Inter US Finance, LLC (NMLS ID #1161874), an affiliate of Inter & Co Payments, Inc.
+
+Securities brokerage services are provided by Inter&Co Securities LLC, Member 
+FINRA/
+SIPC
+ , an affiliate of Inter & Co Payments, Inc. and a wholly-owned subsidiary of Inter&Co US Holding. View important information and disclosures here .
+
+If you have any questions or concerns regarding any transaction, please write to us at 501 Brickell Key Drive, Suite 202, Miami, FL 33131, or by email at help@inter.co or by calling us at 1-888-305-7264 .
+
+THIS NEXT SECTION IS APPLICABLE FOR US RESIDENTS ONLY. IF YOU ARE NOT A RESIDENT OF THE UNITED STATES OF AMERICA, PLEASE DISREGARD THIS SECTION.
+
+The Inter US Mastercard® Credit Card is issued by Continental Bank, Member FDIC, pursuant to a license from Mastercard International Incorporated and may be used wherever Mastercard debit is accepted. The Inter US Mastercard® Credit Card is issued by Continental Bank, Member FDIC, pursuant to a license from Mastercard International Incorporated, and may be used wherever Mastercard is accepted. For more information about the Inter US Mastercard credit and debit cards please see the applicable cardholder agreements here .
+
+THIS NEXT SECTION IS APPLICABLE FOR NON-US RESIDENTS ONLY. IF YOU ARE A RESIDENT OF THE UNITED STATES OF AMERICA, PLEASE DISREGARD THIS SECTION.
+
+The Inter Mastercard® International Debit Card (“Global Card”) is issued by the international branch of Banco Inter S.A. in the Cayman Islands, authorized to operate as a category “B” banking institution by the Cayman Islands Monetary Authority – CIMA (“Cayman Branch”), pursuant to a license from Mastercard International Incorporated, linked to a US dollar checking account in the Cayman Islands maintained by the Cayman Branch (“Cayman Account”). For more information about the Cayman Account and the Global Card offered by the Cayman Branch, see the Cayman Account and Global Card Agreement, available here .
+
+The Inter Mastercard® International Credit Card (“Global Credit Card”) is issued by the Cayman Branch, pursuant to a license from Mastercard International Incorporated. For more information about the Global Credit Card offered by the Cayman Branch, see the Global Credit Card Agreement, available here .
+
+The Cayman Account, Global Card and Global Credit Card are offered by the international branch of Banco Inter S.A. in the Cayman Islands, an affiliate of Inter, and are not features of the Global Account nor are they offered by Inter & Co Payments, Inc. The Cayman Account, Global Card and Global Credit Card are not available for U.S. customers.
+
+The Cayman Branch will gather your information in order to offer you the Cayman Account, the Global Card and the Global Credit Card. Personal data will be subject to the Data Protection Act of the Cayman Islands, as well as the General Data Protection Law. To learn more about how we protect your personal data, see our Privacy Policy, available at https://inter.co/politica-de-privacidade/ .
+
+Choose your preferred language (English, Spanish, Portuguese)
+
+USA
+Follow Inter
+
+Terms and Conditions
+CFSB
+Inter&Co Account | Short Form Disclosure
+Inter&Co Account Fees Schedule | Long Form
+Inter&Co Account Agreement
+User Agreement
+E-Sign Consent
+Continental
+Deposit Account & Debit Cardholder Agreement
+Reg CC Notice
+Patriot Act Notice
+Credit Cardholder Agreement
+Fee Schedule
+Privacy Policy
+US State Licensing and Complaint Policy
+LGPD (Brazil)
+Fraud Prevention
+Inter&Co Security
+Cookies Policy
+Compliance
+Compliance Declaration
+State Licensing Information
+Cashback Agreement
+Navigated to Frequently Asked Questions – DriveWealth Migration – Updated June 4, 2025

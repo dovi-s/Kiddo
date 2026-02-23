@@ -1,0 +1,112 @@
+Sacra Logo
+Unlock Full Access
+Sign In
+Your Feed
+
+Workspace
+Charts
+Highlights
+Questions
+API
+
+Explore
+Companies
+Categories
+Reports
+
+About
+Features
+Pricing
+Community
+
+Search Sacra for anything
+Home
+ > 
+Companies
+ > 
+DriveWealth
+
+DriveWealth
+
+Follow
+API for embedding U.S. securities trading into consumer and fintech apps
+#fintech
+Valuation
+
+$2.85B
+2025
+
+Funding
+
+$569.63M
+2021
+
+View PDF
+
+Embed PDF
+Details
+Headquarters
+New York, NY
+CEO
+Michael Blaugrund
+Website
+drivewealth.com
+Milestones
+FOUNDING YEAR
+2012
+Listed In
+#fintech
+Overview
+Reports
+Filings
+Valuation & Funding
+
+DriveWealth raised $450 million in a Series D round in August 2021, which valued the company at $2.85 billion. The round was co-led by Insight Partners and Accel, with additional participation from Greyhound Capital, SoftBank Vision Fund 2, and Point72 Ventures.
+
+Since its founding in 2012, the company has raised over $550 million in total funding. Previous rounds included investments from Fidelity International, Base10, FTX, and FlightDeck. The Series D remains DriveWealth's most recent major funding event.
+
+Valuation & Funding History
+
+Detailed breakdown of all valuation events
+
+Date	Event	Valuation	Amount	Price	Status	
+Aug 2021	Series D 	$2.9B	$450.0M	$25.18 	Closed	
+Oct 2020	Series C 	—	$56.7M	$2.33 	Closed	
+Apr 2018	Series B 	—	$21.0M	$1.46 	Closed	
+Apr 2015	Series A 	—	$4.4M	$1.46 	Announced	
+Product
+DriveWealth is a brokerage infrastructure platform that enables apps and financial services to embed U.S. stock trading capabilities via REST APIs. It functions as a stock trading equivalent to Stripe for payments.
+
+The platform manages the entire trading process, from account opening to settlement. Partners use DriveWealth's APIs to offer fractional share trading with minimums as low as 0.00000001 shares. For example, a user can purchase $5 worth of Tesla stock through a partner app, with DriveWealth handling fractional calculations, order routing, clearing, and custody operations in the background.
+
+The system operates through omnibus accounts, where DriveWealth holds securities on behalf of all partner customers while maintaining individual account records. When a user initiates a trade through a partner's interface, the partner sends an API call specifying the symbol, side, and dollar amount. DriveWealth processes this as market orders, executes trades across multiple venues, and provides real-time confirmations via webhooks.
+
+Key features include 24-hour trading capabilities, set to launch in 2025 through OTC Markets' overnight sessions, extensive fractional trading across most U.S. equities, and connectivity to institutional-grade execution management systems. The platform supports market orders, limit orders, fractional orders, and advanced conditional orders through a unified JSON specification.
+
+DriveWealth also offers regulatory infrastructure, including KYC onboarding, tax form generation, dividend processing, and compliance reporting across more than 150 countries. This allows partners to provide white-label brokerage services without requiring their own broker-dealer licenses.
+
+Business Model
+DriveWealth operates as a B2B2C platform, providing brokerage infrastructure to fintech companies, super-apps, and financial institutions that offer trading services to their end users. The company serves as both the technology provider and the regulated broker-dealer, managing clearing and custody internally rather than outsourcing these functions.
+
+The monetization model incorporates multiple revenue streams. DriveWealth charges transaction fees on each trade executed through its platform, allowing partners to set their own commission structures on top of base execution costs. Additional revenue is generated through payment for order flow arrangements, where market makers provide rebates for trade routing. Partners can configure markup schedules, enabling both DriveWealth and the partner to capture the spread between wholesale execution costs and retail pricing.
+
+This vertically integrated model distinguishes DriveWealth from traditional clearing brokers and pure technology vendors. By controlling the entire stack, from APIs to settlement, the company captures more value per transaction while offering partners faster integration and greater control over the user experience. The omnibus account structure aggregates order flow to achieve improved execution prices while maintaining individual customer records and tax reporting.
+
+The global licensing framework allows partners to provide U.S. stock trading internationally without requiring their own regulatory approvals. DriveWealth’s licenses in the U.S., Singapore, and Lithuania enable passportable access to major markets, with the company managing cross-border compliance and foreign exchange conversion.
+
+Competition
+API-first brokerage platforms
+Alpaca is DriveWealth's closest competitor, offering developer-focused APIs for embedding stock trading. The company reports 5 million accounts across more than 200 fintech clients, has achieved self-clearing status, and raised $52 million in Series C funding. Alpaca is introducing 24/5 trading and expanding beyond U.S. securities, competing directly on clearing margins, global coverage, and the speed of feature development.
+
+Atomic Invest targets tax-advantaged accounts and direct indexing for robo-advisors, while Tradier specializes in options trading and Trade-It focuses on media publisher distribution. These companies provide niche capabilities but do not match DriveWealth's global reach or comprehensive clearing infrastructure.
+
+Vertically integrated clearing powerhouses
+Apex Fintech Solutions, a major clearing broker serving 13–20 million accounts, offers modular APIs for partners. In 2024, Apex plans to launch a patented Stock-Rewards API, which could enable bundling loyalty programs with custody services and challenge DriveWealth in enterprise retailer partnerships. Apex's scale supports lower clearing fees, though its legacy technology stack often results in longer integration timelines.
+
+Interactive Brokers provides IBKR Lite for partners, offering access to 135 global markets along with advanced margin and derivatives capabilities. However, its API onboarding process is slower, and its technology stack is less modern compared to DriveWealth's developer-first approach. Traditional firms like BNY Pershing and Schwab's Embedded offering compete through balance sheet strength and established relationships with large financial institutions.
+
+Regional embedded investing enablers
+Regional competitors such as Velexa and WealthKernel in the UK, Bitpanda Technology Solutions in Europe, and various platforms in Asia are replicating DriveWealth's model within local regulatory frameworks. These companies leverage deeper knowledge of local markets, compliance with regional regulations like MiFID II, and established relationships with domestic financial institutions.
+
+While DriveWealth's global platform appeals to multinational companies seeking consolidated vendor relationships, regional providers often deliver more tailored solutions for specific market conditions and regulatory environments.
+

@@ -1,0 +1,153 @@
+Skip to content
+
+Investopedia
+Live
+Top Stories
+Average Retirement Savings at 59
+Average Credit Score in Your 40s and 50s
+Compare Your Net Worth to Others Making Similar Incomes
+Simple Ways to Earn Money With ChatGPT
+
+Gifted Stock: Definition, Process, and Tax Implications
+By Julia Kagan Updated February 25, 2025
+Reviewed by Ebony Howard
+Fact checked by Vikki Velasquez
+Gifted Stock: Transferring the ownership of company shares from one person or entity to another person or entity.
+Investopedia / Joules Garcia
+What Is Gifted Stock?
+Gifted stock refers to a stock that is given to someone as a gift. In other words, it’s the transfer of ownership of stock shares from one person or entity to another.
+
+Gifting company shares with the potential to grow significantly in value can make a nice present, though it’s worth bearing in mind that this generous act may be subject to gift tax and result in a hefty tax bill for the recipient when it’s time to sell.
+
+Because stocks can grow or decline in value, it’s important to know how they are viewed by the Internal Revenue Service (IRS) and what you need to do if you’re given stock as a gift.
+
+Key Takeaways
+Gifted stock is stock given from one person or entity to another.
+Gifting stocks can provide tax advantages, though it’s worth speaking with an advisor first.
+Gifted stocks may be transferred using a brokerage account or through an estate planning strategy that involves completing a transfer on death (TOD) agreement.
+The cost basis for taxing gifted stocks depends on their fair market value at the time of gifting and sale.
+The IRS imposes caps on the value of stocks that can be gifted without being reported or taxed.
+Get personalized, AI-powered answers built on 27+ years of trusted expertise.
+
+Ask anything to get started...
+ASK
+Understanding Gifted Stock
+Investors keen to share their wealth might wonder whether it makes more sense to gift stock or sell it and give away the proceeds. The answer generally depends on the value of the stock being given and the tax status and bracket of both the recipient and the donor.
+
+Tax Considerations
+In 2025, the IRS allows you to give up to $19,000 per person without reporting it and paying gift taxes, up from $18,000 in 2024.1 It’s worth remembering, though, that this tax—which can range from 18% to 40% on a sliding scale, depending on how big the taxable gift is—only needs to be paid when gifts exceed the lifetime gift tax exemption ($13.61 million in 2024 and $13.99 million in 2025).23 There is no limit on gifts between spouses.4
+
+Fast Fact
+Gifts can include physical assets, stocks, bonds, cash, or anything else of value. The lifetime gift tax exclusion is the value of gifts you can give in total over your lifetime.
+
+Capital gains tax liabilities must also be considered. If you were to sell the stock and gift the proceeds, you would need to report any capital gains and pay the tax after accounting for its cost basis. In this case, it may be worth gifting the stock, particularly if the recipient has a lower tax rate.5
+
+When gifting stock, the recipient assumes your cost basis and holding period. In other words, if you were to give a friend $12,000 worth of stock purchased five years earlier for $7,000, they would be liable to pay long-term capital gains taxes on a profit of $5,000 should they sell straightaway.6
+
+Losses are treated slightly differently, but only if the fair market value (FMV) at the date of transfer was less than the donor’s basis. In that case, if the stock depreciates after it was gifted and the recipient decides to sell it, then the FMV on the date of the transfer is used to determine the loss.78
+
+The same rules apply if this gift is going to a child. In theory, your child would pay less in capital gains taxes when disposing of the gifted stock, assuming they earn little to no income. However, it’s worth bearing in mind that the kiddie tax means that anything over $2,600 could be taxed at the guardian’s tax rate.9
+
+Fast Fact
+Inherited stock offers greater tax advantages than regular gifted securities. All inherited stock is treated as long-term property, and the recipient’s cost basis is the market value at the date of death—rather than the price of the original purchase.10
+
+Process of Transferring Gifted Stock
+The process involved in transferring stocks to another party as a gift will depend on the specific circumstances, but it is typically straightforward. For an immediate transfer of stocks held in a brokerage account, you may only need to fill out a form that changes the name on the ownership title for those stocks.
+
+If the gift is an estate planning strategy, and you want to arrange a transfer that will take effect upon your death, you would complete a transfer on death (TOD) agreement. The person named as the designated beneficiary in the TOD agreement has no claims or rights to that stock as long as you are alive. Until your death, you continue to be the legal owner of that stock and can sell it, close the account, or change the paperwork to name someone else as the beneficiary.11
+
+Depending on the policies of your brokerage firm, you may also be able to name an alternate beneficiary. If you own the stocks with another person, such as your spouse, then the TOD agreement generally would only apply once both owners of the joint account have died.
+
+This TOD process is similar to a payable on death (POD) process used with bank accounts. Setting up this arrangement in advance will make it much easier for the intended recipient to take ownership of the stocks quickly upon your death.
+
+Example of Gifted Stock
+To further explain the concept of assuming the cost basis of gifted stocks, imagine your father bought 100 shares of stock and gave them to you 20 years later. If the fair market value was more than the original basis when you received it, you use the original basis when you sell it.
+
+So, if your father bought the stocks for $25 per share and gave them to you when they were valued at $30 per share, you would use the original basis of $25 when you sell.
+
+If the fair market value when you received it was less than the original basis, you would:
+
+Use the original cost basis if you sell it for more than the original basis.
+Use the selling price as the basis if you sell it for less than the original basis but more than fair market value at the time of the gift.
+Use the fair market value at the time of the gift if you sell it for less than that value.
+So, say you received the same 100 stocks with an original basis of $25 per share when they were worth $15. If the price rose to $30 per share and you sold them, you would use the original basis of $25 per share because you received it for less than the original basis but sold it for more.
+
+If you sold them for $20 per share, you would use that as the basis because it was less than the original basis but more than the fair market value at the time you received it.
+
+Finally, if you sold them for $10 per share, you would use $15 as the basis because you received and sold them for less than the original basis.
+
+What Is the Difference Between Gifted Stock and Inherited Stock?
+Inherited stock, unlike gifted securities, does not take the original purchase value into account for tax purposes. When you inherit stock, its cost basis is the stock’s market value at the date of the donor’s death, which usually results in a lower tax bill.10
+
+How Long Should Gifted Stock Be Held to Avoid Short-Term Capital Gains Tax?
+When you are gifted stock, the holding period includes the time the donor owned the stock. In other words, should you wish to sell immediately, you won’t be liable to pay higher short-term capital gains tax, provided that the person who gifted the stock bought it at least one year beforehand.57
+
+How Is Gifted Stock Taxed When Sold?
+Tax liability depends on both the holding period and the cost basis. If the gifted stock increases in value, your eventual gain when selling will be taxed based on the original purchase price of the shares. However, if the shares depreciate after the gift was made and you decide to sell them, then the value of the stock on the date when it was gifted to you will determine the weight of your capital loss—but only if the fair market value (FMV) at the date of transfer was less than the donor’s basis.78
+
+The Bottom Line
+Gifted stock refers to stock given from one person or entity to another as a gift. It can provide tax advantages, but it’s worth speaking with an advisor first to avoid gift tax and a large tax bill for the recipient when it’s time to sell.
+
+Correction—Feb. 7, 2025: This article has been corrected to state that losses on gifted stock are treated differently for capital gains tax purposes only if the fair market value at the date of transfer was less than the donor’s basis.
+
+Article Sources
+Read more 
+Personal Finance
+ 
+Wealth
+ 
+Trust & Estate Planning
+Partner Links
+Related Articles
+Trust
+Declaration of Trust Explained for Estate Planning Success
+
+Understanding the Role of an Executrix in Estate Planning
+Business Chart Showing Financial Success at the Stock Market
+How To Invest Like An Endowment
+Woman pointing to a heart symbol.
+Personal Trusts Explained: Benefits and Functions
+Mature financial advisor planning with young couple in an office setting.
+The Average Inheritance Revealed: Here’s How Much Most People Receive
+Image of businesspeople’s hands with ballpoint pens, writing on papers while planning work
+Administration Bonds Explained: Ensuring Estate Integrity
+Advisor talking with couple
+Understanding the Uniform Simultaneous Death Act
+Close-up of a person signing a testamentary will.
+Testamentary Wills Explained: Definition, Process, and Importance
+High School Students Listen to Teacher in Classroom
+Irrevocable Income-Only Trust Explained: Benefits and Usage
+
+Discretionary Beneficiary: Definition, Features, and Financial Impact
+Financial advisor consulting with young couple in living room
+Legacy Planning: A Comprehensive Guide to Protecting Your Estate
+A woman working on a laptop while being kissed by a child holding a phone
+Discover If Your Wealth Is Greater Than You Think with These Tips
+Cash
+Decamillionaire: Definition and Wealth Significance
+Person using a laptop outdoors on a sunny day
+Are You Wealthier Than You Think? How To Accurately Assess Your Financial Standing
+A woman looks out the window of a car while smiling
+Becoming a Millionaire Before 30: How Often Does This Happen?
+A man standing on top of a car surrounded by people in a field
+Bad Bunny Just Made Super Bowl History—Here's the Net Worth Behind the Performance
+Investopedia
+Newsletter Sign Up
+Follow Us
+News
+Investing
+Simulator
+Banking
+Personal Finance
+Economy
+Reviews
+Dictionary
+About Us
+Editorial Process
+Careers
+Contact Us
+Privacy Policy
+Terms of Service
+Advertise
+Your Privacy Choices   
+Investopedia is part of the People Inc. publishing family.
