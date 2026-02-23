@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { Gift, TrendingUp, Shield, Lock, Users, ArrowRight, Check, Star, Zap, Calculator } from "lucide-react";
+import { Gift, TrendingUp, Shield, Lock, Users, ArrowRight, Check, Star, Zap, Calculator, MousePointerClick, Share2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
@@ -241,44 +241,79 @@ export default function Home() {
             <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight" data-testid="text-how-heading">
               How it <GradientText>works</GradientText>
             </h2>
+            <p className="text-muted-foreground mt-4 max-w-xl mx-auto">
+              Simple for parents. Even simpler for gift-givers.
+            </p>
           </FadeIn>
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            {[
-              {
-                icon: Gift,
-                step: "1",
-                title: "Create a Fund",
-                desc: "For your child, yourself, or anyone. Takes less than two minutes to get started.",
-              },
-              {
-                icon: Users,
-                step: "2",
-                title: "Share the Link",
-                desc: "Send it at birthdays, baby showers, holidays. Givers contribute without needing an account.",
-              },
-              {
-                icon: TrendingUp,
-                step: "3",
-                title: "Gifts Grow",
-                desc: "Contributions are auto-invested and compound over time. Watch the fund grow year after year.",
-              },
-            ].map((item, i) => (
-              <FadeIn key={item.step} delay={i * 0.15}>
-                <motion.div
-                  className="bg-card rounded-2xl shadow-premium-sm p-8 text-center h-full"
-                  whileHover={{ y: -4 }}
-                  transition={{ duration: 0.2 }}
-                  data-testid={`card-step-${item.step}`}
-                >
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
-                    <item.icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <div className="text-xs font-medium text-primary mb-2">Step {item.step}</div>
-                  <h3 className="font-heading text-xl font-semibold text-foreground mb-3">{item.title}</h3>
-                  <p className="text-muted-foreground leading-relaxed text-sm">{item.desc}</p>
-                </motion.div>
+
+          <div className="max-w-5xl mx-auto space-y-16">
+            <div>
+              <FadeIn className="flex items-center gap-3 mb-8">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <h3 className="font-heading text-xl md:text-2xl font-semibold text-foreground" data-testid="text-parents-heading">For Parents</h3>
               </FadeIn>
-            ))}
+              <div className="grid md:grid-cols-3 gap-6">
+                {[
+                  { icon: Gift, title: "Create a Fund", desc: "Set up an investment fund for your child in under two minutes. No SSN needed upfront." },
+                  { icon: Share2, title: "Share the Link", desc: "Send it to family and friends, or display a QR code at your event." },
+                  { icon: TrendingUp, title: "Gifts Invest Automatically", desc: "Every contribution buys real investments. Watch it grow over time." },
+                ].map((item, i) => (
+                  <FadeIn key={item.title} delay={i * 0.12}>
+                    <motion.div
+                      className="bg-card rounded-2xl shadow-premium-sm p-7 h-full"
+                      whileHover={{ y: -4 }}
+                      transition={{ duration: 0.2 }}
+                      data-testid={`card-parent-step-${i + 1}`}
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <item.icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <span className="text-xs font-semibold text-primary">Step {i + 1}</span>
+                      </div>
+                      <h4 className="font-heading text-lg font-semibold text-foreground mb-2">{item.title}</h4>
+                      <p className="text-muted-foreground leading-relaxed text-sm">{item.desc}</p>
+                    </motion.div>
+                  </FadeIn>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <FadeIn className="flex items-center gap-3 mb-8">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+                  <Gift className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <h3 className="font-heading text-xl md:text-2xl font-semibold text-foreground" data-testid="text-givers-heading">For Gift-Givers</h3>
+              </FadeIn>
+              <div className="grid md:grid-cols-3 gap-6">
+                {[
+                  { icon: MousePointerClick, title: "Tap the Link", desc: "Open the link you received. No account or app download needed." },
+                  { icon: Gift, title: "Pick an Amount", desc: "Choose how much to give. Pay with Apple Pay, Google Pay, card, or bank transfer." },
+                  { icon: CheckCircle2, title: "Done in 60 Seconds", desc: "That's it. Your gift is on its way to becoming a real investment." },
+                ].map((item, i) => (
+                  <FadeIn key={item.title} delay={i * 0.12}>
+                    <motion.div
+                      className="bg-card rounded-2xl shadow-premium-sm p-7 h-full"
+                      whileHover={{ y: -4 }}
+                      transition={{ duration: 0.2 }}
+                      data-testid={`card-giver-step-${i + 1}`}
+                    >
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                          <item.icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <span className="text-xs font-semibold text-primary">Step {i + 1}</span>
+                      </div>
+                      <h4 className="font-heading text-lg font-semibold text-foreground mb-2">{item.title}</h4>
+                      <p className="text-muted-foreground leading-relaxed text-sm">{item.desc}</p>
+                    </motion.div>
+                  </FadeIn>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
