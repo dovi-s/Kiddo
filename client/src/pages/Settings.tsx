@@ -6,9 +6,10 @@ import { useAuth } from "@/hooks/use-auth";
 import { haptic } from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { AddFundSheet } from "@/components/AddFundSheet";
 import {
   User, CreditCard, Shield, Eye, EyeOff, LogOut, Check,
-  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet, ChevronLeft
+  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet, ChevronLeft, Plus
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
@@ -26,6 +27,7 @@ export default function Settings() {
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
   const [discoverable, setDiscoverable] = useState(false);
+  const [addFundOpen, setAddFundOpen] = useState(false);
 
   const { data: funds = [] } = useQuery<any[]>({
     queryKey: ["/api/funds"],
@@ -153,13 +155,36 @@ export default function Settings() {
         {/* Your Funds */}
         <SectionCard>
           <div className="p-5 space-y-4">
-            <div className="flex items-center gap-3 mb-2">
-              <Star size={18} className="text-muted-foreground" />
-              <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-funds">Your Funds</h2>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <Star size={18} className="text-muted-foreground" />
+                <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-funds">Your Funds</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setAddFundOpen(true); haptic("selection"); }}
+                className="text-xs gap-1"
+                data-testid="button-add-fund-settings"
+              >
+                <Plus size={14} />
+                Add fund
+              </Button>
             </div>
 
             {funds.length === 0 ? (
-              <p className="text-sm text-muted-foreground" data-testid="text-no-funds">You have not created any funds yet.</p>
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground mb-3" data-testid="text-no-funds">You have not created any funds yet.</p>
+                <Button
+                  variant="outline"
+                  onClick={() => { setAddFundOpen(true); haptic("selection"); }}
+                  className="gap-2"
+                  data-testid="button-create-first-fund"
+                >
+                  <Plus size={16} />
+                  Create your first fund
+                </Button>
+              </div>
             ) : (
               <div className="space-y-3">
                 {funds.map((fund: any) => (
@@ -169,7 +194,7 @@ export default function Settings() {
                     className="flex items-center justify-between p-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
                     onClick={() => {
                       haptic("selection");
-                      navigate(`/fund/${fund.slug || fund.id}`);
+                      navigate(`/dashboard`);
                     }}
                     data-testid={`card-fund-${fund.id}`}
                   >
@@ -427,6 +452,14 @@ export default function Settings() {
         </SectionCard>
 
       </div>
+
+      <AddFundSheet
+        open={addFundOpen}
+        onClose={() => setAddFundOpen(false)}
+        onSuccess={() => {
+          navigate("/dashboard");
+        }}
+      />
     </div>
   );
 }

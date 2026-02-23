@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
+import { AddFundSheet } from "@/components/AddFundSheet";
 import {
   TrendingUp,
   ArrowUp,
@@ -57,6 +58,7 @@ export default function Dashboard() {
   const [selectedFundId, setSelectedFundId] = useState<string>("");
   const [fundPickerOpen, setFundPickerOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [addFundOpen, setAddFundOpen] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -177,45 +179,61 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-6 space-y-6">
-        {funds.length > 1 && (
-          <div className="relative">
-            <button
-              onClick={() => { haptic("selection"); setFundPickerOpen(!fundPickerOpen); }}
-              className="flex items-center gap-2 px-4 py-2.5 bg-card rounded-xl border border-border/50 shadow-premium-sm w-full"
-              data-testid="button-fund-switcher"
-            >
-              <Wallet size={16} className="text-muted-foreground" />
-              <span className="flex-1 text-left font-medium text-sm truncate">
-                {activeFund?.name || "Select fund"}
-              </span>
-              <ChevronDown size={16} className={`text-muted-foreground transition-transform ${fundPickerOpen ? "rotate-180" : ""}`} />
-            </button>
-            {fundPickerOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -4 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="absolute top-full left-0 right-0 mt-1 bg-card rounded-xl border border-border/50 shadow-premium-sm z-50 overflow-hidden"
+        <div className="relative">
+          <div className="flex gap-2">
+            {funds.length > 0 ? (
+              <button
+                onClick={() => { haptic("selection"); if (funds.length > 1) setFundPickerOpen(!fundPickerOpen); }}
+                className="flex items-center gap-2 px-4 py-2.5 bg-card rounded-xl border border-border/50 shadow-premium-sm flex-1 min-w-0"
+                data-testid="button-fund-switcher"
               >
-                {funds.map((fund) => (
-                  <button
-                    key={fund.id}
-                    onClick={() => {
-                      setSelectedFundId(fund.id);
-                      setFundPickerOpen(false);
-                      haptic("selection");
-                    }}
-                    className={`w-full text-left px-4 py-3 text-sm hover:bg-muted/50 transition-colors ${
-                      fund.id === activeFundId ? "bg-primary/5 font-semibold" : ""
-                    }`}
-                    data-testid={`button-select-fund-${fund.id}`}
-                  >
-                    {fund.name}
-                  </button>
-                ))}
-              </motion.div>
+                <Wallet size={16} className="text-muted-foreground flex-shrink-0" />
+                <span className="flex-1 text-left font-medium text-sm truncate">
+                  {activeFund?.name || "Select fund"}
+                </span>
+                {funds.length > 1 && (
+                  <ChevronDown size={16} className={`text-muted-foreground transition-transform flex-shrink-0 ${fundPickerOpen ? "rotate-180" : ""}`} />
+                )}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 px-4 py-2.5 bg-card rounded-xl border border-border/50 shadow-premium-sm flex-1 min-w-0">
+                <Wallet size={16} className="text-muted-foreground flex-shrink-0" />
+                <span className="flex-1 text-left text-sm text-muted-foreground">No funds yet</span>
+              </div>
             )}
+            <button
+              onClick={() => { setAddFundOpen(true); haptic("selection"); }}
+              className="flex items-center justify-center w-10 h-10 bg-card rounded-xl border border-border/50 shadow-premium-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex-shrink-0"
+              data-testid="button-add-fund"
+            >
+              <Plus size={18} />
+            </button>
           </div>
-        )}
+          {fundPickerOpen && funds.length > 1 && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute top-full left-0 right-0 mt-1 bg-card rounded-xl border border-border/50 shadow-premium-sm z-50 overflow-hidden"
+            >
+              {funds.map((fund) => (
+                <button
+                  key={fund.id}
+                  onClick={() => {
+                    setSelectedFundId(fund.id);
+                    setFundPickerOpen(false);
+                    haptic("selection");
+                  }}
+                  className={`w-full text-left px-4 py-3 text-sm hover:bg-muted/50 transition-colors ${
+                    fund.id === activeFundId ? "bg-primary/5 font-semibold" : ""
+                  }`}
+                  data-testid={`button-select-fund-${fund.id}`}
+                >
+                  {fund.name}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </div>
 
         {isPageLoading ? (
           <div className="space-y-4">
@@ -535,6 +553,14 @@ export default function Dashboard() {
           </>
         )}
       </main>
+
+      <AddFundSheet
+        open={addFundOpen}
+        onClose={() => setAddFundOpen(false)}
+        onSuccess={(newFundId) => {
+          if (newFundId) setSelectedFundId(newFundId);
+        }}
+      />
     </div>
   );
 }
