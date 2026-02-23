@@ -8,7 +8,8 @@ interface KoraMarkProps {
 
 function KoraMark({ size = 28, className = "" }: KoraMarkProps) {
   const uid = useId();
-  const id = `kora-${uid}`;
+  const id = `k${uid.replace(/:/g, "")}`;
+
   return (
     <svg
       width={size}
@@ -19,40 +20,57 @@ function KoraMark({ size = 28, className = "" }: KoraMarkProps) {
       aria-label="Kora"
     >
       <defs>
-        <linearGradient id={`${id}-bg`} x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
-          <stop stopColor="hsl(152, 45%, 22%)" />
-          <stop offset="1" stopColor="hsl(152, 45%, 14%)" />
+        <linearGradient
+          id={`${id}gf`}
+          x1="13"
+          y1="24"
+          x2="38"
+          y2="4"
+          gradientUnits="userSpaceOnUse"
+        >
+          <stop offset="0%" stopColor="hsl(152, 45%, 18%)" />
+          <stop offset="45%" stopColor="hsl(152, 45%, 22%)" />
+          <stop offset="100%" stopColor="hsl(36, 72%, 50%)" />
         </linearGradient>
-        <radialGradient id={`${id}-seed`}>
-          <stop stopColor="hsl(40, 85%, 62%)" />
-          <stop offset="1" stopColor="hsl(36, 72%, 50%)" />
-        </radialGradient>
       </defs>
 
-      <circle cx="24" cy="24" r="23" fill={`url(#${id}-bg)`} />
-
-      <circle cx="24" cy="24" r="20.5" stroke="white" strokeWidth="0.35" opacity="0.1" fill="none" />
-
       <path
-        d="M17 13 L17 35"
-        stroke="white"
-        strokeWidth="3"
+        d="M15 5 C14 13, 13 21, 12.5 28 C12 33, 10.5 37, 8.5 39.5 Q6.5 42, 8.5 43 Q11 44.5, 13.5 41 C14.5 39, 15.5 36, 15.5 31"
+        stroke="hsl(152, 45%, 18%)"
+        strokeWidth="3.6"
         strokeLinecap="round"
-      />
-      <path
-        d="M17.5 24 C21 23, 26 18, 32.5 12.5"
-        stroke="white"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <path
-        d="M17.5 24 C21 25, 26 30, 32.5 35.5"
-        stroke="white"
-        strokeWidth="3"
-        strokeLinecap="round"
+        fill="none"
       />
 
-      <circle cx="33.5" cy="11" r="2.4" fill={`url(#${id}-seed)`} />
+      <path
+        d="M13 23 C17 19, 24 12, 36 4"
+        stroke={`url(#${id}gf)`}
+        strokeWidth="3.6"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      <path
+        d="M29 11 L37 3.5 L35.5 13"
+        stroke="hsl(36, 72%, 50%)"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+
+      <path
+        d="M13 23 C17 27, 22 31, 27.5 34"
+        stroke="hsl(152, 45%, 18%)"
+        strokeWidth="3.2"
+        strokeLinecap="round"
+        fill="none"
+      />
+
+      <path
+        d="M36 42.5 C33.5 40, 30 37.5, 30 34.5 C30 32, 31.5 30.5, 33.5 30.5 C35 30.5, 36 32, 36 33.5 C36 32, 37 30.5, 38.5 30.5 C40.5 30.5, 42 32, 42 34.5 C42 37.5, 38.5 40, 36 42.5 Z"
+        fill="hsl(36, 72%, 50%)"
+      />
     </svg>
   );
 }
