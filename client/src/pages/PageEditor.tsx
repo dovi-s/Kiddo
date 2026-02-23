@@ -697,7 +697,7 @@ export default function PageEditor() {
       </div>
 
       {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50">
+      <header className="lg:hidden sticky top-0 z-50 gemini-glass-nav">
         <div className="px-4 h-14 flex items-center justify-between">
           <button 
             onClick={() => window.history.back()}

@@ -67,7 +67,7 @@ export default function Send() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
+      <header className="sticky top-0 z-50 gemini-glass-nav">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/">
             <span className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</span>

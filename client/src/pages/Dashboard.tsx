@@ -15,7 +15,7 @@ import { PageTransition } from "@/components/layout/PageTransition";
 import { springSnappy, springGentle, easeOutExpo, cardTactile, staggerFast, sharePulse, staggerPremium, listItemSpring } from "@/lib/animations";
 import { AnimatedValue } from "@/components/ui/animated-value";
 import { MagneticButton } from "@/components/ui/magnetic-button";
-import { GeminiBalanceGlow, GradientText, ThinkingOrb, GeminiSparkle, SparkleCluster, EnlighteningReveal } from "@/components/ui/gemini";
+import { GeminiBalanceGlow, GradientText, ThinkingOrb, EnlighteningReveal } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds, useFundEvents, useFundHoldings, useFundGifts, useCreateFund } from "@/hooks/use-funds";
@@ -210,7 +210,7 @@ export default function Dashboard() {
     <PageTransition>
       <div className={`min-h-screen bg-background md:pb-0 ${selectedFund.status === 'active' ? 'pb-24' : 'pb-4'}`}>
         <motion.header 
-          className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50 shadow-sm"
+          className="sticky top-0 z-50 gemini-glass-nav"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}

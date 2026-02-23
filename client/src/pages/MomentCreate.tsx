@@ -203,7 +203,7 @@ export default function MomentCreate() {
   return (
     <PageTransition>
       <div className="min-h-screen bg-background pb-28">
-        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50">
+        <header className="sticky top-0 z-50 gemini-glass-nav">
           <div className="max-w-lg mx-auto px-4 h-14 flex items-center">
             <Link href="/events" className="flex items-center gap-2 text-muted-foreground">
               <ArrowLeft size={20} />

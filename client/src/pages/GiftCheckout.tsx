@@ -243,7 +243,7 @@ export default function GiftCheckout() {
   if (isComplete) {
     return (
       <div className="min-h-screen bg-background font-sans">
-        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50">
+        <header className="sticky top-0 z-50 gemini-glass-nav">
           <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
             <Logo size="sm" className="text-primary" />
             <div className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1.5 rounded-full">
@@ -397,7 +397,7 @@ export default function GiftCheckout() {
   return (
     <PageTransition className="min-h-screen bg-background font-sans pb-8">
       <motion.header
-        className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50"
+        className="sticky top-0 z-50 gemini-glass-nav"
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.2, ease: easeOutExpo }}

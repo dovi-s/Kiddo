@@ -28,10 +28,11 @@ export function MobileNav() {
     <motion.nav
       initial={{ y: 100 }}
       animate={{ y: 0 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/98 backdrop-blur-2xl border-t border-border/50 px-2 pb-safe shadow-[0_-4px_20px_-4px_rgba(0,0,0,0.08)]"
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden gemini-glass-nav border-t border-border/40 px-2 pb-safe"
+      style={{ backdropFilter: "blur(24px) saturate(1.4)", WebkitBackdropFilter: "blur(24px) saturate(1.4)" }}
     >
-      <div className="flex items-center justify-around h-20">
+      <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const isActive = location === item.href || 
             (item.href === "/dashboard" && location.startsWith("/dashboard")) ||
@@ -42,47 +43,25 @@ export function MobileNav() {
           return (
             <Link key={item.href} href={item.href}>
               <motion.div
-                whileTap={{ scale: 0.88 }}
-                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ duration: 0.1 }}
                 onClick={() => !isActive && haptic('selection')}
-                className="flex flex-col items-center justify-center py-3 px-5 relative touch-target"
+                className="flex flex-col items-center justify-center py-2 px-5 relative touch-target"
                 data-testid={`nav-${item.label.toLowerCase()}`}
               >
-                <motion.div
-                  layout
-                  className={`p-2 rounded-2xl transition-colors duration-200 ${
-                    isActive ? "bg-primary/12" : ""
-                  }`}
-                >
-                  <motion.div
-                    animate={{ scale: isActive ? 1.08 : 1 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 20 }}
-                  >
-                    <Icon 
-                      className={`w-6 h-6 transition-colors duration-200 ${
-                        isActive ? "text-primary" : "text-muted-foreground"
-                      }`} 
-                      strokeWidth={isActive ? 2.5 : 2}
-                    />
-                  </motion.div>
-                </motion.div>
-                <span className={`text-[11px] mt-1 transition-all duration-200 ${
-                  isActive ? "text-primary font-semibold" : "text-muted-foreground font-medium"
+                <div className="relative">
+                  <Icon 
+                    className={`w-[22px] h-[22px] transition-colors duration-150 ${
+                      isActive ? "text-primary" : "text-muted-foreground"
+                    }`} 
+                    strokeWidth={isActive ? 2.5 : 1.8}
+                  />
+                </div>
+                <span className={`text-[10px] mt-1 transition-colors duration-150 ${
+                  isActive ? "text-primary font-semibold" : "text-muted-foreground"
                 }`}>
                   {item.label}
                 </span>
-                <AnimatePresence>
-                  {isActive && (
-                    <motion.div
-                      layoutId="nav-indicator"
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                      className="absolute -top-0.5 w-1 h-1 rounded-full bg-primary"
-                    />
-                  )}
-                </AnimatePresence>
               </motion.div>
             </Link>
           );

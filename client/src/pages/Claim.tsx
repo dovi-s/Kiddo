@@ -82,7 +82,7 @@ export default function Claim() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-sm border-b border-border">
+      <header className="sticky top-0 z-40 gemini-glass-nav">
         <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <Logo size="md" className="text-foreground" />
           {step !== "success" && (

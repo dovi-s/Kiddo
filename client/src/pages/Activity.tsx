@@ -118,7 +118,7 @@ export default function Activity() {
       <div className="min-h-screen bg-background">
         {/* Header */}
         <motion.header 
-          className="sticky top-0 z-40 bg-background/95 backdrop-blur-xl border-b border-border/50"
+          className="sticky top-0 z-40 gemini-glass-nav"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}

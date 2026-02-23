@@ -7,7 +7,7 @@ import { ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { PageTransition } from "@/components/layout/PageTransition";
-import { GeminiHeroGradient, GradientText, ThinkingOrb, SparkleCluster, GeminiSparkle, EnlighteningReveal } from "@/components/ui/gemini";
+import { GeminiHeroGradient, GradientText, ThinkingOrb, EnlighteningReveal } from "@/components/ui/gemini";
 import { springGentle, easeOutExpo, easeOutBack } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
@@ -183,11 +183,9 @@ export default function Home() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
-              className="text-sm font-medium text-primary dark:text-primary mb-4 inline-flex items-center gap-1.5"
+              className="text-sm font-medium text-primary dark:text-primary mb-4"
             >
-              <GeminiSparkle size={14} color="hsl(152, 45%, 18%)" />
               The gift that grows
-              <GeminiSparkle size={14} color="hsl(36, 72%, 52%)" delay={0.3} />
             </motion.p>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold leading-[1.05] text-foreground tracking-tight mb-6">
               Give a gift they'll still<br className="hidden sm:block" /> have in <GradientText className="text-4xl md:text-5xl lg:text-6xl font-semibold">twenty years</GradientText>.
@@ -208,7 +206,7 @@ export default function Home() {
             >
               <Link href="/get-started">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button size="lg" className="gemini-btn-shimmer h-14 px-10 text-base rounded-2xl shadow-lg shadow-primary/20" data-testid="button-create-fund">
+                  <Button size="lg" className="gemini-btn-shimmer h-14 px-10 text-base shadow-lg shadow-primary/20" style={{ borderRadius: "var(--radius-control)" }} data-testid="button-create-fund">
                     Get started
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -216,7 +214,7 @@ export default function Home() {
               </Link>
               <Link href="/send">
                 <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button variant="outline" size="lg" className="h-14 px-10 text-base rounded-2xl" data-testid="button-send-gift">
+                  <Button variant="outline" size="lg" className="h-14 px-10 text-base border-border/60 text-muted-foreground" style={{ borderRadius: "var(--radius-control)" }} data-testid="button-send-gift">
                     Send stock
                   </Button>
                 </motion.div>
@@ -344,8 +342,8 @@ export default function Home() {
                     whileHover={{ y: -4, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.1)" }}
                     className="p-8 rounded-2xl border bg-background cursor-pointer transition-all h-full gemini-hover-glow"
                   >
-                    <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center text-2xl mb-6 shadow-lg shadow-primary/20">
-                      <svg className="w-7 h-7 text-white" viewBox="0 0 32 32" fill="none">
+                    <div className="h-14 w-14 rounded-full bg-primary flex items-center justify-center mb-6 shadow-lg shadow-primary/20">
+                      <svg className="w-6 h-6 text-primary-foreground" viewBox="0 0 32 32" fill="none">
                         <path d="M8 6v20M8 16l10-10M8 16l10 10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>

@@ -1009,7 +1009,7 @@ export default function Settings() {
     <PageTransition>
       <div className="min-h-screen bg-background pb-28">
         <motion.header 
-          className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border/50"
+          className="sticky top-0 z-50 gemini-glass-nav"
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2, ease: easeOutExpo }}
