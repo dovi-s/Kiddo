@@ -1,5 +1,61 @@
+import { useId } from "react";
 import { Link } from "wouter";
-import logoIcon from "@assets/generated_images/kora_elegant_k_heart_growth_arrow.png";
+
+interface KoraMarkProps {
+  size?: number;
+  className?: string;
+}
+
+function KoraMark({ size = 28, className = "" }: KoraMarkProps) {
+  const uid = useId();
+  const id = `kora-${uid}`;
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      className={className}
+      aria-label="Kora"
+    >
+      <defs>
+        <linearGradient id={`${id}-bg`} x1="8" y1="6" x2="40" y2="42" gradientUnits="userSpaceOnUse">
+          <stop stopColor="hsl(152, 45%, 22%)" />
+          <stop offset="1" stopColor="hsl(152, 45%, 14%)" />
+        </linearGradient>
+        <radialGradient id={`${id}-seed`}>
+          <stop stopColor="hsl(40, 85%, 62%)" />
+          <stop offset="1" stopColor="hsl(36, 72%, 50%)" />
+        </radialGradient>
+      </defs>
+
+      <circle cx="24" cy="24" r="23" fill={`url(#${id}-bg)`} />
+
+      <circle cx="24" cy="24" r="20.5" stroke="white" strokeWidth="0.35" opacity="0.1" fill="none" />
+
+      <path
+        d="M17 13 L17 35"
+        stroke="white"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M17.5 24 C21 23, 26 18, 32.5 12.5"
+        stroke="white"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M17.5 24 C21 25, 26 30, 32.5 35.5"
+        stroke="white"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+
+      <circle cx="33.5" cy="11" r="2.4" fill={`url(#${id}-seed)`} />
+    </svg>
+  );
+}
 
 interface LogoProps {
   size?: "sm" | "md" | "lg";
@@ -10,24 +66,20 @@ interface LogoProps {
 
 export function Logo({ size = "md", showWordmark = true, className = "", linkTo = "/" }: LogoProps) {
   const sizes = {
-    sm: { icon: "w-6 h-6", text: "text-[14px]", gap: "gap-1" },
-    md: { icon: "w-7 h-7", text: "text-[16px]", gap: "gap-1.5" },
-    lg: { icon: "w-9 h-9", text: "text-[20px]", gap: "gap-2" },
+    sm: { icon: 22, text: "text-[14px]", gap: "gap-1.5" },
+    md: { icon: 26, text: "text-[16px]", gap: "gap-1.5" },
+    lg: { icon: 34, text: "text-[20px]", gap: "gap-2" },
   };
 
   const s = sizes[size];
 
   const logoContent = (
     <span className={`flex items-center ${s.gap} ${className}`}>
-      <img 
-        src={logoIcon} 
-        alt="Kora" 
-        className={`${s.icon} object-contain`}
-      />
+      <KoraMark size={s.icon} />
       {showWordmark && (
-        <span 
+        <span
           className={`font-semibold ${s.text} tracking-[0.01em] text-[hsl(var(--kora-evergreen))]`}
-          style={{ 
+          style={{
             fontFeatureSettings: '"kern" 1',
           }}
         >
@@ -49,19 +101,13 @@ export function Logo({ size = "md", showWordmark = true, className = "", linkTo 
 }
 
 export function LogoMark({ size = "md", className = "" }: { size?: "sm" | "md" | "lg"; className?: string }) {
-  const sizes = {
-    sm: { dim: "w-6 h-6" },
-    md: { dim: "w-7 h-7" }, 
-    lg: { dim: "w-9 h-9" },
+  const markSizes = {
+    sm: 22,
+    md: 28,
+    lg: 36,
   };
 
-  const s = sizes[size];
-
-  return (
-    <img 
-      src={logoIcon} 
-      alt="Kora" 
-      className={`${s.dim} object-contain ${className}`}
-    />
-  );
+  return <KoraMark size={markSizes[size]} className={className} />;
 }
+
+export { KoraMark };
