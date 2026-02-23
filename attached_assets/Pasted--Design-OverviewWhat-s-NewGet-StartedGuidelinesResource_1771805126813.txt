@@ -1,0 +1,246 @@
+
+Design
+OverviewWhat’s NewGet StartedGuidelinesResources
+Let’s talk Liquid Glass
+Create the next generation of apps by joining us for an all-new set of interactive design activities.
+
+Let's talk Liquid Glass: New design workshops
+February 25, 2026
+
+In-person session
+Apple Japan, Tokyo
+Japanese
+
+Let's talk Liquid Glass: New design appointments
+February 25-26, 2026
+
+Online appointment
+Tokyo, Tokyo
+Japanese
+
+Liquid Glass 알아보기: 새로운 디자인 오프라인 상담
+February 26-27, 2026
+
+In-person appointment
+Seoul, Seoul
+Korean
+
+Let's talk Liquid Glass: Bring the new design to your app
+March 2, 2026
+
+In-person session
+Hotel Mercure Warszawa Grand, 00-522 Warsaw
+English
+
+Let’s talk Liquid Glass: New design workshop
+March 10-12, 2026
+
+In-person session
+New York City, New York
+English
+
+Let’s talk Liquid Glass: New design workshops
+March 11, 2026
+
+In-person session
+Apple Japan, Tokyo
+Japanese
+
+Let's talk Liquid Glass: Bring the new design to your app
+March 16, 2026
+
+Online session
+Apple (Battersea Power Station), London
+English
+
+Let's talk Liquid Glass: New design appointments
+March 18-19, 2026
+
+Online appointment
+Tokyo, Tokyo
+Japanese
+
+Request a one-on-one design and technology appointment
+April 7-8, 2026
+
+Online appointment
+Tokyo, Tokyo
+Japanese
+
+Request a one-on-one design and technology appointment
+May 12-13, 2026
+
+Online appointment
+Tokyo, Tokyo
+Japanese
+
+View all activities
+
+
+
+What's new
+
+See the new design in action
+Discover how leading apps use Liquid Glass to create immersive experiences.
+
+Explore the gallery
+
+
+Apple Design Resources
+Design apps with official templates for Figma and Sketch, color guides, and more.
+
+Dive into resources
+
+
+Adopt Liquid Glass
+Find out how to bring the new material to your app.
+
+Learn more
+
+
+Explore the new design
+Dive into the incredible new design across Apple platforms.
+
+Visit the Human Interface Guidelines
+
+
+Create with Icon Composer
+Build app icons for the new design, and apply real-time dynamic properties and other effects.
+
+Find out more
+
+
+Discover SF Symbols 7
+Learn about new features like Draw, Variable Draw, New Annotation, and Enhanced Magic Replace.
+
+Learn more
+
+Watch design videos
+Learn about designing great experiences from Apple experts.
+
+Browse all design videos
+
+
+Meet Liquid Glass
+
+Get to know the new design system
+
+Say hello to the new look of app icons
+
+Create icons with Icon Composer
+
+Design foundations from idea to interface
+
+Elevate the design of your iPad app
+Developer stories
+
+Spreading joy with PBJ
+Go behind the scenes with PBJ – The Musical, a charming Apple Design Award winner with impressive production values.
+
+Read more
+
+A collage showing three screens from the air-quality app Paku, each on an Apple Watch.
+The appealing design of CapWords
+The Apple Design Award winner leverages a lot of cutting-edge technology for an app that was partly invented by a 3-year-old.
+
+Read more
+
+
+The retro wonder of Afterplace
+Embark on a retro adventure full of friendly rabbits, sarcastic vending machines, and vintage villains.
+
+Read more
+
+
+Apple Design Awards
+Celebrate innovation, ingenuity, and technical achievement in app and game design.
+
+Meet this year’s winners and finalists
+
+New to design?
+Get started with our Design Pathway, a simple and easy-to-navigate collection of the videos, documentation, and resources you’ll need to start designing great apps and games.
+
+Start the Pathway
+
+Developer Footer
+
+Apple
+DeveloperDesign
+Platforms
+iOS
+iPadOS
+macOS
+tvOS
+visionOS
+watchOS
+Tools
+Swift
+SwiftUI
+Swift Playground
+TestFlight
+Xcode
+Xcode Cloud
+Icon Composer
+SF Symbols
+Topics & Technologies
+Accessibility
+Accessories
+Apple Intelligence
+App Store
+Audio & Video
+Augmented Reality
+Business
+Design
+Distribution
+Education
+Fonts
+Games
+Health & Fitness
+In-App Purchase
+Localization
+Maps & Location
+Machine Learning & AI
+Open Source
+Security
+Safari & Web
+Resources
+Documentation
+Sample Code
+Tutorials
+Downloads
+Forums
+Videos
+Support
+Support Articles
+Contact Us
+Bug Reporting
+System Status
+Account
+Apple Developer
+App Store Connect
+Certificates, IDs, & Profiles
+Feedback Assistant
+Programs
+Apple Developer Program
+Apple Developer Enterprise Program
+App Store Small Business Program
+MFi Program
+Mini Apps Partner Program
+News Partner Program
+Video Partner Program
+Security Bounty Program
+Security Research Device Program
+Events
+Meet with Apple
+Apple Developer Centers
+App Store Awards
+Apple Design Awards
+Apple Developer Academies
+WWDC
+Get the Apple Developer app.
+Light
+Dark
+Auto
+
+English
+Copyright © 2026 Apple Inc. All rights reserved.Terms of Use Privacy Policy Agreements and Guidelines
