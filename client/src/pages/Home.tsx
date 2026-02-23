@@ -478,7 +478,7 @@ export default function Home() {
                 name: "Family",
                 price: "$149",
                 period: "/year",
-                tagline: "For families who gift often",
+                tagline: "One price for the whole family",
                 features: [
                   "Platform fee waived up to $15K/yr",
                   "Unlimited premium event pages",

@@ -207,7 +207,7 @@ export default function Settings() {
                     <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">$149/year</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Platform fee waived on up to $15,000 in gifts per year
+                    One price for your whole family. Platform fee waived on up to $15,000 in gifts per year.
                   </p>
                   <ul className="space-y-1.5 text-sm text-muted-foreground">
                     <li className="flex items-center gap-2">
