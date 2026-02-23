@@ -462,8 +462,7 @@ export default function Home() {
             <img
               src={mascotPlanting}
               alt="Kora mascot planting a coin"
-              className="mx-auto mb-6 w-64 md:w-80 h-auto"
-              style={{ mixBlendMode: "multiply" }}
+              className="mx-auto mb-6 w-48 md:w-64 h-auto drop-shadow-lg"
               data-testid="img-cta-mascot"
             />
             <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight mb-6" data-testid="text-cta-heading">
