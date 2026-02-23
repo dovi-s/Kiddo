@@ -99,7 +99,7 @@ export function RecurringGiftNudge({
             Make your gift go further
           </p>
           <p className="text-xs text-stone-500 mb-3">
-            Set up a recurring gift to {recipientName} — small amounts grow big over time
+            Set up a recurring gift to {recipientName}. Small amounts grow big over time.
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -169,7 +169,7 @@ export function RecurringSetupModal({
         <div className="p-5 border-b border-stone-100">
           <DialogTitle className="font-semibold text-stone-900">Set up recurring gift</DialogTitle>
           <p className="text-sm text-stone-500 mt-0.5">
-            Consistency beats timing — small gifts compound over time
+            Consistency beats timing. Small gifts compound over time.
           </p>
         </div>
 

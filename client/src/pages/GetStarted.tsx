@@ -484,7 +484,7 @@ export default function GetStarted() {
                     >
                       <div className="p-4 rounded-2xl bg-success/10 border border-success/20">
                         <p className="text-sm text-[hsl(var(--kora-evergreen))]">
-                          <span className="font-semibold">{recipientName}'s Future Fund</span> — {accountType === "parent" ? "their" : "your"} personalized investment account
+                          <span className="font-semibold">{recipientName}'s Future Fund</span>, {accountType === "parent" ? "their" : "your"} personalized investment account
                         </p>
                       </div>
                     </motion.div>

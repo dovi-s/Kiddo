@@ -7,6 +7,7 @@ Kora is a gifting platform that transforms traditional gifts into long-term inve
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
+Writing style: Never use em dashes. Use periods, commas, or rewrite the sentence instead. Keep copy personal and grounded in real user experience.
 
 ## System Architecture
 

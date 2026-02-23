@@ -75,19 +75,19 @@ export default function About() {
               </div>
               <div className="space-y-5 text-muted-foreground leading-relaxed">
                 <p>
-                  Someone once told us about a savings bond they received as a kid. Fifteen years later, they cashed it in — and it had barely grown. The intention was beautiful, but the result was disappointing. If that same money had gone into a popular stock or an index fund, the story would have been completely different.
+                  When we were kids, a family member gave us savings bonds. It felt like a really thoughtful gift at the time. Fifteen years later, we finally cashed them in. They had barely grown. The same amount put into almost any popular stock or index fund would have been worth so much more.
                 </p>
                 <p>
-                  That stuck with us. Good intentions deserve better outcomes. The problem isn't that people don't want to give meaningful gifts — it's that the best options have been locked behind confusing brokerage accounts and paperwork nobody wants to deal with.
+                  The love behind that gift was real. But the outcome didn't match. And we realized this happens all the time. People want to give something meaningful, something that lasts. But the options are either forgettable (toys, gift cards) or locked behind confusing brokerage accounts that nobody wants to deal with.
                 </p>
                 <p>
-                  Now imagine if a $50 birthday gift was planted like a seed in the stock market. Over 18 years, at the S&P 500's historical average, it could grow into nearly $280. Not collecting dust in a drawer — actually compounding.
+                  So we built Kora. A simple way to give stock investments as gifts. No brokerage account needed for the giver. No confusing forms. Just tap a link, pick an amount, and you've planted a gift that actually grows over time.
                 </p>
                 <p>
-                  That's the idea behind Kora. We make it ridiculously easy to give stock investments as gifts. No brokerage account needed for the giver. No confusing forms. Just tap a link, pick an amount, and you've given a gift that compounds over time.
+                  A $50 birthday gift invested in the stock market could grow into nearly $280 over 18 years at historical averages. That's not a toy forgotten in a closet. That's a head start.
                 </p>
                 <p>
-                  We built Kora for parents who want something better than another toy. For grandparents who want their love to compound. For friends at baby showers who want to give something truly lasting. And for everyone who's ever received a well-meaning gift that just didn't grow.
+                  We built Kora for parents who want something better for their kids. For grandparents who want their generosity to compound. For friends at baby showers who want to give something truly lasting. And for anyone who ever received a well-meaning gift that just didn't grow.
                 </p>
               </div>
             </div>
