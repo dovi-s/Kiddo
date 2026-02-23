@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -21,6 +22,7 @@ import ActivateInvesting from "@/pages/ActivateInvesting";
 import GiftCheckout from "@/pages/GiftCheckout";
 import Login from "@/pages/Login";
 import Events from "@/pages/Events";
+import brandMark from "@/assets/kora-brand-mark.png";
 
 function Router() {
   return (
@@ -46,11 +48,51 @@ function Router() {
   );
 }
 
+function SplashScreen({ onComplete }: { onComplete: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onComplete, 1800);
+    return () => clearTimeout(timer);
+  }, [onComplete]);
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-background gemini-warm-section flex items-center justify-center" data-testid="splash-screen">
+      <div className="text-center">
+        <img
+          src={brandMark}
+          alt="Kora"
+          data-testid="img-brand-mark-splash"
+          className="w-44 h-auto mx-auto animate-splash-enter"
+        />
+        <div className="mt-6 flex justify-center gap-1 animate-splash-dots">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-1.5 h-1.5 rounded-full bg-primary/40"
+              style={{ animation: `splashDot 1.2s ease-in-out ${i * 0.15}s infinite` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
+  const [showSplash, setShowSplash] = useState(() => {
+    if (sessionStorage.getItem("kora-launched")) return false;
+    return true;
+  });
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem("kora-launched", "1");
+    setShowSplash(false);
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <KoraProvider>
         <TooltipProvider>
+          {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
           <Toaster />
           <Router />
           <MobileNav />
