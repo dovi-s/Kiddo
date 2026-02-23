@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
 import { GradientText, ThinkingOrb } from "@/components/ui/gemini";
+import { Mascot } from "@/components/ui/mascot";
 import { useQuery } from "@tanstack/react-query";
 
 const AMOUNTS = [25, 50, 100, 250];
@@ -199,9 +200,7 @@ export default function GiftCheckout() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-            <Gift className="w-6 h-6 text-primary" />
-          </div>
+          <Mascot size="md" className="mx-auto mb-2 drop-shadow-md" context="checkout" />
           <h1 className="font-heading text-2xl font-bold text-foreground mb-1" data-testid="text-heading">
             {heading}
           </h1>

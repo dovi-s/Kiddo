@@ -1,76 +1,73 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
+import { Mascot } from "@/components/ui/mascot";
 
 export function Footer() {
+  const productLinks = [
+    { href: "/get-started", label: "Get started" },
+    { href: "/faq", label: "How it works" },
+    { href: "/#pricing", label: "Pricing" },
+  ];
+
+  const companyLinks = [
+    { href: "/about", label: "About" },
+    { href: "/about#trust", label: "Trust" },
+    { href: "/faq", label: "Support" },
+  ];
+
+  const legalLinks = [
+    { href: "/legal", label: "Terms" },
+    { href: "/legal", label: "Privacy" },
+    { href: "/legal", label: "Disclosures" },
+  ];
+
+  const renderLinks = (links: { href: string; label: string }[]) => (
+    <ul className="space-y-3 text-sm text-muted-foreground">
+      {links.map((link) => (
+        <li key={link.label}>
+          <Link href={link.href}>
+            <motion.span
+              className="hover:text-foreground transition-colors inline-block cursor-pointer"
+              whileHover={{ x: 2 }}
+              transition={{ duration: 0.2 }}
+              data-testid={`link-footer-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
+            >
+              {link.label}
+            </motion.span>
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <footer className="border-t">
       <div className="container mx-auto px-4 py-16">
         <div className="grid gap-10 md:grid-cols-4">
           <div className="space-y-4">
-            <Logo size="sm" className="text-foreground" />
+            <div className="flex items-center gap-3">
+              <Mascot size="sm" context="footer" />
+              <Logo size="sm" className="text-foreground" linkTo={null} />
+            </div>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-[200px]">
-              Give something that stays.
+              Give something that grows.
             </p>
           </div>
-          
+
           <div>
             <h4 className="text-sm font-medium mb-4 text-foreground">Product</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              {[
-                { href: "/get-started", label: "Get started" },
-                { href: "/moment", label: "Send a gift" },
-                { href: "/#pricing", label: "Pricing" },
-              ].map((link) => (
-                <li key={link.href}>
-                  <Link href={link.href}>
-                    <motion.span 
-                      className="hover:text-foreground transition-colors inline-block cursor-pointer"
-                      whileHover={{ x: 2 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {link.label}
-                    </motion.span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            {renderLinks(productLinks)}
           </div>
 
           <div>
             <h4 className="text-sm font-medium mb-4 text-foreground">Company</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              {["About", "Trust", "Support"].map((label) => (
-                <li key={label}>
-                  <motion.a 
-                    href="#" 
-                    className="hover:text-foreground transition-colors inline-block"
-                    whileHover={{ x: 2 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {label}
-                  </motion.a>
-                </li>
-              ))}
-            </ul>
+            {renderLinks(companyLinks)}
           </div>
 
           <div>
             <h4 className="text-sm font-medium mb-4 text-foreground">Legal</h4>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              {["Terms", "Privacy", "Disclosures"].map((label) => (
-                <li key={label}>
-                  <motion.a 
-                    href="#" 
-                    className="hover:text-foreground transition-colors inline-block"
-                    whileHover={{ x: 2 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {label}
-                  </motion.a>
-                </li>
-              ))}
-            </ul>
+            {renderLinks(legalLinks)}
           </div>
         </div>
 

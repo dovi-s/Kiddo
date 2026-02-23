@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { ChevronDown, Search, Gift, Share2, TrendingUp, ArrowRight, Shield, Lock, MousePointerClick, Clock, CheckCircle2 } from "lucide-react";
+import { Mascot } from "@/components/ui/mascot";
 
 const parentSteps = [
   {
@@ -194,6 +195,7 @@ export default function FAQ() {
             transition={{ duration: 0.6 }}
             className="max-w-3xl mx-auto text-center mb-16"
           >
+            <Mascot size="lg" className="mx-auto mb-6 drop-shadow-lg" context="faq-hero" />
             <h1 className="font-heading text-3xl md:text-4xl lg:text-5xl font-semibold text-foreground tracking-tight mb-4" data-testid="text-page-title">
               How Kora Works
             </h1>

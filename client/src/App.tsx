@@ -28,6 +28,8 @@ import FAQ from "@/pages/FAQ";
 import MemoryBook from "@/pages/MemoryBook";
 import GiftSuccess from "@/pages/GiftSuccess";
 import KidView from "@/pages/KidView";
+import About from "@/pages/About";
+import Legal from "@/pages/Legal";
 import brandMark from "@/assets/kora-brand-mark.png";
 
 function Router() {
@@ -49,6 +51,8 @@ function Router() {
       <Route path="/settings" component={Settings} />
       <Route path="/faq" component={FAQ} />
       <Route path="/how-it-works" component={FAQ} />
+      <Route path="/about" component={About} />
+      <Route path="/legal" component={Legal} />
       <Route path="/memory/:fundId" component={MemoryBook} />
       <Route path="/gift/success" component={GiftSuccess} />
       <Route path="/kid/:fundId" component={KidView} />

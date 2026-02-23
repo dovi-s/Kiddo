@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { SparkleBurst, GradientText, GeminiHeroGradient } from "@/components/ui/gemini"
 import { haptic } from "@/lib/haptics"
 import { Logo } from "@/components/ui/logo"
+import { Mascot } from "@/components/ui/mascot"
 
 export default function GiftSuccess() {
   const searchString = useSearch()
@@ -56,6 +57,15 @@ export default function GiftSuccess() {
           className="mb-8"
         >
           <Logo />
+        </motion.div>
+
+        <motion.div
+          initial={{ scale: 0.7, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-4"
+        >
+          <Mascot size="lg" className="mx-auto drop-shadow-lg" context="gift-success" />
         </motion.div>
 
         <div className="relative flex items-center justify-center mb-6">

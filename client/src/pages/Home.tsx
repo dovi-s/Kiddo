@@ -8,6 +8,7 @@ import { Logo } from "@/components/ui/logo";
 import { GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { ThinkingOrb } from "@/components/ui/gemini";
+import { Mascot } from "@/components/ui/mascot";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
@@ -181,6 +182,14 @@ export default function Home() {
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="max-w-3xl mx-auto text-center"
           >
+            <motion.div
+              initial={{ scale: 0.7, opacity: 0, rotate: -5 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="mb-6"
+            >
+              <Mascot size="lg" className="mx-auto drop-shadow-lg" context="home-hero" />
+            </motion.div>
             <h1 className="font-heading text-4xl md:text-6xl font-bold leading-tight text-foreground tracking-tight mb-6" data-testid="text-hero-headline">
               Give something that grows with them
             </h1>
@@ -473,6 +482,7 @@ export default function Home() {
             transition={{ duration: 0.6 }}
             className="text-center max-w-2xl mx-auto"
           >
+            <Mascot size="lg" className="mx-auto mb-6" context="home-cta" />
             <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight mb-6" data-testid="text-cta-heading">
               Start building their future <GradientText>today</GradientText>
             </h2>
