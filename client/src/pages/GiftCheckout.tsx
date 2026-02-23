@@ -346,11 +346,11 @@ export default function GiftCheckout() {
             data-testid="button-toggle-execution"
           >
             <div className="text-left">
-              <h2 className="font-heading text-lg font-semibold text-foreground">How to invest</h2>
+              <h2 className="font-heading text-lg font-semibold text-foreground">What should this gift buy?</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {executionModel === "auto" && "Auto-Invest (recommended)"}
-                {executionModel === "pick" && (selectedStock ? `${selectedStock} selected` : "Pick a Stock")}
-                {executionModel === "family" && "Let them decide"}
+                {executionModel === "auto" && "A diversified mix (recommended)"}
+                {executionModel === "pick" && (selectedStock ? `$${activeAmount} of ${STOCK_PICKS.find(s => s.symbol === selectedStock)?.name || selectedStock}` : "You choose a specific stock")}
+                {executionModel === "family" && "The family will choose"}
               </p>
             </div>
             <motion.div
@@ -384,8 +384,11 @@ export default function GiftCheckout() {
                       {executionModel === "auto" && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                     </div>
                     <div>
-                      <span className="font-medium text-sm text-foreground">Auto-Invest</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">Automatically invested in a diversified mix</p>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm text-foreground">Diversified mix</span>
+                        <span className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded-full font-medium">Recommended</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">Your gift is automatically invested in a balanced mix of stocks. Great for long-term growth.</p>
                     </div>
                   </button>
 
@@ -402,8 +405,8 @@ export default function GiftCheckout() {
                       {executionModel === "pick" && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                     </div>
                     <div>
-                      <span className="font-medium text-sm text-foreground">Pick a Stock</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">Choose a company you believe in</p>
+                      <span className="font-medium text-sm text-foreground">Pick a specific stock</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">Want to give $50 of Disney or Apple? Choose a company you love.</p>
                     </div>
                   </button>
 
@@ -416,25 +419,33 @@ export default function GiftCheckout() {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          {STOCK_PICKS.map((stock) => (
-                            <motion.button
-                              key={stock.symbol}
-                              whileTap={{ scale: 0.95 }}
-                              className={`px-3 py-2 rounded-full text-xs font-medium transition-colors ${
-                                selectedStock === stock.symbol
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted text-foreground hover:bg-muted/80"
-                              }`}
-                              onClick={() => {
-                                haptic("selection");
-                                setSelectedStock(stock.symbol === selectedStock ? null : stock.symbol);
-                              }}
-                              data-testid={`button-stock-${stock.symbol}`}
-                            >
-                              {stock.name} ({stock.symbol})
-                            </motion.button>
-                          ))}
+                        <div className="space-y-2 pt-1">
+                          <div className="flex flex-wrap gap-2">
+                            {STOCK_PICKS.map((stock) => (
+                              <motion.button
+                                key={stock.symbol}
+                                whileTap={{ scale: 0.95 }}
+                                className={`px-3 py-2 rounded-full text-xs font-medium transition-colors ${
+                                  selectedStock === stock.symbol
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-foreground hover:bg-muted/80"
+                                }`}
+                                onClick={() => {
+                                  haptic("selection");
+                                  setSelectedStock(stock.symbol === selectedStock ? null : stock.symbol);
+                                }}
+                                data-testid={`button-stock-${stock.symbol}`}
+                              >
+                                {stock.name} ({stock.symbol})
+                              </motion.button>
+                            ))}
+                          </div>
+                          {selectedStock && (
+                            <p className="text-xs text-primary font-medium flex items-center gap-1">
+                              <Check size={12} />
+                              ${activeAmount} of {STOCK_PICKS.find(s => s.symbol === selectedStock)?.name} will be purchased for {recipientName}
+                            </p>
+                          )}
                         </div>
                       </motion.div>
                     )}
@@ -453,8 +464,8 @@ export default function GiftCheckout() {
                       {executionModel === "family" && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
                     </div>
                     <div>
-                      <span className="font-medium text-sm text-foreground">Let them decide</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">The family will choose how to invest your gift</p>
+                      <span className="font-medium text-sm text-foreground">Let the family decide</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">Your gift arrives as cash. The family picks what to invest in.</p>
                     </div>
                   </button>
                 </div>
@@ -699,10 +710,25 @@ export default function GiftCheckout() {
                 transition={{ duration: 0.25 }}
                 className="overflow-hidden"
               >
-                <div className="px-5 pb-5">
-                  <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-education">
-                    Your gift goes directly into {recipientName}'s investment fund. It will be invested at the next trading window into real stocks, protected by SIPC insurance up to $500,000. You don't need an account, and {recipientName}'s family manages the fund. Once invested, the gift is irrevocable and belongs to the recipient.
-                  </p>
+                <div className="px-5 pb-5 space-y-3">
+                  <div className="space-y-2.5 text-sm text-muted-foreground leading-relaxed">
+                    {executionModel === "auto" && (
+                      <p data-testid="text-education">
+                        Your gift goes into {recipientName}'s investment fund and is automatically invested for them. No action needed from you or the family.
+                      </p>
+                    )}
+                    {executionModel === "pick" && (
+                      <p data-testid="text-education">
+                        Your gift buys {selectedStock ? `${STOCK_PICKS.find(s => s.symbol === selectedStock)?.name || selectedStock} stock` : "the stock you choose"} for {recipientName}. Every dollar gets invested, even if the stock costs more than your gift amount.
+                      </p>
+                    )}
+                    {executionModel === "family" && (
+                      <p data-testid="text-education">
+                        Your gift arrives as cash in {recipientName}'s fund. The family will decide when and what to invest in. This gives them full control.
+                      </p>
+                    )}
+                    <p>All investments are protected up to $500,000 and held securely at a regulated brokerage. Once invested, gifts belong to the recipient.</p>
+                  </div>
                 </div>
               </motion.div>
             )}
