@@ -109,7 +109,7 @@ export default function GiftCheckout() {
     enabled: !!(eventSlug || fundSlug),
   });
 
-  const recipientName = eventData?.fund?.recipientFirstName || fundSlug || "Recipient";
+  const recipientName = eventData?.fund?.recipientFirstName || eventData?.fund?.name || "Recipient";
   const eventName = eventData?.event?.name || "";
   const eventType = eventData?.event?.eventType || "";
   const giftCount = eventData?.event?.giftCount ?? eventData?.giftCount ?? 0;
