@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { ArrowLeft, ArrowRight, Check, Shield, Lock, TrendingUp, Wallet, User, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ const stepIndex = (s: Step) => STEPS.indexOf(s);
 export default function ActivateInvesting() {
   const [, setLocation] = useLocation();
   const { user, isLoading, isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("welcome");
 
   const [personal, setPersonal] = useState({
@@ -66,18 +68,28 @@ export default function ActivateInvesting() {
     setStep("processing");
 
     try {
-      await fetch("/api/funds/activate", {
+      const res = await fetch("/api/kyc/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ fundId: "default", strategy }),
+        body: JSON.stringify({ personal, identity, strategy }),
       });
-    } catch (_) {}
-
-    setTimeout(() => {
-      haptic("success");
-      setStep("success");
-    }, 2000);
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        console.error("KYC submission failed:", err);
+        setStep("review");
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+      setTimeout(() => {
+        haptic("success");
+        setStep("success");
+      }, 2000);
+    } catch (e) {
+      console.error(e);
+      setStep("review");
+    }
   };
 
   const canProceedPersonal =
@@ -662,7 +674,10 @@ export default function ActivateInvesting() {
               />
               <div className="max-w-xs mx-auto">
                 <Button
-                  onClick={() => setLocation("/dashboard")}
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+                    setLocation("/dashboard");
+                  }}
                   data-testid="button-go-to-dashboard"
                   className="w-full h-14 text-base font-semibold rounded-2xl"
                 >

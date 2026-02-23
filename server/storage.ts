@@ -1,5 +1,5 @@
 import { 
-  funds, events, holdings, gifts, activities, subscriptions, transactions, memoryEntries,
+  funds, events, holdings, gifts, activities, subscriptions, transactions, memoryEntries, bankAccounts,
   type Fund, type InsertFund,
   type Event, type InsertEvent,
   type Holding, type InsertHolding,
@@ -8,6 +8,7 @@ import {
   type Subscription, type InsertSubscription,
   type Transaction, type InsertTransaction,
   type MemoryEntry, type InsertMemoryEntry,
+  type BankAccount, type InsertBankAccount,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -29,8 +30,10 @@ export interface IStorage {
   deleteEvent(id: string): Promise<void>;
 
   getHoldingsByFund(fundId: string): Promise<Holding[]>;
+  getHoldingByFundAndTicker(fundId: string, ticker: string): Promise<Holding | undefined>;
   createHolding(holding: InsertHolding): Promise<Holding>;
   updateHolding(id: string, holding: Partial<InsertHolding>): Promise<Holding | undefined>;
+  deleteHolding(id: string): Promise<void>;
 
   getGift(id: string): Promise<Gift | undefined>;
   getGiftsByFund(fundId: string): Promise<Gift[]>;
@@ -58,6 +61,10 @@ export interface IStorage {
   getMemoryEntriesByFund(fundId: string): Promise<MemoryEntry[]>;
   createMemoryEntry(entry: InsertMemoryEntry): Promise<MemoryEntry>;
   deleteMemoryEntry(id: string): Promise<void>;
+
+  getBankAccountsByUser(userId: string): Promise<BankAccount[]>;
+  createBankAccount(account: InsertBankAccount): Promise<BankAccount>;
+  deleteBankAccount(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -125,6 +132,11 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(holdings).where(eq(holdings.fundId, fundId));
   }
 
+  async getHoldingByFundAndTicker(fundId: string, ticker: string): Promise<Holding | undefined> {
+    const [holding] = await db.select().from(holdings).where(and(eq(holdings.fundId, fundId), eq(holdings.ticker, ticker)));
+    return holding;
+  }
+
   async createHolding(holding: InsertHolding): Promise<Holding> {
     const [created] = await db.insert(holdings).values(holding).returning();
     return created;
@@ -133,6 +145,10 @@ export class DatabaseStorage implements IStorage {
   async updateHolding(id: string, holding: Partial<InsertHolding>): Promise<Holding | undefined> {
     const [updated] = await db.update(holdings).set({ ...holding, updatedAt: new Date() }).where(eq(holdings.id, id)).returning();
     return updated;
+  }
+
+  async deleteHolding(id: string): Promise<void> {
+    await db.delete(holdings).where(eq(holdings.id, id));
   }
 
   async getGift(id: string): Promise<Gift | undefined> {
@@ -238,6 +254,19 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMemoryEntry(id: string): Promise<void> {
     await db.delete(memoryEntries).where(eq(memoryEntries.id, id));
+  }
+
+  async getBankAccountsByUser(userId: string): Promise<BankAccount[]> {
+    return db.select().from(bankAccounts).where(eq(bankAccounts.userId, userId)).orderBy(desc(bankAccounts.createdAt));
+  }
+
+  async createBankAccount(account: InsertBankAccount): Promise<BankAccount> {
+    const [created] = await db.insert(bankAccounts).values(account).returning();
+    return created;
+  }
+
+  async deleteBankAccount(id: string): Promise<void> {
+    await db.delete(bankAccounts).where(eq(bankAccounts.id, id));
   }
 }
 

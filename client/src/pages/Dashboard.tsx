@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
+import { toast } from "@/hooks/use-toast";
 import { EducationTip, educationContent } from "@/components/ui/education";
 import { GradientText, GeminiBalanceGlow } from "@/components/ui/gemini";
 import mascotImg from "@/assets/kora-mascot.png";
@@ -58,11 +59,16 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { data: subscription } = useSubscription();
+  const queryClient = useQueryClient();
   const [selectedFundId, setSelectedFundId] = useState<string>("");
   const [fundPickerOpen, setFundPickerOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [addFundOpen, setAddFundOpen] = useState(false);
   const [eventGateOpen, setEventGateOpen] = useState(false);
+  const [investingCash, setInvestingCash] = useState(false);
+  const [sellingHolding, setSellingHolding] = useState<Holding | null>(null);
+  const [sellShares, setSellShares] = useState("");
+  const [sellLoading, setSellLoading] = useState(false);
   const isFamily = subscription?.plan === "family" && subscription?.status === "active";
 
   useEffect(() => {
@@ -164,6 +170,71 @@ export default function Dashboard() {
       setTimeout(() => setCopiedLink(false), 2000);
     } catch {
       haptic("error");
+    }
+  };
+
+  const handleInvestCash = async () => {
+    if (!activeFundId || investingCash) return;
+    setInvestingCash(true);
+    haptic("medium");
+    try {
+      const res = await fetch(`/api/funds/${activeFundId}/auto-invest`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        haptic("success");
+        toast({ title: "Cash invested", description: `$${data.invested} invested across ${data.holdings.length} positions` });
+        queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/funds", activeFundId, "holdings"] });
+      } else {
+        toast({ title: "Could not invest", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not invest", description: "Please try again", variant: "destructive" });
+    } finally {
+      setInvestingCash(false);
+    }
+  };
+
+  const handleSellHolding = async () => {
+    if (!sellingHolding || sellLoading) return;
+    const shares = parseFloat(sellShares);
+    const maxShares = parseFloat(sellingHolding.shares || "0");
+    if (isNaN(shares) || shares <= 0 || shares > maxShares) {
+      toast({ title: "Invalid amount", description: `Enter between 0 and ${maxShares.toFixed(4)} shares`, variant: "destructive" });
+      return;
+    }
+    setSellLoading(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/holdings/sell", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          holdingId: sellingHolding.id,
+          shares: shares,
+          sellAll: shares >= maxShares,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        haptic("success");
+        toast({ title: "Sold", description: `Sold ${shares.toFixed(4)} shares of ${sellingHolding.ticker} for ${formatCurrency(data.proceeds || 0)}` });
+        setSellingHolding(null);
+        setSellShares("");
+        queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/funds", activeFundId, "holdings"] });
+      } else {
+        toast({ title: "Sale failed", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Sale failed", description: "Please try again", variant: "destructive" });
+    } finally {
+      setSellLoading(false);
     }
   };
 
@@ -314,6 +385,35 @@ export default function Dashboard() {
               </div>
             </motion.section>
 
+            {pendingBalance > 0 && activeFund?.status === "active" && (
+              <motion.section
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.04 }}
+              >
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl border border-primary/20 p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Cash ready to invest</p>
+                    <p className="text-lg font-semibold text-foreground">{formatCurrency(pendingBalance)}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={investingCash}
+                    onClick={handleInvestCash}
+                    className="rounded-full gap-2"
+                    data-testid="button-invest-cash"
+                  >
+                    {investingCash ? (
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <TrendingUp size={15} />
+                    )}
+                    {investingCash ? "Investing..." : "Invest Now"}
+                  </Button>
+                </div>
+              </motion.section>
+            )}
+
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -445,16 +545,32 @@ export default function Dashboard() {
                               {hShares.toFixed(4)} shares
                             </p>
                           </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-sm">{formatCurrency(hValue)}</p>
-                            <p
-                              className={`text-xs font-medium ${
-                                hIsGain ? "text-green-600" : "text-red-600"
-                              }`}
-                            >
-                              {hIsGain ? "+" : ""}
-                              {formatCurrency(hGain)}
-                            </p>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="font-semibold text-sm">{formatCurrency(hValue)}</p>
+                              <p
+                                className={`text-xs font-medium ${
+                                  hIsGain ? "text-green-600" : "text-red-600"
+                                }`}
+                              >
+                                {hIsGain ? "+" : ""}
+                                {formatCurrency(hGain)}
+                              </p>
+                            </div>
+                            {activeFund?.status === "active" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground"
+                                onClick={() => {
+                                  setSellingHolding(h);
+                                  setSellShares(hShares.toFixed(4));
+                                }}
+                                data-testid={`button-sell-${h.id}`}
+                              >
+                                Sell
+                              </Button>
+                            )}
                           </div>
                         </div>
                       );
@@ -583,6 +699,69 @@ export default function Dashboard() {
         open={eventGateOpen}
         onClose={() => setEventGateOpen(false)}
       />
+
+      {sellingHolding && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => { setSellingHolding(null); setSellShares(""); }}
+          />
+          <div className="relative bg-card rounded-t-3xl sm:rounded-2xl border border-border/50 shadow-premium-lg w-full sm:max-w-md p-6 z-10">
+            <h3 className="font-heading text-lg font-semibold mb-1">Sell {sellingHolding.ticker}</h3>
+            <p className="text-sm text-muted-foreground mb-4">{sellingHolding.name}</p>
+
+            <div className="space-y-3 mb-5">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Current value</span>
+                <span className="font-medium">{formatCurrency(parseFloat(sellingHolding.currentValue || "0"))}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Total shares</span>
+                <span className="font-medium">{parseFloat(sellingHolding.shares || "0").toFixed(4)}</span>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Shares to sell</label>
+                <input
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  max={sellingHolding.shares || "0"}
+                  value={sellShares}
+                  onChange={(e) => setSellShares(e.target.value)}
+                  className="w-full rounded-xl border border-border/50 bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  data-testid="input-sell-shares"
+                />
+                <button
+                  className="text-xs text-primary mt-1"
+                  onClick={() => setSellShares(parseFloat(sellingHolding.shares || "0").toFixed(4))}
+                  data-testid="button-sell-all"
+                >
+                  Sell all shares
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-full"
+                onClick={() => { setSellingHolding(null); setSellShares(""); }}
+                data-testid="button-cancel-sell"
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 rounded-full"
+                disabled={sellLoading || !sellShares || parseFloat(sellShares) <= 0}
+                onClick={handleSellHolding}
+                data-testid="button-confirm-sell"
+              >
+                {sellLoading ? "Selling..." : "Confirm Sale"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

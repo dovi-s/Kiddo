@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { index, jsonb, pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, timestamp, varchar, text } from "drizzle-orm/pg-core";
 
 export const sessions = pgTable(
   "sessions",
@@ -19,6 +19,9 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"),
   googleId: varchar("google_id").unique(),
+  kycStatus: text("kyc_status").default("none"),
+  kycSubmittedAt: timestamp("kyc_submitted_at"),
+  kycData: jsonb("kyc_data"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

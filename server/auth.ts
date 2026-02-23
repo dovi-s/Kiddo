@@ -114,7 +114,7 @@ export function setupAuth(app: Express) {
         if (err) {
           return res.status(500).json({ message: "Failed to create session" });
         }
-        const { passwordHash: _, ...safeUser } = user;
+        const { passwordHash: _, kycData: _kd, ...safeUser } = user;
         return res.status(201).json(safeUser);
       });
     } catch (error) {
@@ -135,7 +135,7 @@ export function setupAuth(app: Express) {
         if (err) {
           return res.status(500).json({ message: "Failed to create session" });
         }
-        const { passwordHash: _, ...safeUser } = user;
+        const { passwordHash: _, kycData: _kd, ...safeUser } = user;
         return res.json(safeUser);
       });
     })(req, res, next);
@@ -146,7 +146,7 @@ export function setupAuth(app: Express) {
       return res.status(401).json({ message: "Not authenticated" });
     }
     const user = req.user as User;
-    const { passwordHash: _, ...safeUser } = user;
+    const { passwordHash: _, kycData: _kd, ...safeUser } = user;
     res.json(safeUser);
   });
 

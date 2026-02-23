@@ -24,6 +24,7 @@ export const funds = pgTable("funds", {
   recipientRelation: text("recipient_relation"),
   recipientBirthdate: timestamp("recipient_birthdate"),
   investmentStrategy: text("investment_strategy").default("auto_invest"),
+  isDiscoverable: boolean("is_discoverable").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -211,6 +212,23 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
   fund: one(funds, { fields: [transactions.fundId], references: [funds.id] }),
 }));
 
+export const bankAccounts = pgTable("bank_accounts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  bankName: text("bank_name").notNull(),
+  accountLast4: text("account_last4").notNull(),
+  routingLast4: text("routing_last4"),
+  accountType: text("account_type").default("checking"),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("bank_accounts_user_id_idx").on(table.userId),
+]);
+
+export const bankAccountsRelations = relations(bankAccounts, ({ one }) => ({
+  user: one(users, { fields: [bankAccounts.userId], references: [users.id] }),
+}));
+
 export const insertFundSchema = createInsertSchema(funds).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertHoldingSchema = createInsertSchema(holdings).omit({ id: true, createdAt: true, updatedAt: true });
@@ -219,6 +237,7 @@ export const insertActivitySchema = createInsertSchema(activities).omit({ id: tr
 export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertMemoryEntrySchema = createInsertSchema(memoryEntries).omit({ id: true, createdAt: true });
+export const insertBankAccountSchema = createInsertSchema(bankAccounts).omit({ id: true, createdAt: true });
 
 export type InsertFund = z.infer<typeof insertFundSchema>;
 export type Fund = typeof funds.$inferSelect;
@@ -236,3 +255,5 @@ export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertMemoryEntry = z.infer<typeof insertMemoryEntrySchema>;
 export type MemoryEntry = typeof memoryEntries.$inferSelect;
+export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
+export type BankAccount = typeof bankAccounts.$inferSelect;

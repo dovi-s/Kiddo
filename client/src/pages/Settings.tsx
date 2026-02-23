@@ -1,7 +1,7 @@
-import { useState, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
@@ -11,9 +11,11 @@ import { AddFundSheet } from "@/components/AddFundSheet";
 import { toast } from "@/hooks/use-toast";
 import {
   User, CreditCard, Shield, Eye, EyeOff, LogOut, Check,
-  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet, ChevronLeft, Plus, Loader2, Camera
+  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet, ChevronLeft, Plus, Loader2, Camera,
+  Building2, Trash2, TrendingDown, ArrowDownToLine, X
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -23,13 +25,420 @@ function SectionCard({ children, className = "" }: { children: React.ReactNode; 
   );
 }
 
+function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
+  open: boolean;
+  onClose: () => void;
+  holding: any;
+  fund: any;
+  onSuccess: () => void;
+}) {
+  const [selling, setSelling] = useState(false);
+  const [sellAll, setSellAll] = useState(true);
+  const [customShares, setCustomShares] = useState("");
+
+  const handleSell = async () => {
+    setSelling(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/holdings/sell", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          holdingId: holding.id,
+          fundId: fund.id,
+          shares: sellAll ? undefined : customShares,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        haptic("success");
+        toast({ title: `Sold ${holding.ticker}`, description: `$${data.saleValue} will settle in 1-2 business days` });
+        onSuccess();
+        onClose();
+      } else {
+        toast({ title: "Could not sell", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not sell", description: "Please try again", variant: "destructive" });
+    } finally {
+      setSelling(false);
+    }
+  };
+
+  if (!holding) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Sell {holding.ticker}</DialogTitle>
+        <div className="p-6 space-y-5">
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mx-auto">
+              <TrendingDown size={24} className="text-red-600" />
+            </div>
+            <h2 className="font-heading text-xl font-semibold text-foreground">Sell {holding.ticker}</h2>
+            <p className="text-sm text-muted-foreground">{holding.name}</p>
+          </div>
+
+          <div className="bg-muted/30 rounded-xl p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Shares owned</span>
+              <span className="font-medium">{parseFloat(holding.shares).toFixed(4)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Current value</span>
+              <span className="font-medium">${parseFloat(holding.currentValue).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Gain/Loss</span>
+              <span className={`font-medium ${parseFloat(holding.gain) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {parseFloat(holding.gain) >= 0 ? "+" : ""}${parseFloat(holding.gain).toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => { setSellAll(true); haptic("selection"); }}
+              className={`w-full p-3 rounded-xl border-2 text-left transition-all ${sellAll ? "border-primary bg-primary/5" : "border-border"}`}
+              data-testid="option-sell-all"
+            >
+              <p className="text-sm font-medium">Sell all shares</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Sell {parseFloat(holding.shares).toFixed(4)} shares for ~${parseFloat(holding.currentValue).toFixed(2)}</p>
+            </button>
+            <button
+              onClick={() => { setSellAll(false); haptic("selection"); }}
+              className={`w-full p-3 rounded-xl border-2 text-left transition-all ${!sellAll ? "border-primary bg-primary/5" : "border-border"}`}
+              data-testid="option-sell-partial"
+            >
+              <p className="text-sm font-medium">Sell specific amount</p>
+              {!sellAll && (
+                <input
+                  type="number"
+                  step="0.0001"
+                  max={holding.shares}
+                  value={customShares}
+                  onChange={(e) => setCustomShares(e.target.value)}
+                  placeholder="Number of shares"
+                  className="mt-2 w-full px-3 py-2 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  data-testid="input-sell-shares"
+                  autoFocus
+                />
+              )}
+            </button>
+          </div>
+
+          <div className="bg-amber-50 rounded-xl border border-amber-200/50 p-3">
+            <p className="text-xs text-amber-800">
+              {fund.accountType === "UTMA"
+                ? "For custodial accounts, sale proceeds must be used for the child's benefit."
+                : "Proceeds will be available as cash in your fund after settlement (1-2 business days)."}
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={onClose} data-testid="button-cancel-sell">
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 bg-red-600 hover:bg-red-700"
+              disabled={selling || (!sellAll && (!customShares || parseFloat(customShares) <= 0))}
+              onClick={handleSell}
+              data-testid="button-confirm-sell"
+            >
+              {selling && <Loader2 size={16} className="mr-2 animate-spin" />}
+              Sell
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function WithdrawSheet({ open, onClose, fund, bankAccounts, onSuccess }: {
+  open: boolean;
+  onClose: () => void;
+  fund: any;
+  bankAccounts: any[];
+  onSuccess: () => void;
+}) {
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [selectedBank, setSelectedBank] = useState(bankAccounts[0]?.id || "");
+
+  useEffect(() => {
+    if (bankAccounts.length > 0 && !selectedBank) {
+      setSelectedBank(bankAccounts[0].id);
+    }
+  }, [bankAccounts]);
+
+  const availableCash = fund ? parseFloat(fund.pendingBalance) : 0;
+
+  const handleWithdraw = async () => {
+    setWithdrawing(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/withdrawals", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fundId: fund.id,
+          amount: amount,
+          bankAccountId: selectedBank,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        haptic("success");
+        toast({ title: "Withdrawal initiated", description: `$${data.amount} will arrive in 1-3 business days` });
+        onSuccess();
+        onClose();
+      } else {
+        toast({ title: "Could not withdraw", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not withdraw", description: "Please try again", variant: "destructive" });
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
+  if (!fund) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Withdraw Cash</DialogTitle>
+        <div className="p-6 space-y-5">
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+              <ArrowDownToLine size={24} className="text-primary" />
+            </div>
+            <h2 className="font-heading text-xl font-semibold text-foreground">Withdraw Cash</h2>
+            <p className="text-sm text-muted-foreground">Available: ${availableCash.toFixed(2)}</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Amount</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  max={availableCash}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full pl-7 pr-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  data-testid="input-withdraw-amount"
+                />
+              </div>
+              <button
+                onClick={() => setAmount(availableCash.toFixed(2))}
+                className="text-xs text-primary mt-1 hover:underline"
+                data-testid="button-withdraw-max"
+              >
+                Withdraw all
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">To bank account</label>
+              {bankAccounts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No bank accounts linked. Add one below.</p>
+              ) : (
+                <div className="space-y-2">
+                  {bankAccounts.map((ba) => (
+                    <button
+                      key={ba.id}
+                      onClick={() => { setSelectedBank(ba.id); haptic("selection"); }}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${selectedBank === ba.id ? "border-primary bg-primary/5" : "border-border"}`}
+                      data-testid={`option-bank-${ba.id}`}
+                    >
+                      <Building2 size={16} className="text-muted-foreground" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{ba.bankName}</p>
+                        <p className="text-xs text-muted-foreground">{ba.accountType} ****{ba.accountLast4}</p>
+                      </div>
+                      {selectedBank === ba.id && <Check size={16} className="text-primary" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={onClose} data-testid="button-cancel-withdraw">
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={withdrawing || !amount || parseFloat(amount) <= 0 || parseFloat(amount) > availableCash || !selectedBank}
+              onClick={handleWithdraw}
+              data-testid="button-confirm-withdraw"
+            >
+              {withdrawing && <Loader2 size={16} className="mr-2 animate-spin" />}
+              Withdraw
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function LinkBankSheet({ open, onClose, onSuccess }: {
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [linking, setLinking] = useState(false);
+  const [bankName, setBankName] = useState("");
+  const [accountLast4, setAccountLast4] = useState("");
+  const [routingLast4, setRoutingLast4] = useState("");
+  const [accountType, setAccountType] = useState("checking");
+
+  const handleLink = async () => {
+    setLinking(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/bank-accounts", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bankName, accountLast4, routingLast4, accountType }),
+      });
+      if (res.ok) {
+        haptic("success");
+        toast({ title: "Bank account linked" });
+        setBankName("");
+        setAccountLast4("");
+        setRoutingLast4("");
+        onSuccess();
+        onClose();
+      } else {
+        const data = await res.json();
+        toast({ title: "Could not link account", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not link account", description: "Please try again", variant: "destructive" });
+    } finally {
+      setLinking(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+        <DialogTitle className="sr-only">Link Bank Account</DialogTitle>
+        <div className="p-6 space-y-5">
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
+              <Building2 size={24} className="text-primary" />
+            </div>
+            <h2 className="font-heading text-xl font-semibold text-foreground">Link Bank Account</h2>
+            <p className="text-sm text-muted-foreground">Add your bank account for withdrawals</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Bank name</label>
+              <input
+                type="text"
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+                placeholder="Chase, Wells Fargo, etc."
+                className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                data-testid="input-bank-name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Account last 4</label>
+                <input
+                  type="text"
+                  value={accountLast4}
+                  onChange={(e) => setAccountLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="1234"
+                  maxLength={4}
+                  className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  data-testid="input-account-last4"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Routing last 4</label>
+                <input
+                  type="text"
+                  value={routingLast4}
+                  onChange={(e) => setRoutingLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="5678"
+                  maxLength={4}
+                  className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  data-testid="input-routing-last4"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Account type</label>
+              <select
+                value={accountType}
+                onChange={(e) => setAccountType(e.target.value)}
+                className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                data-testid="select-account-type"
+              >
+                <option value="checking">Checking</option>
+                <option value="savings">Savings</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="bg-muted/30 rounded-xl border border-border/50 p-3">
+            <div className="flex items-start gap-2">
+              <Lock size={14} className="text-muted-foreground mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-muted-foreground">
+                Your bank information is encrypted and secure. We use this only to process your withdrawal requests.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" className="flex-1" onClick={onClose} data-testid="button-cancel-link-bank">
+              Cancel
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={linking || !bankName || accountLast4.length !== 4}
+              onClick={handleLink}
+              data-testid="button-confirm-link-bank"
+            >
+              {linking && <Loader2 size={16} className="mr-2 animate-spin" />}
+              Link Account
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Settings() {
   const { user, isLoading: authLoading, logout } = useAuth();
   const [, navigate] = useLocation();
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
-  const [discoverable, setDiscoverable] = useState(false);
   const [addFundOpen, setAddFundOpen] = useState(false);
+  const [sellHoldingOpen, setSellHoldingOpen] = useState(false);
+  const [selectedHolding, setSelectedHolding] = useState<any>(null);
+  const [selectedFundForAction, setSelectedFundForAction] = useState<any>(null);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [linkBankOpen, setLinkBankOpen] = useState(false);
+
+  const queryClient = useQueryClient();
 
   const { data: funds = [] } = useQuery<any[]>({
     queryKey: ["/api/funds"],
@@ -39,6 +448,38 @@ export default function Settings() {
       return res.json();
     },
     enabled: !!user,
+  });
+
+  const { data: kycData } = useQuery<any>({
+    queryKey: ["/api/user/kyc-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/kyc-status", { credentials: "include" });
+      if (!res.ok) return { kycStatus: "none" };
+      return res.json();
+    },
+    enabled: !!user,
+  });
+
+  const { data: bankAccounts = [] } = useQuery<any[]>({
+    queryKey: ["/api/bank-accounts"],
+    queryFn: async () => {
+      const res = await fetch("/api/bank-accounts", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!user,
+  });
+
+  const primaryFund = funds[0];
+
+  const { data: holdingsData = [] } = useQuery<any[]>({
+    queryKey: ["/api/funds", primaryFund?.id, "holdings"],
+    queryFn: async () => {
+      const res = await fetch(`/api/funds/${primaryFund.id}/holdings`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!primaryFund,
   });
 
   if (authLoading) {
@@ -54,7 +495,6 @@ export default function Settings() {
     return null;
   }
 
-  const queryClient = useQueryClient();
   const { data: subscription } = useSubscription();
   const [upgrading, setUpgrading] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -63,7 +503,7 @@ export default function Settings() {
   const displayName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User";
   const userEmail = user.email || "";
   const userPlan = (subscription?.plan === "family" && subscription?.status === "active") ? "family" : "free";
-  const kycCompleted = false;
+  const kycCompleted = kycData?.kycStatus === "approved";
 
   const handleUpgradeFamily = async () => {
     setUpgrading(true);
@@ -157,10 +597,51 @@ export default function Settings() {
     setEditingName(false);
   };
 
+  const handleToggleDiscoverable = async (fundId: string, newValue: boolean) => {
+    haptic("selection");
+    try {
+      const res = await fetch(`/api/funds/${fundId}/privacy`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDiscoverable: newValue }),
+      });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+        toast({ title: newValue ? "Fund is now discoverable" : "Fund is now private" });
+      }
+    } catch {
+      toast({ title: "Could not update privacy", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteBankAccount = async (id: string) => {
+    haptic("medium");
+    try {
+      const res = await fetch(`/api/bank-accounts/${id}`, { method: "DELETE", credentials: "include" });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+        toast({ title: "Bank account removed" });
+      }
+    } catch {
+      toast({ title: "Could not remove account", variant: "destructive" });
+    }
+  };
+
   const handleSignOut = () => {
     haptic("medium");
     logout();
   };
+
+  const refreshAll = () => {
+    queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
+    if (primaryFund) {
+      queryClient.invalidateQueries({ queryKey: ["/api/funds", primaryFund.id, "holdings"] });
+    }
+  };
+
+  const isAnyFundDiscoverable = funds.some((f: any) => f.isDiscoverable);
 
   return (
     <div className="md:ml-[220px] lg:ml-[260px] min-h-screen bg-background pb-24 md:pb-8">
@@ -477,9 +958,14 @@ export default function Settings() {
             </div>
 
             {kycCompleted ? (
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-200">
-                <Check size={20} className="text-green-600" />
-                <p className="text-sm font-medium text-green-700" data-testid="text-investing-active">Investing is active</p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-green-50 border border-green-200">
+                  <Check size={20} className="text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium text-green-700" data-testid="text-investing-active">Investing is active</p>
+                    <p className="text-xs text-green-600">Identity verified. Your funds are investing automatically.</p>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
@@ -508,6 +994,67 @@ export default function Settings() {
               <Wallet size={18} className="text-muted-foreground" />
               <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-withdrawals">Withdrawals & Selling</h2>
             </div>
+
+            {holdingsData.length > 0 && (
+              <div className="space-y-2 mb-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Your Holdings</p>
+                {holdingsData.map((holding: any) => (
+                  <div
+                    key={holding.id}
+                    className="flex items-center justify-between p-3 rounded-xl border border-border/50"
+                    data-testid={`card-holding-${holding.id}`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-foreground">{holding.ticker}</p>
+                        <span className={`text-xs ${parseFloat(holding.gain) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {parseFloat(holding.gain) >= 0 ? "+" : ""}${parseFloat(holding.gain).toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{parseFloat(holding.shares).toFixed(4)} shares · ${parseFloat(holding.currentValue).toFixed(2)}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => {
+                        setSelectedHolding(holding);
+                        setSelectedFundForAction(primaryFund);
+                        setSellHoldingOpen(true);
+                        haptic("medium");
+                      }}
+                      data-testid={`button-sell-${holding.id}`}
+                    >
+                      Sell
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {primaryFund && parseFloat(primaryFund.pendingBalance) > 0 && (
+              <div className="bg-primary/5 rounded-xl border border-primary/20 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Available cash</p>
+                    <p className="text-lg font-semibold text-foreground">${parseFloat(primaryFund.pendingBalance).toFixed(2)}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedFundForAction(primaryFund);
+                      setWithdrawOpen(true);
+                      haptic("medium");
+                    }}
+                    data-testid="button-withdraw-cash"
+                  >
+                    <ArrowDownToLine size={14} className="mr-1" />
+                    Withdraw
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-3">
               <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
@@ -538,27 +1085,89 @@ export default function Settings() {
           </div>
         </SectionCard>
 
+        {/* Bank Accounts */}
+        <SectionCard>
+          <div className="p-5 space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <Building2 size={18} className="text-muted-foreground" />
+                <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-bank-accounts">Bank Accounts</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setLinkBankOpen(true); haptic("selection"); }}
+                className="text-xs gap-1"
+                data-testid="button-link-bank"
+              >
+                <Plus size={14} />
+                Link account
+              </Button>
+            </div>
+
+            {bankAccounts.length === 0 ? (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground mb-3" data-testid="text-no-bank-accounts">No bank accounts linked yet.</p>
+                <Button
+                  variant="outline"
+                  onClick={() => { setLinkBankOpen(true); haptic("selection"); }}
+                  className="gap-2"
+                  data-testid="button-link-first-bank"
+                >
+                  <Building2 size={16} />
+                  Link a bank account
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {bankAccounts.map((ba: any) => (
+                  <div
+                    key={ba.id}
+                    className="flex items-center justify-between p-3 rounded-xl border border-border/50"
+                    data-testid={`card-bank-${ba.id}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Building2 size={16} className="text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{ba.bankName}</p>
+                        <p className="text-xs text-muted-foreground">{ba.accountType} ****{ba.accountLast4}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteBankAccount(ba.id)}
+                      className="text-muted-foreground hover:text-red-600 transition-colors p-1"
+                      data-testid={`button-remove-bank-${ba.id}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </SectionCard>
+
         {/* Privacy */}
         <SectionCard>
           <div className="p-5 space-y-4">
             <div className="flex items-center gap-3 mb-2">
-              {discoverable ? <Eye size={18} className="text-muted-foreground" /> : <EyeOff size={18} className="text-muted-foreground" />}
+              {isAnyFundDiscoverable ? <Eye size={18} className="text-muted-foreground" /> : <EyeOff size={18} className="text-muted-foreground" />}
               <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-privacy">Privacy</h2>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex-1 mr-4">
-                <p className="text-sm font-medium text-foreground">Make my funds discoverable</p>
+            {funds.map((fund: any) => (
+              <div key={fund.id} className="flex items-center justify-between">
+                <div className="flex-1 mr-4">
+                  <p className="text-sm font-medium text-foreground">{fund.name}</p>
+                  <p className="text-xs text-muted-foreground">{fund.isDiscoverable ? "Discoverable" : "Private (link only)"}</p>
+                </div>
+                <Switch
+                  checked={fund.isDiscoverable || false}
+                  onCheckedChange={(val) => handleToggleDiscoverable(fund.id, val)}
+                  data-testid={`toggle-discoverable-${fund.id}`}
+                />
               </div>
-              <Switch
-                checked={discoverable}
-                onCheckedChange={(val) => {
-                  setDiscoverable(val);
-                  haptic("selection");
-                }}
-                data-testid="toggle-discoverable"
-              />
-            </div>
+            ))}
 
             <div className="flex items-start gap-2 p-3 rounded-xl bg-muted/30">
               <Lock size={14} className="text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -592,6 +1201,28 @@ export default function Settings() {
         onSuccess={() => {
           navigate("/dashboard");
         }}
+      />
+
+      <SellHoldingSheet
+        open={sellHoldingOpen}
+        onClose={() => { setSellHoldingOpen(false); setSelectedHolding(null); }}
+        holding={selectedHolding}
+        fund={selectedFundForAction}
+        onSuccess={refreshAll}
+      />
+
+      <WithdrawSheet
+        open={withdrawOpen}
+        onClose={() => setWithdrawOpen(false)}
+        fund={selectedFundForAction || primaryFund}
+        bankAccounts={bankAccounts}
+        onSuccess={refreshAll}
+      />
+
+      <LinkBankSheet
+        open={linkBankOpen}
+        onClose={() => setLinkBankOpen(false)}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] })}
       />
     </div>
   );

@@ -5,7 +5,7 @@ import { stripeService } from "./stripeService";
 import { sql, eq } from "drizzle-orm";
 import { db } from "./db";
 import { isAuthenticated } from "./auth";
-import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, users } from "@shared/schema";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, users, funds, holdings } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -259,6 +259,355 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error activating fund:', error);
       res.status(500).json({ error: 'Failed to activate fund' });
+    }
+  });
+
+  // ===== KYC =====
+  app.post('/api/kyc/submit', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { personal, identity, strategy } = req.body;
+
+      if (!personal || !identity) {
+        return res.status(400).json({ error: 'Personal and identity information are required' });
+      }
+
+      const kycData = {
+        firstName: personal.firstName,
+        lastName: personal.lastName,
+        dob: personal.dob,
+        address: {
+          street: personal.street,
+          city: personal.city,
+          state: personal.state,
+          zip: personal.zip,
+        },
+        phone: personal.phone,
+        citizenship: identity.citizenship,
+        employment: identity.employment,
+        ssnProvided: true,
+      };
+
+      await db.update(users).set({
+        kycStatus: 'approved',
+        kycSubmittedAt: new Date(),
+        kycData: kycData,
+        firstName: personal.firstName,
+        lastName: personal.lastName,
+        updatedAt: new Date(),
+      }).where(eq(users.id, userId));
+
+      const userFunds = await storage.getFundsByUser(userId);
+      for (const fund of userFunds) {
+        if (fund.status === 'draft') {
+          await storage.updateFund(fund.id, {
+            status: 'active',
+            investmentStrategy: strategy || 'growth',
+          });
+        }
+      }
+
+      await storage.createActivity({
+        userId,
+        fundId: userFunds[0]?.id,
+        type: 'kyc_approved',
+        title: 'Identity verified',
+        description: 'Your identity has been verified. Your funds are now active and investing.',
+      });
+
+      res.json({ status: 'approved', activatedFunds: userFunds.length });
+    } catch (error) {
+      console.error('Error submitting KYC:', error);
+      res.status(500).json({ error: 'Failed to submit KYC' });
+    }
+  });
+
+  app.get('/api/user/kyc-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const [user] = await db.select({ kycStatus: users.kycStatus, kycSubmittedAt: users.kycSubmittedAt }).from(users).where(eq(users.id, userId));
+      res.json({ kycStatus: user?.kycStatus || 'none', kycSubmittedAt: user?.kycSubmittedAt });
+    } catch (error) {
+      console.error('Error fetching KYC status:', error);
+      res.status(500).json({ error: 'Failed to fetch KYC status' });
+    }
+  });
+
+  // ===== PRIVACY =====
+  app.patch('/api/funds/:id/privacy', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fund = await storage.getFund(req.params.id);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      const { isDiscoverable } = req.body;
+      const updated = await storage.updateFund(req.params.id, { isDiscoverable: !!isDiscoverable });
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating privacy:', error);
+      res.status(500).json({ error: 'Failed to update privacy' });
+    }
+  });
+
+  // ===== SELL HOLDINGS =====
+  app.post('/api/holdings/sell', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { holdingId, fundId, shares } = req.body;
+
+      if (!holdingId || !fundId) {
+        return res.status(400).json({ error: 'holdingId and fundId are required' });
+      }
+
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      const holdingsList = await storage.getHoldingsByFund(fundId);
+      const holding = holdingsList.find(h => h.id === holdingId);
+      if (!holding) return res.status(404).json({ error: 'Holding not found' });
+
+      const sharesToSell = shares ? parseFloat(shares) : parseFloat(holding.shares);
+      if (sharesToSell <= 0 || sharesToSell > parseFloat(holding.shares)) {
+        return res.status(400).json({ error: 'Invalid number of shares' });
+      }
+
+      const pricePerShare = parseFloat(holding.currentValue) / parseFloat(holding.shares);
+      const saleValue = sharesToSell * pricePerShare;
+      const remainingShares = parseFloat(holding.shares) - sharesToSell;
+
+      if (remainingShares <= 0.000001) {
+        await storage.deleteHolding(holdingId);
+      } else {
+        const remainingCostBasis = (parseFloat(holding.costBasis) / parseFloat(holding.shares)) * remainingShares;
+        const remainingValue = pricePerShare * remainingShares;
+        await storage.updateHolding(holdingId, {
+          shares: remainingShares.toFixed(6),
+          costBasis: remainingCostBasis.toFixed(2),
+          currentValue: remainingValue.toFixed(2),
+          gain: (remainingValue - remainingCostBasis).toFixed(2),
+        });
+      }
+
+      const newBalance = parseFloat(fund.balance) - saleValue;
+      const newPending = parseFloat(fund.pendingBalance) + saleValue;
+      await storage.updateFund(fundId, {
+        balance: Math.max(0, newBalance).toFixed(2),
+        pendingBalance: newPending.toFixed(2),
+      });
+
+      await storage.createActivity({
+        userId,
+        fundId,
+        type: 'sell',
+        title: `Sold ${holding.ticker}`,
+        description: `Sold ${sharesToSell.toFixed(4)} shares of ${holding.name} for $${saleValue.toFixed(2)}. Cash will settle in 1-2 business days.`,
+        amount: saleValue.toFixed(2),
+      });
+
+      await storage.createTransaction({
+        userId,
+        type: 'sell',
+        amount: saleValue.toFixed(2),
+        status: 'completed',
+        description: `Sold ${sharesToSell.toFixed(4)} shares of ${holding.ticker}`,
+        fundId,
+        completedAt: new Date(),
+      });
+
+      res.json({ success: true, saleValue: saleValue.toFixed(2), ticker: holding.ticker, sharesSold: sharesToSell });
+    } catch (error) {
+      console.error('Error selling holding:', error);
+      res.status(500).json({ error: 'Failed to sell holding' });
+    }
+  });
+
+  // ===== WITHDRAWALS =====
+  app.post('/api/withdrawals', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { fundId, amount, bankAccountId } = req.body;
+
+      if (!fundId || !amount || !bankAccountId) {
+        return res.status(400).json({ error: 'fundId, amount, and bankAccountId are required' });
+      }
+
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      const bankAccounts = await storage.getBankAccountsByUser(userId);
+      const bankAccount = bankAccounts.find(b => b.id === bankAccountId);
+      if (!bankAccount) return res.status(404).json({ error: 'Bank account not found' });
+
+      const withdrawAmount = parseFloat(amount);
+      const availableCash = parseFloat(fund.pendingBalance);
+      if (withdrawAmount <= 0 || withdrawAmount > availableCash) {
+        return res.status(400).json({ error: `Insufficient cash. Available: $${availableCash.toFixed(2)}` });
+      }
+
+      await storage.updateFund(fundId, {
+        pendingBalance: (availableCash - withdrawAmount).toFixed(2),
+      });
+
+      await storage.createActivity({
+        userId,
+        fundId,
+        type: 'withdrawal',
+        title: 'Cash withdrawal',
+        description: `$${withdrawAmount.toFixed(2)} withdrawn to ${bankAccount.bankName} ending in ${bankAccount.accountLast4}. Expect 1-3 business days.`,
+        amount: withdrawAmount.toFixed(2),
+      });
+
+      await storage.createTransaction({
+        userId,
+        type: 'withdrawal',
+        amount: withdrawAmount.toFixed(2),
+        status: 'processing',
+        description: `Withdrawal to ${bankAccount.bankName} ****${bankAccount.accountLast4}`,
+        fundId,
+      });
+
+      res.json({ success: true, amount: withdrawAmount.toFixed(2), bankAccount: { bankName: bankAccount.bankName, last4: bankAccount.accountLast4 } });
+    } catch (error) {
+      console.error('Error processing withdrawal:', error);
+      res.status(500).json({ error: 'Failed to process withdrawal' });
+    }
+  });
+
+  // ===== BANK ACCOUNTS =====
+  app.get('/api/bank-accounts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const accounts = await storage.getBankAccountsByUser(userId);
+      res.json(accounts);
+    } catch (error) {
+      console.error('Error fetching bank accounts:', error);
+      res.status(500).json({ error: 'Failed to fetch bank accounts' });
+    }
+  });
+
+  app.post('/api/bank-accounts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { bankName, accountLast4, routingLast4, accountType } = req.body;
+
+      if (!bankName || !accountLast4) {
+        return res.status(400).json({ error: 'Bank name and account last 4 digits are required' });
+      }
+
+      const account = await storage.createBankAccount({
+        userId,
+        bankName,
+        accountLast4,
+        routingLast4: routingLast4 || null,
+        accountType: accountType || 'checking',
+        status: 'active',
+      });
+
+      await storage.createActivity({
+        userId,
+        type: 'bank_linked',
+        title: 'Bank account linked',
+        description: `${bankName} account ending in ${accountLast4} has been linked.`,
+      });
+
+      res.status(201).json(account);
+    } catch (error) {
+      console.error('Error creating bank account:', error);
+      res.status(500).json({ error: 'Failed to link bank account' });
+    }
+  });
+
+  app.delete('/api/bank-accounts/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const accounts = await storage.getBankAccountsByUser(userId);
+      const account = accounts.find(a => a.id === req.params.id);
+      if (!account) return res.status(404).json({ error: 'Bank account not found' });
+
+      await storage.deleteBankAccount(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting bank account:', error);
+      res.status(500).json({ error: 'Failed to remove bank account' });
+    }
+  });
+
+  // ===== AUTO-INVEST =====
+  app.post('/api/funds/:fundId/auto-invest', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+      if (fund.status !== 'active') return res.status(400).json({ error: 'Fund must be activated before investing' });
+
+      const cashToInvest = parseFloat(fund.pendingBalance);
+      if (cashToInvest <= 0) {
+        return res.status(400).json({ error: 'No cash available to invest' });
+      }
+
+      const defaultBasket = [
+        { ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', weight: 0.50 },
+        { ticker: 'VXUS', name: 'Vanguard Total International Stock ETF', weight: 0.25 },
+        { ticker: 'BND', name: 'Vanguard Total Bond Market ETF', weight: 0.15 },
+        { ticker: 'VGT', name: 'Vanguard Information Technology ETF', weight: 0.10 },
+      ];
+
+      const createdHoldings = [];
+      for (const asset of defaultBasket) {
+        const investAmount = cashToInvest * asset.weight;
+        if (investAmount < 0.01) continue;
+
+        const mockPrices: Record<string, number> = { VTI: 285.42, VXUS: 62.18, BND: 71.35, VGT: 572.90 };
+        const price = mockPrices[asset.ticker] || 100;
+        const sharesBought = investAmount / price;
+
+        const existing = await storage.getHoldingByFundAndTicker(fund.id, asset.ticker);
+        if (existing) {
+          const newShares = parseFloat(existing.shares) + sharesBought;
+          const newCostBasis = parseFloat(existing.costBasis) + investAmount;
+          const newValue = parseFloat(existing.currentValue) + investAmount;
+          await storage.updateHolding(existing.id, {
+            shares: newShares.toFixed(6),
+            costBasis: newCostBasis.toFixed(2),
+            currentValue: newValue.toFixed(2),
+            gain: (newValue - newCostBasis).toFixed(2),
+          });
+        } else {
+          await storage.createHolding({
+            fundId: fund.id,
+            ticker: asset.ticker,
+            name: asset.name,
+            shares: sharesBought.toFixed(6),
+            costBasis: investAmount.toFixed(2),
+            currentValue: investAmount.toFixed(2),
+            gain: '0.00',
+          });
+        }
+        createdHoldings.push({ ticker: asset.ticker, shares: sharesBought, value: investAmount });
+      }
+
+      await storage.updateFund(fund.id, {
+        balance: (parseFloat(fund.balance) + cashToInvest).toFixed(2),
+        pendingBalance: '0.00',
+      });
+
+      await storage.createActivity({
+        userId,
+        fundId: fund.id,
+        type: 'auto_invest',
+        title: 'Cash invested',
+        description: `$${cashToInvest.toFixed(2)} invested across ${createdHoldings.length} positions.`,
+        amount: cashToInvest.toFixed(2),
+      });
+
+      res.json({ success: true, invested: cashToInvest.toFixed(2), holdings: createdHoldings });
+    } catch (error) {
+      console.error('Error auto-investing:', error);
+      res.status(500).json({ error: 'Failed to auto-invest' });
     }
   });
 
@@ -758,7 +1107,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'No fields to update' });
       }
       const [updated] = await db.update(users).set(updates).where(eq(users.id, userId)).returning();
-      const { passwordHash: _, ...safeUser } = updated;
+      const { passwordHash: _, kycData: _kd, ...safeUser } = updated;
       res.json(safeUser);
     } catch (error) {
       console.error('Error updating profile:', error);
