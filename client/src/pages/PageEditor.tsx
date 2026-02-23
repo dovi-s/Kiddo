@@ -100,7 +100,7 @@ export default function PageEditor() {
   const [previewNote, setPreviewNote] = useState("");
   const [previewProcessing, setPreviewProcessing] = useState(false);
   
-  const previewProjection = Math.round(previewAmount * 4.6);
+  const previewProjection = Math.round(previewAmount * Math.pow(1.10, 18));
   const previewFee = Math.round(previewAmount * 0.029 * 100) / 100 + 0.30;
   const previewTotal = (previewAmount + previewFee).toFixed(2);
   
@@ -479,7 +479,7 @@ export default function PageEditor() {
                 </p>
                 <p className="font-serif text-xl lg:text-2xl font-light">${previewProjection.toLocaleString()}</p>
                 <p className={`text-[10px] lg:text-xs ${pageData.theme === "dark" ? "text-white/40" : "text-stone-400"}`}>
-                  in 18 years at 7% return
+                  in 18 years at 10% return
                 </p>
               </div>
             )}

@@ -121,7 +121,7 @@ export const educationContent = {
   },
   giftGrowth: {
     title: "How much can gifts grow?",
-    content: "The stock market has historically averaged about 7% per year. A $50 gift today could grow to roughly $197 in 18 years. Past performance doesn't guarantee future results, but long time horizons tend to smooth out market ups and downs.",
+    content: "The S&P 500 has historically averaged about 10% per year. A $50 gift today could grow to roughly $278 in 18 years. Past performance doesn't guarantee future results, but long time horizons tend to smooth out market ups and downs.",
   },
   withdrawals: {
     title: "Can I sell or withdraw?",

@@ -32,7 +32,7 @@ function GrowthCalculator() {
   const [years, setYears] = useState(10);
   const [isCustom, setIsCustom] = useState(false);
 
-  const result = Math.round(amount * Math.pow(1.07, years));
+  const result = Math.round(amount * Math.pow(1.10, years));
 
   return (
     <motion.div
@@ -112,7 +112,7 @@ function GrowthCalculator() {
             in {years} years
           </motion.p>
           <p className="text-xs text-muted-foreground mt-3" data-testid="text-growth-disclaimer">
-            Based on the stock market's historical average of ~7% per year. Past performance does not guarantee future results.
+            Based on the S&P 500's historical average of ~10% per year. Past performance does not guarantee future results.
           </p>
         </div>
       </div>

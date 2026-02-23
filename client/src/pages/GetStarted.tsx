@@ -52,7 +52,7 @@ export default function GetStarted() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectedAmount, setProjectedAmount] = useState(500);
 
-  const projectedGrowth = Math.round(projectedAmount * Math.pow(1.07, 15));
+  const projectedGrowth = Math.round(projectedAmount * Math.pow(1.10, 15));
   const fundName = recipientName || (accountType === "parent" ? "Your child" : "You");
 
   const addChild = () => {
@@ -591,7 +591,7 @@ export default function GetStarted() {
                 <div className="flex items-start gap-3 p-4 bg-muted rounded-2xl border border-border">
                   <Sparkles className="w-5 h-5 text-[hsl(var(--kora-gold))] flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-muted-foreground">
-                    Based on historical S&P 500 average returns of ~7% annually. Past performance doesn't guarantee future results.
+                    Based on the S&P 500's historical average of ~10% annually. Past performance doesn't guarantee future results.
                   </p>
                 </div>
               </motion.div>

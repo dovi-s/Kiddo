@@ -138,7 +138,7 @@ export default function Dashboard() {
     return 15;
   })();
 
-  const projectedValue = totalValue * Math.pow(1.07, yearsRemaining);
+  const projectedValue = totalValue * Math.pow(1.10, yearsRemaining);
 
   const activeEvents = events.filter((e) => e.status === "active");
 
@@ -339,7 +339,7 @@ export default function Dashboard() {
                       Growth Projection
                     </h3>
                     <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-growth-projection">
-                      At 7% average yearly return, this fund could be worth{" "}
+                      At 10% average yearly return, this fund could be worth{" "}
                       <span className="font-semibold text-foreground">
                         {formatCurrency(projectedValue)}
                       </span>{" "}

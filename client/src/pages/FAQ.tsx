@@ -81,7 +81,7 @@ const faqItems = [
   {
     id: "vs-savings",
     question: "How is this different from a savings account?",
-    answer: "A savings account currently earns around 4% per year. Historically, a diversified stock portfolio has averaged around 7% per year over the long run. Over 18 years, that difference adds up significantly. Plus, your child gets real ownership in companies they actually know and use, which is a great way to teach them about money and investing.",
+    answer: "A savings account currently earns around 4% per year. Historically, the S&P 500 has averaged around 10% per year. Over 18 years, that difference is massive. Plus, your child gets real ownership in companies they actually know and use, which is a great way to teach them about money and investing.",
   },
   {
     id: "payment-methods",

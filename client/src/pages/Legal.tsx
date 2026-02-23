@@ -167,7 +167,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Investment Risks</h3>
-                  <p>Investing in securities involves risk. The value of your investments may fluctuate, and you may receive back less than you originally invested. Past performance is not indicative of future results. Historical averages (such as 7% annual returns) are not guaranteed.</p>
+                  <p>Investing in securities involves risk. The value of your investments may fluctuate, and you may receive back less than you originally invested. Past performance is not indicative of future results. Historical averages (such as 10% annual returns) are not guaranteed.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Not FDIC Insured</h3>
