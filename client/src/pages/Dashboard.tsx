@@ -3,7 +3,9 @@ import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 import { AddFundSheet } from "@/components/AddFundSheet";
+import { EventGateModal } from "@/components/EventGateModal";
 import {
   TrendingUp,
   ArrowUp,
@@ -55,10 +57,13 @@ function formatDate(dateStr: string | Date | null | undefined): string {
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: subscription } = useSubscription();
   const [selectedFundId, setSelectedFundId] = useState<string>("");
   const [fundPickerOpen, setFundPickerOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [addFundOpen, setAddFundOpen] = useState(false);
+  const [eventGateOpen, setEventGateOpen] = useState(false);
+  const isFamily = subscription?.plan === "family" && subscription?.status === "active";
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -329,7 +334,14 @@ export default function Dashboard() {
                 variant="outline"
                 size="sm"
                 className="flex-1 rounded-full gap-2 h-10"
-                onClick={() => setLocation("/event/create")}
+                onClick={() => {
+                  haptic("selection");
+                  if (isFamily) {
+                    setLocation("/event/create");
+                  } else {
+                    setEventGateOpen(true);
+                  }
+                }}
                 data-testid="button-create-event"
               >
                 <Calendar size={15} />
@@ -565,6 +577,11 @@ export default function Dashboard() {
         onSuccess={(newFundId) => {
           if (newFundId) setSelectedFundId(newFundId);
         }}
+      />
+
+      <EventGateModal
+        open={eventGateOpen}
+        onClose={() => setEventGateOpen(false)}
       />
     </div>
   );

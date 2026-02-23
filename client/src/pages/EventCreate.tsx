@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useMemo } from "react";
+import { useLocation, useSearch } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Calendar, Gift, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ArrowRight, ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,9 +7,11 @@ import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
 import { GradientText, EnlighteningReveal, ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent } from "@/hooks/use-events";
 import { useFunds } from "@/hooks/use-funds";
 import { toast } from "@/hooks/use-toast";
+import { EventGateModal } from "@/components/EventGateModal";
 
 const EVENT_TYPES = [
   { value: "birthday", label: "Birthday", icon: PartyPopper, color: "text-pink-500 bg-pink-50 dark:bg-pink-950/30" },
@@ -30,9 +32,14 @@ function slugify(text: string): string {
 
 export default function EventCreate() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: subscription, isLoading: subLoading } = useSubscription();
   const { data: funds = [], isLoading: fundsLoading } = useFunds();
   const createEvent = useCreateEvent();
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
+  const searchParams = useMemo(() => new URLSearchParams(searchString), [searchString]);
+  const hasEventPass = searchParams.get("eventPass") === "purchased";
+  const stripeSessionId = searchParams.get("session_id");
 
   const [step, setStep] = useState(1);
   const [eventType, setEventType] = useState("");
@@ -42,7 +49,9 @@ export default function EventCreate() {
   const [fundId, setFundId] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
 
-  if (authLoading || fundsLoading) {
+  const isFamily = subscription?.plan === "family" && subscription?.status === "active";
+
+  if (authLoading || fundsLoading || subLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center md:ml-[220px] lg:ml-[260px]">
         <ThinkingOrb size={40} variant="default" />
@@ -53,6 +62,17 @@ export default function EventCreate() {
   if (!isAuthenticated) {
     window.location.href = "/login";
     return null;
+  }
+
+  if (!isFamily && !hasEventPass) {
+    return (
+      <div className="min-h-screen bg-background md:ml-[220px] lg:ml-[260px]">
+        <EventGateModal
+          open={true}
+          onClose={() => setLocation("/events")}
+        />
+      </div>
+    );
   }
 
   const canProceedStep1 = eventType !== "";
@@ -73,7 +93,8 @@ export default function EventCreate() {
         slug,
         userId: "",
         status: "active",
-      });
+        ...(stripeSessionId ? { stripeSessionId } : {}),
+      } as any);
       haptic("success");
       toast({ title: "Event created!", description: "Your new event is ready to share." });
       setLocation("/events");

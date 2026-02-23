@@ -265,6 +265,33 @@ export async function registerRoutes(
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;
+
+      const subscription = await storage.getSubscription(userId);
+      const isFamily = subscription?.plan === 'family' && subscription?.status === 'active';
+
+      if (!isFamily) {
+        let hasValidEventPass = false;
+        if (req.body.stripeSessionId) {
+          try {
+            const session = await stripeService.getCheckoutSession(req.body.stripeSessionId);
+            if (
+              session.payment_status === 'paid' &&
+              session.metadata?.type === 'event_pass' &&
+              session.metadata?.userId === userId
+            ) {
+              hasValidEventPass = true;
+            }
+          } catch {}
+        }
+
+        if (!hasValidEventPass) {
+          return res.status(403).json({ 
+            error: 'Plan upgrade required',
+            message: 'Upgrade to Family Plan or purchase an Event Pass to create events.'
+          });
+        }
+      }
+
       const data = insertEventSchema.parse({ ...req.body, userId });
       const event = await storage.createEvent(data);
       res.status(201).json(event);
@@ -512,8 +539,8 @@ export async function registerRoutes(
       const session = await stripeService.createCheckoutSession(
         priceId,
         'payment',
-        `${baseUrl}/events?success=event-pass&eventId=${eventId || ''}`,
-        `${baseUrl}/event/create?canceled=true`,
+        `${baseUrl}/event/create?eventPass=purchased&session_id={CHECKOUT_SESSION_ID}`,
+        `${baseUrl}/events?canceled=event-pass`,
         { eventId: eventId || '', eventName: eventName || '', userId, type: 'event_pass' }
       );
       

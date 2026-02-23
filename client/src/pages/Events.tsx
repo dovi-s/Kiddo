@@ -14,6 +14,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useEvents } from "@/hooks/use-events";
 import { useFunds } from "@/hooks/use-funds";
 import { toast } from "@/hooks/use-toast";
+import { EventGateModal } from "@/components/EventGateModal";
 import type { Event } from "@shared/schema";
 
 function getEventTypeLabel(eventType: string | null | undefined): string {
@@ -56,6 +57,7 @@ export default function Events() {
   const [editDate, setEditDate] = useState("");
   const [editType, setEditType] = useState("");
   const [saving, setSaving] = useState(false);
+  const [eventGateOpen, setEventGateOpen] = useState(false);
   const isFamily = subscription?.plan === "family" && subscription?.status === "active";
 
   const openEditModal = (event: Event) => {
@@ -156,16 +158,21 @@ export default function Events() {
           <h1 className="font-heading text-2xl font-bold text-foreground" data-testid="heading-your-events">
             Your Events
           </h1>
-          <Link href="/event/create">
-            <Button
-              data-testid="button-create-event"
-              className="gap-2"
-              onClick={() => haptic("medium")}
-            >
-              <Plus size={18} />
-              Create Event
-            </Button>
-          </Link>
+          <Button
+            data-testid="button-create-event"
+            className="gap-2"
+            onClick={() => {
+              haptic("medium");
+              if (isFamily) {
+                window.location.href = "/event/create";
+              } else {
+                setEventGateOpen(true);
+              }
+            }}
+          >
+            <Plus size={18} />
+            Create Event
+          </Button>
         </motion.div>
 
         {events.length === 0 ? (
@@ -181,12 +188,21 @@ export default function Events() {
               <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
                 Create your first event to start receiving gifts!
               </p>
-              <Link href="/event/create">
-                <Button data-testid="button-create-first-event" className="gap-2">
-                  <Plus size={18} />
-                  Create your first event
-                </Button>
-              </Link>
+              <Button
+                data-testid="button-create-first-event"
+                className="gap-2"
+                onClick={() => {
+                  haptic("medium");
+                  if (isFamily) {
+                    window.location.href = "/event/create";
+                  } else {
+                    setEventGateOpen(true);
+                  }
+                }}
+              >
+                <Plus size={18} />
+                Create your first event
+              </Button>
             </motion.div>
           </EnlighteningReveal>
         ) : (
@@ -570,6 +586,11 @@ export default function Events() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <EventGateModal
+        open={eventGateOpen}
+        onClose={() => setEventGateOpen(false)}
+      />
     </div>
   );
 }
