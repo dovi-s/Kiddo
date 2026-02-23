@@ -180,6 +180,88 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/public/funds/:id/overview', async (req, res) => {
+    try {
+      const fund = await storage.getFund(req.params.id);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      const gifts = await storage.getGiftsByFund(fund.id);
+      res.json({
+        id: fund.id,
+        name: fund.name,
+        recipientFirstName: fund.recipientFirstName,
+        accountType: fund.accountType,
+        balance: fund.balance,
+        totalGains: fund.totalGains,
+        giftCount: gifts.length,
+      });
+    } catch (error) {
+      console.error('Error fetching public fund overview:', error);
+      res.status(500).json({ error: 'Failed to fetch fund' });
+    }
+  });
+
+  app.get('/api/public/funds/:id/gifts', async (req, res) => {
+    try {
+      const fund = await storage.getFund(req.params.id);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      const gifts = await storage.getGiftsByFund(fund.id);
+      res.json(gifts.map(g => ({
+        id: g.id,
+        senderName: g.senderName,
+        amount: g.amount,
+        message: g.message,
+        createdAt: g.createdAt,
+        status: g.status,
+      })));
+    } catch (error) {
+      console.error('Error fetching public fund gifts:', error);
+      res.status(500).json({ error: 'Failed to fetch gifts' });
+    }
+  });
+
+  app.get('/api/public/funds/:id/memory', async (req, res) => {
+    try {
+      const fund = await storage.getFund(req.params.id);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      const entries = await storage.getMemoryEntriesByFund(req.params.id);
+      res.json(entries);
+    } catch (error) {
+      console.error('Error fetching public memory:', error);
+      res.status(500).json({ error: 'Failed to fetch memory' });
+    }
+  });
+
+  app.post('/api/funds/activate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { fundId, strategy } = req.body;
+      if (!fundId) {
+        return res.status(400).json({ error: 'Fund ID is required' });
+      }
+      const fund = await storage.getFund(fundId);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      if (fund.userId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const updated = await storage.updateFund(fundId, {
+        status: "active",
+        investmentStrategy: strategy || "growth",
+      });
+      res.json(updated);
+    } catch (error) {
+      console.error('Error activating fund:', error);
+      res.status(500).json({ error: 'Failed to activate fund' });
+    }
+  });
+
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;

@@ -1,459 +1,319 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
-import { Plus, CalendarHeart, Gift, ChevronDown, ChevronRight, Edit2, Trash2, Share2, MoreHorizontal, Sparkles, Check } from "lucide-react";
-import { PageTransition } from "@/components/layout/PageTransition";
-import { Mascot } from "@/components/ui/mascot";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { easeOutExpo, staggerPremium, listItemSpring, sharePulse } from "@/lib/animations";
-import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { GradientText, EnlighteningReveal, ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
 import { useEvents } from "@/hooks/use-events";
 import { useFunds } from "@/hooks/use-funds";
-import { ThinkingOrb } from "@/components/ui/gemini";
+import { toast } from "@/hooks/use-toast";
+import type { Event } from "@shared/schema";
 
-type EventItem = {
-  id: string;
-  slug: string;
-  title: string;
-  fundName: string;
-  fundSlug: string;
-  date?: string;
-  raised: number;
-  gifts: number;
-  active: boolean;
-  type: "birthday" | "holiday" | "anytime" | "custom";
-  isDefault?: boolean;
-};
+function getEventTypeLabel(eventType: string | null | undefined): string {
+  switch (eventType) {
+    case "birthday": return "Birthday";
+    case "baby_shower": return "Baby Shower";
+    case "holiday": return "Holiday";
+    case "christmas": return "Christmas";
+    case "graduation": return "Graduation";
+    case "just_because": return "Just Because";
+    default: return "Event";
+  }
+}
 
-function getEventIcon(type: EventItem["type"]) {
-  switch (type) {
-    case "birthday":
-      return "🎂";
-    case "holiday":
-      return "🎄";
-    case "anytime":
-      return "💝";
-    case "custom":
-      return "✨";
+function getEventTypeIcon(eventType: string | null | undefined) {
+  switch (eventType) {
+    case "birthday": return <PartyPopper size={20} />;
+    case "baby_shower": return <Baby size={20} />;
+    case "holiday": return <TreeDeciduous size={20} />;
+    case "christmas": return <TreeDeciduous size={20} />;
+    case "graduation": return <GraduationCap size={20} />;
+    case "just_because": return <Heart size={20} />;
+    default: return <Gift size={20} />;
   }
 }
 
 export default function Events() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { data: apiFunds = [], isLoading: fundsLoading } = useFunds();
-  const { data: apiEvents = [], isLoading: eventsLoading } = useEvents();
-  
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: events = [], isLoading: eventsLoading } = useEvents();
+  const { data: funds = [], isLoading: fundsLoading } = useFunds();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [selectedFundSlug, setSelectedFundSlug] = useState("");
-  const [showFundPicker, setShowFundPicker] = useState(false);
-  const [actionEventId, setActionEventId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      window.location.href = "/login";
-    }
-  }, [authLoading, isAuthenticated]);
-
-  useEffect(() => {
-    if (apiFunds.length > 0 && !selectedFundSlug) {
-      setSelectedFundSlug(apiFunds[0].slug);
-    }
-  }, [apiFunds, selectedFundSlug]);
-
-  const funds = apiFunds.map(f => ({
-    slug: f.slug,
-    name: f.name,
-    accountType: f.accountType,
-  }));
-
-  const selectedFund = funds.find(f => f.slug === selectedFundSlug) || funds[0];
-
-  const fundLookup = Object.fromEntries(apiFunds.map(f => [f.id, f]));
-
-  const events: EventItem[] = apiEvents
-    .filter(e => {
-      const eventFund = fundLookup[e.fundId];
-      return eventFund && eventFund.slug === selectedFundSlug;
-    })
-    .map(e => {
-      const eventFund = fundLookup[e.fundId];
-      return {
-        id: e.id,
-        slug: e.slug,
-        title: e.name,
-        fundName: eventFund?.name || "Fund",
-        fundSlug: eventFund?.slug || "",
-        date: e.eventDate ? new Date(e.eventDate).toLocaleDateString() : undefined,
-        raised: parseFloat(e.giftVolume || "0"),
-        gifts: e.giftCount || 0,
-        active: e.status === "active",
-        type: e.isPermanent ? "anytime" as const : "custom" as const,
-        isDefault: e.isPermanent,
-      };
-    });
-
-  const activeEvents = events.filter(e => e.active);
-  const pastEvents = events.filter(e => !e.active);
-
-  const handleDelete = (id: string) => {
-    const event = events.find(e => e.id === id);
-    if (event?.isDefault) {
-      toast({ title: "Can't delete", description: "This is your permanent gift link", variant: "destructive" });
-      setActionEventId(null);
-      return;
-    }
-    toast({ title: "Event deleted" });
-    setActionEventId(null);
-  };
-
-  const handleShare = (event: EventItem) => {
-    const url = `${window.location.origin}/${event.fundSlug}/${event.slug}`;
-    navigator.clipboard.writeText(url);
-    setActionEventId(null);
-    toast({ title: "Link copied!", description: "Share this link with friends and family" });
-  };
-
-  if (authLoading || fundsLoading || eventsLoading) {
+  if (authLoading || eventsLoading || fundsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center md:ml-[220px] lg:ml-[260px]">
         <ThinkingOrb size={40} variant="default" />
       </div>
     );
   }
 
   if (!isAuthenticated) {
+    window.location.href = "/login";
     return null;
   }
 
+  const fundLookup = Object.fromEntries(funds.map(f => [f.id, f]));
+
+  const handleCopyLink = (event: Event) => {
+    const fund = fundLookup[event.fundId];
+    if (!fund) return;
+    const url = `${window.location.origin}/${fund.slug}/${event.slug}`;
+    navigator.clipboard.writeText(url);
+    haptic("success");
+    toast({ title: "Link copied!", description: "Share this link with friends and family" });
+  };
+
+  const toggleExpand = (id: string) => {
+    haptic("selection");
+    setExpandedId(prev => prev === id ? null : id);
+  };
+
+  const goalProgress = (event: Event) => {
+    if (!event.goalAmount) return null;
+    const goal = parseFloat(event.goalAmount);
+    const raised = parseFloat(event.giftVolume || "0");
+    if (goal <= 0) return null;
+    return Math.min((raised / goal) * 100, 100);
+  };
+
   return (
-    <PageTransition>
-      <div className="min-h-screen bg-background pb-28 md:ml-[220px] lg:ml-[260px]">
-        <motion.header 
-          className="sticky top-0 z-50 gemini-glass-nav"
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.2, ease: easeOutExpo }}
+    <div className="min-h-screen bg-background pb-28 md:ml-[220px] lg:ml-[260px]">
+      <main className="max-w-lg md:max-w-3xl mx-auto px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center justify-between mb-8"
         >
-          <div className="max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-4 h-14 flex items-center">
-            <div className="md:hidden"><Logo size="sm" className="text-primary" /></div>
-          </div>
-        </motion.header>
+          <h1 className="font-heading text-2xl font-bold text-foreground" data-testid="heading-your-events">
+            Your Events
+          </h1>
+          <Link href="/event/create">
+            <Button
+              data-testid="button-create-event"
+              className="gap-2"
+              onClick={() => haptic("medium")}
+            >
+              <Plus size={18} />
+              Create Event
+            </Button>
+          </Link>
+        </motion.div>
 
-        <main className="max-w-lg md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-6">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="mb-8"
-          >
-            {funds.length > 1 ? (
-              <motion.button
-                onClick={() => { haptic('selection'); setShowFundPicker(true); }}
-                whileTap={{ scale: 0.98 }}
-                className="inline-flex items-center gap-2 mb-2"
-                data-testid="button-fund-context"
-              >
-                <h1 className="text-2xl font-bold text-foreground">{selectedFund.name}'s Events</h1>
-                <ChevronDown size={20} className="text-muted-foreground" />
-              </motion.button>
-            ) : (
-              <h1 className="text-2xl font-bold text-foreground mb-2">Events</h1>
-            )}
-            <p className="text-muted-foreground">Create gift occasions for birthdays, holidays, and more</p>
-          </motion.div>
-
-          {activeEvents.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Active Events</h2>
-              <motion.div 
-                className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4"
-                initial="hidden"
-                animate="visible"
-                variants={staggerPremium}
-              >
-                {activeEvents.map((event, index) => {
-                  const isExpanded = expandedId === event.id;
-                  return (
-                    <motion.div
-                      key={event.id}
-                      layout
-                      variants={listItemSpring}
-                      className={`bg-card border rounded-2xl overflow-hidden transition-shadow duration-200 ${isExpanded ? "border-[hsl(var(--kora-evergreen)/0.3)] shadow-premium-lg" : "border-border shadow-premium-sm"}`}
-                    >
-                      <motion.div 
-                        className="p-5 cursor-pointer"
-                        onClick={() => { haptic('selection'); setExpandedId(isExpanded ? null : event.id); }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-2xl">
-                            {getEventIcon(event.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold text-foreground truncate">{event.title}</p>
-                              {event.isDefault && (
-                                <span className="text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                                  Permanent
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {event.fundName} · {event.isDefault ? "Always open" : (event.date || "Always open")}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              <p className="font-bold text-foreground">${event.raised}</p>
-                              <p className="text-xs text-muted-foreground">{event.gifts} gifts</p>
-                            </div>
-                            <motion.div
-                              animate={{ rotate: isExpanded ? 180 : 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ChevronDown size={18} className="text-muted-foreground" />
-                            </motion.div>
-                          </div>
-                        </div>
-                      </motion.div>
-
-                      <AnimatePresence>
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-                            className="overflow-hidden"
-                          >
-                            <div className="px-5 pb-5 pt-0 border-t border-border/50">
-                              <div className={`pt-4 grid gap-2 ${event.isDefault ? 'grid-cols-2' : 'grid-cols-3'}`}>
-                                <motion.button
-                                  initial={{ opacity: 0, y: 8 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: 0.05 }}
-                                  whileTap={{ scale: 0.95 }}
-                                  onClick={() => handleShare(event)}
-                                  className="flex flex-col items-center gap-2 p-3 rounded-xl bg-[hsl(var(--kora-evergreen)/0.1)] text-[hsl(var(--kora-evergreen))]"
-                                  data-testid={`button-share-${event.id}`}
-                                >
-                                  <Share2 size={18} />
-                                  <span className="text-xs font-medium">Share</span>
-                                </motion.button>
-                                {!event.isDefault && (
-                                  <Link href={`/edit/${event.fundSlug}/${event.id}`}>
-                                    <motion.button
-                                      initial={{ opacity: 0, y: 8 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      transition={{ delay: 0.1 }}
-                                      whileTap={{ scale: 0.95 }}
-                                      className="w-full flex flex-col items-center gap-2 p-3 rounded-xl bg-muted text-muted-foreground hover:bg-border transition-colors"
-                                      data-testid={`button-edit-${event.id}`}
-                                    >
-                                      <Edit2 size={18} />
-                                      <span className="text-xs font-medium">Edit</span>
-                                    </motion.button>
-                                  </Link>
-                                )}
-                                {!event.isDefault ? (
-                                  <motion.button
-                                    initial={{ opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.15 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={() => setActionEventId(event.id)}
-                                    className="flex flex-col items-center gap-2 p-3 rounded-xl bg-muted text-muted-foreground hover:bg-border transition-colors"
-                                    data-testid={`button-more-${event.id}`}
-                                  >
-                                    <MoreHorizontal size={18} />
-                                    <span className="text-xs font-medium">More</span>
-                                  </motion.button>
-                                ) : (
-                                  <Link href={`/${event.fundSlug}/${event.slug}`}>
-                                    <motion.button
-                                      initial={{ opacity: 0, y: 8 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      transition={{ delay: 0.1 }}
-                                      whileTap={{ scale: 0.95 }}
-                                      className="w-full flex flex-col items-center gap-2 p-3 rounded-xl bg-[hsl(var(--kora-gold)/0.1)] text-[hsl(var(--kora-gold))]"
-                                      data-testid={`button-view-${event.id}`}
-                                    >
-                                      <Gift size={18} />
-                                      <span className="text-xs font-medium">View</span>
-                                    </motion.button>
-                                  </Link>
-                                )}
-                              </div>
-
-                              {!event.isDefault && (
-                                <Link href={`/${event.fundSlug}/${event.slug}`}>
-                                  <motion.div
-                                    initial={{ opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.2 }}
-                                    className="mt-4 p-4 rounded-xl bg-[hsl(var(--kora-gold)/0.1)] flex items-center justify-between cursor-pointer"
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      <Gift size={18} className="text-[hsl(var(--kora-gold))]" />
-                                      <span className="text-sm font-medium text-[hsl(var(--kora-gold))]">View gift page</span>
-                                    </div>
-                                    <ChevronRight size={16} className="text-[hsl(var(--kora-gold))]" />
-                                  </motion.div>
-                                </Link>
-                              )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            </div>
-          )}
-
-          {pastEvents.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">Past Events</h2>
-              <div className="space-y-3 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4">
-                {pastEvents.map((event, index) => (
-                  <motion.div
-                    key={event.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.04, duration: 0.2 }}
-                    className="bg-card border border-border rounded-2xl p-5 opacity-70"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-2xl grayscale">
-                        {getEventIcon(event.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground truncate">{event.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {event.fundName} · {event.date}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-foreground">${event.raised}</p>
-                        <p className="text-xs text-muted-foreground">{event.gifts} gifts</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {events.length === 0 && (
+        {events.length === 0 ? (
+          <EnlighteningReveal>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-center py-16"
+              className="text-center py-16 bg-card rounded-2xl shadow-premium-sm"
+              data-testid="empty-state-events"
             >
-              <Mascot size="lg" className="mx-auto mb-4" context="events-empty" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">No events yet</h3>
-              <p className="text-muted-foreground mb-6">Create an event for birthdays, holidays, or any occasion</p>
+              <Gift size={48} className="mx-auto mb-4 text-muted-foreground" />
+              <h3 className="font-heading text-lg font-semibold text-foreground mb-2">No events yet</h3>
+              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                Create your first event to start receiving gifts!
+              </p>
               <Link href="/event/create">
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  className="px-6 py-3 bg-primary text-primary-foreground rounded-xl font-semibold flex items-center gap-2 mx-auto"
-                  data-testid="button-create-first-event"
-                >
-                  <Sparkles size={18} />
+                <Button data-testid="button-create-first-event" className="gap-2">
+                  <Plus size={18} />
                   Create your first event
-                </motion.button>
+                </Button>
               </Link>
             </motion.div>
-          )}
-        </main>
+          </EnlighteningReveal>
+        ) : (
+          <div className="space-y-4">
+            {events.map((event, index) => {
+              const fund = fundLookup[event.fundId];
+              const isExpanded = expandedId === event.id;
+              const progress = goalProgress(event);
+              const raised = parseFloat(event.giftVolume || "0");
+              const giftCount = event.giftCount || 0;
 
-        <Sheet open={!!actionEventId} onOpenChange={() => setActionEventId(null)}>
-          <SheetContent side="bottom" className="rounded-t-3xl">
-            <SheetHeader className="text-left mb-4">
-              <SheetTitle className="text-lg font-semibold">Event options</SheetTitle>
-            </SheetHeader>
-            
-            <div className="space-y-2 pb-4">
-              <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => actionEventId && handleDelete(actionEventId)}
-                className="w-full p-4 rounded-xl bg-destructive/10 text-destructive flex items-center gap-4 font-medium"
-                data-testid="button-delete-event"
-              >
-                <Trash2 size={20} />
-                Delete event
-              </motion.button>
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        <Link href="/event/create">
-          <motion.button
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 400, damping: 25, delay: 0.2 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => haptic('medium')}
-            className="fixed bottom-36 right-4 w-14 h-14 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-premium-lg z-50"
-            data-testid="button-create-event"
-          >
-            <Plus size={24} />
-          </motion.button>
-        </Link>
-
-        {/* Fund Picker Sheet */}
-        <Sheet open={showFundPicker} onOpenChange={setShowFundPicker}>
-          <SheetContent side="bottom" className="rounded-t-3xl">
-            <SheetHeader className="text-left mb-4">
-              <SheetTitle className="text-lg font-semibold">Select fund</SheetTitle>
-            </SheetHeader>
-            
-            <div className="space-y-2 pb-4">
-              {funds.map((fund) => (
-                <motion.button
-                  key={fund.slug}
-                  onClick={() => {
-                    haptic('selection');
-                    setSelectedFundSlug(fund.slug);
-                    setShowFundPicker(false);
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`w-full p-4 rounded-xl flex items-center gap-4 transition-colors ${
-                    fund.slug === selectedFundSlug
-                      ? "bg-[hsl(var(--kora-evergreen)/0.1)] border-2 border-[hsl(var(--kora-evergreen))]"
-                      : "bg-muted border-2 border-transparent hover:bg-border"
-                  }`}
-                  data-testid={`fund-option-${fund.slug}`}
+              return (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05, duration: 0.3 }}
+                  className="bg-card rounded-2xl shadow-premium-sm border border-border overflow-hidden"
+                  data-testid={`card-event-${event.id}`}
                 >
-                  <div className="w-12 h-12 rounded-full bg-[hsl(var(--kora-gold))] flex items-center justify-center text-[hsl(var(--kora-evergreen))] text-lg font-semibold">
-                    {fund.name.charAt(0)}
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-semibold text-foreground">{fund.name}'s Fund</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted-foreground/10 text-muted-foreground">
-                        {fund.accountType === "UTMA" ? "Custodial" : fund.accountType === "Personal" ? "Personal" : fund.accountType}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {fund.accountType === "UTMA" ? "You manage for " + fund.name : "Your account"}
-                      </span>
+                  <div className="p-5">
+                    <div className="flex items-start gap-4">
+                      <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                        {getEventTypeIcon(event.eventType)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-heading font-semibold text-foreground truncate" data-testid={`text-event-name-${event.id}`}>
+                            {event.name}
+                          </h3>
+                          {event.isPermanent && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 shrink-0" data-testid={`badge-permanent-${event.id}`}>
+                              <Star size={10} />
+                              Permanent
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span data-testid={`text-event-type-${event.id}`}>{getEventTypeLabel(event.eventType)}</span>
+                          {event.eventDate && (
+                            <>
+                              <span>·</span>
+                              <span className="flex items-center gap-1" data-testid={`text-event-date-${event.id}`}>
+                                <Calendar size={12} />
+                                {new Date(event.eventDate).toLocaleDateString()}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 mt-2 text-sm" data-testid={`text-gift-stats-${event.id}`}>
+                          <TrendingUp size={14} className="text-primary" />
+                          <span className="font-medium text-foreground">${raised.toFixed(0)} raised</span>
+                          <span className="text-muted-foreground">from {giftCount} {giftCount === 1 ? "gift" : "gifts"}</span>
+                        </div>
+
+                        {progress !== null && (
+                          <div className="mt-3" data-testid={`progress-bar-${event.id}`}>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                              <span>Progress</span>
+                              <span>{progress.toFixed(0)}%</span>
+                            </div>
+                            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                              <motion.div
+                                className="h-full bg-primary rounded-full"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progress}%` }}
+                                transition={{ duration: 0.8, ease: "easeOut" }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        data-testid={`button-share-link-${event.id}`}
+                        onClick={() => handleCopyLink(event)}
+                      >
+                        <Copy size={14} />
+                        Share Link
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5"
+                        data-testid={`button-view-details-${event.id}`}
+                        onClick={() => toggleExpand(event.id)}
+                      >
+                        <motion.div
+                          animate={{ rotate: isExpanded ? 180 : 0 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <ChevronDown size={14} />
+                        </motion.div>
+                        View Details
+                      </Button>
                     </div>
                   </div>
-                  {fund.slug === selectedFundSlug && (
-                    <div className="w-6 h-6 rounded-full bg-[hsl(var(--kora-evergreen))] flex items-center justify-center">
-                      <Check size={14} className="text-white" />
-                    </div>
-                  )}
-                </motion.button>
-              ))}
+
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-5 pb-5 pt-0 border-t border-border/50">
+                          <div className="pt-4 space-y-4">
+                            {event.description && (
+                              <div data-testid={`text-description-${event.id}`}>
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Description</p>
+                                <p className="text-sm text-foreground">{event.description}</p>
+                              </div>
+                            )}
+
+                            {fund && (
+                              <div data-testid={`text-fund-name-${event.id}`}>
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Linked Fund</p>
+                                <p className="text-sm text-foreground">{fund.name}</p>
+                              </div>
+                            )}
+
+                            <div data-testid={`area-qr-code-${event.id}`}>
+                              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">QR Code</p>
+                              <div className="w-32 h-32 bg-muted rounded-xl flex items-center justify-center border border-border">
+                                <div className="text-center">
+                                  <Share2 size={24} className="mx-auto text-muted-foreground mb-1" />
+                                  <span className="text-[10px] text-muted-foreground">QR Code</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+
+        {events.length < 2 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.4 }}
+            className="mt-8"
+          >
+            <div className="gemini-featured-border rounded-2xl">
+              <div className="bg-card rounded-2xl p-6" data-testid="card-event-pass-upsell">
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Star size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading font-semibold text-foreground mb-1" data-testid="text-event-pass-title">
+                      <GradientText>Event Pass</GradientText> · $99 one-time
+                    </h3>
+                    <ul className="space-y-2 mt-3 text-sm text-muted-foreground">
+                      <li className="flex items-start gap-2">
+                        <Gift size={14} className="mt-0.5 text-primary shrink-0" />
+                        Waives the Kora platform fee on up to $7,500 in gifts for one event
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <Star size={14} className="mt-0.5 text-primary shrink-0" />
+                        Includes premium themes, goal cards, and thank-you automation
+                      </li>
+                    </ul>
+                    <Link href="/settings">
+                      <Button
+                        className="mt-4 gap-2"
+                        data-testid="button-get-event-pass"
+                        onClick={() => haptic("medium")}
+                      >
+                        Get Event Pass
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
             </div>
-          </SheetContent>
-        </Sheet>
-      </div>
-    </PageTransition>
+          </motion.div>
+        )}
+      </main>
+    </div>
   );
 }

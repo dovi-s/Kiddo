@@ -23,6 +23,7 @@ import ActivateInvesting from "@/pages/ActivateInvesting";
 import GiftCheckout from "@/pages/GiftCheckout";
 import Login from "@/pages/Login";
 import Events from "@/pages/Events";
+import EventCreate from "@/pages/EventCreate";
 import FAQ from "@/pages/FAQ";
 import MemoryBook from "@/pages/MemoryBook";
 import GiftSuccess from "@/pages/GiftSuccess";
@@ -41,7 +42,7 @@ function Router() {
       <Route path="/activity" component={Activity} />
       <Route path="/activity/:id" component={ActivityDetail} />
       <Route path="/events" component={Events} />
-      <Route path="/event/create" component={MomentCreate} />
+      <Route path="/event/create" component={EventCreate} />
       <Route path="/send" component={Send} />
       <Route path="/claim/:token" component={Claim} />
       <Route path="/edit/:fund/:event" component={PageEditor} />

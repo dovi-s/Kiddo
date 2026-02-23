@@ -11,7 +11,7 @@ function useFundData(fundId: string) {
   return useQuery({
     queryKey: ["kid-fund", fundId],
     queryFn: async () => {
-      const res = await fetch(`/api/funds/${fundId}`, { credentials: "include" });
+      const res = await fetch(`/api/public/funds/${fundId}/overview`);
       if (!res.ok) throw new Error("Could not load your garden");
       return res.json();
     },
@@ -23,7 +23,7 @@ function useGiftsData(fundId: string) {
   return useQuery({
     queryKey: ["kid-gifts", fundId],
     queryFn: async () => {
-      const res = await fetch(`/api/funds/${fundId}/gifts`, { credentials: "include" });
+      const res = await fetch(`/api/public/funds/${fundId}/gifts`);
       if (!res.ok) throw new Error("Could not load gifts");
       return res.json();
     },
@@ -35,7 +35,7 @@ function useMemoryData(fundId: string) {
   return useQuery({
     queryKey: ["kid-memory", fundId],
     queryFn: async () => {
-      const res = await fetch(`/api/funds/${fundId}/memory`, { credentials: "include" });
+      const res = await fetch(`/api/public/funds/${fundId}/memory`);
       if (!res.ok) throw new Error("Could not load memories");
       return res.json();
     },

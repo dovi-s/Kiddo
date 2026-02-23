@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
+import { EducationTip, educationContent } from "@/components/ui/education";
 import { GradientText, GeminiBalanceGlow } from "@/components/ui/gemini";
 import mascotImg from "@/assets/kora-mascot.png";
 import type { Fund, Holding, Gift as GiftType, Event } from "@shared/schema";
@@ -350,6 +351,18 @@ export default function Dashboard() {
                 </div>
               </div>
             </motion.section>
+
+            {activeFund?.status === "draft" && (
+              <EducationTip title={educationContent.pendingCash.title} icon="tip" variant="inline">
+                {educationContent.pendingCash.content}
+              </EducationTip>
+            )}
+
+            {activeFund?.accountType === "UTMA" && !holdings.length && (
+              <EducationTip title={educationContent.utma.title} icon="help" variant="expandable">
+                {educationContent.utma.content}
+              </EducationTip>
+            )}
 
             <div className="md:grid md:grid-cols-2 md:gap-6 space-y-6 md:space-y-0">
               <motion.section
