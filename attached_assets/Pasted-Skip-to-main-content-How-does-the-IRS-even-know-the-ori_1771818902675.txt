@@ -1,0 +1,492 @@
+Skip to main content
+How does the IRS even know the original basis on gifted stock? : r/personalfinance
+
+r/personalfinance
+Search in r/personalfinance
+
+Get App
+Log In
+
+Expand user menu
+Skip to NavigationSkip to Right Sidebar
+
+Back
+Go to personalfinance
+r/personalfinance
+•
+1y ago
+trippknightly
+
+How does the IRS even know the original basis on gifted stock?
+Suppose I gift some stock to one of my children. Maybe they sell it next year maybe not for a decade. The basis in the stock will be the original cost basis (or less if FMV declined), that much I get. But how does the IRS even have any way to know the original cost basis? Is this just the honor system? Maybe I die before they ever do anything with it and they have no real way to know its basis. This seems a little murky from an audit trail standpoint.
+
+EDIT 7 hours in and one thing not mentioned is how long term capital gains tax rate could be zero, depending on recipient’s income bracket. College student, for example. It might be tax efficient to gift/give the child highly-appreciated stocks (subject to the annual limit or not) rather than cash? And they sell the stocks while income is negligible. (Admittedly this a divergence from my original question!).
+
+And then from there I’d diverge even further if I wanted to control their access to the money for a few more years via trust. If I even could.
+
+201
+·
+54
+u/sageintacct avatar
+sageintacct
+•
+Promoted
+
+Your month-end, even faster with Sage Copilot. Accelerate your monthly close with smarter AI. Trust your numbers. Let Sage Copilot help continuously assure your data. Take a product tour.
+Your month-end, even faster with Sage Copilot. Accelerate your monthly close with smarter AI. Trust your numbers. Let Sage Copilot help continuously assure your data. Take a product tour.
+Your month-end, even faster with Sage Copilot. Accelerate your monthly close with smarter AI. Trust your numbers. Let Sage Copilot help continuously assure your data. Take a product tour.
+Your month-end, even faster with Sage Copilot. Accelerate your monthly close with smarter AI. Trust your numbers. Let Sage Copilot help continuously assure your data. Take a product tour.
+Your month-end, even faster with Sage Copilot. Accelerate your monthly close with smarter AI. Trust your numbers. Let Sage Copilot help continuously assure your data. Take a product tour.
+sage.com
+Learn More
+Comments Section
+u/Default87 avatar
+Default87
+•
+1y ago
+if you read the box of your tax return where you sign (which when filing online, you are authorizing, even if you arent physically signing the document) you will see the follow statement:
+
+Under penalties of perjury, I declare that I have examined this return and accompanying schedules and statements, and to the best of my knowledge and belief, they are true, correct, and complete.
+
+so the meta concept here is it is up to you to be accurately filling out your tax returns and not commit crime. It’s really easy to lie on your tax returns, and for certain things there is a very low chance they would get questioned or would require any substantiation. But that doesn’t mean you should be lying on your tax returns. It’s part of the social contract we all engage with.
+
+It is ultimately up to you to properly maintain records of your information. Brokerages help you out in this endeavor by maintaining records, and those records are usually correct. I did hear about some people in the Schwab/TD Ameritrade merger the other year who had really old stock purchases (pre 1990s) that there were not records in TDAs system of their cost basis, so when the merger happened their cost basis was $0 in the system. So when they sold stock, it was improperly reported to the IRS as fully capital gains, and they had to go through extra steps to correct that. But that is a fairly unique/edge case thing though.
+
+4
+
+1 more reply
+Forfeit32
+•
+1y ago
+As an aside, if you ever make charitable donations, consider donating your low basis stock in kind. The charity will liquidate and then not have to pay taxes on the big gains.
+
+
+56
+AbaloneArtistic5130
+•
+1y ago
+even better, we set up a charitable trust. sell low basis stocks or whatever, give it into the trust , and we can give cash from there which is convenient for the charities. and tax free gains on the stocks we give. wait 2 months and buy the stock again if you want to, and basically it is resetting the basis. cute rich person trick available to us regular people.
+
+24
+
+8 more replies
+
+1 more reply
+btarlinian2
+•
+1y ago
+If you can’t substantiate your basis you have to claim a basis of $0. As in most things, if you don’t get audited no one will look at this, but if you do, it’s your responsibility to provide the basis you entered is correct. It’s not on the IRS to prove that you are wrong.
+
+Edited to fix typo.
+
+
+59
+babecafe
+•
+1y ago
+There's always going to be evidence to substantiate an estimated basis, such as the price history during an estimated time of acquisition, so one would never have to claim a basis of $0. Estimating figures for tax purposes legitimately happens all the time.
+
+
+30
+btarlinian2
+•
+1y ago
+Oh sure. I was trying to make the point that you couldn’t invent a basis that suited you and then rely on the IRS having to prove that it’s wrong. You are obliged to show that you have reasonable evidence for your cost basis, not the other way around.
+
+17
+
+1 more reply
+u/dahinds avatar
+dahinds
+•
+1y ago
+Try this when your dad inherited AT&T stock from his mom. And reinvested dividends for decades. At some point you just have to give up. We ended up donating a bunch to charity partly to avoid needing the basis, since my dad was a stickler and would not let us claim a basis of $0.
+
+0
+u/listerine411 avatar
+listerine411
+•
+1y ago
+You're allowed to make a good faith estimate of cost basis based on some historical research, you're not obligated to claim zero.
+
+It's very rare for the IRS to dispute a cost basis.
+
+12
+
+6 more replies
+davvblack
+•
+1y ago
+if you can’t* but yeah
+
+2
+
+2 more replies
+u/Schwab_Official avatar
+u/Schwab_Official
+•
+Promoted
+
+Learn the unique tax considerations that impact full-time traders' bottom lines, including qualifying under special IRS rules.
+Learn More
+schwab.com
+Thumbnail image: Learn the unique tax considerations that impact full-time traders' bottom lines, including qualifying under special IRS rules.
+u/lucky_ducker avatar
+lucky_ducker
+•
+1y ago
+For stocks purchased on or after January 1, 2011, brokerages have been required to track cost basis, and report it to the IRS upon the sale of that stock.
+
+Prior to that date, it's not so much the "honor system" as it is that the IRS assumes the entire proceeds of a stock sale represents gains, unless YOU the taxpayer have records proving otherwise.
+
+
+21
+u/crappleberrypunch avatar
+crappleberrypunch
+•
+1y ago
+I thought it was 1/1/2012
+
+
+0
+Mystrysktr
+•
+1y ago
+It depends on the security type. I’d have to google when each type became “covered” to know specifically, but the first securities where 1/1/2011
+
+2
+
+[deleted]
+•
+1y ago
+u/BouncyEgg avatar
+BouncyEgg
+•
+1y ago
+Cost basis is now required to be transmitted from the brokerages to the IRS.
+
+Cost basis will generally transfer when the shares are gifted from one account to another. Or even one brokerage to another.
+
+Anyways...
+
+It is on you (the taxpayer) to substantiate your cost basis.
+
+The way this would come up is upon audit.
+
+If you are selected for audit, the IRS Auditor would as you to substantiate your claims of whatever cost basis you claimed.
+
+The IRS does not make it the responsibility of the IRS to do this. Onus is on you.
+
+So many folks will choose to maintain their own cost basis records especially when transferring accounts/brokerages/etc.
+
+212
+
+2 more replies
+u/Altkolsch avatar
+Altkolsch
+•
+1y ago
+If the shares are covered, cost basis should follow the shares to where they are transferred. If they are non-covered there will be no cost basis information transferred to the IRS. You can report 0 or you can do a Good Faith Estimate. I’m sure the shares traded for more than $0 at some point before you received them. Using the smallest amount the shares ever traded for is easy to prove if examined/audited.
+
+2
+u/hrblock avatar
+u/hrblock
+•
+Promoted
+
+No seriously, it's that easy
+Learn More
+hrblock.com
+File your taxes for free with H&R Block
+
+Thumbnail image: No seriously, it's that easy
+nozzery
+•
+1y ago
+The cost basis transfers with the shares, your broker keeps track, there's nothing murky and it gets reported on 1099b with the sale to the seller and the IRS. Cost basis only gets stepped up for an inheritor, to the value on the date of decedent's death, no step up for gifts
+
+Reporting incorrect cost basis or unwarranted adjustments would be tax fraud https://www.browntax.com/insights/a-look-at-the-potential-penalties-for-federal-tax-evasion-and-tax-fraud/
+
+
+3
+u/LooksAtClouds avatar
+LooksAtClouds
+•
+1y ago
+Uh, how about the stock purchased by my great grandad in 1919, inherited ? by my grandad ?, gifted to my dad in 1946, gifted to me in 1983, dividends reinvested ever since then until recently when I retired and decided to take them, also it has split multiple times? I have decided to just die and let my children inherit it to get a basis step-up rather than trying to spend months figuring out what the basis is. It will be different for each lot purchased with reinvested dividends, right?
+
+
+0
+nozzery
+•
+1y ago
+Correct. You can create a spreadsheet retroactively to track each tax lot, if you like, the IRS accepts best effort recreations, as long as they use reasonable logic and facts
+
+They don't, however, allow the basis to be stepped up at the time of a gift. Only death+inheritance
+
+2
+u/AutoModerator avatar
+AutoModerator
+MOD
+•
+1y ago
+You may find these links helpful:
+
+"How to handle $"
+
+Investing
+
+I am a bot, and this action was performed automatically. Please contact the moderators of this subreddit if you have any questions or concerns.
+
+1
+gounatos
+•
+1y ago
+Doesn't the cost basis get updated to what it is when you gifted it and then the value counts against your lifetime gift tax exemption?
+
+No, no it doesn't
+
+
+1
+nozzery
+•
+1y ago
+Cost basis is not adjusted for gifts, basis is what the buyer paid. If you inherit stock upon someone's death, then basis is stepped up to the value on the date of death. No step up for gifts.
+
+
+19
+gounatos
+•
+1y ago
+Very enlightening! Thanks for the correction. I was confused with inheriting, i can see how it could be gamed in case of gifts now.
+
+2
+
+1 more reply
+WoodsFinder
+•
+1y ago
+For stock purchased since (I think) 2011, the brokerage firms are required to save and track basis in stock and transfer that if you gift the stock or transfer it to another brokerage and they report the basis to the IRS on the 1099-B for the year it's sold.
+
+For any stock bought before 2011, I don't think they know the basis, but rely on you to report it accurately. If you're audited, they could ask for proof of the basis you reported.
+
+4
+Electrical_Feature12
+•
+1y ago
+It’s reported from custodian to custodian.
+
+1
+Related Answers Section
+Related Answers
+Understanding cost basis of gifted stock
+Cost basis rules for gifting stock
+Cost basis for inherited stock
+Step-up basis for inherited assets
+Assets without step-up in basis
+New to Reddit?
+Create your account and connect with a world of communities.
+
+
+Continue With Phone Number
+By continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy.
+More posts you may like
+Gifted stock tax consequences
+r/tax icon
+r/tax
+•
+1y ago
+Gifted stock tax consequences
+4 upvotes · 8 comments
+Cost basis for stock that was gifted to me and that I want to gift to my daughter.
+r/tax icon
+r/tax
+•
+2y ago
+Cost basis for stock that was gifted to me and that I want to gift to my daughter.
+15 comments
+Cost basis when selling stocks that were gifted
+r/tax icon
+r/tax
+•
+1y ago
+Cost basis when selling stocks that were gifted
+3 upvotes · 6 comments
+Was gifted stock, sold it. Reporting necessary?
+r/tax icon
+r/tax
+•
+1y ago
+Was gifted stock, sold it. Reporting necessary?
+12 comments
+I got 50 gifted subs yesterday and it's.. $17 revenue?
+r/Twitch icon
+r/Twitch
+•
+1y ago
+I got 50 gifted subs yesterday and it's.. $17 revenue?
+663 upvotes · 183 comments
+Cost basis for gifted rental property
+r/tax icon
+r/tax
+•
+1y ago
+Cost basis for gifted rental property
+2 upvotes · 11 comments
+Cost basis of gifted stocks and inherited stocks. FIFO or LIFO?
+r/personalfinance
+•
+4y ago
+Cost basis of gifted stocks and inherited stocks. FIFO or LIFO?
+2 upvotes · 6 comments
+Why is cost basis method relevant when gifting shares?
+r/tax icon
+r/tax
+•
+2y ago
+Why is cost basis method relevant when gifting shares?
+6 upvotes · 21 comments
+Anyone pay the IRS with a check?
+r/Bogleheads icon
+r/Bogleheads
+•
+5mo ago
+Anyone pay the IRS with a check?
+8 upvotes · 77 comments
+Grandparents “gifted” me whole life insurance. What should I do?
+r/personalfinance
+•
+2y ago
+Grandparents “gifted” me whole life insurance. What should I do?
+259 upvotes · 136 comments
+Was gifted this gold coin, is there value?
+r/coins icon
+r/coins
+•
+1y ago
+Was gifted this gold coin, is there value?
+r/coins - Was gifted this gold coin, is there value?
+2
+110 upvotes · 36 comments
+Got INR 1 crore worth gift stocks from dad to my zerodha account recently
+r/IndianStockMarket icon
+r/IndianStockMarket
+•
+1y ago
+Got INR 1 crore worth gift stocks from dad to my zerodha account recently
+r/IndianStockMarket - Got INR 1 crore worth gift stocks from dad to my zerodha account recently 
+23 comments
+Is cost basis or market value used for gifting stock?
+r/tax icon
+r/tax
+•
+1y ago
+Is cost basis or market value used for gifting stock?
+2 upvotes · 7 comments
+What index fund is the most safe/reliable/overall best choice as a young investor?
+r/personalfinance
+•
+10mo ago
+What index fund is the most safe/reliable/overall best choice as a young investor?
+25 upvotes · 20 comments
+Had these gifted to me! Are they worth any value?
+r/hockey icon
+r/hockey
+•
+7mo ago
+Had these gifted to me! Are they worth any value?
+r/hockey - Had these gifted to me! Are they worth any value?
+2
+330 upvotes · 147 comments
+Step-father gifted thousands of shares of stock to me, what happens next?
+r/personalfinance
+•
+1y ago
+Step-father gifted thousands of shares of stock to me, what happens next?
+313 upvotes · 87 comments
+Sell gifted stock to reallocate?
+r/Bogleheads icon
+r/Bogleheads
+•
+9mo ago
+Sell gifted stock to reallocate?
+7 upvotes · 16 comments
+Was gifted $500 worth of iTunes gift cards for Christmas. Don't own any iDevices.
+r/personalfinance
+•
+6y ago
+Was gifted $500 worth of iTunes gift cards for Christmas. Don't own any iDevices.
+13 upvotes · 27 comments
+How Stocks Can Be Quietly Stolen From Your I.R.A.
+r/Bogleheads icon
+r/Bogleheads
+•
+5mo ago
+How Stocks Can Be Quietly Stolen From Your I.R.A.
+r/Bogleheads - How Stocks Can Be Quietly Stolen From Your I.R.A.
+nytimes
+299 upvotes · 73 comments
+Inherited stocks, will I be taxed on capital gains if I sell?
+r/personalfinance
+•
+9d ago
+Inherited stocks, will I be taxed on capital gains if I sell?
+21 upvotes · 18 comments
+My dad gifted me some pens does anybody know the value?
+r/fountainpens icon
+r/fountainpens
+•
+24d ago
+My dad gifted me some pens does anybody know the value?
+r/fountainpens - My dad gifted me some pens does anybody know the value?
+3
+6 comments
+Gifting Stock Advice
+r/personalfinance
+•
+2y ago
+Gifting Stock Advice
+1 upvote · 5 comments
+I’ve inherited stock and I don’t know what to do with it.
+r/personalfinance
+•
+8mo ago
+I’ve inherited stock and I don’t know what to do with it.
+21 upvotes · 40 comments
+How does gifting stocks work?
+r/IndianStockMarket icon
+r/IndianStockMarket
+•
+1y ago
+How does gifting stocks work?
+7 upvotes · 26 comments
+So if you make under $40k a year on the lowest tax bracket, does that mean you'll never pay any taxes on gains when you sell shares of stocks/etf's ever?
+r/investing icon
+r/investing
+•
+4mo ago
+So if you make under $40k a year on the lowest tax bracket, does that mean you'll never pay any taxes on gains when you sell shares of stocks/etf's ever?
+125 upvotes · 119 comments
+Community Info Section
+r/personalfinance
+Join
+Personal Finance
+Learn about budgeting, saving, getting out of debt, credit, investing, and retirement planning. Join our community, read the PF Wiki, and get on top of your finances!
+
+Show more
+Public
+Top Posts
+Reddit
+reReddit: Top posts of April 13, 2025
+Reddit
+reReddit: Top posts of April 2025
+Reddit
+reReddit: Top posts of 2025
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.
+
+Expand Navigation

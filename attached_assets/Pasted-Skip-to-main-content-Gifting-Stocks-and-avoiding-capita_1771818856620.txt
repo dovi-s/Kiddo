@@ -1,0 +1,296 @@
+Skip to main content
+Gifting Stocks and avoiding capital gains tax? : r/personalfinance
+
+r/personalfinance
+Search in r/personalfinance
+
+Get App
+Log In
+
+Expand user menu
+Skip to NavigationSkip to Right Sidebar
+
+Back
+Go to personalfinance
+r/personalfinance
+•
+3y ago
+FrugalFire7
+
+Gifting Stocks and avoiding capital gains tax?
+In the US, is there a way one with a regular taxable brokerage account can gift stocks to their family without either a.) the owner paying capital gains to liquidate and b.) the giftee having to pay the step up in gains if they sell them?
+
+I assume no matter what the giftee will have to pay capital gains when selling unless they obtain the stock through inheritance. But if the owner of the stock wants to gift the stocks while still living, is there any way to avoid paying tax on that? Would a trust be an option? Or do you have to liquidate assets to put them into a trust?
+
+2
+·
+6
+u/tastytrade avatar
+tastytrade
+•
+Promoted
+
+We know what traders want. No wonder why they choose tastytrade.
+Learn More
+tastytrade.com
+Thumbnail image: We know what traders want. No wonder why they choose tastytrade.
+Comments Section
+u/ThunderDrop avatar
+ThunderDrop
+•
+3y ago
+The only thing close is donating to a qualified charity, not gifting to a family member.
+
+You are allowed to donate appreciated assets to charities, avoiding capital gains taxes, since the charity will be immune to them.
+
+Also, if you make a large donation into a donor advised fund, to be donated out over the next several years, you can maximize the income tax deduction as well.
+
+So if you or the family member makes regular charitable donations, using a donor advised fund saves you the capitol gains tax in the growth of an asset. AND potentially makes more of your donation income tax deductible.
+
+3
+TyrconnellFL
+•
+3y ago
+There is no way other than inheritance to step up. Otherwise people would pair off and gift stock to avoid taxes. The current system does mean it’s possible to be taxes twice, I think: the giver buys stock for $1 and it grows to $20 million. The giver pays taxes on about about $7 million given in excess of the lifetime exemption, and then the recipient sells and pays the capital gains on $19,999,999.
+
+You can avoid paying gift taxes by keeping the total lifetime gift value under $12.92 million per person. For most families that’s not a concern.
+
+
+2
+u/FrugalFire7 avatar
+FrugalFire7
+OP
+•
+3y ago
+Hah! 12.92 million...if that were the concern I don't think I'd even care about taxes! Yeah, we're talking anywhere from 20-50k probably being gifted to a few individuals from one family member. Unfortunately if the family members who owns the stocks wants to gift them, they are devalued basically by 15% or 20% due to LT Cap Gains.
+
+
+For the 0% cap gains income, does that just mean their income needs to be in that margin, or once they start selling off old stock that have LT gains, do those gaints then apply to the margin? Say they made 20k in work income, but sold stocks that have 50k in cap gains...does that mean 70k income for the LT bracket to now be 15% rate?
+
+1
+nozzery
+•
+3y ago
+The only step up is upon death. Gift, no step, ever.
+
+
+2
+u/DeluxeXL avatar
+DeluxeXL
+•
+3y ago
+Gifting has a step-down basis sometimes. Basically, if sold at a capital loss, the loss is limited by the worse of original cost basis or FMV at gifting.
+
+1
+u/AutoModerator avatar
+AutoModerator
+MOD
+•
+3y ago
+You may find our Taxes wiki helpful.
+
+I am a bot, and this action was performed automatically. Please contact the moderators of this subreddit if you have any questions or concerns.
+
+1
+New to Reddit?
+Create your account and connect with a world of communities.
+
+
+Continue With Phone Number
+By continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy.
+More posts you may like
+Avoiding Capital Gains on Stock by Gifting?
+r/tax icon
+r/tax
+•
+2y ago
+Avoiding Capital Gains on Stock by Gifting?
+5 upvotes · 16 comments
+Inherited stocks, will I be taxed on capital gains if I sell?
+r/personalfinance
+•
+9d ago
+Inherited stocks, will I be taxed on capital gains if I sell?
+21 upvotes · 18 comments
+Should I sell stocks before end of year to take advantage of 35k of tax-free capital gains?
+r/personalfinance
+•
+2mo ago
+Should I sell stocks before end of year to take advantage of 35k of tax-free capital gains?
+221 upvotes · 24 comments
+Can I gift my child stock and have them not owe LT capital gains? (CA)
+r/tax icon
+r/tax
+•
+1y ago
+Can I gift my child stock and have them not owe LT capital gains? (CA)
+1 upvote · 20 comments
+Should one sell and rebuy stocks to avoid capital gains?
+r/Fire icon
+r/Fire
+•
+1y ago
+Should one sell and rebuy stocks to avoid capital gains?
+53 upvotes · 65 comments
+Avoiding cap gains through gift and inheritance
+r/tax icon
+r/tax
+•
+5mo ago
+Avoiding cap gains through gift and inheritance
+7 upvotes · 36 comments
+Friendly reminder: State Capital Gains Tax is (Usually) a Thing
+r/Bogleheads icon
+r/Bogleheads
+•
+17d ago
+Friendly reminder: State Capital Gains Tax is (Usually) a Thing
+130 upvotes · 32 comments
+Your guide to capital gains: profits, taxes, and smart strategies
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+2mo ago
+Your guide to capital gains: profits, taxes, and smart strategies
+r/fidelityinvestments - Your guide to capital gains: profits, taxes, and smart strategies
+52 upvotes · 6 comments
+Tax consequences of gifting appreciated stock to young adult child?
+r/tax icon
+r/tax
+•
+2y ago
+Tax consequences of gifting appreciated stock to young adult child?
+4 upvotes · 28 comments
+Transferring Capital Gains to Children to avoid tax
+r/tax icon
+r/tax
+•
+1y ago
+Transferring Capital Gains to Children to avoid tax
+20 comments
+Capital gains tax
+r/Bogleheads icon
+r/Bogleheads
+•
+4mo ago
+Capital gains tax
+26 upvotes · 48 comments
+Can I gift my spouse stock and file separately to reduce our capital gains tax to 0%?
+r/personalfinance
+•
+6y ago
+Can I gift my spouse stock and file separately to reduce our capital gains tax to 0%?
+4 comments
+Am I going to get hit with major capital gains taxes with VTSAX?
+r/personalfinance
+•
+3mo ago
+Am I going to get hit with major capital gains taxes with VTSAX?
+28 comments
+How to avoid taxes? Buy individual stocks?
+r/investing icon
+r/investing
+•
+1y ago
+How to avoid taxes? Buy individual stocks?
+44 comments
+What is a capital gains distribution event? Is my position getting closed?
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+2mo ago
+What is a capital gains distribution event? Is my position getting closed?
+r/fidelityinvestments - What is a capital gains distribution event? Is my position getting closed?
+1 upvote · 8 comments
+Capital gains - Tax mitigation strategies
+r/personalfinance
+•
+1mo ago
+Capital gains - Tax mitigation strategies
+21 comments
+Can you give someone stock as a gift?
+r/investing icon
+r/investing
+•
+3mo ago
+Can you give someone stock as a gift?
+7 upvotes · 30 comments
+Realize capital gains now or reinvest assets in a taxable brokerage account?
+r/Bogleheads icon
+r/Bogleheads
+•
+3mo ago
+Realize capital gains now or reinvest assets in a taxable brokerage account?
+8 upvotes · 13 comments
+Are y'all selling anything you bought earlier this year or waiting for 1 year so you're taxed on capital gains instead?
+r/investing icon
+r/investing
+•
+5mo ago
+Are y'all selling anything you bought earlier this year or waiting for 1 year so you're taxed on capital gains instead?
+26 upvotes · 65 comments
+Got slammed by Short Term Capital Gains , Any suggestions?
+r/investing icon
+r/investing
+•
+4mo ago
+Got slammed by Short Term Capital Gains , Any suggestions?
+27 comments
+Capital gains tax withholding
+r/stocks icon
+r/stocks
+•
+10mo ago
+Capital gains tax withholding
+2 upvotes · 14 comments
+Taxation on gifted shares
+r/IndianStockMarket icon
+r/IndianStockMarket
+•
+1y ago
+Taxation on gifted shares
+2 upvotes · 14 comments
+Gifted stock tax consequences
+r/tax icon
+r/tax
+•
+1y ago
+Gifted stock tax consequences
+4 upvotes · 8 comments
+Short vs Long Term Capital Gains Question
+r/investing icon
+r/investing
+•
+7mo ago
+Short vs Long Term Capital Gains Question
+3 upvotes · 12 comments
+Sell my individual stocks and take the tax hit?
+r/Bogleheads icon
+r/Bogleheads
+•
+23d ago
+Sell my individual stocks and take the tax hit?
+8 upvotes · 22 comments
+Community Info Section
+r/personalfinance
+Join
+Personal Finance
+Learn about budgeting, saving, getting out of debt, credit, investing, and retirement planning. Join our community, read the PF Wiki, and get on top of your finances!
+
+Show more
+Public
+Top Posts
+Reddit
+reReddit: Top posts of June 9, 2023
+Reddit
+reReddit: Top posts of June 2023
+Reddit
+reReddit: Top posts of 2023
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.
+
+Expand Navigation

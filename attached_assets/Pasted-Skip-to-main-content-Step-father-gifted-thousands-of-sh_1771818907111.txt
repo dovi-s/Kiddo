@@ -1,0 +1,483 @@
+Skip to main content
+Step-father gifted thousands of shares of stock to me, what happens next? : r/personalfinance
+
+r/personalfinance
+Search in r/personalfinance
+
+Get App
+Log In
+
+Expand user menu
+Skip to NavigationSkip to Right Sidebar
+
+Back
+Go to personalfinance
+r/personalfinance
+•
+1y ago
+ThrowAway1Millioms
+
+Step-father gifted thousands of shares of stock to me, what happens next?
+My step-father recently gave me (26F) a few thousand shares of a stock of a start-up company he has been invested in for a few years. When he bought the shares it was at about $14-$15 and is now worth less than a dollar per share. When I hit my account, it shows a balance of -90%, and a total balance of -$29,000. The shares are currently worth a bit less than $2,000. He stated the stock has a few catalysts coming up and could gain value quickly.
+
+As far as taxes go, he stated that I wouldn't have to pay taxes on this since the true value of the gift was $2,000. Is that correct?
+If I sell these shares at less than he initially bought them for (~$14-$15), would it count as a loss for tax purposes? Or would they be a gain since I received them when the stock was around $1?
+
+My step-sister also received stock, and is concerned over his intentions for gifting the stock... Would gifting this stock give him any tax-breaks or advantages?
+
+Anything else I need to consider before selling the shares in the future?
+
+313
+·
+87
+u/anthropic-ai avatar
+anthropic-ai
+•
+Promoted
+
+Scaling engineering output used to mean scaling engineering teams. Claude Code changes that math.
+Sign Up
+claude.com
+Thumbnail image: Scaling engineering output used to mean scaling engineering teams. Claude Code changes that math.
+Comments Section
+bobos-wear-bonobos
+•
+1y ago
+My step-sister also received stock, and is concerned over his intentions for gifting the stock... Would gifting this stock give him any tax-breaks or advantages?
+
+No. Not only does he not get any tax advantage from gifting you each the shares, he actually cost himself a lot of money by doing this.
+
+If he had sold the shares and realized the capital loss -- which between you and your step-sister's gifts, sounds like it was probably north of a $60k loss for him -- then he could have used that to offset other capital gains, or ordinary income.
+
+But he punted that away for no reason. He could have sold, booked the loss, gifted you the cash equivalent of what he just gifted you in shares, and let you do whatever you want with it -- including buy the shares yourself, if that's what you wanted.
+
+In short, don't take financial advice from your step-father. He doesn't seem to have a good handle on these things.
+
+
+1.1K
+u/TheMogulSkier avatar
+TheMogulSkier
+•
+1y ago
+The easy work around for his own tax structuring would be recording as:
+
+He sells you the stock for $2k, allowing him to report the loss
+
+He gifts you $2k cash
+
+Same net impact
+
+
+73
+u/steelfork avatar
+steelfork
+•
+1y ago
+Not only that, Op can sell and get the capital loss. Even if OP never invests it would be a 3000 per year deduction on income tax for a long time.
+
+4
+
+2 more replies
+
+1 more reply
+u/ThrowAway1Millioms avatar
+ThrowAway1Millioms
+OP
+•
+1y ago
+Thank you - just wanted to see if there was any advantage to him doing this. I think the loss in itself was enough to show us not to take financial advice from him haha. Thanks again!
+
+
+162
+u/calogr98lfc avatar
+calogr98lfc
+•
+1y ago
+Why are you being so dismissive and ungrateful of him?
+
+Maybe he knows about the tax break and maybe doesn’t care.
+
+Maybe he wanted to do something nice to his daughters that could provide something better later (if the stock goes up, which he seems to think it will). Gifting these stocks seems infinitely more personal than gifting just money, as this is something that he choose to did himself previously.
+
+Just seems like a good guy to me doing a good thing.
+
+116
+
+11 more replies
+dankbuttmuncher
+•
+1y ago
+Working in the industry, I doubt that he has other assets that he can use the offset on
+
+
+39
+adesrosiers1
+•
+1y ago
+He could have still offset $3k / year on ordinary income in that case
+
+49
+
+7 more replies
+u/BusshyBrowss avatar
+BusshyBrowss
+•
+1y ago
+Just commenting for reassurance that this is the 100% correct answer
+
+3
+Offduty_shill
+•
+1y ago
+Yeah from my understanding isn't this an extremely stupid move on stepfathers part? OP and sister gain no real benefit from being gifted this stock, tax wise or otherwise, over being given 2000$ they could just go buy the stock with (if they wanted) but stepfather now can't claim the loss for his taxes.
+
+4
+
+1 more reply
+
+11 more replies
+PeterGibbons316
+•
+1y ago
+OP listen to u/nozzery. The only thing I will add is to make sure you have the cost-basis from your step-father. You will need it to calculate your tax liability/deduction when you sell.
+
+Edit: Updated with correct info. My apologies.
+
+4
+
+3 more replies
+
+[deleted]
+•
+1y ago
+u/Official_Klaviyo avatar
+u/Official_Klaviyo
+•
+Promoted
+
+Smarter support, happier customers. Bring marketing and customer service together to deliver seamless, personalized moments across every channel.
+Sign Up
+klaviyo.com
+Thumbnail image: Smarter support, happier customers. Bring marketing and customer service together to deliver seamless, personalized moments across every channel.
+brancolangelo
+•
+1y ago
+This is a terrible idea. He’s sitting on a valuable tax asset, a loss. If he gifts you the depreciated asset you may not be able to realize that loss for tax purposes. He’s better off selling them and offsetting a gain
+
+
+31
+ThighOfTheTiger
+•
+1y ago
+The tense is pretty clear, this already happened
+
+21
+nozzery
+•
+1y ago
+If you do nothing, no tax. If you sell, you pay tax on the gain. Your cost basis is whatever the purchaser paid, UNLESS there's a tax loss, then your cost basis is the price when you received the shares. Your purchase date is when they purchased. Prior owner's tax loss is wiped out with a gift https://www.forbes.com/sites/davidmarotta/2023/10/24/no-tax-benefit-to-gifting-capital-losses/
+
+
+55
+u/deadsirius- avatar
+deadsirius-
+•
+1y ago
+Said differently...
+
+If sold for less than the value on gift date -- The basis is the value on the gift date for the loss.
+
+If sold for more than the value on the gift date, but less than donor's basis -- The basis is the value the shares are sold for with no loss or gain.
+
+If sold for more than donor's basis -- The donor's basis becomes the donee's basis for the gain.
+
+34
+
+4 more replies
+bobos-wear-bonobos
+•
+1y ago
+Why link to a Forbes commenter when you could provide the IRS reference?
+
+https://www.irs.gov/faqs/capital-gains-losses-and-sale-of-home/property-basis-sale-of-home-etc/property-basis-sale-of-home-etc
+
+34
+
+1 more reply
+u/lucky_ducker avatar
+lucky_ducker
+•
+1y ago
+You don't pay taxes on a gift, ever. If the FMV of the gift exceeded $18K your stepdad would have to report it on IRS Form 709 with his taxes.
+
+The only taxes here will be capital gains when you sell the shares, and your cost basis is what he paid for the shares. So unless the company takes off, you have an unrealized loss.
+
+Determining your cost basis in the shares is much more complicated than it should be: https://ttlc.intuit.com/turbotax-support/en-us/help-article/investment-income/determine-cost-basis-stock-received-gift/L4bZeNvpc_US_en_US
+
+
+28
+nozzery
+•
+1y ago
+Tax loss goes away with gift https://www.forbes.com/sites/davidmarotta/2023/10/24/no-tax-benefit-to-gifting-capital-losses/
+
+23
+u/shopify avatar
+u/shopify
+•
+Promoted
+
+Build your online store and start selling today. No tech skills needed.
+Sign Up
+shopify.com
+Clickable image which will reveal the video player: Build your online store and start selling today. No tech skills needed.
+Collapse video player
+
+0:00 / 0:00
+
+
+
+
+SwampOfDownvotes
+•
+1y ago
+Even if the true value of the stock was 10 million dollars, you wouldn't have to pay taxes on it. The giftor has to pay taxes on gifts if it's applicable. 
+
+4
+
+2 more replies
+ColdboyCrypto
+•
+1y ago
+What is the company name or ticker symbol?
+
+2
+StraightOuttaFox
+•
+1y ago
+I gotta start looking at the subreddit name before the title…
+
+2
+frinkmahii
+•
+1y ago
+Since it’s a gift. And has a possible upside, see if you can transfer it to a Roth IRA.
+
+Then if it pops. Sell it inside the account and buy something which might be safer longer term and turn into a nice retirement egg.
+
+And if you’re lucky, whatever value you had it on deposit, you can draw that back out without penalty. (Which makes Roth a nice vehicle for emergency funds where you can withdrawal your contributions tax free)
+
+9
+
+[deleted]
+•
+1y ago
+Related Answers Section
+Related Answers
+How to gift stock shares to family members
+Process to transfer stocks to another person
+Who pays gift tax on gifted stocks
+Gifting stock to adult children advice
+Best budgeting methods for irregular income
+New to Reddit?
+Create your account and connect with a world of communities.
+
+
+Continue With Phone Number
+By continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy.
+More posts you may like
+How does the IRS even know the original basis on gifted stock?
+r/personalfinance
+•
+1y ago
+How does the IRS even know the original basis on gifted stock?
+201 upvotes · 54 comments
+My company gifted me stock for my anniversary, and they’re treating it as reportable income?
+r/tax icon
+r/tax
+•
+9mo ago
+My company gifted me stock for my anniversary, and they’re treating it as reportable income?
+30 comments
+Cost basis for stock that was gifted to me and that I want to gift to my daughter.
+r/tax icon
+r/tax
+•
+2y ago
+Cost basis for stock that was gifted to me and that I want to gift to my daughter.
+15 comments
+Was gifted stock, sold it. Reporting necessary?
+r/tax icon
+r/tax
+•
+1y ago
+Was gifted stock, sold it. Reporting necessary?
+12 comments
+Best ways to maximize step up basis on stock account for grandkids
+r/tax icon
+r/tax
+•
+1y ago
+Best ways to maximize step up basis on stock account for grandkids
+1 upvote · 12 comments
+gifted stocks to a minor, sell on receipt? Tax implications?
+r/personalfinance
+•
+2y ago
+gifted stocks to a minor, sell on receipt? Tax implications?
+2 upvotes · 6 comments
+Why is cost basis method relevant when gifting shares?
+r/tax icon
+r/tax
+•
+2y ago
+Why is cost basis method relevant when gifting shares?
+6 upvotes · 21 comments
+Just received an offer from my old company to buy back the stock shares I left with.
+r/personalfinance
+•
+1y ago
+Just received an offer from my old company to buy back the stock shares I left with.
+656 upvotes · 201 comments
+Cost basis when selling stocks that were gifted
+r/tax icon
+r/tax
+•
+1y ago
+Cost basis when selling stocks that were gifted
+3 upvotes · 6 comments
+Gifting Stock Advice
+r/personalfinance
+•
+2y ago
+Gifting Stock Advice
+1 upvote · 5 comments
+Gifting stocks to parents to sell - Taxes?
+r/tax icon
+r/tax
+•
+1mo ago
+Gifting stocks to parents to sell - Taxes?
+10 upvotes · 9 comments
+Can you give someone stock as a gift?
+r/investing icon
+r/investing
+•
+3mo ago
+Can you give someone stock as a gift?
+7 upvotes · 30 comments
+How to Give Stock as a Gift
+r/personalfinance
+•
+5y ago
+How to Give Stock as a Gift
+2 upvotes · 10 comments
+Should I even be "playing" with stocks if I can't invest thousands of dollars?
+r/stocks icon
+r/stocks
+•
+1y ago
+Should I even be "playing" with stocks if I can't invest thousands of dollars?
+67 comments
+Hi, I sold a stock two days ago and today it went down. How soon can I buy more shares of a stock back after I sell it?
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+9mo ago
+Hi, I sold a stock two days ago and today it went down. How soon can I buy more shares of a stock back after I sell it?
+1 upvote · 12 comments
+People who retired early due to investing, which stocks did it for you?
+r/investingforbeginners icon
+r/investingforbeginners
+•
+2mo ago
+People who retired early due to investing, which stocks did it for you?
+83 upvotes · 77 comments
+Stop investing in individual stocks
+r/Fire icon
+r/Fire
+•
+18d ago
+Stop investing in individual stocks
+378 upvotes · 398 comments
+How do stock brokers not lose money when they lend shares to hedge funds?
+r/Billions icon
+r/Billions
+•
+8mo ago
+How do stock brokers not lose money when they lend shares to hedge funds?
+18 upvotes · 4 comments
+Inherited stocks, will I be taxed on capital gains if I sell?
+r/personalfinance
+•
+9d ago
+Inherited stocks, will I be taxed on capital gains if I sell?
+21 upvotes · 18 comments
+When do i sell these mutual funds ? It’s been more than 3 to 4 years
+r/IndianMutualFunds icon
+r/IndianMutualFunds
+•
+2mo ago
+When do i sell these mutual funds ? It’s been more than 3 to 4 years
+r/IndianMutualFunds - When do i sell these mutual funds ? It’s been more than 3 to 4 years
+123 upvotes · 32 comments
+How and Where to start investing?
+r/Fire icon
+r/Fire
+•
+15d ago
+How and Where to start investing?
+12 upvotes · 15 comments
+Just bought 10k shares and will buy more after the 9th
+r/KSSBulls icon
+r/KSSBulls
+•
+8mo ago
+Just bought 10k shares and will buy more after the 9th
+r/KSSBulls - Just bought 10k shares and will buy more after the 9th
+43 upvotes · 12 comments
+Do people who invest in individual stocks know something we dont?
+r/investing icon
+r/investing
+•
+3mo ago
+Do people who invest in individual stocks know something we dont?
+100 comments
+New to investing: where to start?
+r/personalfinance
+•
+20d ago
+New to investing: where to start?
+4 upvotes · 19 comments
+22 year old new to investing
+r/TheRaceTo100K icon
+r/TheRaceTo100K
+•
+6mo ago
+22 year old new to investing
+r/TheRaceTo100K - 22 year old new to investing
+3
+37 upvotes · 29 comments
+Community Info Section
+r/personalfinance
+Join
+Personal Finance
+Learn about budgeting, saving, getting out of debt, credit, investing, and retirement planning. Join our community, read the PF Wiki, and get on top of your finances!
+
+Show more
+Public
+Top Posts
+Reddit
+reReddit: Top posts of January 31, 2025
+Reddit
+reReddit: Top posts of January 2025
+Reddit
+reReddit: Top posts of 2025
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.
+
+Expand Navigation

@@ -1,0 +1,244 @@
+
+Bogleheads.org
+Investing Advice Inspired by Jack Bogle
+
+Skip to content
+
+Google...
+Quick linksForum PoliciesWikiBlogSupport this SiteAmazonFAQLoginRegister
+Board indexUS InvestorsPersonal Investments
+Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+
+Search this topic…
+16 posts • Page 1 of 1
+Topic Author
+MrCheapo
+Posts: 1756
+Joined: Tue Dec 22, 2020 2:43 pm
+Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by MrCheapo » Sat Jan 18, 2025 12:30 pm
+
+So I have the opportunity to do a consultancy. It's a nice 1 month gig that pays very well, but I don't need the money. It would also be fun.
+
+But the organization is asking me to divest of several stocks (they are in the area they operate in). The challenge is I bought some of these stock back in 2020 so am sitting on 200+% capital gains. Indeed the capital gains tax would be almost half the consultancy fee.
+
+Can I gift these shares to my children without any tax consequences. Kind of like a 1031 Step up basis but for stocks?
+Top
+jebmke
+Posts: 32663
+Joined: Thu Apr 05, 2007 2:44 pm
+Location: Delmarva Peninsula
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by jebmke » Sat Jan 18, 2025 12:34 pm
+
+gifting stocks with unrealized gain normally passes the basis and tax liability to the recipient. Of course, if the recipient is a charity, it doesn't pay taxes so it becomes a tax-free gain for them. For anyone else, the tax consequence of the gain you give them depends on what they do with the security and other aspects of their tax return. They can avoid the tax by holding it until they give it away or by dying. They do not get a "step up" unless you die and they inherit it.
+Don't trust me, look it up. https://www.irs.gov/forms-instructions-and-publications
+Top
+HomeStretch
+Posts: 15159
+Joined: Thu Dec 27, 2018 2:06 pm
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by HomeStretch » Sat Jan 18, 2025 12:37 pm
+
+Is it worth divesting yourself of certain stocks for a 1 month consultancy stint?
+
+Gifts between spouses are tax free for Federal purposes. Would transferring ownership to your spouse satisfy them or would these shares still be considered attributable to you?
+Top
+legalwriter1
+Posts: 386
+Joined: Tue Aug 16, 2022 9:59 am
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by legalwriter1 » Sat Jan 18, 2025 12:40 pm
+
+The adult child may have some room for tax gain harvesting. There are no capital gains for a single filer in 2025 with taxable income under $48,350 (after the standard $15k deduction). For a married couple, it's $96k, after the $30k standard deduction and all other deductions.
+Top
+User avatar
+TomatoTomahto
+Posts: 20697
+Joined: Mon Apr 11, 2011 1:48 pm
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by TomatoTomahto » Sat Jan 18, 2025 12:49 pm
+
+You might ask the organization’s Compliance Department if an agreement not to change your position in the stocks, and providing interested party notifications on your account activity will suffice.
+
+We have restrictions in my wife’s employment, but would find selling to be excessively onerous, especially for a limited duration engagement.
+I get the FI part but not the RE part of FIRE.
+Top
+Toddo
+Posts: 437
+Joined: Mon Aug 12, 2024 5:06 pm
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by Toddo » Sat Jan 18, 2025 1:11 pm
+
+MrCheapo wrote: Sat Jan 18, 2025 12:30 pm
+Can I gift these shares to my children without any tax consequences. Kind of like a 1031 Step up basis but for stocks?
+There would be no tax consequences to you, other than the gifts would use a portion of your lifetime gift/inheritance tax allowance. With the current value of that at over $13M that doesn't matter to most of us.
+
+The consequences to the recipient were described by jebmke. It depends on what they do with the stocks and their own tax situations.
+Top
+User avatar
+TomatoTomahto
+Posts: 20697
+Joined: Mon Apr 11, 2011 1:48 pm
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by TomatoTomahto » Sat Jan 18, 2025 1:19 pm
+
+Toddo wrote: Sat Jan 18, 2025 1:11 pm
+There would be no tax consequences to you, other than the gifts would use a portion of your lifetime gift/inheritance tax allowance. With the current value of that at over $13M that doesn't matter to most of us.
+There are 12 states and the District of Columbia that have their own estate tax laws. In MA, where I live, the estate tax starts at $2M (recently raised from cliff at $1M) and the rate pretty quickly escalates to 16%.
+
+So, “most of us” but far from “all of us.”
+I get the FI part but not the RE part of FIRE.
+Top
+SnowBog
+Posts: 5884
+Joined: Fri Dec 21, 2018 10:21 pm
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by SnowBog » Sun Jan 19, 2025 12:58 pm
+
+legalwriter1 wrote: Sat Jan 18, 2025 12:40 pm
+The adult child may have some room for tax gain harvesting. There are no capital gains for a single filer in 2025 with taxable income under $48,350 (after the standard $15k deduction). For a married couple, it's $96k, after the $30k standard deduction and all other deductions.
+Also true for minor children, although at much less thresholds. Not sure if it changes is 2025, but in 2024 the "kiddie tax" threshold for unearned income was $2,600. IIRC the first $1,300 of gains were tax-free, the next $1,300 of gains were at the kids tax rate (nearly tax free). But anything over that gets taxed at the parent rates.
+
+We used this to help fund a UTMA ear marked for college (or "launch") costs with highly appreciated single stocks that (after becoming Bogleheads) we didn't want to own anymore (but taxes were too costly to exit completely in our high earning/working years).
+Top
+Topic Author
+MrCheapo
+Posts: 1756
+Joined: Tue Dec 22, 2020 2:43 pm
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by MrCheapo » Sun Jan 19, 2025 1:15 pm
+
+jebmke wrote: Sat Jan 18, 2025 12:34 pm
+gifting stocks with unrealized gain normally passes the basis and tax liability to the recipient. Of course, if the recipient is a charity, it doesn't pay taxes so it becomes a tax-free gain for them. For anyone else, the tax consequence of the gain you give them depends on what they do with the security and other aspects of their tax return. They can avoid the tax by holding it until they give it away or by dying. They do not get a "step up" unless you die and they inherit it.
+Thanks, but to be clear I pay no capital gains now and the kid will only pay them when they sell the stock?
+
+That works, I really don't want to sell the stock.
+
+Also, how does one logistially do this? The stock is at Schwab, the kid's accounts are at Fidelity.
+Top
+jebmke
+Posts: 32663
+Joined: Thu Apr 05, 2007 2:44 pm
+Location: Delmarva Peninsula
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by jebmke » Sun Jan 19, 2025 1:22 pm
+
+MrCheapo wrote: Sun Jan 19, 2025 1:15 pm
+jebmke wrote: Sat Jan 18, 2025 12:34 pm
+gifting stocks with unrealized gain normally passes the basis and tax liability to the recipient. Of course, if the recipient is a charity, it doesn't pay taxes so it becomes a tax-free gain for them. For anyone else, the tax consequence of the gain you give them depends on what they do with the security and other aspects of their tax return. They can avoid the tax by holding it until they give it away or by dying. They do not get a "step up" unless you die and they inherit it.
+Thanks, but to be clear I pay no capital gains now and the kid will only pay them when they sell the stock?
+
+That works, I really don't want to sell the stock.
+
+Also, how does one logistially do this? The stock is at Schwab, the kid's accounts are at Fidelity.
+Read more ...
+if you give them the stock, I think they end up with a lower basis than if you sold (with no tax), gifted them the money and they bought the stock back at current market value. If I am right, you are gifting them a potential tax liability that isn't necessary.
+
+I have no idea how Schwab works. At VG there is a web dialog that I have never used - I would guess that it populates paperwork that has to be signed and mailed to VG (or in your case Schwab). The only gifting I have done is direct transfers from taxable to DAF (also VG). That is an immediate transaction that executes overnight with no paper.
+Don't trust me, look it up. https://www.irs.gov/forms-instructions-and-publications
+Top
+Geologist
+Posts: 4110
+Joined: Fri Jan 02, 2009 6:35 pm
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by Geologist » Sun Jan 19, 2025 1:31 pm
+
+jebmke wrote: Sun Jan 19, 2025 1:22 pm
+MrCheapo wrote: Sun Jan 19, 2025 1:15 pm
+
+
+Thanks, but to be clear I pay no capital gains now and the kid will only pay them when they sell the stock?
+
+That works, I really don't want to sell the stock.
+
+Also, how does one logistially do this? The stock is at Schwab, the kid's accounts are at Fidelity.
+if you give them the stock, I think they end up with a lower basis than if you sold (with no tax), gifted them the money and they bought the stock back at current market value. If I am right, you are gifting them a potential tax liability that isn't necessary.
+
+I have no idea how Schwab works. At VG there is a web dialog that I have never used - I would guess that it populates paperwork that has to be signed and mailed to VG (or in your case Schwab). The only gifting I have done is direct transfers from taxable to DAF (also VG). That is an immediate transaction that executes overnight with no paper.
+Read more ...
+At Vanguard, the web dialog for gifts generates electronic paperwork that doesn't have to be mailed (generally). However, you do need to know key elements of the recipient's accounts (account number, DTC number, and so on). I'm sure this latter set of requirements also applies at Schwab. I am reasonably sure you can look up the process on Schwab's website.
+Top
+User avatar
+gatorking
+Posts: 1696
+Joined: Tue Feb 20, 2007 5:15 pm
+Location: MA
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by gatorking » Sun Jan 19, 2025 2:53 pm
+
+Maybe the child gift the shares back after the consultancy gig?
+Top
+TA_Lurker
+Posts: 277
+Joined: Mon Nov 03, 2008 9:41 pm
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by TA_Lurker » Sun Jan 19, 2025 2:58 pm
+
+MrCheapo wrote: Sun Jan 19, 2025 1:15 pm
+jebmke wrote: Sat Jan 18, 2025 12:34 pm
+gifting stocks with unrealized gain normally passes the basis and tax liability to the recipient. Of course, if the recipient is a charity, it doesn't pay taxes so it becomes a tax-free gain for them. For anyone else, the tax consequence of the gain you give them depends on what they do with the security and other aspects of their tax return. They can avoid the tax by holding it until they give it away or by dying. They do not get a "step up" unless you die and they inherit it.
+Thanks, but to be clear I pay no capital gains now and the kid will only pay them when they sell the stock?
+
+That works, I really don't want to sell the stock.
+
+Also, how does one logistially do this? The stock is at Schwab, the kid's accounts are at Fidelity.
+Read more ...
+Are your children minors? If yes, this probably won’t pass the smell test for your employer if you control these accounts...
+Top
+Grt2bOutdoors
+Posts: 26146
+Joined: Thu Apr 05, 2007 8:20 pm
+Location: New York
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by Grt2bOutdoors » Sun Jan 19, 2025 3:03 pm
+
+TA_Lurker wrote: Sun Jan 19, 2025 2:58 pm
+MrCheapo wrote: Sun Jan 19, 2025 1:15 pm
+
+
+Thanks, but to be clear I pay no capital gains now and the kid will only pay them when they sell the stock?
+
+That works, I really don't want to sell the stock.
+
+Also, how does one logistially do this? The stock is at Schwab, the kid's accounts are at Fidelity.
+Are your children minors? If yes, this probably won’t pass the smell test for your employer if you control these accounts...
+Read more ...
+Even if the children are not minors, they are not likely to be viewed as disinterested parties. particularly if the parent can influence their decision making process. The OP should ask the organization if divesting to an interested party such as a child/adult child is considered a complete divestiture.
+"One should invest based on their need, ability and willingness to take risk - Larry Swedroe" Asking Portfolio Questions
+Top
+Topic Author
+MrCheapo
+Posts: 1756
+Joined: Tue Dec 22, 2020 2:43 pm
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by MrCheapo » Sun Jan 19, 2025 3:10 pm
+
+gatorking wrote: Sun Jan 19, 2025 2:53 pm
+Maybe the child gift the shares back after the consultancy gig?
+No they can keep them and use them while they're in college or something
+Top
+Topic Author
+MrCheapo
+Posts: 1756
+Joined: Tue Dec 22, 2020 2:43 pm
+Re: Gifting Shares (To a Child or Someone/Thing Else) Without Capital Gains?
+Post by MrCheapo » Sun Jan 19, 2025 3:10 pm
+
+Grt2bOutdoors wrote: Sun Jan 19, 2025 3:03 pm
+TA_Lurker wrote: Sun Jan 19, 2025 2:58 pm
+
+
+Are your children minors? If yes, this probably won’t pass the smell test for your employer if you control these accounts...
+Even if the children are not minors, they are not likely to be viewed as disinterested parties. particularly if the parent can influence their decision making process. The OP should ask the organization if divesting to an interested party such as a child/adult child is considered a complete divestiture.
+Thanks. The note I got said they have to be divested from husband and wife. It said nothing about children or brothers or sisters or other relatives
+Top
+16 posts • Page 1 of 1
+Return to “Personal Investments”
+Board indexAll times are UTC-06:00Delete cookiesAboutContact us
+No guarantees are made as to the accuracy of the information on this site or the appropriateness of any advice to your particular situation.
+Powered by phpBB® Forum Software © phpBB Limited
+
+Privacy | Terms
+
+Time: 0.294s | Peak Memory Usage: 8.86 MiB | GZIP: Off

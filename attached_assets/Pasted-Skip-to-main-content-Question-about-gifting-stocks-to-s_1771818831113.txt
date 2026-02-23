@@ -1,0 +1,344 @@
+Skip to main content
+Question about gifting stocks to someone and then getting them back : r/tax
+
+
+r/tax
+Search in r/tax
+
+Get App
+Log In
+
+Expand user menu
+Skip to NavigationSkip to Right Sidebar
+
+Back
+r/tax icon
+Go to tax
+r/tax
+•
+4mo ago
+wonkywong
+
+Question about gifting stocks to someone and then getting them back
+I gifted my friend 18k in stock earlier this year, it hasn’t appreciated in value but he wanted to gift it back to me. Will this raise red flags with the irs or is there a way to transfer the stock back into my fidelity but not as a gift.
+
+1
+·
+8
+u/CoinTracker_official avatar
+CoinTracker_official
+•
+Promoted
+
+If you’re active in crypto, the hard part isn’t trading — it’s tracking activity across wallets and exchanges. CoinTracker syncs transactions, calculates gains and losses, and shows your performance in one place. Not just for tax season — for year-round clarity. No spreadsheets. Just confidence.
+Learn More
+cointracker.io
+Clickable image which will reveal the video player: If you’re active in crypto, the hard part isn’t trading — it’s tracking activity across wallets and exchanges. CoinTracker syncs transactions, calculates gains and losses, and shows your performance in one place. Not just for tax season — for year-round clarity. No spreadsheets. Just confidence.
+Collapse video player
+
+0:00 / 0:00
+
+
+
+
+Comments Section
+u/Aggressive-Leading45 avatar
+Aggressive-Leading45
+•
+4mo ago
+The cost basis goes with the gift. As long as you aren’t gifting more than $19k/year to him they don’t care.
+
+
+4
+wonkywong
+OP
+•
+4mo ago
+Yes I already gifted it to him earlier this year but he wants to gift it back to me so I’m wondering if that will be a problem or raise an alarm
+
+
+0
+u/omgadog avatar
+omgadog
+•
+4mo ago
+There is no problem with what you are doing if everything is legit.
+
+
+2
+wonkywong
+OP
+•
+4mo ago
+Yeah I was trying to search online and it was saying it can be a problem if I’m trying to avoid taxes but it’s not like the stock as accumulated value or anything
+
+
+0
+u/I__Know__Stuff avatar
+I__Know__Stuff
+•
+4mo ago
+It doesn't avoid taxes, so it isn't a problem.
+
+Your basis in the shares is the same as when you gave them to him, assuming they are the same shares.
+
+On the other hand, if he sold the shares you gave him and now he is giving you different (but identical) shares, then he owes tax on the sale and your basis of the shares he is giving you is whatever he got them for.
+
+
+2
+wonkywong
+OP
+•
+4mo ago
+Thank you yeah it’s all the same shares so thanks for the response
+
+1
+u/omgadog avatar
+omgadog
+•
+4mo ago
+There is no tax with gift. You are good.
+
+1
+u/OptimaTaxRelief avatar
+OptimaTaxRelief
+•
+4mo ago
+If your friend transfers it back, it should technically count as another gift from them to you. The IRS only requires a gift tax return (Form 709) when total gifts to any one person exceed $19,000 in a year.  
+
+Keep in mind, no actual tax is usually owed unless lifetime gifts exceed the federal exemption (about $13.99 million). If you’re unsure how to report it or want to avoid any red flags, it’s best to check with a tax professional. Hope this helps. Note that this is meant to give you a general idea, but since taxes aren’t one-size-fits-all, it’s best to run your specific situation by a tax expert before making any big decisions. 
+
+4
+Related Answers Section
+Related Answers
+Impact of tax reforms on small businesses
+Tax reforms can significantly impact small businesses, and Redditors have shared various insights and experiences on this topic. Here are some key points:
+
+Relocation and Tax Competition
+Business Relocation: Some small businesses may consider relocating to lower-tax jurisdictions. "Corporate taxes, be they income, property, tariffs etc. are simply expenses. If the hit is large enough, we will absolutely relocate."
+
+Tax Competition: States and countries often compete to attract businesses by offering lower tax rates, which can have mixed effects. "Businesses do sometimes relocate for tax benefits, but the end result is that everyone is worse off when jurisdictions go into a tax rate war, especially on the state level."
+
+Compliance and Filing
+Tax Filing Requirements: Even very small businesses need to file taxes, and failing to do so can lead to penalties. "Yes, Form 1065 filing requirement. Personally, would not recommend DIYing it."
+
+Hobby vs. Business: The IRS distinguishes between a hobby and a business based on the intent to make a profit. "For business losses to be deductible, the operator of the business must intend to make a profit in the operation of the business."
+
+Selling a Business
+Tax on Sale: When selling a business, the tax implications can be complex and depend on the type of sale. "Generally, a business like that is an asset sale. If that's the case, you'll have to recapture depreciation on any assets you sold that have sales price allocated to it, and anything else sold above the value of the assets comes in as capital gains."
+
+Professional Advice
+Seeking Professional Help: It's crucial to consult with a tax professional when dealing with complex tax situations, such as selling a business or managing back taxes. "My advice is don’t look to Reddit for tax advice- spend 2% and hire a tax professional."
+
+Subreddits for Further Questions
+r/tax
+
+r/smallbusiness
+
+r/entrepreneur
+
+These subreddits are great places to ask more specific questions and get advice from a community of business owners and tax experts.
+
+See Answer
+Common tax deductions often overlooked
+How to prepare for an IRS audit
+Best tax software for freelancers
+Understanding international tax treaties
+New to Reddit?
+Create your account and connect with a world of communities.
+
+
+Continue With Phone Number
+By continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy.
+More posts you may like
+How does gifting stocks work?
+r/IndianStockMarket icon
+r/IndianStockMarket
+•
+1y ago
+How does gifting stocks work?
+7 upvotes · 26 comments
+Can you give someone stock as a gift?
+r/investing icon
+r/investing
+•
+3mo ago
+Can you give someone stock as a gift?
+7 upvotes · 30 comments
+Tax consequences of gifting appreciated stock to young adult child?
+r/tax icon
+r/tax
+•
+2y ago
+Tax consequences of gifting appreciated stock to young adult child?
+4 upvotes · 28 comments
+Gifting Stocks and avoiding capital gains tax?
+r/personalfinance
+•
+3y ago
+Gifting Stocks and avoiding capital gains tax?
+2 upvotes · 6 comments
+Gifting stocks to parents to sell - Taxes?
+r/tax icon
+r/tax
+•
+1mo ago
+Gifting stocks to parents to sell - Taxes?
+10 upvotes · 9 comments
+How to Give Stock as a Gift
+r/personalfinance
+•
+5y ago
+How to Give Stock as a Gift
+2 upvotes · 10 comments
+Giving stock as a gift, help, please!
+r/investing icon
+r/investing
+•
+5y ago
+Giving stock as a gift, help, please!
+4 upvotes · 16 comments
+I'm just trying to pay back what I owe :(
+r/tax icon
+r/tax
+•
+1y ago
+I'm just trying to pay back what I owe :(
+r/tax - I'm just trying to pay back what I owe :(
+2
+7 upvotes · 40 comments
+Wondering about the 2025 gift tax
+r/tax icon
+r/tax
+•
+3mo ago
+Wondering about the 2025 gift tax
+64 upvotes · 40 comments
+Why do I owe almost $2k?
+r/tax icon
+r/tax
+•
+1y ago
+Why do I owe almost $2k?
+148 upvotes · 115 comments
+Is everyone getting lower returns?
+r/tax icon
+r/tax
+•
+16d ago
+Is everyone getting lower returns?
+40 comments
+This is the first time I owe and I can’t afford it. What are my options?
+r/tax icon
+r/tax
+•
+1y ago
+This is the first time I owe and I can’t afford it. What are my options?
+18 upvotes · 66 comments
+In US. If I get stocks as part of my compensation. Do I need to pay taxes?
+r/tax icon
+r/tax
+•
+3mo ago
+In US. If I get stocks as part of my compensation. Do I need to pay taxes?
+47 upvotes · 61 comments
+My company gifted me stock for my anniversary, and they’re treating it as reportable income?
+r/tax icon
+r/tax
+•
+9mo ago
+My company gifted me stock for my anniversary, and they’re treating it as reportable income?
+30 comments
+My teenager made $3800 last year, got a W2 and has no withholding.
+r/tax icon
+r/tax
+•
+1y ago
+My teenager made $3800 last year, got a W2 and has no withholding.
+123 upvotes · 51 comments
+Gifted stock tax consequences
+r/tax icon
+r/tax
+•
+1y ago
+Gifted stock tax consequences
+4 upvotes · 8 comments
+My partner inherited about $70k, this will destroy their life
+r/tax icon
+r/tax
+•
+5mo ago
+My partner inherited about $70k, this will destroy their life
+51 comments
+I owe 100k, I need help figuring out my next steps when I have no resources.
+r/tax icon
+r/tax
+•
+6mo ago
+I owe 100k, I need help figuring out my next steps when I have no resources.
+3 upvotes · 25 comments
+What a relief. Here I was thinking I owe it all at once.
+r/tax icon
+r/tax
+•
+20d ago
+What a relief. Here I was thinking I owe it all at once.
+46 comments
+Did I do something wrong
+r/tax icon
+r/tax
+•
+7d ago
+Did I do something wrong
+8 upvotes · 25 comments
+Quick update to my "income just got inflated by $71k" post
+r/tax icon
+r/tax
+•
+6mo ago
+Quick update to my "income just got inflated by $71k" post
+2 upvotes · 11 comments
+200k gambling win/losses IRS
+r/tax icon
+r/tax
+•
+2mo ago
+200k gambling win/losses IRS
+17 upvotes · 21 comments
+400k last year -> 0k W2 this year, but I sold stock for 100k capital gains. Do I pay the government estimated taxes immediately?
+r/tax icon
+r/tax
+•
+9mo ago
+400k last year -> 0k W2 this year, but I sold stock for 100k capital gains. Do I pay the government estimated taxes immediately?
+8 upvotes · 17 comments
+i'm so confused about my return
+r/tax icon
+r/tax
+•
+11d ago
+i'm so confused about my return
+2 upvotes · 32 comments
+Please help me understand what I should claim as a single person next year.
+r/tax icon
+r/tax
+•
+2mo ago
+Please help me understand what I should claim as a single person next year.
+7 upvotes · 16 comments
+Community Info Section
+r/tax
+Join
+Tax News and Discussion
+Reddit's home for tax geeks and taxpayers! News, discussion, policy, and law relating to any tax - U.S. and International, Federal, State, or local. The IRS is experiencing significant and extended delays in processing - everything. Don't post questions related to that here, please.
+
+Show more
+Public
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.
+
+Expand Navigation

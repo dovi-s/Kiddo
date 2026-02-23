@@ -1,0 +1,267 @@
+
+Bogleheads.org
+Investing Advice Inspired by Jack Bogle
+
+Skip to content
+
+Google...
+Quick linksForum PoliciesWikiBlogSupport this SiteAmazonFAQLoginRegister
+Board indexUS InvestorsPersonal Investments
+How To Gift Shares to a Relative
+
+Search this topic…
+16 posts • Page 1 of 1
+Topic Author
+Toddo
+Posts: 437
+Joined: Mon Aug 12, 2024 5:06 pm
+How To Gift Shares to a Relative
+Post by Toddo » Sun Dec 01, 2024 10:10 pm
+
+I want to give some money to a relative and am thinking of doing it by gifting some appreciated mutual fund shares I hold, provided the recipient is in a lower income tax bracket than I am (don't know that yet). The shares are in my Fidelity account, and I don't believe the recipient has an account at Fidelity, but does have accounts elsewhere.
+
+How would I go about transferring the shares? There is a large cap gains distribution scheduled with an record date of 15 Dec. Could I make the transfer in time to get it done, and they sell the shares, but that date?
+Top
+User avatar
+retired@50
+Posts: 18788
+Joined: Tue Oct 01, 2019 2:36 pm
+Location: Living in the U.S.A.
+Re: How To Gift Shares to a Relative
+Post by retired@50 » Sun Dec 01, 2024 10:34 pm
+
+TerryR wrote: Sun Dec 01, 2024 10:10 pm
+I want to give some money to a relative and am thinking of doing it by gifting some appreciated mutual fund shares I hold, provided the recipient is in a lower income tax bracket than I am (don't know that yet). The shares are in my Fidelity account, and I don't believe the recipient has an account at Fidelity, but does have accounts elsewhere.
+
+How would I go about transferring the shares? There is a large cap gains distribution scheduled with an record date of 15 Dec. Could I make the transfer in time to get it done, and they sell the shares, but that date?
+I've done this, but not at Fidelity.
+
+At my brokerage it involves having the brokerage account number and full name of the recipient. Gifting is typically not allowed in IRA accounts, just taxable accounts.
+
+This link will probably get you started.
+https://www.fidelity.com/customer-servi ... csource=FA
+
+Regards,
+"All of us would be better investors if we just made fewer decisions." - Daniel Kahneman
+Top
+sc9182
+Posts: 2936
+Joined: Wed Aug 17, 2016 7:43 pm
+Re: How To Gift Shares to a Relative
+Post by sc9182 » Mon Dec 02, 2024 6:52 am
+
+Guessing you want to be within annual gift tax reporting guidelines?
+
+In Fidelity - assuming your relative has an account# (and you know their full name, may be a bit more details)., simply call Fidelity rep and have them transfer X count of your MF/ETF shares (within Gift-tax reporting annual $$ limits?) to your relative account. Make sure NOT to check their box (on Fidelity end) - Mark this as Gift. By doing thus so., you preserve and transfer original cost based and date of purchase ~ and it be passed to the relative. If relative intends to sell those shares/etf ., they will realize LTCG. If they keep those - obviously, they will enjoy those dividends.
+
+The key-point is NOT to check their box check-box (by the Rep., we don’t see this box): “is this a Gift”
+
+If you somehow think needing to check this box — then, those shares be transferred at that day’s closing-price as your relative’s cost-basis. (guessing - you would owe/pay LTCG taxes on the basis difference- but, I have not explored much on this angle..)
+Top
+User avatar
+Wiggums
+Posts: 7905
+Joined: Thu Jan 31, 2019 7:02 am
+Re: How To Gift Shares to a Relative
+Post by Wiggums » Mon Dec 02, 2024 7:23 am
+
+sc9182 wrote: Mon Dec 02, 2024 6:52 am
+Guessing you want to be within annual gift tax reporting guidelines?
+
+In Fidelity - assuming your relative has an account# (and you know their full name, may be a bit more details)., simply call Fidelity rep and have them transfer X count of your MF/ETF shares (within Gift-tax reporting annual $$ limits?) to your relative account. Make sure NOT to check their box (on Fidelity end) - Mark this as Gift. By doing thus so., you preserve and transfer original cost based and date of purchase ~ and it be passed to the relative. If relative intends to sell those shares/etf ., they will realize LTCG. If they keep those - obviously, they will enjoy those dividends.
+
+The key-point is NOT to check their box check-box (by the Rep., we don’t see this box): “is this a Gift”
+
+If you somehow think needing to check this box — then, those shares be transferred at that day’s closing-price as your relative’s cost-basis. (guessing - you would owe/pay LTCG taxes on the basis difference- but, I have not explored much on this angle..)
+Read more ...
+From the Fidelity form:
+
+“Transfers between accounts with different tax identification numbers will be coded as a gift, unless you select Non-Gift below and provide a brief explanation below.”
+
+What non-gift explanation do you use?
+"I started with nothing and I still have most of it left."
+Top
+Topic Author
+Toddo
+Posts: 437
+Joined: Mon Aug 12, 2024 5:06 pm
+Re: How To Gift Shares to a Relative
+Post by Toddo » Mon Dec 02, 2024 8:24 am
+
+sc9182 wrote: Mon Dec 02, 2024 6:52 am
+Guessing you want to be within annual gift tax reporting guidelines?
+You mean keep it below the gift tax reporting level? No, I expect it will exceed that.
+sc9182 wrote: Mon Dec 02, 2024 6:52 am
+The key-point is NOT to check their box check-box (by the Rep., we don’t see this box): “is this a Gift”
+
+If you somehow think needing to check this box — then, those shares be transferred at that day’s closing-price as your relative’s cost-basis. (guessing - you would owe/pay LTCG taxes on the basis difference- but, I have not explored much on this angle..)
+I don't understand. It is a gift. For a gift the original basis should be transferred. No? Why would they report today's price as the recipient's basis?
+Top
+User avatar
+retired@50
+Posts: 18788
+Joined: Tue Oct 01, 2019 2:36 pm
+Location: Living in the U.S.A.
+Re: How To Gift Shares to a Relative
+Post by retired@50 » Mon Dec 02, 2024 8:38 am
+
+TerryR wrote: Mon Dec 02, 2024 8:24 am
+sc9182 wrote: Mon Dec 02, 2024 6:52 am
+Guessing you want to be within annual gift tax reporting guidelines?
+You mean keep it below the gift tax reporting level? No, I expect it will exceed that.
+In that case, check out the wiki page on gift tax. You will likely need to file IRS Form 709, but there typically isn't any tax due by the giver or the recipient. The gist is that it reduces your lifetime exclusion amount.
+
+https://www.bogleheads.org/wiki/Gift_tax
+
+Regards,
+"All of us would be better investors if we just made fewer decisions." - Daniel Kahneman
+Top
+Topic Author
+Toddo
+Posts: 437
+Joined: Mon Aug 12, 2024 5:06 pm
+Re: How To Gift Shares to a Relative
+Post by Toddo » Mon Dec 02, 2024 10:15 am
+
+retired@50 wrote: Mon Dec 02, 2024 8:38 am
+In that case, check out the wiki page on gift tax. You will likely need to file IRS Form 709, but there typically isn't any tax due by the giver or the recipient. The gist is that it reduces your lifetime exclusion amount.
+Thanks. Yes I understand that. I've done that before with another gift.
+Top
+delamer
+Posts: 21267
+Joined: Tue Feb 08, 2011 5:13 pm
+Re: How To Gift Shares to a Relative
+Post by delamer » Mon Dec 02, 2024 10:26 am
+
+I’ve only done this at Vanguard, but a search within their site on “gift shares” gets me to the correct page to do it all online.
+
+Vanguard allows the transfer to another taxable Vanguard account or to an external taxable account, but I have never tried the latter.
+
+I think you can probably get the transfer done by December 15, assuming the recipient has an internal Fidelity account already or an external account at a major brokerage that can be linked to.
+
+Good luck.
+Still, a man hears what he wants to hear. And disregards the rest. | | The Boxer by Paul Simon
+Top
+Topic Author
+Toddo
+Posts: 437
+Joined: Mon Aug 12, 2024 5:06 pm
+Re: How To Gift Shares to a Relative
+Post by Toddo » Mon Dec 02, 2024 10:29 am
+
+Thanks to everybody for the help.
+
+An update...
+I've talked to Fidelity. They tell me a gift to another Fidelity account up to $32,000 per day can be done with a verbal authorization. Over that amount, or to another firm, requires paper with a Medallion guarantee. Since we have no Fidelity office closer than two hours away, that means getting the guarantee from a bank.
+
+They said that verbal transfer to a Fidelity account is near instantaneous. Transfer to another firm requires mail time plus "several days" to process. So recipient is going to open a Fidelity account to facilitate the transfer.
+
+My Fidelity account was set to "Average Cost Basis" for mutual funds. In order to transfer specific lots and control the recipient's capital gains tax (my holdings in this fund extend back nearly 60 years) I've had to change to "Actual Cost" basis and enter the basis for pre-2010 lots.
+Top
+delamer
+Posts: 21267
+Joined: Tue Feb 08, 2011 5:13 pm
+Re: How To Gift Shares to a Relative
+Post by delamer » Mon Dec 02, 2024 10:40 am
+
+TerryR wrote: Mon Dec 02, 2024 10:29 am
+Thanks to everybody for the help.
+
+An update...
+I've talked to Fidelity. They tell me a gift to another Fidelity account up to $32,000 per day can be done with a verbal authorization. Over that amount, or to another firm, requires paper with a Medallion guarantee. Since we have no Fidelity office closer than two hours away, that means getting the guarantee from a bank.
+
+They said that verbal transfer to a Fidelity account is near instantaneous. Transfer to another firm requires mail time plus "several days" to process. So recipient is going to open a Fidelity account to facilitate the transfer.
+
+My Fidelity account was set to "Average Cost Basis" for mutual funds. In order to transfer specific lots and control the recipient's capital gains tax (my holdings in this fund extend back nearly 60 years) I've had to change to "Actual Cost" basis and enter the basis for pre-2010 lots.
+Read more ...
+Glad that you got it sorted. Medallion guarantees can be a huge hassle so having the recipient open a Fidelity account is a good idea.
+Still, a man hears what he wants to hear. And disregards the rest. | | The Boxer by Paul Simon
+Top
+sc9182
+Posts: 2936
+Joined: Wed Aug 17, 2016 7:43 pm
+Re: How To Gift Shares to a Relative
+Post by sc9182 » Mon Dec 02, 2024 11:26 am
+
+TerryR wrote: Mon Dec 02, 2024 10:29 am
+Thanks to everybody for the help.
+
+An update...
+I've talked to Fidelity. They tell me a gift to another Fidelity account up to $32,000 per day can be done with a verbal authorization. Over that amount, or to another firm, requires paper with a Medallion guarantee. Since we have no Fidelity office closer than two hours away, that means getting the guarantee from a bank.
+
+They said that verbal transfer to a Fidelity account is near instantaneous. Transfer to another firm requires mail time plus "several days" to process. So recipient is going to open a Fidelity account to facilitate the transfer.
+
+My Fidelity account was set to "Average Cost Basis" for mutual funds. In order to transfer specific lots and control the recipient's capital gains tax (my holdings in this fund extend back nearly 60 years) I've had to change to "Actual Cost" basis and enter the basis for pre-2010 lots.
+Read more ...
+Make that under $36000 per day limit .. Medallion guarantee not worth the hassle. May be transfer in two+ days (then again - don't forget to file gift-tax forms if its over annual limits - if you are MFJ - its 36000/year., if the recipient is also MFJ and you as a couple can gift to other couple $72k in year without needing to report)
+TerryR wrote: Mon Dec 02, 2024 8:24 am
+sc9182 wrote: Mon Dec 02, 2024 6:52 am
+The key-point is NOT to check their box check-box (by the Rep., we don’t see this box): “is this a Gift”
+
+If you somehow think needing to check this box — then, those shares be transferred at that day’s closing-price as your relative’s cost-basis. (guessing - you would owe/pay LTCG taxes on the basis difference- but, I have not explored much on this angle..)
+I don't understand. It is a gift. For a gift the original basis should be transferred. No? Why would they report today's price as the recipient's basis?
+I don't fully get the gist of it either (although Fidelity rep explained it somewhat) - all I can say, in our case (NOT marking it as Gift) - transferred the cost-basis/lot-info/dates and LTCG to the recipient; sounds like this is your intent too (?)
+Top
+GuyInFL
+Posts: 1099
+Joined: Thu Aug 04, 2016 7:17 pm
+Re: How To Gift Shares to a Relative
+Post by GuyInFL » Mon Dec 02, 2024 11:40 am
+
+Just have your relative create a Fidelity account online and transfer to that. Especially if they are going to sell it. The whole process will take a couple days.
+Top
+jstorz
+Posts: 85
+Joined: Fri Sep 04, 2020 5:44 pm
+Re: How To Gift Shares to a Relative
+Post by jstorz » Mon Dec 02, 2024 12:23 pm
+
+I gift appreciated stock to my kids every year to take advantage of their standard deduction - I immediately sell and buy VTI. Gifted shares carry the original basis, and my understanding is the gift amount is the average of the high/low on the day of the transfer. This would only matter if you're at risk of running up against the annual exclusion (including other gifts throughout the year).
+
+What I do is call Fidelity and ask them to journal over X shares from specific lot(s) as gifts. As they are UTMA accounts with myself as the custodian they are easy to identify, but I expect that Fidelity would have no issue accepting the recipients name and account number for a transfer.
+Top
+Topic Author
+Toddo
+Posts: 437
+Joined: Mon Aug 12, 2024 5:06 pm
+Re: How To Gift Shares to a Relative
+Post by Toddo » Mon Dec 02, 2024 3:49 pm
+
+An account was opened this morning by the recipient, and I called this afternoon to make the transfer. I was told the maximum was "about $32,000" but in fact he transferred $32,500 worth. I'll call back as needed to do the rest. Specifying lots makes the call to set up the transfer a bit messier than it would be if I could do it online, but not too bad.
+
+The transfer showed up in both my account and the receiving account in a few minutes. But my holdings of this security and the list of lots have both disappeared from my "Positions" page online - guess it takes a while for the system to sort that out.
+
+Yes, I'm aware this will be well above the gift tax filing threshold, so I get to do that again. Fun. :happy
+Top
+Topic Author
+Toddo
+Posts: 437
+Joined: Mon Aug 12, 2024 5:06 pm
+Re: How To Gift Shares to a Relative
+Post by Toddo » Thu Dec 05, 2024 11:02 am
+
+Update:
+
+I just made my forth (of six) transfers by phone. The transfers show up as "pending" within minutes, and are completed overnight.
+
+I've been told that there is a hard rule that telephone transfers cannot exceed $36,000 per day. That can be a bit of a bind for transferring mutual fund shares because the transfer is evaluated at the closing price that day. So if you set the number of shares too close to the $36,000 limit and the NAV of the fund goes up too much that day the entire transfer can be rejected.
+
+I'm trying to give the gifted shares the highest basis possible so I'm selecting lots to achieve that. The agents have been very patient in selecting lots and splitting lots when needed to get my target transfer value for each day.
+Top
+gogleheads.orb
+Posts: 203
+Joined: Fri Oct 18, 2013 12:34 pm
+Re: How To Gift Shares to a Relative
+Post by gogleheads.orb » Thu Jul 17, 2025 9:15 am
+
+I found I could give unlimited amount to a fidelity account that is not mine over the phone if I added standing instructions for that account. You do this by choosing add a bank or recipient under the move money page.
+Top
+16 posts • Page 1 of 1
+Return to “Personal Investments”
+Board indexAll times are UTC-06:00Delete cookiesAboutContact us
+No guarantees are made as to the accuracy of the information on this site or the appropriateness of any advice to your particular situation.
+Powered by phpBB® Forum Software © phpBB Limited
+
+Privacy | Terms
+
+Time: 0.341s | Peak Memory Usage: 8.9 MiB | GZIP: Off

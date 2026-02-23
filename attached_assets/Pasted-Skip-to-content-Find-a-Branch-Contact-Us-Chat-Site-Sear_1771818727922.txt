@@ -1,0 +1,215 @@
+Skip to content
+Find a Branch
+
+Contact Us
+
+Chat
+Site Search
+Search
+
+
+Log In
+
+Accounts & Products
+
+Advice
+
+Pricing
+
+
+
+Why Schwab
+
+
+
+Learn
+Open an Account
+Search Learn
+Search Learn
+
+Taxes
+Tax-Smart Ways to Gift Highly Appreciated Assets
+Transferring appreciated investments to family members or charity can benefit others while also potentially reducing your taxes.
+February 20, 2026•Hayden Adams
+
+
+If your estate-planning goals include transferring wealth to future generations or creating a charitable legacy, using highly appreciated assets to achieve those aims can help generate substantial potential income and estate tax savings in the process.
+
+In most cases, transferring such assets to a family member or charity allows you to avoid paying capital gains taxes on the appreciation, which for long-term holdings is taxed at up to 20%, plus an additional 3.8% net investment income tax if your income exceeds certain thresholds. (However, your heirs will be subject to capital gains tax when they sell the holding.) Furthermore, gifting these assets removes any future appreciation from your estate.
+
+Here are some popular ways to transfer highly appreciated assets for maximum tax efficiency.
+
+1. Giving to family
+There's a limit on how much you can gift to family members and others over your lifetime with no gift tax consequences. With the passage of the One Big Beautiful Bill Act (OBBBA), in 2026, the federal gift and estate tax exemption is now $15 million for individuals and $30 million for couples. In addition, this exemption is now permanent and will be indexed to inflation beginning in 2027.
+
+Estates that exceed the exemption limit may be subject to estate taxes up to 40%—but transferring highly appreciated assets to heirs before you pass, also known as lifetime giving, can help reduce your taxable estate. To do so in a tax-smart manner, consider:
+
+Outright gifting: In 2026, the IRS allows you to gift up to $19,000 per person without utilizing part of your lifetime exemption or being required to complete a gift-tax return. As a couple, you and your spouse could give each of your children and grandchildren $38,000 this year with no hit to your estate tax exemption. And if you institute a regular annual gifting strategy, you could meaningfully reduce your taxable estate incrementally over time.
+
+But it's important to know that, unlike assets passed down after death, assets that are gifted during your lifetime carry over your original purchase price (carryover basis) and holding period. If and when your heirs decide to sell the stock, they will incur capital gains on the appreciation from the date of your purchase to the date of their sale. That said, the inheritor's taxes may be lower than yours if they're in a lower tax bracket, so this option might be worth considering if, say, the gift is for a new graduate or other lower-income family member.
+
+Upstream gifting: Gifting a highly appreciated position to older family members could also be an option if their estate isn't large enough to exceed the estate tax exemption. With this strategy, known as upstream gifting, you transfer appreciated positions to your parent, who benefits from any income the assets generate before ultimately leaving the asset to your children or other selected beneficiary. When those beneficiaries eventually inherit the asset from your parent, they will receive the step-up in cost basis.
+
+This strategy uses part of your lifetime estate and gift tax exemption to facilitate the transfer, but it removes future appreciation from your estate.
+
+Establishing a trust: A grantor retained annuity trust (GRAT) is another method of removing future appreciation from your estate while passing assets to your beneficiaries tax-efficiently. They are often used for gifts to children but not grandchildren because GRATs are not necessarily exempt from generation skipping taxes.
+
+Under this strategy, you transfer highly appreciating assets into a fixed-term, irrevocable trust, which then pays you annuity payments plus a rate of return (as determined by the IRS) for a set number of years. At the end of the term, any excess appreciation (i.e., if the investment return of the GRAT is greater than the IRS interest rate) of the assets passes to your beneficiaries tax-free and, depending on how you structure your GRAT, the gift may not count against your lifetime gift and estate tax exemption. Keep in mind that your heirs will maintain the original tax basis you had.
+
+If you die before your GRAT term ends or the assets don't grow as much as expected or lose value, little or no assets will be transferred and the value of the remaining assets, including any earnings, will be included in your taxable estate.
+
+Learn about tax-smart strategies. 
+Go to tax planning guide
+2. Giving to charity
+If philanthropy is a priority for you, donating long-term highly appreciated stock and other holdings directly to a charity can make your donated dollars stretch further because of both the income and estate tax advantages.
+
+For one, doing so allows you to avoid the capital gains tax you would owe if you sold the asset first and then donated the proceeds. Plus, you may also be able to deduct the donated investment's fair market value in the year of the donation up to IRS limitations.
+
+To get this favorable tax treatment, you must have held the asset for longer than a year. Also be aware that the deduction for non-cash donations is capped at 30% of your adjusted gross income (AGI), versus 60% of AGI for charitable donations made in cash. If your deduction exceeds 30%, you can carry over and deduct any excess amount for up to five additional years.
+
+However, before we get into a hypothetical example, we need to talk about one of the changes that the One Big Beautiful Bill Act introduced in 2025. OBBBA alters the charitable giving situation somewhat for the highest earners—those in the 37% bracket. Typically referred to as the 2/37 rule, this provision effectively limits the value of deductions available to those in the highest tax bracket to just 35 cents for every dollar of itemized deductions. (This change does not affect any of the lower brackets.)
+
+Let's say you paid $100,000 to purchase a stock that is now valued at $750,000—a gain of $650,000. Here's how your tax savings compare for selling the asset first and donating the cash versus donating the stock directly to a charity.
+
+Tax savings comparison for 2026 tax year for those in the 37% bracket
+<!-- HIDDEN_CAPTION -->
+Category	Sell stock and donate after-tax cash	Donate stock directly to charity
+Long-term capital gains taxes owed	
+$154,700
+($650,000 x .238)
+$0
+0.5% charitable donation floor	$12,500
+($2,500,000 x .005)	$12,500
+($2,500,000 x .005)
+Charitable gift and equivalent tax deduction	$582,800
+($750,000 – $154,700 – $12,500)	$737,500
+($750,000 – $12,500)
+Tax savings	$49,280
+([$582,800 x .35] – $154,700)	$258,125
+($737,500 x .35)
+Disclosure
+
+This hypothetical example is for illustrative purposes only. The example assumes an original cost basis for the stock of $100,000, federal long-term capital gains tax rate of 20%, net investment income tax of 3.8%, and an adjusted gross income of $2.5 million. This example does not take into account any state or local taxes.
+
+In this example, giving the highly appreciated long-term assets directly to the charity resulted in a significantly larger tax savings. By giving appreciated assets, the donor was able to avoid the recognition of taxable income, allowing them to give more and have a larger tax deduction. The donor has also removed these assets and any future appreciation from their estate, potentially reducing how much their estate might owe in taxes before it's passed on to heirs, especially if the estate is close to the federal gift and estate tax limit.
+
+A new floor for charitable deductions
+As you can see in the example above, there is another change in the One Big Beautiful Bill Act that affects the deduction for charitable giving. Starting in 2026, the OBBBA institutes a floor for charitable giving. Taxpayers who itemize deductions will only be able to claim a charitable donation as an itemized deduction for the portion of their giving that exceeds 0.5% of their adjusted gross income (AGI). In practice, this means you must first calculate 0.5% of your AGI, and only contributions above that threshold will be eligible for an itemized tax deduction. So, if your AGI in 2026 is $500,000, only charitable contributions above $2,500 would be eligible for a deduction.
+
+In our hypothetical example, our donor’s AGI was $2.5m. Because they itemize, this new floor would disallow $12,500 of their charitable giving no matter how they make their gift, either in cash or in the form of stock. This might not change how you give, but it could reduce the tax savings of your donation.
+
+Resources for gifting highly appreciated assets
+Several vehicles can help implement this tax-smart strategy:
+
+Donor-advised fund: These charitable accounts have no setup costs, low to no minimum contributions, and relatively low administrative fees. You can contribute your highly appreciated stock or other investments for a deduction in the current tax year, but you don't have to immediately decide which charities will benefit from your gift.
+Charitable remainder trust: You can donate your highly appreciated position to this type of irrevocable trust and you or your heirs receive an income stream for a dedicated term (not to exceed 20 years), after which the remaining trust assets go to your charity or charities of choice. You get an immediate charitable deduction on the value of the assets estimated to pass to the charity at the end of the trust term.
+Private foundation: These are federally recognized charitable tax-exempt organizations that allow families and others to create and manage a legacy of charitable gift-giving for generations to come. Establishing a private foundation is a complex endeavor with differing tax deductions and implications, so be sure you're prepared for the related time and expense involved.
+Incorporating the whole picture
+These are just a few of the many ways to potentially maximize your gift-giving while reducing the income and estate tax bite of your most appreciated investments. Having a clearly defined giving strategy helps you manage estate tax risks, regardless of changes in estate tax limits across administrations. A financial or wealth consultant can help you approach your decisions with your comprehensive financial situation in mind.
+
+Learn about tax-smart strategies. 
+Go to tax planning guide
+More from Charles Schwab
+
+Understand Your Cost Basis
+Article | Feb 6, 2026
+Photo of college student in a classroom
+529 Eligible Expenses
+Article | Feb 6, 2026
+
+ETFs and Taxes: What to Know
+Article | Feb 4, 2026
+Explore more topics
+Taxes
+Charitable Giving
+Estate Planning
+This information is not a specific recommendation, individualized tax, legal, or investment advice. Tax laws are subject to change, either prospectively or retroactively. Where specific advice is necessary or appropriate, individuals should contact their own professional tax and investment advisors or other professionals (CPA, Financial Planner, Investment Manager, Estate Attorney) to help answer questions about specific situations or needs prior to taking any action based upon this information. Certain information presented herein may be subject to change. The information or material contained in this document may not be copied, assigned, transferred, disclosed or utilized without the express written approval of Schwab.
+
+This material is intended for general informational and educational purposes only. This should not be considered an individualized recommendation or personalized investment advice. The investment strategies mentioned may not be suitable for everyone. Each investor needs to review an investment strategy for his or her own particular situation before making any investment decisions.
+
+All expressions of opinion are subject to change without notice in reaction to shifting market, economic or political conditions. Data contained herein from third party providers is obtained from what are considered reliable sources. However, its accuracy, completeness or reliability cannot be guaranteed.
+
+For illustrative purpose(s) only. Individual situations will vary. Not intended to be reflective of results you can expect to achieve.
+
+Investing involves risk, including loss of principal.
+
+A donor's ability to claim itemized deductions is subject to a variety of limitations depending on the donor's specific tax situation.
+
+Market fluctuations may cause the value of investment fund shares held in a donor-advised fund (DAF) account to be worth more or less than the value of the original contribution to the funds.
+
+The Schwab Center for Financial Research is a division of Charles Schwab & Co., Inc.
+
+0226-3ZH9
+Investment and Insurance Products Are: Not FDIC Insured • Not Insured by Any Federal Government Agency • Not a Deposit or Other Obligation of, or Guaranteed by, the Bank or any of its Affiliates • Subject to Investment Risks, Including Possible Loss of Principal Amount Invested
+The Charles Schwab Corporation provides a full range of brokerage, banking and financial advisory services through its operating subsidiaries. Its broker-dealer subsidiary, Charles Schwab & Co. Inc. (Member SIPC), and its affiliates offer investment services and products. Its banking subsidiary, Charles Schwab Bank, SSB (member FDIC and an Equal Housing Lender), provides deposit and lending services and products.
+
+This site is designed for U.S. residents. Non-U.S. residents are subject to country-specific restrictions. Learn more about our services for non-U.S. residents, Charles Schwab Hong Kong clients, Charles Schwab U.K. clients.
+
+© 2026 Charles Schwab & Co., Inc. All rights reserved. Member SIPC. Unauthorized access is prohibited. Usage will be monitored.
+
+own your tomorrow
+Accounts
+
+Brokerage
+401(k) Rollover
+Individual Retirement Accounts (IRAs)
+Schwab Bank Checking
+Small Business Retirement
+See More Accounts
+Investment Products
+
+Stocks
+Mutual Funds
+Exchange Traded Funds (ETFs)
+Annuities
+Bonds
+See More Investment Products
+Trading
+
+Trading Platforms
+Execution Quality
+Options
+Futures
+Research & Tools
+
+Retirement Calculator
+Roth vs. Traditional IRA Calculator
+Research Tools
+Mobile Apps
+Learn
+
+Insights & Education
+Trading
+Market Commentary
+Planning & Retirement
+Podcasts
+Schwab Network
+About Schwab
+
+Why Schwab
+Compare Us
+Satisfaction Guarantee
+Forms & Applications
+Pricing
+Notify us of a Death
+SchwabSafe
+Privacy
+Additional Schwab Sites
+Site Map
+Business Continuity
+Financial Statement
+Accessibility Help
+Contact Us
+About Schwab
+Careers
+Investment Professionals' Compensation
+Important Notices
+Account Protection
+SIPC®
+FDIC Insurance
+FINRA's Broker Check
+Bank Client Complaints
+Client Relationship Summaries
+Your Privacy Choices
+(1124-0VG4)
+

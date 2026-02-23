@@ -1,0 +1,271 @@
+
+Monetary Gifts
+Gifting Stock to Family: What You Need to Know
+Is it possible to give stocks or mutual funds as gifts? If so, what are the tax effects? Find out how gifting stock to family works in our detailed guide.
+
+By
+
+EarlyBird Team
+Last updated:
+
+February 13, 2023
+
+
+EarlyBird helps parents, family, and friends collectively invest in a child’s financial future. Learn more.
+
+What You'll Learn
+Can I Give Stock as a Gift?
+How to Gift Stock to Family 
+What Are the Tax Implications of Gifting Shares to Family? 
+Conclusion 
+
+What is the one gift that truly keeps on giving? Stock! 
+
+This gift can build long-term wealth for the recipient. And as it turns out, gifting stock to family or friends may result in a tax benefit for you, as well. 
+
+But how do you gift stock? You can’t exactly wrap up a share of Apple, nor can you throw together an ETF gift basket. 
+
+This comprehensive guide will show you everything you need to know about gifting stock. 
+
+Can I Give Stock as a Gift?
+Yes, you can gift stock to family members — or to anyone, for that matter. 
+
+If you already own stocks and want to give them to another person, the process will involve transferring the stocks from your brokerage account to the brokerage account of the recipient. 
+
+If the recipient doesn’t have an active brokerage account, they’ll need to open one. 
+
+If you want to purchase new stock for a family member, you’ll typically need to transfer funds to them to have them buy the shares directly from a broker. 
+
+For a minor, you could also set up a custodial account in their name and make new investments within that account.
+
+You can find more details on how all of these methods work further down the page. 
+
+Alternatively, you can sell stock and then gift money from the proceeds to the recipient. The sale will be a taxable event, however, and you’ll likely owe capital gains tax on the transaction — more on this later. 
+
+
+
+INVEST EARLY
+, 
+GROW TOGETHER
+Download EarlyBird today and start investing in your child’s tomorrow.
+Get started
+Pros and cons of gifting equities 
+There are both advantages and disadvantages to gifting equities (aka stock):
+
+Pros
+
+Your gift can grow over time.
+You can gift existing stocks without paying capital gains tax (because you don’t have to sell them).
+Future market gains will benefit the gift recipient.
+If the recipient has a low income, they may not need to pay capital gains tax when they sell.
+Cons
+
+It can be more complicated than most gifts.
+There may still be tax consequences for one or both parties (more on this below).
+How to Gift Stock to Family 
+The specific steps needed to give stocks to a family member depend on several factors. 
+
+The process will differ if you’re gifting an existing stock that you own or a new stock that you’d like to purchase. The size of the gift and the age of the recipient may also change the strategy. 
+
+Finally, the specific process will depend on your broker’s requirements and processes (and requirements from the recipient’s broker). 
+
+The sections below will describe the most common methods.
+
+Transferring existing stock (through a brokerage) 
+If you already own stock and want to give it to a family member, you’ll need to transfer the shares. The recipient of the gift will need to have their own brokerage account at a provider like Schwab, Fidelity, E-Trade, etc. 
+
+Transferring stock from brokerage
+(Image Source)
+
+
+While they may vary a bit depending on what brokerage you use, these are the basic steps you will take to gift stock via transfer:
+
+Speak to the gift recipient to see if they have a brokerage account. If they don’t, ask them to open one. Their account doesn’t need to be held with your broker, although the transfer process may be a bit quicker if it is.
+Gather account details from the gift recipient. You’ll need the receiving firm’s name (the company that manages the recipient’s brokerage account), the receiving firm’s account number, and the receiving firm’s Depository Trust and Clearing (DTC) number. You’ll also need the recipient’s name and other personal information.
+
+Authorize the transfer. This usually involves filling out a form and signing it, either digitally or on paper. For example, here's Fidelity’s gift transfer form, and here's TD Ameritrade’s form. You can search your broker’s website or contact them for details.
+ 
+Note: Some brokers require different forms depending on whether you’re transferring to another account at that same broker or to another broker. It’s best to call your broker for details before proceeding.
+
+Wait for the transfer. If you’re transferring within the same brokerage company (your Vanguard account to your nephew’s Vanguard account, for example), the transfer should be completed within a week or so. For transfers to a different broker, the process can take several weeks. 
+The process is generally the same whether you’re transferring an individual security, a mutual fund, or an ETF. However, if the specific mutual fund is not available at the brokerage of the gift recipient, the transfer may not be possible. 
+
+If the gift is under $16,000 (in 2022 or $17,000 in 2023), no tax form is generally required. If you give over the threshold amount, you’ll need to file a gift tax return—but you won't necessarily owe any taxes on the gift. 
+
+The recipient of the gift doesn’t typically need to report the gift or pay tax on it. However, they may owe capital gains tax when they eventually sell. We’ll discuss the tax implications of gifting stock in more detail later in this guide. 
+
+Buying stock for family 
+If you want to make a new investment for a family member, the process is a bit simpler. You’ll just need to send funds to the gift recipient, who can then use the funds to buy an investment through their brokerage account. 
+
+Graphic of two people with money around them
+
+
+The recipient will need their own brokerage account. If they don’t have one, they can sign up in a few minutes. Some good options include Vanguard, Fidelity, Charles Schwab, or E-Trade. 
+
+You can transfer funds in any way that is convenient. Writing a check, gifting cash, or initiating a bank transfer are all good options. You may be able to transfer funds directly to the recipient’s brokerage account, although it’s often simpler to just write a check. 
+
+The same gift tax rules apply to cash gifts. For gifts under $16,000 (in 2022 or $17,000 in 2023), no reporting is necessary. For gifts over the threshold amount, you’ll need to file a gift tax return. 
+
+Investing for a child 
+What if the gift recipient is a minor? In this case, the process is a bit different and generally must include the use of a 
+custodial account
+. A custodial account is opened in the name of the child, but it is managed by an adult (often the parents or guardians) until the child turns 18. 
+
+Graphic of a person holding a baby and showing them an investment graph
+
+
+The simplest way to invest on behalf of children is to use EarlyBird. 
+
+EarlyBird is an app that allows parents, family members, friends, godparents, and more to collectively 
+gift investments
+ to children. Here’s how it works:
+
+An adult sets up an EarlyBird account for the child.
+Parents choose an 
+investment profile
+ (from aggressive to conservative), allowing funds to be invested in a mix of stocks and bonds.
+Anyone can send a monetary gift to the child through EarlyBird, along with a video message.
+Money is automatically invested and can grow over time with the market.
+When the child becomes a legal adult, they gain full control over the account.
+EarlyBird is a UGMA account, which means that funds are not restricted to a certain use. Unlike 529 college savings plans, which must be used for college only, the child can use the gifted funds for any purpose once they turn 18. 
+
+EarlyBird provides the child with a lot of flexibility. Funds may be used for college, a business venture, a round-the-world trip, or any other purpose. 
+
+Note: At this time, EarlyBird doesn’t support the gifting of existing equities. You can send cash to an EarlyBird account where it can then be invested, but you cannot transfer existing stock. 
+
+Click here to download the EarlyBird app or learn more.  
+
+Of course, EarlyBird isn’t the only way to invest for a child. 
+
+The child’s parents may have already established a college fund for the child. In this case, you can ask the parents how you can contribute. 
+
+Or they may already have another custodial brokerage account set up, which you can transfer stock or add fresh funds to. 
+
+For more ideas, see our investing for kids guide. 
+
+What Are the Tax Implications of Gifting Shares to Family? 
+Gifting equities to family members can make a lot of sense from a tax perspective — but there are still some things to be aware of. If you're making a substantial gift, it’s best to speak to a tax advisor or financial advisor before proceeding. 
+
+Often, gifting appreciated stock instead of cash may offer tax savings to the gifter but may increase the gift recipient’s tax liability in the future.  
+
+There are two main tax effects to keep in mind: that of the gift tax and that of capital gains tax. 
+
+Gift tax
+Gift tax may come into play on any gift, whether it’s cash, equities, or property. Because of the exclusions, most Americans won’t actually owe any gift tax, but they may still need to file some extra paperwork come tax time. 
+
+Gift tax generally affects the gift giver, not the beneficiary. That means that you may be responsible for paying gift tax, but whoever you give the stocks or money to usually won’t need to pay anything. 
+
+Here’s how it works:
+
+Gift tax applies to the gift of cash, stocks, bonds, vehicles, real estate, and anything else of value.
+If the gift is under $16,000 (in 2022 or $17,000 in 2023), no gift tax is owed — and no special reporting is required.
+This limit is per person. If you’re married filing jointly, you and your spouse can give up to $32,000 (in 2022 or $34,000 in 2023) without filing a gift tax return.
+The limit is also per recipient. This means that you could give up $10,000 to your nephew, $15,000 to your daughter, $10,000 to your coworker, etc., without needing to file a gift tax return.
+The value of the gift is based on the current market value. If you give appreciated securities, the gift tax will be calculated based on the fair market value on the day of the transfer (regardless of how much you originally paid for the stock).
+If the gift is over the stated threshold amounts, a gift tax return (IRS form 709) must be filed.
+However, there is an additional lifetime gift tax exclusion of up to $12.92 million (as of 2023), which means you likely won’t owe any gift tax unless you gift more than $12.92 million in your lifetime (or as part of your estate after death).
+For example, if you and your spouse give $100,000 to a family member in 2023, $34,000 would be covered by the yearly exclusion, and the other $66,000 would be covered by the lifetime exclusion. You would not owe any gift tax.
+Gift tax graphic
+(Image Source)
+
+
+Gifts are not tax-deductible unless they are made to a qualifying nonprofit organization. 
+
+The gift beneficiary doesn’t need to report the gift, and it won’t be treated as income. However, when they eventually sell the investment, they may owe capital gains tax. 
+
+Capital gains 
+Capital gains tax comes into play when an investment is sold. Because you’re gifting the stock directly instead of selling it, you won’t owe capital gains tax — but the gift recipient will when they eventually sell the shares.
+
+Capital gains tax graphic
+(Image Source) 
+
+
+Capital gains tax is based on the profit (capital gain) from a given stock sale rather than the total amount of the sale. 
+
+For example, if you buy stocks worth $1,000 and later sell them for $3,000, you’ll owe capital gains tax on the $2,000 profit ($3,000 sale - $1,000 original cost basis). 
+
+When you give someone stocks, your cost basis (the original cost of the stock) transfers to the recipient. If you paid $1,000 for a stock three years ago and then gave it to your godchild, the recipient will inherit the $1,000 cost basis — even if the stock is now worth $3,000. 
+
+If the recipient were to immediately sell the stock for $3,000, they would owe capital gains tax on the $2,000 profit ($3,000 sale - $1,000 original cost basis). 
+
+In other words, it doesn’t matter what the value of the stock is when you give it away. What matters is the value of the stock when it was originally purchased. 
+
+There are two tax rate structures for capital gains.
+
+Long-term capital gain tax applies to assets sold after owning them for more than 12 months. For taxes due in 2023, the tax rates break down as follows:
+
+Single filers
+
+0% for single filers with total taxable income under $41,675
+15% for single filers with total taxable income between $41,676 and $459,750
+20% for single filers with total taxable income of $459,751 or more
+Joint filers
+
+0% for joint filers with total taxable income under $83,350
+15% for joint filers with total taxable income between $83,351 and $517,200
+20% for joint filers with total taxable income of $517,201 or more
+Note that different income thresholds apply to those who are married filing separately, or anyone filing as a head of household. ‍
+
+‍
+Short-term capital gain tax applies to assets sold after owning them for less than 12 months. The tax rates are based on the standard income tax brackets and range from 10%–37% based on income level. 
+
+Often, the gift recipient will have a lower income level than the gifter — and will therefore pay a lower capital gains tax rate when they sell the assets. 
+
+Finally, keep in mind that the recipient will also owe income taxes on any dividends received from the stock, starting on the day they receive the shares. This income is treated as standard investment income and is separate from capital gains tax. 
+
+Conclusion 
+Gifting equities can be intimidating, but it’s not as complex as it might seem. 
+
+Armed with the knowledge in this guide, you’ll be able to 
+gift investments
+ to loved ones, and you may even earn a valuable tax benefit along the way! 
+
+‍
+Looking to invest in the futures of the children in your life? Check out the EarlyBird app — it makes it easy for loved ones to set up a 
+custodial account
+ and gift wealth, not waste.
+
+
+
+INVEST EARLY
+, 
+GROW TOGETHER
+Download EarlyBird today and start investing in your child’s tomorrow.
+Get started
+This page contains general information and does not contain financial advice. All investments involve risk. Any hypothetical performance shown is for illustrative purposes only. Actual investment performance may be different for many reasons, including, but not limited to, market fluctuations, time horizon, taxes, and fees. Please consult a qualified financial advisor and/or tax professional for investment guidance.
+
+
+Author
+EarlyBird Team
+Was this helpful?
+Yes
+No
+Stay in the loop
+Join the EarlyBird Newsletter!
+alexdough@email.com
+
+
+
+
+You might also enjoy
+
+How to Give a Gift that Matters
+
+A Complete Guide for Gifting Money to Children
+
+Family Gift Ideas: the Ultimate Guide
+
+
+
+
+
+FAQ
+Blog
+Legal
+Careers
+Support
+support@getearlybird.io
+This website is operated by EarlyBird Central Inc., an SEC-registered Investment Advisor. Brokerage services are provided to clients of EarlyBird Central Inc. by Apex Clearing Corporation, an SEC-registered broker-dealer and member FINRA. Apex Clearing Corporation is a member of SIPC. SIPC protects against the loss of cash and securities held by a customer at a financially-troubled SIPC-member brokerage firm. The limit for SIPC protection is $500,000. For details, please see www.sipc.org.
+
+Important Disclosures: Investing involves risk, including loss of principal. Read more
+

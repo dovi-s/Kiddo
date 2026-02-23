@@ -1,0 +1,417 @@
+Skip to main content
+What are the tax implications of gifting a taxable brokerage account to a kid? : r/personalfinance
+
+r/personalfinance
+Search in r/personalfinance
+
+Get App
+Log In
+
+Expand user menu
+Skip to NavigationSkip to Right Sidebar
+
+Back
+Go to personalfinance
+r/personalfinance
+•
+4y ago
+positivoh
+
+What are the tax implications of gifting a taxable brokerage account to a kid?
+I think opening a taxable brokerage under my ssn, and gifting it at a later date provides the most flexibility for me (in terms of when I gift it) and the most flexibility for them (in terms of what it can be spent on.)
+
+I know I'll be on the hook for any dividends or capital gains that are generated from those investments, but I think the good outweighs the bad. The portfolio would consist of ITOT or FZROX and I'd add money ($500~$1000 /year) at least for the next 10 years. I've read mixed reviews on 529s, and do not like the idea of money being tied to education. Especially, if it means paying a penalty to use it for non-education related expenses.
+
+Are there any other pitfalls I should be aware of?
+
+7
+·
+20
+u/wealthfront avatar
+wealthfront
+•
+Promoted
+
+Remember, kids: always diversify 🤓 Wealthfront’s Automated Investing Account spreads your money across asset classes—so one bad egg doesn’t break your whole portfolio.
+Sign Up
+wealthfront.com
+Thumbnail image: Remember, kids: always diversify 🤓 Wealthfront’s Automated Investing Account spreads your money across asset classes—so one bad egg doesn’t break your whole portfolio.
+Comments Section
+u/DeluxeXL avatar
+DeluxeXL
+•
+4y ago
+Have you considered using a UTMA brokerage account, i.e. the beneficiary owns the account but you manage it, and anyone can gift into it. You can gift into the account each year to slowly accumulate value. There will be no lump sum gifting like when you hand over a normal account, but there is also no undoing a gift.
+
+
+7
+u/positivoh avatar
+positivoh
+OP
+•
+4y ago
+I've looked into it, but there's potential for a negative impact on their financial aid. When I went to school I fell into the "too rich to be considered poor, and too poor to be considered rich" category. Needless to say, the income DQ'd me from a variety of scholarships and income based programs. I'd prefer to help them avoid that scenario if possible.
+
+
+1
+[deleted]
+•
+4y ago
+You're going to run into that regardless just having this brokerage account at all. Expect to pay out of pocket for your kids education unless they get scholarships. ESPECIALLY with how much education cost is skyrocketing the last decade.
+
+Maybe do a 529 instead to cover that?
+
+2
+[deleted]
+•
+4y ago
+Keep in mind the impacts to financial aid should the kid ever go to college
+
+1
+Anonymoose2021
+•
+4y ago
+You and your spouse can each gift $16k per year without filing a gift tax return. You can also gift an unlimited amount if for educational or medical expenses and paid directly to the provider.
+
+Above those amounts you must file a gift tax return when you gift the money or stocks. On a practical basis, what works best when you gift is for your child to open an account in his SSN, and you transfer the stocks and ETFs in kind without selling them. You report the full market value on the gift tax return. Your child assumes your cost basis.
+
+Even though a gift in excess of the annual exclusion must be reported, no gift tax is due until your lifetime gifting (in excess of annual exclusions) has reached the lifetime exemption amount of $12.06M (as of 2022).
+
+3
+[deleted]
+•
+4y ago
+If the fair market value of the account exceeds the annual gift exclusion when you make the gift, which is currently $15k, is increasing to $16k in 2022, and might be around $20k in ten years, then you'll have to file a form with the IRS to report the gift.
+
+If you plan to give away many millions of dollars in your lifetime and/or leave many millions of dollars in your estate, at some point a gift tax might kick in for you. "Many millions" means "about $12 million" right now (double for a married couple) but there's the potential for that to drop to about $6m for an individual over the next decade since the increase is tied to a ten year expiration in the TCJA.
+
+When you gift appreciated assets, the recipient acquires your cost basis. If you buy stock now that you give away in ten years, the recipient will very likely have to consider the tax consequences of selling the stock to access the money.
+
+You can't really gift an account but rather you gift the stuff inside the account. If you're buying in-house mutual funds at (I assume) Fidelity, the recipient will have to open their own account at Fidelity to receive them and depending on whatever choices the recipient has made for themselves, this may be inconvenient for them. On the other hand, if you're buying ETFs, those are largely portable and you can easily send them to the recipient's account at any brokerage, not just Fidelity.
+
+
+2
+u/positivoh avatar
+positivoh
+OP
+•
+4y ago
+My funds are limited as is, so I doubt I'll be remotely close to the gift limit. Are you saying, when I gift the assets, if the overall account balance exceeds the gift limit ($15k or the new limit), then the recipient is on the hook for the taxes, if the assets have to be sold instead of an in-kind transfer?
+
+That's what made me list ITOT. If I went with FZROX, it is solely to take advantage of the 0% ER. Since both funds have similar performance, being tied to Fidelity might be a fair trade if the money saved, results in larger growth overall.
+
+
+1
+[deleted]
+•
+4y ago
+Are you saying, when I gift the assets, if the overall account balance exceeds the gift limit ($15k or the new limit), then the recipient is on the hook for the taxes, if the assets have to be sold instead of an in-kind transfer?
+
+No.
+
+If the value of the gift exceeds the annual gift exemption, which is currently $15k and will probably be about $20k in ten years, you have to file Form 709.
+
+If the gift is of appreciated assets, the recipient acquires your cost basis and so selling them becomes a taxable event for the recipient. You buy a share of XYZ today for $1. In 10 years, that share is worth $2. You give it away. The recipient acquires your $1 cost basis and so if they sell it for $2, they're on the hook for capital gains taxes on that $1 long-term gain. If you don't want the recipient to be on the hook for taxes, you yourself can sell the share of XYZ for $2, pay the relevant taxes, and then just give the recipient $2 in cash.
+
+The gift exclusion/tax and the capital gains taxes on appreciated assets are two totally separate issues to be aware of.
+
+
+2
+u/positivoh avatar
+positivoh
+OP
+•
+4y ago
+ah okay that makes sense. Thanks for elaborating.
+
+1
+chopsui101
+•
+4y ago
+A 529 the benf can pull the funds out and pay taxes plus a 10% penalty. However the taxes are assessed at the benf tax rate. This assumes that the benf tax rate would be less than your’s it still might save you money to put it into a 529. You might also look at an irrevocable trust, depending on what you want them to do with the money.
+
+
+0
+Anonymoose2021
+•
+4y ago
+For the amounts the OP mentioned, an irrevocable trust is not cost effective due to the initial setup costs, the yearly administrative expenses such as filing a trust tax return each year, and the higher tax rates imposed on trusts.
+
+A UTMA (uniform trust for minors act) preset trust with standardized provisions and reduced administrative costs might make sense. No tax return needed if the child's total income is less than $1100. A tax return is required, but no tax owed if unearned income is between $1100 and $2200. Depending upon the state, the child gets full access to the account at either age 18 or 21.
+
+
+2
+u/positivoh avatar
+positivoh
+OP
+•
+4y ago
+The impact to financial aid and handing over $x amount of dollars to a teenager is slightly concerning. lol. Hopefully, some financial gems can be taught along the way. Ultimately, if they receive the money and choose to blow it. It's on them.
+
+
+1
+Anonymoose2021
+•
+4y ago
+I accidentally had a large UTMAs for my two children as in the 1990s I was taking advantage of the lower tax rates for children over 14 to realize gains on a concentrated stock position from employee stock options. The stock soared well beyond my expectations and the $24k value grew to well into 6 figures. They were age 21 handovers, but I "forgot" to transfer the 6 figure accounts until ages 23 and 25. They were holding only non-dividend stocks so they didn’t have any effect on their taxes as they started getting earned income and filing income tax returns. So "child gets full access at age 18 or 21” may not truly reflect reality.
+
+1
+chopsui101
+•
+4y ago
+A 529 or coverdell would be better than a UTMA. UTMA are assessed as student assets and financial aid while 529 are the parents assets.
+
+
+1
+Anonymoose2021
+•
+4y ago
+More specifically student assets can be expected to contribute a maximum of 20% of value each year to the expected family contribution, while parental assets (excluding primary residence and retirement account) count at a maximum of just under 6% of value annually.
+
+529 plans can also be used up to $10k/yr for k-12 expenses, and the beneficiary can be changed to a wide range of eligible relatives — parents, uncle/aunts, siblings, and first cousins. And you can also just let any unused funds continue tax free accumulation for the next generation as son or daughter of beneficiary is also a qualified beneficiary. Then there is always the wine tasting adult education course in France (just kidding about that one, but the rules are rather flexible).
+
+Coverall plans do have an AGI eligibility limit of $95k/$190k single/married, and you have to be careful about fees on $2k/yr investments.
+
+1
+u/positivoh avatar
+positivoh
+OP
+•
+4y ago
+I don't know what the final account balance will be when the time comes. I do know, I don't want a couple of thousand dollars or more locked into a specific use category.
+
+1
+chopsui101
+•
+4y ago
+as a follow up.....i'd be more concerned how it effects the kid's access to financial aid. As assets in the kid's name effect it more than assets in your name, 529's and coverdell's are counted in your assets rather than the kids.
+
+
+-1
+u/positivoh avatar
+positivoh
+OP
+•
+4y ago
+Yep, that's why I'm trying to stay away from a 529 if possible.
+
+1
+u/arch8ngel avatar
+arch8ngel
+•
+4y ago
+If you're married, you and your spouse can EACH give your child (or anyone) up to the annual exclusion amount without issue.
+
+You wouldn't give an account, directly, though -- you have to sell the underlying and give cash. (stock will only directly convey as part of inheritance)
+
+If you don't want to worry about capital gains considerations at the time of the gift -- and the kids are currently minors -- the simplest thing to do is open a UGMA account and invest on the kid's behalf.
+
+When they become an adult (18 in some states, 21 in others) - the account will convert to be theirs exclusively. And any unrealized capital gains stay unrealized until the underlying investments are actually sold. (assuming minimizing or delaying taxes was part of your concern)
+
+0
+Related Answers Section
+Related Answers
+Best investment accounts for gifting
+How to gift stocks on Robinhood
+Can you send stocks to someone?
+Best budgeting apps for beginners
+How to save for a house down payment
+New to Reddit?
+Create your account and connect with a world of communities.
+
+
+Continue With Phone Number
+By continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy.
+More posts you may like
+Tax consequences of gifting appreciated stock to young adult child?
+r/tax icon
+r/tax
+•
+2y ago
+Tax consequences of gifting appreciated stock to young adult child?
+4 upvotes · 28 comments
+Why are ETFs more Tax Friendly in a Taxable Brokerage Account?
+r/Bogleheads icon
+r/Bogleheads
+•
+2mo ago
+Why are ETFs more Tax Friendly in a Taxable Brokerage Account?
+70 upvotes · 19 comments
+Custodial account vs taxable brokerage (for kids)
+r/Fire icon
+r/Fire
+•
+9mo ago
+Custodial account vs taxable brokerage (for kids)
+3 upvotes · 7 comments
+How do taxes work in a brokerage account?
+r/Bogleheads icon
+r/Bogleheads
+•
+4mo ago
+How do taxes work in a brokerage account?
+62 upvotes · 47 comments
+Are bond funds a poor choice for taxable brokerage accounts due to tax implications?
+r/personalfinance
+•
+2mo ago
+Are bond funds a poor choice for taxable brokerage accounts due to tax implications?
+3 upvotes · 31 comments
+What bonds do you normally add on a Taxable Brokerage Account?
+r/Bogleheads icon
+r/Bogleheads
+•
+6mo ago
+What bonds do you normally add on a Taxable Brokerage Account?
+7 upvotes · 21 comments
+Brokerage accounts for children advice.
+r/personalfinance
+•
+1y ago
+Brokerage accounts for children advice.
+2 upvotes · 22 comments
+Leave which type of asset to children, Roth or taxable brokerage?
+r/Bogleheads icon
+r/Bogleheads
+•
+1mo ago
+Leave which type of asset to children, Roth or taxable brokerage?
+37 upvotes · 53 comments
+How to use brokerage account without major tax implications down the line
+r/Bogleheads icon
+r/Bogleheads
+•
+1y ago
+How to use brokerage account without major tax implications down the line
+4 upvotes · 23 comments
+What to do with money in taxable brokerage
+r/personalfinance
+•
+3mo ago
+What to do with money in taxable brokerage
+23 upvotes · 33 comments
+My next step is a regular taxable brokerage account, right?
+r/personalfinance
+•
+4mo ago
+My next step is a regular taxable brokerage account, right?
+5 upvotes · 15 comments
+If you had $10k to invest in a taxable brokerage account, what would you invest in?
+r/Bogleheads icon
+r/Bogleheads
+•
+7mo ago
+If you had $10k to invest in a taxable brokerage account, what would you invest in?
+64 comments
+Is investing in taxable accounts recommended for young people?
+r/Bogleheads icon
+r/Bogleheads
+•
+8mo ago
+Is investing in taxable accounts recommended for young people?
+11 upvotes · 34 comments
+Why is an UTMA brokerage account a good idea?
+r/Bogleheads icon
+r/Bogleheads
+•
+2y ago
+Why is an UTMA brokerage account a good idea?
+6 upvotes · 25 comments
+What ETFs should I put into my taxable account?
+r/Bogleheads icon
+r/Bogleheads
+•
+7mo ago
+What ETFs should I put into my taxable account?
+3 upvotes · 7 comments
+Isn’t tax loss harvesting useless? (Taxable Brokerage Account)
+r/Bogleheads icon
+r/Bogleheads
+•
+7mo ago
+Isn’t tax loss harvesting useless? (Taxable Brokerage Account)
+50 comments
+Parents of r/investing. Thinking of opening a custodial brokerage account for my newborn. Looking to see has anyone done anything similar and what was your experience
+r/investing icon
+r/investing
+•
+2y ago
+Parents of r/investing. Thinking of opening a custodial brokerage account for my newborn. Looking to see has anyone done anything similar and what was your experience
+11 upvotes · 13 comments
+Allocation between taxable and tax advantaged accounts?
+r/HENRYfinance icon
+r/HENRYfinance
+•
+1mo ago
+Allocation between taxable and tax advantaged accounts?
+27 upvotes · 20 comments
+Treating Taxable Brokerage as Savings Accounts
+r/Bogleheads icon
+r/Bogleheads
+•
+1mo ago
+Treating Taxable Brokerage as Savings Accounts
+8 upvotes · 16 comments
+Bonds in Taxable brokerage
+r/Bogleheads icon
+r/Bogleheads
+•
+3mo ago
+Bonds in Taxable brokerage
+25 upvotes · 34 comments
+Retirement Mutual Fund in Taxable Brokerage Account
+r/personalfinance
+•
+4mo ago
+Retirement Mutual Fund in Taxable Brokerage Account
+62 upvotes · 26 comments
+Why I will contribute to a taxable account moving forward
+r/Bogleheads icon
+r/Bogleheads
+•
+8mo ago
+Why I will contribute to a taxable account moving forward
+218 upvotes · 158 comments
+Would like to create an account for people to gift my child and then the money to be invested.
+r/investing icon
+r/investing
+•
+3y ago
+Would like to create an account for people to gift my child and then the money to be invested.
+2 upvotes · 15 comments
+Gifted stock tax consequences
+r/tax icon
+r/tax
+•
+1y ago
+Gifted stock tax consequences
+4 upvotes · 8 comments
+Gifting Stocks and avoiding capital gains tax?
+r/personalfinance
+•
+3y ago
+Gifting Stocks and avoiding capital gains tax?
+2 upvotes · 6 comments
+Community Info Section
+r/personalfinance
+Join
+Personal Finance
+Learn about budgeting, saving, getting out of debt, credit, investing, and retirement planning. Join our community, read the PF Wiki, and get on top of your finances!
+
+Show more
+Public
+Top Posts
+Reddit
+reReddit: Top posts of December 24, 2021
+Reddit
+reReddit: Top posts of December 2021
+Reddit
+reReddit: Top posts of 2021
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.
+
+Expand Navigation

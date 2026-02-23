@@ -1,0 +1,470 @@
+Skip to main content
+Gifting stocks to avoid tax on 1m+ in capital gain : r/fatFIRE
+
+
+r/fatFIRE
+Search in r/fatFIRE
+
+Get App
+Log In
+
+Expand user menu
+Skip to NavigationSkip to Right Sidebar
+
+Back
+r/fatFIRE icon
+Go to fatFIRE
+r/fatFIRE
+•
+5y ago
+Purple_Sandwich_9340
+
+Gifting stocks to avoid tax on 1m+ in capital gain
+Using a throwaway account. Originally posted in r/tax but didn't get useful responses. Members of this sub are amazing and I am hoping someone here actually attempted this! So here is the story:
+
+Currently sitting on stocks with over 1M in capital gains. My plan is to gift them to my dad who lives in a foreign country (not a US citizen). He can then sell them and pay (much lower) capital gains tax in the foreign country. (I will eventually inherit the money being the only child and I trust my dad entirely, so not worried about that part).
+
+I want to do everything legally and don't wish to get in trouble with the IRS. Is my plan workable? I assume I will need to file a gift tax return since the amount is over $15K. Any special considerations while gifting to a non-resident alien individual?
+
+Any recommendations for a good tax attorney or CPA who can help me with the transaction? Should I try to find a tax attorney or a CPA? Please feel free to PM me.
+
+6
+·
+32
+u/AmexBusiness avatar
+AmexBusiness
+•
+Promoted
+
+Unlock access to travel benefits with The Business Platinum Card®.
+Learn More
+americanexpress.com
+Clickable image which will reveal the video player: Unlock access to travel benefits with The Business Platinum Card®.
+Collapse video player
+
+0:00 / 0:00
+
+
+
+
+Comments Section
+stereoeraser
+•
+5y ago
+I’m interested in this too but haven’t found too much outside of faking my own death.
+
+4
+taxcatmando
+•
+5y ago
+Here’s an option. Set up LLC. Contribute stocks to LLC and there is no gain recognition.
+
+Gift father a large percentage of non voting right interest. A qualified appraisal will take into account lack of control and marketability and gift will be valued at far less than FMV.
+
+
+3
+Anonymoose2021
+•
+5y ago
+Since the OP was attempting to utilize the low cap gains of a foreign country there would have to be some further steps.
+
+If, after gifting large % of LLC, the OP as manager of LLC then sold the stock how would the gains be handled? I assume LLC would choose partnership taxation and then issue K1s. What would the taxation be for non-US citizen father?
+
+If after gifting of discounted LLC share to father, how long until it would be OK to dissolve LLC and distribute holdings in kind? That would be non-taxable event, even if distributed to non-US citizen outside US, correct?
+
+2
+
+3 more replies
+u/Purple_Sandwich_9340 avatar
+Purple_Sandwich_9340
+OP
+•
+5y ago
+Interesting. I need to read about this an understand this option better. Wouldn't it lead to double taxation with corporate + personal? Or do the taxes just directly pass through to Schedule C?
+
+
+1
+taxcatmando
+•
+5y ago
+LLC with one owner is disregarded. It’s not a schedule c because not a trade or business. When the gift of interest occurs it defaults to a partnership. No corporate set up so no double taxation.
+
+1
+XiJinPing2030
+•
+1y ago
+Hi OP, I am recently thinking about doing this, I wonder what you did in the end?
+
+1
+FinanceRonin
+•
+5y ago
+If you do follow through with this plan, I suggest that you designate yourself as the beneficiary for the account where the funds are held. Of course, I have no idea how foreign estate taxes or inheritance works. You should probably figure that out before your father's hot new younger wife figures it out.
+
+
+1
+u/Purple_Sandwich_9340 avatar
+Purple_Sandwich_9340
+OP
+•
+5y ago
+Hahaha, I doubt he is going to find someone at age 70+.
+
+1
+
+3 more replies
+u/AmericanExpress avatar
+u/AmericanExpress
+•
+Promoted
+
+Earn 6% Cash Back on select streaming subscriptions with the Blue Cash Preferred® Card. Terms apply.
+Learn More
+americanexpress.com
+Thumbnail image: Earn 6% Cash Back on select streaming subscriptions with the Blue Cash Preferred® Card. Terms apply.
+
+SetTheTon3
+•
+5y ago
+
+[deleted]
+•
+5y ago
+hold_my_caulfield
+•
+5y ago
+You need to determine whether your dad will be subject to transfer taxes or estate taxes in whatever country he is in. If that is not a worry, you need to be careful about using your basic exclusion amount if you have a taxable estate (or might have one down the road). For example, if you use up 2m of your BEA gifting the stock, that could translate to 800k in estate taxes you pay down the road.
+
+I don't like the uncertainty of 1) when you get the $$$ back, 2) the assets being subjected to your dad's creditors, and 3) wasting your exclusion amount.
+
+You MIGHT consider a charitable remainder trust to lessen the tax blow...especially if there is a charity near and dear to you.
+
+As to professionals, reach out to an attorney who is an ACTEC fellow (there are around 2,500 of them worldwide). They have the expertise to advise you and give you other options. DEFINITELY loop in a good CPA as well.
+
+
+6
+sqcirc
+•
+5y ago
+depending on the circumstances, this seems like a non-scalable plan.
+
+I'm guessing these are short term cap gains on something volatile? Vs a long term hold? Also maybe a one-off event where the OP isn't worried about using up their lifetime exemption?
+
+
+2
+u/Purple_Sandwich_9340 avatar
+Purple_Sandwich_9340
+OP
+•
+5y ago
+Yup, probably not scalable beyond a few million I guess. Highly volatile stocks but mostly long term cap gains. March 2020 dip help me get 200% returns (no Crypto involved).
+
+0
+u/Purple_Sandwich_9340 avatar
+Purple_Sandwich_9340
+OP
+•
+5y ago
+Thanks, I will look up ACTEC. My NW is under 4m for now, so 22m looks like pretty far away (married and mid career). So not that worried about hitting the exclusion limit but good advice to keep in mind.
+
+
+0
+sqcirc
+•
+5y ago
+fyi, it might not matter, but the limit is automatically going down to $5m single / $10m married in 2025. And there has been talk about doing it sooner.
+
+1
+
+2 more replies
+hold_my_caulfield
+•
+5y ago
+How much is the stock worth? And how old is your dad? Even at 1m that’s a significant amount of your net worth to hand over for some indefinite period of time. There is some value in simply paying the tax and not losing control of and access to your $$$.
+
+Don’t let the tail wag the dog.
+
+1
+
+1 more reply
+u/Odd-Travel-721 avatar
+Odd-Travel-721
+•
+5y ago
+OP, I've been thinking about doing the same thing, so I talked to a couple of CPAs informally about it (just mentioned this idea and asked whether this would be an issue with the IRS) and it seems like it's potentially doable.
+
+The key component as I've come to understand it is that your dad really needs to hold onto the money thereafter, and it can't just be you gift shares, they sell, then gift you back the money. Anything that happens like that under a short time frame is likely to incur IRS scrutiny and they might rule it as not a gift. A potential complication on your end is that your parent is not a US citizen - I'm not clear on whether that changes anything from a gift tax perspective, but it's worth double checking
+
+Anyway, for these reasons I came to the same conclusion that just waiting until inheritance is the best way to make this work if you don't need to use the money anyway, but I'm curious if anyone else has experience with this and whether this is the only option.
+
+For example - if family members just gift assets back and forth periodically, does that invite IRS scrutiny and the potential for these to be ruled as not gifts? Like what if you gift your parents the shares, they keep the money thereafter and spend it however they want, but then at some point they decide to gift you some of their other assets unrelated to the shares and unrelated to inheritance. Would the IRS have an issue with this?
+
+
+3
+u/Purple_Sandwich_9340 avatar
+Purple_Sandwich_9340
+OP
+•
+5y ago
+From what I understand, there is no hard and fast rule. If the IRS deems this to be "transaction" rather than gift, it would be a problem. Your parents can gift you other unrelated assets but not with the intention of returning your earlier gift. So I guess the more time passes, the better it is. I imagine if they gift you back something 10 years later, it would be pretty hard for the IRS to argue that this was a transaction.
+
+1
+
+2 more replies
+Related Answers Section
+Related Answers
+Top investment strategies for fatFIRE success
+Achieving fatFIRE (Financial Independence, Retire Early with a substantial net worth) requires strategic investment and careful planning. Here are some top investment strategies and insights from Redditors who have successfully navigated this path:
+
+Diversification and Asset Allocation
+Invest in a Mix of Assets: Many fatFIRErs recommend diversifying across different asset classes to mitigate risk. For example, investing in S&P500 or broad market ETFs is a popular choice. "Invest in S&P500 or broad market ETFs. Jack Bogle had the '3 fund portfolio'."
+
+Balance Crypto and Traditional Investments: While some have made significant wealth from crypto, it's crucial to balance it with more stable investments. "My wealth comes from selling two software businesses and from crypto appreciation." and "Congrats! I hope you diversified enough to secure your FatFIRE win even if the crypto markets implode."
+
+High-Growth Investments
+Entrepreneurship and Business Ventures: Many fatFIRErs have built their wealth through selling businesses. "My wealth comes from selling two software businesses and from crypto appreciation."
+
+Real Estate: Investing in real estate can provide substantial returns, especially if managed well. "I have lots to share and ask about fatFIRE life, but I thought I'd introduce myself by telling the story of how I got here."
+
+Risk Management
+Umbrella Insurance: This can protect you from significant financial losses in case of an accident. "Umbrella Insurance Coverage is inexpensive and prevents you from being wiped out financially in an accident."
+
+Avoid High Debt: Keeping debt low is crucial to maintaining financial stability. "$130k of debt (so ~0.3% debt ratio)"
+
+Drawdown Strategies
+3-4% Rule: Many fatFIRErs follow the 3-4% rule for withdrawals to ensure their portfolio lasts. "I know about the 3–4% rule, but should I maybe just see what I make each quarter and dip in to that."
+
+Cash Buffer: Having a few years' worth of living expenses in cash can help manage market volatility. "3 years of living expenses set aside in cash/money market/fixed income."
+
+Mental and Emotional Preparation
+Manage Anxiety: Transitioning to retirement can be daunting, but setting up systems and focusing on non-financial goals can help. "How did you deal with the anxiety of no longer having a paycheck?"
+
+Prioritize Health and Relationships: These are often cited as more important than wealth itself. "A good relationship with your spouse, kids, parents, siblings is something you can't buy. Nurture it."
+
+Additional Tips
+Seek Professional Advice: While some prefer to manage their investments themselves, seeking advice from a financial advisor can be beneficial. "You don’t need to pay 1.2% (or any percent aum fee) to get good financial advice."
+
+Continuous Learning: Stay informed about investment strategies and market trends. "I manage a portion of my assets on my own, but I also keep a portion of my assets under management."
+
+Subreddits for Further Questions
+r/fatFIRE
+
+r/financialindependence
+
+r/investing
+
+These communities are great places to ask more specific questions and get personalized advice from people who have already achieved financial independence.
+
+See Answer
+Best apps for tracking fatFIRE progress
+How to optimize taxes for fatFIRE
+Essential expenses to consider for fatFIRE
+Best financial books for fatFIRE enthusiasts
+New to Reddit?
+Create your account and connect with a world of communities.
+
+
+Continue With Phone Number
+By continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy.
+More posts you may like
+100k to invest need 5% yield cashflow tax free income no stocks need to preserve capital any advice?
+r/Fire icon
+r/Fire
+•
+10mo ago
+100k to invest need 5% yield cashflow tax free income no stocks need to preserve capital any advice?
+25 comments
+Just lost $1k I think it’s time to give up completely on investing
+r/raceto10000 icon
+r/raceto10000
+•
+19d ago
+Just lost $1k I think it’s time to give up completely on investing
+r/raceto10000 - Just lost $1k I think it’s time to give up completely on investing
+50 upvotes · 56 comments
+My Christmas Gift (to myself)- hit $70k !!
+r/Fire icon
+r/Fire
+•
+2mo ago
+My Christmas Gift (to myself)- hit $70k !!
+32 upvotes · 11 comments
+I finally hit 10k invested!
+r/Fire icon
+r/Fire
+•
+23d ago
+I finally hit 10k invested!
+139 upvotes · 10 comments
+No one to tell, hit $5M at 29
+r/fatFIRE icon
+r/fatFIRE
+•
+4mo ago
+No one to tell, hit $5M at 29
+1.3K upvotes · 243 comments
+Early 30s, ~$3M invested, high income — looking for perspective from people further down the path
+r/fatFIRE icon
+r/fatFIRE
+•
+8d ago
+Early 30s, ~$3M invested, high income — looking for perspective from people further down the path
+97 upvotes · 71 comments
+I feel like I am messing up my investments
+r/Fire icon
+r/Fire
+•
+18d ago
+I feel like I am messing up my investments
+22 comments
+Having a trust fund makes me feel like a loser
+r/fatFIRE icon
+r/fatFIRE
+•
+28d ago
+Having a trust fund makes me feel like a loser
+23 comments
+Any big changes after $25M?
+r/fatFIRE icon
+r/fatFIRE
+•
+2mo ago
+Any big changes after $25M?
+309 upvotes · 173 comments
+I reached $30M NW finally.
+r/fatFIRE icon
+r/fatFIRE
+•
+4mo ago
+I reached $30M NW finally.
+35 comments
+Excess cash in a profitable C-corp: keep it inside or distribute and invest personally?
+r/fatFIRE icon
+r/fatFIRE
+•
+25d ago
+Excess cash in a profitable C-corp: keep it inside or distribute and invest personally?
+33 upvotes · 55 comments
+Rate my Mutual Funds Portfolio
+r/IndianMutualFunds icon
+r/IndianMutualFunds
+•
+2mo ago
+Rate my Mutual Funds Portfolio
+r/IndianMutualFunds - Rate my Mutual Funds Portfolio
+88 upvotes · 22 comments
+Recent Windfall and Investment Status
+r/fatFIRE icon
+r/fatFIRE
+•
+2mo ago
+Recent Windfall and Investment Status
+29 upvotes · 14 comments
+Which on is good to invest long term ETF or Mutual Funds?
+r/Indiastreetbets icon
+r/Indiastreetbets
+•
+19d ago
+Which on is good to invest long term ETF or Mutual Funds?
+5 upvotes · 12 comments
+Need Advice Consolidating Multiple Brokerages into One ~$4.8M Portfolio
+r/fatFIRE icon
+r/fatFIRE
+•
+16d ago
+Need Advice Consolidating Multiple Brokerages into One ~$4.8M Portfolio
+47 upvotes · 103 comments
+How do you think about cash in your portfolio as your portfolio grows?
+r/fatFIRE icon
+r/fatFIRE
+•
+13d ago
+How do you think about cash in your portfolio as your portfolio grows?
+57 upvotes · 62 comments
+Is it worth seeking out investments in the private market?
+r/fatFIRE icon
+r/fatFIRE
+•
+8mo ago
+Is it worth seeking out investments in the private market?
+56 comments
+Charitable giving
+r/fatFIRE icon
+r/fatFIRE
+•
+3mo ago
+Charitable giving
+79 upvotes · 62 comments
+Access to hedge funds
+r/fatFIRE icon
+r/fatFIRE
+•
+8mo ago
+Access to hedge funds
+3 upvotes · 45 comments
+These stocks pay you every month
+r/premarketStockTraders icon
+r/premarketStockTraders
+•
+3mo ago
+These stocks pay you every month
+r/premarketStockTraders - These stocks pay you every month
+78 upvotes · 12 comments
+Where do I find people to invest in?
+r/fatFIRE icon
+r/fatFIRE
+•
+9mo ago
+Where do I find people to invest in?
+68 comments
+Valuing a stock
+r/premarketStockTraders icon
+r/premarketStockTraders
+•
+1mo ago
+Valuing a stock
+r/premarketStockTraders - Valuing a stock
+208 upvotes · 37 comments
+For long-term investors
+r/premarketStockTraders icon
+r/premarketStockTraders
+•
+4mo ago
+For long-term investors
+r/premarketStockTraders - For long-term investors
+191 upvotes · 36 comments
+A New Year and A Chance To Evaluate Your Investments
+r/CryptoMars icon
+r/CryptoMars
+•
+2mo ago
+A New Year and A Chance To Evaluate Your Investments
+42 upvotes · 18 comments
+Any finance books tailored for wealth kids?
+r/fatFIRE icon
+r/fatFIRE
+•
+7mo ago
+Any finance books tailored for wealth kids?
+56 upvotes · 18 comments
+Community Info Section
+r/fatFIRE
+Join
+Wealth and Financial Independence/Retire Early
+Retire with a fat stash.
+Public
+Top Posts
+Reddit
+reReddit: Top posts of February 17, 2021
+Reddit
+reReddit: Top posts of February 2021
+Reddit
+reReddit: Top posts of 2021
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.
+
+Expand Navigation

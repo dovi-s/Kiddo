@@ -1,0 +1,228 @@
+Skip to main content
+Search on Personal Finance & Money…
+Personal Finance & Money
+Home
+Questions
+Unanswered
+AI Assist
+Tags
+Chat
+Users
+Stack Internal
+Stack Overflow for Teams is now called Stack Internal. Bring the best of human thought and AI automation together at your work.
+
+ 
+How can I gift paper stock certificates?
+Asked 5 years, 9 months ago
+Modified 5 years, 9 months ago
+Viewed 8k times
+
+Report this ad
+AD
+1
+
+I am planning to give shares to some close individuals. Some of these individuals are still minors (between the ages of 6 to 13). I strongly prefer gifting these shares in the form of physical stock certificates. How can I do it? Where can I obtain physical paper stock certificates for the shares I'm about give away? How will dividends be received?
+
+I'm planning to gift shares in 5 companies:
+
+Kikkoman Corporation (Japan)
+The Walt Disney Company (USA)
+Berkshire Hathaway (USA)
+Nestlé S.A. (Switzerland)
+Coca-Cola Hellenic Bottling Company (Greece, UK)
+Note: most of the intended recipients live outside the USA, Canada, and Europe.
+
+stocksgiftsshare-certificate
+Share
+Improve this question
+Follow
+edited May 2, 2020 at 1:03
+asked May 2, 2020 at 0:58
+Flux's user avatar
+Flux
+17.4k1212 gold badges7777 silver badges145145 bronze badges
+1
+Related: Is it possible to physically own a share certificate in a company? – 
+Ben Miller
+ CommentedMay 2, 2020 at 3:18
+Add a comment
+3 Answers
+Sorted by:
+
+Highest score (default)
+5
+
+I have previously written an answer to a similar question, but I am writing an answer here tailored to your situation.
+
+There are several aspects to your question.
+
+First, you should be aware that some corporations are no longer issuing new paper certificates. This includes Disney. Eventually, paper stock certificates will be a thing of the past.
+
+Second, when you purchase stock in the normal way, through your stock broker, the shares are held in "street name," which means that the shares are titled to the stock broker, and the stock broker keeps track of the fact that you own some of the shares. You can ask the broker to put the shares in your name, and you can also request that a paper certificate be created and sent to you, but some brokers no longer do this, and those that do charge high fees for these services, as the brokers want to discourage this.
+
+Third, there are additional considerations when you give shares to a minor. This is location-dependent. In the U.S., this is normally done using the UTMA (Uniform Transfer to Minors Act); an adult custodian is named (often a parent), who is in control of the shares until the minor reaches a certain age of majority, which varies by state. Other countries will have other rules.
+
+If you want the easiest way to give 1 share of stock with a certificate for decoration, there are companies that specialize in this service. They take care of acquiring the stock, registering it to the recipient's name, obtaining the certificate, and even other services like framing and engraving. Two of the companies at the top of a Google search result are Give A Share and Unique Stock Gift. These each have a list of stocks that they sell. For stocks that are no longer issuing new certificates (such as Disney), these services create a replica stock certificate that they send along with a real electronic share of stock.
+
+The two services I named sell both Disney and Berkshire Hathaway. As I mentioned, with a Disney share (DIS) you will get a replica stock certificate. Berkshire Hathaway does still issue paper certificates; these services sell Class B shares (BRK.B), which are a fraction of the cost of Class A shares (BRK.A).
+
+The other three stocks you listed are not available from either of these services. They don't have much for international stocks. There may be similar services in other countries that have more international selection.
+
+As for dividends, when the share of stock is registered to your recipient's name, the corporation will mail a paper check to your recipient every time a dividend is issued.
+
+Share
+Improve this answer
+Follow
+edited May 4, 2020 at 17:54
+answered May 4, 2020 at 15:22
+Ben Miller's user avatar
+Ben Miller
+117k3232 gold badges331331 silver badges437437 bronze badges
+Add a comment
+0
+
+It has been a verrry long time since I have owned stock certificates so I no longer know if they are issued. If they do then I'd suggest that you contact some brokers and inquire about this. Make sure to ask what fees they charge for obtaining a stock certificate as well as if you can do it in someone else's name.
+
+Another possibility might be to open a dividend reinvestment plan in the name of each of these individuals. There are a number of web site services that deal with this process (google for details). Again, it has been a very long time since I did this. Back then there were two methods:
+
+Purchase a single share, receive the certificate and then open the DRIP with the company
+
+Purchase shares with some minimum amount and all shares are held by the DRIP
+
+Subsequent purchases can be made. Back in the day there were a number that offered as much as a 5% discount on automatically reinvested dividends as well as some that offered a discount on new cash purchases.
+
+Not all companies offer direct investing DRIPs but for those that do, some offer no-fee DRIPs.
+
+Share
+Improve this answer
+Follow
+answered May 2, 2020 at 1:20
+Bob Baerker's user avatar
+Bob Baerker
+78k1515 gold badges102102 silver badges178178 bronze badges
+Add a comment
+0
+
+A direct stock purchase plan from a company that offers stock-transfer-agent services is sufficient for direct ownership of stocks. Also, a brokerage account minimum deposit is avoided. Here are two links:
+
+https://www.shareowneronline.com/
+
+https://www-us.computershare.com/Investor/#DirectStock
+
+Now a brokerage account will offer a larger selection of investments.
+
+But financial accounts of any kind require residency. That's what ADR's are for. Some financial company in an investor's home country will offer either ADR's or international trading as through the financial company's international offices.
+
+Share
+Improve this answer
+Follow
+edited May 2, 2020 at 22:05
+answered May 2, 2020 at 21:59
+S Spring's user avatar
+S Spring
+3,60211 gold badge99 silver badges66 bronze badges
+The U.S. direct stock purchase plans don't require U.S. residency but defer to the home country rules. – 
+S Spring
+ CommentedMay 3, 2020 at 19:29
+Add a comment
+You must log in to answer this question.
+Start asking to get answers
+
+Find the answer to your question by asking.
+
+Explore related questions
+
+stocksgiftsshare-certificate
+See similar questions with these tags.
+
+Featured on Meta
+Logo updates to Stack Overflow's visual identity
+All users on Stack Exchange can now participate in chat
+
+Report this ad
+AD
+Linked
+4
+Is it possible to physically own a share certificate in a company?
+Related
+6
+How can I check if share certificates I found have value?
+3
+Ownership of Yahoo paper stock certificates
+1
+How do I cash in physical stock certificates? (GM 1989)
+5
+Are my old stock certificates worth anything? How can I find out?
+40
+I found stock certificates for Disney and Sony that were given to me in 2011
+2
+How can I research some paper shares I found?
+Hot Network Questions
+What did it mean when a 19th century UK man was a "blocker"
+Why do we need length contraction along with time dilation?
+Is Charlie Kirk and conservatives in general against condoms?
+Do we need the Second Law of Thermodynamics to give physical meaning to the quantities appearing in the First Law?
+Why are articles used (or not used) in these contexts?
+Calculating next row in binary matrix
+WiFi.h with esp32 board (version 3.1.0) consumes over 500000 bytes program storage
+Were U.S.-based academics from overseas eligible for the Vietnam draft?
+Can human wills and structural limits prevent philosophical truths from taking hold like in math or logic?
+What are the types of random signals?
+How are chromatic melodies over german 6th chords written?
+Horizontal Dominoes game: Reposition the dominoes to make them all horizontal
+\refstepcounter in hyperref does not work with \offinterlineskip
+200 baht VOA "scam" fee at some Thailand airports?
+I am trying to make a USB battery charger + boost converter
+Can I play Virtual Boy without the accessory?
+Why is Atria moving so fast, or is it?
+Should I use "will"/"would" in this sentence?
+Were tariffs under section 122 imposed by some president before Trump?
+Asking for deadline extension on graduate school offer
+Unitless Poisson distribution: an example
+How to construct two compact, uncountable, disjoint subsets of an uncountable compact metric space?
+How can I ensure I graduate on time?
+valve cover replacement uncertainty
+ Question feed
+
+
+
+
+
+
+
+Personal Finance & Money
+Tour
+Help
+Chat
+Contact
+Feedback
+Company
+Stack Overflow
+Stack Internal
+Stack Data Licensing
+Stack Ads
+About
+Press
+Legal
+Privacy Policy
+Terms of Service
+Your Privacy Choices 
+Cookie Policy
+Stack Exchange Network
+Technology
+Culture & recreation
+Life & arts
+Science
+Professional
+Business
+API
+Data
+Blog
+Facebook
+Twitter
+LinkedIn
+Instagram
+Site design / logo © 2026 Stack Exchange Inc; user contributions licensed under CC BY-SA . rev 2026.2.19.39917
+
+
+AD

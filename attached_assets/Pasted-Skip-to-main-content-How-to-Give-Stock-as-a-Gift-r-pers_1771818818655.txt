@@ -1,0 +1,339 @@
+Skip to main content
+How to Give Stock as a Gift : r/personalfinance
+
+r/personalfinance
+Search in r/personalfinance
+
+Get App
+Log In
+
+Expand user menu
+Skip to NavigationSkip to Right Sidebar
+
+Back
+Go to personalfinance
+r/personalfinance
+•
+5y ago
+CommandoCoob
+
+How to Give Stock as a Gift
+Hello All - First off I want to say thank you to this thread for the priceless advice that I have received from it.
+
+Why I am writing this post:
+
+I have combed the internet for the past couple of days trying to figure out how to gift stock to someone. In my case, my older sister’s birthday is on Sunday and I would like to gift her stock. At this point, I am kind of over the whole idea of pointless material items as gifts for Birthdays/Christmas. This subreddit might be a bit to blame at first, but it also just comes with my new perspective of being more financially conscious. My initial research came through super helpful sites that I always consult like Investopedia and Nerdwallet. However, these sites just tell you what stock gifting is and that it can be done. I clearly knew it was possible and was more so focused on how to do it. I then moved on and also searched various subreddits for keywords. It did not seem like anyone had done much of an in-depth post about this topic before. This is not an all-inclusive post, it is meant for me to share my experience and hopefully help someone else in the process. Eventually, I got fed up with all the searching and did the most boomer thing… Picked up my cellphone and called the company that my brokerage/Roth IRA is held with and talked to a live person (lol).
+
+What I learned:
+
+You have to buy the stock and it has to settle (two business days) before it can be transferred…(After the stock is transferred it will then settle in the new owner's account)
+
+(More pertinent for those that are trying to gift it as a present without the receiver finding out) You have to have the account number of the receiver…This is important because it kind of defeats the purpose of my original intention. In my case, I had to call my sister and explain that I was gifting her a stock for her birthday. I knew she had a Roth IRA but was unsure about a brokerage. Turns out she did have a brokerage and gave me her brokerage account number… and the surprise aspect was kind of spoiled… However, we joked it still kind of existed because I did not reveal what stock she was going to be getting. So in essence, there is still some sort of surprise factor in that regard. A benefit is that now I have her account number in the event that it is something I want to do again in the future, ie. Christmas. It is also worth noting that she gets an email as soon as the transfer executes. So the cat is out of the box very quickly with regards to what stock I was gifting.
+
+If you want to gift stock as a share directly to someone, the easiest way is to do it between your brokerage account (with the share in question bought ahead of time) and the brokerage account of the person with whom you would like to give it to. Then call your broker and provide the necessary info.
+
+I inquired about a Roth IRA to Roth IRA transfer and was quick to find out that only post-tax dollars could be contributed to Roths aka I could get her Roth IRA account number, but would only be able to contribute a monetary amount. Obviously, this would not be automatically invested into anything unless she took care of it and it would also still count towards her annual contribution limits. So just food for thought if that’s something that you were cool with.
+
+How it went down:
+
+After I had her account number and the stock I wanted to give her was in my brokerage account and settled. I called my broker and provided them with the account number and the stock/amount of stocks that I wanted to transfer. The whole process of the transfer on the phone took less than 5 minutes.
+
+If anyone has had any experience with stock gifting that differed then my own, please share.
+
+(Disclaimer: This post was based on experience with Fidelity. Other brokers/firms/banks might have varying processes)
+
+(TLDR: If you want to gift stock, you have to know what type of accounts the person you want to gift to has for you to trade anything into because the type of account determines what kind of gift can be made - stock/straight cash.)
+
+2
+·
+10
+u/anthropic-ai avatar
+anthropic-ai
+•
+Promoted
+
+Scaling engineering output used to mean scaling engineering teams. Claude Code changes that math.
+Sign Up
+claude.com
+Thumbnail image: Scaling engineering output used to mean scaling engineering teams. Claude Code changes that math.
+Comments Section
+Raphy000
+•
+5y ago
+Does the transfer get treated on your end as a sale that gets reported on 1099-B for taxable capital gains? I assume it does and that you’re also subject to gift tax limits.
+
+
+2
+u/CommandoCoob avatar
+CommandoCoob
+OP
+•
+5y ago
+I am not certain. However, the share was not sold through this whole process of the transfer/gift. So I know that I will not receive any taxable capital gains and therefore any taxes.
+
+
+1
+Raphy000
+•
+5y ago
+Oh, I think I've figured it out. You owe no capital gains taxes because the cost basis just transfers over to her, so whenever she sells she'll owe the taxes herself. But your gift is still subject to the $15k gift tax limit per person per year.
+
+
+2
+u/CommandoCoob avatar
+CommandoCoob
+OP
+•
+5y ago
+Right, this makes sense because the sale hasn't been made yet. Is her cost basis going to be what I bought at? I think it would make more logical sense for the cost basis to be what the stock price was at when the transfer was made. However, I guess the rationale there is that then the government "misses out" on the size of the taxed amount.
+
+
+1
+Raphy000
+•
+5y ago
+The cost basis is directly transferred over so it will be what you bought it for - otherwise that would be a major tax loophole that obviously would have been patched by now.
+
+1
+u/AutoModerator avatar
+AutoModerator
+MOD
+•
+5y ago
+You may find these links helpful:
+
+"How to handle $"
+
+Investing
+
+I am a bot, and this action was performed automatically. Please contact the moderators of this subreddit if you have any questions or concerns.
+
+1
+rainierd
+•
+5y ago
+An interesting option in the US especially for minors is stockpile. You can buy them a gift card of partial shares like $100 of Amazon or such which they redeem in their account.
+
+Note that minors would still need a custodian of the account to approve transactions
+
+
+1
+u/CommandoCoob avatar
+CommandoCoob
+OP
+•
+5y ago
+Yeah, Stockpile is a really good option for sure and probably a better service than Robinhood because of what it offers for beginners. I just knew in my case that my sister already had some accounts open and was already in the market.
+
+1
+
+[deleted]
+•
+5y ago
+Related Answers Section
+Related Answers
+How to gift stock effectively
+Tax implications of gifting stock
+Investment-grade gifts ideas
+Transferring shares to family members
+Best budgeting apps for beginners
+New to Reddit?
+Create your account and connect with a world of communities.
+
+
+Continue With Phone Number
+By continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy.
+More posts you may like
+Can you give someone stock as a gift?
+r/investing icon
+r/investing
+•
+3mo ago
+Can you give someone stock as a gift?
+7 upvotes · 30 comments
+Giving stock as a gift, help, please!
+r/investing icon
+r/investing
+•
+5y ago
+Giving stock as a gift, help, please!
+4 upvotes · 16 comments
+Stocks as wedding gift?
+r/personalfinance
+•
+8mo ago
+Stocks as wedding gift?
+1 upvote · 19 comments
+Got INR 1 crore worth gift stocks from dad to my zerodha account recently
+r/IndianStockMarket icon
+r/IndianStockMarket
+•
+1y ago
+Got INR 1 crore worth gift stocks from dad to my zerodha account recently
+r/IndianStockMarket - Got INR 1 crore worth gift stocks from dad to my zerodha account recently 
+23 comments
+Is there still anyway to buy just one share paper stock certificate as a gift to love one ?
+r/investing icon
+r/investing
+•
+6y ago
+Is there still anyway to buy just one share paper stock certificate as a gift to love one ?
+3 upvotes · 16 comments
+Gifting Stock Advice
+r/personalfinance
+•
+2y ago
+Gifting Stock Advice
+1 upvote · 5 comments
+How do I gift a stock across platform?
+r/IndianStockMarket icon
+r/IndianStockMarket
+•
+1y ago
+How do I gift a stock across platform?
+11 upvotes · 8 comments
+How does gifting stocks work?
+r/IndianStockMarket icon
+r/IndianStockMarket
+•
+1y ago
+How does gifting stocks work?
+7 upvotes · 26 comments
+How do I gift stock?
+r/stocks icon
+r/stocks
+•
+6y ago
+How do I gift stock?
+8 upvotes · 11 comments
+How does the IRS even know the original basis on gifted stock?
+r/personalfinance
+•
+1y ago
+How does the IRS even know the original basis on gifted stock?
+201 upvotes · 54 comments
+Can I gift stocks to someone? How do I buy it for someone without them knowing?
+r/personalfinance
+•
+3y ago
+Can I gift stocks to someone? How do I buy it for someone without them knowing?
+1 upvote · 6 comments
+Tax consequences of gifting appreciated stock to young adult child?
+r/tax icon
+r/tax
+•
+2y ago
+Tax consequences of gifting appreciated stock to young adult child?
+4 upvotes · 28 comments
+Best way to gift a child stocks?
+r/stocks icon
+r/stocks
+•
+6y ago
+Best way to gift a child stocks?
+70 upvotes · 55 comments
+Question about gifting stocks to someone and then getting them back
+r/tax icon
+r/tax
+•
+4mo ago
+Question about gifting stocks to someone and then getting them back
+1 upvote · 8 comments
+Stock Gift to my Wife (Robinhood to Robinhood) . Is it Possible?
+r/RobinHood icon
+r/RobinHood
+•
+8y ago
+Stock Gift to my Wife (Robinhood to Robinhood) . Is it Possible?
+6 comments
+Paper stock certificates are gone—any other good physical financial gift ideas for a 1-year-old?
+r/personalfinance
+•
+3y ago
+Paper stock certificates are gone—any other good physical financial gift ideas for a 1-year-old?
+38 upvotes · 44 comments
+Gifting stocks to parents to sell - Taxes?
+r/tax icon
+r/tax
+•
+1mo ago
+Gifting stocks to parents to sell - Taxes?
+10 upvotes · 9 comments
+Gifting stocks to niece and nephew
+r/stocks icon
+r/stocks
+•
+3mo ago
+Gifting stocks to niece and nephew
+10 upvotes · 11 comments
+I want to give/gift a stock I purchased in Robinhood to family
+r/FinancialPlanning icon
+r/FinancialPlanning
+•
+2y ago
+I want to give/gift a stock I purchased in Robinhood to family
+1 upvote · 1 comment
+Gifting stocks for kids birthday -- best way? something visual?
+r/stocks icon
+r/stocks
+•
+2y ago
+Gifting stocks for kids birthday -- best way? something visual?
+3 upvotes · 25 comments
+Is it possible to "gift" a share to someone?
+r/RobinHood icon
+r/RobinHood
+•
+8y ago
+Is it possible to "gift" a share to someone?
+27 upvotes · 9 comments
+Giving GameStop Shares As Holiday Gifts and Other Presents, Eh?
+r/Superstonk icon
+r/Superstonk
+•
+2mo ago
+Giving GameStop Shares As Holiday Gifts and Other Presents, Eh?
+249 upvotes · 20 comments
+My fiancée contributed to her traditional IRA and didn’t buy any stocks
+r/personalfinance
+•
+5mo ago
+My fiancée contributed to her traditional IRA and didn’t buy any stocks
+137 upvotes · 70 comments
+Just hit 100k invested at 25!!
+r/Fire icon
+r/Fire
+•
+2mo ago
+Just hit 100k invested at 25!!
+165 upvotes · 22 comments
+How does Robinhood give away free shares just for people inviting others and still profit?
+r/RobinHood icon
+r/RobinHood
+•
+9y ago
+How does Robinhood give away free shares just for people inviting others and still profit?
+10 upvotes · 25 comments
+Community Info Section
+r/personalfinance
+Join
+Personal Finance
+Learn about budgeting, saving, getting out of debt, credit, investing, and retirement planning. Join our community, read the PF Wiki, and get on top of your finances!
+
+Show more
+Public
+Top Posts
+Reddit
+reReddit: Top posts of May 25, 2021
+Reddit
+reReddit: Top posts of May 2021
+Reddit
+reReddit: Top posts of 2021
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.
+
+Expand Navigation

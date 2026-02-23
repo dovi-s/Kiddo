@@ -1,0 +1,522 @@
+Skip to main content
+Children received individual company stocks as gifts. What should I do? : r/Bogleheads
+
+
+r/Bogleheads
+Search in r/Bogleheads
+
+Get App
+Log In
+
+Expand user menu
+Skip to NavigationSkip to Right Sidebar
+
+Back
+r/Bogleheads icon
+Go to Bogleheads
+r/Bogleheads
+•
+2y ago
+[deleted]
+
+Children received individual company stocks as gifts. What should I do?
+My parents gifted stock to my two children, SPY, AAPL, and LLY. The stocks are in a custodian account. They all have sigifnicant long term capital gains. Would it make sense to sell AAPL and LLY for VOO? How about SPY for VOO given the expense ratio difference? Thanks!
+
+Edit: Okay, I’ll just leave the investments as is since it’s their gifts. Thanks for all the feedback.
+
+41
+·
+45
+u/upwork avatar
+upwork
+•
+Promoted
+
+Waiting ≠ working. Founders on the fast track already know: Post your job on Upwork, plug in a pro, and watch your project take off.
+Sign Up
+upwork.com
+Thumbnail image: Waiting ≠ working. Founders on the fast track already know: Post your job on Upwork, plug in a pro, and watch your project take off.
+Comments Section
+readabook37
+•
+2y ago
+I would ask future gifts be invested in a 529 plan. I don’t think a grandparent owned 529 with the grandchild as beneficiary is taken into consideration for financial aid calculations. (Please check to see if this has changed.)
+
+2
+TeaWLemon
+•
+2y ago
+Be sure to turn those custodial accounts to them as soon as they are old enough. Forgot to do this for some of mine and it’s a royal pain to untangle when I’m not in the same state as my folks.
+
+3
+u/HortHortenstein avatar
+HortHortenstein
+•
+2y ago
+They're not yours — so don't do anything until your children can make the decision for themselves.
+
+93
+costanzashairpiece
+•
+2y ago
+I would never sell SPY with huge capital gains to turn around and buy VOO. You guys are too obsessed with expense ratios if you're considering this, lol.
+
+Generally I feel the same about mega corps like AAPL or ELI Lilly. Taxes are the enemy. HODL till u die.
+
+
+19
+Theburritolyfe
+•
+2y ago
+Nah most of us recognize that selling spy for VOO,VTI, or even VT is stepping over a dollar to get to a dime. Not everyone does but most of us get that.
+
+3
+
+3 more replies
+u/cjorgensen avatar
+cjorgensen
+•
+2y ago
+My partner was given stock when she was going into college. Her uncle set up her Roth IRA and purchased stock for her with in. Fast forward a decade, and that stock was fairly worthless (it was the NVDA of its day).
+
+The idea that the stock went down soured her on the idea of investing. I’ve only recently gotten her to move out of an all cash position into a HYSA and some bonds (it’s a start).
+
+I would sell the stock, move it into an index fund, and not tell your parents or you kids. Passing your values onto your kids is part of parenting, and if you want to stay away from individual stocks, go for it.
+
+2
+NothrakiDed
+•
+2y ago
+They are not yours to sell.
+
+
+219
+
+maniacreturns
+•
+2y ago
+Warmstar219
+•
+2y ago
+Not true. This is a custodial account. The custodian is supposed to act in the best interest of the beneficiary. Sometimes that means selling.
+
+
+9
+NothrakiDed
+•
+2y ago
+Without clarification from the grandparents, we don't know what the intended best interests for the child are.
+
+3
+
+2 more replies
+u/TradeStation avatar
+u/TradeStation
+•
+Promoted
+
+Scan decades of historical market data in seconds. Program automated trades. Secure price improvements. See what our platform can do. Try TradeStation.
+Learn More
+tradestation.com
+Clickable image which will reveal the video player: Scan decades of historical market data in seconds. Program automated trades. Secure price improvements. See what our platform can do. Try TradeStation.
+Collapse video player
+
+u/SpaceGuyUW avatar
+SpaceGuyUW
+•
+2y ago
+SPY vs VOO expense ratio is not worth selling. That's single digit basis points.
+
+The individual stocks depends a little on age, if kiddie tax starts to apply. If your child is 17 it might be worth waiting until they are taxed on their bracket vs yours, for example. If tax timing doesn't apply, might as well sell.
+
+Many Bogleheads would look at VT or VTI.
+
+Edit: Yeah agree that if children are old enough to understand (not toddlers), you should ask them first.
+
+22
+
+3 more replies
+u/turtlerunner99 avatar
+turtlerunner99
+•
+2y ago
+It's complicated.
+
+I'll disagree. You're the guardian. You should do what you think best for your children. Well, you should always do what's best for your children.
+
+Is it a "lot" of money for you and your children? If not, why not leave things as they are.
+
+My grandmother gave our daughters $2,000 each in the 1980s when they were born. I put it in SPY and forgot about it. By the time they graduated from college one used it to buy a new car after her old one was totaled in an accident and the other for a down payment on her home.
+
+One thing I would definately do is set up the account to re-invest the dividends in the stock(s) that had them.
+
+But if your children have earned income and pay taxes, they might be in the zero capital gains bracket and not necessarily paying based on your income.
+
+
+24
+[deleted]
+•
+2y ago
+I'll disagree. You're the guardian. You should do what you think best for your children.
+
+This is the best comment ITT.
+
+If you are their guardian, you need to allocate it in their best interest, they obviously cant make the decision. After all, they dont pay the tax, you do.
+
+Do whatever is best for your kids, they wont know what decision to make.
+
+21
+u/medicalsteve avatar
+medicalsteve
+•
+2y ago
+Be careful on your last point about cap gains taxes. Look up the kiddie tax rule.
+
+4
+
+2 more replies
+MostlyRegarded
+•
+2y ago
+Lots of bad advice in the top replies. If you are the custodian of your children's account, you are not obligated due to the magic of a gift to hold these stocks on your children's behalf until they are educated enough to switch to a more boglehead appropriate investment style.
+
+Also, with gifts, look into step up in cost basis, I am 90% sure that your child's basis is the price on the day the shares were gifted.
+
+3
+u/mchem avatar
+mchem
+•
+2y ago
+These were gifts to your children. Do not sell.
+
+
+353
+u/mchem avatar
+mchem
+•
+2y ago
+It would be worthwhile to talk to a tax advisor or further explore the implications of the various things you could do to lessen the tax burden when they’re ready to use the money. There’s good advice here but none of us know the amount that was gifted, the age of your children, or other factors which may be important.
+
+
+33
+deano492
+•
+2y ago
+Yeah. Or specifically, look up Kiddie Tax (Bogleheads wiki is best) to see how you can recognize a portion of the capital gains each year for free. It will bring up the cost basis annually meaning when they come to use it far less unrealized gains.
+
+11
+
+2 more replies
+u/Danthamannn avatar
+Danthamannn
+•
+2y ago
+My grandmother left me and my siblings a custodial account. I learned about it around 1999-2000ish, and that it was about 30,000 in blue chips(I’m a middle child, so my sisters likely had more) my mom sold it all around 08…and when my grandmother passed, mom blew through the inheritance in about three years.
+
+
+6
+wolfiemoz
+•
+2y ago
+Sue
+
+3
+
+1 more reply
+u/Schwab_Official avatar
+u/Schwab_Official
+•
+Promoted
+
+Get the latest on the markets and economy, and their potential impact on your portfolio.
+Learn More
+schwab.com
+Thumbnail image: Get the latest on the markets and economy, and their potential impact on your portfolio.
+
+Rich-Interaction6920
+•
+2y ago
+u/torchboy1661 avatar
+torchboy1661
+•
+2y ago
+You know it's not a sin to own individual stocks. Especially if they are free. Even after taxes, it will be free money for them whenever they decide to cash out.
+
+Dont miss the forest from the trees. Let it ride, dude.
+
+60
+
+Coasterman345
+•
+2y ago
+Related Answers Section
+Related Answers
+Best low-cost index funds for beginners
+For beginners looking to invest in low-cost index funds, here are some of the best options and advice from Redditors:
+
+Recommended Low-Cost Index Funds
+S&P 500 Index Funds: These are highly recommended for their diversification and performance.
+
+VOO (Vanguard S&P 500 ETF): "Yes, you are on the right track. I recommend checking out VTI, VOO, and VT for starters as they are all low cost and should help you on the way to your growth goals."
+
+FXAIX (Fidelity S&P 500 Index Fund): "The Fidelity S&P 500 in my 401k, FXAIX, is 0.02%, even lower than VOO at 0.03%"
+
+IVV (iShares Core S&P 500 ETF): "S&P 500 Index Funds: $FXAIX (Fidelity), $VOO (Vanguard), $IVV (Blackrock iShares), $SWPPX (Charles Schwab)"
+
+Total Stock Market Index Funds: These provide broader diversification beyond just the S&P 500.
+
+VTI (Vanguard Total Stock Market ETF): "I recommend checking out VTI, VOO, and VT for starters as they are all low cost and should help you on the way to your growth goals."
+
+VT (Vanguard Total World Stock ETF): "A better place to start would be a broad market (rather than large cap) and global rather than domestic fund. Thus, an ETF like VT is a better choice."
+
+Fees and Costs
+Expense Ratios: Aim for funds with low expense ratios, preferably under 0.25%.
+
+"In the modern era I'd say that for an individual index anything below 0.25% is cheap."
+
+"I love anything under 0.10%. I try to keep my aggregate ratio under 0.15%"
+
+Tracking Difference: Consider the tracking difference of the fund, which measures how closely the ETF's performance matches its underlying index.
+
+"I also look at the tracking difference. People tend to fanboy WEBN, but VWCE has a ridiculously good tracking difference (~0.02%)."
+
+Investment Strategy
+Long-Term Investing: Index funds are best for long-term investing due to the power of compound interest.
+
+"Yes, you get dirt-cheap access to the miracle of the stock market's compound growth. It's a proven path to long term wealth."
+
+Diversification: Invest in a diversified portfolio to minimize risk.
+
+"Diversification is the best hedge against ignorance."
+
+Tax-Advantaged Accounts: Utilize accounts like Roth IRAs and 401ks to maximize your returns.
+
+"If you don't need this money for years, and you earned it with a job, consider using at least part of it to open and fund a Roth IRA."
+
+Additional Tips
+Start Early: The sooner you start investing, the better.
+
+"Yes..the sooner you start the better"
+
+Stay the Course: Avoid panicking during market downturns.
+
+"There will be down periods; remember this money is for the long term, so don't sweat the short term losses or volatility."
+
+Subreddits for Further Questions
+r/investingforbeginners
+
+r/Bogleheads
+
+r/FluentInFinance
+
+These communities are great places to ask more specific questions and get personalized advice from experienced investors.
+
+See Answer
+How to create a three-fund portfolio
+Common mistakes in passive investing
+How to rebalance your investment portfolio
+Understanding the impact of fees on returns
+New to Reddit?
+Create your account and connect with a world of communities.
+
+
+Continue With Phone Number
+By continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy.
+More posts you may like
+How to give kids stocks as gifts
+r/personalfinance
+•
+11y ago
+How to give kids stocks as gifts
+18 upvotes · 20 comments
+Suggest a stock to gift a child
+r/IndianStockMarket icon
+r/IndianStockMarket
+•
+2y ago
+Suggest a stock to gift a child
+110 upvotes · 116 comments
+Best way to gift a child stocks?
+r/stocks icon
+r/stocks
+•
+6y ago
+Best way to gift a child stocks?
+70 upvotes · 55 comments
+Tax consequences of gifting appreciated stock to young adult child?
+r/tax icon
+r/tax
+•
+2y ago
+Tax consequences of gifting appreciated stock to young adult child?
+4 upvotes · 28 comments
+Gifting stocks for kids birthday -- best way? something visual?
+r/stocks icon
+r/stocks
+•
+2y ago
+Gifting stocks for kids birthday -- best way? something visual?
+3 upvotes · 25 comments
+Can I gift my child stock and have them not owe LT capital gains? (CA)
+r/tax icon
+r/tax
+•
+1y ago
+Can I gift my child stock and have them not owe LT capital gains? (CA)
+1 upvote · 20 comments
+Gifting shares to children
+r/personalfinance
+•
+3mo ago
+Gifting shares to children
+15 comments
+Can you give someone stock as a gift?
+r/investing icon
+r/investing
+•
+3mo ago
+Can you give someone stock as a gift?
+7 upvotes · 30 comments
+Looking for Stocks to Invest in for my children
+r/investing icon
+r/investing
+•
+9mo ago
+Looking for Stocks to Invest in for my children
+2 upvotes · 37 comments
+Can a parent transfer stocks to a child without either incurring taxes?
+r/tax icon
+r/tax
+•
+3y ago
+Can a parent transfer stocks to a child without either incurring taxes?
+43 upvotes · 35 comments
+Why do people invest in individual stocks when we have ETFs?
+r/Bogleheads icon
+r/Bogleheads
+•
+26d ago
+Why do people invest in individual stocks when we have ETFs?
+32 comments
+Do you own individual stocks for any weird reasons?
+r/Bogleheads icon
+r/Bogleheads
+•
+2mo ago
+Do you own individual stocks for any weird reasons?
+259 upvotes · 345 comments
+How do you guys not get tempted to buy individual stocks?
+r/ETFs icon
+r/ETFs
+•
+9mo ago
+How do you guys not get tempted to buy individual stocks?
+78 upvotes · 126 comments
+Sold all my individual stocks
+r/Bogleheads icon
+r/Bogleheads
+•
+1mo ago
+Sold all my individual stocks
+162 upvotes · 112 comments
+How to Give Stock as a Gift
+r/personalfinance
+•
+5y ago
+How to Give Stock as a Gift
+2 upvotes · 10 comments
+Should I sell all my individual stocks and put in VT?
+r/Bogleheads icon
+r/Bogleheads
+•
+3mo ago
+Should I sell all my individual stocks and put in VT?
+29 upvotes · 31 comments
+Do you buy individual stocks in your brokerage?
+r/Bogleheads icon
+r/Bogleheads
+•
+8d ago
+Do you buy individual stocks in your brokerage?
+10 upvotes · 64 comments
+Gifting stocks to niece and nephew
+r/stocks icon
+r/stocks
+•
+3mo ago
+Gifting stocks to niece and nephew
+10 upvotes · 11 comments
+Best way to move out of individual stocks
+r/Bogleheads icon
+r/Bogleheads
+•
+5mo ago
+Best way to move out of individual stocks
+38 upvotes · 36 comments
+Best way to invest monthly for my kids’ future (not just for college)?
+r/Bogleheads icon
+r/Bogleheads
+•
+4mo ago
+Best way to invest monthly for my kids’ future (not just for college)?
+18 upvotes · 46 comments
+Investment account for kids
+r/Bogleheads icon
+r/Bogleheads
+•
+5mo ago
+Investment account for kids
+18 upvotes · 48 comments
+noob to investing inherited over 600k in stocks. please advise
+r/Bogleheads icon
+r/Bogleheads
+•
+4mo ago
+noob to investing inherited over 600k in stocks. please advise
+r/Bogleheads - noob to investing inherited over 600k in stocks. please advise
+26 upvotes · 23 comments
+21 years old and just starting investing!
+r/Bogleheads icon
+r/Bogleheads
+•
+3mo ago
+21 years old and just starting investing!
+r/Bogleheads - 21 years old and just starting investing!
+155 upvotes · 35 comments
+Just invested in my first share of stock through my ROTH Ira at 18!!!
+r/Bogleheads icon
+r/Bogleheads
+•
+1y ago
+Just invested in my first share of stock through my ROTH Ira at 18!!!
+219 upvotes · 22 comments
+Which 3 funds portfolio should I get?
+r/Bogleheads icon
+r/Bogleheads
+•
+7mo ago
+Which 3 funds portfolio should I get?
+20 comments
+Community Info Section
+r/Bogleheads
+Join
+Passive Indexing Community for Long-Term Lazy Investors
+Bogleheads are passive investors who follow Jack Bogle's simple but powerful message to diversify with low-cost index funds and let compounding grow wealth. Jack founded Vanguard and pioneered indexed mutual funds. His work has since inspired others to get the most out of their long-term investments. Active managers want your money - our advice: keep it! How? Investing in broad-market low-cost indexes, diversified between equities and fixed income. Buy, hold, pay low fees, and stay the course!
+
+Show more
+Public
+Top Posts
+Reddit
+reReddit: Top posts of March 23, 2024
+Reddit
+reReddit: Top posts of March 2024
+Reddit
+reReddit: Top posts of 2024
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.
+
+Expand Navigation
