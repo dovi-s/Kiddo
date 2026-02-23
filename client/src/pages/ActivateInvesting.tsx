@@ -110,10 +110,10 @@ export default function ActivateInvesting() {
     <div className="min-h-screen gemini-warm-section overflow-hidden">
       <header className="sticky top-0 z-50 gemini-glass-nav">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
-          {step !== "welcome" && step !== "processing" && step !== "success" ? (
+          {step !== "processing" && step !== "success" ? (
             <button
-              onClick={goBack}
-              data-testid="button-back"
+              onClick={step === "welcome" ? () => setLocation("/dashboard") : goBack}
+              data-testid={step === "welcome" ? "button-close" : "button-back"}
               className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150"
             >
               <ArrowLeft size={18} />
@@ -207,6 +207,14 @@ export default function ActivateInvesting() {
                 Begin Verification
                 <ArrowRight size={18} className="ml-2" />
               </Button>
+
+              <button
+                onClick={() => setLocation("/dashboard")}
+                data-testid="button-skip-activation"
+                className="w-full py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                I'll do this later
+              </button>
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
                 <Lock size={12} />
