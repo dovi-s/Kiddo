@@ -106,8 +106,9 @@ export default function Settings() {
           body: JSON.stringify({ profileImageUrl: dataUrl }),
         });
         if (res.ok) {
+          const updatedUser = await res.json();
           haptic("success");
-          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+          queryClient.setQueryData(["/api/auth/user"], updatedUser);
           toast({ title: "Photo updated" });
         } else {
           toast({ title: "Could not update photo", variant: "destructive" });
@@ -143,7 +144,8 @@ export default function Settings() {
         body: JSON.stringify({ firstName, lastName }),
       });
       if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        const updatedUser = await res.json();
+        queryClient.setQueryData(["/api/auth/user"], updatedUser);
         haptic("success");
         toast({ title: "Name updated" });
       } else {
