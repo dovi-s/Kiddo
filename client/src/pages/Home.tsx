@@ -75,7 +75,7 @@ function GrowthCalculator() {
                   setIsCustom(true);
                 }
               }}
-              className="px-4 py-2 rounded-xl text-sm font-medium bg-muted text-foreground w-24 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-muted text-foreground w-28 border border-border/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
               data-testid="input-custom-amount"
             />
           </div>
