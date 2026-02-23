@@ -163,7 +163,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="md:ml-[220px] lg:ml-[260px] min-h-screen bg-background">
+    <div className="md:ml-[220px] lg:ml-[260px] min-h-screen bg-background pb-24 md:pb-8">
       <div className="md:hidden sticky top-0 z-40 h-14 flex items-center px-4 bg-background/80 backdrop-blur-lg border-b border-border/40">
         <Link href="/dashboard">
           <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors" data-testid="button-back-dashboard">
