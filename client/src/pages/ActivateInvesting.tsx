@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowLeft, ArrowRight, Check, Shield, Lock, TrendingUp, Wallet, User } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Shield, Lock, TrendingUp, Wallet, User, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
@@ -435,9 +435,9 @@ export default function ActivateInvesting() {
             >
               <div>
                 <h1 className="font-heading text-xl font-semibold text-foreground mb-1" data-testid="text-strategy-heading">
-                  How should gifts be invested?
+                  Set your default investment strategy
                 </h1>
-                <p className="text-sm text-muted-foreground">Pick a starting approach. You can change this anytime.</p>
+                <p className="text-sm text-muted-foreground">When a gift comes in without a specific investment choice, this is where it goes.</p>
               </div>
 
               <div className="space-y-3">
@@ -504,6 +504,24 @@ export default function ActivateInvesting() {
                     </div>
                   </button>
                 ))}
+              </div>
+
+              <div className="bg-card rounded-2xl border border-border/50 p-4 space-y-2.5">
+                <p className="text-xs font-medium text-foreground">How does this work with gifts?</p>
+                <div className="space-y-2 text-xs text-muted-foreground">
+                  <div className="flex items-start gap-2">
+                    <TrendingUp size={13} className="text-primary shrink-0 mt-0.5" />
+                    <p><span className="font-medium text-foreground">Most gifts auto-invest</span> into your default strategy above. No action needed from you.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Gift size={13} className="text-primary shrink-0 mt-0.5" />
+                    <p><span className="font-medium text-foreground">If a giver picks a specific stock</span> (like $50 of Disney), that gift goes exactly where they chose. Your default isn't used.</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <User size={13} className="text-primary shrink-0 mt-0.5" />
+                    <p><span className="font-medium text-foreground">You can also hold gifts as cash</span> and decide later. Change this per-fund anytime in settings.</p>
+                  </div>
+                </div>
               </div>
 
               <p className="text-xs text-muted-foreground text-center">You can change this anytime from your settings.</p>
