@@ -25,8 +25,8 @@ Preferred communication style: Simple, everyday language.
     *   **Kora Platform Fee**: 1.5% per gift (min $1, max $10), same for all payment methods.
     *   **Account Memberships**:
         *   **Free ($0)**: Guests pay processing + Kora platform fee. Host can cover platform fee per event.
-        *   **Family ($149/year)**: Kora platform fee waived up to $15,000/year, household dashboard, recurring gift management, priority support.
-    *   **Event Add-on**: **Event Pass ($99/event)**: One-time purchase, waives Kora platform fee up to $7,500 gift volume for a single event; includes premium themes, goal cards, thank-you automation. This is not a subscription plan.
+        *   **Family ($149/year)**: Kora platform fee waived up to $15,000/year, unlimited premium event pages, household dashboard, recurring gift management, priority support.
+    *   **Event Add-on**: **Event Pass ($99/event)**: One-time purchase for Free-tier users, waives Kora platform fee up to $7,500 gift volume for a single event; includes premium themes, goal cards, thank-you automation. Family Plan members get these features included. This is not a subscription plan.
     *   **Payment Methods**: Apple Pay, Google Pay, credit/debit cards, bank transfer (ACH). Apple Pay/Google Pay are one-tap and seamless. ACH has lower fees for larger gifts.
 *   **Withdrawal & Selling Policy**:
     *   Custodians (parents) can sell investments and withdraw, but funds must be used for the child's benefit (UTMA law).

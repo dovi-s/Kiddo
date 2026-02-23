@@ -474,6 +474,7 @@ export default function Home() {
                 tagline: "For families who gift often",
                 features: [
                   "Platform fee waived up to $15K/yr",
+                  "Unlimited premium event pages",
                   "Household dashboard for all kids",
                   "Recurring gift management",
                   "Priority support",

@@ -212,6 +212,10 @@ export default function Settings() {
                   <ul className="space-y-1.5 text-sm text-muted-foreground">
                     <li className="flex items-center gap-2">
                       <Check size={14} className="text-primary" />
+                      Unlimited premium event pages
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={14} className="text-primary" />
                       Household dashboard
                     </li>
                     <li className="flex items-center gap-2">
