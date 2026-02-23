@@ -190,9 +190,9 @@ export default function Home() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/faq">
+              <Link href="/#how-it-works">
                 <Button variant="outline" size="lg" className="h-14 px-10 text-base" data-testid="button-send-gift" onClick={() => haptic('light')}>
-                  Send a gift
+                  How it works
                 </Button>
               </Link>
             </motion.div>
