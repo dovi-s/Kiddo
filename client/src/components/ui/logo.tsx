@@ -31,7 +31,7 @@ export function Logo({ size = "md", showWordmark = true, className = "", linkTo 
             fontFeatureSettings: '"kern" 1',
           }}
         >
-          kora
+          Kora
         </span>
       )}
     </span>
