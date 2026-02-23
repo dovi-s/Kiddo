@@ -47,6 +47,31 @@ Kora supports three models:
 
 The platform emphasizes transparency regarding asset holding (e.g., Apex Clearing), SIPC coverage, account control, status updates (pending → invested → settled), and clear fee disclosure. A "Memory Book" feature captures sentimental data like messages, photos, and milestones to foster long-term engagement.
 
+## Pages and Routes
+
+### Public Pages (no auth required)
+*   **Home** (`/`): Landing page with hero, growth calculator, how it works, trust section, pricing, CTA
+*   **FAQ** (`/faq`, `/how-it-works`): Searchable FAQ with How It Works visual guides
+*   **Gift Checkout** (`/:fund`, `/:fund/:event`): Gift-giver checkout with one-tap amounts, execution models, message, fee transparency
+*   **Gift Success** (`/gift/success`): Celebration page after gifting with sharing CTAs
+*   **Kid View** (`/kid/:fundId`): Fun kid-friendly view using garden/seed metaphor, public API endpoints
+
+### Auth Pages
+*   **Login** (`/login`): Kora-branded email/password + Google OAuth
+*   **Get Started** (`/get-started`): Multi-step onboarding: hook > choose > personalize > projection > account > children > success
+*   **Activate Investing** (`/activate`): Plain-English KYC simulation with strategy picker
+
+### Authenticated Pages (sidebar offset)
+*   **Dashboard** (`/dashboard`): Fund switcher, balance breakdown, quick actions, growth projection, holdings, recent gifts, events summary
+*   **Events** (`/events`): Event list with stats, share links, Event Pass upsell
+*   **Event Create** (`/event/create`): Multi-step event creation (type, details, fund link, goal)
+*   **Memory Book** (`/memory/:fundId`): Timeline of gift messages, milestones, photos, notes
+*   **Activity** (`/activity`): Filtered activity feed grouped by date
+*   **Settings** (`/settings`): Profile, funds list, membership, Event Passes, KYC status, privacy
+
+### Reusable Components
+*   **EducationTip** (`client/src/components/ui/education.tsx`): Inline, expandable, and tooltip education with pre-built content for UTMA, auto-invest, SIPC, fees, pending cash, taxes, gift growth
+
 ## External Dependencies
 
 *   **Database**: PostgreSQL (managed via `DATABASE_URL`), Drizzle Kit for migrations.
