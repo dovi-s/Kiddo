@@ -87,7 +87,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">4. Fees</h3>
-                  <p>Kora charges a platform fee on each gift (Card: 1.5%, min $1, max $10. ACH: 1.0%, min $0.75, max $10). Standard payment processing fees also apply (Card: ~2.9% + $0.30, ACH: ~$0.75). Family Plan and Event Pass members may have the platform fee waived up to specified limits. All fees are disclosed before payment.</p>
+                  <p>Kora charges a platform fee of 1.5% on each gift (minimum $1, maximum $10). Payment processing fees also apply: card, Apple Pay, and Google Pay are approximately 2.9% + $0.30 per transaction; bank transfers (ACH) are 0.8%, capped at $5. Family Plan ($149/year) and Event Pass ($99 one-time) members have the platform fee waived up to specified limits. All fees are disclosed to the giver before payment.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">5. Investment Risk</h3>
@@ -95,7 +95,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">6. UTMA Accounts</h3>
-                  <p>Custodial (UTMA) accounts are managed by the custodian (parent or guardian) for the benefit of the minor. Assets in a UTMA account are irrevocable gifts to the minor and transfer to their control when they reach the age of majority in their state (typically 18 or 21).</p>
+                  <p>Custodial (UTMA) accounts are managed by the custodian (parent or guardian) for the benefit of the minor. Assets in a UTMA account are irrevocable gifts to the minor and transfer to their control when they reach the age of majority in their state (typically 18 or 21). The custodian may sell investments and withdraw funds at any time, provided the funds are used for the child's benefit, as required by UTMA law. For adult (personal taxable) accounts, the account owner has full control to sell investments and withdraw at any time.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">7. Account Closure</h3>

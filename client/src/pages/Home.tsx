@@ -375,8 +375,8 @@ export default function Home() {
                 features: [
                   "Create unlimited funds",
                   "Share with family and friends",
-                  "Processing fees apply",
-                  "Small platform fee per gift",
+                  "Apple Pay, Google Pay, card, or bank transfer",
+                  "Small platform fee per gift (1.5%, max $10)",
                 ],
                 cta: "Get Started Free",
                 featured: false,
@@ -388,10 +388,10 @@ export default function Home() {
                 period: "one-time",
                 tagline: "For one big celebration",
                 features: [
-                  "Waives platform fee up to $7,500",
-                  "One-time purchase",
-                  "Premium event page",
-                  "Processing fees still apply",
+                  "Platform fee waived up to $7,500",
+                  "One-time purchase, no subscription",
+                  "Premium event page themes",
+                  "Thank-you automation",
                 ],
                 cta: "Get Event Pass",
                 featured: true,
@@ -399,14 +399,14 @@ export default function Home() {
               {
                 id: "family",
                 name: "Family",
-                price: "$199",
+                price: "$149",
                 period: "/year",
                 tagline: "For families who gift often",
                 features: [
-                  "Waives platform fee up to $15K/yr",
-                  "Household dashboard",
+                  "Platform fee waived up to $15K/yr",
+                  "Household dashboard for all kids",
+                  "Recurring gift management",
                   "Priority support",
-                  "Processing fees still apply",
                 ],
                 cta: "Go Family",
                 featured: false,
@@ -463,9 +463,9 @@ export default function Home() {
             <div className="bg-card rounded-2xl shadow-premium-sm p-6">
               <p className="text-sm font-medium text-foreground mb-2">Fee details</p>
               <p className="text-xs text-muted-foreground leading-relaxed" data-testid="text-fee-details">
-                Card processing: ~2.9% + $0.30 per transaction. ACH processing: ~$0.75 per transaction.
-                Platform fee (Card): 1.5% (min $1, max $10). Platform fee (ACH): 1.0% (min $0.75, max $10).
-                Event Pass and Family plans waive the platform fee portion.
+                Payment processing: Card, Apple Pay, and Google Pay are ~2.9% + $0.30. Bank transfer (ACH) is just 0.8% (max $5).
+                Kora platform fee: 1.5% per gift (min $1, max $10). Event Pass and Family plans waive the platform fee.
+                Givers always see a clear fee breakdown before paying.
               </p>
             </div>
           </FadeIn>

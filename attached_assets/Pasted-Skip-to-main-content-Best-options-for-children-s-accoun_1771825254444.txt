@@ -1,0 +1,463 @@
+Skip to main content
+Best options for children’s accounts : r/Bogleheads
+
+
+r/Bogleheads
+Search in r/Bogleheads
+
+Get App
+Log In
+
+Expand user menu
+Skip to NavigationSkip to Right Sidebar
+
+Back
+r/Bogleheads icon
+Go to Bogleheads
+r/Bogleheads
+•
+3y ago
+abetheduck
+
+Best options for children’s accounts
+I have two children in elementary school who I would like to get into investing with the money they receive as gifts (starting with ~$1k each), and hopefully continue as they start earning money through odd jobs as they get older. I have two main questions - first is which brokerage should I use? I have Fidelity for my retirement accounts through work, but I know people love Vanguard around here too. I am open to using whatever makes the most sense. The second is should the accounts be set up in my name or should it be in their name, or is it possible for it to be a joint account? I am sure there are some pitfalls around taxes and probably considerations on personal wealth for a future where they hopefully go to college. I don’t expect this to grow to more than $10k between now and college, so I don’t know if that is something to worry about.
+
+Thanks for the help and suggestions!
+
+7
+·
+16
+u/mazdausa avatar
+mazdausa
+•
+Promoted
+
+The kind of cargo space that dares you to dream big.​
+Learn More
+mazdausa.com
+Thumbnail image: The kind of cargo space that dares you to dream big.​
+Comments Section
+spinrut
+•
+3y ago
+Just reiterating things that have already been said. 529s for school expenses and UTMAs
+
+Aside from that you can open Roth ira for kids IF they have earned income. There are legitimate ways to do this like keeping track of paying them for doing chores but I have not gone that far yet. You can't just give them an allowance and contribute, but if they have defined household work and get paid for it, you can contribute that to a Roth
+
+
+1
+u/abetheduck avatar
+abetheduck
+OP
+•
+3y ago
+Wow, I didn’t realize that you could fund a Roth IRA before 18. That is a great thing to keep in mind as the kiddos grow through the rest of their school years. Thanks for pointing this out!
+
+
+1
+spinrut
+•
+3y ago
+You gotta research the ins and outs due to being restricted to only being able to contribute the amount they earned so you don't run into trouble with the taxman
+
+But there are perfectly legal ways to do this
+
+1
+u/zacce avatar
+zacce
+•
+3y ago
+As parent of kids, I did some work to find the best account for our kids money (aside from 529). I found "Fidelity Youth Account" is the best but only available to kids aged 13 to 17. Our youngest waited a few years till she turned 13 to be eligible for the account.
+
+
+3
+u/abetheduck avatar
+abetheduck
+OP
+•
+3y ago
+I will definitely take a look at this, but it will be a couple years before mine age into that range. Did you just keep the money in a HYSA ahead of that or what did you do for the two years before they could open the Fidelity account?
+
+
+1
+u/zacce avatar
+zacce
+•
+3y ago
+my kid kept her money in an envelope.
+
+
+2
+u/abetheduck avatar
+abetheduck
+OP
+•
+3y ago
+That is basically our current strategy. Looking for a bit more gains to help the understanding of compound interest.
+
+1
+BoglesFollies
+•
+3y ago
+I’d recommend waiting for the Fidelity youth accounts. Based upon the amount of money you’re talking about, and the age of your kids, there is no need to rush.
+
+1
+u/AmexBusiness avatar
+u/AmexBusiness
+•
+Promoted
+
+Buy big for your business with The Plum Card®.
+Learn More
+americanexpress.com
+Thumbnail image: Buy big for your business with The Plum Card®.
+u/winnovate avatar
+winnovate
+•
+3y ago
+Setup UTMAs in Fidelity. In these accounts, you are the custodian, they are the owner. No tax impact on capital gains to you. Why fidelity, no dollar amount minimum on fractional shares, no limit to what stocks (like Schwab) and no OTC fees.
+
+I have 2 UTMAs for each of my kids. One I manage and one they manage. The one I manage, they have zero visibility into it. The one they manage, they can buy or sell whatever they want. They can’t withdraw. I contribute $20 each paycheck and they contribute whatever they want from their own money. It’s been a fun experience learning about companies, seeing gains (and losses), and a little competition between my kids.
+
+
+2
+u/abetheduck avatar
+abetheduck
+OP
+•
+3y ago
+After reading a bit more from the link above, this does seem likely to be the best bet for my needs at the moment. Thank you!
+
+2
+u/TheBalloonDispatcher avatar
+TheBalloonDispatcher
+•
+3y ago
+Look into opening a 529 to save for education expenses. Check your state for tax benefits and use that account. If there aren't any tax benefits, opening a fidelity 529 is a great option to keep it simple.
+
+
+2
+u/abetheduck avatar
+abetheduck
+OP
+•
+3y ago
+My focus here is their money. They are lucky enough to have 529 accounts which have been funded to an adequate degree from grandparents
+
+3
+NotoriousGING
+•
+3y ago
+You can also open Trustee accounts, which are in your name with the kid as beneficiaries. I originally had UTMAs for both kids but switched to Trustee Accounts given some concerns about taxes and the UTMAs counting as assets for the kids when it comes to future financial aid.
+
+
+2
+u/abetheduck avatar
+abetheduck
+OP
+•
+3y ago
+This is something I am concerned about. Can you elaborate more on what you discovered that led you to this decision?
+
+
+2
+NotoriousGING
+•
+3y ago
+Kid could potentially have to file a tax return based on unearned income if it exceeds a certain level. Don’t use Earlybird but this gives a general overview.
+
+https://www.getearlybird.io/blog/utma-tax-rules#:~:text=UTMA%20account%20holders%20may%20owe,while%20growing%20the%20UTMA%20balance.
+
+Worked with a financial planner to review my current plan (not using them for ongoing advising but did a one-time check) and based on our want for more flexibility on uses and lack of impact on the kids, we went the Trustee Account route.
+
+
+2
+captngringo
+•
+2y ago
+Late to the party here, thanks for sharing the link! My wife has earlybird on our upcoming baby's registry. Based on your link, it says that anything over $1100 but under $11000 can be filed on our joint return as long as other conditions are met (all conditions seem reasonable and like they will be met). Was there anything else with tax implications that bothered you other than if they make over $11k/yr taxes a separate return would have to be filed on behalf of the child (assuming that was your issue)?
+
+My only initial concern when I first started researching was the $3/mo fee lol but honestly that's not terrible.
+
+Curious if anyone else has experience with earlybird, may start a separate post focused on it.
+
+1
+Related Answers Section
+Related Answers
+Best low-cost index funds for beginners
+For beginners looking to invest in low-cost index funds, here are some of the best options and advice from Redditors:
+
+Recommended Low-Cost Index Funds
+S&P 500 Index Funds: These are highly recommended for their diversification and performance.
+
+VOO (Vanguard S&P 500 ETF): "Yes, you are on the right track. I recommend checking out VTI, VOO, and VT for starters as they are all low cost and should help you on the way to your growth goals."
+
+FXAIX (Fidelity S&P 500 Index Fund): "The Fidelity S&P 500 in my 401k, FXAIX, is 0.02%, even lower than VOO at 0.03%"
+
+IVV (iShares Core S&P 500 ETF): "S&P 500 Index Funds: $FXAIX (Fidelity), $VOO (Vanguard), $IVV (Blackrock iShares), $SWPPX (Charles Schwab)"
+
+Total Stock Market Index Funds: These provide broader diversification beyond just the S&P 500.
+
+VTI (Vanguard Total Stock Market ETF): "I recommend checking out VTI, VOO, and VT for starters as they are all low cost and should help you on the way to your growth goals."
+
+VT (Vanguard Total World Stock ETF): "A better place to start would be a broad market (rather than large cap) and global rather than domestic fund. Thus, an ETF like VT is a better choice."
+
+Fees and Costs
+Expense Ratios: Aim for funds with low expense ratios, preferably under 0.25%.
+
+"In the modern era I'd say that for an individual index anything below 0.25% is cheap."
+
+"I love anything under 0.10%. I try to keep my aggregate ratio under 0.15%"
+
+Tracking Difference: Consider the tracking difference of the fund, which measures how closely the ETF's performance matches its underlying index.
+
+"I also look at the tracking difference. People tend to fanboy WEBN, but VWCE has a ridiculously good tracking difference (~0.02%)."
+
+Investment Strategy
+Long-Term Investing: Index funds are best for long-term investing due to the power of compound interest.
+
+"Yes, you get dirt-cheap access to the miracle of the stock market's compound growth. It's a proven path to long term wealth."
+
+Diversification: Invest in a diversified portfolio to minimize risk.
+
+"Diversification is the best hedge against ignorance."
+
+Tax-Advantaged Accounts: Utilize accounts like Roth IRAs and 401ks to maximize your returns.
+
+"If you don't need this money for years, and you earned it with a job, consider using at least part of it to open and fund a Roth IRA."
+
+Additional Tips
+Start Early: The sooner you start investing, the better.
+
+"Yes..the sooner you start the better"
+
+Stay the Course: Avoid panicking during market downturns.
+
+"There will be down periods; remember this money is for the long term, so don't sweat the short term losses or volatility."
+
+Subreddits for Further Questions
+r/investingforbeginners
+
+r/Bogleheads
+
+r/FluentInFinance
+
+These communities are great places to ask more specific questions and get personalized advice from experienced investors.
+
+See Answer
+How to create a three-fund portfolio
+Common mistakes in passive investing
+How to rebalance your investment portfolio
+Understanding the impact of fees on returns
+New to Reddit?
+Create your account and connect with a world of communities.
+
+
+Continue With Phone Number
+By continuing, you agree to our User Agreement and acknowledge that you understand the Privacy Policy.
+More posts you may like
+Besides 529, what accounts for kids and at what age?
+r/Bogleheads icon
+r/Bogleheads
+•
+14d ago
+Besides 529, what accounts for kids and at what age?
+196 upvotes · 217 comments
+Investment account for kids
+r/Bogleheads icon
+r/Bogleheads
+•
+5mo ago
+Investment account for kids
+18 upvotes · 48 comments
+Best way to invest monthly for my kids’ future (not just for college)?
+r/Bogleheads icon
+r/Bogleheads
+•
+4mo ago
+Best way to invest monthly for my kids’ future (not just for college)?
+18 upvotes · 46 comments
+Promoted
+
+sidebar promoted post thumbnail
+Parents tryin to be helpful but…
+r/Bogleheads icon
+r/Bogleheads
+•
+3mo ago
+Parents tryin to be helpful but…
+187 upvotes · 96 comments
+What would you invest for your FHSA account?
+r/fican icon
+r/fican
+•
+8d ago
+What would you invest for your FHSA account?
+7 upvotes · 27 comments
+$300k in my savings account. I have never invested because I'm dumb. Help.
+r/Bogleheads icon
+r/Bogleheads
+•
+6mo ago
+$300k in my savings account. I have never invested because I'm dumb. Help.
+544 upvotes · 192 comments
+What should be my first investments as a young adult?
+r/Bogleheads icon
+r/Bogleheads
+•
+1y ago
+What should be my first investments as a young adult?
+30 upvotes · 37 comments
+22 year old, just starting brokerage account. Don't know what to invest in.
+r/Bogleheads icon
+r/Bogleheads
+•
+7mo ago
+22 year old, just starting brokerage account. Don't know what to invest in.
+40 upvotes · 49 comments
+Promoted
+
+sidebar promoted post thumbnail
+Best To Invest Funds invest HSA in
+r/Bogleheads icon
+r/Bogleheads
+•
+2mo ago
+Best To Invest Funds invest HSA in
+3 upvotes · 7 comments
+Need to clear my investment accounts
+r/Bogleheads icon
+r/Bogleheads
+•
+28d ago
+Need to clear my investment accounts
+2 upvotes · 15 comments
+Confused about which funds to hold in which accounts
+r/Bogleheads icon
+r/Bogleheads
+•
+8mo ago
+Confused about which funds to hold in which accounts
+13 upvotes · 5 comments
+Recently found out I have an American Funds account.
+r/Bogleheads icon
+r/Bogleheads
+•
+6mo ago
+Recently found out I have an American Funds account.
+5 upvotes · 7 comments
+Do you ever take money from your investment accounts ?
+r/Bogleheads icon
+r/Bogleheads
+•
+10mo ago
+Do you ever take money from your investment accounts ?
+66 upvotes · 165 comments
+How often do yall check your investment account?
+r/Bogleheads icon
+r/Bogleheads
+•
+6mo ago
+How often do yall check your investment account?
+189 upvotes · 239 comments
+Is it reasonable to put everything into one account, or is there a reason to diversify?
+r/Bogleheads icon
+r/Bogleheads
+•
+7mo ago
+Is it reasonable to put everything into one account, or is there a reason to diversify?
+20 upvotes · 28 comments
+Do you guys invest in all the same stuff throughout all of your investment accounts ?
+r/Bogleheads icon
+r/Bogleheads
+•
+8mo ago
+Do you guys invest in all the same stuff throughout all of your investment accounts ?
+64 upvotes · 62 comments
+Thoughts on my Mutual Fund Picks?
+r/Bogleheads icon
+r/Bogleheads
+•
+1mo ago
+Thoughts on my Mutual Fund Picks?
+5 upvotes · 10 comments
+Investing Advice
+r/Bogleheads icon
+r/Bogleheads
+•
+20d ago
+Investing Advice
+18 upvotes · 24 comments
+Investment account contributions
+r/Bogleheads icon
+r/Bogleheads
+•
+6mo ago
+Investment account contributions
+r/Bogleheads - Investment account contributions
+49 upvotes · 27 comments
+I now understand why a financial advisor is not necessary
+r/Bogleheads icon
+r/Bogleheads
+•
+8mo ago
+I now understand why a financial advisor is not necessary
+104 upvotes · 95 comments
+Struggling with Asset Allocation (Comments Please)
+r/Bogleheads icon
+r/Bogleheads
+•
+3mo ago
+Struggling with Asset Allocation (Comments Please)
+5 upvotes · 23 comments
+My 3 fund portfolio allocation
+r/Bogleheads icon
+r/Bogleheads
+•
+11d ago
+My 3 fund portfolio allocation
+8 upvotes · 6 comments
+Help me understand the 3 fund portfolio
+r/Bogleheads icon
+r/Bogleheads
+•
+5mo ago
+Help me understand the 3 fund portfolio
+6 comments
+Help with medium term investment
+r/Bogleheads icon
+r/Bogleheads
+•
+9mo ago
+Help with medium term investment
+4 upvotes · 10 comments
+I left my financial advisor. But I now need some help deciding what to do
+r/Bogleheads icon
+r/Bogleheads
+•
+2mo ago
+I left my financial advisor. But I now need some help deciding what to do
+4 upvotes · 24 comments
+Community Info Section
+r/Bogleheads
+Join
+Passive Indexing Community for Long-Term Lazy Investors
+Bogleheads are passive investors who follow Jack Bogle's simple but powerful message to diversify with low-cost index funds and let compounding grow wealth. Jack founded Vanguard and pioneered indexed mutual funds. His work has since inspired others to get the most out of their long-term investments. Active managers want your money - our advice: keep it! How? Investing in broad-market low-cost indexes, diversified between equities and fixed income. Buy, hold, pay low fees, and stay the course!
+
+Show more
+Public
+Top Posts
+Reddit
+reReddit: Top posts of August 15, 2023
+Reddit
+reReddit: Top posts of August 2023
+Reddit
+reReddit: Top posts of 2023
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.
+
+Expand Navigation

@@ -61,7 +61,7 @@ const faqItems = [
   {
     id: "fees",
     question: "What are the fees?",
-    answer: "There are two parts to fees. First, payment processing: card payments cost about 2.9% + $0.30 per transaction, and ACH (bank transfer) costs about $0.75. Second, the Kora platform fee: for card gifts it is 1.5% (minimum $1, maximum $10), and for ACH gifts it is 1.0% (minimum $0.75, maximum $10). Want to cover fees for your guests? The Event Pass ($99) waives the platform fee on up to $7,500 per event. The Family Plan ($199/year) waives the platform fee on up to $15,000 in gifts per year.",
+    answer: "There are two parts to fees. First, payment processing: card, Apple Pay, and Google Pay cost about 2.9% + $0.30 per transaction. Bank transfers (ACH) are much cheaper at just 0.8%, capped at $5. Second, the Kora platform fee: 1.5% per gift (minimum $1, maximum $10). Want to cover fees for your guests? The Event Pass ($99) waives the platform fee on up to $7,500 per event. The Family Plan ($149/year) waives the platform fee on up to $15,000 in gifts per year.",
   },
   {
     id: "turns-18",
@@ -84,8 +84,18 @@ const faqItems = [
     answer: "A savings account currently earns around 4% per year. Historically, a diversified stock portfolio has averaged around 7% per year over the long run. Over 18 years, that difference adds up significantly. Plus, your child gets real ownership in companies they actually know and use, which is a great way to teach them about money and investing.",
   },
   {
+    id: "payment-methods",
+    question: "How can gift-givers pay?",
+    answer: "Givers can pay with Apple Pay, Google Pay, any major credit or debit card, or a bank transfer (ACH). Apple Pay and Google Pay are the fastest, just one tap. Bank transfers have lower processing fees, which is great for larger gifts. Every method is secure and encrypted.",
+  },
+  {
+    id: "withdraw-sell",
+    question: "Can I sell investments or withdraw money?",
+    answer: "Yes. For custodial (UTMA) accounts, the parent or guardian can sell investments and withdraw funds, as long as the money is used for the child's benefit (that is the law for custodial accounts). For adult accounts, you have full control to sell and withdraw. Sold investments settle in about one business day (T+1), after which you can transfer to your bank. Kora does not charge withdrawal fees. Gifts are irrevocable once made, meaning they belong to the recipient, but the custodian manages them until the child reaches adulthood.",
+  },
+  {
     id: "transfer-out",
-    question: "Can I transfer money out?",
+    question: "Can I transfer to another brokerage?",
     answer: "Yes. You can transfer the account to any other brokerage using a standard ACATS transfer. There are no lock-ups or penalties. Your investments move as-is to the new brokerage.",
   },
   {

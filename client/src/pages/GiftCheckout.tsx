@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, Lock, Shield, ChevronDown, Check, ArrowRight, Heart, Sparkles, TrendingUp } from "lucide-react";
+import { Gift, Lock, Shield, ChevronDown, Check, ArrowRight, Heart, Sparkles, TrendingUp, CreditCard, Building2, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
@@ -23,6 +23,13 @@ const STOCK_PICKS = [
 ];
 
 type ExecutionModel = "auto" | "pick" | "family";
+type PaymentMethod = "card" | "apple_pay" | "bank";
+
+const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: typeof CreditCard; desc: string; feeLine: string }[] = [
+  { id: "apple_pay", label: "Apple Pay / Google Pay", icon: Smartphone, desc: "One-tap checkout", feeLine: "~2.9% + $0.30" },
+  { id: "card", label: "Credit or debit card", icon: CreditCard, desc: "Visa, Mastercard, Amex", feeLine: "~2.9% + $0.30" },
+  { id: "bank", label: "Bank transfer (ACH)", icon: Building2, desc: "Lower fees, 3-5 days", feeLine: "0.8% (max $5)" },
+];
 
 interface FeeData {
   baseAmount: number;
@@ -72,6 +79,7 @@ export default function GiftCheckout() {
   const [senderName, setSenderName] = useState("");
   const [senderEmail, setSenderEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("apple_pay");
   const [coverFees, setCoverFees] = useState(true);
   const [showFees, setShowFees] = useState(false);
   const [showEducation, setShowEducation] = useState(false);
@@ -134,9 +142,13 @@ export default function GiftCheckout() {
     staleTime: 5000,
   });
 
-  const processingFee = feeData?.processingFee ?? (activeAmount * 0.029 + 0.30);
+  const estimatedProcessingFee = paymentMethod === "bank"
+    ? Math.min(5, activeAmount * 0.008)
+    : (activeAmount * 0.029 + 0.30);
+  const processingFee = feeData?.processingFee ?? estimatedProcessingFee;
   const platformFee = feeData?.koraFee ?? Math.max(1, Math.min(10, activeAmount * 0.015));
   const totalCharge = feeData?.totalCharge ?? (coverFees ? activeAmount + processingFee + platformFee : activeAmount);
+  const achSavings = (activeAmount * 0.029 + 0.30) - Math.min(5, activeAmount * 0.008);
   const feeWaived = feeData?.hasEventPass || feeData?.hasFamilyPlan;
 
   const canSubmit = isValidAmount && senderName.trim().length > 0;
@@ -501,10 +513,69 @@ export default function GiftCheckout() {
         </motion.section>
 
         <motion.section
+          className="bg-card rounded-2xl shadow-premium-sm p-5 space-y-3"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.18 }}
+        >
+          <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="text-payment-method-heading">
+            How would you like to pay?
+          </h2>
+          <div className="space-y-2">
+            {PAYMENT_METHODS.map((method) => {
+              const Icon = method.icon;
+              return (
+                <button
+                  key={method.id}
+                  className={`w-full p-3.5 rounded-xl border text-left flex items-center gap-3 transition-all ${
+                    paymentMethod === method.id
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "border-border hover:border-primary/30"
+                  }`}
+                  onClick={() => {
+                    haptic("selection");
+                    setPaymentMethod(method.id);
+                  }}
+                  data-testid={`button-payment-${method.id}`}
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                    paymentMethod === method.id ? "bg-primary/10" : "bg-muted"
+                  }`}>
+                    <Icon size={18} className={paymentMethod === method.id ? "text-primary" : "text-muted-foreground"} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">{method.label}</p>
+                    <p className="text-xs text-muted-foreground">{method.desc}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={`text-xs font-medium ${method.id === "bank" ? "text-green-600" : "text-muted-foreground"}`}>
+                      {method.feeLine}
+                    </span>
+                    {method.id === "bank" && activeAmount >= 50 && (
+                      <p className="text-[10px] text-green-600 mt-0.5">
+                        Save ${achSavings > 0 ? achSavings.toFixed(2) : ((activeAmount * 0.029 + 0.30) - Math.min(5, activeAmount * 0.008)).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                    paymentMethod === method.id ? "border-primary" : "border-muted-foreground/30"
+                  }`}>
+                    {paymentMethod === method.id && <div className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2">
+            You will choose your exact payment method on the secure checkout page. Estimated fees shown above.
+          </p>
+        </motion.section>
+
+        <motion.section
           className="bg-card rounded-2xl shadow-premium-sm overflow-hidden"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.2 }}
+          transition={{ duration: 0.3, delay: 0.22 }}
         >
           <button
             className="w-full p-5 flex items-center justify-between"
@@ -544,7 +615,9 @@ export default function GiftCheckout() {
                       <span className="text-foreground font-medium">${activeAmount.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Processing fee</span>
+                      <span className="text-muted-foreground">
+                        Processing ({paymentMethod === "bank" ? "ACH" : paymentMethod === "apple_pay" ? "Apple/Google Pay" : "Card"})
+                      </span>
                       <span className="text-foreground">${processingFee.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
@@ -628,7 +701,7 @@ export default function GiftCheckout() {
               >
                 <div className="px-5 pb-5">
                   <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-education">
-                    Your gift goes directly into {recipientName}'s investment fund. It will be invested at the next trading window into real stocks, protected by SIPC insurance up to $500,000. You don't need an account, and {recipientName}'s family manages the fund.
+                    Your gift goes directly into {recipientName}'s investment fund. It will be invested at the next trading window into real stocks, protected by SIPC insurance up to $500,000. You don't need an account, and {recipientName}'s family manages the fund. Once invested, the gift is irrevocable and belongs to the recipient.
                   </p>
                 </div>
               </motion.div>
@@ -659,8 +732,14 @@ export default function GiftCheckout() {
               </div>
             ) : (
               <>
-                <Lock size={16} />
-                <span>Pay ${isValidAmount ? totalCharge.toFixed(2) : "0.00"} with card</span>
+                {paymentMethod === "apple_pay" ? <Smartphone size={16} /> : paymentMethod === "bank" ? <Building2 size={16} /> : <Lock size={16} />}
+                <span>
+                  {paymentMethod === "apple_pay"
+                    ? `Pay $${isValidAmount ? totalCharge.toFixed(2) : "0.00"}`
+                    : paymentMethod === "bank"
+                    ? `Pay $${isValidAmount ? totalCharge.toFixed(2) : "0.00"} via bank`
+                    : `Pay $${isValidAmount ? totalCharge.toFixed(2) : "0.00"} with card`}
+                </span>
               </>
             )}
           </motion.button>

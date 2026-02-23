@@ -319,7 +319,7 @@ export default function MomentCreate() {
                 {!hasFamilyPlan && (
                   <p className="text-xs text-muted-foreground flex items-start gap-1.5">
                     <Info size={12} className="flex-shrink-0 mt-0.5" />
-                    Upgrade to Family Plan ($199/year) to create unlimited events with no per-event fee.
+                    Upgrade to Family Plan ($149/year) to create unlimited events with no per-event fee.
                   </p>
                 )}
               </div>

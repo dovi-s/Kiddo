@@ -109,7 +109,7 @@ export const educationContent = {
   },
   fees: {
     title: "How do fees work?",
-    content: "There are two types of fees: processing fees (charged by the card network, like when you buy anything online) and a small Kora platform fee. Family Plan members and Event Pass holders get the platform fee waived.",
+    content: "There are two types of fees: payment processing (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at just 0.8% max $5) and a small Kora platform fee of 1.5% (max $10). Family Plan and Event Pass holders get the platform fee waived.",
   },
   pendingCash: {
     title: "What does 'pending' mean?",
@@ -122,5 +122,13 @@ export const educationContent = {
   giftGrowth: {
     title: "How much can gifts grow?",
     content: "The stock market has historically averaged about 7% per year. A $50 gift today could grow to roughly $197 in 18 years. Past performance doesn't guarantee future results, but long time horizons tend to smooth out market ups and downs.",
+  },
+  withdrawals: {
+    title: "Can I sell or withdraw?",
+    content: "Yes. You can sell investments and withdraw cash to your bank account, subject to standard trade settlement (typically T+1). For custodial (UTMA) accounts, withdrawals must benefit the child. For personal accounts, you have full control. Kora does not charge withdrawal fees.",
+  },
+  paymentMethods: {
+    title: "What payment methods are accepted?",
+    content: "Gift-givers can pay with Apple Pay, Google Pay, any major credit or debit card, or a bank transfer (ACH). Apple Pay and Google Pay are the fastest. Bank transfers have lower processing fees, which is great for larger gifts.",
   },
 };

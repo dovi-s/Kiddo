@@ -21,12 +21,19 @@ Preferred communication style: Simple, everyday language.
 *   **Child Privacy**: Minors are non-discoverable by default with link-only access. Pages for minors display only the first name.
 *   **Child Experience**: Designed to make investing feel like progress via milestones and feedback, avoiding financial jargon.
 *   **Pricing Model**:
-    *   **Processing Fees**: Standard card (~2.9% + $0.30) and ACH (~$0.75) fees.
-    *   **Kora Platform Fees**: Card 1.5% (min $1, max $10), ACH 1.0% (min $0.75, max $10).
+    *   **Processing Fees**: Card/Apple Pay/Google Pay (~2.9% + $0.30), ACH bank transfer (0.8%, max $5).
+    *   **Kora Platform Fee**: 1.5% per gift (min $1, max $10), same for all payment methods.
     *   **Account Memberships**:
         *   **Free ($0)**: Guests pay processing + Kora platform fee. Host can cover platform fee per event.
-        *   **Family ($199/year)**: Kora platform fee waived up to $15,000/year, household dashboard, recurring gift management, priority support.
+        *   **Family ($149/year)**: Kora platform fee waived up to $15,000/year, household dashboard, recurring gift management, priority support.
     *   **Event Add-on**: **Event Pass ($99/event)**: One-time purchase, waives Kora platform fee up to $7,500 gift volume for a single event; includes premium themes, goal cards, thank-you automation. This is not a subscription plan.
+    *   **Payment Methods**: Apple Pay, Google Pay, credit/debit cards, bank transfer (ACH). Apple Pay/Google Pay are one-tap and seamless. ACH has lower fees for larger gifts.
+*   **Withdrawal & Selling Policy**:
+    *   Custodians (parents) can sell investments and withdraw, but funds must be used for the child's benefit (UTMA law).
+    *   Adult account holders have full control to sell and withdraw whenever they want.
+    *   Gifts are irrevocable once made (they belong to the recipient).
+    *   No Kora withdrawal fees. Standard settlement (T+1) applies before cash is withdrawable.
+    *   UTMA accounts transfer to the child's full control at age of majority (18-21 depending on state).
 
 ### Technical Implementation
 

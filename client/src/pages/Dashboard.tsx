@@ -364,6 +364,12 @@ export default function Dashboard() {
               </EducationTip>
             )}
 
+            {holdings.length > 0 && (
+              <EducationTip title={educationContent.withdrawals.title} icon="tip" variant="expandable">
+                {educationContent.withdrawals.content}
+              </EducationTip>
+            )}
+
             <div className="md:grid md:grid-cols-2 md:gap-6 space-y-6 md:space-y-0">
               <motion.section
                 initial={{ opacity: 0, y: 8 }}

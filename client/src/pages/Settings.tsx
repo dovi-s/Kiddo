@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   User, CreditCard, Shield, Eye, EyeOff, LogOut, Check,
-  ChevronRight, Star, Lock, Crown
+  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet
 } from "lucide-react";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -204,10 +204,10 @@ export default function Settings() {
                   <div className="flex items-center gap-2">
                     <Crown size={16} className="text-primary" />
                     <p className="text-sm font-semibold text-foreground">Family Plan</p>
-                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">$199/year</span>
+                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">$149/year</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Waives the platform fee on up to $15,000 in gifts per year
+                    Platform fee waived on up to $15,000 in gifts per year
                   </p>
                   <ul className="space-y-1.5 text-sm text-muted-foreground">
                     <li className="flex items-center gap-2">
@@ -326,6 +326,43 @@ export default function Settings() {
                 </Button>
               </div>
             )}
+          </div>
+        </SectionCard>
+
+        {/* Withdrawals & Selling */}
+        <SectionCard>
+          <div className="p-5 space-y-4">
+            <div className="flex items-center gap-3 mb-2">
+              <Wallet size={18} className="text-muted-foreground" />
+              <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-withdrawals">Withdrawals & Selling</h2>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+                <ArrowUpRight size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-1">Selling investments</p>
+                  <p className="text-xs text-muted-foreground" data-testid="text-sell-policy">
+                    You can sell investments at any time, subject to standard settlement periods (typically 1 to 2 business days). For custodial (UTMA) accounts, proceeds must be used for the child's benefit. For personal accounts, you have full control.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-muted/30">
+                <Wallet size={14} className="text-primary mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-foreground mb-1">Withdrawing cash</p>
+                  <p className="text-xs text-muted-foreground" data-testid="text-withdraw-policy">
+                    Cash from sold investments can be withdrawn to your linked bank account after trade settlement (typically T+1). Transfers typically arrive in 1 to 3 business days. Kora does not charge withdrawal fees. Standard brokerage and regulatory fees may apply.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-amber-50 border border-amber-200/50">
+                <Lock size={14} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-amber-800" data-testid="text-irrevocable-note">
+                  Gifts are irrevocable once received. They belong to the recipient and cannot be taken back by the giver.
+                </p>
+              </div>
+            </div>
           </div>
         </SectionCard>
 
