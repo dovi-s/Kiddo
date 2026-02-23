@@ -3,13 +3,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { AddFundSheet } from "@/components/AddFundSheet";
+import { toast } from "@/hooks/use-toast";
 import {
   User, CreditCard, Shield, Eye, EyeOff, LogOut, Check,
-  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet, ChevronLeft, Plus
+  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet, ChevronLeft, Plus, Loader2
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
@@ -52,10 +54,35 @@ export default function Settings() {
     return null;
   }
 
+  const { data: subscription } = useSubscription();
+  const [upgrading, setUpgrading] = useState(false);
+
   const displayName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User";
   const userEmail = user.email || "";
-  const userPlan = "free";
+  const userPlan = (subscription?.plan === "family" && subscription?.status === "active") ? "family" : "free";
   const kycCompleted = false;
+
+  const handleUpgradeFamily = async () => {
+    setUpgrading(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/stripe/checkout/family-plan", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Something went wrong", description: data.error || "Could not start checkout", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Something went wrong", description: "Please try again", variant: "destructive" });
+    } finally {
+      setUpgrading(false);
+    }
+  };
 
   const eventsWithPasses = funds.flatMap((f: any) =>
     (f.events || []).filter((e: any) => e.hasEventPass)
@@ -265,10 +292,10 @@ export default function Settings() {
                   <Button
                     className="w-full"
                     data-testid="button-upgrade-family"
-                    onClick={() => {
-                      haptic("medium");
-                    }}
+                    disabled={upgrading}
+                    onClick={handleUpgradeFamily}
                   >
+                    {upgrading && <Loader2 size={16} className="mr-2 animate-spin" />}
                     Upgrade to Family Plan
                   </Button>
                 </div>
@@ -312,26 +339,38 @@ export default function Settings() {
               </div>
             )}
 
-            <div className="bg-muted/30 rounded-xl border border-border/50 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <CreditCard size={16} className="text-muted-foreground" />
-                <p className="text-sm font-semibold text-foreground">Event Pass</p>
-                <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">$99 one-time</span>
+            {userPlan === "family" ? (
+              <div className="bg-primary/5 rounded-xl border border-primary/20 p-4 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Check size={16} className="text-primary" />
+                  <p className="text-sm font-semibold text-foreground">Included with Family Plan</p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Premium event pages, goal cards, and thank-you automation are all included. No Event Pass needed.
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Waives the platform fee up to $7,500 for one event
-              </p>
-              <Button
-                variant="outline"
-                className="w-full"
-                data-testid="button-buy-event-pass"
-                onClick={() => {
-                  haptic("medium");
-                }}
-              >
-                Buy an Event Pass
-              </Button>
-            </div>
+            ) : (
+              <div className="bg-muted/30 rounded-xl border border-border/50 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <CreditCard size={16} className="text-muted-foreground" />
+                  <p className="text-sm font-semibold text-foreground">Event Pass</p>
+                  <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">$99 one-time</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Waives the platform fee up to $7,500 for one event. Includes premium themes, goal cards, and thank-you automation.
+                </p>
+                <Link href="/events">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    data-testid="button-buy-event-pass"
+                    onClick={() => haptic("medium")}
+                  >
+                    View Events
+                  </Button>
+                </Link>
+              </div>
+            )}
           </div>
         </SectionCard>
 

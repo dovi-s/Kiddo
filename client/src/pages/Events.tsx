@@ -2,12 +2,13 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft } from "lucide-react";
+import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft, Check, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
 import { GradientText, EnlighteningReveal, ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 import { useEvents } from "@/hooks/use-events";
 import { useFunds } from "@/hooks/use-funds";
 import { toast } from "@/hooks/use-toast";
@@ -39,9 +40,11 @@ function getEventTypeIcon(eventType: string | null | undefined) {
 
 export default function Events() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { data: subscription } = useSubscription();
   const { data: events = [], isLoading: eventsLoading } = useEvents();
   const { data: funds = [], isLoading: fundsLoading } = useFunds();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const isFamily = subscription?.plan === "family" && subscription?.status === "active";
 
   if (authLoading || eventsLoading || fundsLoading) {
     return (
@@ -288,39 +291,71 @@ export default function Events() {
             transition={{ delay: 0.3, duration: 0.4 }}
             className="mt-8"
           >
-            <div className="gemini-featured-border rounded-2xl">
-              <div className="bg-card rounded-2xl p-6" data-testid="card-event-pass-upsell">
+            {isFamily ? (
+              <div className="bg-card rounded-2xl border border-primary/20 p-6" data-testid="card-family-plan-active">
                 <div className="flex items-start gap-4">
-                  <div className="w-11 h-11 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                    <Star size={20} />
+                  <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <Crown size={20} />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-heading font-semibold text-foreground mb-1" data-testid="text-event-pass-title">
-                      <GradientText>Event Pass</GradientText> · $99 one-time
+                    <h3 className="font-heading font-semibold text-foreground mb-1" data-testid="text-family-plan-title">
+                      Family Plan Active
                     </h3>
-                    <ul className="space-y-2 mt-3 text-sm text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <Gift size={14} className="mt-0.5 text-primary shrink-0" />
-                        Waives the Kora platform fee on up to $7,500 in gifts for one event
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Your events include all premium features at no extra cost.
+                    </p>
+                    <ul className="space-y-2 text-sm text-muted-foreground">
+                      <li className="flex items-center gap-2">
+                        <Check size={14} className="text-primary shrink-0" />
+                        Platform fee waived up to $15,000/year
                       </li>
-                      <li className="flex items-start gap-2">
-                        <Star size={14} className="mt-0.5 text-primary shrink-0" />
-                        Includes premium themes, goal cards, and thank-you automation
+                      <li className="flex items-center gap-2">
+                        <Check size={14} className="text-primary shrink-0" />
+                        Premium themes, goal cards, and thank-you automation
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Check size={14} className="text-primary shrink-0" />
+                        Unlimited premium event pages
                       </li>
                     </ul>
-                    <Link href="/settings">
-                      <Button
-                        className="mt-4 gap-2"
-                        data-testid="button-get-event-pass"
-                        onClick={() => haptic("medium")}
-                      >
-                        Get Event Pass
-                      </Button>
-                    </Link>
                   </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="gemini-featured-border rounded-2xl">
+                <div className="bg-card rounded-2xl p-6" data-testid="card-event-pass-upsell">
+                  <div className="flex items-start gap-4">
+                    <div className="w-11 h-11 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <Star size={20} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-heading font-semibold text-foreground mb-1" data-testid="text-event-pass-title">
+                        <GradientText>Event Pass</GradientText> · $99 one-time
+                      </h3>
+                      <ul className="space-y-2 mt-3 text-sm text-muted-foreground">
+                        <li className="flex items-start gap-2">
+                          <Gift size={14} className="mt-0.5 text-primary shrink-0" />
+                          Waives the Kora platform fee on up to $7,500 in gifts for one event
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <Star size={14} className="mt-0.5 text-primary shrink-0" />
+                          Includes premium themes, goal cards, and thank-you automation
+                        </li>
+                      </ul>
+                      <Link href="/settings">
+                        <Button
+                          className="mt-4 gap-2"
+                          data-testid="button-get-event-pass"
+                          onClick={() => haptic("medium")}
+                        >
+                          Get Event Pass
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </main>
