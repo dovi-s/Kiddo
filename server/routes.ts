@@ -948,14 +948,40 @@ export async function registerRoutes(
         }
       }
       
+      const parsedAmount = parseFloat(amount) || 0;
       const fees = stripeService.calculateFees(
-        parseFloat(amount) || 0, 
+        parsedAmount, 
         coverFees || false, 
         hasEventPass, 
         hasFamilyPlan,
         paymentMethod || 'card'
       );
-      res.json({ ...fees, hasEventPass, hasFamilyPlan });
+      
+      const processingFeeRate = paymentMethod === 'bank' 
+        ? '0.8% (max $5.00)' 
+        : '2.9% + $0.30';
+      const koraFeeRate = hasEventPass || hasFamilyPlan 
+        ? 'Waived' 
+        : '1.5% (min $1, max $10)';
+      const stripeFeeExplanation = paymentMethod === 'bank'
+        ? 'ACH bank transfer processing fee charged by Stripe.'
+        : 'Card processing fee charged by Stripe for secure payment handling.';
+      const koraFeeExplanation = hasEventPass
+        ? 'Waived because the host purchased an Event Pass ($99/event).'
+        : hasFamilyPlan
+          ? 'Waived because the host has an active Family Plan ($149/year).'
+          : 'Kora platform fee that supports secure investing infrastructure. Minimum $1, maximum $10 per gift.';
+
+      res.json({ 
+        ...fees, 
+        hasEventPass, 
+        hasFamilyPlan,
+        processingFeeRate,
+        koraFeeRate,
+        stripeFeeExplanation,
+        koraFeeExplanation,
+        feesSavedByPlan: hasEventPass || hasFamilyPlan ? Math.min(Math.max(parsedAmount * 0.015, 1), 10) : 0,
+      });
     } catch (error) {
       console.error('Error calculating fees:', error);
       res.status(500).json({ error: 'Failed to calculate fees' });
@@ -993,6 +1019,8 @@ export async function registerRoutes(
         }
       }
 
+      const recipientName = fund.recipientFirstName || fund.name || 'recipient';
+
       const session = await stripeService.createGiftCheckoutSession({
         fundId,
         eventId,
@@ -1004,6 +1032,7 @@ export async function registerRoutes(
         hasEventPass,
         hasFamilyPlan,
         fundUserId: fund.userId,
+        recipientName,
         paymentMethod: paymentMethod || 'card',
         successUrl: `${baseUrl}/gift/success?fundId=${fundId}&eventId=${eventId || ''}`,
         cancelUrl: `${baseUrl}/gift/${eventId || fundId}?canceled=true`,

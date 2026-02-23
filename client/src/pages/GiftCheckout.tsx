@@ -40,6 +40,11 @@ interface FeeData {
   netToFund: number;
   hasEventPass: boolean;
   hasFamilyPlan: boolean;
+  processingFeeRate?: string;
+  koraFeeRate?: string;
+  stripeFeeExplanation?: string;
+  koraFeeExplanation?: string;
+  feesSavedByPlan?: number;
 }
 
 interface PublicEventData {
@@ -82,7 +87,6 @@ export default function GiftCheckout() {
   const [message, setMessage] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("apple_pay");
   const [coverFees, setCoverFees] = useState(true);
-  const [showFees, setShowFees] = useState(false);
   const [showEducation, setShowEducation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -165,9 +169,9 @@ export default function GiftCheckout() {
     : (activeAmount * 0.029 + 0.30);
   const processingFee = feeData?.processingFee ?? estimatedProcessingFee;
   const platformFee = feeData?.koraFee ?? Math.max(1, Math.min(10, activeAmount * 0.015));
-  const totalCharge = feeData?.totalCharge ?? (coverFees ? activeAmount + processingFee + platformFee : activeAmount);
-  const achSavings = (activeAmount * 0.029 + 0.30) - Math.min(5, activeAmount * 0.008);
   const feeWaived = feeData?.hasEventPass || feeData?.hasFamilyPlan;
+  const totalCharge = feeData?.totalCharge ?? (activeAmount + processingFee + (feeWaived ? 0 : platformFee));
+  const achSavings = (activeAmount * 0.029 + 0.30) - Math.min(5, activeAmount * 0.008);
 
   const canSubmit = isValidAmount && senderName.trim().length > 0;
 
@@ -602,99 +606,154 @@ export default function GiftCheckout() {
         </motion.section>
 
         <motion.section
-          className="bg-card rounded-2xl shadow-premium-sm overflow-hidden"
+          className="bg-card rounded-2xl shadow-premium-sm overflow-hidden border border-border/50"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.22 }}
+          data-testid="section-fee-breakdown"
         >
-          <button
-            className="w-full p-5 flex items-center justify-between"
-            onClick={() => {
-              haptic("light");
-              setShowFees(!showFees);
-            }}
-            data-testid="button-toggle-fees"
-          >
-            <div className="text-left">
-              <h2 className="font-heading text-lg font-semibold text-foreground">Fee breakdown</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Total: ${totalCharge.toFixed(2)}
+          <div className="p-5 pb-0">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-heading text-lg font-semibold text-foreground">Order summary</h2>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Shield size={11} />
+                <span>Transparent pricing</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="px-5 pt-3 pb-5 space-y-4">
+            <div className="bg-primary/5 border border-primary/15 rounded-xl p-3.5">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <Gift size={14} className="text-primary" />
+                  {recipientName} receives
+                </span>
+                <span className="text-lg font-bold text-primary" data-testid="text-recipient-receives">
+                  ${(coverFees ? activeAmount : (feeData?.netToFund ?? activeAmount - platformFee)).toFixed(2)}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {coverFees
+                  ? `100% of your $${activeAmount.toFixed(2)} gift goes directly into ${recipientName}'s investment fund`
+                  : `Your $${activeAmount.toFixed(2)} gift minus the $${platformFee.toFixed(2)} platform fee`}
               </p>
             </div>
-            <motion.div
-              animate={{ rotate: showFees ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronDown size={20} className="text-muted-foreground" />
-            </motion.div>
-          </button>
 
-          <AnimatePresence>
-            {showFees && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="overflow-hidden"
-              >
-                <div className="px-5 pb-5 space-y-3">
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Gift amount</span>
-                      <span className="text-foreground font-medium">${activeAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">
-                        Processing ({paymentMethod === "bank" ? "ACH" : paymentMethod === "apple_pay" ? "Apple/Google Pay" : paymentMethod === "cashapp" ? "Cash App" : "Card"})
-                      </span>
-                      <span className="text-foreground">${processingFee.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Kora platform fee</span>
-                      {feeWaived ? (
-                        <span className="text-green-600 font-medium">Waived</span>
-                      ) : (
-                        <span className="text-foreground">${platformFee.toFixed(2)}</span>
-                      )}
-                    </div>
-                    {feeWaived && (
-                      <p className="text-xs text-green-600 flex items-center gap-1">
-                        <Check size={12} />
-                        {feeData?.hasEventPass ? "Event Pass" : "Family Plan"} active - platform fee waived
-                      </p>
-                    )}
-                    <div className="border-t border-border pt-2 flex justify-between font-semibold">
-                      <span className="text-foreground">Total</span>
-                      <span className="text-foreground">${totalCharge.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  <button
-                    className="w-full flex items-center justify-between py-3 px-3 rounded-xl bg-muted"
-                    onClick={() => {
-                      haptic("selection");
-                      setCoverFees(!coverFees);
-                    }}
-                    data-testid="button-toggle-cover-fees"
-                  >
-                    <span className="text-sm text-foreground">
-                      Cover the fees so 100% goes to {recipientName}'s fund
-                    </span>
-                    <div className={`w-10 h-6 rounded-full transition-colors relative ${
-                      coverFees ? "bg-primary" : "bg-muted-foreground/30"
-                    }`}>
-                      <motion.div
-                        className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm"
-                        animate={{ left: coverFees ? 18 : 2 }}
-                        transition={{ duration: 0.2 }}
-                      />
-                    </div>
-                  </button>
+            <div className="space-y-2.5 text-sm">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-foreground font-medium">Gift amount</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">Deposited into {recipientName}'s investment fund</p>
                 </div>
-              </motion.div>
+                <span className="text-foreground font-medium shrink-0">${activeAmount.toFixed(2)}</span>
+              </div>
+
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-foreground font-medium">
+                    Processing fee ({feeData?.processingFeeRate || (paymentMethod === "bank" ? "0.8%, max $5" : "2.9% + $0.30")})
+                  </span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {feeData?.stripeFeeExplanation || (paymentMethod === "bank"
+                      ? "ACH bank transfer processing fee charged by Stripe."
+                      : "Card processing fee charged by Stripe for secure payment handling.")}
+                  </p>
+                </div>
+                <span className="text-foreground shrink-0">${processingFee.toFixed(2)}</span>
+              </div>
+
+              {paymentMethod !== "bank" && activeAmount >= 50 && achSavings > 0 && (
+                <div className="flex items-center gap-1.5 text-xs text-green-600 pl-1">
+                  <TrendingUp size={11} />
+                  <span>Switch to bank transfer to save ${achSavings.toFixed(2)} in processing fees</span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="text-foreground font-medium">Kora platform fee{!feeWaived ? ` (${feeData?.koraFeeRate || "1.5%, min $1, max $10"})` : ""}</span>
+                  {feeWaived ? (
+                    <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
+                      <Check size={10} />
+                      {feeData?.koraFeeExplanation || (feeData?.hasEventPass ? "Waived by Event Pass ($99/event)" : "Waived by Family Plan ($149/year)")}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {feeData?.koraFeeExplanation || "Kora platform fee that supports secure investing infrastructure. Minimum $1, maximum $10 per gift."}
+                      {!coverFees && " Deducted from gift amount."}
+                      {coverFees && ` Added to your total so the full gift goes to ${recipientName}.`}
+                    </p>
+                  )}
+                </div>
+                {feeWaived ? (
+                  <span className="text-green-600 font-medium shrink-0 line-through decoration-green-600/50">
+                    ${Math.min(Math.max(activeAmount * 0.015, 1), 10).toFixed(2)}
+                  </span>
+                ) : (
+                  <span className="text-foreground shrink-0">${platformFee.toFixed(2)}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-border pt-3">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-foreground font-semibold">You pay</span>
+                <span className="text-foreground text-lg font-bold" data-testid="text-total-charge">${totalCharge.toFixed(2)}</span>
+              </div>
+
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Goes to {recipientName}'s fund</span>
+                  <span className="font-medium text-foreground">${(coverFees ? activeAmount : (feeData?.netToFund ?? activeAmount - platformFee)).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Payment processing (Stripe)</span>
+                  <span>${processingFee.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Kora platform</span>
+                  <span>{feeWaived ? "$0.00" : `$${platformFee.toFixed(2)}`}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              className="w-full flex items-center justify-between py-3 px-3 rounded-xl bg-muted"
+              onClick={() => {
+                haptic("selection");
+                setCoverFees(!coverFees);
+              }}
+              data-testid="button-toggle-cover-fees"
+            >
+              <div className="text-left">
+                <span className="text-sm font-medium text-foreground">
+                  Cover fees for {recipientName}
+                </span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {coverFees
+                    ? `You're covering $${(processingFee + (feeWaived ? 0 : platformFee)).toFixed(2)} in fees. ${recipientName} gets the full $${activeAmount.toFixed(2)}.`
+                    : `Turn on so ${recipientName} receives 100% of your $${activeAmount.toFixed(2)} gift.`}
+                </p>
+              </div>
+              <div className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ml-3 ${
+                coverFees ? "bg-primary" : "bg-muted-foreground/30"
+              }`}>
+                <motion.div
+                  className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm"
+                  animate={{ left: coverFees ? 18 : 2 }}
+                  transition={{ duration: 0.2 }}
+                />
+              </div>
+            </button>
+
+            {!feeWaived && (
+              <div className="bg-muted/50 rounded-xl p-3 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Save on fees with a plan</p>
+                <p>The host can waive the Kora platform fee for all guests by purchasing a <strong>Family Plan ($149/year)</strong> or an <strong>Event Pass ($99/event)</strong>.</p>
+              </div>
             )}
-          </AnimatePresence>
+          </div>
         </motion.section>
 
         <motion.section

@@ -846,18 +846,33 @@ export default function Settings() {
                   <p className="text-sm text-muted-foreground">
                     One price for your whole family. Platform fee waived on up to $15,000 in gifts per year.
                   </p>
+                  <div className="bg-background rounded-lg p-3 border border-border/30 text-xs text-muted-foreground space-y-1.5">
+                    <p className="font-medium text-foreground text-sm">Fee savings example</p>
+                    <div className="flex justify-between">
+                      <span>On a $100 gift (Free plan)</span>
+                      <span>$1.50 Kora fee</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>On a $100 gift (Family Plan)</span>
+                      <span className="text-green-600 font-medium">$0.00 Kora fee</span>
+                    </div>
+                    <div className="flex justify-between pt-1 border-t border-border/30">
+                      <span>If you receive $5,000 in gifts/year</span>
+                      <span className="text-green-600 font-medium">Save ~$75</span>
+                    </div>
+                  </div>
                   <ul className="space-y-1.5 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <Check size={14} className="text-primary" />
+                      Kora platform fee waived (up to $15,000/year in gifts)
+                    </li>
                     <li className="flex items-center gap-2">
                       <Check size={14} className="text-primary" />
                       Unlimited premium event pages
                     </li>
                     <li className="flex items-center gap-2">
                       <Check size={14} className="text-primary" />
-                      Household dashboard
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check size={14} className="text-primary" />
-                      Recurring gift management
+                      Household dashboard and recurring gift management
                     </li>
                     <li className="flex items-center gap-2">
                       <Check size={14} className="text-primary" />
@@ -932,7 +947,7 @@ export default function Settings() {
                   <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">$99 one-time</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Waives the platform fee up to $7,500 for one event. Includes premium themes, goal cards, and thank-you automation.
+                  Waives the Kora platform fee (1.5% per gift) up to $7,500 in gift volume for one event. Includes premium themes, goal cards, and thank-you automation. Processing fees (Stripe) still apply.
                 </p>
                 <Link href="/events">
                   <Button

@@ -60,7 +60,7 @@ The platform emphasizes transparency regarding asset holding (e.g., Apex Clearin
 ### Public Pages (no auth required)
 *   **Home** (`/`): Landing page with hero, growth calculator, how it works, trust section, pricing, CTA
 *   **FAQ** (`/faq`, `/how-it-works`): Searchable FAQ with How It Works visual guides
-*   **Gift Checkout** (`/:fund`, `/:fund/:event`): Gift-giver checkout with one-tap amounts, execution models, message, fee transparency
+*   **Gift Checkout** (`/:fund`, `/:fund/:event`): Gift-giver checkout with one-tap amounts, execution models, message, always-visible order summary with itemized fees (gift amount, processing fee with rate, Kora platform fee with explanation, total charge, recipient receives amount, cover-fees toggle, plan savings info)
 *   **Gift Success** (`/gift/success`): Celebration page after gifting with sharing CTAs
 *   **Kid View** (`/kid/:fundId`): Fun kid-friendly view using garden/seed metaphor, public API endpoints
 
@@ -70,12 +70,12 @@ The platform emphasizes transparency regarding asset holding (e.g., Apex Clearin
 *   **Activate Investing** (`/activate`): Plain-English KYC simulation with strategy picker
 
 ### Authenticated Pages (sidebar offset)
-*   **Dashboard** (`/dashboard`): Fund switcher, balance breakdown, quick actions, growth projection, holdings, recent gifts, events summary
+*   **Dashboard** (`/dashboard`): Fund switcher, balance breakdown, quick actions (share, create event, invest cash), growth projection, holdings with sell action, recent gifts, events summary
 *   **Events** (`/events`): Event list with stats, share links, Event Pass upsell
 *   **Event Create** (`/event/create`): Multi-step event creation (type, details, fund link, goal)
 *   **Memory Book** (`/memory/:fundId`): Timeline of gift messages, milestones, photos, notes
 *   **Activity** (`/activity`): Filtered activity feed grouped by date
-*   **Settings** (`/settings`): Profile, funds list, membership, Event Passes, KYC status, privacy
+*   **Settings** (`/settings`): Profile, funds list, membership (with fee savings example), Event Passes, KYC status, privacy toggle per fund, sell holdings, withdraw cash, bank account management
 
 ### Reusable Components
 *   **EducationTip** (`client/src/components/ui/education.tsx`): Inline, expandable, and tooltip education with pre-built content for UTMA, auto-invest, SIPC, fees, pending cash, taxes, gift growth

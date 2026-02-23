@@ -14,6 +14,7 @@ export interface GiftCheckoutParams {
   hasEventPass?: boolean;
   hasFamilyPlan?: boolean;
   fundUserId?: string;
+  recipientName?: string;
   successUrl: string;
   cancelUrl: string;
   paymentMethod?: PaymentMethodPreference;
@@ -112,22 +113,85 @@ export class StripeService {
       params.hasFamilyPlan || false,
       params.paymentMethod
     );
-    const totalCents = Math.round(fees.totalCharge * 100);
     const paymentMethodTypes = this.getPaymentMethodTypes(params.paymentMethod);
 
-    return await stripe.checkout.sessions.create({
-      payment_method_types: paymentMethodTypes,
-      line_items: [{
+    const recipientLabel = params.recipientName || 'recipient';
+    const giftAmountCents = Math.round(fees.netToFund * 100);
+    const processingFeeCents = Math.round(fees.processingFee * 100);
+    const koraFeeCents = Math.round(fees.koraFee * 100);
+
+    const payMethodLabel = params.paymentMethod === 'bank' ? 'ACH bank transfer' 
+      : params.paymentMethod === 'apple_pay' ? 'Apple Pay / Google Pay'
+      : params.paymentMethod === 'cashapp' ? 'Cash App'
+      : 'Card';
+
+    const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `Gift to fund`,
-            description: params.message ? `"${params.message.slice(0, 100)}"` : 'Investment gift',
+            name: `Investment gift for ${recipientLabel}`,
+            description: params.coverFees
+              ? `Full $${params.amount.toFixed(2)} goes to ${recipientLabel}'s investment fund`
+              : `$${fees.netToFund.toFixed(2)} deposited into ${recipientLabel}'s investment fund`,
           },
-          unit_amount: totalCents,
+          unit_amount: giftAmountCents,
         },
         quantity: 1,
-      }],
+      },
+    ];
+
+    if (processingFeeCents > 0) {
+      line_items.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `Payment processing (${payMethodLabel})`,
+            description: params.paymentMethod === 'bank'
+              ? 'ACH transfer fee: 0.8% of gift amount, capped at $5.00'
+              : `${payMethodLabel} processing: 2.9% + $0.30`,
+          },
+          unit_amount: processingFeeCents,
+        },
+        quantity: 1,
+      });
+    }
+
+    if (koraFeeCents > 0) {
+      line_items.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Kora platform fee',
+            description: '1.5% of gift amount (min $1, max $10). Supports secure investing infrastructure.',
+          },
+          unit_amount: koraFeeCents,
+        },
+        quantity: 1,
+      });
+    }
+
+    if (fees.koraFee === 0 && (params.hasEventPass || params.hasFamilyPlan)) {
+      const waiver = params.hasFamilyPlan 
+        ? 'Kora platform fee waived by Family Plan ($149/year)'
+        : 'Kora platform fee waived by Event Pass ($99/event)';
+      const normalFee = Math.min(Math.max(params.amount * 0.015, 1), 10);
+      line_items.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: `${waiver}`,
+            description: `Normally $${normalFee.toFixed(2)} (1.5% of gift). Saving you money on every gift.`,
+          },
+          unit_amount: 0,
+        },
+        quantity: 1,
+      });
+    }
+
+    return await stripe.checkout.sessions.create({
+      payment_method_types: paymentMethodTypes,
+      line_items,
       mode: 'payment',
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
@@ -147,13 +211,20 @@ export class StripeService {
         coverFees: params.coverFees.toString(),
         hasEventPass: (params.hasEventPass || false).toString(),
         hasFamilyPlan: (params.hasFamilyPlan || false).toString(),
+        paymentMethod: params.paymentMethod || 'card',
       },
       payment_intent_data: {
+        description: `Gift of $${fees.netToFund.toFixed(2)} to ${recipientLabel}'s investment fund via Kora`,
         metadata: {
           type: 'gift',
           fundId: params.fundId,
           fundUserId: params.fundUserId || '',
           eventId: params.eventId || '',
+          senderName: params.senderName,
+          baseAmount: params.amount.toString(),
+          processingFee: fees.processingFee.toString(),
+          koraFee: fees.koraFee.toString(),
+          netToFund: fees.netToFund.toString(),
         },
       },
     });

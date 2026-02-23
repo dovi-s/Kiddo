@@ -537,14 +537,56 @@ export default function Home() {
             ))}
           </div>
 
-          <FadeIn delay={0.4} className="text-center mt-10 max-w-2xl mx-auto">
-            <div className="bg-card rounded-2xl shadow-premium-sm p-6">
-              <p className="text-sm font-medium text-foreground mb-2">Fee details</p>
-              <p className="text-xs text-muted-foreground leading-relaxed" data-testid="text-fee-details">
-                Payment processing: Card, Apple Pay, and Google Pay are ~2.9% + $0.30. Bank transfer (ACH) is just 0.8% (max $5).
-                Kora platform fee: 1.5% per gift (min $1, max $10). Event Pass and Family plans waive the platform fee.
-                Givers always see a clear fee breakdown before paying.
-              </p>
+          <FadeIn delay={0.4} className="mt-10 max-w-3xl mx-auto">
+            <div className="bg-card rounded-2xl shadow-premium-sm p-6" data-testid="section-fee-details">
+              <p className="text-sm font-semibold text-foreground mb-4 text-center">Complete fee breakdown</p>
+              <div className="grid md:grid-cols-2 gap-4 text-xs text-muted-foreground">
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-medium text-foreground text-sm mb-1">Payment processing (Stripe)</p>
+                    <div className="space-y-1.5 pl-3 border-l-2 border-primary/20">
+                      <div className="flex justify-between">
+                        <span>Credit/debit card</span>
+                        <span className="font-medium">2.9% + $0.30</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Apple Pay / Google Pay</span>
+                        <span className="font-medium">2.9% + $0.30</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Bank transfer (ACH)</span>
+                        <span className="font-medium text-green-600">0.8% (max $5)</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] mt-1">Charged by Stripe for secure payment processing. Kora does not mark up processing fees.</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-medium text-foreground text-sm mb-1">Kora platform fee</p>
+                    <div className="space-y-1.5 pl-3 border-l-2 border-primary/20">
+                      <div className="flex justify-between">
+                        <span>Free plan</span>
+                        <span className="font-medium">1.5% per gift (min $1, max $10)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Event Pass ($99)</span>
+                        <span className="font-medium text-green-600">Waived (up to $7,500)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Family Plan ($149/yr)</span>
+                        <span className="font-medium text-green-600">Waived (up to $15,000/yr)</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] mt-1">Covers investing infrastructure, compliance, and customer support. No hidden charges.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-border/30 text-center">
+                <p className="text-xs text-muted-foreground">
+                  Givers always see a clear order summary with every fee itemized before paying. Hosts can cover fees so recipients get 100%. No withdrawal fees. No account fees. No surprise charges.
+                </p>
+              </div>
             </div>
           </FadeIn>
         </div>

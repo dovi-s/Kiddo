@@ -62,7 +62,7 @@ async function createProducts() {
 
   const familyPlanPrice = await stripe.prices.create({
     product: familyPlan.id,
-    unit_amount: 19900,
+    unit_amount: 14900,
     currency: 'usd',
     recurring: { interval: 'year' },
     metadata: {
