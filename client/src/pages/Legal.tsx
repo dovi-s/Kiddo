@@ -63,7 +63,7 @@ export default function Legal() {
               <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
                 <div>
                   <h3 className="font-medium text-foreground mb-2">1. What Kora Is</h3>
-                  <p>Kora is a technology platform that makes it easy to give stock investments as gifts. We are not a broker-dealer, investment adviser, or bank. Brokerage services are provided by our clearing partners, who are registered with FINRA and members of SIPC.</p>
+                  <p>Kora is a technology platform that makes it easy to give stock investments as gifts. We are not a broker-dealer, investment adviser, or bank. Brokerage services are provided by DriveWealth, LLC, a FINRA-registered broker-dealer and member of SIPC.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">2. Account Eligibility</h3>
@@ -113,7 +113,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Who We Share With</h3>
-                  <p>We share information with our clearing partners (to open and manage investment accounts), payment processors (to process transactions), and as required by law. We do not sell or rent your personal information to third parties for marketing purposes.</p>
+                  <p>We share information with DriveWealth, LLC (to open and manage investment accounts), payment processors (to process transactions), and as required by law. We do not sell or rent your personal information to third parties for marketing purposes.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Children's Privacy</h3>
@@ -121,7 +121,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Data Security</h3>
-                  <p>We use 256-bit SSL encryption, secure data storage, and follow industry best practices for data protection. Your identity verification data (like SSN) is encrypted and transmitted directly to our clearing partners.</p>
+                  <p>We use 256-bit SSL encryption, secure data storage, and follow industry best practices for data protection. Your identity verification data (like SSN) is encrypted and transmitted directly to DriveWealth, LLC.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Your Rights</h3>
@@ -147,7 +147,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Brokerage Services</h3>
-                  <p>Securities are offered through our clearing partners, which are FINRA-registered broker-dealers and SIPC members. Clearing and custody services are provided by the clearing firm. Kora facilitates the user experience but does not execute trades or hold customer assets.</p>
+                  <p>Securities are offered through DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. Clearing and custody services are provided by DriveWealth. Kora facilitates the user experience but does not execute trades or hold customer assets.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">SIPC Coverage</h3>
@@ -167,7 +167,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Regulatory Information</h3>
-                  <p>Check the background of our clearing partners on <a href="https://brokercheck.finra.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">FINRA's BrokerCheck</a>.</p>
+                  <p>Check the background of DriveWealth, LLC on <a href="https://brokercheck.finra.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">FINRA's BrokerCheck</a>.</p>
                 </div>
               </div>
             </div>

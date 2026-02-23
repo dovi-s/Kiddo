@@ -122,7 +122,7 @@ export default function About() {
               {
                 icon: Shield,
                 title: "Trust is earned, not assumed",
-                desc: "Real regulated accounts. SIPC protection up to $500,000. Transparent fees shown before every transaction. Your money is held at a clearing firm, never by us.",
+                desc: "Real regulated accounts. SIPC protection up to $500,000. Transparent fees shown before every transaction. Your money is held at DriveWealth, LLC, a FINRA-registered broker-dealer. Never by us.",
               },
               {
                 icon: Heart,
@@ -163,7 +163,7 @@ export default function About() {
                   </div>
                   <div>
                     <p className="font-medium text-foreground mb-1">We never hold your money</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">Your investments are held at a FINRA-registered clearing firm, completely separate from Kora. Even if something happened to us, your assets are safe.</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">Your investments are held at DriveWealth, LLC, a FINRA-registered broker-dealer, completely separate from Kora. Even if something happened to us, your assets are safe.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">

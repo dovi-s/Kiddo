@@ -718,6 +718,15 @@ export default function GiftCheckout() {
               </div>
             </div>
 
+            {activeAmount >= 1000 && (
+              <div className="bg-blue-50 rounded-xl border border-blue-200/50 p-3" data-testid="tip-gift-tax">
+                <p className="text-xs font-medium text-blue-900 mb-0.5">Good to know</p>
+                <p className="text-xs text-blue-800">
+                  Each person can gift up to $19,000 per recipient per year without any tax reporting. The recipient never owes income tax on the gift itself.
+                </p>
+              </div>
+            )}
+
             <button
               className="w-full flex items-center justify-between py-3 px-3 rounded-xl bg-muted"
               onClick={() => {
@@ -878,7 +887,7 @@ export default function GiftCheckout() {
             </div>
           </div>
           <p className="text-[10px] text-muted-foreground/70">
-            Investments are not FDIC insured and may lose value. Assets held by Alpaca Securities LLC, Member FINRA/SIPC.
+            Investments are not FDIC insured and may lose value. Assets held by DriveWealth, LLC, Member FINRA/SIPC.
           </p>
         </motion.footer>
       </main>

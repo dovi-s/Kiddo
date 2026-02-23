@@ -10,7 +10,7 @@ const faqItems = [
   {
     id: "how-invested",
     question: "How does the money actually get invested?",
-    answer: "Kora uses an embedded brokerage model, similar to how apps like Robinhood and Acorns work. When a gift comes in, the money is invested through a regulated broker-dealer and held at a FINRA-member clearing firm. You get a real brokerage account with real investments, and there are no trading commissions. Kora never holds your money directly.",
+    answer: "Kora uses an embedded brokerage model, similar to how apps like Robinhood and Acorns work. When a gift comes in, the money is invested through DriveWealth, LLC, a FINRA-registered broker-dealer. You get a real brokerage account with real investments, including fractional shares down to 8 decimal places. There are no trading commissions. Kora never holds your money directly.",
   },
   {
     id: "utma",
@@ -20,7 +20,7 @@ const faqItems = [
   {
     id: "safety",
     question: "Is my child's money safe?",
-    answer: "Yes. All accounts are held at a regulated clearing firm and protected by SIPC (Securities Investor Protection Corporation) for up to $500,000. This is the same protection that covers accounts at major brokerages. Kora never holds custody of your funds.",
+    answer: "Yes. All accounts are held at DriveWealth, LLC, a FINRA-registered broker-dealer, and protected by SIPC (Securities Investor Protection Corporation) for up to $500,000. This is the same protection that covers accounts at major brokerages. Kora never holds custody of your funds.",
   },
   {
     id: "fees",
@@ -70,7 +70,7 @@ const faqItems = [
   {
     id: "gift-safe",
     question: "How do gift-givers know their gift is safe?",
-    answer: "Gift-givers see transparent fees before they check out, so there are no surprises. Every dollar goes into a real, SIPC-protected brokerage account at a regulated clearing firm. It is not a prepaid card or store credit. It is a real investment in their name.",
+    answer: "Gift-givers see transparent fees before they check out, so there are no surprises. Every dollar goes into a real, SIPC-protected brokerage account at DriveWealth, LLC. It is not a prepaid card or store credit. It is a real investment in their name.",
   },
   {
     id: "choose-stocks",
@@ -96,6 +96,16 @@ const faqItems = [
     id: "monthly-fees",
     question: "Are there monthly fees?",
     answer: "No. Kora has no monthly fees and no account minimums. You only pay when a gift is made: a small platform fee of 1.5% per gift (min $1, max $10), plus standard payment processing. Many competitors charge $3 to $5 per month whether or not you receive gifts. With Kora, if nobody gives this month, you pay nothing. The Event Pass and Family Plan can waive the platform fee entirely for higher gift volumes.",
+  },
+  {
+    id: "who-holds",
+    question: "Who holds my investments?",
+    answer: "Your investments are held by DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. DriveWealth provides the brokerage infrastructure that powers Kora, including account opening, trade execution, custody, and settlement. They support fractional shares down to 8 decimal places, so every dollar of a gift gets fully invested. Kora is a technology platform that provides the user experience, but DriveWealth holds and safeguards your assets. Your securities are held in an omnibus account structure at DriveWealth, with your ownership individually tracked and protected by SIPC up to $500,000.",
+  },
+  {
+    id: "tax-implications",
+    question: "What are the tax implications of gifting stock to a child?",
+    answer: "There are a few tax concepts to be aware of. First, the gift itself: each person can give up to $19,000 per recipient per year without any gift tax reporting (married couples can give up to $38,000). Most gifts on Kora are well under this. Second, cost basis: when stock is gifted, the recipient inherits the giver's original cost basis and holding period, not the value at the time of the gift. This means capital gains are calculated from what was originally paid. Third, the kiddie tax: for children under 19 (or under 24 if full-time students), unearned income over $2,600 per year may be taxed at the parent's rate. The first $1,300 is tax-free, the next $1,300 is taxed at the child's rate. Most custodial accounts on Kora stay well below these thresholds. We always recommend consulting a tax professional for advice specific to your situation.",
   },
 ];
 

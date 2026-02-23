@@ -341,8 +341,8 @@ export default function Home() {
               },
               {
                 icon: Check,
-                title: "Regulated clearing firm",
-                desc: "All trades are executed through a FINRA-registered broker-dealer and clearing firm.",
+                title: "DriveWealth clearing",
+                desc: "All trades are executed through DriveWealth, LLC, a FINRA-registered broker-dealer with fractional share support.",
               },
               {
                 icon: Lock,
@@ -368,7 +368,7 @@ export default function Home() {
           </div>
           <FadeIn delay={0.3} className="text-center mt-8">
             <p className="text-xs text-muted-foreground" data-testid="text-clearing-partner">
-              Assets held at our clearing partner, a FINRA-registered firm.
+              Assets held at DriveWealth, LLC, Member FINRA/SIPC.
             </p>
           </FadeIn>
         </div>

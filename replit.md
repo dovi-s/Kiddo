@@ -53,7 +53,7 @@ Kora supports three models:
 
 ### Trust Layer & Memory Book
 
-The platform emphasizes transparency regarding asset holding (e.g., Apex Clearing), SIPC coverage, account control, status updates (pending → invested → settled), and clear fee disclosure. A "Memory Book" feature captures sentimental data like messages, photos, and milestones to foster long-term engagement.
+The platform emphasizes transparency regarding asset holding (DriveWealth, LLC), SIPC coverage, account control, status updates (pending → invested → settled), and clear fee disclosure. A "Memory Book" feature captures sentimental data like messages, photos, and milestones to foster long-term engagement.
 
 ## Pages and Routes
 
@@ -86,7 +86,7 @@ The platform emphasizes transparency regarding asset holding (e.g., Apex Clearin
 *   **Database**: PostgreSQL (managed via `DATABASE_URL`), Drizzle Kit for migrations.
 *   **Payment Processing**: Stripe.
 *   **Authentication & Sessions**: Passport.js (local strategy), express-session, connect-pg-simple.
-*   **Brokerage Integration**: Embedded broker-dealer model with partners like Apex Clearing or DriveWealth for KYC/AML, custody, clearing, settlement, and tax reporting.
+*   **Brokerage Integration**: Embedded broker-dealer model powered by DriveWealth, LLC (FINRA/SIPC member) for KYC/AML, custody, clearing, settlement, fractional shares (8 decimal places), and tax reporting.
 *   **Frontend Libraries**: qrcode.react, date-fns, react-hook-form with @hookform/resolvers.
 
 ## Responsive Layout Architecture

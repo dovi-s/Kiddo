@@ -505,6 +505,12 @@ export default function Dashboard() {
               </EducationTip>
             )}
 
+            {activeFund?.accountType === "UTMA" && holdings.length > 0 && (
+              <EducationTip title={educationContent.kiddieTax.title} icon="security" variant="expandable">
+                {educationContent.kiddieTax.content}
+              </EducationTip>
+            )}
+
             <div className="md:grid md:grid-cols-2 md:gap-6 space-y-6 md:space-y-0">
               <motion.section
                 initial={{ opacity: 0, y: 8 }}

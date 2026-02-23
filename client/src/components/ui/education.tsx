@@ -117,7 +117,7 @@ export const educationContent = {
   },
   costBasis: {
     title: "What about taxes on gifts?",
-    content: "Most gifts are well under the $19,000 annual gift tax exclusion, so there's no gift tax to worry about. When investments are eventually sold, capital gains taxes apply based on the original cost basis.",
+    content: "Most gifts are well under the $19,000 annual gift tax exclusion, so there's no gift tax to worry about. When investments are eventually sold, capital gains taxes apply based on the original cost basis. The recipient inherits the giver's cost basis and holding period, not the value at the time of the gift.",
   },
   giftGrowth: {
     title: "How much can gifts grow?",
@@ -130,5 +130,21 @@ export const educationContent = {
   paymentMethods: {
     title: "What payment methods are accepted?",
     content: "Gift-givers can pay with Apple Pay, Google Pay, any major credit or debit card, or a bank transfer (ACH). Apple Pay and Google Pay are the fastest. Bank transfers have lower processing fees, which is great for larger gifts.",
+  },
+  kiddieTax: {
+    title: "What is the kiddie tax?",
+    content: "For children under 19 (or under 24 if a full-time student), unearned income over $2,600 per year may be taxed at the parent's tax rate instead of the child's. The first $1,300 is tax-free, and the next $1,300 is taxed at the child's rate. This only applies when investments are sold at a gain or when dividends exceed these thresholds. Most custodial accounts stay well below these limits.",
+  },
+  costBasisGifted: {
+    title: "How is cost basis handled for gifted stock?",
+    content: "When you receive stock as a gift, you inherit the giver's original cost basis and their holding period. This means when you eventually sell, your capital gains (or losses) are calculated from what the giver originally paid, not what the stock was worth when you received it. If the stock has gone up since the giver bought it, you will owe taxes on the full gain when you sell.",
+  },
+  giftTaxExclusion: {
+    title: "Is there a limit on tax-free gifts?",
+    content: "Each person can give up to $19,000 per recipient per year without any gift tax implications. Married couples can combine their exclusions to give up to $38,000 per recipient. Beyond that, there is a lifetime exemption of $13.99 million before any gift tax is owed. Most families never come close to these limits. The recipient never owes income tax on receiving a gift.",
+  },
+  utmaTransfer: {
+    title: "When does my child get control?",
+    content: "UTMA accounts automatically transfer to the child's full control at the age of majority, which is 18 or 21 depending on your state. At that point, they can keep the investments, sell them, or transfer to another brokerage. All gifts to a UTMA account are irrevocable, meaning once the gift is made, it legally belongs to the child.",
   },
 };

@@ -25,7 +25,7 @@ export function TrustFooter() {
             </div>
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-[hsl(var(--kora-evergreen))]" />
-              <span>Securities held by Apex Clearing Corp.</span>
+              <span>Securities held by DriveWealth, LLC</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-[hsl(var(--kora-evergreen))]" />

@@ -137,6 +137,13 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
             </p>
           </div>
 
+          <div className="bg-blue-50 rounded-xl border border-blue-200/50 p-3">
+            <p className="text-xs font-medium text-blue-900 mb-1">Tax note: cost basis</p>
+            <p className="text-xs text-blue-800">
+              Capital gains are calculated from the original purchase price, not the value when the gift was received. Long-term holdings (over 1 year) are taxed at a lower rate.
+            </p>
+          </div>
+
           <div className="flex gap-3">
             <Button variant="outline" className="flex-1" onClick={onClose} data-testid="button-cancel-sell">
               Cancel
@@ -790,34 +797,40 @@ export default function Settings() {
             ) : (
               <div className="space-y-3">
                 {funds.map((fund: any) => (
-                  <motion.div
-                    key={fund.id}
-                    whileTap={{ scale: 0.99 }}
-                    className="flex items-center justify-between p-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
-                    onClick={() => {
-                      haptic("selection");
-                      navigate(`/dashboard`);
-                    }}
-                    data-testid={`card-fund-${fund.id}`}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground truncate" data-testid={`text-fund-name-${fund.id}`}>{fund.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-muted-foreground">{fund.accountType || "UTMA"}</span>
-                        <span className="text-xs text-muted-foreground">·</span>
-                        <span className={`text-xs ${fund.status === "active" ? "text-green-600" : "text-muted-foreground"}`} data-testid={`text-fund-status-${fund.id}`}>
-                          {fund.status === "active" ? "Active" : "Draft"}
-                        </span>
-                        {fund.recipientFirstName && (
-                          <>
-                            <span className="text-xs text-muted-foreground">·</span>
-                            <span className="text-xs text-muted-foreground" data-testid={`text-fund-recipient-${fund.id}`}>{fund.recipientFirstName}</span>
-                          </>
-                        )}
+                  <div key={fund.id} className="space-y-2">
+                    <motion.div
+                      whileTap={{ scale: 0.99 }}
+                      className="flex items-center justify-between p-3 rounded-xl border border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+                      onClick={() => {
+                        haptic("selection");
+                        navigate(`/dashboard`);
+                      }}
+                      data-testid={`card-fund-${fund.id}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground truncate" data-testid={`text-fund-name-${fund.id}`}>{fund.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-muted-foreground">{fund.accountType || "UTMA"}</span>
+                          <span className="text-xs text-muted-foreground">·</span>
+                          <span className={`text-xs ${fund.status === "active" ? "text-green-600" : "text-muted-foreground"}`} data-testid={`text-fund-status-${fund.id}`}>
+                            {fund.status === "active" ? "Active" : "Draft"}
+                          </span>
+                          {fund.recipientFirstName && (
+                            <>
+                              <span className="text-xs text-muted-foreground">·</span>
+                              <span className="text-xs text-muted-foreground" data-testid={`text-fund-recipient-${fund.id}`}>{fund.recipientFirstName}</span>
+                            </>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
-                  </motion.div>
+                      <ChevronRight size={16} className="text-muted-foreground flex-shrink-0" />
+                    </motion.div>
+                    {(fund.accountType === "UTMA" || !fund.accountType) && (
+                      <p className="text-[11px] text-muted-foreground/70 px-1" data-testid={`tip-utma-transfer-${fund.id}`}>
+                        This UTMA account transfers to {fund.recipientFirstName || "your child"} at age 18-21 (varies by state). All gifts are irrevocable.
+                      </p>
+                    )}
+                  </div>
                 ))}
               </div>
             )}

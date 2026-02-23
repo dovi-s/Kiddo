@@ -102,7 +102,7 @@ export function Footer() {
 
         <div className="mt-16 pt-8 border-t space-y-4">
           <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
-            Securities offered through our clearing partners. Not FDIC insured. Not bank guaranteed. May lose value.
+            Securities offered through DriveWealth, LLC, Member FINRA/SIPC. Not FDIC insured. Not bank guaranteed. May lose value.
           </p>
           <p className="text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} Kora. All rights reserved.
