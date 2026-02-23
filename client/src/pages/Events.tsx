@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
-import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft, Check, Crown, ExternalLink, X, Eye } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft, Check, Crown, ExternalLink, X, Eye, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
 import { GradientText, EnlighteningReveal, ThinkingOrb } from "@/components/ui/gemini";
@@ -23,6 +24,7 @@ function getEventTypeLabel(eventType: string | null | undefined): string {
     case "christmas": return "Christmas";
     case "graduation": return "Graduation";
     case "just_because": return "Just Because";
+    case "gift_anytime": return "Permanent";
     default: return "Event";
   }
 }
@@ -35,6 +37,7 @@ function getEventTypeIcon(eventType: string | null | undefined) {
     case "christmas": return <TreeDeciduous size={20} />;
     case "graduation": return <GraduationCap size={20} />;
     case "just_because": return <Heart size={20} />;
+    case "gift_anytime": return <Gift size={20} />;
     default: return <Gift size={20} />;
   }
 }
@@ -44,9 +47,55 @@ export default function Events() {
   const { data: subscription } = useSubscription();
   const { data: events = [], isLoading: eventsLoading } = useEvents();
   const { data: funds = [], isLoading: fundsLoading } = useFunds();
+  const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editType, setEditType] = useState("");
+  const [saving, setSaving] = useState(false);
   const isFamily = subscription?.plan === "family" && subscription?.status === "active";
+
+  const openEditModal = (event: Event) => {
+    setEditingEvent(event);
+    setEditName(event.name);
+    setEditDescription(event.description || "");
+    setEditDate(event.eventDate ? new Date(event.eventDate).toISOString().split("T")[0] : "");
+    setEditType(event.eventType || "");
+    haptic("light");
+  };
+
+  const handleSaveEvent = async () => {
+    if (!editingEvent) return;
+    setSaving(true);
+    try {
+      const updates: Record<string, any> = { name: editName.trim() };
+      if (editDescription.trim()) updates.description = editDescription.trim();
+      else updates.description = null;
+      if (editDate) updates.eventDate = editDate;
+      else updates.eventDate = null;
+      if (editType) updates.eventType = editType;
+      const res = await fetch(`/api/events/${editingEvent.id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ["/api/events"] });
+        haptic("success");
+        toast({ title: "Event updated" });
+        setEditingEvent(null);
+      } else {
+        toast({ title: "Could not save changes", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not save changes", variant: "destructive" });
+    }
+    setSaving(false);
+  };
 
   if (authLoading || eventsLoading || fundsLoading) {
     return (
@@ -304,6 +353,17 @@ export default function Events() {
                                 </div>
                               </div>
                             </div>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              data-testid={`button-edit-event-${event.id}`}
+                              onClick={() => openEditModal(event)}
+                            >
+                              <Pencil size={14} />
+                              Edit Event
+                            </Button>
                           </div>
                         </div>
                       </motion.div>
@@ -392,7 +452,8 @@ export default function Events() {
       </main>
 
       <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) setPreviewUrl(null); }}>
-        <DialogContent className="max-w-lg w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl max-h-[90vh]">
+        <DialogContent className="max-w-lg w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl max-h-[90vh]" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">Page Preview</DialogTitle>
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30">
             <div className="flex items-center gap-2">
               <Eye size={16} className="text-muted-foreground" />
@@ -428,6 +489,81 @@ export default function Events() {
                 title="Event page preview"
               />
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editingEvent} onOpenChange={(open) => { if (!open) setEditingEvent(null); }}>
+        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">Edit Event</DialogTitle>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
+            <div className="flex items-center gap-2">
+              <Pencil size={16} className="text-muted-foreground" />
+              <span className="font-heading font-semibold">Edit Event</span>
+            </div>
+            <button
+              onClick={() => setEditingEvent(null)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
+              data-testid="button-edit-close"
+            >
+              <X size={16} className="text-muted-foreground" />
+            </button>
+          </div>
+          <div className="p-5 space-y-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Event Name</label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="e.g. Dovi's 5th Birthday"
+                data-testid="input-edit-event-name"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Event Type</label>
+              <select
+                value={editType}
+                onChange={(e) => setEditType(e.target.value)}
+                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                data-testid="select-edit-event-type"
+              >
+                <option value="gift_anytime">Gift Anytime (Permanent)</option>
+                <option value="birthday">Birthday</option>
+                <option value="baby_shower">Baby Shower</option>
+                <option value="holiday">Holiday</option>
+                <option value="christmas">Christmas</option>
+                <option value="graduation">Graduation</option>
+                <option value="just_because">Just Because</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Description (optional)</label>
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Add a short description for your gift page"
+                rows={3}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                data-testid="input-edit-event-description"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Date (optional)</label>
+              <Input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                data-testid="input-edit-event-date"
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleSaveEvent}
+              disabled={saving || !editName.trim()}
+              data-testid="button-save-event"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

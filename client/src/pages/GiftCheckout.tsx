@@ -109,16 +109,32 @@ export default function GiftCheckout() {
   });
 
   const recipientName = eventData?.fund?.recipientFirstName || fundSlug || "Recipient";
-  const eventType = eventData?.event?.eventType || eventData?.event?.name || "";
+  const eventName = eventData?.event?.name || "";
+  const eventType = eventData?.event?.eventType || "";
   const giftCount = eventData?.event?.giftCount ?? eventData?.giftCount ?? 0;
   const goalAmount = eventData?.event?.goalAmount;
   const giftVolume = eventData?.event?.giftVolume ?? 0;
   const fundId = eventData?.fund?.id;
   const eventId = eventData?.event?.id;
 
-  const heading = eventType
-    ? `${recipientName}'s ${eventType}`
-    : `Gift to ${recipientName}`;
+  const heading = (() => {
+    if (eventName && eventName !== "Gift anytime") return eventName;
+    if (eventType) {
+      const typeLabels: Record<string, string> = {
+        birthday: "Birthday",
+        baby_shower: "Baby Shower",
+        holiday: "Holiday",
+        christmas: "Christmas",
+        graduation: "Graduation",
+        just_because: "Just Because",
+        gift_anytime: "",
+      };
+      const label = typeLabels[eventType];
+      if (!label) return `Gift to ${recipientName}`;
+      return `${recipientName}'s ${label}`;
+    }
+    return `Gift to ${recipientName}`;
+  })();
 
   const growthAmount = compoundGrowth(activeAmount, 0.07, 18);
 

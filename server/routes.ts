@@ -46,7 +46,6 @@ export async function registerRoutes(
       const data = insertFundSchema.parse({ ...req.body, userId });
       const fund = await storage.createFund(data);
       
-      // Create permanent "Gift anytime" link for the fund
       await storage.createEvent({
         fundId: fund.id,
         userId,
@@ -54,6 +53,7 @@ export async function registerRoutes(
         slug: `${fund.slug}-anytime`,
         isPermanent: true,
         status: "active",
+        eventType: "gift_anytime",
       });
       
       res.status(201).json(fund);
@@ -283,7 +283,15 @@ export async function registerRoutes(
       if (event.userId !== (req.user as any).id) {
         return res.status(403).json({ error: 'Forbidden' });
       }
-      const updated = await storage.updateEvent(req.params.id, req.body);
+      const allowedFields = ['name', 'description', 'eventDate', 'eventType', 'goalAmount', 'imageUrl', 'status'] as const;
+      const sanitized: Record<string, any> = {};
+      for (const key of allowedFields) {
+        if (req.body[key] !== undefined) sanitized[key] = req.body[key];
+      }
+      if (Object.keys(sanitized).length === 0) {
+        return res.status(400).json({ error: 'No valid fields to update' });
+      }
+      const updated = await storage.updateEvent(req.params.id, sanitized);
       res.json(updated);
     } catch (error) {
       console.error('Error updating event:', error);
