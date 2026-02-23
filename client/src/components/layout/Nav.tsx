@@ -92,6 +92,9 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
               >
                 Pricing
               </span>
+              <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-about-nav">
+                About
+              </Link>
             </>
           )}
         </div>
@@ -135,6 +138,7 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                     <span onClick={() => { setIsOpen(false); scrollToSection('/#how-it-works'); }} className="font-medium cursor-pointer">How It Works</span>
                     <Link href="/faq" onClick={() => setIsOpen(false)} className="font-medium">FAQ</Link>
                     <span onClick={() => { setIsOpen(false); scrollToSection('/#pricing'); }} className="font-medium cursor-pointer">Pricing</span>
+                    <Link href="/about" onClick={() => setIsOpen(false)} className="font-medium">About</Link>
                     <hr />
                     <Link href="/login" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
                     <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Get started</Button></Link>
