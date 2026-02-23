@@ -7,6 +7,7 @@ import { ArrowRight } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { Mascot } from "@/components/ui/mascot";
 import { GeminiHeroGradient, GradientText, ThinkingOrb, EnlighteningReveal } from "@/components/ui/gemini";
 import { springGentle, easeOutExpo, easeOutBack } from "@/lib/animations";
 import { haptic } from "@/lib/haptics";
@@ -38,7 +39,7 @@ function GrowthCalculator() {
             key={amount}
             initial={{ scale: 1.1 }}
             animate={{ scale: 1 }}
-            className="text-2xl font-semibold text-foreground"
+            className="font-serif text-2xl font-semibold text-foreground"
           >
             ${amount}
           </motion.span>
@@ -80,7 +81,7 @@ function GrowthCalculator() {
                 key={bar.value}
                 initial={{ opacity: 0.5 }}
                 animate={{ opacity: 1 }}
-                className="text-base font-semibold text-foreground"
+                className="font-serif text-base font-semibold text-foreground"
               >
                 ${bar.value.toLocaleString()}
               </motion.span>
@@ -179,6 +180,14 @@ export default function Home() {
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="max-w-3xl mx-auto text-center"
           >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.05, type: "spring", stiffness: 200, damping: 20 }}
+              className="mb-6"
+            >
+              <Mascot size="lg" className="mx-auto" context="home-hero" />
+            </motion.div>
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

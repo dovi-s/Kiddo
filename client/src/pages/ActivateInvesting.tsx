@@ -9,6 +9,7 @@ import { haptic } from "@/lib/haptics";
 import { useFunds } from "@/hooks/use-funds";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ThinkingOrb } from "@/components/ui/gemini";
+import { Mascot } from "@/components/ui/mascot";
 
 type Step = "intro" | "brokerage" | "identity" | "child" | "agreements" | "processing" | "complete";
 
@@ -171,8 +172,8 @@ export default function ActivateInvesting() {
   if (!fundSlug || !targetFund) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-50 bg-background pb-2">
-          <div className="max-w-xl mx-auto px-4 pt-4 h-14 flex items-center justify-center">
+        <header className="sticky top-0 z-50 gemini-glass-nav">
+          <div className="max-w-xl mx-auto px-4 h-14 flex items-center justify-center">
             <Logo size="sm" className="text-primary" linkTo="/dashboard" />
           </div>
         </header>
@@ -202,8 +203,8 @@ export default function ActivateInvesting() {
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
-      <header className="sticky top-0 z-50 bg-background pb-2">
-        <div className="max-w-xl mx-auto px-4 pt-4 h-14 flex items-center justify-between">
+      <header className="sticky top-0 z-50 gemini-glass-nav">
+        <div className="max-w-xl mx-auto px-4 h-14 flex items-center justify-between">
           {step !== "intro" && step !== "brokerage" && step !== "processing" && step !== "complete" ? (
             <button 
               onClick={handleBack} 
@@ -801,18 +802,12 @@ export default function ActivateInvesting() {
             >
               <div className="relative z-10 text-center max-w-sm w-full">
                 <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
+                  initial={{ scale: 0, rotate: -10 }}
                   animate={{ scale: 1, rotate: 0 }}
                   transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
-                  className="w-28 h-28 rounded-full bg-success flex items-center justify-center mb-8 mx-auto shadow-lg"
+                  className="mb-6 mx-auto"
                 >
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.3, duration: 0.15 }}
-                  >
-                    <Check className="w-14 h-14 text-success-foreground" strokeWidth={3} />
-                  </motion.div>
+                  <Mascot size="xl" className="mx-auto" context="activate-success" />
                 </motion.div>
 
                 <motion.h2

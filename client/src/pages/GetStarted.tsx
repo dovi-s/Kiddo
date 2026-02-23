@@ -153,8 +153,8 @@ export default function GetStarted() {
   const progress = getProgress();
 
   const PremiumHeader = ({ showBack = true }: { showBack?: boolean }) => (
-    <header className="sticky top-0 z-40 bg-background pb-4">
-      <div className="max-w-lg mx-auto px-4 pt-4 flex items-center justify-between">
+    <header className="sticky top-0 z-40 gemini-glass-nav">
+      <div className="max-w-lg mx-auto px-4 flex items-center justify-between">
         {showBack ? (
           <button 
             onClick={handleBack} 
