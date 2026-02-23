@@ -1,9 +1,11 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { Mascot } from "@/components/ui/mascot";
 
 export function Footer() {
+  const [location, setLocation] = useLocation();
+
   const productLinks = [
     { href: "/get-started", label: "Get Started" },
     { href: "/#how-it-works", label: "How It Works" },
@@ -22,22 +24,49 @@ export function Footer() {
     { href: "/legal", label: "Disclosures" },
   ];
 
+  const handleLinkClick = (href: string) => {
+    const hasHash = href.includes('#');
+    if (!hasHash) return;
+
+    const [path, hash] = href.split('#');
+    const targetPath = path || '/';
+    const isCurrentPage = location === targetPath || (targetPath === '/' && location === '/');
+
+    if (isCurrentPage) {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      setLocation(targetPath);
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+    }
+  };
+
   const renderLinks = (links: { href: string; label: string }[]) => (
     <ul className="space-y-3 text-sm text-muted-foreground">
-      {links.map((link) => (
-        <li key={link.label}>
-          <Link href={link.href}>
-            <motion.span
-              className="hover:text-foreground transition-colors inline-block cursor-pointer"
-              whileHover={{ x: 2 }}
-              transition={{ duration: 0.2 }}
-              data-testid={`link-footer-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
-            >
-              {link.label}
-            </motion.span>
-          </Link>
-        </li>
-      ))}
+      {links.map((link) => {
+        const hasHash = link.href.includes('#');
+        const inner = (
+          <motion.span
+            className="hover:text-foreground transition-colors inline-block cursor-pointer"
+            whileHover={{ x: 2 }}
+            transition={{ duration: 0.2 }}
+            data-testid={`link-footer-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
+          >
+            {link.label}
+          </motion.span>
+        );
+
+        return (
+          <li key={link.label}>
+            {hasHash ? (
+              <span onClick={() => handleLinkClick(link.href)}>{inner}</span>
+            ) : (
+              <Link href={link.href}>{inner}</Link>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 

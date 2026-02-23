@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Menu, Settings, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,24 @@ interface NavProps {
 export function Nav({ showDashboard, accountType, profileName }: NavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
+  const [location, setLocation] = useLocation();
   
   const displayName = user?.firstName || profileName || "User";
+
+  const scrollToSection = (href: string) => {
+    const [path, hash] = href.split('#');
+    const targetPath = path || '/';
+    const isHome = location === '/' || location === '';
+    
+    if (isHome && targetPath === '/') {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      setLocation(targetPath);
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+    }
+  };
 
   return (
     <motion.nav 
@@ -59,23 +75,23 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
             </>
           ) : (
             <>
-              <a 
-                href="/#how-it-works" 
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              <span 
+                onClick={() => scrollToSection('/#how-it-works')}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 data-testid="link-how-it-works-nav"
               >
                 How It Works
-              </a>
+              </span>
               <Link href="/faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-faq-nav">
                 FAQ
               </Link>
-              <a 
-                href="/#pricing" 
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              <span 
+                onClick={() => scrollToSection('/#pricing')}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 data-testid="link-pricing-nav"
               >
                 Pricing
-              </a>
+              </span>
             </>
           )}
         </div>
@@ -116,9 +132,9 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                   </>
                 ) : (
                   <>
-                    <a href="/#how-it-works" onClick={() => setIsOpen(false)} className="font-medium">How It Works</a>
+                    <span onClick={() => { setIsOpen(false); scrollToSection('/#how-it-works'); }} className="font-medium cursor-pointer">How It Works</span>
                     <Link href="/faq" onClick={() => setIsOpen(false)} className="font-medium">FAQ</Link>
-                    <a href="/#pricing" onClick={() => setIsOpen(false)} className="font-medium">Pricing</a>
+                    <span onClick={() => { setIsOpen(false); scrollToSection('/#pricing'); }} className="font-medium cursor-pointer">Pricing</span>
                     <hr />
                     <Link href="/login" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
                     <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Get started</Button></Link>

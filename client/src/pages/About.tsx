@@ -146,7 +146,7 @@ export default function About() {
         </div>
       </section>
 
-      <section className="py-20 md:py-28">
+      <section className="py-20 md:py-28" id="trust">
         <div className="max-w-4xl mx-auto px-4">
           <FadeIn>
             <div className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12">
