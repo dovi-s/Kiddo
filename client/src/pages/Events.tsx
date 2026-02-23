@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft, Check, Crown, ExternalLink } from "lucide-react";
+import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft, Check, Crown, ExternalLink, X, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
 import { GradientText, EnlighteningReveal, ThinkingOrb } from "@/components/ui/gemini";
@@ -44,6 +45,7 @@ export default function Events() {
   const { data: events = [], isLoading: eventsLoading } = useEvents();
   const { data: funds = [], isLoading: fundsLoading } = useFunds();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const isFamily = subscription?.plan === "family" && subscription?.status === "active";
 
   if (authLoading || eventsLoading || fundsLoading) {
@@ -229,12 +231,12 @@ export default function Events() {
                         onClick={() => {
                           const f = fundLookup[event.fundId];
                           if (f) {
-                            window.open(`/${f.slug}/${event.slug}`, "_blank");
+                            setPreviewUrl(`/${f.slug}/${event.slug}`);
                             haptic("light");
                           }
                         }}
                       >
-                        <ExternalLink size={14} />
+                        <Eye size={14} />
                         Preview
                       </Button>
                       <Button
@@ -283,15 +285,13 @@ export default function Events() {
                             {fund && (
                               <div data-testid={`text-page-url-${event.id}`}>
                                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Gift Page Link</p>
-                                <a
-                                  href={`/${fund.slug}/${event.slug}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-sm text-primary hover:underline break-all flex items-center gap-1"
+                                <button
+                                  onClick={() => setPreviewUrl(`/${fund.slug}/${event.slug}`)}
+                                  className="text-sm text-primary hover:underline break-all flex items-center gap-1 text-left"
                                 >
                                   {window.location.origin}/{fund.slug}/{event.slug}
-                                  <ExternalLink size={12} className="shrink-0" />
-                                </a>
+                                  <Eye size={12} className="shrink-0" />
+                                </button>
                               </div>
                             )}
 
@@ -390,6 +390,47 @@ export default function Events() {
           </motion.div>
         )}
       </main>
+
+      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) setPreviewUrl(null); }}>
+        <DialogContent className="max-w-lg w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl max-h-[90vh]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/30">
+            <div className="flex items-center gap-2">
+              <Eye size={16} className="text-muted-foreground" />
+              <span className="text-sm font-medium">Page Preview</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5 text-xs"
+                onClick={() => {
+                  if (previewUrl) window.open(previewUrl, "_blank");
+                }}
+                data-testid="button-preview-open-tab"
+              >
+                <ExternalLink size={12} />
+                Open
+              </Button>
+              <button
+                onClick={() => setPreviewUrl(null)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
+                data-testid="button-preview-close"
+              >
+                <X size={16} className="text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+          <div className="w-full bg-background" style={{ height: "70vh" }}>
+            {previewUrl && (
+              <iframe
+                src={previewUrl}
+                className="w-full h-full border-0"
+                title="Event page preview"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
