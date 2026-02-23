@@ -190,11 +190,18 @@ export default function Home() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/#how-it-works">
-                <Button variant="outline" size="lg" className="h-14 px-10 text-base" data-testid="button-send-gift" onClick={() => haptic('light')}>
-                  How it works
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-14 px-10 text-base"
+                data-testid="button-how-it-works"
+                onClick={() => {
+                  haptic('light');
+                  document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                How it works
+              </Button>
             </motion.div>
 
             <motion.div
