@@ -367,6 +367,61 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Why Kora Section */}
+      <section className="py-20 md:py-32">
+        <div className="max-w-6xl mx-auto px-4">
+          <FadeIn className="text-center mb-16">
+            <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight" data-testid="text-why-heading">
+              More than a <GradientText>brokerage account</GradientText>
+            </h2>
+            <p className="text-muted-foreground mt-4 max-w-xl mx-auto">
+              You could open a UTMA at any brokerage. Here's what you'd be missing.
+            </p>
+          </FadeIn>
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {[
+              {
+                icon: Gift,
+                title: "One-link gifting",
+                desc: "Grandma doesn't need to download an app or create an account. She just opens a link, picks an amount, and pays with Apple Pay. Done in 60 seconds.",
+              },
+              {
+                icon: Zap,
+                title: "Auto-invest every gift",
+                desc: "No collecting checks, depositing cash, or placing trades yourself. Every gift automatically buys real investments at the next trading window.",
+              },
+              {
+                icon: Star,
+                title: "Memory Book",
+                desc: "Every gift comes with a personal message. Photos, milestones, and notes are saved in a timeline your child will treasure when they grow up.",
+              },
+              {
+                icon: Users,
+                title: "Event pages",
+                desc: "Create a page for birthdays, baby showers, or holidays. Share a link or QR code. Guests gift investments instead of another toy they'll outgrow.",
+              },
+            ].map((item, i) => (
+              <FadeIn key={item.title} delay={i * 0.1}>
+                <motion.div
+                  className="bg-card rounded-2xl shadow-premium-sm p-7 flex gap-5 h-full"
+                  whileHover={{ y: -3 }}
+                  transition={{ duration: 0.2 }}
+                  data-testid={`card-why-${i}`}
+                >
+                  <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <item.icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-heading text-lg font-semibold text-foreground mb-2">{item.title}</h3>
+                    <p className="text-muted-foreground leading-relaxed text-sm">{item.desc}</p>
+                  </div>
+                </motion.div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Pricing Section */}
       <section className="py-20 md:py-32 gemini-warm-section" id="pricing">
         <div className="max-w-6xl mx-auto px-4">
@@ -374,6 +429,9 @@ export default function Home() {
             <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight" data-testid="text-pricing-heading">
               Simple, transparent <GradientText>pricing</GradientText>
             </h2>
+            <p className="text-muted-foreground mt-4 max-w-xl mx-auto">
+              No monthly fees. No account minimums. You only pay when gifts come in.
+            </p>
           </FadeIn>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {[
@@ -384,6 +442,7 @@ export default function Home() {
                 period: "",
                 tagline: "Perfect for getting started",
                 features: [
+                  "No monthly fees, no minimums",
                   "Create unlimited funds",
                   "Share with family and friends",
                   "Apple Pay, Google Pay, card, or bank transfer",

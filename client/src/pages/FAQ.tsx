@@ -25,7 +25,7 @@ const faqItems = [
   {
     id: "fees",
     question: "What are the fees?",
-    answer: "There are two parts to fees. First, payment processing: card, Apple Pay, and Google Pay cost about 2.9% + $0.30 per transaction. Bank transfers (ACH) are much cheaper at just 0.8%, capped at $5. Second, the Kora platform fee: 1.5% per gift (minimum $1, maximum $10). Want to cover fees for your guests? The Event Pass ($99) waives the platform fee on up to $7,500 per event. The Family Plan ($149/year) waives the platform fee on up to $15,000 in gifts per year.",
+    answer: "First, the big one: there are no monthly fees and no account minimums. You only pay when a gift actually comes in. There are two parts to each gift's fees. First, payment processing: card, Apple Pay, and Google Pay cost about 2.9% + $0.30 per transaction. Bank transfers (ACH) are much cheaper at just 0.8%, capped at $5. Second, the Kora platform fee: 1.5% per gift (minimum $1, maximum $10). Want to cover fees for your guests? The Event Pass ($99) waives the platform fee on up to $7,500 per event. The Family Plan ($149/year) waives the platform fee on up to $15,000 in gifts per year.",
   },
   {
     id: "turns-18",
@@ -40,7 +40,7 @@ const faqItems = [
   {
     id: "taxes",
     question: "What about taxes?",
-    answer: "Most gifts fall well under the IRS gift tax exclusion, which is $19,000 per person per year. So in nearly every case, there is nothing to report. For the child's account, the \"kiddie tax\" only kicks in when unearned income (like dividends and gains) exceeds $2,700 in a year, which is uncommon for most gift-sized accounts. Also, the cost basis (what was originally paid for the investments) carries over from the giver, which can help reduce taxes later.",
+    answer: "Most gifts fall well under the IRS gift tax exclusion (currently $19,000 per person per year), so in nearly every case there is nothing to report. For the child's account, the \"kiddie tax\" only kicks in when unearned income (like dividends and gains) exceeds a few thousand dollars per year (the threshold changes annually, so check the latest IRS guidelines). This is uncommon for most gift-sized accounts. Also, the cost basis (what was originally paid for the investments) carries over from the giver, which can help reduce taxes later.",
   },
   {
     id: "vs-savings",
@@ -76,6 +76,26 @@ const faqItems = [
     id: "choose-stocks",
     question: "Can I choose specific stocks?",
     answer: "Yes! Givers can pick from a curated list of popular brands and companies, or they can simply let auto-invest handle it. Either way, the gift goes into real investments held in the child's account.",
+  },
+  {
+    id: "utma-vs-529",
+    question: "What is the difference between a UTMA and a 529?",
+    answer: "A 529 is specifically for education expenses (tuition, room and board, etc.) and offers tax-free growth when used for qualified education costs. A UTMA account has no restrictions on how the money is used. Your child can use it for anything: a first car, starting a business, a down payment on a home, or even education. The tradeoff is that UTMA investment gains are subject to the kiddie tax, though the first few thousand dollars of unearned income per year is generally not taxed (thresholds change annually, so check the latest IRS guidelines). Many families use both: a 529 for college savings and a UTMA on Kora for everything else.",
+  },
+  {
+    id: "financial-aid",
+    question: "Does a UTMA account affect financial aid?",
+    answer: "It can, but the impact is often smaller than people think. UTMA accounts are considered the student's asset on the FAFSA, which means up to 20% of the value may count against financial aid eligibility. Parent-owned 529 plans are generally assessed at a lower rate. The actual impact depends on the account size, who owns the 529, and the school's aid formulas. For most families, the amounts in a Kora fund are modest enough that the financial aid impact is minimal. If this is a concern, we recommend consulting a financial advisor for your specific situation.",
+  },
+  {
+    id: "why-kora",
+    question: "Why not just open a free UTMA at Fidelity or Vanguard?",
+    answer: "You absolutely can, and those are great brokerages. What Kora adds is the gifting layer. With Fidelity or Vanguard, you would need to collect money from family members separately (Venmo, checks, etc.), deposit it yourself, and then invest it manually. With Kora, grandma just opens a link, picks an amount, pays with Apple Pay, and the money is automatically invested in your child's account. Plus, every gift comes with a message that gets saved in your child's Memory Book. Kora also gives you shareable event pages for birthdays and baby showers, so guests can gift investments instead of another toy. That social gifting layer is what makes Kora different.",
+  },
+  {
+    id: "monthly-fees",
+    question: "Are there monthly fees?",
+    answer: "No. Kora has no monthly fees and no account minimums. You only pay when a gift is made: a small platform fee of 1.5% per gift (min $1, max $10), plus standard payment processing. Many competitors charge $3 to $5 per month whether or not you receive gifts. With Kora, if nobody gives this month, you pay nothing. The Event Pass and Family Plan can waive the platform fee entirely for higher gift volumes.",
   },
 ];
 
