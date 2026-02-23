@@ -28,6 +28,7 @@ export function Logo({ size = "md", showWordmark = true, className = "", linkTo 
         <span
           className={`font-semibold ${s.text} tracking-[0.01em] text-[hsl(var(--kora-evergreen))]`}
           style={{
+            fontFamily: '"Playfair Display", serif',
             fontFeatureSettings: '"kern" 1',
           }}
         >
