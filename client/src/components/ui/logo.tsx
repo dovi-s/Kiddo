@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import koraMarkImg from "../../assets/kora-mark.png";
+import koraMarkImg from "../../assets/kora-logo-cropped.png";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg";
