@@ -11,6 +11,7 @@ import { ThinkingOrb } from "@/components/ui/gemini";
 import { Mascot } from "@/components/ui/mascot";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
+import mascotPlanting from "@/assets/kora-mascot-planting.png";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
@@ -458,7 +459,13 @@ export default function Home() {
             transition={{ duration: 0.6 }}
             className="text-center max-w-2xl mx-auto"
           >
-            <Mascot size="lg" className="mx-auto mb-6" context="home-cta" />
+            <img
+              src={mascotPlanting}
+              alt="Kora mascot planting a coin"
+              className="mx-auto mb-6 w-64 md:w-80 h-auto"
+              style={{ mixBlendMode: "multiply" }}
+              data-testid="img-cta-mascot"
+            />
             <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight mb-6" data-testid="text-cta-heading">
               Start building their future <GradientText>today</GradientText>
             </h2>
