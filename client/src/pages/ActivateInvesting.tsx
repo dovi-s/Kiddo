@@ -31,7 +31,7 @@ export default function ActivateInvesting() {
   });
 
   const [identity, setIdentity] = useState({
-    ssnLast4: "",
+    ssn: "",
     citizenship: "us_citizen",
     employment: "employed",
   });
@@ -91,7 +91,7 @@ export default function ActivateInvesting() {
     personal.phone;
 
   const canProceedIdentity =
-    identity.ssnLast4.length === 4 && identity.citizenship && identity.employment;
+    identity.ssn.length === 9 && identity.citizenship && identity.employment;
 
   const progress = step === "processing" || step === "success" ? 100 : ((stepIndex(step) + 1) / STEPS.length) * 100;
 
@@ -359,19 +359,19 @@ export default function ActivateInvesting() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Last 4 digits of SSN</label>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Social Security Number</label>
                   <input
-                    type="text"
-                    value={identity.ssnLast4}
+                    type="password"
+                    value={identity.ssn}
                     onChange={(e) =>
-                      setIdentity({ ...identity, ssnLast4: e.target.value.replace(/\D/g, "").slice(0, 4) })
+                      setIdentity({ ...identity, ssn: e.target.value.replace(/\D/g, "").slice(0, 9) })
                     }
-                    placeholder="1234"
-                    maxLength={4}
-                    data-testid="input-ssn-last4"
+                    placeholder="•••••••••"
+                    maxLength={9}
+                    data-testid="input-ssn"
                     className={inputClass}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">This is a simulated field for the prototype</p>
+                  <p className="text-xs text-muted-foreground mt-1">Required by law to open an investment account. Encrypted and never stored in plain text.</p>
                 </div>
 
                 <div>
@@ -561,9 +561,9 @@ export default function ActivateInvesting() {
                 </div>
                 <div className="border-t border-border/50" />
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">SSN (last 4)</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Social Security Number</p>
                   <p className="text-sm font-medium text-foreground" data-testid="text-review-ssn">
-                    ***-**-{identity.ssnLast4}
+                    •••-••-{identity.ssn.slice(-4)}
                   </p>
                 </div>
                 <div className="border-t border-border/50" />
