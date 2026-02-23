@@ -11,7 +11,6 @@ import { ThinkingOrb } from "@/components/ui/gemini";
 import { Mascot } from "@/components/ui/mascot";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
-import mascotPlanting from "@/assets/kora-mascot-planting.png";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
@@ -485,7 +484,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 md:py-32" style={{ backgroundColor: "hsl(45, 30%, 93%)" }}>
+      <section className="py-20 md:py-32">
         <div className="max-w-6xl mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -494,12 +493,7 @@ export default function Home() {
             transition={{ duration: 0.6 }}
             className="text-center max-w-2xl mx-auto"
           >
-            <img
-              src={mascotPlanting}
-              alt="Kora mascot planting a coin"
-              className="mx-auto mb-8 w-56 md:w-72 h-auto rounded-3xl"
-              data-testid="img-cta-mascot"
-            />
+            <Mascot size="lg" className="mx-auto mb-6" context="home-cta" />
             <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight mb-6" data-testid="text-cta-heading">
               Start building their future <GradientText>today</GradientText>
             </h2>
