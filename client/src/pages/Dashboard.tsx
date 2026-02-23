@@ -216,14 +216,14 @@ export default function Dashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           holdingId: sellingHolding.id,
+          fundId: activeFundId,
           shares: shares,
-          sellAll: shares >= maxShares,
         }),
       });
       const data = await res.json();
       if (res.ok) {
         haptic("success");
-        toast({ title: "Sold", description: `Sold ${shares.toFixed(4)} shares of ${sellingHolding.ticker} for ${formatCurrency(data.proceeds || 0)}` });
+        toast({ title: "Sold", description: `Sold ${shares.toFixed(4)} shares of ${sellingHolding.ticker} for ${formatCurrency(parseFloat(data.saleValue || "0"))}` });
         setSellingHolding(null);
         setSellShares("");
         queryClient.invalidateQueries({ queryKey: ["/api/funds"] });

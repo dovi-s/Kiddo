@@ -782,8 +782,8 @@ export async function registerRoutes(
   app.get('/api/subscription', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;
-      const subscription = await storage.getSubscription(userId);
-      res.json(subscription || { plan: 'free', status: 'active' });
+      const subscription = await storage.ensureSubscription(userId);
+      res.json(subscription);
     } catch (error) {
       console.error('Error fetching subscription:', error);
       res.status(500).json({ error: 'Failed to fetch subscription' });

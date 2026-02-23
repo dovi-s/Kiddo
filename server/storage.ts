@@ -50,6 +50,7 @@ export interface IStorage {
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
   updateSubscription(id: string, subscription: Partial<InsertSubscription>): Promise<Subscription | undefined>;
   upsertSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  ensureSubscription(userId: string): Promise<Subscription>;
 
   getGiftByPaymentIntent(paymentIntentId: string): Promise<Gift | undefined>;
   incrementEventGiftStats(eventId: string, amount: number): Promise<void>;
@@ -214,6 +215,17 @@ export class DatabaseStorage implements IStorage {
       return updated!;
     }
     return this.createSubscription(subscription);
+  }
+
+  async ensureSubscription(userId: string): Promise<Subscription> {
+    const existing = await this.getSubscription(userId);
+    if (existing) return existing;
+    return this.createSubscription({
+      userId,
+      plan: 'free',
+      billingInterval: 'none',
+      status: 'active',
+    });
   }
 
   async getGiftByPaymentIntent(paymentIntentId: string): Promise<Gift | undefined> {

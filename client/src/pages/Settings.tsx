@@ -891,13 +891,32 @@ export default function Settings() {
                 </div>
               </>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Check size={16} className="text-green-600" />
                   <span className="text-sm font-medium text-foreground" data-testid="text-current-plan">Family Plan</span>
                   <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span>
                 </div>
-                <p className="text-sm text-muted-foreground" data-testid="text-renewal-date">Renews on your next billing date</p>
+                <div className="bg-muted/30 rounded-xl p-3 space-y-1.5 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Plan</span>
+                    <span className="font-medium text-foreground">Family ($149/year)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Billing</span>
+                    <span className="font-medium text-foreground">{subscription?.billingInterval === "yearly" ? "Annual" : subscription?.billingInterval === "monthly" ? "Monthly" : "Annual"}</span>
+                  </div>
+                  {subscription?.currentPeriodEnd && (
+                    <div className="flex justify-between">
+                      <span>Renews</span>
+                      <span className="font-medium text-foreground">{new Date(subscription.currentPeriodEnd).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>Platform fee</span>
+                    <span className="font-medium text-green-600">Waived (up to $15,000/year)</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>

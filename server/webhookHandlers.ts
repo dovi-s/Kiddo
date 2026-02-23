@@ -103,6 +103,7 @@ export class WebhookHandlers {
         stripeSubscriptionId: subscriptionId,
         stripeCustomerId: typeof session.customer === 'string' ? session.customer : session.customer?.id || null,
         plan: 'family',
+        billingInterval: 'yearly',
         status: subscription.status,
         currentPeriodStart: new Date(subscription.current_period_start * 1000),
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),

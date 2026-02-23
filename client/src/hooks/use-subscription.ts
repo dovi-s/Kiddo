@@ -3,8 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 interface Subscription {
   id?: string;
   plan: string;
+  billingInterval?: string;
   status: string;
+  currentPeriodStart?: string;
   currentPeriodEnd?: string;
+  stripeSubscriptionId?: string;
+  createdAt?: string;
 }
 
 async function fetchSubscription(): Promise<Subscription> {

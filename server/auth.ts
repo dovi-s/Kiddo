@@ -7,6 +7,7 @@ import type { Express, RequestHandler } from "express";
 import { users, type User } from "@shared/models/auth";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
+import { storage } from "./storage";
 
 async function getUser(id: string): Promise<User | undefined> {
   const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -109,6 +110,12 @@ export function setupAuth(app: Express) {
 
       const passwordHash = await bcrypt.hash(password, 12);
       const user = await createUser({ email, passwordHash, firstName, lastName });
+
+      try {
+        await storage.ensureSubscription(user.id);
+      } catch (subErr) {
+        console.error("Failed to create free subscription:", subErr);
+      }
 
       req.login(user, (err) => {
         if (err) {

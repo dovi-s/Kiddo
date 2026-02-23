@@ -58,6 +58,12 @@ async function upsertUser(claims: any) {
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
   });
+  try {
+    const { storage } = await import("../../storage");
+    await storage.ensureSubscription(claims["sub"]);
+  } catch (e) {
+    console.error("Failed to ensure subscription on login:", e);
+  }
 }
 
 export async function setupAuth(app: Express) {
