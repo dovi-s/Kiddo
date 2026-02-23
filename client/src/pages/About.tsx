@@ -75,16 +75,19 @@ export default function About() {
               </div>
               <div className="space-y-5 text-muted-foreground leading-relaxed">
                 <p>
-                  Think about the last birthday gift you gave a child. Maybe it was a toy, maybe it was cash in a card. Within a week, that toy is forgotten in a closet. That cash? Spent on something nobody remembers.
+                  Someone once told us about a savings bond they received as a kid. Fifteen years later, they cashed it in — and it had barely grown. The intention was beautiful, but the result was disappointing. If that same money had gone into a popular stock or an index fund, the story would have been completely different.
                 </p>
                 <p>
-                  Now imagine if that same $50 was planted like a seed. Over 18 years, at the stock market's historical average, it could grow into nearly $200. A gift that literally grows with them.
+                  That stuck with us. Good intentions deserve better outcomes. The problem isn't that people don't want to give meaningful gifts — it's that the best options have been locked behind confusing brokerage accounts and paperwork nobody wants to deal with.
+                </p>
+                <p>
+                  Now imagine if a $50 birthday gift was planted like a seed in the stock market. Over 18 years, at the S&P 500's historical average, it could grow into nearly $280. Not collecting dust in a drawer — actually compounding.
                 </p>
                 <p>
                   That's the idea behind Kora. We make it ridiculously easy to give stock investments as gifts. No brokerage account needed for the giver. No confusing forms. Just tap a link, pick an amount, and you've given a gift that compounds over time.
                 </p>
                 <p>
-                  We built Kora for parents who want something better than another toy. For grandparents who want their love to compound. For friends at baby showers who want to give something truly lasting.
+                  We built Kora for parents who want something better than another toy. For grandparents who want their love to compound. For friends at baby showers who want to give something truly lasting. And for everyone who's ever received a well-meaning gift that just didn't grow.
                 </p>
               </div>
             </div>
