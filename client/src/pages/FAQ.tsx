@@ -3,44 +3,8 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
-import { ChevronDown, Search, Gift, Share2, TrendingUp, ArrowRight, Shield, Lock, MousePointerClick, Clock, CheckCircle2 } from "lucide-react";
+import { ChevronDown, Search, Shield, Lock, ArrowRight } from "lucide-react";
 import { Mascot } from "@/components/ui/mascot";
-
-const parentSteps = [
-  {
-    icon: <Gift className="w-6 h-6" />,
-    title: "Create a Fund",
-    desc: "Set up an investment fund for your child in under two minutes.",
-  },
-  {
-    icon: <Share2 className="w-6 h-6" />,
-    title: "Share the Link",
-    desc: "Send it to family and friends, or display a QR code at your event.",
-  },
-  {
-    icon: <TrendingUp className="w-6 h-6" />,
-    title: "Gifts Invest Automatically",
-    desc: "Every contribution buys real investments. Watch it grow over time.",
-  },
-];
-
-const giverSteps = [
-  {
-    icon: <MousePointerClick className="w-6 h-6" />,
-    title: "Tap the Link",
-    desc: "Open the link you received. No account or app download needed.",
-  },
-  {
-    icon: <Gift className="w-6 h-6" />,
-    title: "Pick an Amount",
-    desc: "Choose how much to give. Pay with card, Apple Pay, or bank transfer.",
-  },
-  {
-    icon: <CheckCircle2 className="w-6 h-6" />,
-    title: "Done in 60 Seconds",
-    desc: "That's it. Your gift is on its way to becoming a real investment.",
-  },
-];
 
 const faqItems = [
   {
@@ -115,35 +79,6 @@ const faqItems = [
   },
 ];
 
-function StepCard({ step, index, total }: { step: typeof parentSteps[0]; index: number; total: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.15, duration: 0.5 }}
-      className="flex-1 min-w-0"
-      data-testid={`step-card-${index}`}
-    >
-      <div className="gemini-soft-container rounded-2xl p-6 h-full relative">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-            {step.icon}
-          </div>
-          <span className="text-sm font-semibold text-primary">Step {index + 1}</span>
-        </div>
-        <h3 className="font-heading text-lg font-semibold text-foreground mb-2">{step.title}</h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
-      </div>
-      {index < total - 1 && (
-        <div className="hidden md:flex items-center justify-center absolute top-1/2 -right-4 -translate-y-1/2 z-10">
-          <ArrowRight className="w-5 h-5 text-muted-foreground/40" />
-        </div>
-      )}
-    </motion.div>
-  );
-}
-
 function AccordionItem({ item, isOpen, onToggle }: { item: typeof faqItems[0]; isOpen: boolean; onToggle: () => void }) {
   return (
     <div className="border-b border-border last:border-b-0" data-testid={`faq-item-${item.id}`}>
@@ -197,106 +132,28 @@ export default function FAQ() {
     <div className="min-h-screen bg-background">
       <Nav />
 
-      <section className="pt-24 pb-16 md:pt-32 md:pb-20 gemini-warm-section">
-        <div className="container mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="max-w-3xl mx-auto text-center mb-16"
-          >
-            <Mascot size="lg" className="mx-auto mb-6 drop-shadow-lg" context="faq-hero" />
-            <h1 className="font-heading text-3xl md:text-4xl lg:text-5xl font-semibold text-foreground tracking-tight mb-4" data-testid="text-page-title">
-              How Kora Works
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-xl mx-auto" data-testid="text-page-subtitle">
-              Simple for parents. Even simpler for gift-givers.
-            </p>
-          </motion.div>
-
-          <div className="max-w-5xl mx-auto space-y-16">
-            <div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                className="flex items-center gap-2 mb-6"
-              >
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                  <Shield className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <h2 className="font-heading text-xl md:text-2xl font-semibold text-foreground" data-testid="text-parents-heading">For Parents</h2>
-              </motion.div>
-              <div className="grid md:grid-cols-3 gap-4 md:gap-6 relative">
-                {parentSteps.map((step, i) => (
-                  <StepCard key={i} step={step} index={i} total={parentSteps.length} />
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true }}
-                className="flex items-center gap-2 mb-6"
-              >
-                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                  <Gift className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <h2 className="font-heading text-xl md:text-2xl font-semibold text-foreground" data-testid="text-givers-heading">For Gift-Givers</h2>
-              </motion.div>
-              <div className="grid md:grid-cols-3 gap-4 md:gap-6 relative">
-                {giverSteps.map((step, i) => (
-                  <StepCard key={i} step={step} index={i} total={giverSteps.length} />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.3 }}
-            className="max-w-md mx-auto text-center mt-12"
-          >
-            <Link href="/get-started">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-3.5 rounded-full font-semibold text-sm shadow-lg shadow-primary/20"
-                data-testid="button-get-started"
-              >
-                Get started free
-                <ArrowRight className="w-4 h-4" />
-              </motion.button>
-            </Link>
-          </motion.div>
-        </div>
-      </section>
-
-      <section className="py-16 md:py-24 border-t" id="faq">
+      <section className="pt-24 pb-16 md:pt-32 md:pb-24">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
               className="text-center mb-10"
             >
-              <h2 className="font-heading text-2xl md:text-3xl font-semibold text-foreground tracking-tight mb-3" data-testid="text-faq-heading">
+              <Mascot size="lg" className="mx-auto mb-6 drop-shadow-lg" context="faq-hero" />
+              <h1 className="font-heading text-3xl md:text-4xl lg:text-5xl font-semibold text-foreground tracking-tight mb-4" data-testid="text-page-title">
                 Frequently Asked Questions
-              </h2>
-              <p className="text-muted-foreground">
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-xl mx-auto" data-testid="text-page-subtitle">
                 Everything you need to know about gifting investments with Kora.
               </p>
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
               className="relative mb-8"
             >
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -312,8 +169,8 @@ export default function FAQ() {
 
             <motion.div
               initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
               className="bg-card rounded-2xl border border-border shadow-premium-sm overflow-hidden"
               data-testid="faq-accordion"
             >
@@ -335,12 +192,13 @@ export default function FAQ() {
 
             <motion.div
               initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              className="text-center mt-10 space-y-3"
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-center mt-10 space-y-4"
             >
               <p className="text-sm text-muted-foreground">
-                Still have questions?
+                Still have questions? Check out how Kora works on our{" "}
+                <Link href="/#how-it-works" className="text-primary hover:underline">home page</Link>.
               </p>
               <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/70">
                 <Lock className="w-3.5 h-3.5" />

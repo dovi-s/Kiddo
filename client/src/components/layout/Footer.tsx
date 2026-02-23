@@ -6,9 +6,9 @@ import { Mascot } from "@/components/ui/mascot";
 export function Footer() {
   const productLinks = [
     { href: "/get-started", label: "Get Started" },
-    { href: "/faq", label: "How It Works" },
+    { href: "/#how-it-works", label: "How It Works" },
     { href: "/#pricing", label: "Pricing" },
-    { href: "/faq#faq", label: "FAQ" },
+    { href: "/faq", label: "FAQ" },
   ];
 
   const companyLinks = [

@@ -50,7 +50,7 @@ function Router() {
       <Route path="/edit/:fund/:event" component={PageEditor} />
       <Route path="/settings" component={Settings} />
       <Route path="/faq" component={FAQ} />
-      <Route path="/how-it-works" component={FAQ} />
+      <Route path="/how-it-works">{() => { window.location.href = "/#how-it-works"; return null; }}</Route>
       <Route path="/about" component={About} />
       <Route path="/legal" component={Legal} />
       <Route path="/memory/:fundId" component={MemoryBook} />
