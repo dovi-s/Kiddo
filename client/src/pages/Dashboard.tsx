@@ -8,6 +8,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-mo
 import { toast } from "@/hooks/use-toast";
 import { QRCodeSVG } from "qrcode.react";
 import { Plus, User, Users, ChevronRight, ChevronDown, Share2, TrendingUp, Clock, Gift, Shield, MessageCircle, Calendar, X, Lock, Check } from "lucide-react";
+import { Mascot } from "@/components/ui/mascot";
 import { Logo } from "@/components/ui/logo";
 import { ShareKit } from "@/components/ui/share-kit";
 import { TrustFooter, WhoControlsDrawer } from "@/components/ui/trust-elements";
@@ -474,7 +475,7 @@ export default function Dashboard() {
                     <TabsContent value="gifts" className="space-y-3">
                       {allContributions.length === 0 ? (
                         <div className="text-center py-8 text-muted-foreground">
-                          <Gift size={32} className="mx-auto mb-3 opacity-50" />
+                          <Mascot size="md" className="mx-auto mb-3" context="dashboard-gifts-empty" />
                           <p className="text-sm">No gifts yet. Share your fund to start receiving!</p>
                         </div>
                       ) : (

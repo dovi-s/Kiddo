@@ -6,6 +6,7 @@ import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 import { useCreateFund } from "@/hooks/use-funds";
+import { Mascot } from "@/components/ui/mascot";
 
 type AccountType = "parent" | "adult" | null;
 
@@ -841,18 +842,12 @@ export default function GetStarted() {
           >
             <div className="relative z-10 text-center max-w-sm w-full">
               <motion.div
-                initial={{ scale: 0, rotate: -180 }}
+                initial={{ scale: 0, rotate: -10 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
-                className="w-28 h-28 rounded-full bg-success flex items-center justify-center mb-8 mx-auto shadow-lg"
+                className="mb-6 mx-auto"
               >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.3, duration: 0.15 }}
-                >
-                  <Check className="w-14 h-14 text-success-foreground" strokeWidth={3} />
-                </motion.div>
+                <Mascot size="xl" className="mx-auto" context="getstarted-success" />
               </motion.div>
 
               <motion.h1

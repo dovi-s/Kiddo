@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Shield, Lock, CheckCircle2, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { ThinkingOrb } from "@/components/ui/gemini";
+import { Mascot } from "@/components/ui/mascot";
 
 const STOCKS = [
   { symbol: "AAPL", name: "Apple", price: 178.50 },
@@ -417,9 +418,9 @@ export default function Send() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", duration: 0.5 }}
-                className="w-20 h-20 rounded-full bg-success/10 mx-auto flex items-center justify-center mb-6"
+                className="mx-auto mb-4"
               >
-                <CheckCircle2 className="w-10 h-10 text-success" />
+                <Mascot size="lg" className="mx-auto" context="send-success" />
               </motion.div>
 
               <h1 className="text-2xl font-semibold text-foreground mb-2">Sent!</h1>

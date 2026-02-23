@@ -6,6 +6,7 @@ import { Link, useLocation } from "wouter";
 import { ArrowLeft, Check, Loader2, Share2, Copy, Sparkles, CalendarHeart, Zap, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { Mascot } from "@/components/ui/mascot";
 import { useKora } from "@/lib/KoraContext";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
@@ -141,9 +142,9 @@ export default function MomentCreate() {
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
-                className="w-20 h-20 rounded-full bg-[hsl(var(--kora-evergreen))] flex items-center justify-center mx-auto mb-6"
+                className="mx-auto mb-4"
               >
-                <Check className="w-10 h-10 text-white" />
+                <Mascot size="lg" className="mx-auto" context="event-created" />
               </motion.div>
               
               <h1 className="text-2xl font-bold text-foreground mb-2">Event created!</h1>

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { Plus, CalendarHeart, Gift, ChevronDown, ChevronRight, Edit2, Trash2, Share2, MoreHorizontal, Sparkles, Check } from "lucide-react";
 import { PageTransition } from "@/components/layout/PageTransition";
+import { Mascot } from "@/components/ui/mascot";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { easeOutExpo, staggerPremium, listItemSpring, sharePulse } from "@/lib/animations";
 import { toast } from "@/hooks/use-toast";
@@ -353,9 +354,7 @@ export default function Events() {
               animate={{ opacity: 1, scale: 1 }}
               className="text-center py-16"
             >
-              <div className="w-20 h-20 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center">
-                <CalendarHeart size={32} className="text-muted-foreground" />
-              </div>
+              <Mascot size="lg" className="mx-auto mb-4" context="events-empty" />
               <h3 className="text-lg font-semibold text-foreground mb-2">No events yet</h3>
               <p className="text-muted-foreground mb-6">Create an event for birthdays, holidays, or any occasion</p>
               <Link href="/event/create">
