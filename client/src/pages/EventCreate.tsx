@@ -101,6 +101,14 @@ export default function EventCreate() {
           transition={{ duration: 0.3 }}
           className="mb-8"
         >
+          <button
+            onClick={() => setLocation("/events")}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+            data-testid="button-back-to-events"
+          >
+            <ArrowLeft size={16} />
+            Back to Events
+          </button>
           <h1 className="font-heading text-2xl font-bold text-foreground" data-testid="heading-create-event">
             Create Event
           </h1>
