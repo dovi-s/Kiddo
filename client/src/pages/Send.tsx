@@ -287,14 +287,14 @@ export default function Send() {
               <h1 className="text-2xl font-semibold text-foreground mb-6">How much?</h1>
 
               <div className="relative mb-2">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl text-border">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-3xl font-serif text-border">$</span>
                 <input
                   type="text"
                   inputMode="numeric"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
                   data-testid="input-amount"
-                  className="w-full pl-12 pr-4 py-5 text-4xl font-light bg-card border border-border rounded-xl text-foreground focus:outline-none focus:border-muted-foreground focus:ring-4 focus:ring-primary/5"
+                  className="w-full pl-12 pr-4 py-5 text-4xl font-serif font-light bg-card border border-border rounded-xl text-foreground focus:outline-none focus:border-muted-foreground focus:ring-4 focus:ring-primary/5"
                 />
               </div>
               <p className="text-sm text-muted-foreground mb-6">
@@ -324,7 +324,7 @@ export default function Send() {
                 </div>
                 <div className="flex justify-between items-end">
                   <div>
-                    <p className="text-3xl font-light">${futureValue.toFixed(0)}</p>
+                    <p className="font-serif text-3xl font-light">${futureValue.toFixed(0)}</p>
                     <p className="text-primary-foreground/60 text-sm">in 10 years</p>
                   </div>
                   <div className="text-right">

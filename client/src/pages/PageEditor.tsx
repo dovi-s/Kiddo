@@ -477,7 +477,7 @@ export default function PageEditor() {
                 <p className={`text-[10px] lg:text-xs ${pageData.theme === "dark" ? "text-white/60" : "text-stone-500"}`}>
                   Your ${previewAmount} could become
                 </p>
-                <p className="text-xl lg:text-2xl font-light">${previewProjection.toLocaleString()}</p>
+                <p className="font-serif text-xl lg:text-2xl font-light">${previewProjection.toLocaleString()}</p>
                 <p className={`text-[10px] lg:text-xs ${pageData.theme === "dark" ? "text-white/40" : "text-stone-400"}`}>
                   in 18 years at 7% return
                 </p>

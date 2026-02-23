@@ -192,7 +192,7 @@ export default function ActivityDetail() {
                   transition={{ delay: 0.1 }}
                   className="text-center py-6 border-y border-border"
                 >
-                  <p className="text-4xl font-bold text-foreground">${activity.amount}</p>
+                  <p className="font-serif text-4xl font-bold text-foreground">${activity.amount}</p>
                   <div className="flex items-center justify-center gap-2 mt-2">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig.bg} ${statusConfig.text} flex items-center gap-1.5`}>
                       <StatusIcon size={14} />

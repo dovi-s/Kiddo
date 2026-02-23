@@ -241,7 +241,7 @@ export default function Home() {
                 transition={{ delay: i * 0.1, duration: 0.5 }}
                 className="flex items-baseline gap-2"
               >
-                <p className="text-3xl md:text-4xl font-light text-foreground tracking-tight">
+                <p className="font-serif text-3xl md:text-4xl font-light text-foreground tracking-tight">
                   {stat.prefix}<AnimatedNumber value={stat.value} suffix={stat.suffix} />
                 </p>
                 <p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -488,7 +488,7 @@ export default function Home() {
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className="text-2xl font-semibold">{plan.price}</p>
+                        <p className="font-serif text-2xl font-semibold">{plan.price}</p>
                         {plan.period && <p className="text-xs text-muted-foreground">{plan.period}</p>}
                       </div>
                       <Link href="/get-started">

@@ -527,7 +527,7 @@ export default function GetStarted() {
                 <div className="bg-card rounded-3xl p-6 shadow-lg border border-border mb-6">
                   <div className="flex items-center justify-between mb-6">
                     <span className="text-sm text-muted-foreground">Annual gifts</span>
-                    <span className="text-2xl font-bold text-foreground">${projectedAmount}</span>
+                    <span className="font-serif text-2xl font-bold text-foreground">${projectedAmount}</span>
                   </div>
                   
                   <input
@@ -555,7 +555,7 @@ export default function GetStarted() {
                           initial={{ scale: 1.05 }}
                           animate={{ scale: 1 }}
                           transition={{ duration: 0.15 }}
-                          className="text-4xl font-bold text-success"
+                          className="font-serif text-4xl font-bold text-success"
                         >
                           ${projectedGrowth.toLocaleString()}
                         </motion.p>

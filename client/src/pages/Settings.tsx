@@ -731,7 +731,7 @@ function BillingTab() {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-xl font-bold text-foreground">$199</span>
+                  <span className="font-serif text-xl font-bold text-foreground">$199</span>
                   <span className="text-sm text-muted-foreground">/year</span>
                 </div>
                 <p className="font-semibold text-foreground mb-1">Family Plan</p>
@@ -769,7 +769,7 @@ function BillingTab() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline gap-2 mb-1">
-                    <span className="text-xl font-bold text-foreground">$99</span>
+                    <span className="font-serif text-xl font-bold text-foreground">$99</span>
                     <span className="text-sm text-muted-foreground">one-time</span>
                   </div>
                   <p className="font-semibold text-foreground mb-1">Event Pass</p>

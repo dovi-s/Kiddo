@@ -414,7 +414,7 @@ export default function Dashboard() {
                     <GeminiBalanceGlow />
                     <div className="relative z-10 text-center mb-8">
                       <motion.p 
-                        className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground tracking-tight mb-3 gemini-value-glow"
+                        className="font-serif text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground tracking-tight mb-3 gemini-value-glow"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1, duration: 0.2 }}
@@ -442,18 +442,18 @@ export default function Dashboard() {
                       variants={staggerPremium}
                     >
                       <motion.div variants={listItemSpring} className="text-center">
-                        <p className="text-2xl sm:text-3xl font-bold text-foreground">${investedAmount.toLocaleString()}</p>
+                        <p className="font-serif text-2xl sm:text-3xl font-bold text-foreground">${investedAmount.toLocaleString()}</p>
                         <p className="text-sm text-muted-foreground mt-1.5 font-medium">Invested</p>
                       </motion.div>
                       <motion.div variants={listItemSpring} className="text-center border-x border-border">
-                        <p className="text-2xl sm:text-3xl font-bold text-[hsl(var(--kora-gold))]">${pendingAmount}</p>
+                        <p className="font-serif text-2xl sm:text-3xl font-bold text-[hsl(var(--kora-gold))]">${pendingAmount}</p>
                         <p className="text-sm text-muted-foreground mt-1.5 flex items-center justify-center gap-1.5 font-medium">
                           <span className="gemini-pulse-dot" />
                           Pending
                         </p>
                       </motion.div>
                       <motion.div variants={listItemSpring} className="text-center">
-                        <p className="text-2xl sm:text-3xl font-bold text-foreground">${totalReceived.toLocaleString()}</p>
+                        <p className="font-serif text-2xl sm:text-3xl font-bold text-foreground">${totalReceived.toLocaleString()}</p>
                         <p className="text-sm text-muted-foreground mt-1.5 font-medium">Received</p>
                       </motion.div>
                     </motion.div>

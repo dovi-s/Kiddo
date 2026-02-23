@@ -125,7 +125,7 @@ export default function Claim() {
                       </p>
                       {gift.assetType === "stock" ? (
                         <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-semibold text-foreground">
+                          <span className="font-serif text-3xl font-semibold text-foreground">
                             {gift.shares} shares
                           </span>
                           <span className="text-lg text-muted-foreground">
@@ -133,7 +133,7 @@ export default function Claim() {
                           </span>
                         </div>
                       ) : (
-                        <span className="text-3xl font-semibold text-foreground">
+                        <span className="font-serif text-3xl font-semibold text-foreground">
                           ${gift.amount?.toFixed(2)}
                         </span>
                       )}
