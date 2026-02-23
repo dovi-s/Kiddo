@@ -150,7 +150,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
               <div className="h-px bg-border/50 mx-5" />
             </div>
 
-            <div className="p-5 space-y-5">
+            <div className="p-5 pb-24 md:pb-5 space-y-5">
               <AnimatePresence mode="wait">
                 {step === "choose" && (
                   <motion.div
