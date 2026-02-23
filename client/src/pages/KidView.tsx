@@ -1,9 +1,10 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Heart, Sparkles, Star, TreeDeciduous, Users } from "lucide-react";
+import { Heart, Sparkles, Star, TreeDeciduous, Users, ChevronLeft } from "lucide-react";
 import { GeminiSparkle, SparkleBurst, GradientText, EnlighteningReveal } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
+import { Logo } from "@/components/ui/logo";
 import mascot from "@/assets/kora-mascot.png";
 import { useState } from "react";
 
@@ -217,6 +218,18 @@ export default function KidView() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-green-50 to-amber-50" data-testid="kid-view">
+      <div className="sticky top-0 z-40 h-14 flex items-center px-4 bg-emerald-50/80 backdrop-blur-lg">
+        <button
+          onClick={() => window.history.back()}
+          className="flex items-center gap-1 text-emerald-700 hover:text-emerald-900 transition-colors"
+          data-testid="button-back"
+        >
+          <ChevronLeft size={20} />
+          <span className="text-sm">Back</span>
+        </button>
+        <div className="flex-1" />
+        <Logo size="sm" className="text-emerald-800" />
+      </div>
       <div className="max-w-lg mx-auto px-5 py-8 space-y-8">
 
         <EnlighteningReveal>

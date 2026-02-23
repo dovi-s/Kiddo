@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart } from "lucide-react";
+import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
@@ -82,6 +82,16 @@ export default function Events() {
 
   return (
     <div className="min-h-screen bg-background pb-28 md:ml-[220px] lg:ml-[260px]">
+      <div className="md:hidden sticky top-0 z-40 h-14 flex items-center px-4 bg-background/80 backdrop-blur-lg border-b border-border/40">
+        <Link href="/dashboard">
+          <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors" data-testid="button-back-dashboard">
+            <ChevronLeft size={20} />
+            <span className="text-sm">Fund</span>
+          </button>
+        </Link>
+        <div className="flex-1" />
+        <Logo size="sm" className="text-foreground" linkTo="/dashboard" />
+      </div>
       <main className="max-w-lg md:max-w-3xl mx-auto px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: 10 }}

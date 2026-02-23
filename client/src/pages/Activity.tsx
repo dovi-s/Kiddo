@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
-import { Gift, TrendingUp, Calendar, Filter, Check, Clock, ArrowUp, ChevronDown } from "lucide-react";
+import { useLocation, Link } from "wouter";
+import { Gift, TrendingUp, Calendar, Filter, Check, Clock, ArrowUp, ChevronDown, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
 import { EnlighteningReveal } from "@/components/ui/gemini";
 import { formatDistanceToNow } from "date-fns";
@@ -178,6 +179,16 @@ export default function Activity() {
 
   return (
     <div className="min-h-screen bg-background md:ml-[220px] lg:ml-[260px]">
+      <div className="md:hidden sticky top-0 z-40 h-14 flex items-center px-4 bg-background/80 backdrop-blur-lg border-b border-border/40">
+        <Link href="/dashboard">
+          <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors" data-testid="button-back-dashboard">
+            <ChevronLeft size={20} />
+            <span className="text-sm">Fund</span>
+          </button>
+        </Link>
+        <div className="flex-1" />
+        <Logo size="sm" className="text-foreground" linkTo="/dashboard" />
+      </div>
       <div className="max-w-lg md:max-w-3xl mx-auto px-4 py-6">
         <EnlighteningReveal>
           <h1 className="font-heading text-2xl font-bold text-foreground mb-4" data-testid="heading-activity">

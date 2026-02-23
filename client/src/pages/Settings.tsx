@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { haptic } from "@/lib/haptics";
@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   User, CreditCard, Shield, Eye, EyeOff, LogOut, Check,
-  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet
+  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet, ChevronLeft
 } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -76,9 +77,18 @@ export default function Settings() {
 
   return (
     <div className="md:ml-[220px] lg:ml-[260px] min-h-screen bg-background">
+      <div className="md:hidden sticky top-0 z-40 h-14 flex items-center px-4 bg-background/80 backdrop-blur-lg border-b border-border/40">
+        <Link href="/dashboard">
+          <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors" data-testid="button-back-dashboard">
+            <ChevronLeft size={20} />
+            <span className="text-sm">Fund</span>
+          </button>
+        </Link>
+        <div className="flex-1" />
+        <Logo size="sm" className="text-foreground" linkTo="/dashboard" />
+      </div>
       <div className="max-w-lg md:max-w-2xl mx-auto px-4 py-6 space-y-6">
 
-        {/* Header */}
         <motion.h1
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
