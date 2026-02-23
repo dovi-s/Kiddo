@@ -2,10 +2,10 @@ import type { Express } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
 import { stripeService } from "./stripeService";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { db } from "./db";
 import { isAuthenticated } from "./auth";
-import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema } from "@shared/schema";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, users } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -193,7 +193,7 @@ export async function registerRoutes(
         recipientFirstName: fund.recipientFirstName,
         accountType: fund.accountType,
         balance: fund.balance,
-        totalGains: fund.totalGains,
+        totalGain: fund.totalGain,
         giftCount: gifts.length,
       });
     } catch (error) {
@@ -697,6 +697,31 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error deleting memory entry:', error);
       res.status(500).json({ error: 'Failed to delete memory entry' });
+    }
+  });
+
+  app.patch('/api/user/profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { profileImageUrl, firstName, lastName } = req.body;
+      const updates: Record<string, any> = {};
+      if (profileImageUrl !== undefined) {
+        if (typeof profileImageUrl === 'string' && profileImageUrl.length > 3 * 1024 * 1024) {
+          return res.status(400).json({ error: 'Image too large. Please use an image under 2MB.' });
+        }
+        updates.profileImageUrl = profileImageUrl;
+      }
+      if (firstName !== undefined) updates.firstName = String(firstName).slice(0, 100);
+      if (lastName !== undefined) updates.lastName = String(lastName).slice(0, 100);
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'No fields to update' });
+      }
+      const [updated] = await db.update(users).set(updates).where(eq(users.id, userId)).returning();
+      const { passwordHash: _, ...safeUser } = updated;
+      res.json(safeUser);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      res.status(500).json({ error: 'Failed to update profile' });
     }
   });
 

@@ -171,10 +171,14 @@ export default function Dashboard() {
           <Logo size="sm" className="text-primary" />
           <button
             onClick={() => setLocation("/settings")}
-            className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary"
+            className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary overflow-hidden"
             data-testid="avatar-user-initial"
           >
-            {userInitial}
+            {user?.profileImageUrl ? (
+              <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              userInitial
+            )}
           </button>
         </div>
       </header>

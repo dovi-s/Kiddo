@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
@@ -11,7 +11,7 @@ import { AddFundSheet } from "@/components/AddFundSheet";
 import { toast } from "@/hooks/use-toast";
 import {
   User, CreditCard, Shield, Eye, EyeOff, LogOut, Check,
-  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet, ChevronLeft, Plus, Loader2
+  ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet, ChevronLeft, Plus, Loader2, Camera
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 
@@ -54,8 +54,11 @@ export default function Settings() {
     return null;
   }
 
+  const queryClient = useQueryClient();
   const { data: subscription } = useSubscription();
   const [upgrading, setUpgrading] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const displayName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User";
   const userEmail = user.email || "";
@@ -84,6 +87,40 @@ export default function Settings() {
     }
   };
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "Photo too large", description: "Please choose an image under 2MB", variant: "destructive" });
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        const res = await fetch("/api/user/profile", {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profileImageUrl: dataUrl }),
+        });
+        if (res.ok) {
+          haptic("success");
+          queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+          toast({ title: "Photo updated" });
+        } else {
+          toast({ title: "Could not update photo", variant: "destructive" });
+        }
+        setUploadingPhoto(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      toast({ title: "Could not update photo", variant: "destructive" });
+      setUploadingPhoto(false);
+    }
+  };
+
   const eventsWithPasses = funds.flatMap((f: any) =>
     (f.events || []).filter((e: any) => e.hasEventPass)
   );
@@ -94,9 +131,28 @@ export default function Settings() {
     haptic("light");
   };
 
-  const handleSaveName = () => {
+  const handleSaveName = async () => {
+    const parts = nameValue.trim().split(/\s+/);
+    const firstName = parts[0] || "";
+    const lastName = parts.slice(1).join(" ") || "";
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firstName, lastName }),
+      });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        haptic("success");
+        toast({ title: "Name updated" });
+      } else {
+        toast({ title: "Could not update name", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not update name", variant: "destructive" });
+    }
     setEditingName(false);
-    haptic("success");
   };
 
   const handleSignOut = () => {
@@ -133,6 +189,42 @@ export default function Settings() {
             <div className="flex items-center gap-3 mb-2">
               <User size={18} className="text-muted-foreground" />
               <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-profile">Profile</h2>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="relative w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center group"
+                  data-testid="button-change-photo"
+                >
+                  {user.profileImageUrl ? (
+                    <img src={user.profileImageUrl} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xl font-semibold text-primary">{displayName.charAt(0).toUpperCase()}</span>
+                  )}
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    {uploadingPhoto ? (
+                      <Loader2 size={18} className="text-white animate-spin" />
+                    ) : (
+                      <Camera size={18} className="text-white" />
+                    )}
+                  </div>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  data-testid="input-photo-upload"
+                />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-foreground">{displayName}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Tap photo to change. This shows on your event pages.</p>
+              </div>
             </div>
 
             <div className="flex items-center justify-between">
