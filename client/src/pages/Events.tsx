@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft, Check, Crown } from "lucide-react";
+import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft, Check, Crown, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
@@ -222,6 +222,22 @@ export default function Events() {
                         Share Link
                       </Button>
                       <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        data-testid={`button-preview-${event.id}`}
+                        onClick={() => {
+                          const f = fundLookup[event.fundId];
+                          if (f) {
+                            window.open(`/${f.slug}/${event.slug}`, "_blank");
+                            haptic("light");
+                          }
+                        }}
+                      >
+                        <ExternalLink size={14} />
+                        Preview
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="sm"
                         className="gap-1.5"
@@ -261,6 +277,21 @@ export default function Events() {
                               <div data-testid={`text-fund-name-${event.id}`}>
                                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Linked Fund</p>
                                 <p className="text-sm text-foreground">{fund.name}</p>
+                              </div>
+                            )}
+
+                            {fund && (
+                              <div data-testid={`text-page-url-${event.id}`}>
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Gift Page Link</p>
+                                <a
+                                  href={`/${fund.slug}/${event.slug}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm text-primary hover:underline break-all flex items-center gap-1"
+                                >
+                                  {window.location.origin}/{fund.slug}/{event.slug}
+                                  <ExternalLink size={12} className="shrink-0" />
+                                </a>
                               </div>
                             )}
 
