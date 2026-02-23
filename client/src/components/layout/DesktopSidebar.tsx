@@ -56,15 +56,25 @@ export function DesktopSidebar() {
 
       <div className="px-3 py-4 border-t border-border/40">
         {user && (
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
-              {user.firstName?.charAt(0) || "U"}
+          <Link href="/settings">
+            <div
+              onClick={() => haptic('selection')}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer hover:bg-muted/50 transition-colors"
+              data-testid="sidebar-user-profile"
+            >
+              <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold overflow-hidden">
+                {user.profileImageUrl ? (
+                  <img src={user.profileImageUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                ) : (
+                  user.firstName?.charAt(0) || "U"
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{user.firstName}</p>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{user.firstName}</p>
-              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-            </div>
-          </div>
+          </Link>
         )}
         <button
           onClick={() => { haptic('medium'); logout(); }}
