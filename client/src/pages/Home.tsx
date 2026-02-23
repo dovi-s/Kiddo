@@ -9,6 +9,8 @@ import { GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { ThinkingOrb } from "@/components/ui/gemini";
 import { Mascot } from "@/components/ui/mascot";
+import { Nav } from "@/components/layout/Nav";
+import { Footer } from "@/components/layout/Footer";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
@@ -144,33 +146,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Navigation Bar */}
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Logo size="md" />
-          <div className="hidden md:flex items-center gap-8">
-            <a href="#how-it-works" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-how-it-works-nav">
-              How It Works
-            </a>
-            <Link href="/faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-faq-nav">
-              FAQ
-            </Link>
-            <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-pricing-nav">
-              Pricing
-            </a>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/login" data-testid="link-login">
-              <span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">Log in</span>
-            </Link>
-            <Link href="/get-started">
-              <Button size="sm" data-testid="button-get-started-nav" onClick={() => haptic('light')}>
-                Get Started
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Nav />
 
       {/* Hero Section */}
       <section className="relative pt-20 pb-24 md:pt-32 md:pb-40 overflow-hidden gemini-warm-section">
@@ -499,28 +475,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border/40 py-12">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <Logo size="sm" linkTo={null} />
-              <span className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Kora. All rights reserved.</span>
-            </div>
-            <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
-              <Link href="/faq" className="hover:text-foreground transition-colors" data-testid="link-footer-faq">FAQ</Link>
-              <a href="#how-it-works" className="hover:text-foreground transition-colors" data-testid="link-footer-how">How It Works</a>
-              <Link href="/faq" className="hover:text-foreground transition-colors" data-testid="link-footer-privacy">Privacy Policy</Link>
-              <Link href="/faq" className="hover:text-foreground transition-colors" data-testid="link-footer-terms">Terms</Link>
-            </div>
-          </div>
-          <div className="mt-6 text-center">
-            <p className="text-xs text-muted-foreground" data-testid="text-footer-disclaimer">
-              Securities offered through our clearing partners. Not FDIC insured. Not bank guaranteed. May lose value.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

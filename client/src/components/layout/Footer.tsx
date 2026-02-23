@@ -5,20 +5,20 @@ import { Mascot } from "@/components/ui/mascot";
 
 export function Footer() {
   const productLinks = [
-    { href: "/get-started", label: "Get started" },
-    { href: "/faq", label: "How it works" },
+    { href: "/get-started", label: "Get Started" },
+    { href: "/faq", label: "How It Works" },
     { href: "/#pricing", label: "Pricing" },
+    { href: "/faq#faq", label: "FAQ" },
   ];
 
   const companyLinks = [
     { href: "/about", label: "About" },
-    { href: "/about#trust", label: "Trust" },
-    { href: "/faq", label: "Support" },
+    { href: "/about#trust", label: "Trust & Security" },
   ];
 
   const legalLinks = [
-    { href: "/legal", label: "Terms" },
-    { href: "/legal", label: "Privacy" },
+    { href: "/legal", label: "Terms of Service" },
+    { href: "/legal", label: "Privacy Policy" },
     { href: "/legal", label: "Disclosures" },
   ];
 
@@ -42,7 +42,7 @@ export function Footer() {
   );
 
   return (
-    <footer className="border-t">
+    <footer className="border-t border-border/40">
       <div className="container mx-auto px-4 py-16">
         <div className="grid gap-10 md:grid-cols-4">
           <div className="space-y-4">
@@ -73,10 +73,10 @@ export function Footer() {
 
         <div className="mt-16 pt-8 border-t space-y-4">
           <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
-            Kora is a technology platform and is not a broker-dealer. Brokerage services by Alpaca Securities LLC, member FINRA/SIPC. Clearing and custody by Apex Clearing Corporation, member FINRA/SIPC. SIPC protects against broker failure, not market losses.
+            Securities offered through our clearing partners. Not FDIC insured. Not bank guaranteed. May lose value.
           </p>
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Kora Inc.
+            &copy; {new Date().getFullYear()} Kora. All rights reserved.
           </p>
         </div>
       </div>

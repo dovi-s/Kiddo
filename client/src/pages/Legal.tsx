@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Shield, FileText, Eye, AlertTriangle, ArrowRight } from "lucide-react";
+import { Nav } from "@/components/layout/Nav";
+import { Footer } from "@/components/layout/Footer";
 
 type Tab = "terms" | "privacy" | "disclosures";
 
@@ -18,21 +20,7 @@ export default function Legal() {
 
   return (
     <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/">
-            <Logo size="md" linkTo={null} />
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/login">
-              <span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-login">Log in</span>
-            </Link>
-            <Link href="/get-started">
-              <Button size="sm" data-testid="button-get-started">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Nav />
 
       <div className="max-w-4xl mx-auto px-4 py-12 md:py-20">
         <div className="flex items-center gap-3 mb-8">
@@ -197,13 +185,7 @@ export default function Legal() {
         </div>
       </div>
 
-      <footer className="border-t border-border/40 py-8">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Kora Inc. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { Mascot } from "@/components/ui/mascot";
 import { GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
 import { Button } from "@/components/ui/button";
 import { Heart, TrendingUp, Shield, Users, ArrowRight, Sprout, Sparkles } from "lucide-react";
+import { Nav } from "@/components/layout/Nav";
+import { Footer } from "@/components/layout/Footer";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
@@ -23,21 +25,7 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 export default function About() {
   return (
     <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/40">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/">
-            <Logo size="md" linkTo={null} />
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/login">
-              <span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer" data-testid="link-login">Log in</span>
-            </Link>
-            <Link href="/get-started">
-              <Button size="sm" data-testid="button-get-started">Get Started</Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Nav />
 
       <section className="relative pt-20 pb-16 md:pt-32 md:pb-24 overflow-hidden gemini-warm-section">
         <GeminiHeroGradient />
@@ -219,19 +207,7 @@ export default function About() {
         </div>
       </section>
 
-      <footer className="border-t border-border/40 py-12">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <Logo size="sm" linkTo={null} />
-            <span className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} Kora Inc.</span>
-          </div>
-          <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
-            <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
-            <Link href="/legal" className="hover:text-foreground transition-colors">Terms</Link>
-            <Link href="/legal" className="hover:text-foreground transition-colors">Privacy</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
+import { haptic } from "@/lib/haptics";
 
 interface NavProps {
   showDashboard?: boolean;
@@ -24,12 +25,12 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur-sm"
+      className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-lg"
     >
-      <div className="container mx-auto flex h-14 items-center justify-between px-4">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Logo size="md" className="text-foreground" />
 
-        <div className="hidden md:flex md:items-center md:gap-6">
+        <div className="hidden md:flex md:items-center md:gap-8">
           {showDashboard ? (
             <>
               <Link 
@@ -59,65 +60,74 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
           ) : (
             <>
               <a 
-                href="/#how" 
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group"
+                href="/#how-it-works" 
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="link-how-it-works-nav"
               >
-                How it works
-                <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-foreground transition-all group-hover:w-full" />
+                How It Works
               </a>
+              <Link href="/faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-faq-nav">
+                FAQ
+              </Link>
               <a 
                 href="/#pricing" 
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors relative group"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="link-pricing-nav"
               >
                 Pricing
-                <span className="absolute -bottom-0.5 left-0 w-0 h-px bg-foreground transition-all group-hover:w-full" />
               </a>
-              <Link href="/login">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button variant="ghost" size="sm" data-testid="button-login">Log in</Button>
-                </motion.div>
-              </Link>
-              <Link href="/get-started">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button size="sm" data-testid="button-get-started">Get started</Button>
-                </motion.div>
-              </Link>
             </>
           )}
         </div>
 
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-          <SheetTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="right" className="w-[280px]">
-            <div className="flex flex-col gap-6 pt-10">
-              {showDashboard ? (
-                <>
-                  <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName || "")}`} onClick={() => setIsOpen(false)} className="font-medium">
-                    Dashboard
-                  </Link>
-                  <Link href={`/recipient?name=${encodeURIComponent(profileName || "")}`} onClick={() => setIsOpen(false)} className="font-medium">
-                    {accountType === "personal" ? "My View" : `${profileName}'s View`}
-                  </Link>
-                  <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName || "")}`} onClick={() => setIsOpen(false)} className="font-medium">
-                    Settings
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <a href="/#how" onClick={() => setIsOpen(false)} className="font-medium">How it works</a>
-                  <a href="/#pricing" onClick={() => setIsOpen(false)} className="font-medium">Pricing</a>
-                  <hr />
-                  <Link href="/login" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
-                  <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Get started</Button></Link>
-                </>
-              )}
-            </div>
-          </SheetContent>
-        </Sheet>
+        <div className="flex items-center gap-4">
+          {!showDashboard && (
+            <>
+              <Link href="/login" data-testid="link-login">
+                <span className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer hidden md:inline">Log in</span>
+              </Link>
+              <Link href="/get-started">
+                <Button size="sm" data-testid="button-get-started-nav" onClick={() => haptic('light')}>
+                  Get Started
+                </Button>
+              </Link>
+            </>
+          )}
+
+          <Sheet open={isOpen} onOpenChange={setIsOpen}>
+            <SheetTrigger asChild className="md:hidden">
+              <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-[280px]">
+              <div className="flex flex-col gap-6 pt-10">
+                {showDashboard ? (
+                  <>
+                    <Link href={`/dashboard?type=${accountType}&name=${encodeURIComponent(profileName || "")}`} onClick={() => setIsOpen(false)} className="font-medium">
+                      Dashboard
+                    </Link>
+                    <Link href={`/recipient?name=${encodeURIComponent(profileName || "")}`} onClick={() => setIsOpen(false)} className="font-medium">
+                      {accountType === "personal" ? "My View" : `${profileName}'s View`}
+                    </Link>
+                    <Link href={`/settings?type=${accountType}&name=${encodeURIComponent(profileName || "")}`} onClick={() => setIsOpen(false)} className="font-medium">
+                      Settings
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <a href="/#how-it-works" onClick={() => setIsOpen(false)} className="font-medium">How It Works</a>
+                    <Link href="/faq" onClick={() => setIsOpen(false)} className="font-medium">FAQ</Link>
+                    <a href="/#pricing" onClick={() => setIsOpen(false)} className="font-medium">Pricing</a>
+                    <hr />
+                    <Link href="/login" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
+                    <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Get started</Button></Link>
+                  </>
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </motion.nav>
   );
