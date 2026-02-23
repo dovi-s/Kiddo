@@ -485,7 +485,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 md:py-32">
+      <section className="py-20 md:py-32" style={{ backgroundColor: "hsl(45, 30%, 93%)" }}>
         <div className="max-w-6xl mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -497,7 +497,7 @@ export default function Home() {
             <img
               src={mascotPlanting}
               alt="Kora mascot planting a coin"
-              className="mx-auto mb-6 w-48 md:w-64 h-auto drop-shadow-lg"
+              className="mx-auto mb-8 w-56 md:w-72 h-auto rounded-3xl"
               data-testid="img-cta-mascot"
             />
             <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight mb-6" data-testid="text-cta-heading">
