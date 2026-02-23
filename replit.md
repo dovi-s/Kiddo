@@ -76,6 +76,7 @@ The platform emphasizes transparency regarding asset holding (e.g., Apex Clearin
 *   **Memory Book** (`/memory/:fundId`): Timeline of gift messages, milestones, photos, notes
 *   **Activity** (`/activity`): Filtered activity feed grouped by date
 *   **Settings** (`/settings`): Profile, funds list, membership (with fee savings example), Event Passes, KYC status, privacy toggle per fund, sell holdings, withdraw cash, bank account management
+*   **Admin** (`/admin`): Internal admin dashboard with tabs for Overview (revenue, AUM, gift flow, pipeline), Users (all accounts with plan, KYC, fund counts), Funds (all funds with owners, holdings, events), Gifts (full fee itemization per gift), Transactions (complete ledger)
 
 ### Reusable Components
 *   **EducationTip** (`client/src/components/ui/education.tsx`): Inline, expandable, and tooltip education with pre-built content for UTMA, auto-invest, SIPC, fees, pending cash, taxes, gift growth

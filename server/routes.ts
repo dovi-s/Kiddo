@@ -5,7 +5,7 @@ import { stripeService } from "./stripeService";
 import { sql, eq } from "drizzle-orm";
 import { db } from "./db";
 import { isAuthenticated } from "./auth";
-import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, users, funds, holdings } from "@shared/schema";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, users, funds, holdings, gifts, events, subscriptions, transactions, bankAccounts, activities } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -1141,6 +1141,205 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error updating profile:', error);
       res.status(500).json({ error: 'Failed to update profile' });
+    }
+  });
+
+  // ===== ADMIN DASHBOARD =====
+  app.get('/api/admin/overview', isAuthenticated, async (req: any, res) => {
+    try {
+      const userResult = await db.execute(sql`
+        SELECT 
+          COUNT(*)::int AS total_users,
+          COUNT(CASE WHEN kyc_status = 'approved' THEN 1 END)::int AS kyc_approved,
+          COUNT(CASE WHEN kyc_status = 'pending' THEN 1 END)::int AS kyc_pending,
+          COUNT(CASE WHEN kyc_status = 'none' OR kyc_status IS NULL THEN 1 END)::int AS kyc_none
+        FROM users
+      `);
+      const userStats: any = userResult.rows[0];
+
+      const fundResult = await db.execute(sql`
+        SELECT
+          COUNT(*)::int AS total_funds,
+          COUNT(CASE WHEN status = 'active' THEN 1 END)::int AS active_funds,
+          COUNT(CASE WHEN status = 'draft' THEN 1 END)::int AS draft_funds,
+          COALESCE(SUM(CAST(balance AS numeric)), 0) AS total_invested,
+          COALESCE(SUM(CAST(pending_balance AS numeric)), 0) AS total_pending,
+          COALESCE(SUM(CAST(balance AS numeric) + CAST(pending_balance AS numeric)), 0) AS total_aum,
+          COUNT(CASE WHEN account_type = 'UTMA' THEN 1 END)::int AS utma_funds,
+          COUNT(CASE WHEN account_type != 'UTMA' THEN 1 END)::int AS personal_funds
+        FROM funds
+      `);
+      const fundStats: any = fundResult.rows[0];
+
+      const giftResult = await db.execute(sql`
+        SELECT
+          COUNT(*)::int AS total_gifts,
+          COALESCE(SUM(CAST(amount AS numeric)), 0) AS total_gift_volume,
+          COALESCE(AVG(CAST(amount AS numeric)), 0) AS avg_gift_size,
+          COALESCE(SUM(CAST(processing_fee AS numeric)), 0) AS total_processing_fees,
+          COALESCE(SUM(CAST(kora_fee AS numeric)), 0) AS total_kora_fees,
+          COALESCE(SUM(CAST(net_amount AS numeric)), 0) AS total_net_to_recipients,
+          COUNT(CASE WHEN status = 'pending' THEN 1 END)::int AS pending_gifts,
+          COUNT(CASE WHEN status = 'processing' THEN 1 END)::int AS processing_gifts,
+          COUNT(CASE WHEN status = 'invested' THEN 1 END)::int AS invested_gifts,
+          COUNT(CASE WHEN status = 'settled' THEN 1 END)::int AS settled_gifts,
+          COUNT(CASE WHEN status = 'failed' THEN 1 END)::int AS failed_gifts,
+          COUNT(DISTINCT sender_email)::int AS unique_givers
+        FROM gifts
+      `);
+      const giftStats: any = giftResult.rows[0];
+
+      const subResult = await db.execute(sql`
+        SELECT
+          COUNT(*)::int AS total_subscriptions,
+          COUNT(CASE WHEN plan = 'free' THEN 1 END)::int AS free_plans,
+          COUNT(CASE WHEN plan = 'family' AND status = 'active' THEN 1 END)::int AS active_family_plans,
+          COUNT(CASE WHEN plan = 'family' AND status = 'canceled' THEN 1 END)::int AS canceled_family_plans
+        FROM subscriptions
+      `);
+      const subStats: any = subResult.rows[0];
+
+      const eventResult = await db.execute(sql`
+        SELECT
+          COUNT(*)::int AS total_events,
+          COUNT(CASE WHEN has_event_pass = true THEN 1 END)::int AS events_with_pass,
+          COUNT(CASE WHEN status = 'active' THEN 1 END)::int AS active_events,
+          COALESCE(SUM(CAST(gift_volume AS numeric)), 0) AS total_event_gift_volume,
+          COALESCE(SUM(gift_count), 0)::int AS total_event_gift_count
+        FROM events
+      `);
+      const eventStats: any = eventResult.rows[0];
+
+      const txResult = await db.execute(sql`
+        SELECT
+          COUNT(*)::int AS total_transactions,
+          COALESCE(SUM(CASE WHEN type = 'gift' AND status = 'completed' THEN CAST(amount AS numeric) ELSE 0 END), 0) AS gift_tx_volume,
+          COALESCE(SUM(CASE WHEN type = 'family_plan' AND status = 'completed' THEN CAST(amount AS numeric) ELSE 0 END), 0) AS family_plan_revenue,
+          COALESCE(SUM(CASE WHEN type = 'event_pass' AND status = 'completed' THEN CAST(amount AS numeric) ELSE 0 END), 0) AS event_pass_revenue,
+          COALESCE(SUM(CASE WHEN type = 'subscription_renewal' AND status = 'completed' THEN CAST(amount AS numeric) ELSE 0 END), 0) AS renewal_revenue,
+          COALESCE(SUM(CASE WHEN type = 'sell' AND status = 'completed' THEN CAST(amount AS numeric) ELSE 0 END), 0) AS sell_volume,
+          COALESCE(SUM(CASE WHEN type = 'withdrawal' THEN CAST(amount AS numeric) ELSE 0 END), 0) AS withdrawal_volume,
+          COUNT(CASE WHEN status = 'failed' THEN 1 END)::int AS failed_transactions
+        FROM transactions
+      `);
+      const txStats: any = txResult.rows[0];
+
+      const bankResult = await db.execute(sql`
+        SELECT COUNT(*)::int AS total_bank_accounts FROM bank_accounts WHERE status = 'active'
+      `);
+      const bankStats: any = bankResult.rows[0];
+
+      const koraGiftRevenue = parseFloat(String(giftStats.total_kora_fees || '0'));
+      const familyPlanRevenue = parseFloat(String(txStats.family_plan_revenue || '0')) + parseFloat(String(txStats.renewal_revenue || '0'));
+      const eventPassRevenue = parseFloat(String(txStats.event_pass_revenue || '0'));
+      const totalKoraRevenue = koraGiftRevenue + familyPlanRevenue + eventPassRevenue;
+
+      res.json({
+        users: userStats,
+        funds: fundStats,
+        gifts: giftStats,
+        subscriptions: subStats,
+        events: eventStats,
+        transactions: txStats,
+        bankAccounts: bankStats,
+        revenue: {
+          giftPlatformFees: koraGiftRevenue.toFixed(2),
+          familyPlanRevenue: familyPlanRevenue.toFixed(2),
+          eventPassRevenue: eventPassRevenue.toFixed(2),
+          totalKoraRevenue: totalKoraRevenue.toFixed(2),
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching admin overview:', error);
+      res.status(500).json({ error: 'Failed to fetch admin overview' });
+    }
+  });
+
+  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const allUsersResult = await db.execute(sql`
+        SELECT 
+          u.id, u.email, u.first_name, u.last_name, u.kyc_status, u.kyc_submitted_at, u.created_at,
+          s.plan AS sub_plan, s.status AS sub_status, s.billing_interval, s.current_period_end,
+          s.stripe_subscription_id,
+          (SELECT COUNT(*)::int FROM funds f WHERE f.user_id = u.id) AS fund_count,
+          (SELECT COUNT(*)::int FROM funds f WHERE f.user_id = u.id AND f.account_type = 'UTMA') AS utma_count,
+          (SELECT COALESCE(SUM(CAST(f.balance AS numeric) + CAST(f.pending_balance AS numeric)), 0) FROM funds f WHERE f.user_id = u.id) AS total_value,
+          (SELECT COUNT(*)::int FROM bank_accounts ba WHERE ba.user_id = u.id AND ba.status = 'active') AS bank_accounts,
+          (SELECT COUNT(*)::int FROM gifts g JOIN funds f2 ON g.fund_id = f2.id WHERE f2.user_id = u.id) AS gifts_received
+        FROM users u
+        LEFT JOIN subscriptions s ON s.user_id = u.id
+        ORDER BY u.created_at DESC
+      `);
+      res.json(allUsersResult.rows);
+    } catch (error) {
+      console.error('Error fetching admin users:', error);
+      res.status(500).json({ error: 'Failed to fetch admin users' });
+    }
+  });
+
+  app.get('/api/admin/gifts', isAuthenticated, async (req: any, res) => {
+    try {
+      const allGiftsResult = await db.execute(sql`
+        SELECT 
+          g.*,
+          f.name AS fund_name, f.account_type AS fund_type, f.slug AS fund_slug,
+          e.name AS event_name, e.slug AS event_slug, e.has_event_pass,
+          u.email AS owner_email, u.first_name AS owner_first_name
+        FROM gifts g
+        JOIN funds f ON g.fund_id = f.id
+        LEFT JOIN events e ON g.event_id = e.id
+        LEFT JOIN users u ON f.user_id = u.id
+        ORDER BY g.created_at DESC
+        LIMIT 200
+      `);
+      res.json(allGiftsResult.rows);
+    } catch (error) {
+      console.error('Error fetching admin gifts:', error);
+      res.status(500).json({ error: 'Failed to fetch admin gifts' });
+    }
+  });
+
+  app.get('/api/admin/transactions', isAuthenticated, async (req: any, res) => {
+    try {
+      const allTxResult = await db.execute(sql`
+        SELECT 
+          t.*,
+          u.email AS user_email, u.first_name AS user_first_name,
+          f.name AS fund_name,
+          e.name AS event_name
+        FROM transactions t
+        LEFT JOIN users u ON t.user_id = u.id
+        LEFT JOIN funds f ON t.fund_id = f.id
+        LEFT JOIN events e ON t.event_id = e.id
+        ORDER BY t.created_at DESC
+        LIMIT 200
+      `);
+      res.json(allTxResult.rows);
+    } catch (error) {
+      console.error('Error fetching admin transactions:', error);
+      res.status(500).json({ error: 'Failed to fetch admin transactions' });
+    }
+  });
+
+  app.get('/api/admin/funds', isAuthenticated, async (req: any, res) => {
+    try {
+      const allFundsResult = await db.execute(sql`
+        SELECT 
+          f.*,
+          u.email AS owner_email, u.first_name AS owner_first_name, u.last_name AS owner_last_name,
+          u.kyc_status AS owner_kyc_status,
+          (SELECT COUNT(*)::int FROM holdings h WHERE h.fund_id = f.id) AS holding_count,
+          (SELECT COUNT(*)::int FROM gifts g WHERE g.fund_id = f.id) AS gift_count,
+          (SELECT COUNT(*)::int FROM events e WHERE e.fund_id = f.id) AS event_count
+        FROM funds f
+        JOIN users u ON f.user_id = u.id
+        ORDER BY f.created_at DESC
+      `);
+      res.json(allFundsResult.rows);
+    } catch (error) {
+      console.error('Error fetching admin funds:', error);
+      res.status(500).json({ error: 'Failed to fetch admin funds' });
     }
   });
 

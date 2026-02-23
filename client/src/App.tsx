@@ -30,6 +30,7 @@ import GiftSuccess from "@/pages/GiftSuccess";
 import KidView from "@/pages/KidView";
 import About from "@/pages/About";
 import Legal from "@/pages/Legal";
+import Admin from "@/pages/Admin";
 import brandMark from "@/assets/kora-brand-mark.png";
 
 function ScrollToTop() {
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/how-it-works">{() => { window.location.href = "/#how-it-works"; return null; }}</Route>
       <Route path="/about" component={About} />
       <Route path="/legal" component={Legal} />
+      <Route path="/admin" component={Admin} />
       <Route path="/memory/:fundId" component={MemoryBook} />
       <Route path="/gift/success" component={GiftSuccess} />
       <Route path="/kid/:fundId" component={KidView} />
