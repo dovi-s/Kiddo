@@ -536,7 +536,7 @@ export async function registerRoutes(
 
   app.post('/api/stripe/calculate-fees', async (req, res) => {
     try {
-      const { amount, coverFees, eventId, fundId, fundSlug, eventSlug } = req.body;
+      const { amount, coverFees, eventId, fundId, fundSlug, eventSlug, paymentMethod } = req.body;
       
       let hasEventPass = false;
       let hasFamilyPlan = false;
@@ -572,7 +572,8 @@ export async function registerRoutes(
         parseFloat(amount) || 0, 
         coverFees || false, 
         hasEventPass, 
-        hasFamilyPlan
+        hasFamilyPlan,
+        paymentMethod || 'card'
       );
       res.json({ ...fees, hasEventPass, hasFamilyPlan });
     } catch (error) {
@@ -583,7 +584,7 @@ export async function registerRoutes(
 
   app.post('/api/stripe/checkout/gift', async (req, res) => {
     try {
-      const { fundId, eventId, amount, senderName, senderEmail, message, coverFees } = req.body;
+      const { fundId, eventId, amount, senderName, senderEmail, message, coverFees, paymentMethod } = req.body;
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       
       if (!fundId || !amount || !senderName) {
@@ -623,6 +624,7 @@ export async function registerRoutes(
         hasEventPass,
         hasFamilyPlan,
         fundUserId: fund.userId,
+        paymentMethod: paymentMethod || 'card',
         successUrl: `${baseUrl}/gift/success?fundId=${fundId}&eventId=${eventId || ''}`,
         cancelUrl: `${baseUrl}/gift/${eventId || fundId}?canceled=true`,
       });

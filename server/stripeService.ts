@@ -1,6 +1,8 @@
 import { getUncachableStripeClient, getStripePublishableKey } from './stripeClient';
 import type Stripe from 'stripe';
 
+export type PaymentMethodPreference = 'card' | 'apple_pay' | 'bank' | 'cashapp';
+
 export interface GiftCheckoutParams {
   fundId: string;
   eventId?: string;
@@ -14,6 +16,7 @@ export interface GiftCheckoutParams {
   fundUserId?: string;
   successUrl: string;
   cancelUrl: string;
+  paymentMethod?: PaymentMethodPreference;
 }
 
 export interface FeeCalculation {
@@ -25,9 +28,14 @@ export interface FeeCalculation {
 }
 
 export class StripeService {
-  calculateFees(amount: number, coverFees: boolean, hasEventPass: boolean = false, hasFamilyPlan: boolean = false): FeeCalculation {
+  calculateFees(amount: number, coverFees: boolean, hasEventPass: boolean = false, hasFamilyPlan: boolean = false, paymentMethod: PaymentMethodPreference = 'card'): FeeCalculation {
     const baseAmount = amount;
-    const processingFee = Math.round((amount * 0.029 + 0.30) * 100) / 100;
+    let processingFee: number;
+    if (paymentMethod === 'bank') {
+      processingFee = Math.round(Math.min(5, amount * 0.008) * 100) / 100;
+    } else {
+      processingFee = Math.round((amount * 0.029 + 0.30) * 100) / 100;
+    }
     
     let koraFee = 0;
     if (!hasEventPass && !hasFamilyPlan) {
@@ -82,18 +90,33 @@ export class StripeService {
     return await this.createCustomer(email, name, userId ? { userId } : undefined);
   }
 
+  private getPaymentMethodTypes(preference?: PaymentMethodPreference): Stripe.Checkout.SessionCreateParams.PaymentMethodType[] {
+    switch (preference) {
+      case 'bank':
+        return ['us_bank_account'];
+      case 'cashapp':
+        return ['cashapp', 'card'];
+      case 'apple_pay':
+      case 'card':
+      default:
+        return ['card'];
+    }
+  }
+
   async createGiftCheckoutSession(params: GiftCheckoutParams): Promise<Stripe.Checkout.Session> {
     const stripe = await getUncachableStripeClient();
     const fees = this.calculateFees(
       params.amount, 
       params.coverFees, 
       params.hasEventPass || false, 
-      params.hasFamilyPlan || false
+      params.hasFamilyPlan || false,
+      params.paymentMethod
     );
     const totalCents = Math.round(fees.totalCharge * 100);
+    const paymentMethodTypes = this.getPaymentMethodTypes(params.paymentMethod);
 
     return await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
+      payment_method_types: paymentMethodTypes,
       line_items: [{
         price_data: {
           currency: 'usd',

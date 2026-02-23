@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gift, Lock, Shield, ChevronDown, Check, ArrowRight, Heart, Sparkles, TrendingUp, CreditCard, Building2, Smartphone } from "lucide-react";
+import { Gift, Lock, Shield, ChevronDown, Check, ArrowRight, Heart, Sparkles, TrendingUp, CreditCard, Building2, Smartphone, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
@@ -23,12 +23,13 @@ const STOCK_PICKS = [
 ];
 
 type ExecutionModel = "auto" | "pick" | "family";
-type PaymentMethod = "card" | "apple_pay" | "bank";
+type PaymentMethod = "card" | "apple_pay" | "bank" | "cashapp";
 
 const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: typeof CreditCard; desc: string; feeLine: string }[] = [
   { id: "apple_pay", label: "Apple Pay / Google Pay", icon: Smartphone, desc: "One-tap checkout", feeLine: "~2.9% + $0.30" },
   { id: "card", label: "Credit or debit card", icon: CreditCard, desc: "Visa, Mastercard, Amex", feeLine: "~2.9% + $0.30" },
-  { id: "bank", label: "Bank transfer (ACH)", icon: Building2, desc: "Lower fees, 3-5 days", feeLine: "0.8% (max $5)" },
+  { id: "cashapp", label: "Cash App", icon: DollarSign, desc: "Pay with Cash App balance", feeLine: "~2.9% + $0.30" },
+  { id: "bank", label: "Bank transfer (ACH)", icon: Building2, desc: "Lower fees, 3-5 business days", feeLine: "0.8% (max $5)" },
 ];
 
 interface FeeData {
@@ -139,7 +140,7 @@ export default function GiftCheckout() {
   const growthAmount = compoundGrowth(activeAmount, 0.07, 18);
 
   const { data: feeData } = useQuery<FeeData>({
-    queryKey: ["fees", fundSlug, eventSlug, activeAmount, coverFees],
+    queryKey: ["fees", fundSlug, eventSlug, activeAmount, coverFees, paymentMethod],
     queryFn: async () => {
       const res = await fetch("/api/stripe/calculate-fees", {
         method: "POST",
@@ -149,6 +150,7 @@ export default function GiftCheckout() {
           coverFees,
           eventSlug,
           fundSlug,
+          paymentMethod,
         }),
       });
       if (!res.ok) throw new Error("Failed to calculate fees");
@@ -186,6 +188,7 @@ export default function GiftCheckout() {
           senderEmail: senderEmail.trim() || undefined,
           message: message.trim() || undefined,
           coverFees,
+          paymentMethod,
         }),
       });
 
@@ -594,7 +597,7 @@ export default function GiftCheckout() {
             })}
           </div>
           <p className="text-[10px] text-muted-foreground mt-2">
-            You will choose your exact payment method on the secure checkout page. Estimated fees shown above.
+            You'll complete payment on a secure checkout page. Apple Pay and Google Pay appear automatically on supported devices.
           </p>
         </motion.section>
 
@@ -643,7 +646,7 @@ export default function GiftCheckout() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">
-                        Processing ({paymentMethod === "bank" ? "ACH" : paymentMethod === "apple_pay" ? "Apple/Google Pay" : "Card"})
+                        Processing ({paymentMethod === "bank" ? "ACH" : paymentMethod === "apple_pay" ? "Apple/Google Pay" : paymentMethod === "cashapp" ? "Cash App" : "Card"})
                       </span>
                       <span className="text-foreground">${processingFee.toFixed(2)}</span>
                     </div>
@@ -774,12 +777,14 @@ export default function GiftCheckout() {
               </div>
             ) : (
               <>
-                {paymentMethod === "apple_pay" ? <Smartphone size={16} /> : paymentMethod === "bank" ? <Building2 size={16} /> : <Lock size={16} />}
+                {paymentMethod === "apple_pay" ? <Smartphone size={16} /> : paymentMethod === "bank" ? <Building2 size={16} /> : paymentMethod === "cashapp" ? <DollarSign size={16} /> : <Lock size={16} />}
                 <span>
                   {paymentMethod === "apple_pay"
                     ? `Pay $${isValidAmount ? totalCharge.toFixed(2) : "0.00"}`
                     : paymentMethod === "bank"
                     ? `Pay $${isValidAmount ? totalCharge.toFixed(2) : "0.00"} via bank`
+                    : paymentMethod === "cashapp"
+                    ? `Pay $${isValidAmount ? totalCharge.toFixed(2) : "0.00"} with Cash App`
                     : `Pay $${isValidAmount ? totalCharge.toFixed(2) : "0.00"} with card`}
                 </span>
               </>
