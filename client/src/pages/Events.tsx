@@ -519,23 +519,24 @@ export default function Events() {
                 data-testid="input-edit-event-name"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Event Type</label>
-              <select
-                value={editType}
-                onChange={(e) => setEditType(e.target.value)}
-                className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                data-testid="select-edit-event-type"
-              >
-                <option value="gift_anytime">Gift Anytime (Permanent)</option>
-                <option value="birthday">Birthday</option>
-                <option value="baby_shower">Baby Shower</option>
-                <option value="holiday">Holiday</option>
-                <option value="christmas">Christmas</option>
-                <option value="graduation">Graduation</option>
-                <option value="just_because">Just Because</option>
-              </select>
-            </div>
+            {!editingEvent?.isPermanent && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Event Type</label>
+                <select
+                  value={editType}
+                  onChange={(e) => setEditType(e.target.value)}
+                  className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  data-testid="select-edit-event-type"
+                >
+                  <option value="birthday">Birthday</option>
+                  <option value="baby_shower">Baby Shower</option>
+                  <option value="holiday">Holiday</option>
+                  <option value="christmas">Christmas</option>
+                  <option value="graduation">Graduation</option>
+                  <option value="just_because">Just Because</option>
+                </select>
+              </div>
+            )}
             <div>
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Description (optional)</label>
               <textarea
@@ -547,15 +548,17 @@ export default function Events() {
                 data-testid="input-edit-event-description"
               />
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Date (optional)</label>
-              <Input
-                type="date"
-                value={editDate}
-                onChange={(e) => setEditDate(e.target.value)}
-                data-testid="input-edit-event-date"
-              />
-            </div>
+            {!editingEvent?.isPermanent && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5 block">Date (optional)</label>
+                <Input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  data-testid="input-edit-event-date"
+                />
+              </div>
+            )}
             <Button
               className="w-full"
               onClick={handleSaveEvent}
