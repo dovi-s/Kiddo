@@ -171,7 +171,9 @@ export default function GiftCheckout() {
   const processingFee = feeData?.processingFee ?? estimatedProcessingFee;
   const platformFee = feeData?.koraFee ?? 2.00;
   const feeWaived = feeData?.hasEventBoost || feeData?.hasPaidPlan;
-  const totalCharge = feeData?.totalCharge ?? (activeAmount + processingFee + (feeWaived ? 0 : platformFee));
+  const totalFees = processingFee + (feeWaived ? 0 : platformFee);
+  const totalCharge = feeData?.totalCharge ?? (coverFees ? activeAmount + totalFees : activeAmount);
+  const netToFund = feeData?.netToFund ?? (coverFees ? activeAmount : activeAmount - totalFees);
   const achSavings = (activeAmount * 0.029 + 0.30) - Math.min(5, activeAmount * 0.008);
 
   const canSubmit = isValidAmount && senderName.trim().length > 0;
@@ -631,13 +633,13 @@ export default function GiftCheckout() {
                   {recipientName} receives
                 </span>
                 <span className="text-lg font-bold text-primary" data-testid="text-recipient-receives">
-                  ${(coverFees ? activeAmount : (feeData?.netToFund ?? activeAmount - platformFee)).toFixed(2)}
+                  ${(coverFees ? activeAmount : netToFund).toFixed(2)}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
                 {coverFees
                   ? `100% of your $${activeAmount.toFixed(2)} gift goes directly into ${recipientName}'s investment fund`
-                  : `Your $${activeAmount.toFixed(2)} gift minus the $${platformFee.toFixed(2)} platform fee (Free plan)`}
+                  : `Your $${activeAmount.toFixed(2)} gift minus $${totalFees.toFixed(2)} in fees`}
               </p>
             </div>
 
@@ -706,7 +708,7 @@ export default function GiftCheckout() {
               <div className="space-y-1 text-xs text-muted-foreground">
                 <div className="flex justify-between">
                   <span>Goes to {recipientName}'s fund</span>
-                  <span className="font-medium text-foreground">${(coverFees ? activeAmount : (feeData?.netToFund ?? activeAmount - platformFee)).toFixed(2)}</span>
+                  <span className="font-medium text-foreground">${(coverFees ? activeAmount : netToFund).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Payment processing (Stripe)</span>

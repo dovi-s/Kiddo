@@ -56,8 +56,8 @@ export class StripeService {
         baseAmount,
         processingFee,
         koraFee,
-        totalCharge: baseAmount + processingFee + koraFee,
-        netToFund: baseAmount - koraFee,
+        totalCharge: baseAmount,
+        netToFund: baseAmount - processingFee - koraFee,
       };
     }
   }
