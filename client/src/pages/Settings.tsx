@@ -509,7 +509,7 @@ export default function Settings() {
 
   const displayName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User";
   const userEmail = user.email || "";
-  const userPlan = (subscription?.plan === "family" && subscription?.status === "active") ? "family" : "free";
+  const userPlan: "free" | "starter" | "family" = (subscription?.status === "active" && subscription?.plan === "family") ? "family" : (subscription?.status === "active" && subscription?.plan === "starter") ? "starter" : "free";
   const kycCompleted = kycData?.kycStatus === "approved";
 
   const handleUpgradeFamily = async () => {
@@ -849,39 +849,61 @@ export default function Settings() {
               <>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-foreground" data-testid="text-current-plan">Free Plan</span>
+                  <span className="text-xs text-muted-foreground">$2 platform fee per gift</span>
                 </div>
+
+                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20 p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Crown size={16} className="text-primary" />
+                    <p className="text-sm font-semibold text-foreground">Starter Plan</p>
+                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">$5/mo per fund</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Remove the $2 platform fee on every gift. Includes 2 event pages per fund, Memory Book, and auto-invest.
+                  </p>
+                  <ul className="space-y-1.5 text-sm text-muted-foreground">
+                    <li className="flex items-center gap-2">
+                      <Check size={14} className="text-primary" />
+                      No platform fee on gifts
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={14} className="text-primary" />
+                      2 event pages per fund
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={14} className="text-primary" />
+                      Memory Book and auto-invest
+                    </li>
+                  </ul>
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    data-testid="button-upgrade-starter"
+                    disabled={upgrading}
+                    onClick={handleUpgradeFamily}
+                  >
+                    {upgrading && <Loader2 size={16} className="mr-2 animate-spin" />}
+                    Upgrade to Starter
+                  </Button>
+                </div>
+
                 <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20 p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <Crown size={16} className="text-primary" />
                     <p className="text-sm font-semibold text-foreground">Family Plan</p>
-                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">$149/year</span>
+                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">$12/mo or $119/yr</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    One price for your whole family. Platform fee waived on up to $15,000 in gifts per year.
+                    Everything unlimited. No platform fees, unlimited funds and event pages, household dashboard, and priority support.
                   </p>
-                  <div className="bg-background rounded-lg p-3 border border-border/30 text-xs text-muted-foreground space-y-1.5">
-                    <p className="font-medium text-foreground text-sm">Fee savings example</p>
-                    <div className="flex justify-between">
-                      <span>On a $100 gift (Free plan)</span>
-                      <span>$1.50 Kora fee</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>On a $100 gift (Family Plan)</span>
-                      <span className="text-green-600 font-medium">$0.00 Kora fee</span>
-                    </div>
-                    <div className="flex justify-between pt-1 border-t border-border/30">
-                      <span>If you receive $5,000 in gifts/year</span>
-                      <span className="text-green-600 font-medium">Save ~$75</span>
-                    </div>
-                  </div>
                   <ul className="space-y-1.5 text-sm text-muted-foreground">
                     <li className="flex items-center gap-2">
                       <Check size={14} className="text-primary" />
-                      Kora platform fee waived (up to $15,000/year in gifts)
+                      No platform fee on gifts
                     </li>
                     <li className="flex items-center gap-2">
                       <Check size={14} className="text-primary" />
-                      Unlimited premium event pages
+                      Unlimited funds and premium event pages
                     </li>
                     <li className="flex items-center gap-2">
                       <Check size={14} className="text-primary" />
@@ -903,6 +925,49 @@ export default function Settings() {
                   </Button>
                 </div>
               </>
+            ) : userPlan === "starter" ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Check size={16} className="text-green-600" />
+                  <span className="text-sm font-medium text-foreground" data-testid="text-current-plan">Starter Plan</span>
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span>
+                </div>
+                <div className="bg-muted/30 rounded-xl p-3 space-y-1.5 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Plan</span>
+                    <span className="font-medium text-foreground">Starter ($5/mo per fund)</span>
+                  </div>
+                  {subscription?.currentPeriodEnd && (
+                    <div className="flex justify-between">
+                      <span>Renews</span>
+                      <span className="font-medium text-foreground">{new Date(subscription.currentPeriodEnd).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>Platform fee</span>
+                    <span className="font-medium text-green-600">Waived</span>
+                  </div>
+                </div>
+                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20 p-4 space-y-3 mt-3">
+                  <div className="flex items-center gap-2">
+                    <Crown size={16} className="text-primary" />
+                    <p className="text-sm font-semibold text-foreground">Upgrade to Family</p>
+                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">$12/mo or $119/yr</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Unlimited funds, unlimited event pages, household dashboard, and priority support.
+                  </p>
+                  <Button
+                    className="w-full"
+                    data-testid="button-upgrade-family"
+                    disabled={upgrading}
+                    onClick={handleUpgradeFamily}
+                  >
+                    {upgrading && <Loader2 size={16} className="mr-2 animate-spin" />}
+                    Upgrade to Family Plan
+                  </Button>
+                </div>
+              </div>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -913,11 +978,11 @@ export default function Settings() {
                 <div className="bg-muted/30 rounded-xl p-3 space-y-1.5 text-xs text-muted-foreground">
                   <div className="flex justify-between">
                     <span>Plan</span>
-                    <span className="font-medium text-foreground">Family ($149/year)</span>
+                    <span className="font-medium text-foreground">Family ({subscription?.billingInterval === "yearly" ? "$119/year" : "$12/month"})</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Billing</span>
-                    <span className="font-medium text-foreground">{subscription?.billingInterval === "yearly" ? "Annual" : subscription?.billingInterval === "monthly" ? "Monthly" : "Annual"}</span>
+                    <span className="font-medium text-foreground">{subscription?.billingInterval === "yearly" ? "Annual" : "Monthly"}</span>
                   </div>
                   {subscription?.currentPeriodEnd && (
                     <div className="flex justify-between">
@@ -927,7 +992,7 @@ export default function Settings() {
                   )}
                   <div className="flex justify-between">
                     <span>Platform fee</span>
-                    <span className="font-medium text-green-600">Waived (up to $15,000/year)</span>
+                    <span className="font-medium text-green-600">Waived</span>
                   </div>
                 </div>
               </div>
@@ -940,7 +1005,7 @@ export default function Settings() {
           <div className="p-5 space-y-4">
             <div className="flex items-center gap-3 mb-2">
               <CreditCard size={18} className="text-muted-foreground" />
-              <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-event-passes">Event Passes</h2>
+              <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-event-passes">Event Boosts</h2>
             </div>
 
             {eventsWithPasses.length > 0 && (
@@ -953,7 +1018,7 @@ export default function Settings() {
                   >
                     <div>
                       <p className="text-sm font-medium text-foreground">{event.name}</p>
-                      <p className="text-xs text-green-600">Event Pass active</p>
+                      <p className="text-xs text-green-600">Event Boost active</p>
                     </div>
                     <Check size={16} className="text-green-600" />
                   </div>
@@ -968,18 +1033,18 @@ export default function Settings() {
                   <p className="text-sm font-semibold text-foreground">Included with Family Plan</p>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Premium event pages, goal cards, and thank-you automation are all included. No Event Pass needed.
+                  Premium event pages, goal cards, and thank-you automation are all included. No Event Boost needed.
                 </p>
               </div>
             ) : (
               <div className="bg-muted/30 rounded-xl border border-border/50 p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <CreditCard size={16} className="text-muted-foreground" />
-                  <p className="text-sm font-semibold text-foreground">Event Pass</p>
-                  <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">$99 one-time</span>
+                  <p className="text-sm font-semibold text-foreground">Event Boost</p>
+                  <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">$29 one-time</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Waives the Kora platform fee (1.5% per gift) up to $7,500 in gift volume for one event. Includes premium themes, goal cards, and thank-you automation. Processing fees (Stripe) still apply.
+                  Waives the $2 platform fee on gifts for one event. Includes premium themes, goal cards, and thank-you automation. Processing fees (Stripe) still apply.
                 </p>
                 <Link href="/events">
                   <Button

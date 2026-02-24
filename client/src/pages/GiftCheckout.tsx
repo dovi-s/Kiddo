@@ -38,8 +38,9 @@ interface FeeData {
   koraFee: number;
   totalCharge: number;
   netToFund: number;
-  hasEventPass: boolean;
-  hasFamilyPlan: boolean;
+  hasEventBoost: boolean;
+  hasPaidPlan: boolean;
+  hostPlan?: string;
   processingFeeRate?: string;
   koraFeeRate?: string;
   stripeFeeExplanation?: string;
@@ -168,8 +169,8 @@ export default function GiftCheckout() {
     ? Math.min(5, activeAmount * 0.008)
     : (activeAmount * 0.029 + 0.30);
   const processingFee = feeData?.processingFee ?? estimatedProcessingFee;
-  const platformFee = feeData?.koraFee ?? Math.max(1, Math.min(10, activeAmount * 0.015));
-  const feeWaived = feeData?.hasEventPass || feeData?.hasFamilyPlan;
+  const platformFee = feeData?.koraFee ?? 2.00;
+  const feeWaived = feeData?.hasEventBoost || feeData?.hasPaidPlan;
   const totalCharge = feeData?.totalCharge ?? (activeAmount + processingFee + (feeWaived ? 0 : platformFee));
   const achSavings = (activeAmount * 0.029 + 0.30) - Math.min(5, activeAmount * 0.008);
 
@@ -636,7 +637,7 @@ export default function GiftCheckout() {
               <p className="text-xs text-muted-foreground">
                 {coverFees
                   ? `100% of your $${activeAmount.toFixed(2)} gift goes directly into ${recipientName}'s investment fund`
-                  : `Your $${activeAmount.toFixed(2)} gift minus the $${platformFee.toFixed(2)} platform fee`}
+                  : `Your $${activeAmount.toFixed(2)} gift minus the $${platformFee.toFixed(2)} platform fee (Free plan)`}
               </p>
             </div>
 
@@ -672,15 +673,15 @@ export default function GiftCheckout() {
 
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-foreground font-medium">Kora platform fee{!feeWaived ? ` (${feeData?.koraFeeRate || "1.5%, min $1, max $10"})` : ""}</span>
+                  <span className="text-foreground font-medium">Kora platform fee{!feeWaived ? ` (${feeData?.koraFeeRate || "$2.00 per gift"})` : ""}</span>
                   {feeWaived ? (
                     <p className="text-xs text-green-600 mt-0.5 flex items-center gap-1">
                       <Check size={10} />
-                      {feeData?.koraFeeExplanation || (feeData?.hasEventPass ? "Waived by Event Pass ($99/event)" : "Waived by Family Plan ($149/year)")}
+                      {feeData?.koraFeeExplanation || (feeData?.hasEventBoost ? "Waived by Event Boost ($29/event)" : "Waived by host's subscription plan")}
                     </p>
                   ) : (
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {feeData?.koraFeeExplanation || "Kora platform fee that supports secure investing infrastructure. Minimum $1, maximum $10 per gift."}
+                      {feeData?.koraFeeExplanation || "$2.00 platform fee per gift on the Free plan. The host can upgrade to remove this fee."}
                       {!coverFees && " Deducted from gift amount."}
                       {coverFees && ` Added to your total so the full gift goes to ${recipientName}.`}
                     </p>
@@ -688,7 +689,7 @@ export default function GiftCheckout() {
                 </div>
                 {feeWaived ? (
                   <span className="text-green-600 font-medium shrink-0 line-through decoration-green-600/50">
-                    ${Math.min(Math.max(activeAmount * 0.015, 1), 10).toFixed(2)}
+                    $2.00
                   </span>
                 ) : (
                   <span className="text-foreground shrink-0">${platformFee.toFixed(2)}</span>
@@ -759,7 +760,7 @@ export default function GiftCheckout() {
             {!feeWaived && (
               <div className="bg-muted/50 rounded-xl p-3 text-xs text-muted-foreground">
                 <p className="font-medium text-foreground mb-1">Save on fees with a plan</p>
-                <p>The host can waive the Kora platform fee for all guests by purchasing a <strong>Family Plan ($149/year)</strong> or an <strong>Event Pass ($99/event)</strong>.</p>
+                <p>The host can remove the $2 platform fee for all guests by subscribing to a <strong>Starter ($5/mo)</strong> or <strong>Family ($12/mo)</strong> plan.</p>
               </div>
             )}
           </div>

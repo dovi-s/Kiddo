@@ -109,7 +109,7 @@ export const educationContent = {
   },
   fees: {
     title: "How do fees work?",
-    content: "There are two types of fees: payment processing (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at just 0.8% max $5) and a small Kora platform fee of 1.5% (max $10). Family Plan and Event Pass holders get the platform fee waived.",
+    content: "There are two types of fees: payment processing paid by the gift-giver (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at just 0.8% max $5) and the Kora platform fee. On the Free tier, a flat $2 platform fee applies per gift. On Starter ($5/month per fund) and Family ($12/month or $119/year), the platform fee is waived entirely. Free and Starter users can also purchase an Event Boost ($29 one-time) to waive the platform fee for a specific event.",
   },
   pendingCash: {
     title: "What does 'pending' mean?",

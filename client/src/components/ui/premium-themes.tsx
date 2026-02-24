@@ -234,7 +234,7 @@ export function EventPassBadge({ size = "md" }: EventPassBadgeProps) {
       size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-3 py-1 text-xs"
     }`}>
       <Crown size={size === "sm" ? 10 : 12} />
-      Event Pass
+      Event Boost
     </div>
   );
 }
@@ -255,12 +255,12 @@ export function EventPassUpgrade({ eventTitle, onUpgrade, onDismiss }: EventPass
       <div className="relative">
         <div className="flex items-center gap-2 mb-3">
           <Crown className="w-5 h-5 text-[hsl(var(--kora-gold))]" />
-          <span className="text-[hsl(var(--kora-gold))] font-medium text-sm">Event Pass</span>
+          <span className="text-[hsl(var(--kora-gold))] font-medium text-sm">Event Boost</span>
         </div>
         
         <h3 className="text-xl font-semibold mb-2">Make {eventTitle} unforgettable</h3>
         <p className="text-primary-foreground/60 text-sm mb-6">
-          One-time $99 upgrade. Premium themes, goal cards, thank-you automation, and Kora fee waived up to $7,500.
+          One-time $29 upgrade. Premium themes, goal cards, thank-you automation, and $2 platform fee waived on all gifts.
         </p>
         
         <ul className="space-y-2 mb-6">
@@ -269,7 +269,7 @@ export function EventPassUpgrade({ eventTitle, onUpgrade, onDismiss }: EventPass
             "Group goal progress card",
             "Automatic thank-you drafts",
             "Priority support",
-            "Kora fee waived (up to $7,500)"
+            "Platform fee waived on all gifts"
           ].map((feature) => (
             <li key={feature} className="flex items-center gap-2 text-sm text-primary-foreground/80">
               <Check size={14} className="text-success" />
@@ -284,7 +284,7 @@ export function EventPassUpgrade({ eventTitle, onUpgrade, onDismiss }: EventPass
             data-testid="button-upgrade-event-pass"
             className="flex-1 py-3 bg-[hsl(var(--kora-gold))] text-primary font-semibold rounded-xl hover:bg-[hsl(var(--kora-gold-light))] transition-colors"
           >
-            Upgrade for $99
+            Upgrade for $29
           </button>
           <button
             onClick={onDismiss}

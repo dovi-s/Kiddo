@@ -129,7 +129,7 @@ export class WebhookHandlers {
     }
 
     await storage.updateEvent(eventId, {
-      hasEventPass: true,
+      hasEventPass: true, // Event Boost active (DB column name retained)
       eventPassPurchasedAt: new Date(),
     });
 
@@ -137,8 +137,8 @@ export class WebhookHandlers {
       await storage.createActivity({
         userId,
         type: 'event_pass_purchased',
-        title: 'Event Pass purchased',
-        description: 'Platform fees waived for this event up to $7,500',
+        title: 'Event Boost purchased',
+        description: 'Platform fee waived for gifts on this event',
       });
     }
   }

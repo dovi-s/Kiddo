@@ -152,7 +152,7 @@ export default function MomentCreate() {
               
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))] text-sm font-medium mb-6">
                 <Zap size={14} />
-                {hasFamilyPlan ? "Fee-free gifting" : "Event Pass active"}
+                {hasFamilyPlan ? "Fee-free gifting" : "Event Boost active"}
               </div>
 
               <div className="bg-card border border-border rounded-2xl p-5 mb-6">
@@ -301,17 +301,17 @@ export default function MomentCreate() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-foreground">Event Pass</span>
+                        <span className="font-semibold text-foreground">Event Boost</span>
                         {hasFamilyPlan ? (
                           <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">Covered by Family Plan</span>
                         ) : (
-                          <span className="text-sm font-bold text-[hsl(var(--kora-gold))]">$99</span>
+                          <span className="text-sm font-bold text-[hsl(var(--kora-gold))]">$29</span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {hasFamilyPlan 
-                          ? "No Kora fee on gifts for this event (up to $7,500)."
-                          : "Waives the Kora fee on all gifts for this event (up to $7,500)."}
+                          ? "No $2 platform fee on gifts for this event."
+                          : "Waives the $2 platform fee on all gifts for this event."}
                       </p>
                     </div>
                   </div>
@@ -319,7 +319,7 @@ export default function MomentCreate() {
                 {!hasFamilyPlan && (
                   <p className="text-xs text-muted-foreground flex items-start gap-1.5">
                     <Info size={12} className="flex-shrink-0 mt-0.5" />
-                    Upgrade to Family Plan ($149/year) to create unlimited events with no per-event fee.
+                    Upgrade to Family Plan ($12/mo or $119/yr) to create unlimited events with no per-event fee.
                   </p>
                 )}
               </div>
@@ -346,14 +346,14 @@ export default function MomentCreate() {
                 ) : (
                   <>
                     <Sparkles size={18} />
-                    Create event ($99)
+                    Create event ($29)
                   </>
                 )}
               </motion.button>
               <p className="text-xs text-muted-foreground text-center mt-4">
                 {hasFamilyPlan 
                   ? "Covered by your Family Plan"
-                  : "Includes Event Pass for fee-free gifting"}
+                  : "Includes Event Boost for fee-free gifting"}
               </p>
             </div>
           </motion.div>

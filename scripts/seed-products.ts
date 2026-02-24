@@ -49,52 +49,86 @@ async function createProducts() {
     return;
   }
 
-  const familyPlan = await stripe.products.create({
-    name: 'Family Plan',
-    description: 'Waives Kora platform fee on gifts up to $15,000/year. Covers all children and all events.',
+  const starterPlan = await stripe.products.create({
+    name: 'Starter Plan',
+    description: 'No platform fee on gifts. 2 event pages per fund. Memory Book and auto-invest included.',
     metadata: {
       type: 'subscription',
       benefit: 'fee_waiver',
-      annual_limit: '15000',
+      events_per_fund: '2',
+    }
+  });
+  console.log('Created Starter Plan product:', starterPlan.id);
+
+  const starterPlanPrice = await stripe.prices.create({
+    product: starterPlan.id,
+    unit_amount: 500,
+    currency: 'usd',
+    recurring: { interval: 'month' },
+    metadata: {
+      display_name: 'Starter Plan Monthly (per fund)',
+    }
+  });
+  console.log('Created Starter Plan price:', starterPlanPrice.id);
+
+  const familyPlan = await stripe.products.create({
+    name: 'Family Plan',
+    description: 'Unlimited funds and premium event pages. No platform fee on gifts. Household dashboard, recurring gift management, and priority support.',
+    metadata: {
+      type: 'subscription',
+      benefit: 'fee_waiver',
+      unlimited: 'true',
     }
   });
   console.log('Created Family Plan product:', familyPlan.id);
 
-  const familyPlanPrice = await stripe.prices.create({
+  const familyPlanMonthlyPrice = await stripe.prices.create({
     product: familyPlan.id,
-    unit_amount: 14900,
+    unit_amount: 1200,
+    currency: 'usd',
+    recurring: { interval: 'month' },
+    metadata: {
+      display_name: 'Family Plan Monthly',
+    }
+  });
+  console.log('Created Family Plan monthly price:', familyPlanMonthlyPrice.id);
+
+  const familyPlanYearlyPrice = await stripe.prices.create({
+    product: familyPlan.id,
+    unit_amount: 11900,
     currency: 'usd',
     recurring: { interval: 'year' },
     metadata: {
       display_name: 'Family Plan Annual',
     }
   });
-  console.log('Created Family Plan price:', familyPlanPrice.id);
+  console.log('Created Family Plan yearly price:', familyPlanYearlyPrice.id);
 
-  const eventPass = await stripe.products.create({
-    name: 'Event Pass',
-    description: 'Waives Kora platform fee for one event, up to $7,500 in gifts.',
+  const eventBoost = await stripe.products.create({
+    name: 'Event Boost',
+    description: 'Premium themes, goal cards, and thank-you automation for a single event. Waives the $2 platform fee on gifts for that event.',
     metadata: {
       type: 'one_time',
       benefit: 'fee_waiver',
-      event_limit: '7500',
     }
   });
-  console.log('Created Event Pass product:', eventPass.id);
+  console.log('Created Event Boost product:', eventBoost.id);
 
-  const eventPassPrice = await stripe.prices.create({
-    product: eventPass.id,
-    unit_amount: 9900,
+  const eventBoostPrice = await stripe.prices.create({
+    product: eventBoost.id,
+    unit_amount: 2900,
     currency: 'usd',
     metadata: {
-      display_name: 'Event Pass',
+      display_name: 'Event Boost',
     }
   });
-  console.log('Created Event Pass price:', eventPassPrice.id);
+  console.log('Created Event Boost price:', eventBoostPrice.id);
 
   console.log('\nProducts created successfully!');
-  console.log('Family Plan Price ID:', familyPlanPrice.id);
-  console.log('Event Pass Price ID:', eventPassPrice.id);
+  console.log('Starter Plan Price ID:', starterPlanPrice.id);
+  console.log('Family Plan Monthly Price ID:', familyPlanMonthlyPrice.id);
+  console.log('Family Plan Yearly Price ID:', familyPlanYearlyPrice.id);
+  console.log('Event Boost Price ID:', eventBoostPrice.id);
 }
 
 createProducts().catch(console.error);

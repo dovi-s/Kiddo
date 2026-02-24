@@ -414,7 +414,7 @@ export default function Events() {
                     <ul className="space-y-2 text-sm text-muted-foreground">
                       <li className="flex items-center gap-2">
                         <Check size={14} className="text-primary shrink-0" />
-                        Platform fee waived up to $15,000/year
+                        Platform fee waived on all gifts
                       </li>
                       <li className="flex items-center gap-2">
                         <Check size={14} className="text-primary shrink-0" />
@@ -437,12 +437,12 @@ export default function Events() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-heading font-semibold text-foreground mb-1" data-testid="text-event-pass-title">
-                        <GradientText>Event Pass</GradientText> · $99 one-time
+                        <GradientText>Event Boost</GradientText> · $29 one-time
                       </h3>
                       <ul className="space-y-2 mt-3 text-sm text-muted-foreground">
                         <li className="flex items-start gap-2">
                           <Gift size={14} className="mt-0.5 text-primary shrink-0" />
-                          Waives the Kora platform fee on up to $7,500 in gifts for one event
+                          Waives the $2 platform fee on gifts for one event. Includes premium themes, goal cards, and thank-you automation.
                         </li>
                         <li className="flex items-start gap-2">
                           <Star size={14} className="mt-0.5 text-primary shrink-0" />
@@ -455,7 +455,7 @@ export default function Events() {
                           data-testid="button-get-event-pass"
                           onClick={() => haptic("medium")}
                         >
-                          Get Event Pass
+                          Get Event Boost
                         </Button>
                       </Link>
                     </div>

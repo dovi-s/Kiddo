@@ -235,9 +235,9 @@ function OverviewTab() {
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="Total Revenue" value={fmt(r.totalKoraRevenue)} icon={TrendingUp} color="green" sub="All-time Kora earnings" />
-          <StatCard label="Gift Platform Fees" value={fmt(r.giftPlatformFees)} icon={Gift} color="primary" sub={`${fmtNum(g.total_gifts)} gifts, 1.5% fee`} />
+          <StatCard label="Gift Platform Fees" value={fmt(r.giftPlatformFees)} icon={Gift} color="primary" sub={`${fmtNum(g.total_gifts)} gifts, $2/gift fee`} />
           <StatCard label="Family Plan Revenue" value={fmt(r.familyPlanRevenue)} icon={CreditCard} color="purple" sub={`${fmtNum(s.active_family_plans)} active plans`} />
-          <StatCard label="Event Pass Revenue" value={fmt(r.eventPassRevenue)} icon={Calendar} color="amber" sub={`${fmtNum(e.events_with_pass)} passes sold`} />
+          <StatCard label="Event Boost Revenue" value={fmt(r.eventPassRevenue)} icon={Calendar} color="amber" sub={`${fmtNum(e.events_with_pass)} boosts sold`} />
         </div>
       </section>
 
@@ -327,7 +327,7 @@ function OverviewTab() {
           </h2>
           <div className="grid grid-cols-2 gap-3">
             <StatCard label="Total Events" value={fmtNum(e.total_events)} icon={Calendar} color="primary" sub={`${e.active_events} active`} />
-            <StatCard label="Event Passes" value={fmtNum(e.events_with_pass)} icon={CreditCard} color="amber" sub={`$99/pass revenue`} />
+            <StatCard label="Event Boosts" value={fmtNum(e.events_with_pass)} icon={CreditCard} color="amber" sub={`$29/boost revenue`} />
           </div>
         </section>
       </div>

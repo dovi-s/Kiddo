@@ -90,9 +90,9 @@ export function EventGateModal({ open, onClose }: EventGateModalProps) {
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <h3 className="font-heading font-semibold text-foreground">
-                    <GradientText>Event Pass</GradientText>
+                    <GradientText>Event Boost</GradientText>
                   </h3>
-                  <span className="text-sm font-semibold text-foreground">$99</span>
+                  <span className="text-sm font-semibold text-foreground">$29</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   One-time purchase for a single event
@@ -100,7 +100,7 @@ export function EventGateModal({ open, onClose }: EventGateModalProps) {
                 <ul className="mt-2 space-y-1">
                   <li className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Check size={12} className="text-primary shrink-0" />
-                    Waives platform fee on up to $7,500 in gifts
+                    Waives the $2 platform fee on all gifts for this event
                   </li>
                   <li className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Check size={12} className="text-primary shrink-0" />
@@ -111,7 +111,7 @@ export function EventGateModal({ open, onClose }: EventGateModalProps) {
             </div>
             <div className="mt-3 flex justify-end">
               <span className="text-xs font-medium text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
-                {loading === "event-pass" ? "Redirecting..." : "Get Event Pass"}
+                {loading === "event-pass" ? "Redirecting..." : "Get Event Boost"}
                 <ArrowRight size={12} />
               </span>
             </div>
@@ -136,7 +136,7 @@ export function EventGateModal({ open, onClose }: EventGateModalProps) {
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <h3 className="font-heading font-semibold text-foreground">Family Plan</h3>
-                  <span className="text-sm font-semibold text-foreground">$149/yr</span>
+                  <span className="text-sm font-semibold text-foreground">$12/mo</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Unlimited events, premium features, fee savings
@@ -148,7 +148,7 @@ export function EventGateModal({ open, onClose }: EventGateModalProps) {
                   </li>
                   <li className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Check size={12} className="text-primary shrink-0" />
-                    Platform fee waived up to $15,000/year
+                    Platform fee waived on all gifts
                   </li>
                   <li className="text-xs text-muted-foreground flex items-center gap-1.5">
                     <Check size={12} className="text-primary shrink-0" />

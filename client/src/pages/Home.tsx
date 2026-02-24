@@ -437,7 +437,7 @@ export default function Home() {
               Simple, transparent <GradientText>pricing</GradientText>
             </h2>
             <p className="text-muted-foreground mt-4 max-w-xl mx-auto">
-              No monthly fees. No account minimums. You only pay when gifts come in.
+              Plans that grow with your family. Start free, upgrade when you're ready.
             </p>
           </FadeIn>
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -449,45 +449,47 @@ export default function Home() {
                 period: "",
                 tagline: "Perfect for getting started",
                 features: [
-                  "No monthly fees, no minimums",
-                  "Create unlimited funds",
-                  "Share with family and friends",
+                  "1 investment fund",
+                  "1 event page",
                   "Apple Pay, Google Pay, card, or bank transfer",
-                  "Small platform fee per gift (1.5%, max $10)",
+                  "$2 platform fee per gift",
+                  "Event Boost available ($29/event)",
                 ],
                 cta: "Get Started Free",
                 featured: false,
               },
               {
-                id: "event",
-                name: "Event Pass",
-                price: "$99",
-                period: "one-time",
-                tagline: "For one big celebration",
+                id: "starter",
+                name: "Starter",
+                price: "$5",
+                period: "/mo per fund",
+                tagline: "No fees on every gift",
                 features: [
-                  "Platform fee waived up to $7,500",
-                  "One-time purchase, no subscription",
-                  "Premium event page themes",
-                  "Thank-you automation",
+                  "No platform fee on gifts",
+                  "2 event pages per fund",
+                  "Memory Book included",
+                  "Auto-invest for incoming gifts",
+                  "Event Boost available ($29/event)",
                 ],
-                cta: "Get Event Pass",
+                cta: "Start for $5/mo",
                 featured: true,
               },
               {
                 id: "family",
                 name: "Family",
-                price: "$149",
-                period: "/year",
-                tagline: "One price for the whole family",
+                price: "$12",
+                period: "/mo",
+                tagline: "Everything, unlimited",
                 features: [
-                  "Platform fee waived up to $15K/yr",
-                  "Unlimited premium event pages",
+                  "No platform fee on gifts",
+                  "Unlimited funds and event pages",
                   "Household dashboard for all kids",
                   "Recurring gift management",
                   "Priority support",
                 ],
                 cta: "Go Family",
                 featured: false,
+                badge: "$119/yr (save 17%)",
               },
             ].map((plan, i) => (
               <FadeIn key={plan.id} delay={i * 0.1}>
@@ -513,6 +515,9 @@ export default function Home() {
                       <span className="font-heading text-4xl font-bold text-foreground">{plan.price}</span>
                       {plan.period && <span className="text-sm text-muted-foreground">{plan.period}</span>}
                     </div>
+                    {"badge" in plan && plan.badge && (
+                      <p className="text-xs text-green-600 font-medium mt-2">{plan.badge}</p>
+                    )}
                   </div>
                   <ul className="space-y-3 mb-8 flex-1">
                     {plan.features.map((feature) => (
@@ -567,15 +572,19 @@ export default function Home() {
                     <div className="space-y-1.5 pl-3 border-l-2 border-primary/20">
                       <div className="flex justify-between">
                         <span>Free plan</span>
-                        <span className="font-medium">1.5% per gift (min $1, max $10)</span>
+                        <span className="font-medium">$2.00 per gift</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Event Pass ($99)</span>
-                        <span className="font-medium text-green-600">Waived (up to $7,500)</span>
+                        <span>Starter ($5/mo per fund)</span>
+                        <span className="font-medium text-green-600">$0.00</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Family Plan ($149/yr)</span>
-                        <span className="font-medium text-green-600">Waived (up to $15,000/yr)</span>
+                        <span>Family ($12/mo or $119/yr)</span>
+                        <span className="font-medium text-green-600">$0.00</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Event Boost ($29/event)</span>
+                        <span className="font-medium text-green-600">Waived for that event</span>
                       </div>
                     </div>
                     <p className="text-[10px] mt-1">Covers investing infrastructure, compliance, and customer support. No hidden charges.</p>

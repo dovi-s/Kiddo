@@ -11,8 +11,8 @@ export interface GiftCheckoutParams {
   senderEmail?: string;
   message?: string;
   coverFees: boolean;
-  hasEventPass?: boolean;
-  hasFamilyPlan?: boolean;
+  hasEventBoost?: boolean;
+  hasPaidPlan?: boolean;
   fundUserId?: string;
   recipientName?: string;
   successUrl: string;
@@ -29,7 +29,7 @@ export interface FeeCalculation {
 }
 
 export class StripeService {
-  calculateFees(amount: number, coverFees: boolean, hasEventPass: boolean = false, hasFamilyPlan: boolean = false, paymentMethod: PaymentMethodPreference = 'card'): FeeCalculation {
+  calculateFees(amount: number, coverFees: boolean, hasEventBoost: boolean = false, hasPaidPlan: boolean = false, paymentMethod: PaymentMethodPreference = 'card'): FeeCalculation {
     const baseAmount = amount;
     let processingFee: number;
     if (paymentMethod === 'bank') {
@@ -39,9 +39,8 @@ export class StripeService {
     }
     
     let koraFee = 0;
-    if (!hasEventPass && !hasFamilyPlan) {
-      koraFee = Math.min(Math.max(amount * 0.015, 1), 10);
-      koraFee = Math.round(koraFee * 100) / 100;
+    if (!hasPaidPlan && !hasEventBoost) {
+      koraFee = 2.00;
     }
 
     if (coverFees) {
@@ -109,8 +108,8 @@ export class StripeService {
     const fees = this.calculateFees(
       params.amount, 
       params.coverFees, 
-      params.hasEventPass || false, 
-      params.hasFamilyPlan || false,
+      params.hasEventBoost || false, 
+      params.hasPaidPlan || false,
       params.paymentMethod
     );
     const paymentMethodTypes = this.getPaymentMethodTypes(params.paymentMethod);
@@ -163,7 +162,7 @@ export class StripeService {
           currency: 'usd',
           product_data: {
             name: 'Kora platform fee',
-            description: '1.5% of gift amount (min $1, max $10). Supports secure investing infrastructure.',
+            description: '$2.00 per gift on Free plan. Upgrade to Starter or Family to remove this fee.',
           },
           unit_amount: koraFeeCents,
         },
@@ -171,17 +170,16 @@ export class StripeService {
       });
     }
 
-    if (fees.koraFee === 0 && (params.hasEventPass || params.hasFamilyPlan)) {
-      const waiver = params.hasFamilyPlan 
-        ? 'Kora platform fee waived by Family Plan ($149/year)'
-        : 'Kora platform fee waived by Event Pass ($99/event)';
-      const normalFee = Math.min(Math.max(params.amount * 0.015, 1), 10);
+    if (fees.koraFee === 0 && (params.hasEventBoost || params.hasPaidPlan)) {
+      const waiver = params.hasPaidPlan 
+        ? 'Kora platform fee waived by your subscription'
+        : 'Kora platform fee waived by Event Boost';
       line_items.push({
         price_data: {
           currency: 'usd',
           product_data: {
             name: `${waiver}`,
-            description: `Normally $${normalFee.toFixed(2)} (1.5% of gift). Saving you money on every gift.`,
+            description: 'Normally $2.00 per gift. Saving you money on every gift.',
           },
           unit_amount: 0,
         },
@@ -209,8 +207,8 @@ export class StripeService {
         koraFee: fees.koraFee.toString(),
         netToFund: fees.netToFund.toString(),
         coverFees: params.coverFees.toString(),
-        hasEventPass: (params.hasEventPass || false).toString(),
-        hasFamilyPlan: (params.hasFamilyPlan || false).toString(),
+        hasEventBoost: (params.hasEventBoost || false).toString(),
+        hasPaidPlan: (params.hasPaidPlan || false).toString(),
         paymentMethod: params.paymentMethod || 'card',
       },
       payment_intent_data: {

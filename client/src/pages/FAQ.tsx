@@ -25,7 +25,7 @@ const faqItems = [
   {
     id: "fees",
     question: "What are the fees?",
-    answer: "First, the big one: there are no monthly fees and no account minimums. You only pay when a gift actually comes in. There are two parts to each gift's fees. First, payment processing: card, Apple Pay, and Google Pay cost about 2.9% + $0.30 per transaction. Bank transfers (ACH) are much cheaper at just 0.8%, capped at $5. Second, the Kora platform fee: 1.5% per gift (minimum $1, maximum $10). Want to cover fees for your guests? The Event Pass ($99) waives the platform fee on up to $7,500 per event. The Family Plan ($149/year) waives the platform fee on up to $15,000 in gifts per year.",
+    answer: "There are two parts to each gift's fees. First, payment processing (paid by the gift-giver): card, Apple Pay, and Google Pay cost about 2.9% + $0.30 per transaction. Bank transfers (ACH) are much cheaper at just 0.8%, capped at $5. Second, the Kora platform fee depends on your plan. On the Free tier, there is a flat $2 platform fee per gift. On Starter ($5/month per fund) and Family ($12/month or $119/year), the platform fee is completely waived. Free and Starter users can also purchase an Event Boost ($29 one-time) to waive the $2 platform fee for a specific event, plus unlock premium themes, goal cards, and thank-you automation. Family Plan members get all Event Boost features included automatically.",
   },
   {
     id: "turns-18",
@@ -95,7 +95,7 @@ const faqItems = [
   {
     id: "monthly-fees",
     question: "Are there monthly fees?",
-    answer: "No. Kora has no monthly fees and no account minimums. You only pay when a gift is made: a small platform fee of 1.5% per gift (min $1, max $10), plus standard payment processing. Many competitors charge $3 to $5 per month whether or not you receive gifts. With Kora, if nobody gives this month, you pay nothing. The Event Pass and Family Plan can waive the platform fee entirely for higher gift volumes.",
+    answer: "Kora offers a Free tier with no monthly fees and no account minimums. You only pay a flat $2 platform fee when a gift is made. For more features, the Starter plan is $5/month per fund and includes no platform fee, 2 event pages per fund, Memory Book, and auto-invest. The Family plan is $12/month or $119/year and includes unlimited funds, unlimited event pages, no platform fee, a household dashboard, recurring gift management, and priority support. Free and Starter users can also grab an Event Boost for $29 one-time to waive the platform fee for a specific event and unlock premium features.",
   },
   {
     id: "who-holds",

@@ -616,9 +616,9 @@ export async function registerRoutes(
       const userId = (req.user as any).id;
 
       const subscription = await storage.getSubscription(userId);
-      const isFamily = subscription?.plan === 'family' && subscription?.status === 'active';
+      const hasPaidPlan = subscription && (subscription.plan === 'family' || subscription.plan === 'starter') && subscription.status === 'active';
 
-      if (!isFamily) {
+      if (!hasPaidPlan) {
         let hasValidEventPass = false;
         if (req.body.stripeSessionId) {
           try {
@@ -636,7 +636,7 @@ export async function registerRoutes(
         if (!hasValidEventPass) {
           return res.status(403).json({ 
             error: 'Plan upgrade required',
-            message: 'Upgrade to Family Plan or purchase an Event Pass to create events.'
+            message: 'Upgrade to a paid plan or purchase an Event Boost to create events.'
           });
         }
       }
@@ -880,13 +880,13 @@ export async function registerRoutes(
         SELECT pr.id as price_id
         FROM stripe.products p
         JOIN stripe.prices pr ON pr.product = p.id
-        WHERE p.name = 'Event Pass' AND pr.active = true
+        WHERE (p.name = 'Event Boost' OR p.name = 'Event Pass') AND pr.active = true
         LIMIT 1
       `);
       
       const priceId = (result.rows[0] as any)?.price_id;
       if (!priceId) {
-        return res.status(404).json({ error: 'Event Pass price not found. Please run the seed script.' });
+        return res.status(404).json({ error: 'Event Boost price not found. Please run the seed script.' });
       }
       
       const session = await stripeService.createCheckoutSession(
@@ -918,8 +918,9 @@ export async function registerRoutes(
     try {
       const { amount, coverFees, eventId, fundId, fundSlug, eventSlug, paymentMethod } = req.body;
       
-      let hasEventPass = false;
-      let hasFamilyPlan = false;
+      let hasEventBoost = false;
+      let hasPaidPlan = false;
+      let hostPlan = 'free';
       let resolvedFund = null;
       
       if (fundId) {
@@ -931,20 +932,21 @@ export async function registerRoutes(
       if (eventId) {
         const event = await storage.getEvent(eventId);
         if (event?.hasEventPass) {
-          hasEventPass = true;
+          hasEventBoost = true;
         }
       } else if (eventSlug && resolvedFund) {
         const events = await storage.getEventsByFund(resolvedFund.id);
         const event = events.find((e: any) => e.slug === eventSlug);
         if (event?.hasEventPass) {
-          hasEventPass = true;
+          hasEventBoost = true;
         }
       }
       
       if (resolvedFund?.userId) {
         const subscription = await storage.getSubscription(resolvedFund.userId);
-        if (subscription?.plan === 'family' && subscription?.status === 'active') {
-          hasFamilyPlan = true;
+        if (subscription && (subscription.plan === 'family' || subscription.plan === 'starter') && subscription.status === 'active') {
+          hasPaidPlan = true;
+          hostPlan = subscription.plan;
         }
       }
       
@@ -952,35 +954,36 @@ export async function registerRoutes(
       const fees = stripeService.calculateFees(
         parsedAmount, 
         coverFees || false, 
-        hasEventPass, 
-        hasFamilyPlan,
+        hasEventBoost, 
+        hasPaidPlan,
         paymentMethod || 'card'
       );
       
       const processingFeeRate = paymentMethod === 'bank' 
         ? '0.8% (max $5.00)' 
         : '2.9% + $0.30';
-      const koraFeeRate = hasEventPass || hasFamilyPlan 
+      const koraFeeRate = hasEventBoost || hasPaidPlan 
         ? 'Waived' 
-        : '1.5% (min $1, max $10)';
+        : '$2.00 per gift';
       const stripeFeeExplanation = paymentMethod === 'bank'
         ? 'ACH bank transfer processing fee charged by Stripe.'
         : 'Card processing fee charged by Stripe for secure payment handling.';
-      const koraFeeExplanation = hasEventPass
-        ? 'Waived because the host purchased an Event Pass ($99/event).'
-        : hasFamilyPlan
-          ? 'Waived because the host has an active Family Plan ($149/year).'
-          : 'Kora platform fee that supports secure investing infrastructure. Minimum $1, maximum $10 per gift.';
+      const koraFeeExplanation = hasEventBoost
+        ? 'Waived because the host purchased an Event Boost ($29/event).'
+        : hasPaidPlan
+          ? `Waived because the host has an active ${hostPlan === 'family' ? 'Family' : 'Starter'} plan.`
+          : '$2.00 platform fee per gift on the Free plan. The host can upgrade to remove this fee.';
 
       res.json({ 
         ...fees, 
-        hasEventPass, 
-        hasFamilyPlan,
+        hasEventBoost, 
+        hasPaidPlan,
+        hostPlan,
         processingFeeRate,
         koraFeeRate,
         stripeFeeExplanation,
         koraFeeExplanation,
-        feesSavedByPlan: hasEventPass || hasFamilyPlan ? Math.min(Math.max(parsedAmount * 0.015, 1), 10) : 0,
+        feesSavedByPlan: hasEventBoost || hasPaidPlan ? 2.00 : 0,
       });
     } catch (error) {
       console.error('Error calculating fees:', error);
@@ -1002,20 +1005,20 @@ export async function registerRoutes(
         return res.status(404).json({ error: 'Fund not found' });
       }
 
-      let hasEventPass = false;
-      let hasFamilyPlan = false;
+      let hasEventBoost = false;
+      let hasPaidPlan = false;
       
       if (eventId) {
         const event = await storage.getEvent(eventId);
         if (event?.hasEventPass) {
-          hasEventPass = true;
+          hasEventBoost = true;
         }
       }
       
       if (fund.userId) {
         const subscription = await storage.getSubscription(fund.userId);
-        if (subscription?.plan === 'family' && subscription?.status === 'active') {
-          hasFamilyPlan = true;
+        if (subscription && (subscription.plan === 'family' || subscription.plan === 'starter') && subscription.status === 'active') {
+          hasPaidPlan = true;
         }
       }
 
@@ -1029,8 +1032,8 @@ export async function registerRoutes(
         senderEmail,
         message,
         coverFees: coverFees || false,
-        hasEventPass,
-        hasFamilyPlan,
+        hasEventBoost,
+        hasPaidPlan,
         fundUserId: fund.userId,
         recipientName,
         paymentMethod: paymentMethod || 'card',

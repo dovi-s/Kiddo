@@ -75,7 +75,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">4. Fees</h3>
-                  <p>Kora charges a platform fee of 1.5% on each gift (minimum $1, maximum $10). Payment processing fees also apply: card, Apple Pay, and Google Pay are approximately 2.9% + $0.30 per transaction; bank transfers (ACH) are 0.8%, capped at $5. Family Plan ($149/year) and Event Pass ($99 one-time) members have the platform fee waived up to specified limits. All fees are disclosed to the giver before payment.</p>
+                  <p>Kora's platform fee depends on your subscription tier. Free tier: $2 flat platform fee per gift. Starter ($5/month per fund): no platform fee, includes 2 event pages per fund, Memory Book, and auto-invest. Family ($12/month or $119/year): no platform fee, unlimited funds, unlimited event pages, household dashboard, recurring gift management, and priority support. Event Boost ($29 one-time) is available to Free and Starter users and waives the $2 platform fee for that event, plus includes premium themes, goal cards, and thank-you automation; Family Plan members receive these features automatically. Payment processing fees are paid by the gift-giver: card, Apple Pay, and Google Pay are approximately 2.9% + $0.30 per transaction; bank transfers (ACH) are 0.8%, capped at $5. All fees are disclosed to the giver before payment.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">5. Investment Risk</h3>
