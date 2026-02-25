@@ -60,12 +60,25 @@ export class WebhookHandlers {
       koraFee: metadata.koraFee || '0',
       netAmount: metadata.netToFund || metadata.baseAmount || ((session.amount_total || 0) / 100).toString(),
       message: metadata.message || null,
+      executionModel: metadata.executionModel || 'auto_invest',
+      selectedTicker: metadata.selectedTicker || null,
       status: 'pending',
       stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
     };
 
     const gift = await storage.createGift(giftData);
     console.log('[Webhook] Gift created:', gift.id);
+
+    if (gift.message) {
+      await storage.createMemoryEntry({
+        fundId: gift.fundId,
+        giftId: gift.id,
+        type: 'gift_message',
+        content: gift.message,
+        authorName: gift.senderName,
+      });
+      console.log('[Webhook] Memory entry created for gift:', gift.id);
+    }
 
     await storage.createActivity({
       userId: metadata.userId || session.customer,
@@ -78,6 +91,41 @@ export class WebhookHandlers {
 
     if (metadata.eventId) {
       await storage.incrementEventGiftStats(metadata.eventId, parseFloat(giftData.amount));
+    }
+
+    try {
+      let shouldAutoThankYou = false;
+
+      if (metadata.eventId) {
+        const event = await storage.getEvent(metadata.eventId);
+        if (event?.hasEventPass) shouldAutoThankYou = true;
+      }
+
+      if (!shouldAutoThankYou && metadata.fundId) {
+        const fund = await storage.getFund(metadata.fundId);
+        if (fund?.userId) {
+          const subscription = await storage.getSubscription(fund.userId);
+          if (subscription && (subscription.plan === 'family' || subscription.plan === 'starter') && subscription.status === 'active') {
+            shouldAutoThankYou = true;
+          }
+        }
+      }
+
+      if (shouldAutoThankYou) {
+        const fund = await storage.getFund(metadata.fundId);
+        const message = `Thank you ${giftData.senderName} for your generous gift of $${parseFloat(giftData.amount).toFixed(2)} to ${fund?.name || 'the fund'}!`;
+        await storage.createThankYou({
+          fundId: metadata.fundId,
+          giftId: gift.id,
+          senderName: giftData.senderName,
+          senderEmail: giftData.senderEmail || null,
+          message,
+          status: 'draft',
+        });
+        console.log('[Webhook] Auto-generated thank-you draft for gift:', gift.id);
+      }
+    } catch (thankYouError) {
+      console.error('[Webhook] Error auto-generating thank-you:', thankYouError);
     }
   }
 

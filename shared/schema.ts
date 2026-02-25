@@ -230,6 +230,62 @@ export const bankAccountsRelations = relations(bankAccounts, ({ one }) => ({
   user: one(users, { fields: [bankAccounts.userId], references: [users.id] }),
 }));
 
+export const thankYous = pgTable("thank_yous", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fundId: varchar("fund_id").notNull().references(() => funds.id),
+  giftId: varchar("gift_id").references(() => gifts.id),
+  senderName: text("sender_name").notNull(),
+  senderEmail: text("sender_email"),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("draft"),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("thank_yous_fund_id_idx").on(table.fundId),
+]);
+
+export const thankYousRelations = relations(thankYous, ({ one }) => ({
+  fund: one(funds, { fields: [thankYous.fundId], references: [funds.id] }),
+  gift: one(gifts, { fields: [thankYous.giftId], references: [gifts.id] }),
+}));
+
+export const recurringGifts = pgTable("recurring_gifts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fundId: varchar("fund_id").notNull().references(() => funds.id),
+  senderName: text("sender_name").notNull(),
+  senderEmail: text("sender_email"),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  frequency: text("frequency").notNull().default("monthly"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  status: text("status").notNull().default("active"),
+  nextChargeDate: timestamp("next_charge_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("recurring_gifts_fund_id_idx").on(table.fundId),
+]);
+
+export const recurringGiftsRelations = relations(recurringGifts, ({ one }) => ({
+  fund: one(funds, { fields: [recurringGifts.fundId], references: [funds.id] }),
+}));
+
+export const fundCollaborators = pgTable("fund_collaborators", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fundId: varchar("fund_id").notNull().references(() => funds.id),
+  userId: varchar("user_id").references(() => users.id),
+  email: text("email").notNull(),
+  role: text("role").notNull().default("viewer"),
+  status: text("status").notNull().default("pending"),
+  invitedAt: timestamp("invited_at").defaultNow(),
+  acceptedAt: timestamp("accepted_at"),
+}, (table) => [
+  index("fund_collaborators_fund_id_idx").on(table.fundId),
+]);
+
+export const fundCollaboratorsRelations = relations(fundCollaborators, ({ one }) => ({
+  fund: one(funds, { fields: [fundCollaborators.fundId], references: [funds.id] }),
+  user: one(users, { fields: [fundCollaborators.userId], references: [users.id] }),
+}));
+
 export const insertFundSchema = createInsertSchema(funds).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertHoldingSchema = createInsertSchema(holdings).omit({ id: true, createdAt: true, updatedAt: true });
@@ -239,6 +295,9 @@ export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
 export const insertTransactionSchema = createInsertSchema(transactions).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertMemoryEntrySchema = createInsertSchema(memoryEntries).omit({ id: true, createdAt: true });
 export const insertBankAccountSchema = createInsertSchema(bankAccounts).omit({ id: true, createdAt: true });
+export const insertThankYouSchema = createInsertSchema(thankYous).omit({ id: true, createdAt: true });
+export const insertRecurringGiftSchema = createInsertSchema(recurringGifts).omit({ id: true, createdAt: true });
+export const insertFundCollaboratorSchema = createInsertSchema(fundCollaborators).omit({ id: true, invitedAt: true });
 
 export type InsertFund = z.infer<typeof insertFundSchema>;
 export type Fund = typeof funds.$inferSelect;
@@ -258,3 +317,9 @@ export type InsertMemoryEntry = z.infer<typeof insertMemoryEntrySchema>;
 export type MemoryEntry = typeof memoryEntries.$inferSelect;
 export type InsertBankAccount = z.infer<typeof insertBankAccountSchema>;
 export type BankAccount = typeof bankAccounts.$inferSelect;
+export type InsertThankYou = z.infer<typeof insertThankYouSchema>;
+export type ThankYou = typeof thankYous.$inferSelect;
+export type InsertRecurringGift = z.infer<typeof insertRecurringGiftSchema>;
+export type RecurringGift = typeof recurringGifts.$inferSelect;
+export type InsertFundCollaborator = z.infer<typeof insertFundCollaboratorSchema>;
+export type FundCollaborator = typeof fundCollaborators.$inferSelect;

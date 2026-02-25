@@ -1,26 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, Link } from "wouter";
-import { Gift, TrendingUp, Calendar, Filter, Check, Clock, ArrowUp, ChevronDown, ChevronLeft } from "lucide-react";
+import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
 import { EnlighteningReveal } from "@/components/ui/gemini";
 import { formatDistanceToNow } from "date-fns";
-
-type ActivityEntry = {
-  id: string;
-  type: "gift" | "investment" | "event";
-  title: string;
-  description?: string;
-  amount?: number;
-  status?: "pending" | "invested" | "settled";
-  message?: string;
-  details?: string;
-  createdAt: string;
-};
+import { useActivities } from "@/hooks/use-activities";
+import type { Activity as ActivityType } from "@shared/schema";
 
 type FilterType = "all" | "gifts" | "investments" | "events";
 
@@ -31,8 +20,19 @@ const filterOptions: { value: FilterType; label: string }[] = [
   { value: "events", label: "Events" },
 ];
 
-function getTypeIcon(type: ActivityEntry["type"]) {
-  switch (type) {
+const GIFT_TYPES = ["gift_received"];
+const INVESTMENT_TYPES = ["auto_invest", "sell", "withdrawal", "bank_linked"];
+const EVENT_TYPES = ["event_pass_purchased", "subscription_started", "subscription_canceled", "payment_failed", "kyc_approved"];
+
+function mapActivityTypeToCategory(type: string): "gift" | "investment" | "event" {
+  if (GIFT_TYPES.includes(type)) return "gift";
+  if (INVESTMENT_TYPES.includes(type)) return "investment";
+  return "event";
+}
+
+function getTypeIcon(type: string) {
+  const category = mapActivityTypeToCategory(type);
+  switch (category) {
     case "gift":
       return <Gift size={18} className="text-[hsl(var(--kora-gold))]" />;
     case "investment":
@@ -80,7 +80,7 @@ function getStatusBadge(status?: string) {
   }
 }
 
-function groupByDate(items: ActivityEntry[]): { label: string; items: ActivityEntry[] }[] {
+function groupByDate(items: ActivityType[]): { label: string; items: ActivityType[] }[] {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today);
@@ -88,7 +88,7 @@ function groupByDate(items: ActivityEntry[]): { label: string; items: ActivityEn
   const weekAgo = new Date(today);
   weekAgo.setDate(weekAgo.getDate() - 7);
 
-  const groups: Record<string, ActivityEntry[]> = {
+  const groups: Record<string, ActivityType[]> = {
     Today: [],
     Yesterday: [],
     "This Week": [],
@@ -96,7 +96,7 @@ function groupByDate(items: ActivityEntry[]): { label: string; items: ActivityEn
   };
 
   items.forEach((item) => {
-    const d = new Date(item.createdAt);
+    const d = new Date(item.createdAt!);
     if (d >= today) {
       groups["Today"].push(item);
     } else if (d >= yesterday) {
@@ -134,15 +134,7 @@ export default function Activity() {
   const [filter, setFilter] = useState<FilterType>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const { data: activities = [], isLoading: feedLoading } = useQuery<ActivityEntry[]>({
-    queryKey: ["/api/activity", filter],
-    queryFn: async () => {
-      const res = await fetch("/api/activity", { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: isAuthenticated,
-  });
+  const { data: activities = [], isLoading: feedLoading } = useActivities();
 
   if (!authLoading && !isAuthenticated) {
     navigate("/login");
@@ -169,9 +161,10 @@ export default function Activity() {
 
   const filtered = activities.filter((item) => {
     if (filter === "all") return true;
-    if (filter === "gifts") return item.type === "gift";
-    if (filter === "investments") return item.type === "investment";
-    if (filter === "events") return item.type === "event";
+    const category = mapActivityTypeToCategory(item.type);
+    if (filter === "gifts") return category === "gift";
+    if (filter === "investments") return category === "investment";
+    if (filter === "events") return category === "event";
     return true;
   });
 
@@ -255,7 +248,7 @@ export default function Activity() {
                 <AnimatePresence mode="popLayout">
                   {group.items.map((item) => {
                     const isExpanded = expandedId === item.id;
-                    const timestamp = formatDistanceToNow(new Date(item.createdAt), { addSuffix: true });
+                    const timestamp = formatDistanceToNow(new Date(item.createdAt!), { addSuffix: true });
 
                     return (
                       <EnlighteningReveal key={item.id}>
@@ -290,9 +283,6 @@ export default function Activity() {
                               <p className="text-xs text-muted-foreground mt-0.5" data-testid={`text-timestamp-${item.id}`}>
                                 {timestamp}
                               </p>
-                              <div className="mt-2">
-                                {getStatusBadge(item.status)}
-                              </div>
                             </div>
                           </button>
 
@@ -313,31 +303,23 @@ export default function Activity() {
                                     {item.description && (
                                       <p className="text-sm text-muted-foreground">{item.description}</p>
                                     )}
-                                    {item.message && (
-                                      <div className="mt-2 bg-muted/50 rounded-xl p-3">
-                                        <p className="text-sm text-foreground">{item.message}</p>
-                                      </div>
-                                    )}
                                     {item.amount != null && (
                                       <div className="mt-2 flex items-center gap-2">
                                         <span className="text-xs text-muted-foreground">Amount:</span>
                                         <span className="text-sm font-semibold text-foreground">
-                                          ${item.amount.toFixed(2)}
+                                          ${parseFloat(item.amount).toFixed(2)}
                                         </span>
                                       </div>
                                     )}
-                                    {item.details && (
-                                      <p className="text-xs text-muted-foreground mt-2">{item.details}</p>
-                                    )}
                                     <p className="text-xs text-muted-foreground mt-3">
-                                      {new Date(item.createdAt).toLocaleDateString("en-US", {
+                                      {new Date(item.createdAt!).toLocaleDateString("en-US", {
                                         weekday: "long",
                                         month: "long",
                                         day: "numeric",
                                         year: "numeric",
                                       })}{" "}
                                       at{" "}
-                                      {new Date(item.createdAt).toLocaleTimeString("en-US", {
+                                      {new Date(item.createdAt!).toLocaleTimeString("en-US", {
                                         hour: "numeric",
                                         minute: "2-digit",
                                       })}

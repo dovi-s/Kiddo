@@ -326,18 +326,18 @@ export function CollaboratorInviteModal({
   onSendInvite 
 }: CollaboratorInviteModalProps) {
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("view");
+  const [role, setRole] = useState("viewer");
   const [isSending, setIsSending] = useState(false);
 
   const roles = [
     { 
-      id: "view", 
+      id: "viewer", 
       label: "Viewer", 
       description: "Can view fund activity and growth",
       permissions: ["View balance", "See contributors", "View activity"]
     },
     { 
-      id: "admin", 
+      id: "co-admin", 
       label: "Co-Admin", 
       description: "Can manage events and settings",
       permissions: ["All viewer permissions", "Create events", "Edit fund settings", "Send thank-yous"]

@@ -4,8 +4,8 @@ import { storage } from "./storage";
 import { stripeService } from "./stripeService";
 import { sql, eq } from "drizzle-orm";
 import { db } from "./db";
-import { isAuthenticated } from "./auth";
-import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, users, funds, holdings, gifts, events, subscriptions, transactions, bankAccounts, activities } from "@shared/schema";
+import { isAuthenticated, isAdmin } from "./auth";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, users, funds, holdings, gifts, events, subscriptions, transactions, bankAccounts, activities, thankYous, recurringGifts } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -138,9 +138,11 @@ export async function registerRoutes(
           imageUrl: event.imageUrl,
           eventDate: event.eventDate,
           eventType: event.eventType,
+          theme: event.theme,
           goalAmount: event.goalAmount,
           giftVolume: event.giftVolume,
           giftCount: event.giftCount,
+          hasEventPass: event.hasEventPass,
         },
         fund: {
           id: fund?.id,
@@ -186,7 +188,10 @@ export async function registerRoutes(
       if (!fund) {
         return res.status(404).json({ error: 'Fund not found' });
       }
-      const gifts = await storage.getGiftsByFund(fund.id);
+      const fundGifts = await storage.getGiftsByFund(fund.id);
+      const totalContributed = fundGifts
+        .filter((g: any) => g.status === 'completed' || g.status === 'settled')
+        .reduce((sum: number, g: any) => sum + parseFloat(g.netAmount || g.amount || '0'), 0);
       res.json({
         id: fund.id,
         name: fund.name,
@@ -194,7 +199,8 @@ export async function registerRoutes(
         accountType: fund.accountType,
         balance: fund.balance,
         totalGain: fund.totalGain,
-        giftCount: gifts.length,
+        totalContributed: totalContributed.toFixed(2),
+        giftCount: fundGifts.length,
       });
     } catch (error) {
       console.error('Error fetching public fund overview:', error);
@@ -611,6 +617,35 @@ export async function registerRoutes(
     }
   });
 
+  app.patch('/api/funds/:fundId/strategy', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      const { strategy } = req.body;
+      const validStrategies = ['growth', 'balanced', 'custom'];
+      if (!strategy || !validStrategies.includes(strategy)) {
+        return res.status(400).json({ error: 'Invalid strategy. Must be one of: growth, balanced, custom' });
+      }
+
+      if (strategy === 'custom') {
+        const subscription = await storage.getSubscription(userId);
+        const hasPaidPlan = subscription && (subscription.plan === 'starter' || subscription.plan === 'family') && subscription.status === 'active';
+        if (!hasPaidPlan) {
+          return res.status(403).json({ error: 'Custom strategy requires a Starter or Family plan' });
+        }
+      }
+
+      const updated = await storage.updateFund(req.params.fundId, { investmentStrategy: strategy });
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating strategy:', error);
+      res.status(500).json({ error: 'Failed to update strategy' });
+    }
+  });
+
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;
@@ -618,33 +653,42 @@ export async function registerRoutes(
       const subscription = await storage.getSubscription(userId);
       const hasPaidPlan = subscription && (subscription.plan === 'family' || subscription.plan === 'starter') && subscription.status === 'active';
 
-      if (!hasPaidPlan) {
-        let hasValidEventPass = false;
-        if (req.body.stripeSessionId) {
-          try {
-            const session = await stripeService.getCheckoutSession(req.body.stripeSessionId);
-            if (
-              session.payment_status === 'paid' &&
-              session.metadata?.type === 'event_pass' &&
-              session.metadata?.userId === userId
-            ) {
-              hasValidEventPass = true;
-            }
-          } catch {}
-        }
+      let hasValidEventPass = false;
+      if (req.body.stripeSessionId) {
+        try {
+          const session = await stripeService.getCheckoutSession(req.body.stripeSessionId);
+          if (
+            session.payment_status === 'paid' &&
+            session.metadata?.type === 'event_pass' &&
+            session.metadata?.userId === userId
+          ) {
+            hasValidEventPass = true;
+          }
+        } catch {}
+      }
 
-        if (!hasValidEventPass) {
-          return res.status(403).json({ 
-            error: 'Plan upgrade required',
-            message: 'Upgrade to a paid plan or purchase an Event Boost to create events.'
-          });
-        }
+      if (!hasPaidPlan && !hasValidEventPass) {
+        return res.status(403).json({ 
+          error: 'Plan upgrade required',
+          message: 'Upgrade to a paid plan or purchase an Event Boost to create events.'
+        });
       }
 
       const { stripeSessionId, ...eventBody } = req.body;
       const data = insertEventSchema.parse({ ...eventBody, userId });
       const event = await storage.createEvent(data);
-      res.status(201).json(event);
+
+      if (hasValidEventPass) {
+        await storage.updateEvent(event.id, {
+          hasEventPass: true,
+          eventPassPurchasedAt: new Date(),
+        });
+      }
+
+      const finalEvent = hasValidEventPass 
+        ? await storage.getEvent(event.id) 
+        : event;
+      res.status(201).json(finalEvent);
     } catch (error: any) {
       console.error('Error creating event:', error);
       if (error?.name === 'ZodError') {
@@ -735,6 +779,108 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/public/gifts/:id', async (req, res) => {
+    try {
+      const gift = await storage.getGift(req.params.id);
+      if (!gift) {
+        return res.status(404).json({ error: 'Gift not found' });
+      }
+      const fund = await storage.getFund(gift.fundId);
+      res.json({
+        id: gift.id,
+        senderName: gift.senderName,
+        amount: gift.amount,
+        netAmount: gift.netAmount,
+        message: gift.message,
+        executionModel: gift.executionModel,
+        selectedTicker: gift.selectedTicker,
+        status: gift.status,
+        createdAt: gift.createdAt,
+        fundName: fund?.name || 'Investment Fund',
+        recipientFirstName: fund?.recipientFirstName || null,
+      });
+    } catch (error) {
+      console.error('Error fetching public gift:', error);
+      res.status(500).json({ error: 'Failed to fetch gift' });
+    }
+  });
+
+  app.post('/api/gifts/:id/claim', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const gift = await storage.getGift(req.params.id);
+      if (!gift) {
+        return res.status(404).json({ error: 'Gift not found' });
+      }
+      if (gift.status !== 'pending' && gift.status !== 'completed') {
+        return res.status(400).json({ error: 'Gift cannot be claimed in its current status' });
+      }
+
+      const { fundId, newFundName } = req.body;
+      let targetFundId = fundId;
+
+      if (newFundName) {
+        const slug = newFundName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const newFund = await storage.createFund({
+          userId,
+          name: newFundName,
+          slug: `${slug}-${Date.now().toString(36)}`,
+          accountType: 'individual',
+          status: 'active',
+        });
+        targetFundId = newFund.id;
+
+        await storage.createEvent({
+          fundId: newFund.id,
+          userId,
+          name: "Gift anytime",
+          slug: `${newFund.slug}-anytime`,
+          isPermanent: true,
+          status: "active",
+          eventType: "gift_anytime",
+        });
+      }
+
+      if (!targetFundId) {
+        return res.status(400).json({ error: 'Must specify a fund or provide a new fund name' });
+      }
+
+      const targetFund = await storage.getFund(targetFundId);
+      if (!targetFund) {
+        return res.status(404).json({ error: 'Target fund not found' });
+      }
+      if (targetFund.userId !== userId) {
+        return res.status(403).json({ error: 'You do not own this fund' });
+      }
+
+      await storage.updateGift(gift.id, {
+        fundId: targetFundId,
+        status: 'settled',
+        settledAt: new Date(),
+      });
+
+      const giftAmount = parseFloat(gift.netAmount);
+      await storage.updateFund(targetFundId, {
+        pendingBalance: (parseFloat(targetFund.pendingBalance) + giftAmount).toFixed(2),
+        contributorCount: targetFund.contributorCount + 1,
+      });
+
+      await storage.createActivity({
+        userId,
+        fundId: targetFundId,
+        type: 'gift_received',
+        title: `Gift claimed from ${gift.senderName}`,
+        description: `$${giftAmount.toFixed(2)} gift claimed and deposited.`,
+        amount: giftAmount.toFixed(2),
+      });
+
+      res.json({ success: true, fundId: targetFundId, fundName: targetFund.name });
+    } catch (error) {
+      console.error('Error claiming gift:', error);
+      res.status(500).json({ error: 'Failed to claim gift' });
+    }
+  });
+
   // Create gift (public, for gift givers)
   app.post('/api/public/gifts', async (req, res) => {
     try {
@@ -757,6 +903,27 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error fetching activities:', error);
       res.status(500).json({ error: 'Failed to fetch activities' });
+    }
+  });
+
+  app.get('/api/activities/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const activity = await storage.getActivity(req.params.id);
+      if (!activity) {
+        return res.status(404).json({ error: 'Activity not found' });
+      }
+      if (activity.userId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      let fund = null;
+      if (activity.fundId) {
+        fund = await storage.getFund(activity.fundId);
+      }
+      res.json({ ...activity, fundName: fund?.name || null, recipientFirstName: fund?.recipientFirstName || null });
+    } catch (error) {
+      console.error('Error fetching activity:', error);
+      res.status(500).json({ error: 'Failed to fetch activity' });
     }
   });
 
@@ -993,7 +1160,7 @@ export async function registerRoutes(
 
   app.post('/api/stripe/checkout/gift', async (req, res) => {
     try {
-      const { fundId, eventId, amount, senderName, senderEmail, message, coverFees, paymentMethod } = req.body;
+      const { fundId, eventId, amount, senderName, senderEmail, message, coverFees, paymentMethod, executionModel, selectedTicker } = req.body;
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       
       if (!fundId || !amount || !senderName) {
@@ -1037,6 +1204,8 @@ export async function registerRoutes(
         fundUserId: fund.userId,
         recipientName,
         paymentMethod: paymentMethod || 'card',
+        executionModel: executionModel || 'auto',
+        selectedTicker: selectedTicker || undefined,
         successUrl: `${baseUrl}/gift/success?fundId=${fundId}&eventId=${eventId || ''}`,
         cancelUrl: `${baseUrl}/gift/${eventId || fundId}?canceled=true`,
       });
@@ -1147,8 +1316,174 @@ export async function registerRoutes(
     }
   });
 
+  // ===== THANK-YOUS =====
+  app.get('/api/funds/:fundId/thank-yous', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== (req.user as any).id) return res.status(403).json({ error: 'Forbidden' });
+      const items = await storage.getThankYousByFund(req.params.fundId);
+      res.json(items);
+    } catch (error) {
+      console.error('Error fetching thank-yous:', error);
+      res.status(500).json({ error: 'Failed to fetch thank-yous' });
+    }
+  });
+
+  app.patch('/api/funds/:fundId/thank-yous/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== (req.user as any).id) return res.status(403).json({ error: 'Forbidden' });
+
+      const updates: Record<string, any> = {};
+      if (req.body.message !== undefined) updates.message = req.body.message;
+      if (req.body.status === 'sent') {
+        updates.status = 'sent';
+        updates.sentAt = new Date();
+      }
+
+      const updated = await storage.updateThankYou(req.params.id, updates);
+      if (!updated) return res.status(404).json({ error: 'Thank-you not found' });
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating thank-you:', error);
+      res.status(500).json({ error: 'Failed to update thank-you' });
+    }
+  });
+
+  app.post('/api/funds/:fundId/thank-yous/generate', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== (req.user as any).id) return res.status(403).json({ error: 'Forbidden' });
+
+      const fundGifts = await storage.getGiftsByFund(req.params.fundId);
+      const existingThankYous = await storage.getThankYousByFund(req.params.fundId);
+      const thankedGiftIds = new Set(existingThankYous.map(ty => ty.giftId));
+
+      const unthankedGifts = fundGifts.filter(g =>
+        (g.status === 'completed' || g.status === 'settled' || g.status === 'processing' || g.status === 'pending') &&
+        !thankedGiftIds.has(g.id)
+      );
+
+      const created = [];
+      for (const gift of unthankedGifts) {
+        const message = `Thank you ${gift.senderName} for your generous gift of $${parseFloat(gift.amount).toFixed(2)} to ${fund.name}!`;
+        const thankYou = await storage.createThankYou({
+          fundId: fund.id,
+          giftId: gift.id,
+          senderName: gift.senderName,
+          senderEmail: gift.senderEmail || null,
+          message,
+          status: 'draft',
+        });
+        created.push(thankYou);
+      }
+
+      res.json({ generated: created.length, thankYous: created });
+    } catch (error) {
+      console.error('Error generating thank-yous:', error);
+      res.status(500).json({ error: 'Failed to generate thank-yous' });
+    }
+  });
+
+  // ===== RECURRING GIFTS =====
+  app.post('/api/recurring-gifts', async (req, res) => {
+    try {
+      const { fundId, senderName, senderEmail, amount, frequency } = req.body;
+
+      if (!fundId || !senderName || !amount || !frequency) {
+        return res.status(400).json({ error: 'Missing required fields: fundId, senderName, amount, frequency' });
+      }
+
+      const fund = await storage.getFund(fundId);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+
+      const validFrequencies = ['weekly', 'monthly', 'quarterly', 'yearly'];
+      if (!validFrequencies.includes(frequency)) {
+        return res.status(400).json({ error: 'Invalid frequency. Must be one of: weekly, monthly, quarterly, yearly' });
+      }
+
+      const now = new Date();
+      let nextChargeDate = new Date(now);
+      switch (frequency) {
+        case 'weekly': nextChargeDate.setDate(now.getDate() + 7); break;
+        case 'monthly': nextChargeDate.setMonth(now.getMonth() + 1); break;
+        case 'quarterly': nextChargeDate.setMonth(now.getMonth() + 3); break;
+        case 'yearly': nextChargeDate.setFullYear(now.getFullYear() + 1); break;
+      }
+
+      const data = insertRecurringGiftSchema.parse({
+        fundId,
+        senderName,
+        senderEmail: senderEmail || null,
+        amount: parseFloat(amount).toFixed(2),
+        frequency,
+        status: 'active',
+        nextChargeDate,
+      });
+
+      const recurringGift = await storage.createRecurringGift(data);
+      res.status(201).json(recurringGift);
+    } catch (error) {
+      console.error('Error creating recurring gift:', error);
+      res.status(500).json({ error: 'Failed to create recurring gift' });
+    }
+  });
+
+  app.get('/api/funds/:fundId/recurring-gifts', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) {
+        return res.status(404).json({ error: 'Fund not found' });
+      }
+      if (fund.userId !== userId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const subscription = await storage.getSubscription(userId);
+      if (!subscription || subscription.plan !== 'family' || subscription.status !== 'active') {
+        return res.status(403).json({ error: 'Family plan required to view recurring gifts' });
+      }
+
+      const gifts = await storage.getRecurringGiftsByFund(req.params.fundId);
+      res.json(gifts);
+    } catch (error) {
+      console.error('Error fetching recurring gifts:', error);
+      res.status(500).json({ error: 'Failed to fetch recurring gifts' });
+    }
+  });
+
+  app.patch('/api/recurring-gifts/:id', async (req, res) => {
+    try {
+      const { status } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ error: 'Status is required' });
+      }
+
+      const validStatuses = ['active', 'paused', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status. Must be one of: active, paused, cancelled' });
+      }
+
+      const updated = await storage.updateRecurringGift(req.params.id, { status });
+      if (!updated) {
+        return res.status(404).json({ error: 'Recurring gift not found' });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating recurring gift:', error);
+      res.status(500).json({ error: 'Failed to update recurring gift' });
+    }
+  });
+
   // ===== ADMIN DASHBOARD =====
-  app.get('/api/admin/overview', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/overview', isAdmin, async (req: any, res) => {
     try {
       const userResult = await db.execute(sql`
         SELECT 
@@ -1258,7 +1593,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get('/api/admin/users', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/users', isAdmin, async (req: any, res) => {
     try {
       const allUsersResult = await db.execute(sql`
         SELECT 
@@ -1281,7 +1616,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get('/api/admin/gifts', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/gifts', isAdmin, async (req: any, res) => {
     try {
       const allGiftsResult = await db.execute(sql`
         SELECT 
@@ -1303,7 +1638,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get('/api/admin/transactions', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/transactions', isAdmin, async (req: any, res) => {
     try {
       const allTxResult = await db.execute(sql`
         SELECT 
@@ -1325,7 +1660,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get('/api/admin/funds', isAuthenticated, async (req: any, res) => {
+  app.get('/api/admin/funds', isAdmin, async (req: any, res) => {
     try {
       const allFundsResult = await db.execute(sql`
         SELECT 
@@ -1343,6 +1678,92 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error fetching admin funds:', error);
       res.status(500).json({ error: 'Failed to fetch admin funds' });
+    }
+  });
+
+  // ===== FUND COLLABORATORS =====
+  app.post('/api/funds/:fundId/collaborators', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      const subscription = await storage.getSubscription(userId);
+      if (!subscription || subscription.plan !== 'family' || subscription.status !== 'active') {
+        return res.status(403).json({ error: 'Family plan required to invite collaborators' });
+      }
+
+      const { email, role } = req.body;
+      if (!email) return res.status(400).json({ error: 'Email is required' });
+      if (role && !['viewer', 'co-admin'].includes(role)) {
+        return res.status(400).json({ error: 'Role must be viewer or co-admin' });
+      }
+
+      const collaborator = await storage.createCollaborator({
+        fundId: req.params.fundId,
+        email,
+        role: role || 'viewer',
+        status: 'pending',
+      });
+      res.status(201).json(collaborator);
+    } catch (error) {
+      console.error('Error creating collaborator:', error);
+      res.status(500).json({ error: 'Failed to create collaborator' });
+    }
+  });
+
+  app.get('/api/funds/:fundId/collaborators', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      const collaborators = await storage.getCollaboratorsByFund(req.params.fundId);
+      res.json(collaborators);
+    } catch (error) {
+      console.error('Error fetching collaborators:', error);
+      res.status(500).json({ error: 'Failed to fetch collaborators' });
+    }
+  });
+
+  app.patch('/api/funds/:fundId/collaborators/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      const { role, status } = req.body;
+      const updateData: any = {};
+      if (role && ['viewer', 'co-admin'].includes(role)) updateData.role = role;
+      if (status && ['pending', 'accepted', 'declined'].includes(status)) {
+        updateData.status = status;
+        if (status === 'accepted') updateData.acceptedAt = new Date();
+      }
+
+      const updated = await storage.updateCollaborator(req.params.id, updateData);
+      if (!updated) return res.status(404).json({ error: 'Collaborator not found' });
+      res.json(updated);
+    } catch (error) {
+      console.error('Error updating collaborator:', error);
+      res.status(500).json({ error: 'Failed to update collaborator' });
+    }
+  });
+
+  app.delete('/api/funds/:fundId/collaborators/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      await storage.deleteCollaborator(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting collaborator:', error);
+      res.status(500).json({ error: 'Failed to delete collaborator' });
     }
   });
 

@@ -18,6 +18,8 @@ export interface GiftCheckoutParams {
   successUrl: string;
   cancelUrl: string;
   paymentMethod?: PaymentMethodPreference;
+  executionModel?: string;
+  selectedTicker?: string;
 }
 
 export interface FeeCalculation {
@@ -210,6 +212,8 @@ export class StripeService {
         hasEventBoost: (params.hasEventBoost || false).toString(),
         hasPaidPlan: (params.hasPaidPlan || false).toString(),
         paymentMethod: params.paymentMethod || 'card',
+        executionModel: params.executionModel || 'auto',
+        selectedTicker: params.selectedTicker || '',
       },
       payment_intent_data: {
         description: `Gift of $${fees.netToFund.toFixed(2)} to ${recipientLabel}'s investment fund via Kora`,
@@ -223,6 +227,8 @@ export class StripeService {
           processingFee: fees.processingFee.toString(),
           koraFee: fees.koraFee.toString(),
           netToFund: fees.netToFund.toString(),
+          executionModel: params.executionModel || 'auto',
+          selectedTicker: params.selectedTicker || '',
         },
       },
     });

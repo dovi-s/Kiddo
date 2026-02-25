@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wallet, CalendarHeart, Activity, Settings, LogOut } from "lucide-react";
+import { Wallet, CalendarHeart, Activity, Settings, LogOut, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
 import { haptic } from "@/lib/haptics";
@@ -10,6 +10,8 @@ const navItems = [
   { href: "/activity", icon: Activity, label: "Activity" },
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
+
+const adminNavItem = { href: "/admin", icon: ShieldCheck, label: "Admin" };
 
 export function DesktopSidebar() {
   const [location] = useLocation();
@@ -28,11 +30,12 @@ export function DesktopSidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item) => {
+        {[...navItems, ...(user?.isAdmin ? [adminNavItem] : [])].map((item) => {
           const isActive = location === item.href ||
             (item.href === "/dashboard" && location.startsWith("/dashboard")) ||
             (item.href === "/events" && (location.startsWith("/events") || location.startsWith("/event"))) ||
-            (item.href === "/activity" && location.startsWith("/activity"));
+            (item.href === "/activity" && location.startsWith("/activity")) ||
+            (item.href === "/admin" && location.startsWith("/admin"));
           const Icon = item.icon;
 
           return (

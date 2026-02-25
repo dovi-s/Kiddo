@@ -7,6 +7,7 @@ import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
 import { GradientText, ThinkingOrb } from "@/components/ui/gemini";
 import { Mascot } from "@/components/ui/mascot";
+import { GoalCard, themes } from "@/components/ui/premium-themes";
 import { useQuery } from "@tanstack/react-query";
 
 const AMOUNTS = [25, 50, 100, 250];
@@ -56,6 +57,7 @@ interface PublicEventData {
     imageUrl?: string;
     eventDate?: string;
     eventType?: string;
+    theme?: string;
     goalAmount?: number;
     giftVolume?: number;
     giftCount?: number;
@@ -117,6 +119,8 @@ export default function GiftCheckout() {
   const recipientName = eventData?.fund?.recipientFirstName || eventData?.fund?.name || "Recipient";
   const eventName = eventData?.event?.name || "";
   const eventType = eventData?.event?.eventType || "";
+  const eventThemeId = eventData?.event?.theme || "classic";
+  const activeTheme = themes.find(t => t.id === eventThemeId) || themes[0];
   const giftCount = eventData?.event?.giftCount ?? eventData?.giftCount ?? 0;
   const goalAmount = eventData?.event?.goalAmount;
   const giftVolume = eventData?.event?.giftVolume ?? 0;
@@ -196,6 +200,8 @@ export default function GiftCheckout() {
           message: message.trim() || undefined,
           coverFees,
           paymentMethod,
+          executionModel,
+          selectedTicker: executionModel === "pick" ? selectedStock : undefined,
         }),
       });
 
@@ -218,8 +224,10 @@ export default function GiftCheckout() {
     );
   }
 
+  const themeGradientClass = activeTheme.id !== "classic" ? `bg-gradient-to-br ${activeTheme.gradient}` : "";
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className={`min-h-screen ${themeGradientClass || "bg-background"}`}>
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/30">
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <Logo size="sm" className="text-primary" />
@@ -248,7 +256,19 @@ export default function GiftCheckout() {
             </p>
           )}
 
-          {goalAmount && goalAmount > 0 && (
+          {goalAmount && goalAmount > 0 && (feeData?.hasEventBoost || feeData?.hasPaidPlan) && (
+            <div className="mt-4 px-2" data-testid="goal-card-checkout">
+              <GoalCard
+                goalAmount={goalAmount}
+                currentAmount={giftVolume}
+                recipientName={recipientName}
+                eventTitle={eventName || `Gift to ${recipientName}`}
+                contributorCount={giftCount}
+              />
+            </div>
+          )}
+
+          {goalAmount && goalAmount > 0 && !(feeData?.hasEventBoost || feeData?.hasPaidPlan) && (
             <div className="mt-3 px-2" data-testid="progress-goal">
               <div className="flex justify-between text-xs text-muted-foreground mb-1">
                 <span>${giftVolume.toLocaleString()} raised</span>

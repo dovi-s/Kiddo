@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wallet, CalendarHeart, Activity, Settings } from "lucide-react";
+import { Wallet, CalendarHeart, Activity, Settings, ShieldCheck } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -11,9 +11,11 @@ const navItems = [
   { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
+const adminNavItem = { href: "/admin", icon: ShieldCheck, label: "Admin" };
+
 export function MobileNav() {
   const [location] = useLocation();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   
   const hiddenPaths = ["/checkout", "/get-started", "/onboard", "/activate", "/login", "/claim", "/give", "/send"];
   const shouldHide = hiddenPaths.some(path => location.startsWith(path));
@@ -30,11 +32,12 @@ export function MobileNav() {
       style={{ backdropFilter: "blur(24px) saturate(1.4)", WebkitBackdropFilter: "blur(24px) saturate(1.4)" }}
     >
       <div className="flex items-center justify-around h-16">
-        {navItems.map((item) => {
+        {[...navItems, ...(user?.isAdmin ? [adminNavItem] : [])].map((item) => {
           const isActive = location === item.href || 
             (item.href === "/dashboard" && location.startsWith("/dashboard")) ||
             (item.href === "/events" && (location.startsWith("/events") || location.startsWith("/event"))) ||
-            (item.href === "/activity" && location.startsWith("/activity"));
+            (item.href === "/activity" && location.startsWith("/activity")) ||
+            (item.href === "/admin" && location.startsWith("/admin"));
           const Icon = item.icon;
           
           return (

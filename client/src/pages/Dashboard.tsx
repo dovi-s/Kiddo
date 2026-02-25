@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { AddFundSheet } from "@/components/AddFundSheet";
 import { EventGateModal } from "@/components/EventGateModal";
+import { ThankYouManager } from "@/components/ThankYouManager";
+import { GiftReceivedToast } from "@/components/ui/plg-loops";
 import {
   TrendingUp,
   ArrowUp,
@@ -18,6 +20,8 @@ import {
   ChevronDown,
   Wallet,
   Copy,
+  Sprout,
+  Repeat,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
@@ -25,8 +29,9 @@ import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 import { EducationTip, educationContent } from "@/components/ui/education";
 import { GradientText, GeminiBalanceGlow } from "@/components/ui/gemini";
+import { CollaboratorInvite, CollaboratorInviteModal } from "@/components/ui/plg-loops";
 import mascotImg from "@/assets/kora-mascot.png";
-import type { Fund, Holding, Gift as GiftType, Event } from "@shared/schema";
+import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
 
 function SkeletonBlock({ className = "" }: { className?: string }) {
   return (
@@ -63,13 +68,18 @@ export default function Dashboard() {
   const [selectedFundId, setSelectedFundId] = useState<string>("");
   const [fundPickerOpen, setFundPickerOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedKidLink, setCopiedKidLink] = useState(false);
   const [addFundOpen, setAddFundOpen] = useState(false);
   const [eventGateOpen, setEventGateOpen] = useState(false);
   const [investingCash, setInvestingCash] = useState(false);
   const [sellingHolding, setSellingHolding] = useState<Holding | null>(null);
   const [sellShares, setSellShares] = useState("");
   const [sellLoading, setSellLoading] = useState(false);
+  const [showCollabInvite, setShowCollabInvite] = useState(true);
+  const [collabModalOpen, setCollabModalOpen] = useState(false);
   const isFamily = subscription?.plan === "family" && subscription?.status === "active";
+  const [giftToastDismissed, setGiftToastDismissed] = useState(false);
+  const [recentGiftForToast, setRecentGiftForToast] = useState<GiftType | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -120,6 +130,28 @@ export default function Dashboard() {
     enabled: !!activeFundId,
   });
 
+  const { data: recurringGifts = [], isLoading: recurringLoading } = useQuery<RecurringGift[]>({
+    queryKey: ["/api/funds", activeFundId, "recurring-gifts"],
+    queryFn: async () => {
+      const res = await fetch(`/api/funds/${activeFundId}/recurring-gifts`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!activeFundId && isFamily,
+  });
+
+  useEffect(() => {
+    if (giftToastDismissed || !gifts.length) return;
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const recent = gifts.find((g) => {
+      const createdAt = g.createdAt ? new Date(g.createdAt).getTime() : 0;
+      return createdAt > oneHourAgo;
+    });
+    if (recent) {
+      setRecentGiftForToast(recent);
+    }
+  }, [gifts, giftToastDismissed]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -168,6 +200,19 @@ export default function Dashboard() {
       setCopiedLink(true);
       haptic("success");
       setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      haptic("error");
+    }
+  };
+
+  const handleKidViewLink = async () => {
+    const link = `${window.location.origin}/kid/${activeFundId}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopiedKidLink(true);
+      haptic("success");
+      toast({ title: "Kid View link copied!", description: "Share this link so your child can see their fund grow" });
+      setTimeout(() => setCopiedKidLink(false), 2000);
     } catch {
       haptic("error");
     }
@@ -430,6 +475,18 @@ export default function Dashboard() {
                 {copiedLink ? <Copy size={15} /> : <Share2 size={15} />}
                 {copiedLink ? "Copied!" : "Share Link"}
               </Button>
+              {activeFund?.accountType === "UTMA" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 rounded-full gap-2 h-10"
+                  onClick={handleKidViewLink}
+                  data-testid="button-kid-view"
+                >
+                  {copiedKidLink ? <Copy size={15} /> : <Sprout size={15} />}
+                  {copiedKidLink ? "Copied!" : "Kid View"}
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -654,6 +711,16 @@ export default function Dashboard() {
               </motion.section>
             </div>
 
+            {(isFamily || events.some(e => e.hasEventPass)) && activeFundId && (
+              <motion.section
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.22 }}
+              >
+                <ThankYouManager fundId={activeFundId} fundName={activeFund?.name || ""} />
+              </motion.section>
+            )}
+
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -689,6 +756,90 @@ export default function Dashboard() {
                 </div>
               )}
             </motion.section>
+
+            {isFamily && activeFund && showCollabInvite && (
+              <motion.section
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.3 }}
+              >
+                <CollaboratorInvite
+                  fundName={activeFund.name || "your fund"}
+                  onInvite={() => { setCollabModalOpen(true); haptic("selection"); }}
+                  onDismiss={() => { setShowCollabInvite(false); haptic("light"); }}
+                />
+              </motion.section>
+            )}
+
+            {isFamily && (
+              <motion.section
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.35 }}
+              >
+                <h3 className="font-heading text-lg font-semibold mb-3" data-testid="text-recurring-gifts-title">
+                  Recurring Gifts
+                </h3>
+                {recurringLoading ? (
+                  <div className="space-y-3">
+                    <SkeletonBlock className="h-16 w-full" />
+                  </div>
+                ) : recurringGifts.length === 0 ? (
+                  <div className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-6 text-center">
+                    <Repeat size={24} className="text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground" data-testid="text-no-recurring">
+                      No recurring gifts yet. When contributors set up recurring gifts, they'll appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {recurringGifts.map((rg) => {
+                      const rgAmount = parseFloat(rg.amount || "0");
+                      const freqLabel = rg.frequency === "weekly" ? "/week" : rg.frequency === "monthly" ? "/month" : rg.frequency === "quarterly" ? "/quarter" : "/year";
+                      const isActive = rg.status === "active";
+                      return (
+                        <div
+                          key={rg.id}
+                          className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-4 flex items-center justify-between"
+                          data-testid={`card-recurring-gift-${rg.id}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                              <Repeat size={16} className="text-blue-500" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">{rg.senderName}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatCurrency(rgAmount)}{freqLabel}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                isActive
+                                  ? "bg-green-500/10 text-green-600"
+                                  : rg.status === "paused"
+                                  ? "bg-yellow-500/10 text-yellow-600"
+                                  : "bg-red-500/10 text-red-600"
+                              }`}
+                              data-testid={`badge-recurring-status-${rg.id}`}
+                            >
+                              {rg.status}
+                            </span>
+                            {rg.nextChargeDate && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Next: {formatDate(rg.nextChargeDate)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.section>
+            )}
           </>
         )}
       </main>
@@ -705,6 +856,33 @@ export default function Dashboard() {
         open={eventGateOpen}
         onClose={() => setEventGateOpen(false)}
       />
+
+      {activeFund && (
+        <CollaboratorInviteModal
+          isOpen={collabModalOpen}
+          onClose={() => setCollabModalOpen(false)}
+          fundName={activeFund.name || "your fund"}
+          onSendInvite={async (email, role) => {
+            try {
+              const res = await fetch(`/api/funds/${activeFundId}/collaborators`, {
+                method: "POST",
+                credentials: "include",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, role }),
+              });
+              if (res.ok) {
+                haptic("success");
+                toast({ title: "Invite sent!", description: `${email} has been invited as ${role}` });
+              } else {
+                const data = await res.json();
+                toast({ title: "Could not send invite", description: data.error || "Please try again", variant: "destructive" });
+              }
+            } catch {
+              toast({ title: "Could not send invite", description: "Please try again", variant: "destructive" });
+            }
+          }}
+        />
+      )}
 
       {sellingHolding && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -768,6 +946,25 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <AnimatePresence>
+        {recentGiftForToast && !giftToastDismissed && (
+          <GiftReceivedToast
+            giverName={recentGiftForToast.senderName}
+            amount={parseFloat(recentGiftForToast.amount)}
+            recipientName={activeFund?.recipientFirstName || activeFund?.name || "your child"}
+            onViewActivity={() => {
+              setGiftToastDismissed(true);
+              setRecentGiftForToast(null);
+              setLocation("/activity");
+            }}
+            onDismiss={() => {
+              setGiftToastDismissed(true);
+              setRecentGiftForToast(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

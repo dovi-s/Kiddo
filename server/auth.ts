@@ -182,3 +182,13 @@ export const isAuthenticated: RequestHandler = (req, res, next) => {
   }
   next();
 };
+
+export const isAdmin: RequestHandler = (req, res, next) => {
+  if (!req.isAuthenticated() || !req.user) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+  if (!(req.user as any).isAdmin) {
+    return res.status(403).json({ message: "Forbidden: admin access required" });
+  }
+  next();
+};

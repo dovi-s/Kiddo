@@ -12,10 +12,11 @@ import { toast } from "@/hooks/use-toast";
 import {
   User, CreditCard, Shield, Eye, EyeOff, LogOut, Check,
   ChevronRight, Star, Lock, Crown, ArrowUpRight, Wallet, ChevronLeft, Plus, Loader2, Camera,
-  Building2, Trash2, TrendingDown, ArrowDownToLine, X
+  Building2, Trash2, TrendingDown, ArrowDownToLine, X, PieChart, Users, UserPlus
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { CollaboratorInviteModal } from "@/components/ui/plg-loops";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -433,6 +434,154 @@ function LinkBankSheet({ open, onClose, onSuccess }: {
   );
 }
 
+const STRATEGIES = [
+  {
+    key: "growth",
+    label: "Growth Mix",
+    description: "Long-term growth with broad diversification",
+    allocations: [
+      { ticker: "VTI", name: "US Total Market", weight: 50, color: "#4F46E5" },
+      { ticker: "VXUS", name: "International", weight: 25, color: "#0EA5E9" },
+      { ticker: "BND", name: "Bonds", weight: 15, color: "#10B981" },
+      { ticker: "VGT", name: "Tech", weight: 10, color: "#F59E0B" },
+    ],
+  },
+  {
+    key: "balanced",
+    label: "Steady & Balanced",
+    description: "Lower risk with more bond allocation",
+    allocations: [
+      { ticker: "VTI", name: "US Total Market", weight: 35, color: "#4F46E5" },
+      { ticker: "VXUS", name: "International", weight: 15, color: "#0EA5E9" },
+      { ticker: "BND", name: "Bonds", weight: 35, color: "#10B981" },
+      { ticker: "VGT", name: "Tech", weight: 15, color: "#F59E0B" },
+    ],
+  },
+  {
+    key: "custom",
+    label: "Custom",
+    description: "Choose your own allocation",
+    allocations: [],
+    gated: true,
+  },
+];
+
+function StrategyEditor({ fund, userPlan, onSuccess }: { fund: any; userPlan: "free" | "starter" | "family"; onSuccess: () => void }) {
+  const currentStrategy = fund.investmentStrategy || "growth";
+  const [selected, setSelected] = useState(currentStrategy === "auto_invest" ? "growth" : currentStrategy);
+  const [saving, setSaving] = useState(false);
+  const hasChanged = selected !== (currentStrategy === "auto_invest" ? "growth" : currentStrategy);
+  const canUseCustom = userPlan === "starter" || userPlan === "family";
+
+  const handleSave = async () => {
+    setSaving(true);
+    haptic("medium");
+    try {
+      const res = await fetch(`/api/funds/${fund.id}/strategy`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ strategy: selected }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        haptic("success");
+        toast({ title: "Strategy updated", description: `Your fund now uses the ${STRATEGIES.find(s => s.key === selected)?.label} strategy.` });
+        onSuccess();
+      } else {
+        toast({ title: "Could not update strategy", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not update strategy", description: "Please try again", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const activeStrategy = STRATEGIES.find(s => s.key === selected) || STRATEGIES[0];
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        {STRATEGIES.map((strategy) => {
+          const isLocked = strategy.gated && !canUseCustom;
+          return (
+            <button
+              key={strategy.key}
+              onClick={() => {
+                if (isLocked) return;
+                setSelected(strategy.key);
+                haptic("selection");
+              }}
+              disabled={isLocked}
+              className={`w-full p-3 rounded-xl border-2 text-left transition-all ${
+                selected === strategy.key
+                  ? "border-primary bg-primary/5"
+                  : isLocked
+                  ? "border-border/30 opacity-60 cursor-not-allowed"
+                  : "border-border hover:border-border/80"
+              }`}
+              data-testid={`option-strategy-${strategy.key}`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground flex items-center gap-2">
+                    {strategy.label}
+                    {isLocked && <Lock size={12} className="text-muted-foreground" />}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{strategy.description}</p>
+                </div>
+                {selected === strategy.key && <Check size={16} className="text-primary flex-shrink-0" />}
+              </div>
+              {isLocked && (
+                <p className="text-[11px] text-muted-foreground mt-1">Requires Starter or Family plan</p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeStrategy.allocations.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Allocation Breakdown</p>
+          <div className="flex h-3 rounded-full overflow-hidden">
+            {activeStrategy.allocations.map((a) => (
+              <div
+                key={a.ticker}
+                style={{ width: `${a.weight}%`, backgroundColor: a.color }}
+                className="transition-all duration-300"
+              />
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {activeStrategy.allocations.map((a) => (
+              <div key={a.ticker} className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-foreground">{a.ticker} <span className="text-muted-foreground font-normal">{a.weight}%</span></p>
+                  <p className="text-[11px] text-muted-foreground truncate">{a.name}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasChanged && (
+        <Button
+          className="w-full"
+          disabled={saving}
+          onClick={handleSave}
+          data-testid="button-save-strategy"
+        >
+          {saving && <Loader2 size={16} className="mr-2 animate-spin" />}
+          Save Strategy
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export default function Settings() {
   const { user, isLoading: authLoading, logout } = useAuth();
   const [, navigate] = useLocation();
@@ -444,6 +593,8 @@ export default function Settings() {
   const [selectedFundForAction, setSelectedFundForAction] = useState<any>(null);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [linkBankOpen, setLinkBankOpen] = useState(false);
+  const [collabModalOpen, setCollabModalOpen] = useState(false);
+  const [collabFundId, setCollabFundId] = useState<string>("");
 
   const queryClient = useQueryClient();
 
@@ -489,6 +640,25 @@ export default function Settings() {
     enabled: !!primaryFund,
   });
 
+  const { data: collaborators = [] } = useQuery<any[]>({
+    queryKey: ["/api/funds", primaryFund?.id, "collaborators"],
+    queryFn: async () => {
+      const res = await fetch(`/api/funds/${primaryFund.id}/collaborators`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!primaryFund,
+  });
+
+  const { data: subscription } = useSubscription();
+  const [upgrading, setUpgrading] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [reactivating, setReactivating] = useState(false);
+  const [openingPortal, setOpeningPortal] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   if (authLoading) {
     return (
       <div className="md:ml-[220px] lg:ml-[260px] flex items-center justify-center min-h-screen">
@@ -502,14 +672,11 @@ export default function Settings() {
     return null;
   }
 
-  const { data: subscription } = useSubscription();
-  const [upgrading, setUpgrading] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   const displayName = `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User";
   const userEmail = user.email || "";
-  const userPlan: "free" | "starter" | "family" = (subscription?.status === "active" && subscription?.plan === "family") ? "family" : (subscription?.status === "active" && subscription?.plan === "starter") ? "starter" : "free";
+  const isSubActive = subscription?.status === "active";
+  const isSubCanceled = subscription?.status === "canceled";
+  const userPlan: "free" | "starter" | "family" = ((isSubActive || isSubCanceled) && subscription?.plan === "family") ? "family" : ((isSubActive || isSubCanceled) && subscription?.plan === "starter") ? "starter" : "free";
   const kycCompleted = kycData?.kycStatus === "approved";
 
   const handleUpgradeFamily = async () => {
@@ -531,6 +698,77 @@ export default function Settings() {
       toast({ title: "Something went wrong", description: "Please try again", variant: "destructive" });
     } finally {
       setUpgrading(false);
+    }
+  };
+
+  const handleCancelSubscription = async () => {
+    setCanceling(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/subscription/cancel", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        haptic("success");
+        toast({ title: "Subscription canceled", description: `Your plan remains active until ${new Date(data.activeUntil).toLocaleDateString()}` });
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+        setShowCancelConfirm(false);
+      } else {
+        toast({ title: "Could not cancel", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not cancel", description: "Please try again", variant: "destructive" });
+    } finally {
+      setCanceling(false);
+    }
+  };
+
+  const handleReactivateSubscription = async () => {
+    setReactivating(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/subscription/reactivate", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        haptic("success");
+        toast({ title: "Subscription reactivated", description: "Your plan is active again" });
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      } else {
+        toast({ title: "Could not reactivate", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not reactivate", description: "Please try again", variant: "destructive" });
+    } finally {
+      setReactivating(false);
+    }
+  };
+
+  const handleOpenBillingPortal = async () => {
+    setOpeningPortal(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/subscription/portal", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Could not open billing portal", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not open billing portal", description: "Please try again", variant: "destructive" });
+    } finally {
+      setOpeningPortal(false);
     }
   };
 
@@ -640,11 +878,54 @@ export default function Settings() {
     logout();
   };
 
+  const handleDeleteCollaborator = async (fundId: string, collabId: string) => {
+    haptic("medium");
+    try {
+      const res = await fetch(`/api/funds/${fundId}/collaborators/${collabId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "collaborators"] });
+        toast({ title: "Collaborator removed" });
+      } else {
+        const data = await res.json();
+        toast({ title: "Could not remove", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not remove", description: "Please try again", variant: "destructive" });
+    }
+  };
+
+  const handleSendCollabInvite = async (email: string, role: string) => {
+    const fundId = collabFundId || primaryFund?.id;
+    if (!fundId) return;
+    try {
+      const res = await fetch(`/api/funds/${fundId}/collaborators`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, role }),
+      });
+      if (res.ok) {
+        haptic("success");
+        toast({ title: "Invite sent!", description: `${email} has been invited as ${role}` });
+        queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "collaborators"] });
+      } else {
+        const data = await res.json();
+        toast({ title: "Could not send invite", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not send invite", description: "Please try again", variant: "destructive" });
+    }
+  };
+
   const refreshAll = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
     queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] });
     if (primaryFund) {
       queryClient.invalidateQueries({ queryKey: ["/api/funds", primaryFund.id, "holdings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/funds", primaryFund.id, "collaborators"] });
     }
   };
 
@@ -837,6 +1118,99 @@ export default function Settings() {
           </div>
         </SectionCard>
 
+        {/* Collaborators (Family plan only) */}
+        {userPlan === "family" && primaryFund && (
+          <SectionCard>
+            <div className="p-5 space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <Users size={18} className="text-muted-foreground" />
+                  <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-collaborators">Collaborators</h2>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCollabFundId(primaryFund.id);
+                    setCollabModalOpen(true);
+                    haptic("selection");
+                  }}
+                  className="text-xs gap-1"
+                  data-testid="button-invite-collaborator-settings"
+                >
+                  <UserPlus size={14} />
+                  Invite
+                </Button>
+              </div>
+
+              {collaborators.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-muted-foreground mb-3" data-testid="text-no-collaborators">
+                    No collaborators yet. Invite a co-parent or family member to help manage your fund.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setCollabFundId(primaryFund.id);
+                      setCollabModalOpen(true);
+                      haptic("selection");
+                    }}
+                    className="gap-2"
+                    data-testid="button-invite-first-collaborator"
+                  >
+                    <UserPlus size={16} />
+                    Invite someone
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {collaborators.map((collab: any) => (
+                    <div
+                      key={collab.id}
+                      className="flex items-center justify-between p-3 rounded-xl border border-border/50"
+                      data-testid={`card-collaborator-${collab.id}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
+                          <Users size={14} className="text-violet-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground" data-testid={`text-collaborator-email-${collab.id}`}>
+                            {collab.email}
+                          </p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              collab.role === "co-admin" ? "bg-violet-100 text-violet-700" : "bg-muted text-muted-foreground"
+                            }`} data-testid={`text-collaborator-role-${collab.id}`}>
+                              {collab.role === "co-admin" ? "Co-Admin" : "Viewer"}
+                            </span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              collab.status === "accepted" ? "bg-green-100 text-green-700" :
+                              collab.status === "declined" ? "bg-red-100 text-red-700" :
+                              "bg-amber-100 text-amber-700"
+                            }`} data-testid={`text-collaborator-status-${collab.id}`}>
+                              {collab.status === "accepted" ? "Accepted" :
+                               collab.status === "declined" ? "Declined" :
+                               "Pending"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteCollaborator(primaryFund.id, collab.id)}
+                        className="text-muted-foreground hover:text-red-600 transition-colors p-1"
+                        data-testid={`button-remove-collaborator-${collab.id}`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </SectionCard>
+        )}
+
         {/* Membership */}
         <SectionCard>
           <div className="p-5 space-y-4">
@@ -930,8 +1304,17 @@ export default function Settings() {
                 <div className="flex items-center gap-2">
                   <Check size={16} className="text-green-600" />
                   <span className="text-sm font-medium text-foreground" data-testid="text-current-plan">Starter Plan</span>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${isSubCanceled ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
+                    {isSubCanceled ? "Canceling" : "Active"}
+                  </span>
                 </div>
+                {isSubCanceled && subscription?.currentPeriodEnd && (
+                  <div className="bg-amber-50 rounded-xl border border-amber-200/50 p-3">
+                    <p className="text-xs text-amber-800">
+                      Your plan is canceled but remains active until {new Date(subscription.currentPeriodEnd).toLocaleDateString()}. After that, you'll be on the Free plan with a $2 platform fee per gift.
+                    </p>
+                  </div>
+                )}
                 <div className="bg-muted/30 rounded-xl p-3 space-y-1.5 text-xs text-muted-foreground">
                   <div className="flex justify-between">
                     <span>Plan</span>
@@ -939,7 +1322,7 @@ export default function Settings() {
                   </div>
                   {subscription?.currentPeriodEnd && (
                     <div className="flex justify-between">
-                      <span>Renews</span>
+                      <span>{isSubCanceled ? "Active until" : "Renews"}</span>
                       <span className="font-medium text-foreground">{new Date(subscription.currentPeriodEnd).toLocaleDateString()}</span>
                     </div>
                   )}
@@ -948,33 +1331,81 @@ export default function Settings() {
                     <span className="font-medium text-green-600">Waived</span>
                   </div>
                 </div>
-                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20 p-4 space-y-3 mt-3">
-                  <div className="flex items-center gap-2">
-                    <Crown size={16} className="text-primary" />
-                    <p className="text-sm font-semibold text-foreground">Upgrade to Family</p>
-                    <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">$12/mo or $119/yr</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Unlimited funds, unlimited event pages, household dashboard, and priority support.
-                  </p>
+                <div className="flex gap-2">
                   <Button
-                    className="w-full"
-                    data-testid="button-upgrade-family"
-                    disabled={upgrading}
-                    onClick={handleUpgradeFamily}
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    disabled={openingPortal}
+                    onClick={handleOpenBillingPortal}
+                    data-testid="button-manage-billing"
                   >
-                    {upgrading && <Loader2 size={16} className="mr-2 animate-spin" />}
-                    Upgrade to Family Plan
+                    {openingPortal && <Loader2 size={14} className="mr-1 animate-spin" />}
+                    <CreditCard size={14} className="mr-1" />
+                    Manage Billing
                   </Button>
+                  {isSubCanceled ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs text-green-600 border-green-200 hover:bg-green-50"
+                      disabled={reactivating}
+                      onClick={handleReactivateSubscription}
+                      data-testid="button-reactivate-subscription"
+                    >
+                      {reactivating && <Loader2 size={14} className="mr-1 animate-spin" />}
+                      Reactivate
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => setShowCancelConfirm(true)}
+                      data-testid="button-cancel-subscription"
+                    >
+                      Cancel Plan
+                    </Button>
+                  )}
                 </div>
+                {!isSubCanceled && (
+                  <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20 p-4 space-y-3 mt-3">
+                    <div className="flex items-center gap-2">
+                      <Crown size={16} className="text-primary" />
+                      <p className="text-sm font-semibold text-foreground">Upgrade to Family</p>
+                      <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">$12/mo or $119/yr</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Unlimited funds, unlimited event pages, household dashboard, and priority support.
+                    </p>
+                    <Button
+                      className="w-full"
+                      data-testid="button-upgrade-family"
+                      disabled={upgrading}
+                      onClick={handleUpgradeFamily}
+                    >
+                      {upgrading && <Loader2 size={16} className="mr-2 animate-spin" />}
+                      Upgrade to Family Plan
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Check size={16} className="text-green-600" />
                   <span className="text-sm font-medium text-foreground" data-testid="text-current-plan">Family Plan</span>
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Active</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${isSubCanceled ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
+                    {isSubCanceled ? "Canceling" : "Active"}
+                  </span>
                 </div>
+                {isSubCanceled && subscription?.currentPeriodEnd && (
+                  <div className="bg-amber-50 rounded-xl border border-amber-200/50 p-3">
+                    <p className="text-xs text-amber-800">
+                      Your plan is canceled but remains active until {new Date(subscription.currentPeriodEnd).toLocaleDateString()}. After that, you'll be on the Free plan with a $2 platform fee per gift.
+                    </p>
+                  </div>
+                )}
                 <div className="bg-muted/30 rounded-xl p-3 space-y-1.5 text-xs text-muted-foreground">
                   <div className="flex justify-between">
                     <span>Plan</span>
@@ -986,7 +1417,7 @@ export default function Settings() {
                   </div>
                   {subscription?.currentPeriodEnd && (
                     <div className="flex justify-between">
-                      <span>Renews</span>
+                      <span>{isSubCanceled ? "Active until" : "Renews"}</span>
                       <span className="font-medium text-foreground">{new Date(subscription.currentPeriodEnd).toLocaleDateString()}</span>
                     </div>
                   )}
@@ -994,6 +1425,43 @@ export default function Settings() {
                     <span>Platform fee</span>
                     <span className="font-medium text-green-600">Waived</span>
                   </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    disabled={openingPortal}
+                    onClick={handleOpenBillingPortal}
+                    data-testid="button-manage-billing"
+                  >
+                    {openingPortal && <Loader2 size={14} className="mr-1 animate-spin" />}
+                    <CreditCard size={14} className="mr-1" />
+                    Manage Billing
+                  </Button>
+                  {isSubCanceled ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs text-green-600 border-green-200 hover:bg-green-50"
+                      disabled={reactivating}
+                      onClick={handleReactivateSubscription}
+                      data-testid="button-reactivate-subscription"
+                    >
+                      {reactivating && <Loader2 size={14} className="mr-1 animate-spin" />}
+                      Reactivate
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                      onClick={() => setShowCancelConfirm(true)}
+                      data-testid="button-cancel-subscription"
+                    >
+                      Cancel Plan
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -1098,6 +1566,20 @@ export default function Settings() {
             )}
           </div>
         </SectionCard>
+
+        {/* Investment Strategy */}
+        {primaryFund && kycCompleted && (
+          <SectionCard>
+            <div className="p-5 space-y-4">
+              <div className="flex items-center gap-3 mb-2">
+                <PieChart size={18} className="text-muted-foreground" />
+                <h2 className="font-heading text-lg font-semibold text-foreground" data-testid="heading-strategy">Investment Strategy</h2>
+              </div>
+
+              <StrategyEditor fund={primaryFund} userPlan={userPlan} onSuccess={refreshAll} />
+            </div>
+          </SectionCard>
+        )}
 
         {/* Withdrawals & Selling */}
         <SectionCard>
@@ -1336,6 +1818,69 @@ export default function Settings() {
         onClose={() => setLinkBankOpen(false)}
         onSuccess={() => queryClient.invalidateQueries({ queryKey: ["/api/bank-accounts"] })}
       />
+
+      <CollaboratorInviteModal
+        isOpen={collabModalOpen}
+        onClose={() => setCollabModalOpen(false)}
+        fundName={primaryFund?.name || "your fund"}
+        onSendInvite={handleSendCollabInvite}
+      />
+
+      <Dialog open={showCancelConfirm} onOpenChange={(o) => { if (!o) setShowCancelConfirm(false); }}>
+        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">Cancel Subscription</DialogTitle>
+          <div className="p-6 space-y-5">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center mx-auto">
+                <X size={24} className="text-red-600" />
+              </div>
+              <h2 className="font-heading text-xl font-semibold text-foreground">Cancel your plan?</h2>
+              <p className="text-sm text-muted-foreground">
+                Your {subscription?.plan === "family" ? "Family" : "Starter"} plan will remain active until the end of your current billing period
+                {subscription?.currentPeriodEnd && ` (${new Date(subscription.currentPeriodEnd).toLocaleDateString()})`}.
+                After that, you'll move to the Free plan.
+              </p>
+            </div>
+
+            <div className="bg-amber-50 rounded-xl border border-amber-200/50 p-3 space-y-2">
+              <p className="text-xs font-medium text-amber-900">What you'll lose:</p>
+              <ul className="space-y-1 text-xs text-amber-800">
+                <li className="flex items-center gap-2">
+                  <X size={12} className="text-amber-600" />
+                  $2 platform fee will apply to every gift
+                </li>
+                {subscription?.plan === "family" && (
+                  <>
+                    <li className="flex items-center gap-2">
+                      <X size={12} className="text-amber-600" />
+                      Unlimited funds and event pages
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <X size={12} className="text-amber-600" />
+                      Household dashboard and priority support
+                    </li>
+                  </>
+                )}
+              </ul>
+            </div>
+
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1" onClick={() => setShowCancelConfirm(false)} data-testid="button-keep-plan">
+                Keep Plan
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                disabled={canceling}
+                onClick={handleCancelSubscription}
+                data-testid="button-confirm-cancel"
+              >
+                {canceling && <Loader2 size={16} className="mr-2 animate-spin" />}
+                Cancel Plan
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

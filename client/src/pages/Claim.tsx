@@ -1,58 +1,37 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useParams } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Check, TrendingUp, Gift as GiftIcon, Shield, Lock, ChevronRight, Plus } from "lucide-react";
+import { ArrowLeft, Check, TrendingUp, Gift as GiftIcon, Shield, Lock, ChevronRight, Plus, Loader2 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Confetti } from "@/components/ui/confetti";
 import { InvestmentReveal } from "@/components/ui/live-ticker";
 import { haptic } from "@/lib/haptics";
 import { ThinkingOrb } from "@/components/ui/gemini";
+import { useAuth } from "@/hooks/use-auth";
+import { useFunds } from "@/hooks/use-funds";
 
-interface GiftData {
+interface PublicGiftData {
   id: string;
-  claimToken: string;
   senderName: string;
-  senderEmail: string;
-  recipientEmail: string;
-  recipientName: string;
-  assetType: "stock" | "cash";
-  stockSymbol: string | null;
-  stockName: string | null;
-  shares: number | null;
-  currentPrice: number | null;
-  amount: number | null;
-  message: string;
-  status: "pending_claim" | "claimed" | "expired";
-  createdAt: Date;
-  expiresAt: Date;
+  amount: string;
+  netAmount: string;
+  message: string | null;
+  executionModel: string | null;
+  selectedTicker: string | null;
+  status: string;
+  createdAt: string;
+  fundName: string;
+  recipientFirstName: string | null;
 }
-
-const mockGift: GiftData = {
-  id: "gift_abc123",
-  claimToken: "abc123",
-  senderName: "Sarah Chen",
-  senderEmail: "sarah@example.com",
-  recipientEmail: "you@example.com",
-  recipientName: "Alex",
-  assetType: "stock",
-  stockSymbol: "AAPL",
-  stockName: "Apple Inc.",
-  shares: 2.5,
-  currentPrice: 178.50,
-  amount: null,
-  message: "Happy graduation! Here's something to grow with you as you start this next chapter. So proud of you!",
-  status: "pending_claim",
-  createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-  expiresAt: new Date(Date.now() + 28 * 24 * 60 * 60 * 1000),
-};
-
-const mockFunds = [
-  { id: "fund_1", name: "My Investment Fund", slug: "alex-fund", balance: 1250.00, created: "2024" },
-];
 
 type ClaimStep = "preview" | "auth" | "destination" | "success";
 
 export default function Claim() {
+  const { token } = useParams<{ token: string }>();
+  const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
+
   const [step, setStep] = useState<ClaimStep>("preview");
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
   const [selectedFund, setSelectedFund] = useState<string | null>(null);
@@ -60,25 +39,115 @@ export default function Claim() {
   const [newFundName, setNewFundName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isClaiming, setIsClaiming] = useState(false);
+  const [claimedFundName, setClaimedFundName] = useState("");
 
-  const gift = mockGift;
-  const giftValue = gift.assetType === "stock" 
-    ? (gift.shares || 0) * (gift.currentPrice || 0)
-    : gift.amount || 0;
-  
+  const { user, isAuthenticated, login, register, isLoggingIn, isRegistering, loginError, registerError } = useAuth();
+  const { data: userFunds = [] } = useFunds();
+
+  const { data: gift, isLoading: isLoadingGift, error: giftError } = useQuery<PublicGiftData>({
+    queryKey: ["/api/public/gifts", token],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/gifts/${token}`);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Gift not found");
+      }
+      return res.json();
+    },
+    enabled: !!token,
+    retry: false,
+  });
+
+  const claimMutation = useMutation({
+    mutationFn: async (data: { fundId?: string; newFundName?: string }) => {
+      const res = await fetch(`/api/gifts/${token}/claim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to claim gift");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      haptic('success');
+      setClaimedFundName(data.fundName || newFundName || "Your fund");
+      setStep("success");
+      queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+    },
+  });
+
+  const giftValue = gift ? parseFloat(gift.netAmount) : 0;
+  const giftAmount = gift ? parseFloat(gift.amount) : 0;
   const projectedValue = Math.round(giftValue * 4.6);
-  const daysUntilExpiry = Math.ceil((gift.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+
+  const handleAuth = async () => {
+    try {
+      if (authMode === "signup") {
+        await register({ email, password });
+      } else {
+        await login({ email, password });
+      }
+      haptic('medium');
+      setStep("destination");
+    } catch {}
+  };
 
   const handleClaim = () => {
     haptic('medium');
-    setIsClaiming(true);
-    setTimeout(() => {
-      haptic('success');
-      setStep("success");
-      setIsClaiming(false);
-    }, 1500);
+    if (createNewFund && newFundName) {
+      claimMutation.mutate({ newFundName });
+    } else if (selectedFund) {
+      claimMutation.mutate({ fundId: selectedFund });
+    }
   };
+
+  const handleClaimButtonClick = () => {
+    if (isAuthenticated) {
+      setStep("destination");
+    } else {
+      setStep("auth");
+    }
+  };
+
+  if (isLoadingGift) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (giftError || !gift) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-40 gemini-glass-nav">
+          <div className="max-w-2xl mx-auto px-4 h-14 flex items-center">
+            <Logo size="md" className="text-foreground" />
+          </div>
+        </header>
+        <main className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+            <GiftIcon className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h1 className="text-2xl font-semibold text-foreground" data-testid="text-gift-not-found">Gift not found</h1>
+          <p className="text-muted-foreground">
+            This gift link may be invalid or has already been claimed.
+          </p>
+          <Link href="/">
+            <button data-testid="button-go-home" className="mt-4 px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors">
+              Go home
+            </button>
+          </Link>
+        </main>
+      </div>
+    );
+  }
+
+  const isAlreadyClaimed = gift.status === 'settled' || gift.status === 'claimed';
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,11 +177,11 @@ export default function Claim() {
                 <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
                   <GiftIcon className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h1 className="text-2xl lg:text-3xl font-semibold text-foreground">
-                  You've received a gift
+                <h1 className="text-2xl lg:text-3xl font-semibold text-foreground" data-testid="text-gift-heading">
+                  {isAlreadyClaimed ? "This gift has been claimed" : "You've received a gift"}
                 </h1>
                 <p className="text-muted-foreground">
-                  from <span className="font-medium text-foreground">{gift.senderName}</span>
+                  from <span className="font-medium text-foreground" data-testid="text-sender-name">{gift.senderName}</span>
                 </p>
               </div>
 
@@ -120,85 +189,68 @@ export default function Claim() {
                 <div className="p-6 lg:p-8 space-y-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {gift.assetType === "stock" ? "Stock gift" : "Cash gift"}
-                      </p>
-                      {gift.assetType === "stock" ? (
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-serif text-3xl font-semibold text-foreground">
-                            {gift.shares} shares
-                          </span>
-                          <span className="text-lg text-muted-foreground">
-                            of {gift.stockSymbol}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="font-serif text-3xl font-semibold text-foreground">
-                          ${gift.amount?.toFixed(2)}
-                        </span>
-                      )}
+                      <p className="text-sm text-muted-foreground mb-1">Cash gift</p>
+                      <span className="font-serif text-3xl font-semibold text-foreground" data-testid="text-gift-amount">
+                        ${giftAmount.toFixed(2)}
+                      </span>
                     </div>
-                    {gift.assetType === "stock" && (
+                    {giftValue !== giftAmount && (
                       <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Current value</p>
-                        <p className="text-xl font-medium text-foreground">
+                        <p className="text-sm text-muted-foreground">Net amount</p>
+                        <p className="text-xl font-medium text-foreground" data-testid="text-net-amount">
                           ${giftValue.toFixed(2)}
                         </p>
                       </div>
                     )}
                   </div>
 
-                  {gift.assetType === "stock" && (
-                    <div className="bg-muted rounded-xl p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-card rounded-lg flex items-center justify-center text-sm font-bold text-foreground border border-border">
-                          {gift.stockSymbol?.slice(0, 2)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">{gift.stockName}</p>
-                          <p className="text-sm text-muted-foreground">${gift.currentPrice?.toFixed(2)} per share</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   {gift.message && (
                     <div className="border-t border-border pt-6">
                       <p className="text-sm text-muted-foreground mb-2">Personal message</p>
-                      <p className="text-foreground leading-relaxed italic">
+                      <p className="text-foreground leading-relaxed italic" data-testid="text-gift-message">
                         "{gift.message}"
                       </p>
                     </div>
                   )}
 
-                  <div className="bg-muted rounded-xl p-4">
-                    <div className="flex items-start gap-3">
-                      <TrendingUp className="w-5 h-5 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          Could grow to ${projectedValue.toLocaleString()}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Based on historical market performance over 18 years
-                        </p>
+                  {!isAlreadyClaimed && (
+                    <div className="bg-muted rounded-xl p-4">
+                      <div className="flex items-start gap-3">
+                        <TrendingUp className="w-5 h-5 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-foreground">
+                            Could grow to ${projectedValue.toLocaleString()}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Based on historical market performance over 18 years
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                <div className="border-t border-border p-6 lg:p-8 bg-muted/50">
-                  <button
-                    onClick={() => setStep("auth")}
-                    data-testid="button-claim-gift"
-                    className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-                  >
-                    Claim your gift
-                    <ChevronRight size={18} />
-                  </button>
-                  <p className="text-center text-xs text-muted-foreground mt-4">
-                    Claim within {daysUntilExpiry} days · Protected by SIPC
-                  </p>
-                </div>
+                {!isAlreadyClaimed && (
+                  <div className="border-t border-border p-6 lg:p-8 bg-muted/50">
+                    <button
+                      onClick={handleClaimButtonClick}
+                      data-testid="button-claim-gift"
+                      className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                    >
+                      Claim your gift
+                      <ChevronRight size={18} />
+                    </button>
+                    <p className="text-center text-xs text-muted-foreground mt-4">
+                      Protected by SIPC
+                    </p>
+                  </div>
+                )}
+
+                {isAlreadyClaimed && (
+                  <div className="border-t border-border p-6 lg:p-8 bg-muted/50 text-center">
+                    <p className="text-muted-foreground" data-testid="text-already-claimed">This gift has already been claimed.</p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
@@ -296,12 +348,26 @@ export default function Claim() {
                   </div>
                 </div>
 
+                {(loginError || registerError) && (
+                  <p className="text-sm text-red-500" data-testid="text-auth-error">
+                    {loginError || registerError}
+                  </p>
+                )}
+
                 <button
-                  onClick={() => setStep("destination")}
+                  onClick={handleAuth}
+                  disabled={isLoggingIn || isRegistering || !email || !password}
                   data-testid="button-continue-auth"
-                  className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors"
+                  className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {authMode === "signup" ? "Create account" : "Sign in"}
+                  {(isLoggingIn || isRegistering) ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      <span>{authMode === "signup" ? "Creating account..." : "Signing in..."}</span>
+                    </>
+                  ) : (
+                    authMode === "signup" ? "Create account" : "Sign in"
+                  )}
                 </button>
 
                 {authMode === "signup" && (
@@ -322,7 +388,7 @@ export default function Claim() {
               className="space-y-6"
             >
               <button
-                onClick={() => setStep("auth")}
+                onClick={() => setStep(isAuthenticated ? "preview" : "auth")}
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft size={16} />
@@ -339,7 +405,7 @@ export default function Claim() {
               </div>
 
               <div className="bg-card rounded-2xl border border-border p-6 lg:p-8 space-y-4">
-                {mockFunds.map((fund) => (
+                {userFunds.map((fund) => (
                   <button
                     key={fund.id}
                     onClick={() => {
@@ -357,7 +423,7 @@ export default function Claim() {
                       <div>
                         <p className="font-medium text-foreground">{fund.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          Balance: ${fund.balance.toLocaleString()} · Since {fund.created}
+                          Balance: ${parseFloat(fund.balance).toLocaleString()}
                         </p>
                       </div>
                       {selectedFund === fund.id && !createNewFund && (
@@ -418,11 +484,8 @@ export default function Claim() {
               <div className="bg-muted rounded-xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">You're claiming</p>
-                  <p className="font-medium text-foreground">
-                    {gift.assetType === "stock" 
-                      ? `${gift.shares} shares of ${gift.stockSymbol}`
-                      : `$${gift.amount?.toFixed(2)}`
-                    }
+                  <p className="font-medium text-foreground" data-testid="text-claiming-amount">
+                    ${giftAmount.toFixed(2)} gift from {gift.senderName}
                   </p>
                 </div>
                 <p className="text-lg font-semibold text-foreground">
@@ -430,13 +493,19 @@ export default function Claim() {
                 </p>
               </div>
 
+              {claimMutation.error && (
+                <p className="text-sm text-red-500 text-center" data-testid="text-claim-error">
+                  {claimMutation.error.message}
+                </p>
+              )}
+
               <button
                 onClick={handleClaim}
-                disabled={isClaiming || (!selectedFund && !createNewFund) || (createNewFund && !newFundName)}
+                disabled={claimMutation.isPending || (!selectedFund && !createNewFund) || (createNewFund && !newFundName)}
                 data-testid="button-confirm-claim"
                 className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isClaiming ? (
+                {claimMutation.isPending ? (
                   <>
                     <ThinkingOrb size={16} variant="processing" />
                     <span>Claiming...</span>
@@ -460,12 +529,11 @@ export default function Claim() {
             >
               <Confetti isActive={true} />
               
-              {/* Cinematic Investment Reveal */}
               <InvestmentReveal 
                 amount={giftValue}
-                stockSymbol={gift.stockSymbol || "VTI"}
-                stockName={gift.stockName || "Total US Market"}
-                shares={String(gift.shares || (giftValue / 268.45).toFixed(4))}
+                stockSymbol={gift.selectedTicker || "VTI"}
+                stockName={gift.selectedTicker ? `${gift.selectedTicker} Stock` : "Total US Market"}
+                shares={String((giftValue / 268.45).toFixed(4))}
               />
 
               <motion.div 
@@ -474,43 +542,36 @@ export default function Claim() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
               >
-                <h1 className="text-2xl lg:text-3xl font-semibold text-foreground">
+                <h1 className="text-2xl lg:text-3xl font-semibold text-foreground" data-testid="text-claim-success">
                   Gift claimed!
                 </h1>
                 <p className="text-muted-foreground">
-                  {gift.assetType === "stock" 
-                    ? `${gift.shares} shares of ${gift.stockSymbol} have been added to your fund`
-                    : `$${gift.amount?.toFixed(2)} has been added to your fund`
-                  }
+                  ${giftValue.toFixed(2)} has been added to your fund
                 </p>
               </motion.div>
 
               <div className="bg-card rounded-2xl border border-border p-6 max-w-sm mx-auto">
                 <div className="space-y-4">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Asset</span>
-                    <span className="font-medium text-foreground">
-                      {gift.assetType === "stock" ? gift.stockSymbol : "Cash"}
+                    <span className="text-muted-foreground">Amount</span>
+                    <span className="font-medium text-foreground" data-testid="text-success-amount">
+                      ${giftAmount.toFixed(2)}
                     </span>
                   </div>
-                  {gift.assetType === "stock" && (
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Shares</span>
-                      <span className="font-medium text-foreground">{gift.shares}</span>
-                    </div>
-                  )}
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Value</span>
-                    <span className="font-medium text-foreground">${giftValue.toFixed(2)}</span>
+                    <span className="text-muted-foreground">Net value</span>
+                    <span className="font-medium text-foreground">
+                      ${giftValue.toFixed(2)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">From</span>
-                    <span className="font-medium text-foreground">{gift.senderName}</span>
+                    <span className="font-medium text-foreground" data-testid="text-success-sender">{gift.senderName}</span>
                   </div>
                   <div className="border-t border-border pt-4 flex justify-between">
                     <span className="text-muted-foreground">Deposited to</span>
-                    <span className="font-medium text-foreground">
-                      {createNewFund ? newFundName : mockFunds.find(f => f.id === selectedFund)?.name}
+                    <span className="font-medium text-foreground" data-testid="text-success-fund">
+                      {claimedFundName}
                     </span>
                   </div>
                 </div>

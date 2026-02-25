@@ -1,93 +1,25 @@
 import { useParams, Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Gift, TrendingUp, Clock, Check, Share2, MessageCircle, Calendar, DollarSign, User, Sparkles } from "lucide-react";
+import { ArrowLeft, Gift, TrendingUp, Clock, Check, Share2, MessageCircle, Calendar, DollarSign, User, Sparkles, AlertCircle, ShieldCheck, Banknote, CreditCard, PartyPopper, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Nav } from "@/components/layout/Nav";
 import { haptic } from "@/lib/haptics";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { Activity } from "@shared/schema";
 
-const ACTIVITY_DATA: Record<string, {
-  id: string;
-  type: "gift" | "investment" | "milestone";
-  title: string;
-  description: string;
-  amount?: number;
-  from?: string;
-  fundName: string;
-  status: "pending" | "invested" | "completed";
-  date: Date;
-  message?: string;
-  investedIn?: { ticker: string; name: string; shares: string }[];
-}> = {
-  "1": {
-    id: "1",
-    type: "gift",
-    title: "Gift received",
-    description: "Sarah Johnson sent $100",
-    amount: 100,
-    from: "Sarah Johnson",
-    fundName: "Mila",
-    status: "invested",
-    date: new Date(Date.now() - 30 * 60 * 1000),
-    message: "Happy birthday sweetheart! Can't wait to watch this grow with you. Love, Aunt Sarah 💕",
-    investedIn: [
-      { ticker: "VTI", name: "Vanguard Total Stock Market", shares: "0.42" },
-      { ticker: "VXUS", name: "Vanguard Total International", shares: "0.18" }
-    ]
-  },
-  "2": {
-    id: "2",
-    type: "investment",
-    title: "Investment completed",
-    description: "$250 invested in Growth Portfolio",
-    amount: 250,
-    fundName: "Mila",
-    status: "completed",
-    date: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    investedIn: [
-      { ticker: "VTI", name: "Vanguard Total Stock Market", shares: "1.05" },
-      { ticker: "VXUS", name: "Vanguard Total International", shares: "0.45" }
-    ]
-  },
-  "3": {
-    id: "3",
-    type: "gift",
-    title: "Gift received",
-    description: "Michael Chen sent $50",
-    amount: 50,
-    from: "Michael Chen",
-    fundName: "Mila",
-    status: "pending",
-    date: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    message: "A little something for her future!"
-  },
-  "4": {
-    id: "4",
-    type: "milestone",
-    title: "Milestone reached",
-    description: "First $500 invested",
-    fundName: "Mila",
-    status: "completed",
-    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-  },
-  "5": {
-    id: "5",
-    type: "gift",
-    title: "Gift received",
-    description: "Grandma Rose sent $200",
-    amount: 200,
-    from: "Grandma Rose",
-    fundName: "Mila",
-    status: "invested",
-    date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    message: "For my little sunshine. May this help you reach all your dreams. 🌻",
-    investedIn: [
-      { ticker: "VTI", name: "Vanguard Total Stock Market", shares: "0.84" }
-    ]
-  }
-};
+type ActivityWithFund = Activity & { fundName: string | null; recipientFirstName: string | null };
 
-function formatDate(date: Date): string {
+async function fetchActivity(id: string): Promise<ActivityWithFund> {
+  const response = await fetch(`/api/activities/${id}`, { credentials: "include" });
+  if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+  return response.json();
+}
+
+function formatDate(dateStr: string | Date | null | undefined): string {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
   return date.toLocaleDateString('en-US', { 
     weekday: 'long',
     month: 'long', 
@@ -98,21 +30,70 @@ function formatDate(date: Date): string {
   });
 }
 
+function getTypeConfig(type: string) {
+  switch (type) {
+    case "gift_received":
+      return { icon: Gift, bg: "bg-[hsl(var(--kora-gold)/0.15)]", color: "text-[hsl(var(--kora-gold))]", label: "Gift Received" };
+    case "auto_invest":
+      return { icon: TrendingUp, bg: "bg-[hsl(var(--kora-evergreen)/0.15)]", color: "text-[hsl(var(--kora-evergreen))]", label: "Investment" };
+    case "kyc_approved":
+      return { icon: ShieldCheck, bg: "bg-green-100", color: "text-green-600", label: "Identity Verified" };
+    case "sell":
+      return { icon: Banknote, bg: "bg-orange-100", color: "text-orange-600", label: "Sold" };
+    case "withdrawal":
+      return { icon: DollarSign, bg: "bg-blue-100", color: "text-blue-600", label: "Withdrawal" };
+    case "bank_linked":
+      return { icon: CreditCard, bg: "bg-indigo-100", color: "text-indigo-600", label: "Bank Linked" };
+    case "subscription_started":
+      return { icon: Sparkles, bg: "bg-purple-100", color: "text-purple-600", label: "Subscription Started" };
+    case "event_pass_purchased":
+      return { icon: PartyPopper, bg: "bg-pink-100", color: "text-pink-600", label: "Event Boost" };
+    case "subscription_canceled":
+      return { icon: XCircle, bg: "bg-red-100", color: "text-red-500", label: "Subscription Canceled" };
+    case "payment_failed":
+      return { icon: AlertCircle, bg: "bg-red-100", color: "text-red-500", label: "Payment Failed" };
+    default:
+      return { icon: Clock, bg: "bg-muted", color: "text-muted-foreground", label: type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()) };
+  }
+}
+
 export default function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  
-  const activity = ACTIVITY_DATA[id || "1"];
-  
-  if (!activity) {
+
+  const { data: activity, isLoading, error } = useQuery<ActivityWithFund>({
+    queryKey: ["/api/activities", id],
+    queryFn: () => fetchActivity(id!),
+    enabled: !!id,
+    retry: false,
+  });
+
+  if (isLoading) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen bg-background">
+          <Nav />
+          <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-6">
+            <div className="space-y-6">
+              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-48 w-full rounded-2xl" />
+              <Skeleton className="h-24 w-full rounded-2xl" />
+            </div>
+          </main>
+        </div>
+      </PageTransition>
+    );
+  }
+
+  if (error || !activity) {
     return (
       <PageTransition>
         <div className="min-h-screen bg-background">
           <Nav />
           <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-12 text-center">
-            <p className="text-muted-foreground">Activity not found</p>
+            <p className="text-muted-foreground" data-testid="text-activity-not-found">Activity not found</p>
             <Link href="/activity">
-              <Button variant="outline" className="mt-4">Back to Activity</Button>
+              <Button variant="outline" className="mt-4" data-testid="button-back-to-activity">Back to Activity</Button>
             </Link>
           </main>
         </div>
@@ -120,34 +101,9 @@ export default function ActivityDetail() {
     );
   }
 
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case "pending":
-        return { 
-          bg: "bg-[hsl(var(--kora-gold)/0.15)]", 
-          text: "text-[hsl(var(--kora-gold))]",
-          icon: Clock,
-          label: "Pending"
-        };
-      case "invested":
-        return { 
-          bg: "bg-[hsl(var(--kora-evergreen)/0.15)]", 
-          text: "text-[hsl(var(--kora-evergreen))]",
-          icon: TrendingUp,
-          label: "Invested"
-        };
-      default:
-        return { 
-          bg: "bg-success/15", 
-          text: "text-success",
-          icon: Check,
-          label: "Completed"
-        };
-    }
-  };
-
-  const statusConfig = getStatusConfig(activity.status);
-  const StatusIcon = statusConfig.icon;
+  const typeConfig = getTypeConfig(activity.type);
+  const TypeIcon = typeConfig.icon;
+  const fundDisplayName = activity.recipientFirstName || activity.fundName || "Fund";
 
   return (
     <PageTransition>
@@ -174,14 +130,12 @@ export default function ActivityDetail() {
           >
             <div className="bg-card border border-border/50 rounded-2xl p-6 shadow-premium-sm">
               <div className="flex items-start gap-4 mb-6">
-                <div className={`w-14 h-14 rounded-2xl ${activity.type === "gift" ? "bg-[hsl(var(--kora-gold)/0.15)]" : activity.type === "milestone" ? "bg-purple-100" : "bg-[hsl(var(--kora-evergreen)/0.15)]"} flex items-center justify-center`}>
-                  {activity.type === "gift" && <Gift size={24} className="text-[hsl(var(--kora-gold))]" />}
-                  {activity.type === "investment" && <TrendingUp size={24} className="text-[hsl(var(--kora-evergreen))]" />}
-                  {activity.type === "milestone" && <Sparkles size={24} className="text-purple-600" />}
+                <div className={`w-14 h-14 rounded-2xl ${typeConfig.bg} flex items-center justify-center`}>
+                  <TypeIcon size={24} className={typeConfig.color} />
                 </div>
                 <div className="flex-1">
-                  <h1 className="text-xl font-semibold text-foreground">{activity.title}</h1>
-                  <p className="text-muted-foreground mt-1">{activity.description}</p>
+                  <h1 className="text-xl font-semibold text-foreground" data-testid="text-activity-title">{activity.title}</h1>
+                  <p className="text-muted-foreground mt-1" data-testid="text-activity-description">{activity.description}</p>
                 </div>
               </div>
 
@@ -192,38 +146,30 @@ export default function ActivityDetail() {
                   transition={{ delay: 0.1 }}
                   className="text-center py-6 border-y border-border"
                 >
-                  <p className="font-serif text-4xl font-bold text-foreground">${activity.amount}</p>
+                  <p className="font-serif text-4xl font-bold text-foreground" data-testid="text-activity-amount">
+                    ${parseFloat(activity.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
                   <div className="flex items-center justify-center gap-2 mt-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig.bg} ${statusConfig.text} flex items-center gap-1.5`}>
-                      <StatusIcon size={14} />
-                      {statusConfig.label}
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${typeConfig.bg} ${typeConfig.color} flex items-center gap-1.5`}>
+                      <TypeIcon size={14} />
+                      {typeConfig.label}
                     </span>
                   </div>
                 </motion.div>
               )}
 
               <div className="space-y-4 mt-6">
-                {activity.from && (
+                {activity.fundId && (
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                      <User size={18} className="text-muted-foreground" />
+                      <DollarSign size={18} className="text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">From</p>
-                      <p className="font-medium text-foreground">{activity.from}</p>
+                      <p className="text-sm text-muted-foreground">Fund</p>
+                      <p className="font-medium text-foreground" data-testid="text-activity-fund">{fundDisplayName}'s Future Fund</p>
                     </div>
                   </div>
                 )}
-
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                    <DollarSign size={18} className="text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Fund</p>
-                    <p className="font-medium text-foreground">{activity.fundName}'s Future Fund</p>
-                  </div>
-                </div>
 
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
@@ -231,13 +177,23 @@ export default function ActivityDetail() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Date</p>
-                    <p className="font-medium text-foreground">{formatDate(activity.date)}</p>
+                    <p className="font-medium text-foreground" data-testid="text-activity-date">{formatDate(activity.createdAt)}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                    <TypeIcon size={18} className="text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Type</p>
+                    <p className="font-medium text-foreground" data-testid="text-activity-type">{typeConfig.label}</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            {activity.message && (
+            {activity.metadata && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -246,46 +202,13 @@ export default function ActivityDetail() {
               >
                 <div className="flex items-center gap-2 mb-3">
                   <MessageCircle size={16} className="text-[hsl(var(--kora-gold))]" />
-                  <p className="text-sm font-medium text-[hsl(var(--kora-gold))]">Gift message</p>
+                  <p className="text-sm font-medium text-[hsl(var(--kora-gold))]">Details</p>
                 </div>
-                <p className="text-foreground leading-relaxed">"{activity.message}"</p>
+                <p className="text-foreground leading-relaxed" data-testid="text-activity-metadata">{activity.metadata}</p>
               </motion.div>
             )}
 
-            {activity.investedIn && activity.investedIn.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-card border border-border rounded-2xl p-5"
-              >
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp size={16} className="text-[hsl(var(--kora-evergreen))]" />
-                  <p className="font-medium text-foreground">Invested in</p>
-                </div>
-                <div className="space-y-3">
-                  {activity.investedIn.map((holding, i) => (
-                    <motion.div
-                      key={holding.ticker}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.25 + i * 0.05 }}
-                      className="flex items-center justify-between py-2"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium px-2 py-1 rounded bg-muted text-muted-foreground border border-border">
-                          {holding.ticker}
-                        </span>
-                        <span className="text-sm text-foreground">{holding.name}</span>
-                      </div>
-                      <span className="text-sm text-muted-foreground">{holding.shares} shares</span>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {activity.type === "gift" && activity.status === "invested" && (
+            {activity.type === "gift_received" && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -296,8 +219,8 @@ export default function ActivityDetail() {
                   className="w-full h-12 rounded-xl"
                   onClick={() => {
                     navigator.share?.({
-                      title: `${activity.from} gifted to ${activity.fundName}'s Future Fund!`,
-                      text: `${activity.from} just sent $${activity.amount} to grow ${activity.fundName}'s future.`
+                      title: `Gift received for ${fundDisplayName}'s Future Fund!`,
+                      text: activity.description || `A gift was received for ${fundDisplayName}'s future.`
                     }).catch(() => {});
                   }}
                   data-testid="button-share-gift"
@@ -305,19 +228,6 @@ export default function ActivityDetail() {
                   <Share2 size={18} className="mr-2" />
                   Share this gift
                 </Button>
-              </motion.div>
-            )}
-
-            {activity.status === "pending" && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="text-center py-4"
-              >
-                <p className="text-sm text-muted-foreground">
-                  This gift will be invested at the next market open (9:30 AM ET)
-                </p>
               </motion.div>
             )}
           </motion.div>

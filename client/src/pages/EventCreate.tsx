@@ -12,6 +12,7 @@ import { useCreateEvent } from "@/hooks/use-events";
 import { useFunds } from "@/hooks/use-funds";
 import { toast } from "@/hooks/use-toast";
 import { EventGateModal } from "@/components/EventGateModal";
+import { ThemeSelector } from "@/components/ui/premium-themes";
 
 const EVENT_TYPES = [
   { value: "birthday", label: "Birthday", icon: PartyPopper, color: "text-pink-500 bg-pink-50 dark:bg-pink-950/30" },
@@ -46,6 +47,7 @@ export default function EventCreate() {
   const [eventName, setEventName] = useState("");
   const [description, setDescription] = useState("");
   const [eventDate, setEventDate] = useState("");
+  const [selectedTheme, setSelectedTheme] = useState("classic");
   const [fundId, setFundId] = useState("");
   const [goalAmount, setGoalAmount] = useState("");
 
@@ -77,7 +79,7 @@ export default function EventCreate() {
 
   const canProceedStep1 = eventType !== "";
   const canProceedStep2 = eventName.trim() !== "";
-  const canProceedStep3 = fundId !== "";
+  const canProceedStep4 = fundId !== "";
 
   const handleSubmit = async () => {
     haptic("medium");
@@ -89,6 +91,7 @@ export default function EventCreate() {
         eventDate: eventDate ? new Date(eventDate) : undefined,
         fundId,
         eventType,
+        theme: selectedTheme,
         goalAmount: goalAmount ? goalAmount : undefined,
         slug,
         userId: "",
@@ -105,7 +108,7 @@ export default function EventCreate() {
 
   const goNext = () => {
     haptic("selection");
-    setStep(prev => Math.min(prev + 1, 4));
+    setStep(prev => Math.min(prev + 1, 5));
   };
 
   const goBack = () => {
@@ -137,7 +140,7 @@ export default function EventCreate() {
         </motion.div>
 
         <div className="flex items-center gap-2 mb-8" data-testid="step-indicator">
-          {[1, 2, 3, 4].map(s => (
+          {[1, 2, 3, 4, 5].map(s => (
             <div key={s} className="flex items-center gap-2">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
                 s === step ? "bg-primary text-primary-foreground" :
@@ -146,7 +149,7 @@ export default function EventCreate() {
               }`}>
                 {s}
               </div>
-              {s < 4 && <div className={`w-8 h-0.5 rounded ${s < step ? "bg-primary/40" : "bg-muted"}`} />}
+              {s < 5 && <div className={`w-6 h-0.5 rounded ${s < step ? "bg-primary/40" : "bg-muted"}`} />}
             </div>
           ))}
         </div>
@@ -268,6 +271,37 @@ export default function EventCreate() {
               transition={{ duration: 0.25 }}
             >
               <h2 className="font-heading text-lg font-semibold text-foreground mb-4" data-testid="heading-step-3">
+                Choose a theme
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">Pick a visual theme for your event's gift page</p>
+              <ThemeSelector
+                selectedTheme={selectedTheme}
+                onSelectTheme={(themeId) => { haptic("selection"); setSelectedTheme(themeId); }}
+                hasEventPass={isFamily || hasEventPass}
+                onUpgrade={() => setLocation("/events?upgrade=true")}
+              />
+              <div className="mt-6 flex justify-between">
+                <Button variant="outline" onClick={goBack} className="gap-2" data-testid="button-back-step-3">
+                  <ArrowLeft size={16} />
+                  Back
+                </Button>
+                <Button onClick={goNext} className="gap-2" data-testid="button-next-step-3">
+                  Next
+                  <ArrowRight size={16} />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {step === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+            >
+              <h2 className="font-heading text-lg font-semibold text-foreground mb-4" data-testid="heading-step-4">
                 Link to a fund
               </h2>
               <p className="text-sm text-muted-foreground mb-4">Choose which fund gifts from this event will go to</p>
@@ -306,11 +340,11 @@ export default function EventCreate() {
                 </div>
               )}
               <div className="mt-6 flex justify-between">
-                <Button variant="outline" onClick={goBack} className="gap-2" data-testid="button-back-step-3">
+                <Button variant="outline" onClick={goBack} className="gap-2" data-testid="button-back-step-4">
                   <ArrowLeft size={16} />
                   Back
                 </Button>
-                <Button disabled={!canProceedStep3} onClick={goNext} className="gap-2" data-testid="button-next-step-3">
+                <Button disabled={!canProceedStep4} onClick={goNext} className="gap-2" data-testid="button-next-step-4">
                   Next
                   <ArrowRight size={16} />
                 </Button>
@@ -318,15 +352,15 @@ export default function EventCreate() {
             </motion.div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <motion.div
-              key="step4"
+              key="step5"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.25 }}
             >
-              <h2 className="font-heading text-lg font-semibold text-foreground mb-4" data-testid="heading-step-4">
+              <h2 className="font-heading text-lg font-semibold text-foreground mb-4" data-testid="heading-step-5">
                 Set a goal (optional)
               </h2>
               <p className="text-sm text-muted-foreground mb-4">
@@ -346,7 +380,7 @@ export default function EventCreate() {
                 />
               </div>
               <div className="mt-6 flex justify-between">
-                <Button variant="outline" onClick={goBack} className="gap-2" data-testid="button-back-step-4">
+                <Button variant="outline" onClick={goBack} className="gap-2" data-testid="button-back-step-5">
                   <ArrowLeft size={16} />
                   Back
                 </Button>

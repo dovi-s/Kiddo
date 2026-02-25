@@ -1,5 +1,6 @@
 import { 
   funds, events, holdings, gifts, activities, subscriptions, transactions, memoryEntries, bankAccounts,
+  thankYous, recurringGifts, fundCollaborators,
   type Fund, type InsertFund,
   type Event, type InsertEvent,
   type Holding, type InsertHolding,
@@ -9,6 +10,9 @@ import {
   type Transaction, type InsertTransaction,
   type MemoryEntry, type InsertMemoryEntry,
   type BankAccount, type InsertBankAccount,
+  type ThankYou, type InsertThankYou,
+  type RecurringGift, type InsertRecurringGift,
+  type FundCollaborator, type InsertFundCollaborator,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -41,6 +45,7 @@ export interface IStorage {
   createGift(gift: InsertGift): Promise<Gift>;
   updateGift(id: string, gift: Partial<InsertGift>): Promise<Gift | undefined>;
 
+  getActivity(id: string): Promise<Activity | undefined>;
   getActivitiesByUser(userId: string, limit?: number): Promise<Activity[]>;
   getActivitiesByFund(fundId: string, limit?: number): Promise<Activity[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
@@ -66,6 +71,19 @@ export interface IStorage {
   getBankAccountsByUser(userId: string): Promise<BankAccount[]>;
   createBankAccount(account: InsertBankAccount): Promise<BankAccount>;
   deleteBankAccount(id: string): Promise<void>;
+
+  getThankYousByFund(fundId: string): Promise<ThankYou[]>;
+  createThankYou(thankYou: InsertThankYou): Promise<ThankYou>;
+  updateThankYou(id: string, thankYou: Partial<InsertThankYou>): Promise<ThankYou | undefined>;
+
+  getRecurringGiftsByFund(fundId: string): Promise<RecurringGift[]>;
+  createRecurringGift(gift: InsertRecurringGift): Promise<RecurringGift>;
+  updateRecurringGift(id: string, gift: Partial<InsertRecurringGift>): Promise<RecurringGift | undefined>;
+
+  getCollaboratorsByFund(fundId: string): Promise<FundCollaborator[]>;
+  createCollaborator(collaborator: InsertFundCollaborator): Promise<FundCollaborator>;
+  updateCollaborator(id: string, collaborator: Partial<InsertFundCollaborator>): Promise<FundCollaborator | undefined>;
+  deleteCollaborator(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -175,6 +193,11 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
+  async getActivity(id: string): Promise<Activity | undefined> {
+    const [activity] = await db.select().from(activities).where(eq(activities.id, id));
+    return activity;
+  }
+
   async getActivitiesByUser(userId: string, limit = 50): Promise<Activity[]> {
     return db.select().from(activities).where(eq(activities.userId, userId)).orderBy(desc(activities.createdAt)).limit(limit);
   }
@@ -279,6 +302,52 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBankAccount(id: string): Promise<void> {
     await db.delete(bankAccounts).where(eq(bankAccounts.id, id));
+  }
+
+  async getThankYousByFund(fundId: string): Promise<ThankYou[]> {
+    return db.select().from(thankYous).where(eq(thankYous.fundId, fundId)).orderBy(desc(thankYous.createdAt));
+  }
+
+  async createThankYou(thankYou: InsertThankYou): Promise<ThankYou> {
+    const [created] = await db.insert(thankYous).values(thankYou).returning();
+    return created;
+  }
+
+  async updateThankYou(id: string, thankYou: Partial<InsertThankYou>): Promise<ThankYou | undefined> {
+    const [updated] = await db.update(thankYous).set(thankYou).where(eq(thankYous.id, id)).returning();
+    return updated;
+  }
+
+  async getRecurringGiftsByFund(fundId: string): Promise<RecurringGift[]> {
+    return db.select().from(recurringGifts).where(eq(recurringGifts.fundId, fundId)).orderBy(desc(recurringGifts.createdAt));
+  }
+
+  async createRecurringGift(gift: InsertRecurringGift): Promise<RecurringGift> {
+    const [created] = await db.insert(recurringGifts).values(gift).returning();
+    return created;
+  }
+
+  async updateRecurringGift(id: string, gift: Partial<InsertRecurringGift>): Promise<RecurringGift | undefined> {
+    const [updated] = await db.update(recurringGifts).set(gift).where(eq(recurringGifts.id, id)).returning();
+    return updated;
+  }
+
+  async getCollaboratorsByFund(fundId: string): Promise<FundCollaborator[]> {
+    return db.select().from(fundCollaborators).where(eq(fundCollaborators.fundId, fundId)).orderBy(desc(fundCollaborators.invitedAt));
+  }
+
+  async createCollaborator(collaborator: InsertFundCollaborator): Promise<FundCollaborator> {
+    const [created] = await db.insert(fundCollaborators).values(collaborator).returning();
+    return created;
+  }
+
+  async updateCollaborator(id: string, collaborator: Partial<InsertFundCollaborator>): Promise<FundCollaborator | undefined> {
+    const [updated] = await db.update(fundCollaborators).set(collaborator).where(eq(fundCollaborators.id, id)).returning();
+    return updated;
+  }
+
+  async deleteCollaborator(id: string): Promise<void> {
+    await db.delete(fundCollaborators).where(eq(fundCollaborators.id, id));
   }
 }
 

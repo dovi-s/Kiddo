@@ -7,6 +7,8 @@ import { SparkleBurst, GradientText, GeminiHeroGradient } from "@/components/ui/
 import { haptic } from "@/lib/haptics"
 import { Logo } from "@/components/ui/logo"
 import { Mascot } from "@/components/ui/mascot"
+import { ReferralPrompt, RecurringGiftNudge, RecurringSetupModal } from "@/components/ui/plg-loops"
+import { toast } from "@/hooks/use-toast"
 
 export default function GiftSuccess() {
   const searchString = useSearch()
@@ -20,6 +22,9 @@ export default function GiftSuccess() {
 
   const [copied, setCopied] = useState(false)
   const [burstActive, setBurstActive] = useState(false)
+  const [showReferral, setShowReferral] = useState(true)
+  const [showRecurringNudge, setShowRecurringNudge] = useState(true)
+  const [recurringModalOpen, setRecurringModalOpen] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => setBurstActive(true), 300)
@@ -38,6 +43,41 @@ export default function GiftSuccess() {
       setTimeout(() => setCopied(false), 2000)
     } catch {
       setCopied(false)
+    }
+  }
+
+  const handleReferralShare = async () => {
+    const referralUrl = `${window.location.origin}/get-started`
+    try {
+      await navigator.clipboard.writeText(referralUrl)
+      haptic("success")
+    } catch {
+    }
+  }
+
+  const handleRecurringConfirm = async (recurringAmount: number, frequency: string) => {
+    try {
+      const res = await fetch("/api/recurring-gifts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fundId,
+          senderName,
+          amount: recurringAmount,
+          frequency,
+        }),
+      })
+      if (res.ok) {
+        haptic("success")
+        toast({ title: "Recurring gift set up!", description: `$${recurringAmount}/${frequency} gift scheduled` })
+        setRecurringModalOpen(false)
+        setShowRecurringNudge(false)
+      } else {
+        const data = await res.json()
+        toast({ title: "Could not set up recurring gift", description: data.error || "Please try again", variant: "destructive" })
+      }
+    } catch {
+      toast({ title: "Could not set up recurring gift", description: "Please try again", variant: "destructive" })
     }
   }
 
@@ -192,11 +232,51 @@ export default function GiftSuccess() {
           </div>
         </motion.div>
 
+        {showReferral && (
+          <motion.div
+            className="w-full mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.1, duration: 0.5 }}
+            data-testid="section-referral-prompt"
+          >
+            <ReferralPrompt
+              recipientName={fundName}
+              onShare={handleReferralShare}
+              onDismiss={() => setShowReferral(false)}
+            />
+          </motion.div>
+        )}
+
+        {showRecurringNudge && (
+          <motion.div
+            className="w-full mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.3, duration: 0.5 }}
+            data-testid="section-recurring-nudge"
+          >
+            <RecurringGiftNudge
+              lastGiftDate={new Date().toISOString()}
+              recipientName={fundName}
+              onSetupRecurring={() => setRecurringModalOpen(true)}
+              onDismiss={() => setShowRecurringNudge(false)}
+            />
+          </motion.div>
+        )}
+
+        <RecurringSetupModal
+          isOpen={recurringModalOpen}
+          onClose={() => setRecurringModalOpen(false)}
+          recipientName={fundName}
+          onConfirm={handleRecurringConfirm}
+        />
+
         <motion.div
           className="w-full flex flex-col items-center gap-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1, duration: 0.5 }}
+          transition={{ delay: 1.3, duration: 0.5 }}
         >
           <Link href="/get-started" data-testid="link-start-fund">
             <Button className="gap-2 w-full max-w-xs" size="lg">

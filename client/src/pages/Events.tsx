@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft, Check, Crown, ExternalLink, X, Eye, Pencil } from "lucide-react";
+import { Calendar, Gift, Share2, Plus, Star, ChevronDown, Copy, TrendingUp, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ChevronLeft, Check, Crown, ExternalLink, X, Eye, Pencil, Download, Trash2 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -11,10 +12,12 @@ import { haptic } from "@/lib/haptics";
 import { GradientText, EnlighteningReveal, ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
-import { useEvents } from "@/hooks/use-events";
+import { useEvents, useDeleteEvent } from "@/hooks/use-events";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useFunds } from "@/hooks/use-funds";
 import { toast } from "@/hooks/use-toast";
 import { EventGateModal } from "@/components/EventGateModal";
+import { GoalCard, EventPassBadge, EventPassUpgrade } from "@/components/ui/premium-themes";
 import type { Event } from "@shared/schema";
 
 function getEventTypeLabel(eventType: string | null | undefined): string {
@@ -58,7 +61,53 @@ export default function Events() {
   const [editType, setEditType] = useState("");
   const [saving, setSaving] = useState(false);
   const [eventGateOpen, setEventGateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Event | null>(null);
+  const [dismissedUpgrades, setDismissedUpgrades] = useState<Set<string>>(new Set());
+  const deleteEventMutation = useDeleteEvent();
   const isFamily = subscription?.plan === "family" && subscription?.status === "active";
+  const isFree = !subscription || subscription.plan === "free" || subscription.status !== "active";
+
+  const handleEventPassUpgrade = useCallback(async (event: Event) => {
+    try {
+      const res = await fetch("/api/stripe/checkout/event-pass", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: event.id, eventName: event.name }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } else {
+        toast({ title: "Could not start checkout", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not start checkout", variant: "destructive" });
+    }
+  }, []);
+
+  const handleDownloadQR = useCallback((eventId: string, eventName: string) => {
+    const svgElement = document.getElementById(`qr-svg-${eventId}`);
+    if (!svgElement) return;
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const pngUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = `${eventName.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()}-qr.png`;
+      link.href = pngUrl;
+      link.click();
+      haptic("success");
+    };
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  }, []);
 
   const openEditModal = (event: Event) => {
     setEditingEvent(event);
@@ -233,6 +282,11 @@ export default function Events() {
                           <h3 className="font-heading font-semibold text-foreground truncate" data-testid={`text-event-name-${event.id}`}>
                             {event.name}
                           </h3>
+                          {event.hasEventPass && (
+                            <span data-testid={`badge-event-pass-${event.id}`}>
+                              <EventPassBadge size="sm" />
+                            </span>
+                          )}
                           {event.isPermanent && (
                             <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 shrink-0" data-testid={`badge-permanent-${event.id}`}>
                               <Star size={10} />
@@ -258,7 +312,19 @@ export default function Events() {
                           <span className="text-muted-foreground">from {giftCount} {giftCount === 1 ? "gift" : "gifts"}</span>
                         </div>
 
-                        {progress !== null && (
+                        {progress !== null && (event.hasEventPass || isFamily) && (
+                          <div className="mt-3" data-testid={`goal-card-${event.id}`}>
+                            <GoalCard
+                              goalAmount={parseFloat(event.goalAmount!)}
+                              currentAmount={raised}
+                              recipientName={fund?.recipientFirstName || fund?.name || "Recipient"}
+                              eventTitle={event.name}
+                              contributorCount={giftCount}
+                            />
+                          </div>
+                        )}
+
+                        {progress !== null && !(event.hasEventPass || isFamily) && (
                           <div className="mt-3" data-testid={`progress-bar-${event.id}`}>
                             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                               <span>Progress</span>
@@ -272,6 +338,22 @@ export default function Events() {
                                 transition={{ duration: 0.8, ease: "easeOut" }}
                               />
                             </div>
+                          </div>
+                        )}
+
+                        {isFree && !event.hasEventPass && !dismissedUpgrades.has(event.id) && (
+                          <div className="mt-4" data-testid={`upgrade-prompt-${event.id}`}>
+                            <EventPassUpgrade
+                              eventTitle={event.name}
+                              onUpgrade={() => {
+                                haptic("medium");
+                                handleEventPassUpgrade(event);
+                              }}
+                              onDismiss={() => {
+                                haptic("light");
+                                setDismissedUpgrades(prev => new Set(prev).add(event.id));
+                              }}
+                            />
                           </div>
                         )}
                       </div>
@@ -362,24 +444,58 @@ export default function Events() {
 
                             <div data-testid={`area-qr-code-${event.id}`}>
                               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">QR Code</p>
-                              <div className="w-32 h-32 bg-muted rounded-xl flex items-center justify-center border border-border">
-                                <div className="text-center">
-                                  <Share2 size={24} className="mx-auto text-muted-foreground mb-1" />
-                                  <span className="text-[10px] text-muted-foreground">QR Code</span>
+                              <div className="flex items-end gap-3">
+                                <div className="w-32 h-32 bg-white rounded-xl flex items-center justify-center border border-border p-2">
+                                  {fund && (
+                                    <QRCodeSVG
+                                      id={`qr-svg-${event.id}`}
+                                      value={`${window.location.origin}/${fund.slug}/${event.slug}`}
+                                      size={112}
+                                      level="M"
+                                      data-testid={`qr-code-${event.id}`}
+                                    />
+                                  )}
                                 </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5"
+                                  data-testid={`button-download-qr-${event.id}`}
+                                  onClick={() => handleDownloadQR(event.id, event.name)}
+                                >
+                                  <Download size={14} />
+                                  Download
+                                </Button>
                               </div>
                             </div>
 
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="gap-1.5"
-                              data-testid={`button-edit-event-${event.id}`}
-                              onClick={() => openEditModal(event)}
-                            >
-                              <Pencil size={14} />
-                              Edit Event
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5"
+                                data-testid={`button-edit-event-${event.id}`}
+                                onClick={() => openEditModal(event)}
+                              >
+                                <Pencil size={14} />
+                                Edit Event
+                              </Button>
+                              {!event.isPermanent && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                                  data-testid={`button-delete-event-${event.id}`}
+                                  onClick={() => {
+                                    haptic("light");
+                                    setDeleteTarget(event);
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                  Delete
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </motion.div>
@@ -586,6 +702,40 @@ export default function Events() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle data-testid="text-delete-confirm-title">Delete Event</AlertDialogTitle>
+            <AlertDialogDescription data-testid="text-delete-confirm-description">
+              Are you sure you want to delete "{deleteTarget?.name}"? This action cannot be undone. All gift links for this event will stop working.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-delete-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="button-delete-confirm"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!deleteTarget) return;
+                deleteEventMutation.mutate(deleteTarget.id, {
+                  onSuccess: () => {
+                    haptic("success");
+                    toast({ title: "Event deleted" });
+                    setDeleteTarget(null);
+                    setExpandedId(null);
+                  },
+                  onError: () => {
+                    toast({ title: "Could not delete event", variant: "destructive" });
+                  },
+                });
+              }}
+            >
+              {deleteEventMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <EventGateModal
         open={eventGateOpen}

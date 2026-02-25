@@ -165,12 +165,13 @@ export default function KidView() {
   const gifts = Array.isArray(giftsData) ? giftsData : giftsData?.gifts || [];
   const memories = Array.isArray(memoryData) ? memoryData : memoryData?.entries || [];
 
-  const balance = fund?.balance || fund?.totalValue || 0;
-  const totalContributed = fund?.totalContributed || fund?.contributions || balance;
+  const balance = parseFloat(fund?.balance || fund?.totalValue || '0');
+  const totalContributed = parseFloat(fund?.totalContributed || '0');
   const growthPercent = totalContributed > 0
     ? Math.round(((balance - totalContributed) / totalContributed) * 100)
     : 0;
-  const displayGrowth = Math.max(growthPercent, 0);
+  const isNegativeGrowth = growthPercent < 0;
+  const displayGrowth = Math.abs(growthPercent);
 
   const contributorCount = gifts.length > 0
     ? new Set(gifts.map((g: any) => g.senderName || g.sender || g.from)).size
@@ -179,9 +180,10 @@ export default function KidView() {
   const recentGifts = gifts.slice(0, 5);
   const recentMemories = memories.slice(0, 3);
 
-  const hit25 = displayGrowth >= 25;
-  const hit50 = displayGrowth >= 50;
-  const hit100 = displayGrowth >= 100;
+  const positiveGrowth = isNegativeGrowth ? 0 : displayGrowth;
+  const hit25 = positiveGrowth >= 25;
+  const hit50 = positiveGrowth >= 50;
+  const hit100 = positiveGrowth >= 100;
 
   if (fundLoading) {
     return (
@@ -268,7 +270,7 @@ export default function KidView() {
               <Sparkles className="w-5 h-5 text-amber-500" />
             </div>
 
-            <GrowthPlant growthPercent={displayGrowth} />
+            <GrowthPlant growthPercent={positiveGrowth} />
 
             <div className="relative inline-block">
               <motion.p
@@ -278,9 +280,11 @@ export default function KidView() {
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.5, type: "spring" }}
               >
-                Your garden has grown {displayGrowth}%!
+                {isNegativeGrowth
+                  ? `Your garden is resting – down ${displayGrowth}%, but it will grow back!`
+                  : `Your garden has grown ${displayGrowth}%!`}
               </motion.p>
-              {displayGrowth > 0 && (
+              {positiveGrowth > 0 && (
                 <SparkleBurst active={true} className="z-20" />
               )}
             </div>
@@ -289,7 +293,7 @@ export default function KidView() {
               <motion.div
                 className="h-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-amber-400 rounded-full relative"
                 initial={{ width: "0%" }}
-                animate={{ width: `${Math.min(displayGrowth, 100)}%` }}
+                animate={{ width: `${Math.min(positiveGrowth, 100)}%` }}
                 transition={{ duration: 1.5, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
               >
                 <motion.div
