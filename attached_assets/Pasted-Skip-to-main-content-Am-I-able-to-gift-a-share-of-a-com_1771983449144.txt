@@ -1,0 +1,420 @@
+Skip to main content
+Am I able to “gift” a share of a company I hold with Fidelity to someone else? : r/fidelityinvestments
+
+Open menu
+
+
+r/fidelityinvestments
+Search in r/fidelityinvestments
+Log In
+
+Expand user menu
+r/fidelityinvestments icon
+Go to fidelityinvestments
+r/fidelityinvestments
+•
+4y ago
+Thejadejedi21
+
+Am I able to “gift” a share of a company I hold with Fidelity to someone else?
+My best friend’s birthday is coming up and I want to gift him a single share of a company I hold on my brokerage account.
+
+I believe there is a way to do it via Direct Registration, but since I’ve such good report with Fidelity and I find your UI is so user friendly, I wanted to know if there is anyway to do it within Fidelity?
+
+Please let me know if there is anyway for me to do this. Thanks!
+
+(My alternative is to help him open a new account and give him some cash to purchase the share himself, but I’d be more excited to simply give him one of the shares I have in my account instead).
+
+40
+·
+30
+Comments Section
+u/sbrick89 avatar
+sbrick89
+•
+4y ago
+I recently gifted shares to someone else's fidelity account.
+
+it was really easy, just called in and indicated wanting to gift shares. I provided their acct number and confirmed name (I assume there may have been other ways to identify the accounts but this meant I didn't need their ssn, plus they knew and trusted me with their acct number)... they reconfirmed the gift (they have a checkbox specifically for it)... but that was it, and I saw the transfer in my account immediately.
+
+Only part that I'm not sure about, is what it does to cost basis... does mine transfer over? Is it a sale on my side and cost is reset to transfer? No clue.
+
+
+2
+nozzery
+•
+4y ago
+Cost basis transfers over, there was no sale.
+
+2
+krlpbl
+•
+4y ago
+I wonder, will this work with shares in a retirement (IRA) account?
+
+
+1
+u/fatfuckery avatar
+fatfuckery
+•
+4y ago
+It won't.
+
+1
+u/sbrick89 avatar
+sbrick89
+•
+4y ago
+No.
+
+Essentially, retirement accounts only allow in or out in the form of cash, when it comes to ownership transfers or contributions/withdrawals.
+
+401k/403b rollover to IRA transfers assets (even shares that may not be available on general markets); same ownership and both are retirement accounts.
+
+I converted/transfered some shares from traditional IRA to ROTH; assets moved accounts, but same ownership and both accounts are retirement accounts. (Taxable event status is separate from transfer options)
+
+I asked about gifting shares to someone else's roth, from my broker account (also post tax), nope, only cash (different ownership)
+
+Makes sense too, because there are cash limits per year for contributions, and IRS tracking requirements for withdrawals. Forcing cash as a common denominator makes reporting a ton easier.
+
+
+1
+krlpbl
+•
+4y ago
+I just got off the chat with Fidelity. She said I can gift shares from my retirement accounts, but it will be a taxable event plus I will also be penalized 10% for early withdrawal.
+
+1
+
+1 more reply
+u/FidelityBrent avatar
+FidelityBrent
+•
+4y ago
+Welcome to r/fidelityinvestments, u/krlpbl!
+
+Yes, you can transfer shares from an IRA as a gift to a non-retirement account, however, it would still be considered a distribution. The distribution of the shares from your IRA to a non-retirement account would be considered a taxable event. The value of the shares on the date of the distribution from the IRA would determine the dollar amount that would be taxed as earned income for the year. An early withdrawal penalty of 10% also applies to distributions taken from an IRA before age 59 1/2.
+
+Consider speaking with a qualified tax professional before making a decision that may impact your financial situation.
+
+1
+Dr_Jamo_Daddy
+•
+4y ago
+You can I did it for my friend's birthday, good gift. When I called them they just wanted to know my friend's fidelity account number and name!
+
+6
+Serxera
+•
+4y ago
+You'll probably have to call them, but it's totally a thing you can do, and totally legal. CS has the functionality on their web interface, but not Fidelity as far as I know.
+
+
+4
+Thejadejedi21
+OP
+•
+4y ago
+Right, I knew that ComputerShare did if the share is directly registered.
+
+2
+Rachael0404
+•
+4y ago
+You only need their social security #
+
+
+1
+u/sbrick89 avatar
+sbrick89
+•
+4y ago
+Nope, acct number worked fine for me, and felt a ton more secure than knowing other people's SSNs
+
+2
+Sonnysdad
+•
+4y ago
+u/RacerX_1989 😁
+
+
+-3
+RacerX_1989
+•
+4y ago
+You guna gift me a share since my bdays coming yay!!!
+
+
+2
+Sonnysdad
+•
+4y ago
+😦😯
+
+1
+
+[deleted]
+•
+4y ago
+u/FidelityWeston avatar
+FidelityWeston
+MOD
+•
+4y ago
+Hello u/Thejadejedi21,
+
+If both individuals have Fidelity accounts, the owner of the sending account will need to contact us to initiate a transfer of cash or securities to a Fidelity account belonging to someone else. The sending account owner will need to provide us with the receiving Fidelity account number and the amount to be transferred.
+
+Transfers initiated before 4:00 p.m. ET will process same-day. Transfers initiated after 4:00 p.m. ET will be completed the next business day.
+
+Please note that transactions above certain amounts may require additional documentation, usually a signed letter of instruction from the sending account owner. Transfers requiring a signed letter of instruction or form are usually processed in five to seven business days.
+
+Contact Us
+
+
+1
+Thejadejedi21
+OP
+•
+4y ago
+Ok, so if I have a single share that I want to transfer (total value under $300), then I can transfer the share to my friends account without needing to sell and rebuy the share?
+
+
+2
+u/FidelityJohn avatar
+FidelityJohn
+•
+4y ago
+Yes, that is correct. You can contact us to transfer the share in kind to your friend's account. We would need your friends account number. Please note, the share cannot be transferred to an IRA. The transfer must be to a non-retirement account.
+
+2
+
+1 more reply
+Mrbrute
+•
+4y ago
+Any fees associated with this?
+
+
+1
+u/FidelityBrent avatar
+FidelityBrent
+•
+4y ago
+Hi,
+
+Thank you for joining us on Reddit! We do not charge a fee to transfer cash or shares from one Fidelity account to another, regardless of account ownership.
+
+4
+
+4 more replies
+eryc333
+•
+4y ago
+Does it start with a G and end with an E? 🦍
+
+
+4
+Thejadejedi21
+OP
+•
+4y ago
+😳…possibly 😁
+
+3
+More posts you may like
+Fidelity, we are downright begging you...
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+1mo ago
+Fidelity, we are downright begging you...
+r/fidelityinvestments - Fidelity, we are downright begging you...
+231 upvotes · 80 comments
+I’m done with Fidelity. Horrible experience. Don’t ever go with Fidelity.
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+8mo ago
+I’m done with Fidelity. Horrible experience. Don’t ever go with Fidelity.
+77 comments
+ABLE Accounts through Fidelity.
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+7d ago
+ABLE Accounts through Fidelity.
+r/fidelityinvestments - ABLE Accounts through Fidelity.
+4 upvotes · 12 comments
+Fidelity offered me a "free" financial advisor, but am I somehow paying for this?
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+3mo ago
+Fidelity offered me a "free" financial advisor, but am I somehow paying for this?
+36 upvotes · 82 comments
+29, been going strong with Fidelity for all my accounts possible.
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+4mo ago
+29, been going strong with Fidelity for all my accounts possible.
+r/fidelityinvestments - 29, been going strong with Fidelity for all my accounts possible.
+2
+258 upvotes · 80 comments
+Thank you Fidelity!!
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+9mo ago
+Thank you Fidelity!!
+r/fidelityinvestments - Thank you Fidelity!!
+831 upvotes · 173 comments
+Why is Fidelity wanting to advise me now?
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+1y ago
+Why is Fidelity wanting to advise me now?
+92 upvotes · 147 comments
+Just started investing with Fidelity!!!!
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+1mo ago
+Just started investing with Fidelity!!!!
+1 upvote · 8 comments
+how to invest using fidelity?
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+2mo ago
+how to invest using fidelity?
+2 upvotes · 11 comments
+Fidelity created a nightmare for me.
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+3mo ago
+Fidelity created a nightmare for me.
+106 upvotes · 94 comments
+Fidelity for Crypto
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+6mo ago
+Fidelity for Crypto
+1 upvote · 37 comments
+While Fidelity is good for many things, Business Accounts are not one of them... Thanks to this community for the wise recommendation of going elsewhere.
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+7mo ago
+While Fidelity is good for many things, Business Accounts are not one of them... Thanks to this community for the wise recommendation of going elsewhere.
+10 upvotes · 8 comments
+What's the story with Fidelity Financial Advisors?
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+6mo ago
+What's the story with Fidelity Financial Advisors?
+24 upvotes · 56 comments
+Fidelity turned off my 2FA
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+9d ago
+Fidelity turned off my 2FA
+57 upvotes · 58 comments
+Congrats Fidelity. You managed to add yet another long-in step.
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+6d ago
+Congrats Fidelity. You managed to add yet another long-in step.
+r/fidelityinvestments - Congrats Fidelity. You managed to add yet another long-in step.
+21 comments
+Just got this email from fidelity today, can someone eli5 this?
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+1mo ago
+Just got this email from fidelity today, can someone eli5 this?
+r/fidelityinvestments - Just got this email from fidelity today, can someone eli5 this?
+103 upvotes · 55 comments
+Why did my Fidelity advisor dump me???
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+1mo ago
+Why did my Fidelity advisor dump me???
+105 upvotes · 193 comments
+What is it like to work for Fidelity?
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+1y ago
+What is it like to work for Fidelity?
+9 upvotes · 11 comments
+After 25+ years with Fidelity thinking of leaving
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+4mo ago
+After 25+ years with Fidelity thinking of leaving
+48 comments
+Anyone else finding Fidelity has changed for self-directed investors?
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+2mo ago
+Anyone else finding Fidelity has changed for self-directed investors?
+45 upvotes · 114 comments
+Anything better than fidelity for personal banking?
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+3mo ago
+Anything better than fidelity for personal banking?
+48 comments
+A PSA on a possible lack of Fidelity account security
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+2mo ago
+A PSA on a possible lack of Fidelity account security
+310 upvotes · 45 comments
+Fidelity Crypto Question
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+8mo ago
+Fidelity Crypto Question
+3 upvotes · 37 comments
+When Fidelity comes (very) short
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+3mo ago
+When Fidelity comes (very) short
+68 upvotes · 105 comments
+I Give Up On Trying to Use Fidelity
+r/fidelityinvestments icon
+r/fidelityinvestments
+•
+4d ago
+I Give Up On Trying to Use Fidelity
+11 comments
+Top Posts
+Reddit
+reReddit: Top posts of November 6, 2021
+Reddit
+reReddit: Top posts of November 2021
+Reddit
+reReddit: Top posts of 2021
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.

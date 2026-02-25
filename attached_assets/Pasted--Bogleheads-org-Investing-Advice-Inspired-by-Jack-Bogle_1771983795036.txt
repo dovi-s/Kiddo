@@ -1,0 +1,254 @@
+
+Bogleheads.org
+Investing Advice Inspired by Jack Bogle
+
+Skip to content
+
+Google...
+Quick linksForum PoliciesWikiBlogSupport this SiteAmazonFAQ
+Board indexUS InvestorsPersonal Investments
+Gift Stock from a Roth
+
+Search this topic…
+13 posts • Page 1 of 1
+Topic Author
+AZKathy
+Posts: 11
+Joined: Tue Mar 23, 2021 2:15 pm
+Gift Stock from a Roth
+Post by AZKathy » Wed Jan 08, 2025 5:57 pm
+
+I'm hoping you can help me find the correct answer to this.
+
+Generous X (who is over retirement age and has held the Roth for more than 5 years) wants to give his adult nephew stock from his Roth. X thinks that his nephew can receive the stock in his brokerage account and then transfer it, as stock, into his Roth or IRA. (The nephew works and has enough income to cover it. All accounts are in Vanguard.) And because it is all a gift from a Roth X thinks/hopes there won't be a tax burden on the nephew.
+
+So the questions are about stock gifts from a Roth--
+Can you gift stock from your Roth to an individual?
+Does the recipient have to sell the gift stock before putting it in his IRA or Roth? Are those rules different?
+If so, does the recipient have to pay the capital gains when they sell it, since it is from a Roth? (The stock value has increased in X's Roth.)
+Does the IRS count the gift as income when transferring a gift from a relative into a Roth? Or does the money somehow retain its properties as a gift.
+
+I understand that X could just sell the stock in his Roth and gift the cash to the nephew but X wants to gift the stock. If, in the end X does sell the stock in his Roth and gifts the cash, does the nephew have to pay the tax before putting it in his Roth or can you put gifts in your Roth without incurring a tax, since it isn't income. (Assuming you have enough income to cover it.)
+
+Thank you for any help you can give me. I have Googled this unsuccessfully.
+
+Kathy
+Top
+alex_686
+Posts: 15259
+Joined: Mon Feb 09, 2015 1:39 pm
+Re: Gift Stock from a Roth
+Post by alex_686 » Wed Jan 08, 2025 6:00 pm
+
+You can gift stock out of your account.
+
+You can only contribute cash to a IRA or Roth.
+
+
+The tax rules are identical if you gift cash or stock.
+
+It would be simpler for everyone to liquidate the stock in your ROTH and then for the son to contribute cash to their ROTH.
+Last edited by alex_686 on Wed Jan 08, 2025 6:01 pm, edited 1 time in total.
+Former brokerage operations & mutual fund accountant. I hate risk, which is why I study and embrace it.
+Top
+dukeblue219
+Posts: 4928
+Joined: Fri Jan 29, 2016 11:40 am
+Re: Gift Stock from a Roth
+Post by dukeblue219 » Wed Jan 08, 2025 6:01 pm
+
+Since it is a Roth and gifter is eligible to make withdrawals, the simple option is to make a cash gift. Recipient will owe no tax.
+
+There is no way to gift stock from an IRA, nor is there really a point in doing so. There is no way to receive a gift into a Roth to bypass contribution limits.
+
+If one insists on gifting stock, the gifter must sell, get cash, buy stock in a taxable account, and gift from there into recipients taxable account.
+Top
+User avatar
+arcticpineapplecorp.
+Posts: 18885
+Joined: Tue Mar 06, 2012 8:22 pm
+Re: Gift Stock from a Roth
+Post by arcticpineapplecorp. » Wed Jan 08, 2025 6:43 pm
+
+alex_686 wrote: Wed Jan 08, 2025 6:00 pm
+You can only contribute cash to a IRA or Roth.
+if this is true then how did Peter Thiel do this :
+
+"According to ProPublica reporting sourced from IRS records, between 1999 and 2021 Thiel grew his Roth IRA from $2,000 to more than $5 billion."
+Thiel is an accredited investor who, as an early tech founder and investor, had access to some of the most lucrative pre-IPO stock opportunities in history. This allowed Thiel to use his Roth portfolio to hold private stocks with extraordinary returns, such as PayPal and Facebook. These assets have generated outsized returns that created a vast amount of entirely tax-free wealth for Thiel's portfolio.
+
+source: https://finance.yahoo.com/news/peter-th ... 31395.html
+Read more ...
+is the difference that he was an "accredited investor"?
+It's hard to accept the truth when the lies were exactly what you wanted to hear. Investing is simple, but not easy. Buy, hold & rebalance low cost index funds & manage taxable events. Asking Portfolio Questions | Wiki
+Top
+Geologist
+Posts: 4110
+Joined: Fri Jan 02, 2009 6:35 pm
+Re: Gift Stock from a Roth
+Post by Geologist » Wed Jan 08, 2025 6:56 pm
+
+arcticpineapplecorp. wrote: Wed Jan 08, 2025 6:43 pm
+alex_686 wrote: Wed Jan 08, 2025 6:00 pm
+You can only contribute cash to a IRA or Roth.
+if this is true then how did Peter Thiel do this :
+
+"According to ProPublica reporting sourced from IRS records, between 1999 and 2021 Thiel grew his Roth IRA from $2,000 to more than $5 billion."
+Thiel is an accredited investor who, as an early tech founder and investor, had access to some of the most lucrative pre-IPO stock opportunities in history. This allowed Thiel to use his Roth portfolio to hold private stocks with extraordinary returns, such as PayPal and Facebook. These assets have generated outsized returns that created a vast amount of entirely tax-free wealth for Thiel's portfolio.
+
+source: https://finance.yahoo.com/news/peter-th ... 31395.html
+is the difference that he was an "accredited investor"?
+Read more ...
+This is really off topic for the OP's question and could get the thread locked but if you search at Propublica and find the original article, you will see that Thiel used cash in his Roth IRA to buy shares at fractions of a penny per share. He didn't move stock into the Roth, he contributed cash and bought the stock inside the Roth.
+Top
+alex_686
+Posts: 15259
+Joined: Mon Feb 09, 2015 1:39 pm
+Re: Gift Stock from a Roth
+Post by alex_686 » Wed Jan 08, 2025 7:04 pm
+
+Geologist wrote: Wed Jan 08, 2025 6:56 pm
+arcticpineapplecorp. wrote: Wed Jan 08, 2025 6:43 pm
+
+if this is true then how did Peter Thiel do this :
+
+"According to ProPublica reporting sourced from IRS records, between 1999 and 2021 Thiel grew his Roth IRA from $2,000 to more than $5 billion."
+
+
+is the difference that he was an "accredited investor"?
+This is really off topic for the OP's question and could get the thread locked but if you search at Propublica and find the original article, you will see that Thiel used cash in his Roth IRA to buy shares at fractions of a penny per share. He didn't move stock into the Roth, he contributed cash and bought the stock inside the Roth.
+Read more ...
+This is a bit of a loophole.
+
+Venture Capital firms let their employees buy pre-IPO stock in their personal accounts, including their retirement accounts. This is great if you invest In Facebook in the super early days. Less so if you invest in pets.com or some other venture that fails. In short, Thiel made a shewed lottery style bet.
+
+The VC area is less egregious then the Private Equity or Hedge Fund world. More scope to manipulate prices of non-publicly traded assets. There are threads on self-directed IRAs.
+Former brokerage operations & mutual fund accountant. I hate risk, which is why I study and embrace it.
+Top
+User avatar
+arcticpineapplecorp.
+Posts: 18885
+Joined: Tue Mar 06, 2012 8:22 pm
+Re: Gift Stock from a Roth
+Post by arcticpineapplecorp. » Wed Jan 08, 2025 7:07 pm
+
+Geologist wrote: Wed Jan 08, 2025 6:56 pm
+This is really off topic for the OP's question and could get the thread locked but if you search at Propublica and find the original article, you will see that Thiel used cash in his Roth IRA to buy shares at fractions of a penny per share. He didn't move stock into the Roth, he contributed cash and bought the stock inside the Roth.
+ah, ok, makes sense then. Thanks for explaining that.
+It's hard to accept the truth when the lies were exactly what you wanted to hear. Investing is simple, but not easy. Buy, hold & rebalance low cost index funds & manage taxable events. Asking Portfolio Questions | Wiki
+Top
+User avatar
+retired@50
+Posts: 18811
+Joined: Tue Oct 01, 2019 2:36 pm
+Location: Living in the U.S.A.
+Re: Gift Stock from a Roth
+Post by retired@50 » Wed Jan 08, 2025 7:08 pm
+
+AZKathy wrote: Wed Jan 08, 2025 5:57 pm
+I'm hoping you can help me find the correct answer to this.
+
+All accounts are in Vanguard
+Can you gift stock from your Roth to an individual?
+No. Vanguard simply won't allow this type of transaction to occur.
+
+The website won't let the source or the destination account be a Roth IRA or a Traditional IRA. It only works from taxable account to taxable account. If you're using taxable accounts on both sides of the transaction you can gift money market fund shares (i.e. cash) or you can give shares of a stock or mutual fund or ETF.
+
+Regards,
+"All of us would be better investors if we just made fewer decisions." - Daniel Kahneman
+Top
+Topic Author
+AZKathy
+Posts: 11
+Joined: Tue Mar 23, 2021 2:15 pm
+Re: Gift Stock from a Roth
+Post by AZKathy » Wed Jan 08, 2025 7:31 pm
+
+Thank you so much for the replies. I agree completely about the best way to do this.
+
+If X does gift the stock and the nephew does sell it immediately--
+Is the nephew liable for the capital gain at that point (even though it is a gift from a Roth)? I assume so but I couldn't find the IRS info to confirm that exact question.
+
+Thanks again, this is very helpful.
+
+Kathy
+Top
+alex_686
+Posts: 15259
+Joined: Mon Feb 09, 2015 1:39 pm
+Re: Gift Stock from a Roth
+Post by alex_686 » Wed Jan 08, 2025 8:05 pm
+
+AZKathy wrote: Wed Jan 08, 2025 7:31 pm
+Thank you so much for the replies. I agree completely about the best way to do this.
+
+If X does gift the stock and the nephew does sell it immediately--
+Is the nephew liable for the capital gain at that point (even though it is a gift from a Roth)? I assume so but I couldn't find the IRS info to confirm that exact question.
+
+Thanks again, this is very helpful.
+
+Kathy
+Read more ...
+The capital gain would be the difference between the price between the distribution from the IRA/Roth and the time he sells it.
+
+I am going to guess that this transaction - the specific shares from your retirement account to your nephew has lots of emotional issues and thus might be triggering behavioral issues. Rationally it doesn’t make much sense. The way we treat money is rarely rational.
+
+Sell the stock, take the disbursement in cash, send your nephew a check.
+
+Am I missing something? Is this a very low volume family stock? Are you concerned about his money management skills?
+Former brokerage operations & mutual fund accountant. I hate risk, which is why I study and embrace it.
+Top
+RyeBourbon
+Posts: 2561
+Joined: Tue Sep 01, 2020 12:20 pm
+Location: Delmarva
+Re: Gift Stock from a Roth
+Post by RyeBourbon » Wed Jan 08, 2025 8:07 pm
+
+AZKathy wrote: Wed Jan 08, 2025 7:31 pm
+Thank you so much for the replies. I agree completely about the best way to do this.
+
+If X does gift the stock and the nephew does sell it immediately--
+Is the nephew liable for the capital gain at that point (even though it is a gift from a Roth)? I assume so but I couldn't find the IRS info to confirm that exact question.
+
+Thanks again, this is very helpful.
+
+Kathy
+Read more ...
+The capital gain would be the difference between the sale price and the price (value) of the shares on the day he receives them.
+Retired June 2023. LMP (TIPS/STRIPS ladder/SS). Risk portfolio target = 100% equities
+Top
+increment
+Posts: 2451
+Joined: Tue May 15, 2018 2:20 pm
+Re: Gift Stock from a Roth
+Post by increment » Wed Jan 08, 2025 8:20 pm
+
+RyeBourbon wrote: Wed Jan 08, 2025 8:07 pm
+The capital gain would be the difference between the sale price and the price (value) of the shares on the day he receives them.
+If the brokerage allows the shares to come out of the Roth, then the capital gain would be the difference between the sale proceeds and the value of the shares on the day that they came out of the Roth. (Maybe it is possible to accomplish the operation by moving the shares from the Roth to the same person's conventional, taxable account; then giving the shares from the giver's taxable account to the recipient's taxable account.)
+Top
+RyeBourbon
+Posts: 2561
+Joined: Tue Sep 01, 2020 12:20 pm
+Location: Delmarva
+Re: Gift Stock from a Roth
+Post by RyeBourbon » Thu Jan 09, 2025 9:52 am
+
+increment wrote: Wed Jan 08, 2025 8:20 pm
+RyeBourbon wrote: Wed Jan 08, 2025 8:07 pm
+The capital gain would be the difference between the sale price and the price (value) of the shares on the day he receives them.
+If the brokerage allows the shares to come out of the Roth, then the capital gain would be the difference between the sale proceeds and the value of the shares on the day that they came out of the Roth. (Maybe it is possible to accomplish the operation by moving the shares from the Roth to the same person's conventional, taxable account; then giving the shares from the giver's taxable account to the recipient's taxable account.)
+Read more ...
+I was assuming the day they come out of the Roth is the day the recipient receives them. Yes you are technically correct, the best kind of correct. But I don't think you can do an in-kind distribution.
+Retired June 2023. LMP (TIPS/STRIPS ladder/SS). Risk portfolio target = 100% equities
+Top
+13 posts • Page 1 of 1
+Return to “Personal Investments”
+Board indexAll times are UTC-06:00Delete cookiesAboutContact us
+No guarantees are made as to the accuracy of the information on this site or the appropriateness of any advice to your particular situation.
+Powered by phpBB® Forum Software © phpBB Limited
+
+Privacy | Terms
+
+Time: 0.372s | Peak Memory Usage: 8.38 MiB | GZIP: Off

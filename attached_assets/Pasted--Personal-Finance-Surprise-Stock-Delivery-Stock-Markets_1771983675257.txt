@@ -1,0 +1,312 @@
+
+Personal Finance
+Surprise
+Stock Delivery
+Stock Markets
+Giving
+Business and Investments
+Gifts and Surprises
+Financial Investments
+Gifts (financial/monetary...
++ 5
+How can I give stock to a friend as a surprise gift?
+Sort
+Profile photo for Assistant
+Assistant
+Bot
+Jan 20
+Giving stock as a surprise gift is thoughtful and can build long-term value. Below is a clear, practical roadmap covering legal, tax, logistical, and surprise-preservation steps.
+
+1) Choose how to transfer
+
+Transfer directly into the recipient’s brokerage account: simplest if you know their account details (account number, brokerage name, DTC/ACAT transfer instructions). Transfer via an ACAT or broker-assisted transfer. Maintains recipient control and tax basis goes to donor (see tax point).
+Gift shares using a custodial account for minors: open a custodial (UGMA/UTMA) account in the child’s name; the custodian (you or recipient if adult) manages until majority.
+Transfer by delivering a physical stock certificate: rare and slower; requires endorsement and transfer form to the brokerage.
+Use a donor-advised mechanism: donate appreciated stock to a donor-advised fund (DAF) in the recipient’s name if you want a charitable-style gift (different outcome).
+Use fractional-share gifting services: some brokerages allow buying and transferring fractional shares or creating “stock gift” cards that the recipient redeems.
+2) Verify legal and broker requirements
+
+Confirm the recipient has a brokerage account that accepts transfers. If not, you may hold shares in your account and transfer later or use a brokerage that issues gift codes.
+For securities transfer you’ll usually need: stock name/ticker, CUSIP, number of shares, donor investor account details, recipient account details, and a Medallion Signature Guarantee for certificate transfers or certain transfers.
+International constraints: cross-border transfers can be complex; some brokers restrict transfers between countries.
+3) Tax and cost considerations
+
+Gift tax: in the U.S., 2025 annual exclusion is $18,000 per recipient (indexed annually). Gifts above that reduce lifetime exclusion or require filing IRS Form 709. Donor typically pays any gift tax, not recipient.
+Donor’s cost basis: recipient inherits donor’s cost basis and holding period for capital gains tax purposes. This matters when the stock is sold.
+Capital gains: if donor’s basis > current value, tax rules differ when done within three years before donor’s death—consult an advisor for estate planning implications.
+Brokerage fees: some brokers charge transfer fees; check both brokers’ fee schedules.
+For non-U.S. taxpayers, follow local gift and securities transfer tax rules.
+4) Preserve the surprise
+
+If you don’t know the recipient’s brokerage details:
+Use a stock-gift card service or brokerage “gift” feature: you buy shares and the recipient receives an email/code to open an account and accept the gift.
+Purchase a single share and place it in a new brokerage account you open in their name (with their info) only if you have legal authority—otherwise open a custodial account for a minor or use a gift card approach for adults.
+Coordinate with the recipient’s email or documents subtly if the broker will notify them. Choose services that let you control timing of notification.
+Physical presentation: print a brokerage confirmation, write a personalized certificate, or present a framed screenshot of the purchase (if preserving secrecy until reveal).
+5) Step-by-step practical flow (common, low-friction method)
+1. Decide stock and amount (whole or fractional shares).
+2. Check if your broker supports gifting/transfers or offers a gift-code feature.
+3. If using transfers: collect recipient brokerage details (account number & broker) discreetly OR arrange a timed redemption method.
+4. Initiate transfer with your broker; follow transfer forms and provide any required guarantees.
+5. Track completion; confirm acceptance at recipient’s broker.
+6. Reveal the gift in person, by card, or with a printed confirmation.
+
+6) Alternatives when secrecy or logistics block a direct transfer
+
+Gift card / e-gift certificate from a brokerage that issues stocks (e.g., “stock gift” platforms).
+Buy a share through a retail investing app, screenshot or print the holding, and give that as a symbolic gift; later transfer real shares when logistics allow.
+Give cash earmarked for specific stock with a note and instructions; include suggested steps for buying it later.
+7) Practical tips and pitfalls
+
+Avoid opening an account in someone else’s name without permission (legal/identity issues).
+Ensure the recipient will be comfortable receiving stock (liquidity, taxes).
+If gifting appreciated securities, gifting is often more tax-efficient than selling and gifting cash—donor avoids capital gains and recipient retains donor basis (consult a tax advisor).
+For sizable gifts, consult a tax or estate attorney to manage gift tax filings and long-term implications.
+Examples (typical stories)
+
+Example 1: A friend used their brokerage’s “gift a stock” feature—bought fractional shares, generated a redeemable link, then sent the link as a surprise e-card. Recipient clicked, created an account, and accepted the shares.
+Example 2: Giver transferred full shares from their brokerage into the recipient’s existing account using ACAT; both brokers required simple transfer forms and the move completed in 3–7 business days.
+Example 3: For a minor, a parent opened a custodial account and transferred stock into it, then presented a certificate-style printout at a birthday.
+Final checklist before gifting
+
+Confirm recipient’s broker can accept transfers or use a gift-card/ code option.
+Verify tax and gift-limit implications.
+Prepare transfer paperwork and any signature guarantees.
+Plan the reveal method that preserves the surprise and communicates any necessary steps the recipient must take after receiving the gift.
+If the gift is substantial, involve a tax or estate professional to avoid unintended tax consequences and to structure the transfer cleanly.
+
+Ask follow-up questions on Poe, a free app from Quora
+By continuing you agree to create a Poe account, and to its Terms of Service & Privacy Policy
+Tell me more
+
+What are some good stocks to consider for gifting?
+
+Can you explain the tax implications of gifting stock further?
+
+What are the best platforms for gifting fractional shares?
+
+Profile photo for Donald Leow
+Donald Leow
+Master Mason, Retired Radiologic TechnologistAuthor has 21.3K answers and 6.7M answer views
+ · 
+5y
+Originally Answered: How do you gift a share of stock to a friend or family?
+I’ve done this for three nephews for birthdays and Christmas. It’s good to do this while they are young. When they are old enough to realize how much money they are making they become interested in the workings of the stock market and will learn how to invest properly.
+
+I visited my brokerage firm and signed a couple of forms that transferred the stock shares and that was it.
+
+Promoted by The Penny Hoarder
+What's your most unhinged advice to combat the insane cost of living?
+Profile photo for Lisa Dawson
+Lisa Dawson
+Personal Finance Writer at The Penny Hoarder (2010–present)
+ · 
+Updated Jan 25
+Let’s be real — the usual advice about skipping lattes or canceling Netflix is a joke. The cost of living has gone feral, and a $6 coffee isn’t the reason most of us are broke.
+
+If you actually want to survive right now, you need tricks that feel a little off the rails — like slashing bills you didn’t even know were ripping you off, or getting paid for stuff you already waste time on anyway. It’s not glamorous, but it works. Here are the “unhinged” money moves that actually make a dent.
+
+1. Cancel Your Car Insurance
+
+You might not even realize it, but your car insurance company is probably overcharg
+
+Profile photo for Aakash Shah
+Aakash Shah
+Founder and CEO, Wyndly, Fix Your Allergies
+ · 
+10y
+Yes! And it's easy! The traditional method, which does require the recipient's SSN and other information, is to go to a broker and ask them to set up an account, or to transfer some of your holdings into the recipient's account. There are privacy issues, as social security numbers and brokerage account numbers are needed, and I personally am not comfortable sharing, or asking, for these. Someone could steal my identity!
+
+Luckily, there is a service which makes giving stocks as gifts to friends and family very easy. SparkGift (http://www.sparkgift.com) is a service which makes this process as ea
+
+Related questions
+Can I gift shares/equity to people as a surprise without them knowing?
+How do you gift a share of stock to a friend or family?
+Can I gift stocks to a friend?
+How do I buy stock as a gift?
+What is the best way to surprise someone with a gift?
+Profile photo for Al Pecherer
+Al Pecherer
+Lived in San Francisco Bay Area (1971–0)Author has 2.3K answers and 993.3K answer views
+ · 
+4y
+Originally Answered: Can you buy a stock and give it to someone as a gift, e.g. a birthday gift?
+Yes, you can; but it’s much easier to just buy it in the target account and pay for it with a check you deposit to the target account, rather than go through a broker transfer.
+
+It’s a little different if you ALREADY OWN the stock. It would be foolish to sacrifice LTCG treatment (talking about the US)
+
+If you intend to leave appreciated stock after you pass, eg; as part of your estate, that’s the best tax break in the US tax code, where the heir acquires a stepped-up basis. Don’t mess that one up by giving the stock as a gift while you are alive.
+
+Profile photo for Extraordinary Trading
+Extraordinary Trading
+Full-time stocks and Forex trader since early 2012
+ · 
+3y
+Originally Answered: Can you give a stock as a gift?
+Yes. Stocks can be given as a gift. If you are the owner of the stock and hold a paper stock certificate you would complete a stock transfer form and sign it in the presence of a guarantor. For electronic stock shares, complete the transfer process through your broker.
+
+Promoted by Almedia
+Is it really possible to earn real cash just by watching YouTube every day?
+Profile photo for Charlee Anthony
+Charlee Anthony
+Go-to Resource for Realistic, Side Hustle Ideas
+ · 
+Dec 16
+Yes. I made up to $1,110 in only 15 days… from just watching YouTube videos in my free time.
+
+I didn’t even want to share this because I’ll definitely get a ton of hate. I know what I say sounds ridiculous. But it’s all real with freecash.
+
+I learned about it when my co-worker bought drinks on him after finding this “new side hustle”. When he said he gets paid for watching videos, I couldn’t stop laughing. Of course, I had to try it🤭 Got a $5 welcome bonus, invested it in an in-app purchase, and got it back as “cashback”.
+
+I said "invested” intentionally. I got my money back every time. I really th
+
+Profile photo for Joseph Reaves
+Joseph Reaves
+Article Writter at Smart Print Supplies (2018–present)
+ · 
+3y
+Originally Answered: Can you send stock as a gift?
+Yes, you can certainly give someone stock as a gift. You just need to know the recipient's name and brokerage account number.
+
+If you're not sure how to go about it, your broker or financial advisor can help walk you through the process. It's a great way to give someone a long-term investment that will continue to grow over time.
+
+Related questions
+When receiving a gift, do you like to be surprised?
+How can I surprise my friends and family with a unique gift?
+How do I gift stocks?
+Can you give stock as a gift?
+What’s the best surprise gift someone gave you?
+Profile photo for Lawayne Williamson
+Lawayne Williamson
+Flea Market Seller at Traders Village (1983–present)Author has 5.4K answers and 2.1M answer views
+ · 
+5y
+Originally Answered: How do you gift a share of stock to a friend or family?
+Tell you the truth I don’t know as at one time Shares were printed on paper and easily given now they are all on the internet.
+
+Promoted by ComparisonAdviser
+What secret about your industry can you share now that you don’t work for them anymore?
+Profile photo for Carl Madden
+Carl Madden
+Finance Security Expert
+ · 
+Sep 12
+Oh boy, where do I even start? After 8 years as an auto insurance agent, I have zero loyalty left to protect these companies.
+
+We Had "Loyalty Lists" Every month, I'd get a report of customers who hadn't shopped around in 2+ years. These were our golden geese - we could raise their rates aggressively because they'd proven they wouldn't leave. One customer I remember was paying $3,200 annually for coverage that should have cost $1,800. She stayed for 5 years.
+
+The "File and Use" Scam Here's something most people don't know: in many states, insurance companies can raise your rates immediately and ju
+
+Profile photo for Mahesh Halale
+Mahesh Halale
+Ex. Asst Mgr MSFC, currently Professor in Finance (1985–present)Author has 6.3K answers and 1.8M answer views
+ · 
+4y
+Originally Answered: Can you buy a stock and give it to someone as a gift, e.g. a birthday gift?
+Yes you can. Simply buy on his/her trading account using your money. Else buy yourself and then transfer to his/her Demat account. Remember Gift to non close related person attracts gift tax.
+
+Related
+Can I gift stocks to a friend?
+Profile photo for Aaron Brown
+Aaron Brown
+MBA in Finance & Statistics (academic discipline), The University of Chicago Booth School of Business (Graduated 1982)Author has 26.1K answers and 108.6M answer views
+ · 
+9y
+If you hold the shares in a brokerage account, you ask your broker to do it. Depending on the firm, they might make it easy or hard.
+
+If you’re a US taxpayer, you’ll have to consider the gift tax implications. 200 shares of Nvidia is worth about $25,000. The annual gift exclusion amount is only $14,000. You can get around it if you own the stock jointly or gift it to your friend jointly with a spouse, or do it over two years. Or you could pay the gift tax.
+
+Either way, your friend owes no tax on the gift.
+
+Promoted by NerdWallet
+Is using a HELOC for home renovations a smart move or an easy way to overextend?
+Profile photo for NerdWallet
+NerdWallet
+Providing clarity for all of life's financial decisions
+ · 
+Feb 4
+This is one of those ‘it depends’ answers, but the details really matter here.
+
+If your renovation has a solid plan, you’ve compared HELOC options, and you’re confident in your ability to pay it back — a HELOC can be a smart financing tool to get you one step closer to that updated summer yard, or the dream reading nook you always imagined.
+
+But if you’re unsure about budget, timeline, or your ability to handle rate increases, it might be better to look at alternatives like a personal loan, home equity loan or tapping into your savings.
+
+Be sure to choose what's right for you and consider all option
+
+Related
+Can I gift stocks to a friend?
+Profile photo for Alyn Rumbold
+Alyn Rumbold
+Financial Advisor/CFP (1992–present)Author has 793 answers and 2.1M answer views
+ · 
+9y
+Certainly, it's done all the time. Normally they would have to establish a brokerage or dividend reinvestment account in their own name and then the shares can be transferred to that account, though you could also ask to have a stock certificate sent to you instead. In that event, you would endorse the certificate over to your friend and send it to the transfer agent to be re-registered.
+
+Bear in mind that I'm talking about shares held outside a retirement account. If you wanted to gift shares in an IRA to a friend, they are subject to distribution rules, taxation, and possible tax penalties.
+
+Related
+Can I gift stocks to a friend?
+Profile photo for Neel Kumar
+Neel Kumar
+Investing for many years, managing money for self and othersAuthor has 5.9K answers and 25M answer views
+ · 
+9y
+According to US federal tax rules, you can give anyone (whether related to you or not) a gift of up to $14,000 in a given calendar year and not face gift tax. But if anything was given in return (services for example) then you are both in deep trouble.
+
+So, yes, you can gift shares of Nvidia. But watch out for the $14k limit. :)
+
+I just looked up the price of NVDA and if I claim that I am optimistic about the future of the company, can I get a gift of said stock? ;)
+
+Related
+Can I gift stocks to a friend?
+Profile photo for Ritvik Dashora
+Ritvik Dashora
+Financial ProgrammingAuthor has 61 answers and 1.3M answer views
+ · 
+9y
+I think it would be the best gift for your friend. And it seems your friend is a growth investor… ;)
+
+OMG such a high PE ratio and that low dividend yield. It is highly overvalued right now. The only thing supporting is its growth prospects.
+
+All the best to your friend… :D
+
+Related
+Can I gift stocks to a friend?
+Profile photo for Doug Hilton
+Doug Hilton
+Author has 16K answers and 11.3M answer views
+ · 
+9y
+You’ll need thier permission, and their account number. Then call up your broker, and explain what you want. If you both the same broker, you may be able to do it, without the broker’s help.
+
+Related questions
+Can I gift shares/equity to people as a surprise without them knowing?
+How do you gift a share of stock to a friend or family?
+Can I gift stocks to a friend?
+How do I buy stock as a gift?
+What is the best way to surprise someone with a gift?
+When receiving a gift, do you like to be surprised?
+How can I surprise my friends and family with a unique gift?
+How do I gift stocks?
+Can you give stock as a gift?
+What’s the best surprise gift someone gave you?
+How do you discreetly find out if someone received a gift that you sent to them as a surprise?
+What should someone do if they accidentally figure out what a gift is that is supposed to be a surprise before they receive it?
+Can you give stocks as gifts without selling them first?
+What should you never do when surprising someone with a gift?
+What is the best surprise you've given to your parents?
+Related questions
+Can I gift shares/equity to people as a surprise without them knowing?
+How do you gift a share of stock to a friend or family?
+Can I gift stocks to a friend?
+How do I buy stock as a gift?
+What is the best way to surprise someone with a gift?
+When receiving a gift, do you like to be surprised?
+
+AD
+
+
+AD
+
+Advertisement
+AboutCareersPrivacyTermsContactLanguagesYour Ad ChoicesPress© Quora, Inc. 2026

@@ -1,0 +1,548 @@
+Skip to main content
+I’m Noah Kerner, CEO of Acorns. AMA. : r/acorns
+
+Open menu
+
+
+r/acorns
+Search in r/acorns
+Log In
+
+Expand user menu
+r/acorns icon
+Go to acorns
+r/acorns
+•
+3mo ago
+Noah_Kerner
+
+I’m Noah Kerner, CEO of Acorns. AMA.
+Hey r/acorns, Noah here.
+
+Long overdue. This community is what Acorns is all about. You celebrate each other’s milestones, share your journeys, ask the hard questions, and remind us every day why we do what we do. So thank you for being part of this movement (some of you from the start). 
+
+When we started Acorns, the idea was simple: make it easy for anyone, not just the wealthy, to save and invest for the long term. That’s what it’s always been about—leveling the playing field. Giving everyone a fair shot at building wealth. And that's more important now than ever. 
+
+Ask me anything about how we build for everyday investors, the future of Acorns, what we’ve gotten right (and wrong), product decisions, you name it. If you want to go off-topic, that’s cool too. Whatever you’re curious about.
+
+I’ll be back here Wednesday, Nov 19 at 1 PM ET to answer your questions live for about 90 minutes. 
+
+Let’s get into it. 
+
+Noah
+
+r/acorns - I’m Noah Kerner, CEO of Acorns. AMA.
+Answers to the AMA are for informational purposes only and should not be considered as investment advice or a recommendation to buy or sell any particular security, strategy, or investment product. The investments and strategies discussed may not be suitable for all investors. Any forward looking statements may not develop as predicted and are subject to change based on future market and other conditions.
+
+Individual featured is CEO and Chairman of Acorns. https://www.acorns.com/about/
+
+Investing involves risk, including the loss of principal. Visit https://bit.ly/AcornsSocialMediaDisclosures for the full disclosure.
+
+Read more
+AMA Finished · 3 mo. ago
+166
+·
+165
+u/bluehost avatar
+bluehost
+•
+Promoted
+
+Stop fighting for resources on shared hosting. Bluehost VPS runs on AMD EPYC processors with NVMe SSD storage for faster speeds.
+Learn More
+bluehost.com
+Thumbnail image: Stop fighting for resources on shared hosting. Bluehost VPS runs on AMD EPYC processors with NVMe SSD storage for faster speeds.
+
+All
+
+Answered
+
+Unanswered
+Sort by:
+
+Best
+
+Search Comments
+Expand comment search
+Comments Section
+ProfessorPliny
+MOD
+•
+3mo ago
+Thank you to u/noah_kerner for taking the time to host an amazing AMA. We appreciate your honesty, openness, and candid replies.
+
+Please don’t be shy - you and the team are welcome back here any time!
+
+1
+u/wylie99998 avatar
+wylie99998
+•
+3mo ago
+Any thoughts on an HSA option? I currently keep my 401k and HSA in fidelity, but it would be nice to have everything in one place. Even just a dashboard that could display my accounts with another bank, ie what quicken simplify does, so we can see all our investments in one place.
+
+9
+
+1 more reply
+[deleted]
+•
+3mo ago
+Any plans to introduce budgeting, expense & subscription tracking, smart debt crunching etc features since acorns does have access to credit card accounts already with Plaid
+
+Credit Score Monitoring, Rent and utility reporting would also help
+
+Joint saving account
+
+Ability to buy custom stock and crypto
+
+Are you taking away the fee waiver for DD? This would cause a mass exodus to SoFI and other services so would like to get some clarity on this pls.
+
+Any plans to offer Zelle service to the checking account?
+
+7
+
+1 more reply
+enjoythemiles
+•
+3mo ago
+Any chance we can get a 5x option on roundups? 3 it low and 10 is too high.
+
+
+33
+u/Noah_Kerner avatar
+Noah_Kerner
+OP
+•
+3mo ago
+I love this idea. Appreciate you raising it. Lemme bring to the team to make jt happen.
+
+13
+
+7 more replies
+Flimsy_Good_5417
+•
+3mo ago
+When will the Acorns Checking debit card integrate contactless technology?
+
+
+22
+ProfessorPliny
+•
+3mo ago
+“You have to insert it” is one of my most spoken phrases going through a drive through. Then again, my card is super old. I want the tap to pay. 😂
+
+9
+
+1 more reply
+u/Noah_Kerner avatar
+Noah_Kerner
+OP
+•
+3mo ago
+Available on new Green cards and will soon on reissues. Long story about why they weren’t inserted in our tungsten cards but long story short is we produced a large supply with long lead time to be able to offer this material to you all and we are solving this now in the new runs.
+
+8
+
+5 more replies
+u/fidelityinvestments avatar
+u/fidelityinvestments
+•
+Promoted
+
+Fidelity Active ETFs can adapt to changes in market conditions to pursue outperformance.
+Learn More
+fidelity.com
+Clickable image which will reveal the video player: Fidelity Active ETFs can adapt to changes in market conditions to pursue outperformance.
+Collapse video player
+
+0:00 / 0:00
+
+
+
+
+Flimsy_Good_5417
+•
+3mo ago
+I want my Primary Checking funding source to be my Acorns Checking account.
+
+I don’t want to use big banks. I don’t want multiple Checking accounts.
+
+Yet when I speak to your customer service team, this isn’t possible.
+
+Why?
+
+Ultimately, I just want some of the $ in my Acorns checking to transfer as a daily, recurring payments to my Acorns Invest account.
+
+This should be simple, yes?
+
+
+11
+u/Noah_Kerner avatar
+Noah_Kerner
+OP
+•
+3mo ago
+I agree with you completely. Thank you for this feedback. I’m bringing it to the team. You can set up Acorns Checking as your primary funding source. I have this set up myself. And then you can do recurring deposits. More info here https://support.acorns.com/hc/en-us/articles/Can-I-make-my-Acorns-Checking-my-primary-checking-account
+
+8
+
+3 more replies
+
+4 more replies
+u/Competitive_Water963 avatar
+Competitive_Water963
+•
+3mo ago
+This is what your platform has done for me in 7 years.
+Thank you!
+
+Comment Image
+
+14
+u/Noah_Kerner avatar
+Noah_Kerner
+OP
+•
+3mo ago
+This makes me proud for our team, happy for you, and grateful that you would share it.
+
+10
+
+1 more reply
+ProfessorPliny
+MOD
+•
+3mo ago
+Thanks, Noah!
+
+Folks, it’s finally happened. When moderation changed hands 2 years ago, this was always a personal goal of mine. And like Noah said, this is long overdue!
+
+This AMA has been 100% personally verified.
+
+25
+
+1 more reply
+u/OptimisticHedgeHog avatar
+OptimisticHedgeHog
+•
+3mo ago
+Why is it impossible to have both a traditional and Roth IRA? I’ve been using the Roth IRA but my income is going to be too high to put money in a Roth next year so I’m going to have to open a traditional and that’s going to force me to have to go off the platform
+
+16
+
+3 more replies
+Hepburn_Wannabe
+•
+3mo ago
+Why is it so difficult to link accounts, transfer funds to and from different accounts, remove accounts, etc? I spent days chatting and emailing with customer service to change my primary checking account to my Acorns checking account so that I could use it to make regularly scheduled transfers into my Acorns invest and later accounts. Now again I am spending a ton of time chatting with customer service to get a linked account to transfer funds into my Acorns checking and to remove a linked account that no longer exists. I was told my bank account which has been closed cannot be removed “to keep the details in our records.” If that’s true there should be better internal record keeping.
+
+I should be able to easily link and unlink any of my accounts and transfer my money to and from them with ease. I should not have to spend hours chatting with customer service and still only be able to barely use my account. It’s like I am being punished for trying to use the app at all. I have never had issues like this with any other banks or financial apps.
+
+9
+u/Weglot avatar
+u/Weglot
+•
+Promoted
+
+Get a fully translated Lovable app displayed in minutes. AI + human review.
+Get a fully translated Lovable app displayed in minutes. AI + human review.
+Get a fully translated Lovable app displayed in minutes. AI + human review.
+Get a fully translated Lovable app displayed in minutes. AI + human review.
+Get a fully translated Lovable app displayed in minutes. AI + human review.
+weglot.com
+Learn More
+[deleted]
+•
+3mo ago
+you’ve stopped the promise of waiving fees with dd.
+
+why?
+
+
+40
+u/Noah_Kerner avatar
+Noah_Kerner
+OP
+•
+3mo ago
+Sorry actually we didn’t stop waiving fees with direct deposit on the MOC account. There was a bug that has since been fixed that showed the incorrect info. All customers who previously had the subscription waived are grandfathered in with no plans to end it.
+
+21
+
+7 more replies
+Bellezzajess
+•
+3mo ago
+Same question! I’m looking at closing acorns and moving my money elsewhere because I have no desire to pay $12/mo. We have a lot of money in vanguard with no fees and I just had acorns open for fun.
+
+20
+TrishIsOnReddit
+•
+3mo ago
+This. ^
+
+10
+
+2 more replies
+u/allynJnylla avatar
+allynJnylla
+•
+3mo ago
+I am also preparing to close all of my accounts unfortunately and withdraw my funds because of this. It’s very disappointing as a loyal customer, and there was zero communication (or heads up) which makes it worse imo.
+
+8
+
+1 more reply
+
+3 more replies
+u/Mudboneeee2714 avatar
+Mudboneeee2714
+•
+3mo ago
+Noah, why are you charging dedicated long time gold members $12/month with no warning of the billing change????
+
+8
+
+3 more replies
+gates-ollie
+•
+3mo ago
+Need a better way to verify if the purchase worked through Acorns Earn to get the money reinvested back into our portfolios. I never know if it works and I’m always paranoid about it.
+
+7
+
+2 more replies
+ProfessorPliny
+•
+3mo ago
+When Acorns started, your primary demographic was the “financial up and coming.” Primarily those in our 20s and 30s without too many acorns stashed away for our future.
+
+How do you see the brand’s relationship with us evolving as we transition from “financial up and coming” to “financial grown ups?”
+
+Does this look like continuing to invest in offerings geared toward families as we start our own? What about lending options? And for the love of god, joint checking accounts?
+
+Context for this question is I’ve noticed a lot of members of this sub, myself included, “graduate” to larger financial firms with more diverse options like Schwab and Fidelity while keeping Acorns as their backup or “fun” money.
+
+For me, this move had to happen when I got married and we bought our first home a few years later. Larger firms were better able to help us consolidate our assets and navigate the very complex world of joint finances, home buying, trusts, etc.
+
+
+39
+u/Noah_Kerner avatar
+Noah_Kerner
+OP
+•
+3mo ago
+In terms of joint checking accounts, couldn’t agree more. Actually the plan is to turn on couples capability for all of Acorns so we move from single player to multi player.
+
+11
+u/Noah_Kerner avatar
+Noah_Kerner
+OP
+•
+3mo ago
+In terms of evolving with you, we absolutely want you to grow with us and we want to grow with you. Evolving with us means adding retirement planning, investing for your kids, now using Money Manager, etc. Plus, the Invest account is meant to be the simplest way to invest money into a diversified portfolio and grow for life. We encourage you to increase your recurring investment if you can over time to save and invest more as you grow.
+
+8
+
+8 more replies
+More posts you may like
+Should I continue to invest with Acorn?
+r/investingforbeginners icon
+r/investingforbeginners
+•
+1y ago
+Should I continue to invest with Acorn?
+5 upvotes · 9 comments
+u/Public avatar
+Public
+•
+Promoted
+
+Trade options via API for less than $0, and earn rebates on options contracts.
+Thumbnail image: Trade options via API for less than $0, and earn rebates on options contracts.
+public.com
+Sign Up
+Acorns CEO Noah Kerner on Fox Business
+r/acorns icon
+r/acorns
+•
+1y ago
+Acorns CEO Noah Kerner on Fox Business
+r/acorns - Acorns CEO Noah Kerner on Fox Business
+foxbusiness
+9 upvotes · 5 comments
+Great post from Noah on the Acorns Instagram
+r/acorns icon
+r/acorns
+•
+1y ago
+Great post from Noah on the Acorns Instagram
+r/acorns - Great post from Noah on the Acorns Instagram
+78 upvotes · 16 comments
+Acorns has been a good investment for me
+r/acorns icon
+r/acorns
+•
+5mo ago
+Acorns has been a good investment for me
+r/acorns - Acorns has been a good investment for me
+243 upvotes · 33 comments
+Acorns App an "investment trap"
+r/DirtyDave icon
+r/DirtyDave
+•
+2y ago
+Acorns App an "investment trap"
+36 upvotes · 82 comments
+Is acorns legit?? Have friends that told me that they put $15 a week and after a year they c 1-2k profits on acorns ? Is this the case for everybody? If so I might start acorn and put like 100 a week down..
+r/acorns icon
+r/acorns
+•
+5y ago
+Is acorns legit?? Have friends that told me that they put $15 a week and after a year they c 1-2k profits on acorns ? Is this the case for everybody? If so I might start acorn and put like 100 a week down..
+61 upvotes · 101 comments
+Is acorns a legitimate way to invest?
+r/investing icon
+r/investing
+•
+4y ago
+Is acorns a legitimate way to invest?
+20 upvotes · 50 comments
+I'm cancelling my Acorns account (and maybe you should too)
+r/acorns icon
+r/acorns
+•
+2mo ago
+I'm cancelling my Acorns account (and maybe you should too)
+106 upvotes · 155 comments
+I just like some feedback. I just started using acorns want to know how to really have my money grow how to invest. I don’t have money like that, but i have it set up to round up.
+r/acorns icon
+r/acorns
+•
+15d ago
+I just like some feedback. I just started using acorns want to know how to really have my money grow how to invest. I don’t have money like that, but i have it set up to round up.
+7 upvotes · 20 comments
+Do you all recommend Acorns? Or anything like that?
+r/investingforbeginners icon
+r/investingforbeginners
+•
+4mo ago
+Do you all recommend Acorns? Or anything like that?
+8 upvotes · 24 comments
+Should I pull out investment on acorns?
+r/acorns icon
+r/acorns
+•
+2y ago
+Should I pull out investment on acorns?
+16 upvotes · 45 comments
+Is Acorns meant to be your primary savings account?
+r/acorns icon
+r/acorns
+•
+2y ago
+Is Acorns meant to be your primary savings account?
+13 upvotes · 25 comments
+What happens if Acorns goes down?
+r/acorns icon
+r/acorns
+•
+1y ago
+What happens if Acorns goes down?
+7 upvotes · 15 comments
+Newbie to finance and acorns
+r/acorns icon
+r/acorns
+•
+5mo ago
+Newbie to finance and acorns
+r/acorns - Newbie to finance and acorns
+59 upvotes · 13 comments
+Acorns transfer ownership of account
+r/acorns icon
+r/acorns
+•
+7y ago
+Acorns transfer ownership of account
+12 upvotes · 2 comments
+How much should I have in my savings account before investing intones acorns?
+r/acorns icon
+r/acorns
+•
+2y ago
+How much should I have in my savings account before investing intones acorns?
+4 upvotes · 9 comments
+Does anyone use penny saving apps like Acorn?
+r/personalfinance
+•
+9y ago
+Does anyone use penny saving apps like Acorn?
+742 upvotes · 199 comments
+Crazy if true!
+r/acorns icon
+r/acorns
+•
+22d ago
+Crazy if true!
+r/acorns - Crazy if true!
+22 comments
+$1.5M AMA
+r/acorns icon
+r/acorns
+•
+1mo ago
+$1.5M AMA
+r/acorns - $1.5M AMA
+234 upvotes · 176 comments
+Help me understand
+r/acorns icon
+r/acorns
+•
+4d ago
+Help me understand
+r/acorns - Help me understand
+54 upvotes · 14 comments
+Hey guys just started
+r/acorns icon
+r/acorns
+•
+18d ago
+Hey guys just started
+r/acorns - Hey guys just started
+113 upvotes · 38 comments
+Investing app Acorns to go public through a blank-check merger valued at $2.2 billion
+r/investing icon
+r/investing
+•
+5y ago
+Investing app Acorns to go public through a blank-check merger valued at $2.2 billion
+1.2K upvotes · 292 comments
+I completed the referral requirements, ask away!
+r/acorns icon
+r/acorns
+•
+2mo ago
+I completed the referral requirements, ask away!
+r/acorns - I completed the referral requirements, ask away!
+2
+15 upvotes · 17 comments
+Advice- Long Term
+r/acorns icon
+r/acorns
+•
+2y ago
+Advice- Long Term
+9 upvotes · 7 comments
+If I need to pull out all of my money, what do the tax implications look like if I do?
+r/acorns icon
+r/acorns
+•
+20d ago
+If I need to pull out all of my money, what do the tax implications look like if I do?
+r/acorns - If I need to pull out all of my money, what do the tax implications look like if I do?
+40 upvotes · 22 comments
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.

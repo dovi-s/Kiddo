@@ -1,0 +1,252 @@
+
+Financial Services
+Legal Requirements
+Investment Advising
+Trading Account
+Financial Advice
+Financial Regulation
+Financial and Investment ...
+Financial Advisors
+Financial Law
++ 5
+I have a few friends that want me to manage their trading accounts. Is this legal, and what would I need to make it legal?
+Sort
+Profile photo for John Tatoian
+John Tatoian
+Business, Tax & Securities Lawyer (1997–present)Author has 4.1K answers and 2.5M answer views
+ · 
+6y
+Originally Answered: My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+Pursuant to the Investment Advisers Act of 1940 , 15 USC 80b-1 et seq., every Investment Advisor must be licensed and registered at either the state or federal level. The act stipulates that anyone providing advice or making a recommendation on securities (as opposed to another type of investment) is considered an advisor. Individuals whose advice is merely incidental to their line of business may not be considered an advisor.
+
+Investment advisory firms or individuals with more than $110 million under management would be required to register with the Securities & Exchange Commission.
+
+Generally, a
+
+Promoted by ComparisonAdviser
+What are some mistakes that people can make when choosing a financial advisor?
+Profile photo for Zach S.
+Zach S.
+Economics and Financial Expert
+ · 
+Updated 11mo
+Financial Advisors can change lives, but I often see some big mistakes that can drastically affect the results - even as bad as losing all investment gains made! With all the new-age scams out there, it really matters to know these mistakes - so pay attention!
+
+Here’s the Most Common Mistakes:
+
+Hiring a “Financial Advisor” who is not a Fiduciary
+
+Anybody can be a “financial advisor”. It’s an unregulated term so the title means nothing. Not going to name names, but plenty of companies out there abuse this term. Just watch “The Wolf Of Wall Street” to see more on how that works!
+
+On the other hand, ther
+
+Related questions
+My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+Can I trade on my friend’s brokerage account and share the profit with him in the US? If yes, what is the best way for him to send me my share of the profit without getting into any legal and tax trouble? Do you have any other suggestion?
+What are the laws around trading for other individuals? Is it legal for an individual to give me their account details, and I trade for them on their account?
+Is it safe to give your trading account to someone to handle?
+Can I legally trade stocks for a trusted friend (for free) from another country? She can't read the English but would like to invest in the market by sending me the money and having me manage her portfolio.
+Profile photo for Steven Jon Kaplan
+Steven Jon Kaplan
+Investing since 1981; registered with finra.org as an investment advisor.Author has 115 answers and 62.9K answer views
+ · 
+6y
+Originally Answered: My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+This is fully legal. You should study for your Series 65 exam, pass it, and then apply for a state RIA registration. Once that is done, set up a state-registered LLC and file a Schedule C each year with your Form 1040. You can then take clients by setting up separately-managed accounts. This is done by having each client fill out and authorize a document from their brokerage account where you are
+
+Profile photo for Terence Kenneth John Nunis
+Terence Kenneth John Nunis
+Investments, wealth management, liability protection & succession planning.Author has 2.6K answers and 11.2M answer views
+ · 
+Updated 6y
+Originally Answered: My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+Yes, you definitely need a licence. This is true for anywhere in the world. You need the equivalent of a capital markets licence for the company or trust, and certification as a financial advisor and fund manager.
+
+Also, if this is a hedge fund, and not a normal mutual fund or index, that means you are likely going to trade with derivatives and complex financial products and wrappers. This requires years of knowledge to master, a sound grasp of advanced mathematics, and a research team. Having such a fund also means having a compliance team, and getting liability insurance.
+
+The best hedge funds t
+
+Profile photo for John Bailey
+John Bailey
+Delighted to find option pricing and portfolio hedging challenge the wasted math I learned in grad school.Author has 7.4K answers and 6.4M answer views
+ · 
+6y
+Originally Answered: My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+Does Series 65 apply in your state (or country)?
+
+The Series 65 is an exam and securities license required by most U.S. states for individuals who act as investment advisors. The Series 65 exam, known formally as the Uniform Investment Adviser Law Examination, covers laws, regulations, ethics and topics such as retirement planning, portfolio management and fiduciaryresponsibilities. The exam is designed by the North American Securities Administrators Association (NASAA) and is administered by the Financial Industry Regulatory Authority (FINRA).
+
+Registering requirements as part of the Registered I
+
+Promoted by The Penny Hoarder
+What's some brutally honest advice that everyone should know?
+Profile photo for Lisa Dawson
+Lisa Dawson
+Finance Writer at The Penny Hoarder
+ · 
+Updated Jan 24
+Here’s the thing: I wish I had known these money secrets sooner. They’ve helped so many people save hundreds, secure their family’s future, and grow their bank accounts—myself included.
+
+And honestly? Putting them to use was way easier than I had expected. I bet you can knock out at least three or four of these right now—yes, even from your phone. Don’t wait like I did.
+
+1. Cancel Your Car Insurance
+
+You might not even realize it, but your car insurance company is probably overcharging you. In fact, they’re kind of counting on you not noticing. Luckily, this problem is easy to fix.
+
+Don’t waste your t
+
+Related questions
+Can you legally trade for profit through someone else's broker account?
+What does one have to do legally to begin trading other people's brokerage accounts for them?
+Is it legal to manage other’s funds in the states without a license or legal registration like a hedge funds company?
+I want to pool my money with friends and invest it. Do I need any type of license?
+Can I legally manage investment accounts for my friends?
+Profile photo for Marc Stephan Nkouly
+Marc Stephan Nkouly
+Works at CLICSPACE (2015–present)
+ · 
+8y
+Originally Answered: My friends want to pay me to manage their cryptocurrency investments. How do I go about this in a legal manner?
+As far as is concern the physical location will matter. On the other hand is a matter of mutual agreement among two adults . Left to me you should contact a lawyer and sign a contract with him and most of all start from the end of the relationship (Worse case scenario) and determine your responsibilities after that you can move to the best case and determine your remuneration in case the stocks currencies are appreciated.
+
+Profile photo for Mike Martino
+Mike Martino
+PessimistAuthor has 21.3K answers and 11.5M answer views
+ · 
+2y
+The first issue would be the business policy of whatever company they have accounts with.
+
+I don’t know the legal issues involved in starting a business as a financial advisor, but Schwab won’t permit third parties to sign on to someone’s trading account, so if they detected that was happening, they would lock it up until the owner worked something out with them.
+
+I suspect many online trading platform companies will have similar policies. It’s just too big a liability risk for them to let third parties have direct access to their clients’ accounts.
+
+Promoted by Almedia
+Is it really possible to earn real cash just by watching YouTube every day?
+Profile photo for Charlee Anthony
+Charlee Anthony
+Go-to Resource for Realistic, Side Hustle Ideas
+ · 
+Dec 16
+Yes. I made up to $1,110 in only 15 days… from just watching YouTube videos in my free time.
+
+I didn’t even want to share this because I’ll definitely get a ton of hate. I know what I say sounds ridiculous. But it’s all real with freecash.
+
+I learned about it when my co-worker bought drinks on him after finding this “new side hustle”. When he said he gets paid for watching videos, I couldn’t stop laughing. Of course, I had to try it🤭 Got a $5 welcome bonus, invested it in an in-app purchase, and got it back as “cashback”.
+
+I said "invested” intentionally. I got my money back every time. I really th
+
+Profile photo for Barry Gysbers
+Barry Gysbers
+Lives in Washington (2016–present)Author has 4.8K answers and 3.4M answer views
+ · 
+6y
+Originally Answered: My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+Just get them to open an account in their name, and put only the money that they are prepared to lose entirely into it.
+
+Then, they can grant you “trading authority”.
+
+Rule #1 of investing: Don’t lose the money!
+
+Profile photo for Cindy Brick
+Cindy Brick
+Writer, Teacher, Sr. Personal Property AppraiserAuthor has 21K answers and 4.2M answer views
+ · 
+Jan 29
+Even if you have their permission — and it’s legal (I’m guessing you’d need written permission) — unless you’re licensed to do this, you’re taking a real risk. What if something goes wrong, and you make a bad decision? And they lose their money?
+
+Guess who they’ll came after?
+
+Promoted by Grammarly
+How can I effectively edit my own writing?
+Profile photo for Grammarly
+Grammarly
+Great Writing, Simplified
+ · 
+Updated 3y
+So, you think you’ve drafted a tweet, an email, a short story, or even a novel. These are different forms of communication, but the process of bringing them to fruition has a necessary, sometimes overlooked step: editing! Unless you’re a professional writer, it’s unlikely that you have an editor who can review your writing regularly. Here are some tips to help you review your own work.
+
+Give your writing some space. Have you ever felt a mix of pure relief and joy when you’ve finished a draft of something? Don’t downplay that feeling and the ability to walk away from your work before you start ed
+Profile photo for Shesha Kn
+Shesha Kn
+Lives in Bengaluru, Karnataka, IndiaAuthor has 51 answers and 30.7K answer views
+ · 
+2y
+You can comfortably do with certain stipulated terms made out prior to start. But you must sure you do justice to them not blindly.
+
+Profile photo for Ravi Bhaskaruni
+Ravi Bhaskaruni
+Program Manager (Offshore)Author has 854 answers and 998.3K answer views
+ · 
+8y
+Originally Answered: My friends want to pay me to manage their cryptocurrency investments. How do I go about this in a legal manner?
+My experience, once you invest hard-earned money
+
+You are not going to get back
+Better you ask them to provide surity, how they pay back
+Ask them to invest in some other investment for you.
+Everyone looks for free money, you will loose friendship.
+
+Related
+What does one have to do legally to begin trading other people's brokerage accounts for them?
+Profile photo for Saket Taneja
+Saket Taneja
+Btech from Panipat Institute of Engineering and Technology (Graduated 2021)
+ · 
+5y
+You cannot trade securities for others without becoming licensed as an investment professional. Investment professionals must be registered with the Securities and Exchange Commission or have a federal license. ... Of course, if you're willing to jump through the necessary licensing hoops, it's definitely possible.
+
+And for that minimum qualifications:
+
+(1) A professional qualification or post-graduate degree or post graduate diploma in finance, accountancy, business management, commerce, economics, capital market, banking, insurance or actuarial science or
+
+You should be a graduate in any disciplin
+
+Related
+What does one have to do legally to begin trading other people's brokerage accounts for them?
+Profile photo for Morris Pearl
+Morris Pearl
+several decades working in structured finance on both sell side and buy sideAuthor has 6.8K answers and 4.9M answer views
+ · 
+4y
+The laws on these things are different in different countries. You should consult an attorney in your country.
+In my country you would need written permission from the other person.
+That would fine if the other person came you you, or you know them. To hold your self out as a professional for trading other people’s brokerage account could have additional requirements (like being a registered investment advisor).
+Profile photo for Tom Hinkle
+Tom Hinkle
+Former Software Developer (1976–2016)Author has 10.9K answers and 11.6M answer views
+ · 
+6y
+Originally Answered: My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+It sounds like you don’t have the first clue about what you are doing, and there is a strong likelihood this won’t work out well for you or your friends. I would strongly urge you to decline. If you have a good track record investing money, you could tell them what investments you recommend, but even that has risks to your friendships if those recommendations go bad.
+
+Related questions
+My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+Can I trade on my friend’s brokerage account and share the profit with him in the US? If yes, what is the best way for him to send me my share of the profit without getting into any legal and tax trouble? Do you have any other suggestion?
+What are the laws around trading for other individuals? Is it legal for an individual to give me their account details, and I trade for them on their account?
+Is it safe to give your trading account to someone to handle?
+Can I legally trade stocks for a trusted friend (for free) from another country? She can't read the English but would like to invest in the market by sending me the money and having me manage her portfolio.
+Can you legally trade for profit through someone else's broker account?
+What does one have to do legally to begin trading other people's brokerage accounts for them?
+Is it legal to manage other’s funds in the states without a license or legal registration like a hedge funds company?
+I want to pool my money with friends and invest it. Do I need any type of license?
+Can I legally manage investment accounts for my friends?
+My friend wants me to invest some of my money in trading. He wants me to sign an online contract. What kind of steps should I take to protect myself?
+My husband is not listening to me. He lost most of his money in trading. After so many fights between us, he still secretly trades. How can I convince him not to trade?
+Is it legal to set up a trading account under your parents’ name and trade (I am 16)?
+Can a trading broker want me to pay taxes for being able to do withdrawals? My broker want me to pay 20%
+Can I trade in someone else’s broker account with their permission on a profit sharing basis without any legal hassles?
+Related questions
+My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+Can I trade on my friend’s brokerage account and share the profit with him in the US? If yes, what is the best way for him to send me my share of the profit without getting into any legal and tax trouble? Do you have any other suggestion?
+What are the laws around trading for other individuals? Is it legal for an individual to give me their account details, and I trade for them on their account?
+Is it safe to give your trading account to someone to handle?
+Can I legally trade stocks for a trusted friend (for free) from another country? She can't read the English but would like to invest in the market by sending me the money and having me manage her portfolio.
+Can you legally trade for profit through someone else's broker account?
+
+AD
+
+
+AD
+
+Advertisement
+AboutCareersPrivacyTermsContactLanguagesYour Ad ChoicesPress© Quora, Inc. 2026

@@ -1,0 +1,290 @@
+Skip to content
+03:06:36:26
+Save up to $680 on your Disrupt 2026 pass. Ends February 27. REGISTER NOW.
+
+Close
+TechCrunch Mobile Logo
+Site Search Toggle
+Mega Menu Toggle
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EarlyBird’s new app lets families and friends ‘gift’ investments to children
+Sarah Perez
+6:00 AM PST · December 30, 2020
+Image Credits:
+EarlyBird
+A new fintech startup called EarlyBird wants to help families invest in their children’s financial futures. Through the EarlyBird mobile app, parents in just a few minutes can create a custodial account, also known as a UGMA (Uniform Gifts to Minors Act) account. These accounts typically allow a parent, aka the “custodian,” to invest in stocks, bonds, mutual funds and other securities on behalf of the minor child. When the child comes of legal adult age, the investments become theirs.
+
+Through the app, parents can set up an account for their child, then invite other family members and close friends to contribute.
+
+The idea is not so different, in spirit at least, from something like HoneyFund, where newlyweds ask loved ones for cash donations instead of physical gifts. Similarly, EarlyBird offers an alternative to giving a child toys and more “stuff,” by inviting family and friends to donate money. Except in EarlyBird’s case, it’s not asking for straight cash donations — this is not some glorified crowdfunding platform, after all — it’s enabling investments.
+
+Specifically, EarlyBird aims to make it easier and less confusing for parents to establish custodial accounts. It’s not the first fintech to do so — Stash and Acorns, for example, also offer this.
+
+EarlyBird, however, aims to combine the investment account itself with a platform that allows for social features and a gifting experience. The idea is to make the act of donating to the account feel more like a real gift — unlike the gift of a check or some cash tucked into a greeting card.
+
+
+Image Credits:
+EarlyBird
+With the EarlyBird app, the giver can record a short video “memory” alongside their donation to the investment account. This makes for a more social and personal experience as the child can later look back on these videos. In addition, other family members and friends may also see the videos and be prompted to donate to the child’s investment account, too.
+
+The idea for EarlyBird comes from former AgilityIO COO Jordan Wexler, now EarlyBird CEO, and early Yello.co employee and VP Caleb Frankel, now EarlyBird COO.
+
+Save up to $300 or 30% to TechCrunch Founder Summit
+1,000+ founders and investors come together at TechCrunch Founder Summit 2026 for a full day focused on growth, execution, and real-world scaling. Learn from founders and investors who have shaped the industry. Connect with peers navigating similar growth stages. Walk away with tactics you can apply immediately.
+
+Offer ends March 13.
+Boston, MA | June 9, 2026
+REGISTER NOW
+Wexler explains that he began thinking about investments as an alternative to physical gifts when a new baby arrived in his own extended family.
+
+“This all started with a problem I experienced years ago when my beautiful baby niece was born. I found myself head over heels and spending hundreds and hundreds of dollars on just the most ridiculous stuff — pretty much just junk gifts,” he says.
+
+A few years ago, he got the idea to start investing his cash into an index fund on the child’s behalf.
+
+“I wanted to have a larger impact in her life and something that she could really use when she grew up,” Wexler says.
+
+His father had once done the same for him, in fact. When he was 12 years old, his dad gave him some money in a TD Ameritrade account that he withdrew later in life to help fund his first startup — SucceedOverseas in Qingdao, China — a strategic consulting firm that aided companies with employee relocation. (It was acquired in 2015 by Chiway Education Group.) 
+
+Wexler met EarlyBird co-founder Caleb Frankel in Qingdao and reconnected with him again when he returned the U.S. Last year, they teamed up on EarlyBird, with the goal of simplifying the process for parents who want to launch custodial investment accounts for their kids.
+
+
+Image Credits:
+EarlyBird
+Custodial accounts, to be fair, are perhaps not a well-known investment vehicle to those who aren’t parents — or even to those who are, in some cases. That’s because their alternative, the 529 plan, has generally been more popular because of its tax advantages.  
+
+While both accounts allow families to invest on behalf of minor children, investments in 529 plans grow tax-free. Any withdrawals made for educational expenses — like tuition, room and board, books, and more — are also not taxed. That’s a big perk.
+
+UGMA accounts, meanwhile, are taxed at certain levels. The first $1,100 of unearned annual income is tax-free, but the next $1,100 is taxed at the child’s tax rate. Unearned income above $2,200 is then taxed at the rates for trusts and estates, which can be higher than the child’s tax rate.
+
+Donations to UGMA accounts don’t receive an income tax reduction, but they aren’t taxed themselves up to $15,000 for an individual or $30,000 for a married couple.
+
+Because most families are investing with college expenses and tax advantages in mind, 529 plans have been better known. But Wexler says things are changing.
+
+“A lot of parents actually have no idea what education and college will look like in 15 years and want something a little bit more flexible,” he explains.
+
+Plus, UGMA accounts can be used for college, if need be. But if college, say, becomes free in the U.S. one day (!!!), the UGMA account’s investments can be used for anything else. That flexibility is why the account is more attractive to some parents these days — and why other fintechs, like Acorns, are entering this market.
+
+However, EarlyBird will expand into 529 plans within a year, it says. It just didn’t start there.
+
+
+Image Credits:
+EarlyBird
+Another differentiator between EarlyBird and Acorns or Stash’s custodian plans is how EarlyBird incorporates financial literacy into its product.
+
+From birth to 5 years old, the parent manages the child’s account entirely. But when the child is ages 6 to 13, parents can show the app to the child in a special “view only” mode where the child can learn about their investments and watch them grow. At 13 to 18, the child can download the app and, alongside their parents, begin to interact with it. At age 18 (or 21 in some states), the child takes full custody of the account.
+
+EarlyBird also simplifies the act of investing by offering a range of portfolios from conservative to aggressive. On the conservative side, the portfolio is 100% ETF bond-based while the aggressive portfolio is 100% ETF equity-based. Like Acorns, it offers a fixed portfolio model, but it also offers customized portfolios so you can match your investing to your values — like investing in socially responsible businesses. Users can also automate their investments — small or large — on a recurring basis, if they choose.
+
+
+Image Credits:
+EarlyBird
+The portfolios were designed and built with a team of expert financial advisors led by EarlyBird advisor Evan List, a 12-year VP at Bernstein Private Wealth Management. The company says the portfolios are integrated with a rebalancing engine on the backend that ensures that each equity position stays within a 10% drift of the target allocation that EarlyBird has set within the selected portfolio. It also reviews all portfolios quarterly and rebalances them, if necessary, similar to other robo-investors.
+
+The startup’s investment accounts are currently held with its partner Apex Clearing Corporation, a third-party SEC registered broker-dealer and member of FINRA and Securities Investor Protection Corporation (SIPC). This arrangement protects the investments up to $500,000 total. In time, EarlyBird aims to transition to a broker-dealer itself.
+
+Currently, EarlyBird generates revenue by way of its $3 per month management fee (and $1 per month for each additional child).
+
+Over time, it will make money much as many fintechs do. It plans to leverage the trades and transactions with Apex Clearing. And as it transitions to a broker-dealer (when a sizable user base and assets under management are achieved), it may pursue a fully paid lending program, similar to other brokerages.
+
+These programs aren’t live at this time, to be clear, as the startup is only weeks old.
+
+EarlyBird is backed by $2.4 million in funding, led by Network Ventures, in a round closed in November 2020. Other investors include Chingona Ventures, Bridge Investments, Kairos Angels, Takoma Ventures, Subconscious Ventures and various angels.
+
+The app is a free download on iOS.
+
+ 
+
+Topics
+
+earlybird
+finance
+Fintech
+investing
+Media & Entertainment
+money
+Sarah Perez
+Sarah Perez
+Consumer News Editor
+
+   
+Sarah has worked as a reporter for TechCrunch since August 2011. She joined the company after having previously spent over three years at ReadWriteWeb. Prior to her work as a reporter, Sarah worked in I.T. across a number of industries, including banking, retail and software.
+
+You can contact or verify outreach from Sarah by emailing sarahp@techcrunch.com or via encrypted message at sarahperez.01 on Signal.
+View Bio 
+Event Logo
+October 13-15
+San Francisco, CA
+
+Save up to $680 on your pass before February 27.
+
+Meet investors. Discover your next portfolio company. Hear from 250+ tech leaders, dive into 200+ sessions, and explore 300+ startups building what’s next. Don’t miss these one-time savings.
+
+REGISTER NOW
+Most Popular
+Americans are destroying Flock surveillance cameras
+
+Bill Gurley says that right now, the worst thing you can do for your career is play it safe
+
+The 9,000-pound monster I don’t want to give back
+
+Sam Altman would like to remind you that humans use a lot of energy, too
+
+Google VP warns that two types of AI startups may not survive
+
+Great news for xAI: Grok is now pretty good at answering questions about Baldur’s Gate
+
+FBI says ATM ‘jackpotting’ attacks are on the rise, and netting hackers millions in stolen cash
+
+AMD CEO onstage at CES
+AI
+Meta strikes up to $100B AMD chip deal as it chases ‘personal superintelligence’
+Rebecca Bellan
+7:15 AM PST · February 24, 2026
+Meta plans to purchase potentially up to $100 billion worth of AMD chips, enough to drive roughly six gigawatts of data center power demand, the companies announced Tuesday.
+
+As part of the multiyear agreement, AMD has issued Meta a performance-based warrant for up to 160 million shares of AMD common stock — or about 10% of the company — for $0.01 each, structured to vest alongside certain milestones. The full stock award is conditional on AMD’s share price, which would need to hit $600 for Meta to receive its final tranche, per The Wall Street Journal. AMD’s stock closed at $196.60 on Monday.
+
+Under the agreement, Meta will purchase AMD’s MI540 series of GPUs and its latest generation of CPUs. CPUs are increasingly becoming a core pillar of the AI inference compute stack because they’re efficient, easier to scale, and don’t tie companies solely to Nvidia.
+
+“The CPU market is absolutely on fire,” AMD CEO Lisa Su said Tuesday morning during an investor briefing. “There is significant demand. It has continued to grow, and it really is a result of the AI infrastructure deployments as inferencing scales, as agentic AI scales, and our portfolio is in an extremely good position.”
+
+AMD has been slowly gaining ground as AI firms look to reduce their reliance on Nvidia, which has been the longstanding leader in AI chips and has charged a premium for the title. Last October, AMD and OpenAI struck a similar deal trading equity for an agreement to buy chips.
+
+Meta CEO Mark Zuckerberg said the firm’s partnership with AMD is “an important step” as it diversifies its compute and works toward “personal superintelligence.” Zuckerberg has defined personal superintelligence as AI systems designed to deeply understand and empower individuals in their everyday lives.
+
+Meta has pledged to invest at least $600 billion in U.S. data centers and AI infrastructure over the next several years, including a projected capital expenditure spend of $135 billion in 2026. Meta recently unveiled plans for a $10 billion gas-powered data center campus in Indiana designed for 1 gigawatt of compute capacity.
+
+Save up to $300 or 30% to TechCrunch Founder Summit
+1,000+ founders and investors come together at TechCrunch Founder Summit 2026 for a full day focused on growth, execution, and real-world scaling. Learn from founders and investors who have shaped the industry. Connect with peers navigating similar growth stages. Walk away with tactics you can apply immediately.
+
+Offer ends March 13.
+Boston, MA | June 9, 2026
+REGISTER NOW
+The AMD partnership comes a couple of weeks after Meta struck a multiyear deal to expand its data centers with millions of Nvidia’s latest CPUs and GPUs. The Facebook-maker is also working on its own in-house chips but has reportedly hit delays.
+
+This article has been updated with more information from AMD CEO Lisa Su.
+
+Topics
+
+AI
+AI chips
+amd
+cpus
+data centers
+Enterprise
+GPUS
+Meta
+Rebecca Bellan
+Rebecca Bellan
+Senior Reporter
+
+ 
+Rebecca Bellan is a senior reporter at TechCrunch where she covers the business, policy, and emerging trends shaping artificial intelligence. Her work has also appeared in Forbes, Bloomberg, The Atlantic, The Daily Beast, and other publications.
+
+You can contact or verify outreach from Rebecca by emailing rebecca.bellan@techcrunch.com or via encrypted message at rebeccabellan.491 on Signal.
+
+View Bio 
+Newsletters
+See More 
+Subscribe for the industry’s biggest tech news
+
+
+TechCrunch Daily News
+Every weekday and Sunday, you can get the best of TechCrunch’s coverage.
+
+Add TechCrunch Daily News to your subscription choices
+
+Startups Weekly
+Startups are the core of TechCrunch, so get our best coverage delivered weekly.
+
+Add Startups Weekly to your subscription choices
+
+TechCrunch Week in Review
+Get the best of our coverage, delivered to your inbox every Saturday.
+
+Add TechCrunch Week in Review to your subscription choices
+
+TechCrunch Mobility
+TechCrunch Mobility is your destination for transportation news and insight.
+
+Add TechCrunch Mobility to your subscription choices
+No newsletters selected.
+
+Name
+Email address
+Subscribe
+By submitting your email, you agree to our Terms and Privacy Notice.
+
+Loading the next article
+✕
+TechCrunch Logo
+X
+LinkedIn
+Facebook
+Instagram
+youTube
+Mastodon
+Threads
+Bluesky
+TechCrunch
+Staff
+Contact Us
+Advertise
+Crunchboard Jobs
+Site Map
+Terms of Service
+Privacy Policy
+RSS Terms of Use
+OpenClaw
+AI Memory
+Anthropic
+WordPress
+Cohere
+Tech Layoffs
+ChatGPT
+© 2026 TechCrunch Media LLC.
+
+Some areas of this page may shift around if you resize the browser window. Be sure to check heading and document order.

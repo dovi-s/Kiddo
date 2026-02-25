@@ -1,0 +1,454 @@
+Skip to main content
+Question regarding investing on behalf of someone else? : r/investing
+
+Open menu
+
+
+r/investing
+Search in r/investing
+Log In
+
+Expand user menu
+r/investing icon
+Go to investing
+r/investing
+•
+4y ago
+redslayer
+
+Question regarding investing on behalf of someone else?
+As the title states I have a question regarding investing on behalf of someone else. To keep it short I’ve been sharing my investments and thoughts on the market with my dad and now he wants to send me money so I can invest in different securities for him. I have no problem doing this and think it’s kinda fun - I’ve gone over disclaimers with him and said there’s never a guarantee of return in the markets. If I continue to do this for him what are our future tax implications and at this point should I just teach him how to open a brokerage account and do it himself? He says he wants to be hands off and not as involved as I am. Just looking for information!
+
+*Edit: Seems like the general consensus is to have him open up his own brokerage account and just give me the logins so we can work on it together but avoid the messy tax implications. Thanks for all the helpful responses!
+
+1
+·
+34
+u/officialsquarespace avatar
+officialsquarespace
+•
+Promoted
+
+Start Selling with Squarespace
+Sign Up
+squarespace.com
+Thumbnail image: Start Selling with Squarespace
+Comments Section
+
+AutoModerator
+MOD
+•
+4y ago
+[deleted]
+•
+4y ago
+As others said it’s probably not the best idea from a relationship with your father perspective but if you were to do it please don’t have him send the money to you.
+
+Add yourself as an authorized user or power of attorney on his existing accounts. That way all tax liability still falls to him and the accounts always remain in his name primarily.
+
+15
+u/PM__me_compliments avatar
+PM__me_compliments
+•
+4y ago
+You are mixing business, family and money. That's a dangerous concoction.
+
+Talk with your dad and direct him to good resources and feel free to discuss the market with him, but he needs to control this decision on his own or hire a fiduciary.
+
+12
+u/SeriousMongoose2290 avatar
+SeriousMongoose2290
+•
+4y ago
+I’ll never invest for someone else.
+
+
+6
+megalon43
+•
+4y ago
+There is a different kind of stress when investing for others. You can take a 50% loss on your portfolio yourself, but can you let others take the same kind of loss?
+
+7
+redslayer
+OP
+•
+4y ago
+Thanks lol, super helpful!
+
+
+2
+u/SirGlass avatar
+SirGlass
+•
+4y ago
+Its the best advice here
+
+4
+u/SeriousMongoose2290 avatar
+SeriousMongoose2290
+•
+4y ago
+Anytime!
+
+2
+u/ramplovesyou avatar
+u/ramplovesyou
+•
+Promoted
+
+Humanity achieved spaceflight, but couldn't automate expense reports? Not anymore.
+View More
+ramp.com
+Thumbnail image: Humanity achieved spaceflight, but couldn't automate expense reports? Not anymore.
+emikoala
+•
+4y ago
+If you keep all his shares in your name, you'll have a greater tax burden because you'll be pushed into a higher tax bracket than either of you would have been in individually if some of the gains were in his name.
+
+There's also going to be a lot of messy accounting required - if you want to invest his money and your money in the same commodity in the same account, then later sell some, are you selling his shares or yours? If you're selling less than a year after he gave you money, are you going to pull half the shares from your long-term-held tax lot and half the shares from his short-term-held tax lot and take the tax hit for short-term gains? Does he have any expectation of getting cash flow from this, or will he need cash at a particular time, and is that going to force you into making sales when you don't want to make them? You'll have to calculate the relative gains and losses from mixed lots on every single transaction you make, but on your actual taxes, you will have to claim any gains or losses for securities held in your name, even if behind the scenes you're cutting your dad in off the books.
+
+Just about the only way that kind of accounting isn't going to be a huge messy PITA is if you keep the money you're investing on his behalf in a completely separate account, and at that point, it's trivial to just put his name on the account instead of your own. And even in a completely separate account you don't escape the greater tax burden.
+
+
+4
+redslayer
+OP
+•
+4y ago
+Thank your for this response. Sounds like the easiest thing to do would be to have him create an account and then give me login access so I can manage and help but also separating the tax and income liabilities.
+
+This was the big piece I was looking for - I knew it’d get a little tricky once it came to selling and distribution but I’m more of a long term myself and he’s familiar with my “investment strategies” so he kind of wanted to tag along and match what I was doing.
+
+He’s sent a minimal amount, couple shares bought here and there so nothing major. I’ll probably just hold on to what the current positions are and have him create his own account. I have everything organized on an excel sheet with buy in amounts and dates so I’d say in relatively organized with it right now.
+
+2
+serendipitous_potato
+•
+4y ago
+A lot of people are saying don't and I kind of disagree. It's important to know what you're getting into and understanding the relationship you have with your dad.
+
+Personally, I think not only can this be a good opportunity to increase wealth but also a way to bond with your dad over something that you both share interest in (pun intended).
+
+I'd highly suggest that you keep things VERY transparent. Confirming multiple times regarding strategy and deposits. I'd also make sure you have a good understanding on your dad's risk tolerance and having him an understanding that there may be volatility and potential losses (as you said you have). Installing the App of the broker on your dad's phone so he can follow or maybe create an Excel sheet he can glance at. Transparency is everything for trust and making sure there's no finger pointing at the end of the day.
+
+
+3
+redslayer
+OP
+•
+4y ago
+Thank you for this - it’s been a really nice bonding experience for the both of us and I don’t want to lose out on that aspect.
+
+1
+[deleted]
+•
+4y ago
+Even taxes and relationships aside, I’d never do it because it seems like a pain in the ass.
+
+Are you going to use his account and then trade with two separate accounts? That seems annoying if you’re making a lot of trades
+
+Is he just going to give you 5k to toss in with your 16k? What are you going to do when you make a trade for $4361 and it makes a gain of 4.8%? Are you going to do the math and figure what’s his and what’s yours?
+
+Also if you use your account you can figure out the taxes easy enough but if your making short term trades it’s less of your money at the lower tax rate. Say you have 20k until you go into the next bracket. That’s 20k you can earn at a lower rate. Well say you earn 25k and split it evenly with him. 5k is taxed at the next level so you’ve only profited 10k instead of 20k before paying more taxes
+
+3
+RandolphE6
+•
+4y ago
+Have him open an account in his name. He can share the PW with you if you are doing trading for him. Otherwise, throw whatever into VOO and don't touch it. Keep it simple.
+
+3
+Shop-girlNY152
+•
+4y ago
+I would say, depends on your relationship with your dad. I have a friend who, at 19, doubled his small student savings of $2k to $5k and that impressed his dad. So the dad gave him half of his life savings to invest in (they weren’t rich so it’s not that huge of amount). Unfortunately my friend lost all his dad’s money and his, and even came out with a $20k negative. He didn’t know how to tell the dad but when he did, the dad was very kind and gracious to say his son is more important and he’ll help his son to pay off the $20k he owes.
+
+So, if your dad is the type who wouldn’t blame you forever if the investment doesn’t do well, then go for it. If all under your name, then you’ll be the one taxed for all of it, when you make profits.
+
+2
+scw156
+•
+4y ago
+Curious. How old are you?
+
+
+2
+redslayer
+OP
+•
+4y ago
+Mid 20’s
+
+
+1
+scw156
+•
+4y ago
+Don’t do it. It just creates problems. Have him open a brokerage account; teach him.
+
+11
+u/IBKR_Official avatar
+u/IBKR_Official
+•
+Promoted
+
+IBKR retail clients averaged 19.20% in 2025, beating the S&P 500’s 17.9%. The best-informed investors choose Interactive Brokers.
+Learn More
+interactivebrokers.com
+Thumbnail image: IBKR retail clients averaged 19.20% in 2025, beating the S&P 500’s 17.9%. The best-informed investors choose Interactive Brokers.
+[deleted]
+•
+4y ago
+a. he should open his own account.
+
+b. you should not be involved.
+
+The problem with trying to advise family, even if you are not doing so as a licensed broker/dealer or other agent, is that you cannot extricate yourself from this relationship. He is and always will be your father.
+
+I got into one major financial dealing with family and I am never doing it again. It created tensions that were almost irreparable... and that was on a profitable venture. Family bonds become strained over money more than anything else.
+
+As an investor, as a finance professional, I don't recommend having anything to do with his investing except on a completely passive basis—i.e. encouraging him to read certain news pieces or books on finance, but avoiding giving any kind of specific investment guidance which you are not professionally qualified to do.
+
+2
+InTumeWithMyself
+•
+4y ago
+If you gamble in the markets, don’t do it but if you know what you’re doing, that’s your dad, make the family rich!
+
+A lot of you are on the markets and don’t know half of what you’re doing but keep wasting your money. Maybe dad knows he’s not on into all this but it’s a blessing his son is. Hedge fund traders are not smarter than you. You just have to study.
+
+2
+[deleted]
+•
+4y ago
+I’d be very careful investing others money. I’d suggest you add his funds to yours, and work off standard capital gains tax for that pool of funds.
+
+1
+jonesyman23
+•
+4y ago
+Depends. Are you actively trading? Cause that would be a pain to iron out who owes what for taxes. But if you’re making only a couple buys / sells for him annually then it should be easy to figure out. Just know that everything will be reported to the IRS under your tax ID so you’re on the hook for everything.
+
+1
+ASloppySquirrel
+•
+4y ago
+I love how op is giving a disclaimer to his dad like a vanguard fund.
+
+Did you tell him to check with his financial advisor to determine investment suitability?
+
+
+1
+redslayer
+OP
+•
+4y ago
+Gotta cover my butt regardless. He’s not the most educated in the financial world but doesn’t really want to just throw his money at a financial advisor. I’m happy to do it for him I just was trying to get a better idea when tax season comes
+
+1
+
+1 more reply
+redslayer
+OP
+•
+4y ago
+Damn, getting a lot of hate… just wanted to know what the tax implications were in regards to capital gains tax and then distributing the funds back to him.
+
+0
+
+7 more replies
+More posts you may like
+Does anyone else trade crypto on behalf of others?
+r/BitcoinMarkets icon
+r/BitcoinMarkets
+•
+8y ago
+Does anyone else trade crypto on behalf of others?
+14 upvotes · 70 comments
+u/hrblock avatar
+hrblock
+•
+Promoted
+
+You don’t have to go it alone. Shrinking Season 3 now streaming on Apple TV.
+Thumbnail image: You don’t have to go it alone. Shrinking Season 3 now streaming on Apple TV.
+hrblock.com
+Learn More
+Investing on behalf of my partner?
+r/germany icon
+r/germany
+•
+2y ago
+Investing on behalf of my partner?
+8 comments
+Professional trader trading on my behalf
+r/Webull icon
+r/Webull
+•
+2y ago
+Professional trader trading on my behalf
+20 comments
+My friend wants me to invest his money...
+r/stocks icon
+r/stocks
+•
+5y ago
+My friend wants me to invest his money...
+177 upvotes · 199 comments
+Can someone invest for me if I pay money?
+r/personalfinance
+•
+5y ago
+Can someone invest for me if I pay money?
+10 comments
+What should I consider if I want to invest someone else's money?
+r/legaladvice
+•
+8y ago
+What should I consider if I want to invest someone else's money?
+4 comments
+Question about emergency fund and investing…
+r/investing icon
+r/investing
+•
+13d ago
+Question about emergency fund and investing…
+35 upvotes · 16 comments
+Can I gift someone an investment?
+r/investing icon
+r/investing
+•
+4y ago
+Can I gift someone an investment?
+240 upvotes · 105 comments
+Question - At one point do you personally take profits on successful investments?
+r/investing icon
+r/investing
+•
+5mo ago
+Question - At one point do you personally take profits on successful investments?
+4 upvotes · 51 comments
+Can I make investment accounts for other people I'm not related to?
+r/Money icon
+r/Money
+•
+3mo ago
+Can I make investment accounts for other people I'm not related to?
+1 upvote · 11 comments
+I’ve saved up over $100k and want to go full on in investing.. any advice?
+r/investing icon
+r/investing
+•
+8mo ago
+I’ve saved up over $100k and want to go full on in investing.. any advice?
+49 comments
+Is someone using someone else's trading account legal?
+r/legal
+•
+3y ago
+Is someone using someone else's trading account legal?
+34 upvotes · 83 comments
+How do people earn so much in so little time whilst investing?
+r/investing icon
+r/investing
+•
+2mo ago
+How do people earn so much in so little time whilst investing?
+250 upvotes · 167 comments
+22M Only investing in Index Funds, anything more I should be doing?
+r/investing icon
+r/investing
+•
+2mo ago
+22M Only investing in Index Funds, anything more I should be doing?
+17 upvotes · 24 comments
+Is this a crazy portfolio ? (26M)
+r/investing icon
+r/investing
+•
+4mo ago
+Is this a crazy portfolio ? (26M)
+3 upvotes · 19 comments
+Can you pay someone to day trade for you?
+r/Daytrading icon
+r/Daytrading
+•
+5y ago
+Can you pay someone to day trade for you?
+2 upvotes · 19 comments
+What type of investment account can I secretly open for a child?
+r/personalfinance
+•
+4y ago
+What type of investment account can I secretly open for a child?
+16 upvotes · 41 comments
+Where can I get reliable investing advice?
+r/investing icon
+r/investing
+•
+4mo ago
+Where can I get reliable investing advice?
+27 upvotes · 79 comments
+23 year old here. What is best investment advice you received or you learned about later on.
+r/investing icon
+r/investing
+•
+7mo ago
+23 year old here. What is best investment advice you received or you learned about later on.
+67 upvotes · 134 comments
+What has been your most "significant" investment decision to date, and did it actually pay off?
+r/investing icon
+r/investing
+•
+2mo ago
+What has been your most "significant" investment decision to date, and did it actually pay off?
+76 upvotes · 134 comments
+What is the best way to invest in my situation?
+r/investing icon
+r/investing
+•
+1mo ago
+What is the best way to invest in my situation?
+18 upvotes · 35 comments
+What are we all investing for?
+r/investing icon
+r/investing
+•
+4mo ago
+What are we all investing for?
+43 upvotes · 214 comments
+What got u into investing and how is it going now ?
+r/investing icon
+r/investing
+•
+5mo ago
+What got u into investing and how is it going now ?
+15 upvotes · 44 comments
+Am I invested into the correct funds for retirement?
+r/investing icon
+r/investing
+•
+11d ago
+Am I invested into the correct funds for retirement?
+3 upvotes · 38 comments
+Got tired of waiting for the right time finally started investing consistently
+r/investing icon
+r/investing
+•
+7mo ago
+Got tired of waiting for the right time finally started investing consistently
+82 upvotes · 39 comments
+Top Posts
+Reddit
+reReddit: Top posts of February 7, 2022
+Reddit
+reReddit: Top posts of February 2022
+Reddit
+reReddit: Top posts of 2022
+Reddit Rules
+Privacy Policy
+User Agreement
+Your Privacy Choices
+Accessibility
+Reddit, Inc. © 2026. All rights reserved.

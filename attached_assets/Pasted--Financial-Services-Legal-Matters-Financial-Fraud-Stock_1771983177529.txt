@@ -1,0 +1,280 @@
+
+Financial Services
+Legal Matters
+Financial Fraud
+Stock Trading
+Identity Verification
+Business Regulations
+Investment Management
+Financial Markets Regulat...
+Financial Crime
++ 5
+Is it illegal to buy shares on behalf of other people and manage their shares for them without getting their IDs?
+Sort
+Profile photo for Pete Zeman
+Pete Zeman
+Investment Management ConsultingAuthor has 4.8K answers and 6.8M answer views
+ · 
+5y
+There are several questions here, for US investors:
+
+Is it illegal to manage other peoples’ securities? Not if you don’t violate securities law in the state in which you operate, which typically set standards for how you solicit business and usually require you to be licensed and registered with the state if you manage more than X number of accounts or Y amount of dollars.
+
+Is it illegal to buy shares on behalf of other people? If you mean that you are buying them in your name or the name of a fictitious person or entity, then it’s certainly a violation of securities regs.
+
+And if you conceal the so
+
+Promoted by ComparisonAdviser
+What’s the best pre-retirement decision you ever made?
+Profile photo for Zach S.
+Zach S.
+Economics and Financial Expert
+ · 
+Updated 8mo
+Hands down, hiring a fiduciary financial advisor. No contest.
+
+There are a lot of big decisions you have to make before retirement, such as how much you need to save, when to take Social Security, how to manage taxes, what kind of insurance coverage to keep, how to allocate your investments... it can be a lot. And the closer I got to retirement, the more I realized how many ways there were to mess things up if I wasn’t careful.
+
+I used to think I could handle it all myself by reading a few articles, using some online calculators, maybe rebalance my 401(k) once a year. But when I hit my 50s and sta
+
+Related questions
+Can you buy 100% of the shares of a company, and own it privately?
+Can people buy ammo without a real ID?
+Is it legal for someone to sell their shares without the company’s knowledge?
+In the stock market, can (legal) company insiders buy shares from each other and sell shares to each other?
+What shares should I buy and how?
+Profile photo for David Wagner
+David Wagner
+Certified Public Accountant (CPA) Since 1983Author has 1.2K answers and 386.5K answer views
+ · 
+5y
+Sorry I should have made this an answer instead of a comment in the first place.
+
+Your description of the activity sounds much like a broker and probably requires some form of SEC license and maybe state as well, depending on the laws of your state. Also if you don’t have the ID numbers of your clients then you can’t report the income and another activity as required by law and IRS regulations. In short, between this and the issues in other answers, you could find yourself in a boatload of trouble.
+
+Profile photo for JVS
+JVS
+Studied at LawAuthor has 3.1K answers and 8.5M answer views
+ · 
+5y
+In most jurisdictions, you will not only need to meet money laundering prevention requirements when managing other people‘s money, but also need some regulatory approval to do so. The latter is usually only available to people who have a basic understanding of the former. If you have neither, the latter will usually turn out to be the bigger problem for you than the former.
+
+Related
+Is it against the law to purchase stocks for someone else's account without their consent?
+Profile photo for Christopher Caldwell
+Christopher Caldwell
+Former Computer Security ConsultantAuthor has 3.7K answers and 970.2K answer views
+ · 
+1y
+The laws are going to vary dramatically, dependent upon whether you are acting as a broker, or you have access to his TD America login (as an example).
+
+Perhaps not the way you think, however.
+
+If he gave you his password, he is inevitably in violation of his agreement with his (In my example, TD America) Broker. He has arguably done something that he can be sued for.
+
+He would have a much tougher time suing you, as the jury would rightfully ask "well, then why did you give him your password in violation of your agreement with your computer site?"
+
+if you have a private broker, the legality will depen
+
+Promoted by The Penny Hoarder
+What's some brutally honest advice that everyone should know?
+Profile photo for Lisa Dawson
+Lisa Dawson
+Finance Writer at The Penny Hoarder
+ · 
+Updated Jan 24
+Here’s the thing: I wish I had known these money secrets sooner. They’ve helped so many people save hundreds, secure their family’s future, and grow their bank accounts—myself included.
+
+And honestly? Putting them to use was way easier than I had expected. I bet you can knock out at least three or four of these right now—yes, even from your phone. Don’t wait like I did.
+
+1. Cancel Your Car Insurance
+
+You might not even realize it, but your car insurance company is probably overcharging you. In fact, they’re kind of counting on you not noticing. Luckily, this problem is easy to fix.
+
+Don’t waste your t
+
+Related questions
+Should I sell shares of 3i info? The target in 6months.
+Can I buy shares through my company?
+What is a shared service ID?
+Is this the time to buy Credit Suisse shares?
+Can I buy cigarettes from Amazon without getting an ID?
+Related
+Is it against the law to purchase stocks for someone else's account without their consent?
+Profile photo for Christian Wray
+Christian Wray
+CPA - CA-GI-QR Portfolio Author has 154 answers and 113.6K answer views
+ · 
+1y
+Yes - trading on someone else’s behalf without their consent is explicitly illegal.
+
+There are tons of rules regulating brokers, dealers, investment advisors, and their agents/representatives and tons of exceptions to these rules, but almost all of them require disclosure and consent.
+
+If you are a fiduciary and you are asking yourself whether you need to disclose something or receive consent, just remember that fiduciaries can never disclose too much or receive too much consent.
+
+Related
+Is it legal to buy and own stocks but give others full control of when to trade them, and the benefits of gains/losses go to them (i.e., I simply hold the stock in my name, but it'belongs' to someone else in that they control it and benefit from it)?
+Profile photo for David Miller
+David Miller
+Seasoned investor with decades of experience.Author has 24.6K answers and 73.7M answer views
+ · 
+1y
+Sure, and there are many ways to do so. This is essentially what you are doing when you buy shares of a mutual fund such as FBGRX, or exchange traded fund (ETF) such as VUG, for instance. Both FBGRX and VUG are growth-oriented funds and the companies running these funds have some latitude as to the contents of the funds. At any given time they will have a mix of stocks of various companies that meet the objectives of the funds and some amount of cash on hand to make those purchases with. If a particular company, for instance TSLA misses on earnings, the managers of the funds may reduce the num
+
+Promoted by Almedia
+Is it really possible to earn real cash just by watching YouTube every day?
+Profile photo for Charlee Anthony
+Charlee Anthony
+Go-to Resource for Realistic, Side Hustle Ideas
+ · 
+Dec 16
+Yes. I made up to $1,110 in only 15 days… from just watching YouTube videos in my free time.
+
+I didn’t even want to share this because I’ll definitely get a ton of hate. I know what I say sounds ridiculous. But it’s all real with freecash.
+
+I learned about it when my co-worker bought drinks on him after finding this “new side hustle”. When he said he gets paid for watching videos, I couldn’t stop laughing. Of course, I had to try it🤭 Got a $5 welcome bonus, invested it in an in-app purchase, and got it back as “cashback”.
+
+I said "invested” intentionally. I got my money back every time. I really th
+
+Profile photo for Gregory Harnett
+Gregory Harnett
+Corporate Trainer - Insurance and Securities LicensingAuthor has 2.9K answers and 1M answer views
+ · 
+5y
+Yes, it is called money laundering. And of course, all the taxes will be on your social security number. So, it is stupid in that sense as well.
+
+Related
+Is it legal for me to manage my friend's personal financial portfolio of stocks?
+Profile photo for Pete Zeman
+Pete Zeman
+Investment Management ConsultingAuthor has 4.8K answers and 6.8M answer views
+ · 
+7y
+It’s legal.
+
+There’s no law or regulation that says you can’t. In fact, people do it all the time; they regularly give trading authority or power of attorney to relatives, friends, attorneys and accountants.
+
+Can they sue you? Sure, of course. People who invest on behalf of another person can definitely be held liable if they breach certain legal standards that may apply to their conduct:
+
+If the person doing the trading is licensed by the security industry they have, at minimum, an obligation to buy only suitable investments and an obligation to be supervised by the firm they work for.
+Non licensed
+Promoted by SavingsPro
+What is one of the biggest financial mistakes made by seniors who are close to retirement?
+Profile photo for Mark Bradley
+Mark Bradley
+Economist
+ · 
+Updated Oct 20
+After talking to hundreds of seniors over the years, I’ve realized something important:
+
+Most people aren’t bad with money… They just don’t know the strategies, tools, and discounts that are available once you hit 55+.
+
+The good news? A few simple tweaks can save seniors thousands every year.
+
+Here are the biggest money mistakes I see—and exactly how to fix them:
+
+1. Keeping savings in a low-interest bank account
+
+A lot of seniors still have their savings sitting in accounts paying 0.01% interest. Meanwhile, some banks like the ones on this site are offering up to 5%.
+
+That’s the difference between earnin
+
+Related
+Is it legal to buy and own stocks but give others full control of when to trade them, and the benefits of gains/losses go to them (i.e., I simply hold the stock in my name, but it'belongs' to someone else in that they control it and benefit from it)?
+Profile photo for Mike Flynn
+Mike Flynn
+MBA in Finance & Strategy, The Wharton School (Graduated 1986)Author has 3.3K answers and 2.3M answer views
+ · 
+6y
+If it is being done as a subterfuge to assist the other party in avoiding an obligation or breaking a law, then no.
+
+Otherwise yes, but probably a dumb idea, unless carefully structured. The most common structure would be to hold them in trust for some one else, and normally you would establish a separate legal entity (a trust) to hold them so that they are not commingled with your finances.
+
+Despite the fact it ‘belongs’ to someone else (called the Beneficial Owner), you have all the filing and taxation obligations. As such, you would probably want a clear agreement that you retain sufficient ben
+
+Related
+Is it legal to buy a controlling number of shares in one company by using various aliases, and then combining those shares into one portfolio after the fact?
+Profile photo for Eric Rodriguez
+Eric Rodriguez
+Author has 3.1K answers and 19M answer views
+ · 
+6y
+Yes, but let me explain.
+
+I can buy shares in my business name (business account). Then I buy more shares under my corporate account (different name). Next, I buy shares in my personal name (personal account). This can be easily accomplished by having different types of accounts but at the same brokerage. I have five such accounts at TD Ameritrade.
+
+Next, I buy more shares in my child’s custodial account. I tell my brother to grab some shares. I can ask my Mom to grab some more shares.
+
+We can say ‘Our family’ owns X shares (the number how many). We can keep the shares as they are or we can start to
+
+Your response is private
+Was this worth your time?
+This helps us sort answers on the page.
+Absolutely not
+Definitely yes
+Related
+Is buying a large number of shares of a company and then selling those some days later illegal?
+Profile photo for Alyn Rumbold
+Alyn Rumbold
+Financial Advisor/CFP (1992–present)Author has 793 answers and 2.1M answer views
+ · 
+8y
+No. What's illegal is if you buy a large number of shares in a company because you have non-public information about that company. Regardless of how long you hold the shares or whether you make a profit or not, you've violated securities law.
+
+Also, if you are buying and selling “a large number of shares,” you'll want to pay attention to the daily volume of shares that trade. If the stock trades at an average daily volume of, say, 100,000 shares and you buy 20,000 shares, you will likely influence the stock price upward as you buy (meaning you'd be paying progressively​ more for the stock). You
+
+Related
+Is it illegal to invest in companies without registering my name?
+Profile photo for Kristin A
+Kristin A
+Solicitor in England and WalesAuthor has 1.5K answers and 2.2M answer views
+ · 
+8y
+Laws vary between jurisdictions; what is permitted in one country may not be permitted in others. I can therefore only answer your question in very general terms, which is that companies typically are required to maintain a record, available on request, of who their shareholders are. It’s therefore not so much that it’s likely to be illegal for you to be an unregistered shareholder as it is for the company not to have a record of you being the shareholder.
+
+However, as I say this will vary depending on where you are and whether the company is private or publicly traded. Some jurisdictions would
+
+Related
+Is it illegal for a company to loan another company money to buy its own shares? Why?
+Profile photo for Ellis Ho
+Ellis Ho
+Hong Konger in Mainland ChinaAuthor has 1.2K answers and 1.5M answer views
+ · 
+8y
+It is illegal as it is financial assistance provided for the acquisition of own shares.
+
+It is only legal if such financial assistance (loan in this question) is made in the ordinary course of business (Ex. Company A is a bank or in money lending business).
+
+You can borrow money from a Hongkong Bank and buy the Hongkong Bank shares in the stock market as money lending to you is in the ordinary course of business of Hongkong Bank. However, if Hongkong Bank grants you a very huge loan to buy an unusual significant amount of its shares, it is not in her ordinary course of business.
+
+Why? It is the law.
+
+Related questions
+Can you buy 100% of the shares of a company, and own it privately?
+Can people buy ammo without a real ID?
+Is it legal for someone to sell their shares without the company’s knowledge?
+In the stock market, can (legal) company insiders buy shares from each other and sell shares to each other?
+What shares should I buy and how?
+Should I sell shares of 3i info? The target in 6months.
+Can I buy shares through my company?
+What is a shared service ID?
+Is this the time to buy Credit Suisse shares?
+Can I buy cigarettes from Amazon without getting an ID?
+Would you buy HSBC shares?
+Why does the law state that only fully paid up shares can be bought back?
+Is buying a large number of shares of a company and then selling those some days later illegal?
+Is it illegal to sell someone’s shares that you have said will increase in value when they will likely decrease?
+Could you buy shares from your own company, in order to hold majority shares?
+Related questions
+Can you buy 100% of the shares of a company, and own it privately?
+Can people buy ammo without a real ID?
+Is it legal for someone to sell their shares without the company’s knowledge?
+In the stock market, can (legal) company insiders buy shares from each other and sell shares to each other?
+What shares should I buy and how?
+Should I sell shares of 3i info? The target in 6months.
+
+AD
+
+AD
+Advertisement
+AboutCareersPrivacyTermsContactLanguagesYour Ad ChoicesPress© Quora, Inc. 2026

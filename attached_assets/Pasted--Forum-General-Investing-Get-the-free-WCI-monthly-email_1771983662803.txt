@@ -1,0 +1,166 @@
+
+Forum
+General Investing
+Get the free WCI monthly email newsletter (with free email Financial Boot Camp course) and take control of your finances today!
+What to do with stocks given as gift
+
+PostsLatest ActivityPhotos
+Page
+1
+of
+1
+
+Filter
+ATLooler
+ATLooler
+Member
+Join Date: Oct 2022
+Posts: 10
+#1
+What to do with stocks given as gift
+02-18-2024, 03:14 PM
+
+Hi all, I recently received a large sum of money (>100k) as a gift in the form of two stocks. They did well last year but I feel uncomfortable leaving them as my investing strategy has been always to invest in something like VTSAX. I wanted to see what the best course of action would be? I am not sure the tax implications of transferring that much money into an index fund or something like VTSAX but want to learn what my options would be that would be the least costly and smartest investment.
+
+Thanks!
+Tags: None
+Tim
+Tim
+Member
+Join Date: Sep 2018
+Posts: 22040
+#2
+02-18-2024, 03:40 PM
+Find out the basis of the person that gifted the stock to you. If they have detail you can use specific identification or average cost. Older than one year will be capital gains rate. Regardless, taxes do not reduce the gift, the taxes came with it. Congratulations.
+You can donate shares and get deductions, or gift yourself. But that wasn't your question.
+deanyar
+deanyar
+Member
+Join Date: Mar 2019
+Posts: 1321
+#3
+02-19-2024, 09:49 AM
+Yeah - I agree w Tim. It depends on what the unrealized cap gains are on the fund(s) are. 2 key pieces of info that I would want for each fund are unrealized cap gains and expense ratios. Based on those, and what the funds actually are, I would make a determination if I should sell each one or not - if the ERs are low and unrealized cap gains are high, and they seem like reasonable funds, then you could consider keeping them as a "legacy fund". Maybe the ER is high, unrealized cap gains are high, and the fund is not what you want - if giving to charity is part of your plan, then donating these may be considered, as Tim says. Or if there is minimal cap gains or cap loss, you can just sell and then buy what you want (vtsax). But I would eval each one individually and decide what to do...
+Kamban
+Kamban
+Moderator
+Join Date: Aug 2016
+Posts: 8638
+#4
+02-19-2024, 10:52 AM
+Originally posted by ATLooler 
+Hi all, I recently received a large sum of money (>100k) as a gift in the form of two stocks. They did well last year but I feel uncomfortable leaving them as my investing strategy has been always to invest in something like VTSAX. I wanted to see what the best course of action would be? I am not sure the tax implications of transferring that much money into an index fund or something like VTSAX but want to learn what my options would be that would be the least costly and smartest investment.
+
+Thanks!
+I would approach it differently. If I understand you have received shares in stocks of two companies that add up >100K in value. If I were you I would look and see what those companies are before you rush to sell them. If it is something like Apple or Home Depot or Proctor and Gamble I would not be in a rush to sell them. They probably will do about the same as the market or better over the next few years.
+
+Remember, you have to sell those shares to invest in VSTAX. and there is a good chance the basis of these shares are low and any gain will be LTCG for which you will pay taxes. Decide if you want to do that now and move to a index fund or ETF or leave the stocks alone. I have owned single stocks for decades and learned to live with it. Your attitude towards it might be different.
+Guest
+Guest
+#5
+02-19-2024, 11:19 AM
+Originally posted by Kamban 
+
+I would approach it differently. If I understand you have received shares in stocks of two companies that add up >100K in value. If I were you I would look and see what those companies are before you rush to sell them. If it is something like Apple or Home Depot or Proctor and Gamble I would not be in a rush to sell them. They probably will do about the same as the market or better over the next few years.
+
+Remember, you have to sell those shares to invest in VSTAX. and there is a good chance the basis of these shares are low and any gain will be LTCG for which you will pay taxes. Decide if you want to do that now and move to a index fund or ETF or leave the stocks alone. I have owned single stocks for decades and learned to live with it. Your attitude towards it might be different.
+There is nothing poisonous about holding shares in GOOD individual companies outside of your core index holdings. Look at Morningstar ratings or Schwab grade ( although Schwab is more momentum biased). I hold a great group of 10 or so stocks that have all more than doubled , with a few more than 10X. My tax bill would be in seven figures, so I defer the sales until after my death, and thus stepped up basis for my wife, who can then lateral these to an index..
+You can also think of gifting these to your children when they have established a low marginal and thus no capital gains tax exposure.( Not when they are kids and thus subject to kiddie tax limitations).
+If these positions are a majority of your holdings, then ignore everything I’ve said, and sell them.
+ATLooler
+ATLooler
+Member
+Join Date: Oct 2022
+Posts: 10
+#6
+02-20-2024, 01:34 PM
+Thank you all, this information is very helpful. I think I may have inadequately explained the current holdings. Kamban is correct in that they are in shares in two companies that add up to >100k. They are very large corporations that have done well in the last year or two but are also volatile. I know that in the long run it may be fine but I don't think I am equipped to handle the volatility and would feel much more comfortable with the money in an index fund. If I recently received this gift and have owned the stocks < 1-year, are taxes applicable were I to transfer the money to an index fund?
+Kamban
+Kamban
+Moderator
+Join Date: Aug 2016
+Posts: 8638
+#7
+02-20-2024, 06:07 PM
+Originally posted by ATLooler 
+Thank you all, this information is very helpful. I think I may have inadequately explained the current holdings. Kamban is correct in that they are in shares in two companies that add up to >100k. They are very large corporations that have done well in the last year or two but are also volatile. I know that in the long run it may be fine but I don't think I am equipped to handle the volatility and would feel much more comfortable with the money in an index fund. If I recently received this gift and have owned the stocks < 1-year, are taxes applicable were I to transfer the money to an index fund?
+Johanna might explain it better but if I recollect it right, if a person dies and passes the stocks to you in his will, you get a step up in basis. So if the stock was bought for $30/share and is now $100, you get to use $100 as the new basis. If you sell it at $110, you get to pay taxes on only $10 in gain.
+
+On the other hand, if the person is living while he gifted the stock and you do the same thing as noted above, you pay taxes on the difference between the original $30 and the new $110 per share. Even if you sell it right away you will pay capital gain taxes on the difference between $30 and $100.
+
+This is the most important difference.
+
+PS: Shares held for < 1 year pay a higher rate of cap gains taxes called short term CG taxes. Those held for >1 year pay a lower rate, called long term CG taxes.
+Last edited by Kamban; 02-21-2024, 10:03 AM.
+Random1
+Random1
+Member
+Join Date: Jul 2020
+Posts: 2631
+#8
+02-21-2024, 05:59 AM
+If I recently received this gift and have owned the stocks < 1-year, are taxes applicable were I to transfer the money to an index fund?
+You have to sell the stock and buy the MF, these are separate transactions. You just can't transfer money to a MF, you need to purchase the shares from the proceeds of selling the stock.
+Bmac
+Bmac
+Member
+Join Date: Oct 2017
+Posts: 1469
+#9
+02-21-2024, 08:18 AM
+If the stock were gifted (not inherited), the basis and holding period are the same as that of the person that gifted the stock to you. If these have very low cost basis (significant unrealized capital gains) and are good blue chip companies, I would hold them but not have dividends reinvested. If, on the other hand, there is minimal unrealized capital gains, then sell away. Of course, if they have been purchased within the last year and would be short term gains, I would at least wait until they had been owned (from date of the gifter's purchase) 1 day greater than 1 year so any gains were taxed at favorable long term capital gains rates (mostly 15%, depending on other income).
+Kamban
+Kamban
+Moderator
+Join Date: Aug 2016
+Posts: 8638
+#10
+02-21-2024, 10:12 AM
+Originally posted by ATLooler 
+Thank you all, this information is very helpful. I think I may have inadequately explained the current holdings. Kamban is correct in that they are in shares in two companies that add up to >100k. They are very large corporations that have done well in the last year or two but are also volatile. I know that in the long run it may be fine but I don't think I am equipped to handle the volatility and would feel much more comfortable with the money in an index fund. If I recently received this gift and have owned the stocks < 1-year, are taxes applicable were I to transfer the money to an index fund?
+You cannot just transfer money from stock to mutual funds or ETF. You have to sell stocks, pay taxes and then reinvest the remaining amount in mutual funds, as Random1 points out. The only time you can avoid paying taxes soon is in real estate when you do a 1031 exchange. But at the end you still have to pay taxes unless you die and your kid inherits it and has step up basis.
+
+From you posting it is clear you need to do a lot of reading since you are not quite clear about basic investing. My suggestions are to read WCI book on investing. If you can let us know what the stocks are we can give an idea if it is worth holding on to or not. And as I said earlier, did you inherit it after the person who owned it died or is the person living and has gifted it to you when he was alive.
+The White Coat Investor
+The White Coat Investor
+Founder
+Join Date: May 2011
+Posts: 13126
+#11
+02-21-2024, 11:16 AM
+
+This is just the classic "legacy investment" issue with a slight twist in that it is slightly harder to get the basis info. More info on dealing with legacy investments here:
+
+
+6 Options for Legacy Holdings in Your Taxable Account | White Coat Investor
+https://www.whitecoatinvestor.com/legacy-holdings-in-taxable/
+What should you do with legacy holdings you no longer want? Sell them and pay the taxes? Hold them for a while longer? Here's our advice.
+Helping those who wear the white coat get a fair shake on Wall Street since 2011
+Channels
+Collapse
+Forum
+General/Welcome
+Personal Finance and Budgeting
+General Investing
+Retirement Accounts
+Insurance
+Alternative Investments
+Student Loan Management
+Tax Reduction
+Mortgages and Home Buying
+Financial Advisors
+Real Estate Investing
+Estate Planning
+Asset Protection
+Employment, Contracts, Practice Management,
+Beginners Helping Beginners
+Women's Issues
+Retirees
+The Lounge
+Galleries
+Main Gallery
+HelpContact UsTerms of ServicePrivatsphäreGo to top
+Copyright 2023 - The White Coat Investor, LLC
+Powered by vBulletin® Version 6.1.6
+Copyright © 2026 MH Sub I, LLC dba vBulletin. All rights reserved.
+All times are GMT-7. This page was generated at 06:39 PM.

@@ -1,0 +1,167 @@
+Skip to contentSkip to main menu
+A business journal from the Wharton School of the University of Pennsylvania
+
+Mobile menu toggle
+Go to site search
+Mobile menu toggle
+Topics
+Toggle submenu
+Series
+Toggle submenu
+Articles
+Podcasts
+Videos
+Special Reports
+Skip Navigation
+From Spare Change to Nest Egg: How Acorns Encourages Saving and Investing
+January 23, 2019 • 16 min read
+For Acorns’ Jennifer Barrett, the California-based firm's mission is to solve the retirement crisis in America – one penny at a time.
+
+A nest made of straw containing several golden coins, symbolizing financial security or a savings nest egg.
+Finance & Accounting
+Written By
+Knowledge at Wharton Staff
+
+People often believe that investing is difficult, time-consuming, complicated and requires large sums of money. Acorns, a California-based firm that describes itself as a “financial wellness system,” disagrees. Its founders believe investing can be made simple, easy and accessible to people of all incomes.
+
+Acorns encourages users to invest their spare change by rounding up a purchase to the next dollar and investing the difference. Through the Acorns mobile app, the company links to its clients’ bank accounts to save and invest the spare change automatically. For example, if someone buys a cup of coffee for $1.35, Acorns will round it up to $2 and invest 65 cents in an investment portfolio. Because most people are more focused on spending than saving, tying these two activities together leads to small but frequent savings and investments. And from these financial “acorns,” giant oak trees potentially could grow.
+
+Since the company was founded in 2014, Acorns has signed up more than 4.5 million customers. Jennifer Barrett, its chief education officer, believes this rapid growth has come about because “the concept is simple and yet compelling.”
+
+A person sitting on a couch, focusing on their smartphone, with a banner promoting "Knowledge at Wharton" on Apple News.
+In a conversation with Knowledge at Wharton at the recent Fearless in Fintech conference in New York, Barrett discussed Acorns’ journey until now and explained its vision for the future.
+
+Below is an edited version of the interview.
+
+Knowledge at Wharton: What was the origin of Acorns? What inspired the company’s creation?
+
+Jennifer Barrett: A father-and-son team started Acorns. It was the son — Jeff Cruttenden’s — idea. Since his dad [Walter Cruttenden] was in the financial industry, he had grown up being comfortable around investing. When Jeff was in college, he realized that he was unique — not only did he invest, he was actually interested and not intimidated by it. He wondered why we make it so hard for Americans to invest when it’s so important to their well-being, and started thinking about how we could make it easy for people to invest.
+
+Jeff came up with the idea of rounding up spending on purchases and investing the change. The idea behind it was that you’re already spending; if we can attach the process of investing to something that you’re already doing, and we can lower the risk thresholds, we can get a lot more people investing. And then, once they’re in, we slowly nudge them to save and invest more. Jeff worked with his dad and they came up with a prototype, and that was how Acorns was born. His dad came up with the name. He was walking in the woods when he looked down and saw acorns on the ground. He thought, “That’s what we’re doing. We’re planting an acorn, and over time it will become an oak tree.”
+
+Knowledge at Wharton: How big is the oak tree now?
+
+Barrett: We have more than 4.5 million customers and went from a few employees to more than 260 employees in four years, so we’ve grown quite a bit. We have more than $1 billion in assets under management. This is not a lot compared to other financial services companies, but our goal isn’t to compete with them on that basis. In fact, we use a subscription model so it doesn’t matter how much someone has invested. We want everyone to invest more for their own sake, but our business model is not attached to the amount of money they have in their accounts. It is meant to be seen as a service, versus a traditional financial investment firm.
+
+“We use a subscription model so it doesn’t matter how much someone has invested.”
+
+Knowledge at Wharton: What’s the profile of your user base?
+
+Barrett: We like to say that we range from 18 to 88 years. But our average user is about 29 years old. When you think of the avatar for our user base, it’s someone who’s 29, probably college-educated, carrying a fair amount of student debt and making somewhere around $50,000 or $55,000 in household income. That is fairly representative of America. Also, our clients tend to congregate around urban areas. I think that’s natural given we’re a fintech company based on the West and East Coast. We started in those two areas, but now we have people in every state.
+
+Knowledge at Wharton: You’ve scaled rapidly. What are some of the factors that have driven this growth?
+
+Barrett: I believe it’s because the concept is simple and yet compelling. A lot of our growth comes from people referring friends to try it. Because the threshold is very low — you’re just signing up and putting change in — it’s a pretty easy entry point. We’ve also got a lot of press, which has helped.
+
+The people we’re aiming at are those who have been largely left out of the investment world. Lots of companies used to require a minimum threshold of $1,000, $5,000 or $10,000 to open a brokerage account. That was intimidating for a lot of people. Also, these were self-directed accounts, which [again] is intimidating. I think we [came in] at a time when people were realizing that they’re going to be responsible for taking care of themselves more than ever before.
+
+They’re feeling the pressure to invest. They have a lot of student debt. They’re not making as much money as their parents did. They feel like they don’t have a lot of money to invest, but they know they need to. I think we have addressed both those needs, where they feel like they’re doing something for their future, even if it’s just $5 a week, or $5 a month, or something like that. They feel like they can ramp it up when they’re ready.
+
+Knowledge at Wharton: How is the financial literacy at the lower age demographic? It feels as though saving is not a top priority for most young people. Tell us about the landscape that you’re seeing, especially with today’s youth.
+
+Barrett: Financial literacy is one of the big gaps. We’re going to be more and more responsible for our own finances. There are no pensions anymore. A lot of people can’t even depend on a 401(k). Social Security is shrinking. All these things are happening, but we’re not educating people on how to manage their money. I think [only] 17 states require personal finance to be part of their high school curriculum. That’s terrifying.
+
+One of the reasons why I moved into my current role is that we’ve got 4.5 million people who’ve signed up for this app and trust us with their personal information and with their money in some capacity. We have the unique opportunity to teach them, to nudge them along. And it’s a real challenge, because you have to connect it directly to what they’re doing for them to retain it.
+
+“The people that we’re aiming at are those who have been largely left out of the investment world.”
+
+A lot of people who come to us have very little knowledge of investing. We get emails where people say, “What are you doing with my money? Are you saving my money?” People think it’s a savings app. So the first phase of education is, “Here is exactly what happens with your money when you invest with Acorns.” We animate it and show them the journey of their money. We’re working on a full on-boarding education experience that addresses these issues.
+
+The other thing is that if you don’t have experience in investing, and particularly because this generation has only known a bull market, every time the market drops, it’s terrifying for them. A big part of our education is showing them the history of the stock markets and explaining the risks and the returns and the benefits of sticking with it.
+
+Knowledge at Wharton: Do they seem open to learning about it?
+
+Barrett: I think so. When it’s tied directly to their money, it starts to connect. If you explain compounding, it doesn’t mean anything to them, but when you show them the potential [performance] screen … and explain that “if you put $10 more a month, or $10 more a week, this is how it shifts the trajectory of your money, and this is what you’ll have in five, 10, 20 years,” they start to understand it. But it is difficult. As a country, we don’t value financial education. We don’t talk about it in the way that we talk about other core life skills.
+
+Knowledge at Wharton: There’s a school of thought that says that to understand finances and to have effective financial literacy, you have to feel your money. You have to hold it. [But] your world is about financial technology, and it’s this new world that we’re all going towards. We all need to understand it more. Do you think you can have effective financial literacy and financial management when you’re not actually holding tangible money?
+
+Barrett: That’s a good point. My background is mostly financial journalism, and we wrote a lot about the benefits of using cash. There have been lots of studies about the difference [in spending] when you use a credit card versus cash. There is a visceral emotion attached to parting with your cash. I have tried it out personally. When I was getting my finances together, I used only cash for a month just to see how it would change the way I spend. It’s incredible. It really does [change your spending behavior] because you become so much more mindful about how you’re spending.
+
+The challenge now is, how do you become mindful about your spending when you’re not physically feeling that money and peeling the bills out of your wallet? With Acorns, as soon as you’ve spent money on your debit card, you get a notification. This is for two reasons.
+
+“Because this generation has only known a bull market, every time the market drops, it’s terrifying for them.”
+
+One, we want you to be mindful about what you’re spending. Two, if someone steals your card, you will see on your phone immediately if they try to use it, and you can lock it remotely. But a big part is showing people their transactions immediately. It’s about connecting them as much as we can with what they’re doing with their money and where their money is going.
+
+I was talking to a financial adviser about how to determine a client’s risk tolerance. He said he takes a stack of bills, and then he takes half of them and puts them away, and asks the client, “How are you feeling right now?” And then he tells them, “Well, that’s what it’s going to feel like sometimes. The market will go down by 50%. Then it comes back. But you have to be in touch with whatever that feeling is inside you when you see that number drop and know whether you can ride that out or not.” We have to find digital proxies that can have the same impact. That’s mostly visuals, like the performance screen.
+
+Knowledge at Wharton: By nature, young people don’t think long term. But they do need to think about [investing] as a long-term journey. What are you doing on that front?
+
+Barrett: We have a money lab that we formed in 2018. We work with a lot of behavioral economists, and we do different tests with our users. In one test, we took the same amount of money that you would be investing each month, but we divided it by day and by month and by week. We took $150, and we split it as $5 every day, $35 every week, $150 a month, and we asked the users how they would like to invest.
+
+Nearly 30% opted to invest $5 a day without making the connection that it’s essentially the same amount. We used that as a guide and promoted recurring investment options for that amount. Once you understand the mindset, you can make little nudges and people start changing their behavior without even realizing it. It’s fascinating.
+
+Knowledge at Wharton: Acorns is essentially addressing younger people, but are customers staying with Acorns? And if so, as they get older, are you addressing the older population differently than the younger population?
+
+Barrett: We’re just starting to think about that. But we do have a surprising number of customers in their 40s and 50s. Acorns makes it easy to diversify your investments. There are some basic principles that almost anyone can get behind, no matter what your age is. We’re thinking about it in the context of a financial wellness system, which is what we’re moving towards. We’re also looking at how we can personalize our education and our messaging more over the next year, and in a way that’s not creepy or feels too invasive.
+
+I can give you an example. We have more than 250 companies as our Found Money partners. [Acorns’ Found Money partners automatically invest in an Acorns customer’s account. Found Money rewards are credited to the account between 90 and 120 days after the account holder makes a purchase with one of the partners.] We know from our transactional data — that’s anonymous — which companies people are spending money with. So we [partnered with] those companies, and now, when our customers spend with them, they put money into the customer’s investment account. Instead of cash back, it’s a cash forward concept.
+
+“Managing your money is not hard. It comes down to some super-basic concepts.”
+
+But our users don’t always know about it, [so we educate them]. For example, for people who had student loans, we wrote educational pieces that talked about the various aspects of refinancing, the different players in that space, and what they should consider if they are going to refinance their loans. And then separately, almost like an ad on the side, we pointed out that there were some refinancing players that were part of our Found Money program. So, if they use those players, they get more money in their account. I think something like that can be beneficial for our users, without feeling creepy, because we’re not forcing anything on them.
+
+We are looking at what little nudges we can make to help alleviate some of the financial burdens that people have or help them save a little more each month. We’re moving more and more in that direction, and we’ll probably do more customized content for different age groups or people with different goals.
+
+Knowledge at Wharton: Is Acorns potentially a part of what might be a diversification strategy? If you’re keeping someone as a client investing this way, then over time they will end up getting a broker. So, is it a part of what could be a diversified strategy?
+
+Barrett: Yes. We think of it as being a contained system. If you only use Acorns, you should be able to reach your financial goals using it. The goal is that you should be financially successful. But people have 401(k)s, and I think it can complement that. People may want to invest on their own, and we don’t offer that as a product, so I think it can serve as a complement. I’m sure there are Acorns users who are investing on the side as well and they may be using their Acorns portfolio as a hedge, because we balance the portfolios to minimize the risk as much as we can.
+
+Knowledge at Wharton: What do you think would be most useful for high school educators to know about financial technology so that they can educate the next generation about it?
+
+Barrett: There’s a proliferation of fintech companies and there’s an app for almost any kind of financial service that can help young people make good financial choices. Young people are used to having devices that help them, distract them, entertain them — but also collect information about them and help them make good choices. My younger son just turned 8. He has a [fitness device] and looks at the steps he has taken every day. He has a goal that he’s supposed to hit, and there’s a little celebratory chiming whenever he hits his goal. A lot of kids in his class have these kinds of devices.
+
+A model like this — where technology and apps on your phone or a mobile device are helping to drive healthy behavior — can help connect with kids. Acorns is only one of many that do the same thing for your money. These apps fit easily into your life. You are already on your phone, and you don’t have to go out of your way to set it up.
+
+When people ask me about investing, I tell them, it is not that complicated. You don’t need to be tracking all of these stocks and staying on top of things every day. It’s about putting your money in regularly in a lot of different funds and letting it grow. Managing your money is not hard. It comes down to some basic concepts, like reinforcing the idea that you should always live on 20% less than you earn. If we could teach the next generation that one message, we would solve the retirement crisis.
+
+Knowledge at Wharton: What is your vision for Acorns in the next two to three years?
+
+Barrett: One of the things we’re thinking about is how can we customize and personalize content around the goals or preferences or life stages of our customers. We want to marry our content and education to what’s happening specifically with your money, and then nudge you to adopt good behaviors and good habits. We’re also trying to play up a sense of community — that when you join Acorns, you’re joining a community of people who are trying to save and invest and change the trajectory of their lives. If you can tap into that and feel a part of something larger, it can be very powerful.
+
+More From Knowledge at Wharton
+A glowing Bitcoin symbol above a person's hand, set against a blurred cityscape background, symbolizing cryptocurrency and digital finance.
+Fintech
+Consumer Cryptocurrency Confidence Report 2025
+February 23, 2026 • 10 min read
+Two spheres of different sizes on a yellow seesaw balanced on a yellow triangular fulcrum, all set against a yellow background.
+Finance & Accounting
+How ‘Lemon Shocks’ Hurt Aggregate Investment
+February 17, 2026 • 7 min read
+Stacks of gold coins with a dollar sign embossed on each. In the foreground, the text "This Week in Business" with a city skyline and audio wave icon.
+Finance & Accounting
+Stablecoins Explained: Bridging Digital Assets and Traditional Finance
+February 13, 2026 • 11 min listen
+Looking for more insights?
+Sign up to stay informed about our latest article releases.
+
+Name
+Enter your name...
+Email
+Enter your email...
+
+How often would you like to receive newsletters? 
+Get the latest from Knowledge at Wharton every week
+Get a roundup of the best content from Knowledge at Wharton once a month
+Subscribe
+
+A business journal from the Wharton School of the University of Pennsylvania
+
+About
+Knowledge at Wharton
+The Wharton School
+Faculty
+Contact Us
+Bookstore
+Shop Books
+Resources
+Report a Bug
+Twitter
+Facebook
+LinkedIn
+YouTube
+Instagram
+©2026 Knowledge at Wharton. All rights reserved. Knowledge at Wharton is an affiliate of the Wharton School of the University of Pennsylvania.
+
+Privacy Policy
+Report Accessibility Issues and Get Help
