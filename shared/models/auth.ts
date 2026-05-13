@@ -30,6 +30,15 @@ export const users = pgTable("users", {
   // again. Toggleable by admins; defaults false so production users are
   // unaffected.
   isTestUser: boolean("is_test_user").notNull().default(false),
+  // Demo account flag for the public-facing shareable Dunphy demo at
+  // /login (creds in DUNPHY_DEMO_SPEC.md). When true, the user is part
+  // of the paper-trading demo experience: a banner renders on every
+  // authenticated page, the seeded fund state is canonical and reset-
+  // ready, and the account is meant to be shared publicly. Distinct
+  // from is_test_user (dev-pollution flag) — demo accounts are
+  // PRODUCTION-INTENDED and content is curated; test accounts are
+  // dev-only and get filtered from public surfaces. Defaults false.
+  isDemoAccount: boolean("is_demo_account").notNull().default(false),
   kycStatus: text("kyc_status").default("none"),
   kycSubmittedAt: timestamp("kyc_submitted_at"),
   kycData: jsonb("kyc_data"),

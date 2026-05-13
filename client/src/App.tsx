@@ -12,6 +12,7 @@ import { KoraProvider } from "./lib/KoraContext";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { GlobalShareModal } from "@/components/GlobalShareModal";
+import { DemoBanner } from "@/components/DemoBanner";
 import { Mascot } from "@/components/ui/mascot";
 import { GradientText } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
@@ -713,6 +714,7 @@ function Router() {
   return (
     <>
       <ScrollToTop />
+      <DemoBanner />
       <Suspense fallback={<RouteLoadingFallback />}>
         <RouteFader>
         <Switch>
