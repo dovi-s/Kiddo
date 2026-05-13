@@ -8400,10 +8400,20 @@ export default function Dashboard() {
                                   return (
                                     <div style={{ borderRadius: 10, background: "rgba(26,67,50,0.05)", border: "1px solid rgba(26,67,50,0.15)", padding: "10px 12px" }}>
                                       <p style={{ fontSize: 11.5, fontWeight: 600, color: "rgb(26,67,50)", lineHeight: 1.5 }}>
-                                        At today's pace, {childFirst} fund hits {fmtC(G)} in {horizonText} (around {arrivalLabel}).
+                                        {/* Tightened 2026-05-13 — was "At today's pace,
+                                            Emma's fund hits $5,000 in ~4 years (around Feb 2030).
+                                            $50/mo of recurring · 7%/yr assumed · projection only."
+                                            "hits" replaced with "is on pace for" (warmer, lets the
+                                            fund accumulate rather than punch a number); "today's pace"
+                                            dropped as filler; "around" before the date dropped because
+                                            the relative duration already implies approximation; "of"
+                                            removed from "$50/mo of recurring" (form-jargon filler);
+                                            "projection only" removed as defensive disclosure since
+                                            "growth assumed" already does that work. */}
+                                        {childFirst} fund is on pace for {fmtC(G)} in {horizonText} ({arrivalLabel}).
                                       </p>
                                       <p style={{ fontSize: 10.5, color: "rgba(26,67,50,0.7)", lineHeight: 1.5, marginTop: 3 }}>
-                                        {monthlyDisplay ? `${monthlyDisplay}/mo of recurring` : "No recurring set up yet"} · 7%/yr assumed · projection only.
+                                        {monthlyDisplay ? `${monthlyDisplay}/mo recurring · ` : ""}7% growth assumed.
                                       </p>
                                     </div>
                                   );
