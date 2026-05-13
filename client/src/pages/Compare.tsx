@@ -467,7 +467,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       {
         title: "Why families use Kiddo on top of, or instead of, Fidelity",
         body: [
-          "The four moats that separate Kiddo from a generic brokerage UTMA: the gifting infrastructure (shareable link, event pages, no-account-needed checkout), the Memory Book that compounds alongside the money (every gift remembered, every note saved, voice memories sealed for 18), the brokerage UX opinionated for a kid-fund (age-aware Kid View, age-band strategy nudges from 11 onward), and the at-18 transition designed as an emotional climax rather than a statutory cliff.",
+          "Four moats separate Kiddo from a generic brokerage UTMA. First, the gifting infrastructure: shareable link, event pages, no-account-needed checkout. Second, the Memory Book that compounds alongside the money. Every gift remembered, every note saved, voice memories sealed for 18. Third, the brokerage UX opinionated for a kid-fund: age-aware Kid View, age-band strategy nudges from 11 onward. Fourth, the at-18 transition designed as an emotional climax rather than a statutory cliff.",
           "Many thoughtful families keep their Fidelity 529 for education and start a Kiddo UTMA for the gifting ritual. Different jobs, different products. The 529 is restricted to qualified education expenses; the Kiddo UTMA is the kid's at 18, no restrictions, no penalties.",
         ],
       },
