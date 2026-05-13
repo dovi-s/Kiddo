@@ -84,7 +84,26 @@ entry is the whole product in one quote.
 
 ## Demo credentials (shareable)
 
-All six accounts use the same password: **`dunphyfamily`**
+All seven accounts use the same password: **`dunphyfamily`**
+
+### On password strength
+
+`dunphyfamily` is 12 characters, no numbers or symbols. It meets
+Kora's current minimum (auth.ts:649 — ≥8 chars, no complexity rules)
+and is intentionally simple for a **public demo credential** where
+the security posture is "the account is read-only, sandboxed, and
+resets nightly — anyone can know the password."
+
+A stronger demo password (`Dunphys2026!`, `dunphy-family-demo-2026`,
+etc.) is fine if it reads better in marketing copy, but doesn't add
+real security since the password is shared publicly at `/demo`.
+
+**Separate concern: production password requirements.** Kora's
+current 8-char minimum with no complexity rules is weak by modern
+standards. Worth auditing as a separate task — recommend min 10
+chars + zxcvbn-style strength scoring instead of arbitrary "must
+contain a number and symbol" rules that just produce `Password1!`
+patterns. Not blocking this demo, but flag.
 
 | Login | Password | Job |
 |---|---|---|
@@ -326,10 +345,63 @@ after that each piece is incremental.
    up as a co-parent via the existing invitation flow at seed time.
    Demonstrates the real co-parent UX.
 
-2. **Voice-memo content for Gloria.** Recording real audio in
-   Spanish requires either Gloria's actor's consent (won't get) OR a
-   stand-in voice. Recommended: hire a voice actor for 30 seconds,
-   one-time cost, owned by Kora. Costs ~$50 on Fiverr.
+2. **Voice-memo content for Gloria — IP + copyright situation.**
+   THREE phases of asset, each with different legal posture:
+
+   - **Phase A (development placeholder, internal only):** A
+     YouTube clip of Sofía Vergara's Gloria from Modern Family is
+     fine as a TEMPORARY placeholder ON THE DEV BOX while we build.
+     Not displayed publicly, not committed to the repo, not deployed.
+     Pure scaffolding for "does the audio player render correctly,
+     does the Memory Book entry layout work with voice." Same legal
+     posture as a designer using a screenshot from another product
+     in a Figma mockup — fine internally, never ships.
+
+   - **Phase B (staging/beta, restricted access):** Same
+     placeholder can stay through staging if the staging URL is
+     behind auth and not publicly indexed. Still TEMPORARY — clear
+     ticket to replace before production launch.
+
+   - **Phase C (production demo, public-facing):** MUST be original
+     content. Two paths:
+       1. **Voice actor on Fiverr (~$50, recommended)** — find a
+          Spanish-speaking voice actor with a Latin American accent
+          (Colombian preferred to match the source character).
+          Script: 30 seconds, Kora-owned, royalty-free, with rights
+          assignment. Risk: zero.
+       2. **AI-generated voice (e.g., ElevenLabs Spanish voice)** —
+          legally cleaner than copyrighted media but still has its
+          own AI-disclosure considerations depending on jurisdiction.
+
+   **Never use a YouTube/show clip in production.** That's straight
+   copyright infringement (the studio owns the audio) AND right-of-
+   publicity (Sofía Vergara's voice is protected). The fact that
+   Kora is small doesn't change the legal exposure — a single
+   DMCA takedown or C&D from Disney's IP team would be embarrassing
+   and possibly newsworthy.
+
+3. **Character-name IP risk on the Dunphy / Pritchett / Tucker /
+   Delgado family itself.** Modern Family's character names are
+   trademarks of 20th Century Studios / Disney. Using them in a
+   public-facing demo is a calculated risk, not a free lunch:
+
+   - **Low risk while Kora is small** — Disney's IP team isn't
+     scanning small fintech demos. Realistic exposure is ~0 in
+     the first 1,000 users.
+   - **Rises with press / scale** — the moment TechCrunch writes
+     about Kora and mentions the Dunphy demo, the risk surface
+     widens. C&D becomes plausible.
+   - **Two mitigations if/when this matters:**
+     - Add a footer disclaimer: "The Dunphy family is used as a
+       cultural reference; Kora is not affiliated with or
+       endorsed by 20th Century Studios or Disney."
+     - Or rename to "The Murphy family" / "The Smith family" /
+       homage-but-original character names. Loses the universal-
+       recognition benefit but removes the IP question entirely.
+   - **Recommendation:** ship as Dunphys, add the disclaimer,
+     have a 1-hour pre-baked rename script ready in case a C&D
+     ever lands. Don't pre-emptively rename — recognition is the
+     whole point of using the characters.
 
 3. **The physical book "ordered" state on Haley's account.** If a
    real "physical book ordering" feature gets built later, this demo
