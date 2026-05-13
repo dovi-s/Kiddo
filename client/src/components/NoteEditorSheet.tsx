@@ -52,6 +52,14 @@ interface NoteEditorSheetProps {
   majorityAge?: number;
   existingEntry?: MemoryEntry | null;
   onSaved?: () => void;
+  /**
+   * Whether the fund's parent is on Free (gates the media picker
+   * to Kiddo+). Caller computes this — most Dashboard usage threads
+   * the fund-aware plan check (account-level Plus OR per-fund Plus
+   * membership). Gifter-authored Memory Book entries via GiftCheckout
+   * are unaffected; this gate applies only to PARENT-authored entries.
+   */
+  requiresPlus?: boolean;
 }
 
 export function NoteEditorSheet({
@@ -62,6 +70,7 @@ export function NoteEditorSheet({
   parentName,
   pronoun,
   majorityAge,
+  requiresPlus = false,
   existingEntry,
   onSaved,
 }: NoteEditorSheetProps) {
@@ -260,6 +269,7 @@ export function NoteEditorSheet({
                         childName={childName}
                         pronoun={pronoun}
                         majorityAge={safeMajorityAge}
+                        requiresPlus={requiresPlus}
                       />
                     </div>
                   )}

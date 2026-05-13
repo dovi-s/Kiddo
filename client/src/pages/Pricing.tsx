@@ -50,7 +50,7 @@ const plans = [
       "1 child fund (one child's permanent investment account)",
       "1 active event at a time",
       "Shareable gift link, QR code, and gift code",
-      "Memory Book with photos, videos, and voice memos",
+      "Text Memory Book entries (gifters can always attach photos, videos, and voice)",
       "Kid View Lite",
       "SIPC-insured investments via DriveWealth",
       "0.10% annual fee on invested assets only",
@@ -69,6 +69,7 @@ const plans = [
     note: "Annual is 35% off monthly.",
     body: [
       "Everything in Free",
+      "Add your own photos, videos, and voice memos to Memory Book entries",
       "Recurring investments (daily, weekly, or monthly)",
       "Full Kid View",
       "Projections and milestone notifications",
@@ -91,7 +92,7 @@ const plans = [
     body: [
       "Everything in Kiddo+",
       "Unlimited children",
-      "Memory Book for every child",
+      "Full Memory Book authoring for every child",
       "Full Kid View for every child",
       "One view for every fund in your household",
       "Unlimited events with premium features included",

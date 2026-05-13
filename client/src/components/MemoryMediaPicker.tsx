@@ -20,6 +20,8 @@
 // the parent flows.
 
 import { useRef, useState, useEffect } from "react";
+import { Link } from "wouter";
+import { Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 import { getPronouns } from "@/lib/pronouns";
@@ -49,6 +51,7 @@ export function MemoryMediaPicker({
   majorityAge,
   uploadEndpointPrefix = "/api/funds",
   className,
+  requiresPlus = false,
 }: {
   fundId: string;
   value: MemoryMediaValue;
@@ -61,6 +64,18 @@ export function MemoryMediaPicker({
   /** Override the upload endpoint family. Defaults to /api/funds/:id/memory/upload-* */
   uploadEndpointPrefix?: string;
   className?: string;
+  /**
+   * When true, this picker replaces the photo/video/voice trio with a
+   * single Kiddo+ upgrade callout. Used in PARENT-authored Memory Book
+   * contexts (NoteEditorSheet, Dashboard inline composers) when the
+   * fund's parent is on Free. GIFTER-authored contexts (GiftCheckout,
+   * GiftSuccess) always leave this false because gifter media is part
+   * of the locked retention mechanic — a grandparent attaching a voice
+   * memo to a gift should never hit a paywall. The differential is
+   * "parent writing their own entry with media" = Plus feature; "gifter
+   * attaching media to a gift" = always free.
+   */
+  requiresPlus?: boolean;
 }) {
   // Pronouns + majority-age for the voice-note helper line below. Optional
   // props so existing callers don't break — gifter-facing callers
@@ -212,6 +227,51 @@ export function MemoryMediaPicker({
     { kind: "video", label: "Video", emoji: "🎬", has: hasVideo },
     { kind: "voice", label: "Voice", emoji: "🎙", has: hasAudio },
   ];
+
+  // Plus-gate UI. When the parent's fund is on Free AND this picker is
+  // mounted in a PARENT-authored context (NoteEditorSheet, Dashboard
+  // composers), swap the photo/video/voice trio for a single Kiddo+
+  // upgrade callout. The CTA routes to Settings membership tab so the
+  // upgrade happens in-app, not on the public Pricing page. Voice gets
+  // named explicitly in the body copy because per the design lens it's
+  // the moat — "your voice from when she was 3, sealed for her 18th."
+  if (requiresPlus) {
+    return (
+      <div className={className}>
+        <div
+          className="rounded-2xl border border-primary/20 bg-primary/5 p-4"
+          data-testid="memory-media-picker-plus-gate"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+              <Sparkles size={16} className="text-primary" strokeWidth={1.8} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <Lock size={11} className="opacity-60" />
+                <span>Add photos, videos, and voice memos with Kiddo+</span>
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {fundPronouns.subject.charAt(0).toUpperCase() + fundPronouns.subject.slice(1)} hearing your voice on {fundPronouns.possAdj} {majorityOrdinal} birthday is the kind of artifact nothing else gives {fundPronouns.object}. Text entries stay free; media unlocks with Kiddo+ ($4.99/month).
+              </p>
+              <div className="mt-3">
+                <Link href="/settings?tab=membership&upgrade=plus">
+                  <Button
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => haptic("selection")}
+                    data-testid="memory-media-picker-upgrade-cta"
+                  >
+                    Upgrade to Kiddo+
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={className}>

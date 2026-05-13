@@ -2064,7 +2064,19 @@ export default function MemoryBook() {
     minDelta: 1,
   });
   const canSubmit = content.trim().length > 0 && !validateMemoryMedia(photoUrl, videoUrl);
-  // Memory Book is available on all plans - it is a retention mechanic, not a monetization lever.
+  // Memory Book tier policy (locked 2026-05-13):
+  //   - GIFTER-attached media (photos/videos/voice on gifts) is ALWAYS free.
+  //     Locked retention mechanic — a grandparent attaching a voice memo to
+  //     a gift should never hit a paywall. Gifter loop is the moat.
+  //   - PARENT-authored Memory Book entries with media are Kiddo+ only.
+  //     Implemented via the `requiresPlus` prop on MemoryMediaPicker — the
+  //     Dashboard composer and the NoteEditorSheet (Age18Plan parent letter)
+  //     pass it based on the parent's effective plan + fund-level Plus check.
+  //     Free parents see an upgrade callout where the photo/video/voice trio
+  //     would otherwise render; text entries stay unrestricted on all tiers.
+  //   - Memory Book VIEWING (reading what gifters/parents already wrote) is
+  //     never gated. Free parents see every entry their gifters posted with
+  //     full media; the gate only blocks parent-authored media UPLOAD.
   const shouldPromptFirstParentEntry =
     giftMemoryEntries.length > 0 &&
     parentAuthoredEntries.length === 0;

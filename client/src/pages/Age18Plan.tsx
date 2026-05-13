@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { NoteEditorSheet } from "@/components/NoteEditorSheet";
 import { useFunds } from "@/hooks/use-funds";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { getAge18Transition, formatAgeTransitionDate } from "@/lib/age-transition";
@@ -149,6 +150,16 @@ export default function Age18Plan() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: funds = [] } = useFunds();
+  // Plan-state for the parent letter media gate. Per the Memory Book
+  // tier policy: gifter-attached media is always free (locked retention
+  // mechanic), but PARENT-authored Memory Book entries with media are
+  // a Kiddo+ differential. The Age18Plan parent letter is parent-authored,
+  // so it inherits the gate. Free parents see the upgrade callout inside
+  // the NoteEditorSheet's MemoryMediaPicker; paid parents see the full
+  // photo/video/voice trio.
+  const { data: subscription } = useSubscription();
+  const effectivePlan = subscription?.effectivePlan ?? "free";
+  const noteEditorRequiresPlus = effectivePlan === "free";
   // Active fund held in component state so the page reacts to AppHeader
   // fund switches. Was reading getActiveFundId() inline every render —
   // pulls fresh from localStorage but doesn't trigger a re-render when
@@ -828,6 +839,7 @@ export default function Age18Plan() {
         pronoun={(activeFund as any)?.pronoun}
         majorityAge={majorityAge}
         existingEntry={parentLetter ?? null}
+        requiresPlus={noteEditorRequiresPlus}
         onSaved={() => {
           void queryClient.invalidateQueries({ queryKey: ["memory", activeFund?.id, "parent_letter"] });
           void queryClient.invalidateQueries({ queryKey: ["memory", activeFund?.id] });

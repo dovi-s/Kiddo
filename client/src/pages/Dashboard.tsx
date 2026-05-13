@@ -9811,6 +9811,9 @@ export default function Dashboard() {
                           value={oneTimeMedia}
                           onChange={setOneTimeMedia}
                           childName={activeFund?.recipientFirstName}
+                          pronoun={(activeFund as any)?.pronoun}
+                          majorityAge={(activeFund as any)?.majorityAge}
+                          requiresPlus={!hasAutoInvestAccess}
                           className="mt-2"
                         />
                       )}
@@ -10842,6 +10845,9 @@ export default function Dashboard() {
                   value={addFromScheduleMedia}
                   onChange={setAddFromScheduleMedia}
                   childName={activeFund?.recipientFirstName}
+                  pronoun={(activeFund as any)?.pronoun}
+                  majorityAge={(activeFund as any)?.majorityAge}
+                  requiresPlus={!hasAutoInvestAccess}
                   className="mt-1"
                 />
               )}
@@ -11913,6 +11919,9 @@ export default function Dashboard() {
                     value={autoInvestMedia}
                     onChange={setAutoInvestMedia}
                     childName={activeFund?.recipientFirstName}
+                    pronoun={(activeFund as any)?.pronoun}
+                    majorityAge={(activeFund as any)?.majorityAge}
+                    requiresPlus={!hasAutoInvestAccess}
                   />
                 )}
                 <Button
