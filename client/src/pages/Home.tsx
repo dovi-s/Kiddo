@@ -177,7 +177,7 @@ const BENTO_TILES: BentoTile[] = [
   },
   {
     icon: Repeat,
-    eyebrow: "For the parent",
+    eyebrow: "For the parent who shows up",
     title: "Recurring investments",
     body: "Parent contributions on the cadence you set, so you build a rhythm of showing up your child will remember.",
     modalLead:
@@ -192,7 +192,7 @@ const BENTO_TILES: BentoTile[] = [
   },
   {
     icon: TrendingUp,
-    eyebrow: "For the parent",
+    eyebrow: "For the parent who chooses",
     title: "Customize the mix",
     body: "Pick the holdings the fund follows. Conservative, balanced, growth, or your own. Not a black box.",
     modalLead:
