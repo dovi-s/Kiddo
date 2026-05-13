@@ -3686,18 +3686,28 @@ const [editFundName, setEditFundName] = useState("");
                       </div>
                     </div>
 
-                    {/* Plan gate */}
+                    {/* Plan gate. Free users see the feature explainer
+                        cards above (kept on purpose — it teaches what
+                        co-parent access actually does, which the
+                        previous "Upgrade to share fund access" copy
+                        glossed over). The CTA was also softened from
+                        "See plans" to a direct primary upgrade button
+                        because the explainer above already does the
+                        education job; the gate's job is just to close
+                        the loop with one tap. */}
                     {!canInvite && (
-                      <div className="mt-4 rounded-2xl border border-border bg-muted/30 p-4 text-center">
-                        <p className="text-sm font-semibold text-foreground">Co-parent access is a Kiddo Plus feature</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Upgrade to share fund access with a partner or guardian.</p>
+                      <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                        <p className="text-sm font-semibold text-foreground">Invite a co-parent with Kiddo+</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          $4.99/month or $39/year. A partner or guardian sees the fund's growth, the Memory Book, and recent gifts. Their notes show up on the kid's timeline alongside yours.
+                        </p>
                         <Button
                           size="sm"
-                          variant="outline"
                           className="mt-3 rounded-xl"
                           onClick={() => { navigate("/settings?tab=membership"); haptic("selection"); }}
+                          data-testid="button-coparent-upgrade"
                         >
-                          See plans
+                          Upgrade to Kiddo+
                         </Button>
                       </div>
                     )}
