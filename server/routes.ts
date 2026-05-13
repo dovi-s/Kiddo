@@ -16,7 +16,7 @@ import { getConfiguredSuperAdminEmails, isEmailInAdminSet } from "@shared/adminA
 import { sendEmail } from "./emailDelivery";
 import { sendOpsAlert } from "./ops";
 import { runGifterNotificationWorker, enqueueParentThankYou } from "./gifterNotificationWorker";
-import { isDemoFund } from "./demoSandbox";
+import { isDemoFund, isDemoUser, demoMockCheckoutResponse } from "./demoSandbox";
 import { queueCustodianTransfer, isCustodianAchEnabled } from "./custodianTransfer";
 import {
   type AgeTransitionRecord as SharedAgeTransitionRecord,
@@ -5979,6 +5979,21 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'fundId, amount, and bankAccountId are required' });
       }
 
+      // Demo-fund sandbox. Per DUNPHY_DEMO_SPEC.md Phase 2 + server/demoSandbox.ts.
+      // No custodian webhook, no balance mutation, no activity row — just a clean
+      // "looks like it worked" response so the demo visitor sees the success state.
+      if (await isDemoFund(fundId)) {
+        const withdrawAmount = parseFloat(String(amount));
+        return res.json({
+          success: true,
+          isDemo: true,
+          amount: Number.isFinite(withdrawAmount) ? withdrawAmount.toFixed(2) : "0.00",
+          delivered: true,
+          achLive: false,
+          message: "Demo mode. No real funds moved.",
+        });
+      }
+
       const fund = await storage.getFund(fundId);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
@@ -6667,6 +6682,22 @@ export async function registerRoutes(
   app.post('/api/funds/:fundId/auto-invest', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;
+
+      // Demo-fund sandbox. No DriveWealth order, no holdings mutation —
+      // return the same shape the real path returns so the client renders
+      // its success toast and refetches (the refetch shows the seeded
+      // holdings unchanged, which is fine for the demo).
+      if (await isDemoFund(req.params.fundId)) {
+        const requestedAmount = Number(String(req.body?.amount ?? req.body?.cashAmount ?? 0).replace(/[^0-9.]/g, ""));
+        return res.json({
+          success: true,
+          isDemo: true,
+          message: "Demo mode. No order placed; the seeded holdings already show what a real invest would look like.",
+          amountInvested: Number.isFinite(requestedAmount) ? requestedAmount.toFixed(2) : "0.00",
+          createdHoldings: [],
+        });
+      }
+
       const fund = await storage.getFund(req.params.fundId);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
@@ -10604,6 +10635,32 @@ export async function registerRoutes(
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
 
+      // Demo-fund sandbox. Return a synthetic ParentContribution row so the
+      // client's success state fires (and the schedule shows up in the
+      // Dashboard list) without inserting a real row or scheduling the
+      // recurring worker. The seeded demo state already shows what an
+      // active recurring plan looks like — this branch is for visitors
+      // who click "Set up recurring" mid-tour.
+      if (await isDemoFund(req.params.fundId)) {
+        const amt = parseFloat(String(req.body?.amount ?? 0));
+        const freq = String(req.body?.frequency || "monthly");
+        return res.status(201).json({
+          id: `demo_${Date.now()}`,
+          fundId: req.params.fundId,
+          userId,
+          amount: Number.isFinite(amt) ? amt.toFixed(2) : "0.00",
+          frequency: freq,
+          status: "active",
+          isDemo: true,
+          executionModel: req.body?.executionModel || "auto",
+          selectedTicker: req.body?.selectedTicker || null,
+          nextRunDate: new Date(Date.now() + 86400000 * 30).toISOString(),
+          totalContributed: "0.00",
+          note: typeof req.body?.note === "string" ? req.body.note.slice(0, 490) : null,
+          message: "Demo mode. No bank pull will run.",
+        });
+      }
+
       const subscription = await storage.getSubscription(userId);
       const plan = subscription?.plan;
       const isGlobalActive = subscription?.status === 'active';
@@ -10866,12 +10923,31 @@ export async function registerRoutes(
   app.post('/api/parent-contributions/:id/contribute-now', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;
+
+      // Demo-fund sandbox. The synthetic IDs we hand out from the
+      // create-contribution sandbox above start with "demo_" — those
+      // never exist in the DB, so short-circuit before the DB lookup.
+      // For seeded demo contributions that DO exist in the DB, the
+      // fund-level isDemoFund check after the record fetch catches them.
+      if (req.params.id.startsWith("demo_") || (await isDemoUser(userId))) {
+        const origin = req.headers.origin || `${req.protocol}://${req.headers.host}`;
+        return res.json(demoMockCheckoutResponse(`${origin}/dashboard?contribution=success&demo=1`));
+      }
+
       const [record] = await db.select().from(parentContributions).where(eq(parentContributions.id, req.params.id));
       if (!record) return res.status(404).json({ error: 'Plan not found' });
       if (record.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
 
       const fund = await storage.getFund(record.fundId);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
+
+      // Defensive second-line check after the lookup — covers the case
+      // where a Dunphy parent has a real (non-demo-prefix) parent_contributions
+      // row, however unlikely. Same shape as the gift-checkout sandbox.
+      if (await isDemoFund(record.fundId)) {
+        const origin = req.headers.origin || `${req.protocol}://${req.headers.host}`;
+        return res.json(demoMockCheckoutResponse(`${origin}/dashboard?contribution=success&demo=1`));
+      }
 
       const amount = parseFloat(record.amount);
       if (isNaN(amount) || amount < 1) return res.status(400).json({ error: 'Invalid contribution amount' });
@@ -16803,6 +16879,20 @@ export async function registerRoutes(
       const plan = String(req.body?.plan || "").toLowerCase();
       const isStarterPortal = plan === "starter";
       const fundId = String(req.body?.fundId || "");
+
+      // Demo-account sandbox. Demo users have no real Stripe customer record,
+      // so the real path would 404 on "No billing account found." Return a
+      // mock URL that lands them back on /settings with a demo flag — the
+      // client treats the response identically to a real portal URL.
+      if (await isDemoUser(userId)) {
+        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        return res.json({
+          url: `${baseUrl}/settings?demo=1&portal=unavailable`,
+          isDemo: true,
+          message: "Demo mode. The real billing portal isn't available for seeded accounts.",
+        });
+      }
+
       const stripe = await getUncachableStripeClient();
       let stripeCustomerId: string | null = null;
 

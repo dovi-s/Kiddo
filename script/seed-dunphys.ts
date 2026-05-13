@@ -257,10 +257,21 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
     } as any);
   }
 
+  // Audio URL for Gloria's gifts. Only set when the demo audio assets
+  // are present in production (gated by DEMO_AUDIO_ENABLED env var). See
+  // client/public/demo-audio/README.md for the file spec. Without the
+  // flag, Gloria's voice memos stay text-only — better than a broken
+  // play button pointing at 404'd audio.
+  const audioEnabled = process.env.DEMO_AUDIO_ENABLED === "1";
+  const gloriaAudioUrl = audioEnabled
+    ? `/demo-audio/gloria-${kid.firstName.toLowerCase()}.mp3`
+    : null;
+
   // Seed gifts.
   const giftList = giftsForKid(kid);
   const sendersSeen = new Set<string>();
   for (const g of giftList) {
+    const isGloria = g.senderEmail === "gloria@dunphyfamily.com";
     const giftRow: InsertGift = {
       fundId: fund.id,
       senderName: g.senderName,
@@ -270,6 +281,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
       status: "invested",
       message: g.message ?? null,
       selectedTicker: g.selectedTicker ?? null,
+      audioUrl: isGloria ? gloriaAudioUrl : null,
       createdAt: new Date(g.createdAt),
     } as any;
     await db.insert(gifts).values(giftRow as any);
@@ -282,8 +294,8 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
     .where(eq(funds.id, fund.id));
 
   // Seed a couple of Memory Book entries: Cam's Disney note (the love
-  // mark), plus a parent-authored note from Phil. Voice memos are
-  // text-only placeholders until production gets a voice actor.
+  // mark), Gloria's voice memo (audio when DEMO_AUDIO_ENABLED is set,
+  // text-only otherwise), plus a parent-authored note from Phil.
   const camGiftId = (await db.select({ id: gifts.id })
     .from(gifts)
     .where(and(eq(gifts.fundId, fund.id), eq(gifts.senderEmail, "cameron@dunphyfamily.com")))
@@ -297,6 +309,30 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
       authorName: "Cameron Tucker",
       visibility: "kid_now",
       giftId: camGiftId,
+    } as any);
+  }
+
+  // Gloria's voice memo. Links to her most-recent gift for the kid.
+  const gloriaGiftId = (await db.select({ id: gifts.id })
+    .from(gifts)
+    .where(and(eq(gifts.fundId, fund.id), eq(gifts.senderEmail, "gloria@dunphyfamily.com")))
+    .limit(1))[0]?.id;
+  if (gloriaGiftId) {
+    await db.insert(memoryEntries).values({
+      fundId: fund.id,
+      content: `Para ti, ${kid.firstName}. Con todo mi amor. — Abuela`,
+      type: "gift",
+      authorRole: "gifter",
+      authorName: "Gloria Pritchett",
+      visibility: "kid_now",
+      giftId: gloriaGiftId,
+      audioUrl: gloriaAudioUrl,
+      // Transcript ships with the entry whether audio is wired or not —
+      // text version remains useful as the memory itself even when the
+      // audio file isn't deployed.
+      audioTranscript: audioEnabled
+        ? `Mi amor ${kid.firstName}, never forget your familia. Te amo, mi ${kid.pronoun === "she" ? "nieta" : "nieto"}.`
+        : null,
     } as any);
   }
 
@@ -357,7 +393,12 @@ async function ensurePhilFamilySubscription(philId: string): Promise<void> {
   } as any);
 }
 
-async function main() {
+// Exported so the reset-dunphys script (and any future driver) can invoke
+// the seed without spawning a subprocess. closePool=true matches the
+// standalone-script default; reset-dunphys passes false because it manages
+// the pool lifecycle itself across wipe + reseed.
+export async function runDunphySeed(options: { closePool?: boolean } = {}): Promise<void> {
+  const closePool = options.closePool !== false;
   console.log("Seeding Dunphy family demo accounts...");
 
   // 1. Upsert all seven user accounts.
@@ -379,8 +420,8 @@ async function main() {
   const existingFunds = await db.select().from(funds).where(eq(funds.userId, philId));
   if (existingFunds.length > 0) {
     console.log(`\nPhil already has ${existingFunds.length} fund(s). Skipping fund seed to stay idempotent.`);
-    console.log("To re-seed funds from scratch: delete Phil's funds first via SQL, then re-run.");
-    await pool.end();
+    console.log("To re-seed funds from scratch: run `npm run reset:dunphys` instead.");
+    if (closePool) await pool.end();
     return;
   }
 
@@ -400,10 +441,27 @@ async function main() {
   console.log("  cameron@dunphyfamily.com — gifter (Disney love-mark)");
   console.log("  manny@dunphyfamily.com   — gifter (young-gifter)");
 
-  await pool.end();
+  if (closePool) await pool.end();
 }
 
-main().catch((err) => {
-  console.error("Seed failed:", err);
-  process.exit(1);
-});
+// When invoked directly (npm run seed:dunphys), run the standalone path.
+// When imported, callers use runDunphySeed() and we don't touch the pool.
+// Robust detection across Windows + macOS + Linux paths: compare normalized
+// script path against process.argv[1]. require.main isn't available under
+// tsx ESM. The fallback below also handles the case where this module is
+// invoked via tsx with a forward-slash argv path on Windows.
+const isDirectInvocation = (() => {
+  try {
+    const invoked = process.argv[1] ? process.argv[1].replace(/\\/g, "/").toLowerCase() : "";
+    return invoked.endsWith("/seed-dunphys.ts") || invoked.endsWith("/seed-dunphys.js");
+  } catch {
+    return false;
+  }
+})();
+
+if (isDirectInvocation) {
+  runDunphySeed().catch((err) => {
+    console.error("Seed failed:", err);
+    process.exit(1);
+  });
+}

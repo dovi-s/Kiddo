@@ -12,6 +12,7 @@ import { logStorageMode } from "./objectStorage";
 import { startParentLifecycleWorker } from "./parentLifecycleWorker";
 import { startMobilePushWorker } from "./mobilePushWorker";
 import { startAge18TransitionWorker } from "./age18TransitionWorker";
+import { startDemoResetWorker } from "./demoResetWorker";
 import { registerOGMiddleware } from "./ogMiddleware";
 import { users } from "@shared/schema";
 import { getConfiguredSuperAdminEmails, getDefaultSuperAdminEmails } from "@shared/adminAccess";
@@ -617,6 +618,7 @@ app.use((req, res, next) => {
   startMobilePushWorker(log);
   startRecurringContributionWorker(log);
   startAge18TransitionWorker(log);
+  startDemoResetWorker(log);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
