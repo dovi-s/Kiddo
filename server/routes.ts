@@ -5673,6 +5673,16 @@ export async function registerRoutes(
         });
       }
 
+      const decision = getKycDecision({ personal, identity });
+
+      // Persist the failure reason + message alongside the submitted
+      // kycData so the kyc_action_required action item can surface a
+      // specific, actionable description (e.g., "The adult opening
+      // this fund must be at least 18 years old.") instead of the
+      // generic "We weren't able to verify your identity." Cleared
+      // on the next successful submission. Per the 2026-05-13 audit:
+      // the activity-row description was specific but the action-item
+      // card description was generic; this closes that gap.
       const kycData = {
         firstName: String(personal.firstName).trim(),
         lastName: String(personal.lastName).trim(),
@@ -5687,9 +5697,9 @@ export async function registerRoutes(
         citizenship: identity.citizenship,
         employment: identity.employment,
         ssnProvided: true,
+        lastFailureReason: decision.status === "failed" ? decision.reason : null,
+        lastFailureMessage: decision.status === "failed" ? decision.message : null,
       };
-
-      const decision = getKycDecision({ personal, identity });
 
       await db.update(users).set({
         kycStatus: decision.status,

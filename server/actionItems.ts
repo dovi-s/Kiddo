@@ -73,13 +73,27 @@ export async function deriveActionItemsForUser(
     if (userKycStatus === "failed") {
       const snoozedUntil = isSnoozedNow(snoozeMap, "kyc_action_required");
       if (!snoozedUntil) {
+        // Surface the SPECIFIC failure message when persisted to
+        // user.kycData (routes.ts stores lastFailureMessage at submit
+        // time). Falls back to the generic description for legacy
+        // rows that pre-date that persistence. Per the 2026-05-13
+        // audit: the activity ledger had the specific message but
+        // the action-item card had a generic one. Closes that gap.
+        const kycDataAny = (user as any).kycData as any;
+        const specificMessage = kycDataAny && typeof kycDataAny.lastFailureMessage === "string"
+          ? String(kycDataAny.lastFailureMessage).trim()
+          : "";
+        const description = specificMessage
+          ? specificMessage
+          : "We weren't able to verify your identity. Update the details to get investing going.";
+
         out.push({
           id: `kyc_action_required:${primaryFund.id}`,
           type: "kyc_action_required",
           fundId: primaryFund.id,
           fundLabel: fundLabel(primaryFund),
           title: "Identity details need attention",
-          description: "We weren't able to verify your identity. Update the details to get investing going.",
+          description,
           ctaLabel: "Fix identity",
           ctaPath: "/activate",
           snoozedUntil: null,
