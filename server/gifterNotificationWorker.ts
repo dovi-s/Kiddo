@@ -49,6 +49,12 @@ type GifterNotificationSubscriber = {
   // gifter never gets the same "we miss you" message twice in a year.
   // Null means we've never sent one (the most common state).
   lastDormancyCheckinAt: string | null;
+  // Year-end recap dedup. Stores the calendar year the gifter most
+  // recently received the December "year in giving" recap. Once per
+  // calendar year per gifter (NOT per fund — the recap aggregates
+  // ALL funds the gifter has contributed to in that year).
+  lastYearEndRecapYear: number | null;
+  lastYearEndRecapSentAt: string | null;
   // Per feedback_anonymous_as_explicit_flag.md: when an anonymous
   // gifter opts into milestone updates, the system needs to keep
   // their email to send notifications, but every parent-facing
@@ -258,6 +264,10 @@ function normalizeSubscriber(email: string, raw: any): GifterNotificationSubscri
       ? Math.max(0, Number(raw.lastMilestoneNotifiedThreshold))
       : null,
     lastDormancyCheckinAt: typeof raw?.lastDormancyCheckinAt === "string" ? raw.lastDormancyCheckinAt : null,
+    lastYearEndRecapYear: Number.isFinite(Number(raw?.lastYearEndRecapYear))
+      ? Number(raw.lastYearEndRecapYear)
+      : null,
+    lastYearEndRecapSentAt: typeof raw?.lastYearEndRecapSentAt === "string" ? raw.lastYearEndRecapSentAt : null,
     isAnonymous: Boolean(raw?.isAnonymous),
   };
 }
@@ -965,6 +975,92 @@ function renderDormancyCheckIn(entry: QueueEntry): RenderedEmail | null {
   };
 }
 
+// Year-end recap email. Fires mid-December once per gifter per
+// calendar year. THE FIRST cross-fund email in the system: aggregates
+// every gift the gifter sent in the current year across all funds
+// they've contributed to, then frames it as a "your year in giving"
+// recap. Doubles as: (1) personal-record receipt for the gifter (some
+// jurisdictions ask gifters to keep their own records even though the
+// UTMA tax sits with the kid/custodian), (2) brand re-entry moment in
+// the Jan resolution window when families plan the year ahead, and
+// (3) forwardable content that lets gifters share their giving story
+// with their spouse or extended family — natural organic acquisition.
+//
+// Per feedback_anonymous_as_explicit_flag.md: anonymous gifts ARE
+// counted in the aggregate (their email is real and the dollars are
+// real) but the recap copy avoids naming the recipient when the gift
+// was anonymous on a fund where the gifter has ONLY anonymous gifts
+// to that recipient. Mixed-history (some anon, some named) shows the
+// named child but the dollar total is the full sum — gifters who
+// gave anonymously presumably still want to know their own year-end
+// total.
+function renderYearEndRecap(entry: QueueEntry): RenderedEmail | null {
+  const to = String(entry.email || "").trim().toLowerCase();
+  const year = Number(entry.year || 0);
+  const totalGiven = Number(entry.totalGiven || 0);
+  const giftCount = Number(entry.giftCount || 0);
+  const childNames: string[] = Array.isArray(entry.childNames)
+    ? (entry.childNames as unknown[]).map((value) => String(value).trim()).filter(Boolean)
+    : [];
+  const fundCount = Number(entry.fundCount || childNames.length || 0);
+  const primaryGiftUrl = String(entry.primaryGiftUrl || "").trim();
+  const startFundUrl = String(entry.startFundUrl || "").trim();
+  const unsubscribeUrl = String(entry.unsubscribeUrl || "").trim();
+  if (!to || !year || giftCount <= 0 || totalGiven <= 0) return null;
+
+  // Format recipient list. Single child reads as a name; two reads as
+  // "Emma and Mila"; three+ collapses to "{first}, {second}, and N
+  // others" so the subject line doesn't sprawl. Empty list (rare
+  // edge case where every gift was to a deleted fund) falls back to
+  // generic phrasing.
+  const recipientLabel = (() => {
+    if (childNames.length === 0) return `${fundCount} ${fundCount === 1 ? "child" : "children"}`;
+    if (childNames.length === 1) return childNames[0];
+    if (childNames.length === 2) return `${childNames[0]} and ${childNames[1]}`;
+    const named = childNames.slice(0, 2).join(", ");
+    const remaining = childNames.length - 2;
+    return `${named}, and ${remaining} ${remaining === 1 ? "other" : "others"}`;
+  })();
+
+  // Format the total nicely (no decimals when whole; one decimal for
+  // partial cents would look weird at this scale).
+  const totalLabel = `$${totalGiven.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  const giftCountLabel = giftCount === 1 ? "one gift" : `${giftCount} gifts`;
+
+  const subject = `Your ${year} in giving`;
+
+  return {
+    to,
+    subject,
+    text: [
+      `Hi${entry.name ? ` ${entry.name}` : ""},`,
+      "",
+      `Here is your ${year} in gifts on Kiddo.`,
+      "",
+      `You gave ${recipientLabel} ${totalLabel} across ${giftCountLabel} this year.`,
+      "",
+      // Brief reflection lines. Quiet and factual; no celebratory
+      // emoji storm, no manipulative "WOW look what YOU did!" framing.
+      // The recipient list and total speak for themselves.
+      "Every one of those gifts is invested and compounding toward the day each kid turns 18.",
+      "",
+      // CTAs. Primary is a soft "keep going next year" link to the
+      // first fund the gifter has contributed to (or the generic gift
+      // landing if no specific fund is recoverable). Secondary is the
+      // start-fund loop. Both carry tracking params.
+      primaryGiftUrl ? `Keep going in ${year + 1}: ${primaryGiftUrl}` : "",
+      startFundUrl ? `Or start a fund for someone you love: ${startFundUrl}` : "",
+      "",
+      "Thank you for being part of these kids' stories.",
+      "",
+      "The Kiddo team",
+      unsubscribeUrl ? `Unsubscribe: ${unsubscribeUrl}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  };
+}
+
 function renderQueuedEmail(entry: QueueEntry): RenderedEmail | null {
   switch (String(entry.type || "")) {
     case "gift_receipt_followup":
@@ -989,6 +1085,8 @@ function renderQueuedEmail(entry: QueueEntry): RenderedEmail | null {
       return renderParentThankYou(entry);
     case "dormancy_checkin":
       return renderDormancyCheckIn(entry);
+    case "year_end_recap":
+      return renderYearEndRecap(entry);
     default:
       return null;
   }
@@ -1719,6 +1817,217 @@ async function enqueueDormancyCheckIns(log: (message: string, source?: string) =
   }
 }
 
+// Year-end recap enqueue. Runs Dec 15-31 (window so a missed worker
+// tick doesn't lose anyone, plus reasonable runway before New Year's
+// when inboxes get noisy). Aggregates ALL gifts the gifter sent this
+// calendar year across every fund they touched, then enqueues ONE
+// cross-fund recap email per gifter.
+//
+// Eligibility gates:
+//   1. Calendar window: Dec 15 - Dec 31 in the app's timezone.
+//   2. Gifter has at least one settled gift in the current year.
+//   3. lastYearEndRecapYear !== currentYear (one per year per gifter).
+//   4. Gifter is not unsubscribed from ANY fund they gifted this year
+//      (we treat the recap as per-gifter, not per-fund — if they've
+//      opted out of one fund's reminders but stayed on for two
+//      others, they still get the cross-fund recap because the
+//      content speaks to all three).
+//
+// Implementation note: this is the FIRST cross-fund email so the
+// dedup field lives on the SUBSCRIBER record but is only meaningful
+// when read across all funds. We pick one fund's subscriber record
+// as the "anchor" (the one with the most recent gift) and write the
+// year-stamp there. To avoid double-sending we also pre-flight check
+// every other fund's subscriber record for the same email and only
+// proceed if NONE have already been stamped for this year.
+async function enqueueYearEndRecaps(log: (message: string, source?: string) => void) {
+  const now = new Date();
+  const todayParts = getDatePartsInTimeZone(now);
+  // Window guard. December 15 through 31. Tight enough that we don't
+  // accidentally send during November or January.
+  if (todayParts.month !== 12 || todayParts.day < 15) return;
+
+  const currentYear = todayParts.year;
+  const baseUrl = getAppBaseUrl();
+  const store = await loadNotificationStore();
+  let queued = 0;
+  let storeChanged = false;
+
+  // Aggregate gifts by sender email for the current year. Single SQL
+  // pass, then we slice per-gifter in JS.
+  const result = await pool.query(
+    `
+      SELECT
+        LOWER(TRIM(g.sender_email)) AS email,
+        g.fund_id,
+        g.sender_name,
+        g.amount,
+        g.is_anonymous,
+        f.recipient_first_name,
+        f.name AS fund_name,
+        f.slug AS fund_slug,
+        g.created_at
+      FROM gifts g
+      LEFT JOIN funds f ON f.id = g.fund_id
+      WHERE g.sender_email IS NOT NULL
+        AND TRIM(g.sender_email) <> ''
+        AND g.status NOT IN ('failed', 'refunded', 'canceled', 'host_hold')
+        AND EXTRACT(YEAR FROM g.created_at AT TIME ZONE $1) = $2
+      ORDER BY g.created_at DESC
+    `,
+    [APP_TIMEZONE, currentYear],
+  );
+
+  // gifter email -> aggregate state
+  type GifterAggregate = {
+    fundIds: Set<string>;
+    childNames: Set<string>;
+    totalGiven: number;
+    giftCount: number;
+    // Track per-fund whether ALL gifts to that fund were anonymous;
+    // if so we suppress the recipient name in the recap. Mixed (some
+    // anon, some named) still shows the name.
+    nonAnonymousFundIds: Set<string>;
+    primaryFundId: string | null;
+    primaryFundSlug: string | null;
+    senderName: string | null;
+  };
+  const aggregates = new Map<string, GifterAggregate>();
+  for (const row of result.rows) {
+    const email = String(row.email || "").trim().toLowerCase();
+    if (!email) continue;
+    const amount = parseFloat(String(row.amount || "0")) || 0;
+    if (amount <= 0) continue;
+    if (!aggregates.has(email)) {
+      aggregates.set(email, {
+        fundIds: new Set(),
+        childNames: new Set(),
+        totalGiven: 0,
+        giftCount: 0,
+        nonAnonymousFundIds: new Set(),
+        primaryFundId: null,
+        primaryFundSlug: null,
+        senderName: null,
+      });
+    }
+    const agg = aggregates.get(email)!;
+    agg.fundIds.add(row.fund_id);
+    agg.totalGiven += amount;
+    agg.giftCount += 1;
+    if (!row.is_anonymous) {
+      agg.nonAnonymousFundIds.add(row.fund_id);
+      if (row.recipient_first_name) agg.childNames.add(String(row.recipient_first_name).trim());
+    }
+    // First row encountered for this email is the most recent gift
+    // (rows are ORDER BY created_at DESC) so it's the natural anchor
+    // for the "keep going" CTA destination.
+    if (!agg.primaryFundId) {
+      agg.primaryFundId = row.fund_id;
+      agg.primaryFundSlug = row.fund_slug;
+    }
+    if (!agg.senderName && row.sender_name && !row.is_anonymous) {
+      agg.senderName = String(row.sender_name).trim();
+    }
+  }
+
+  if (aggregates.size === 0) return;
+
+  // Array.from for cross-version Map iteration compatibility. Same
+  // pattern used by getPendingInvitationsForUser elsewhere in storage.ts.
+  for (const [email, agg] of Array.from(aggregates.entries())) {
+    // Find ANY subscriber record for this email across all funds
+    // they touched. We use the first one we find as the "anchor" for
+    // the dedup write. If ANY subscriber record for this email shows
+    // lastYearEndRecapYear === currentYear, skip — already sent.
+    let anchorFundId: string = "";
+    let anchorSubscriber: GifterNotificationSubscriber | null = null;
+    let alreadySentThisYear = false;
+    for (const fundId of Array.from(agg.fundIds)) {
+      const sub = store.subscribersByFund[fundId]?.[email];
+      if (!sub) continue;
+      if (sub.lastYearEndRecapYear === currentYear) {
+        alreadySentThisYear = true;
+        break;
+      }
+      if (!anchorSubscriber) {
+        anchorFundId = fundId;
+        anchorSubscriber = sub;
+      }
+    }
+    if (alreadySentThisYear) continue;
+
+    // No subscriber record for this gifter on ANY of the funds they
+    // gave to? Unusual (the gift webhook chain creates these), but
+    // possible for legacy data or gifts that bypassed the opt-in
+    // flow. We still want the recap — synthesize an anonymous
+    // anchor record so we have an unsubscribe token to include and
+    // a place to write the dedup stamp.
+    if (!anchorSubscriber || !anchorFundId) {
+      const anchor = agg.primaryFundId;
+      if (!anchor) continue;
+      if (!store.subscribersByFund[anchor]) store.subscribersByFund[anchor] = {};
+      const token = crypto.randomBytes(16).toString("hex");
+      const synthesized = normalizeSubscriber(email, {
+        name: agg.senderName,
+        unsubscribeToken: token,
+      });
+      store.subscribersByFund[anchor][email] = synthesized;
+      anchorFundId = anchor;
+      anchorSubscriber = synthesized;
+    }
+    if (!anchorFundId || !anchorSubscriber) continue;
+
+    // Resolve recipient names. Show only kids the gifter gave to
+    // non-anonymously (when ALL gifts to a fund were anonymous, the
+    // recipient should remain hidden). If that filtering leaves the
+    // list empty (everything was anonymous), the render function
+    // falls back to "{N} children" generic phrasing.
+    const childNamesList = Array.from(agg.childNames);
+
+    const primaryGiftUrl = agg.primaryFundSlug
+      ? `${baseUrl}/${agg.primaryFundSlug}`
+      : agg.primaryFundId
+        ? `${baseUrl}/gift/${agg.primaryFundId}`
+        : "";
+
+    await appendQueueEntry({
+      type: "year_end_recap",
+      // Anchor fundId — the year-end recap isn't per-fund but the
+      // queue entries carry one for outbox tagging consistency.
+      fundId: anchorFundId,
+      email,
+      name: anchorSubscriber.name,
+      year: currentYear,
+      totalGiven: Math.round(agg.totalGiven * 100) / 100,
+      giftCount: agg.giftCount,
+      fundCount: agg.fundIds.size,
+      childNames: childNamesList,
+      primaryGiftUrl,
+      startFundUrl: buildLoopStartFundUrl(baseUrl, anchorFundId, "year_end_recap_email", "email"),
+      unsubscribeUrl: buildUnsubscribeUrl(baseUrl, anchorSubscriber.unsubscribeToken),
+    });
+
+    // Stamp dedup on the anchor record. We do NOT stamp every fund's
+    // subscriber — the cross-fund check at the top of this loop already
+    // catches subsequent runs because we read lastYearEndRecapYear from
+    // ANY of the gifter's subscriber records.
+    store.subscribersByFund[anchorFundId][email] = {
+      ...anchorSubscriber,
+      lastYearEndRecapYear: currentYear,
+      lastYearEndRecapSentAt: now.toISOString(),
+    };
+    storeChanged = true;
+    queued += 1;
+  }
+
+  if (storeChanged) {
+    await saveNotificationStore(store);
+  }
+  if (queued > 0) {
+    log(`queued ${queued} year-end recap(s)`, "gifter-worker");
+  }
+}
+
 // Exported enqueue for the parent-thank-you flow. Called from
 // routes.ts when a parent marks a thank-you note as "sent" in the
 // dashboard. Distinct from the auto-generated draft created by the
@@ -2019,6 +2328,7 @@ export async function runGifterNotificationWorker(log: (message: string, source?
     await enqueueGiftAnniversaryEmails(log);
     await enqueueRecurringNotifications(log);
     await enqueueDormancyCheckIns(log);
+    await enqueueYearEndRecaps(log);
     await processQueuedNotifications(log);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

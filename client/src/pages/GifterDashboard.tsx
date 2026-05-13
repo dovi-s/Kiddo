@@ -1,217 +1,442 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useSearch } from "wouter";
-import { motion } from "framer-motion";
-import { Logo } from "@/components/ui/logo";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+// BookOpen replaces Sparkles 2026-05-12 for "Latest Memory Book moment" —
+// Sparkles banned per feedback_no_ai_slop.md. BookOpen is the locked Memory
+// Book semantic icon per feedback_iconography_consistency.md.
+import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, TrendingUp, BellRing } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Shield, FileText, Eye, AlertTriangle, ArrowRight } from "lucide-react";
-import { Nav } from "@/components/layout/Nav";
-import { Footer } from "@/components/layout/Footer";
-import { KIDDO_AUM_FEE_RATE, estimateAnnualAumFee } from "@shared/monetization";
+import { Logo } from "@/components/ui/logo";
+import { useAuth } from "@/hooks/use-auth";
+import { toast } from "@/hooks/use-toast";
+import { haptic } from "@/lib/haptics";
+import { buildTrackedGetStartedHref } from "@/lib/acquisition";
+import { useCountUp } from "@/hooks/use-count-up";
 
-type Tab = "terms" | "privacy" | "disclosures";
+type GifterFundRow = {
+  fundId: string;
+  childName: string;
+  fundName: string;
+  sharePath: string;
+  totalGifted: number;
+  giftCount: number;
+  lastGiftAt: string | null;
+  savedAt: string | null;
+  nextBirthdayLabel: string | null;
+  childPhase: string;
+  fundStatus: string;
+  currentFundValue: number;
+  holdingsCount: number;
+  activeEventCount: number;
+  nextMilestoneTarget: number | null;
+  nextMilestoneProgress: number;
+  recentMemoryPreview: string | null;
+  recentMemoryAuthor: string | null;
+  recentMemoryAt: string | null;
+  updatesEnabled: boolean;
+};
 
-export default function Legal() {
+type GifterDashboardData = {
+  summary: {
+    savedFundCount: number;
+    totalGifted: number;
+    totalGifts: number;
+    trackedFundValue: number;
+    followingUpdatesCount: number;
+  };
+  funds: GifterFundRow[];
+};
+
+function fmtMoney(value: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value || 0);
+}
+
+function fmtDate(value: string | null) {
+  if (!value) return "Not yet gifted";
+  return new Date(value).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function statusLabel(value: string) {
+  switch (String(value || "").toLowerCase()) {
+    case "active":
+      return "Live and receiving gifts";
+    case "draft":
+      return "Waiting for investing activation";
+    default:
+      return "In progress";
+  }
+}
+
+export default function GifterDashboard() {
   const search = useSearch();
+  const params = new URLSearchParams(search);
+  const mode = params.get("mode") || "";
+  const sessionId = params.get("session_id") || "";
   const [, setLocation] = useLocation();
-  const [activeTab, setActiveTab] = useState<Tab>("terms");
+  const queryClient = useQueryClient();
+  const { user, isAuthenticated, login, register, isLoggingIn, isRegistering } = useAuth();
 
-  const tabs: { id: Tab; label: string; icon: typeof FileText }[] = [
-    { id: "terms", label: "Terms of Service", icon: FileText },
-    { id: "privacy", label: "Privacy Policy", icon: Eye },
-    { id: "disclosures", label: "Disclosures", icon: AlertTriangle },
-  ];
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [saveInFlight, setSaveInFlight] = useState(false);
+  const startFundHref = buildTrackedGetStartedHref("", {
+    ref: "gifter-dashboard",
+    src: "gifter_dashboard",
+    loop_touchpoint: "gifter_dashboard_cta",
+    loop_channel: "web",
+  });
+
+  const { data, isLoading } = useQuery<GifterDashboardData>({
+    queryKey: ["/api/gifter-account/dashboard"],
+    queryFn: async () => {
+      const res = await fetch("/api/gifter-account/dashboard", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load your saved funds");
+      return res.json();
+    },
+    enabled: isAuthenticated,
+  });
+
+  // Count-up on the five summary cards. The gifter surface is
+  // Robinhood-minimal register; count-up belongs because these are
+  // lifetime stats that mean "look what you did for these kids" —
+  // they should settle in rather than flash. Counts round to int
+  // on render; currency stays at default precision.
+  const savedFundCount = data?.summary.savedFundCount ?? 0;
+  const totalGifted = data?.summary.totalGifted ?? 0;
+  const totalGifts = data?.summary.totalGifts ?? 0;
+  const trackedFundValue = data?.summary.trackedFundValue ?? 0;
+  const followingUpdatesCount = data?.summary.followingUpdatesCount ?? 0;
+  const { value: animatedSavedFundCount, isAnimating: savedFundCountAnimating } = useCountUp({
+    from: 0,
+    to: savedFundCount,
+    duration: 700,
+    enabled: savedFundCount > 0,
+  });
+  const { value: animatedTotalGifted, isAnimating: totalGiftedAnimating } = useCountUp({
+    from: totalGifted * 0.9,
+    to: totalGifted,
+    duration: 1000,
+    enabled: totalGifted > 0,
+  });
+  const { value: animatedTotalGifts, isAnimating: totalGiftsAnimating } = useCountUp({
+    from: 0,
+    to: totalGifts,
+    duration: 700,
+    enabled: totalGifts > 0,
+  });
+  const { value: animatedTrackedFundValue, isAnimating: trackedFundValueAnimating } = useCountUp({
+    from: trackedFundValue * 0.9,
+    to: trackedFundValue,
+    duration: 1000,
+    enabled: trackedFundValue > 0,
+  });
+  const { value: animatedFollowingUpdatesCount, isAnimating: followingUpdatesCountAnimating } = useCountUp({
+    from: 0,
+    to: followingUpdatesCount,
+    duration: 700,
+    enabled: followingUpdatesCount > 0,
+  });
 
   useEffect(() => {
-    const params = new URLSearchParams(search);
-    const requested = params.get("tab");
-    if (requested === "terms" || requested === "privacy" || requested === "disclosures") {
-      setActiveTab(requested);
-      return;
-    }
-    setActiveTab("terms");
-  }, [search]);
+    if (!isAuthenticated || !sessionId || mode !== "save" || saveInFlight) return;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        setSaveInFlight(true);
+        const res = await fetch("/api/gifter-account/save-fund", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ sessionId, source: "gift_success" }),
+        });
+        const payload = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(payload?.error || "Could not save this fund.");
+        if (!cancelled) {
+          haptic("success");
+          toast({ title: "Fund saved", description: `${payload?.childName || "This fund"} is now in your gifter dashboard.` });
+          queryClient.invalidateQueries({ queryKey: ["/api/gifter-account/dashboard"] });
+          setLocation("/gifter");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          toast({ title: "Could not save fund", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+        }
+      } finally {
+        if (!cancelled) setSaveInFlight(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, sessionId, mode, saveInFlight, queryClient, setLocation]);
 
-  function handleTabChange(tab: Tab) {
-    setActiveTab(tab);
-    setLocation(`/legal?tab=${tab}`);
-  }
+  const handleCreateAccount = async () => {
+    try {
+      const [firstName, ...rest] = name.trim().split(/\s+/);
+      await register({
+        email: email.trim(),
+        password,
+        firstName: firstName || undefined,
+        lastName: rest.join(" ") || undefined,
+      });
+    } catch (error) {
+      toast({ title: "Could not create account", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      await login({ email: email.trim(), password });
+    } catch (error) {
+      toast({ title: "Could not sign in", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      <Nav />
-
-      <div className="max-w-4xl mx-auto px-4 py-12 md:py-20">
-        <div className="flex items-center gap-3 mb-8">
-          <Shield className="h-6 w-6 text-primary" />
-          <h1 className="font-heading text-3xl md:text-4xl font-bold text-foreground" data-testid="text-legal-heading">
-            Legal
-          </h1>
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        <div className="flex items-center justify-between">
+          <Logo />
+          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">Back to Kiddo</Link>
         </div>
 
-        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                activeTab === tab.id
-                  ? "bg-primary text-primary-foreground shadow-md"
-                  : "bg-muted text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid={`button-tab-${tab.id}`}
-            >
-              <tab.icon size={15} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25 }}
-          className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12"
-        >
-          {activeTab === "terms" && (
-            <div className="prose prose-sm max-w-none" data-testid="content-terms">
-              <h2 className="font-heading text-xl font-semibold text-foreground mb-4">Terms of Service</h2>
-              <p className="text-sm text-muted-foreground mb-4">Last updated: February 2026</p>
-
-              <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">1. What Kiddo Is</h3>
-                  <p>Kiddo is a technology platform that makes it easy to give stock investments as gifts. We are not a broker-dealer, investment adviser, or bank. Brokerage services are provided by DriveWealth, LLC, a FINRA-registered broker-dealer and member of SIPC.</p>
+        {!isAuthenticated ? (
+          <div className="mt-10 grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
+            <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
+              <p className="text-sm font-medium text-primary">Gifter account</p>
+              <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground">Save the children you gift to often.</h1>
+              <p className="mt-3 text-muted-foreground">
+                Keep favorite fund links in one place, see your gifting history, and come back in one tap for the next birthday or holiday.
+              </p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <Bookmark className="h-4 w-4 text-primary" />
+                  <p className="mt-2 text-sm font-medium text-foreground">Saved funds</p>
+                  <p className="mt-1 text-sm text-muted-foreground">No more asking for the link every time.</p>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">2. Account Eligibility</h3>
-                  <p>You must be at least 18 years old and a U.S. resident to create a Kiddo account. Custodial (UTMA) accounts can be opened for minors by a parent or legal guardian. Gift-givers do not need an account to send gifts.</p>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <Gift className="h-4 w-4 text-primary" />
+                  <p className="mt-2 text-sm font-medium text-foreground">Gift history</p>
+                  <p className="mt-1 text-sm text-muted-foreground">See who you have supported and how often.</p>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">3. How Gifts Work</h3>
-                  <p>When someone sends a gift through Kiddo, the payment is processed via Stripe. Once the payment clears (typically 1 to 2 business days), the funds are directed to the recipient's investment account. Depending on the fund's settings, the money may be automatically invested or held as cash until the account owner decides.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">4. Fees</h3>
-                  <p>Kiddo offers Free, Kiddo Plus, Kiddo Family, Kiddo Legacy, and tiered Kiddo Occasions pricing. Free includes one child fund, gift link sharing, basic Memory Book features, and Kid View Lite. Kiddo does not charge a normal platform fee on gifts. Kiddo Plus costs $4.99 per month or $39 per year for one child fund. Kiddo Family costs $7.99 per month or $69 per year for every child fund you manage. Kiddo Legacy costs $129 per year. Kiddo Occasions start at $7.99 for a one-time premium occasion page. There is no required Kiddo large-gift fee. Optional premium gift upgrades are shown separately before checkout. Kiddo also charges {(KIDDO_AUM_FEE_RATE * 100).toFixed(2)}% annually on invested assets only. On $10,000 invested, that is about ${estimateAnnualAumFee(10000).toFixed(2)} per year. Cash and pending gifts are not charged. Payment processing fees are paid by the gift-giver: card, Apple Pay, and Google Pay are approximately 2.9% + $0.30 per transaction, and bank transfers (ACH) are 0.8%, capped at $5. All fees are disclosed before payment.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">5. Investment Risk</h3>
-                  <p>All investments involve risk, including the possible loss of principal. Past performance does not guarantee future results. The value of your investments may go up or down. Kiddo does not provide investment advice. You are responsible for your own investment decisions.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">6. UTMA Accounts</h3>
-                  <p>Custodial (UTMA) accounts are managed by the custodian (parent or guardian) for the benefit of the minor. Money and assets placed in a UTMA account belong to the minor and transfer to their control when they reach the age of majority in their state (typically 18 or 21). The custodian may sell investments and withdraw funds at any time, provided the funds are used for the child's benefit, as required by UTMA law. For adult (personal taxable) accounts, the account owner has full control to sell investments and withdraw at any time.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">7. Account Closure</h3>
-                  <p>You may close your account at any time. Outstanding investments will need to be sold or transferred before account closure. Standard ACATS transfer to another brokerage is supported.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">8. Changes to Terms</h3>
-                  <p>We may update these terms from time to time. We will notify you of material changes via email or in-app notification. Continued use of Kiddo after changes constitutes acceptance of the updated terms.</p>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <CalendarDays className="h-4 w-4 text-primary" />
+                  <p className="mt-2 text-sm font-medium text-foreground">Birthday-ready</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Jump back in fast for the next event or birthday.</p>
                 </div>
               </div>
             </div>
-          )}
 
-          {activeTab === "privacy" && (
-            <div className="prose prose-sm max-w-none" data-testid="content-privacy">
-              <h2 className="font-heading text-xl font-semibold text-foreground mb-4">Privacy Policy</h2>
-              <p className="text-sm text-muted-foreground mb-4">Last updated: February 2026</p>
+            <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
+              <div className="flex items-center gap-2 text-primary">
+                <Lock className="h-4 w-4" />
+                <p className="text-sm font-medium">Free forever</p>
+              </div>
+              <h2 className="mt-3 font-heading text-2xl font-semibold text-foreground">
+                {mode === "save" ? "Create your gifter account to save this fund" : "Sign in or create your gifter account"}
+              </h2>
+              <div className="mt-5 space-y-3">
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                />
+                <input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Create a password"
+                  className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
+                />
+              </div>
+              <div className="mt-4 grid gap-3">
+                <Button onClick={handleCreateAccount} disabled={isRegistering || isLoggingIn}>
+                  {isRegistering ? "Creating account..." : "Create free gifter account"}
+                </Button>
+                <Button variant="outline" onClick={handleLogin} disabled={isLoggingIn || isRegistering}>
+                  {isLoggingIn ? "Signing in..." : "I already have an account"}
+                </Button>
+              </div>
+              <p className="mt-4 text-xs text-muted-foreground">
+                We only use this account to help you come back to the funds you care about. It does not make you the owner of any child's investments.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-10 space-y-6">
+            <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-primary">Your gifts</p>
+                  <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground">
+                    Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
+                  </h1>
+                  <p className="mt-2 text-muted-foreground">Everything you have saved or gifted to regularly, in one place.</p>
+                </div>
+                {sessionId && mode === "save" && (
+                  <div className="rounded-2xl bg-primary/5 px-4 py-3 text-sm text-primary">
+                    {saveInFlight ? "Saving this fund..." : "This gift page is ready to save."}
+                  </div>
+                )}
+              </div>
 
-              <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">What We Collect</h3>
-                  <p>We collect information you provide when creating an account (name, email, password), activating investing (legal name, date of birth, address, SSN or other identity details required for account opening), and sending gifts (name, email, message, payment details handled by our payment processor). We also collect usage and device data needed to operate, secure, and improve the platform.</p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-sm text-muted-foreground">Saved funds</p>
+                  <p
+                    className="mt-1 font-heading text-2xl text-foreground tabular-nums"
+                    aria-live={savedFundCountAnimating ? "off" : "polite"}
+                    aria-label={String(savedFundCount)}
+                  >{Math.round(animatedSavedFundCount)}</p>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">How We Use Your Information</h3>
-                  <p>We use your information to provide our services, process transactions, verify your identity for regulatory compliance, communicate with you about your account, and improve our platform. We never sell your personal information.</p>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-sm text-muted-foreground">Total gifted</p>
+                  <p
+                    className="mt-1 font-heading text-2xl text-foreground tabular-nums"
+                    aria-live={totalGiftedAnimating ? "off" : "polite"}
+                    aria-label={fmtMoney(totalGifted)}
+                  >{fmtMoney(animatedTotalGifted)}</p>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Who We Share With</h3>
-                  <p>We share information with DriveWealth, LLC to open and manage brokerage accounts, Stripe to process payments, and other service providers that help us run the product. These may include identity-verification and KYC vendors, transactional email providers, analytics providers, cloud hosting or storage vendors, messaging providers, and customer support tools when those services are enabled. We do not sell or rent your personal information to third parties for their own marketing.</p>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-sm text-muted-foreground">Total gifts</p>
+                  <p
+                    className="mt-1 font-heading text-2xl text-foreground tabular-nums"
+                    aria-live={totalGiftsAnimating ? "off" : "polite"}
+                    aria-label={String(totalGifts)}
+                  >{Math.round(animatedTotalGifts)}</p>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Service Providers and Processors</h3>
-                  <p>Depending on which features are enabled, Kiddo may use processors or sub-processors for brokerage custody, payment processing, identity verification, bank linking, transactional email, analytics, messaging, push notifications, support, or storage. Our current stack prominently includes DriveWealth for custody and Stripe for payments. If we enable services such as Plaid, Postmark, SendGrid, Klaviyo, Mixpanel, Google Analytics, Firebase Cloud Messaging, Twilio, or Intercom, those providers will process limited data only for the services they support.</p>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-sm text-muted-foreground">Tracked fund value</p>
+                  <p
+                    className="mt-1 font-heading text-2xl text-foreground tabular-nums"
+                    aria-live={trackedFundValueAnimating ? "off" : "polite"}
+                    aria-label={fmtMoney(trackedFundValue)}
+                  >{fmtMoney(animatedTrackedFundValue)}</p>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Children's Privacy</h3>
-                  <p>We take children's privacy seriously. Minors' accounts are non-discoverable by default and accessible only via direct link. Public-facing pages for minors display only the child's first name. We are actively working toward full COPPA compliance and have additional protections in place for minor accounts: parents create and control accounts on behalf of their children, custodial brokerage accounts are opened in the parent's name as legal custodian, and we do not knowingly collect personal information directly from children under 13 without parental consent. If you believe a child under 13 has provided personal information directly to us without parental consent, please contact us so we can promptly delete it.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Data Security</h3>
-                  <p>We use 256-bit SSL encryption, secure data storage, and follow industry best practices for data protection. Sensitive identity and payment information is transmitted only to the providers responsible for custody, payments, or identity verification and is not exposed publicly in the product experience.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Your Rights</h3>
-                  <p>You can request access to, correction of, or deletion of your personal information at any time by contacting us. California residents have additional rights under the CCPA.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Cookies, Analytics, and Messaging</h3>
-                  <p>We use essential cookies for authentication and session management. If analytics tools are enabled, we may also use measurement technologies to understand usage, improve conversion, detect errors, and evaluate product performance. If push notifications, lifecycle messaging, or support tools are enabled, we may use providers such as Firebase Cloud Messaging, Twilio, Klaviyo, or Intercom for those communications. You can disable non-essential browser storage in your browser settings, though some core product functionality may require essential cookies.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Bank Linking and ACH</h3>
-                  <p>If Kiddo enables ACH bank transfers or bank-linking features through a provider such as Plaid, that provider may receive your banking credentials, account metadata, and account verification information solely to support bank connection, verification, and payment flows. When that functionality is live, the provider will be treated as a named data processor in this policy.</p>
+                <div className="rounded-2xl bg-muted/40 p-4">
+                  <p className="text-sm text-muted-foreground">Following updates</p>
+                  <p
+                    className="mt-1 font-heading text-2xl text-foreground tabular-nums"
+                    aria-live={followingUpdatesCountAnimating ? "off" : "polite"}
+                    aria-label={String(followingUpdatesCount)}
+                  >{Math.round(animatedFollowingUpdatesCount)}</p>
                 </div>
               </div>
             </div>
-          )}
 
-          {activeTab === "disclosures" && (
-            <div className="prose prose-sm max-w-none" data-testid="content-disclosures">
-              <h2 className="font-heading text-xl font-semibold text-foreground mb-4">Disclosures</h2>
-              <p className="text-sm text-muted-foreground mb-4">Last updated: February 2026</p>
-
-              <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
-                <div className="bg-primary/5 rounded-xl p-5 border border-primary/10">
-                  <p className="font-medium text-foreground mb-2">Important Notice</p>
-                  <p>Kiddo Inc. is a technology company, not a broker-dealer, investment adviser, or bank. Kiddo does not provide investment advice or recommendations.</p>
-                </div>
+            <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
+              <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h3 className="font-medium text-foreground mb-2">Brokerage Services</h3>
-                  <p>Securities are offered through DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. Clearing and custody services are provided by DriveWealth. Kiddo provides the product experience but does not execute trades or hold customer assets.</p>
+                  <h2 className="font-heading text-2xl font-semibold text-foreground">Saved children and funds</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    This is your read-only relationship view: who you have helped, how those funds are doing now, and whether updates are still reaching you.
+                  </p>
                 </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">SIPC Coverage</h3>
-                  <p>Accounts are protected by SIPC up to $500,000 (including $250,000 for cash claims). SIPC protects against the loss of securities and cash in the event of a broker-dealer failure. SIPC does not protect against market losses.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Investment Risks</h3>
-                  <p>Investing in securities involves risk. The value of your investments may fluctuate, and you may receive back less than you originally invested. Past performance is not indicative of future results. Historical averages (such as 10% annual returns) are not guaranteed.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Not FDIC Insured</h3>
-                  <p>Investment accounts are not bank deposits and are not insured by the FDIC or any government agency. They are not guaranteed by any bank and may lose value.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Tax Information</h3>
-                  <p>Gifts of securities may have tax implications. The annual gift tax exclusion is $19,000 per recipient (2025). Gifts over this amount may require filing a gift tax return. Investment gains in UTMA accounts may be subject to the kiddie tax if unearned income exceeds $2,700. Consult a tax professional for advice specific to your situation.</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-foreground mb-2">Regulatory Information</h3>
-                  <p>Check the background of DriveWealth, LLC on <a href="https://brokercheck.finra.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">FINRA's BrokerCheck</a>.</p>
-                </div>
+                <Link href={startFundHref}>
+                  <Button variant="outline">
+                    Start your own fund
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
-            </div>
-          )}
-        </motion.div>
+              {isLoading ? (
+                <p className="mt-4 text-sm text-muted-foreground">Loading your saved funds...</p>
+              ) : data?.funds?.length ? (
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {data.funds.map((fund) => (
+                    <div key={fund.fundId} className="rounded-3xl border border-border/60 bg-background p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">{fund.childPhase === "teen" ? "Teen fund" : "Child fund"}</p>
+                          <h3 className="mt-2 font-heading text-xl font-semibold text-foreground">{fund.childName}</h3>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {fund.giftCount > 0 ? `${fund.giftCount} gifts sent • ${fmtMoney(fund.totalGifted)} from you` : "Saved for the next event"}
+                          </p>
+                        </div>
+                        <Heart className="h-5 w-5 text-primary" />
+                      </div>
 
-        <div className="mt-12 text-center">
-          <p className="text-sm text-muted-foreground mb-6">Have questions about any of this?</p>
-          <Link href="/faq">
-            <Button variant="outline" data-testid="button-legal-faq">
-              Visit our FAQ
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <div className="rounded-2xl bg-muted/40 p-3">
+                          <p className="text-xs text-muted-foreground">Fund value now</p>
+                          <p className="mt-1 font-medium text-foreground">{fmtMoney(fund.currentFundValue)}</p>
+                        </div>
+                        <div className="rounded-2xl bg-muted/40 p-3">
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <p className="mt-1 font-medium text-foreground">{statusLabel(fund.fundStatus)}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 space-y-1 text-sm text-muted-foreground">
+                        <p>Last gift: {fmtDate(fund.lastGiftAt)}</p>
+                        <p>Birthday anchor: {fund.nextBirthdayLabel || "Not added yet"}</p>
+                        <p>{fund.holdingsCount} holdings • {fund.activeEventCount} active events</p>
+                        <p className="flex items-center gap-2">
+                          <BellRing className="h-4 w-4 text-primary" />
+                          {fund.updatesEnabled ? "You are following updates for this fund" : "You are not following updates for this fund yet"}
+                        </p>
+                      </div>
+
+                      {fund.nextMilestoneTarget && (
+                        <div className="mt-4 rounded-2xl bg-muted/30 p-4">
+                          <div className="flex items-center justify-between gap-3 text-sm">
+                            <p className="font-medium text-foreground">Next family milestone</p>
+                            <p className="text-muted-foreground">{fmtMoney(fund.nextMilestoneTarget)}</p>
+                          </div>
+                          <div className="mt-3 h-2 rounded-full bg-muted">
+                            <div className="h-2 rounded-full bg-primary" style={{ width: `${fund.nextMilestoneProgress}%` }} />
+                          </div>
+                        </div>
+                      )}
+
+                      {fund.recentMemoryPreview && (
+                        <div className="mt-4 rounded-2xl border border-border/60 bg-card p-4">
+                          <div className="flex items-center gap-2 text-primary">
+                            <BookOpen className="h-4 w-4" />
+                            <p className="text-sm font-medium">Latest Memory Book moment</p>
+                          </div>
+                          <p className="mt-2 text-sm text-foreground">"{fund.recentMemoryPreview}"</p>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            {fund.recentMemoryAuthor ? `${fund.recentMemoryAuthor} • ` : ""}{fmtDate(fund.recentMemoryAt)}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="mt-5 flex flex-wrap gap-3">
+                        <Link href={fund.sharePath}>
+                          <Button>
+                            Gift again
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button variant="outline" disabled>
+                          <TrendingUp className="mr-2 h-4 w-4" />
+                          Read-only tracking
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-5 rounded-3xl border border-dashed border-border bg-muted/20 p-8 text-center">
+                  <Mail className="mx-auto h-5 w-5 text-primary" />
+                  <p className="mt-3 font-medium text-foreground">No saved funds yet</p>
+                  <p className="mt-2 text-sm text-muted-foreground">The next time you finish a gift, use "Save this fund" and it will show up here with fund value, milestones, and memory updates.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
-
-      <Footer />
     </div>
   );
 }
