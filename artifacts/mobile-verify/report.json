@@ -1,0 +1,62 @@
+[
+  {
+    "name": "mobile-home",
+    "ok": true,
+    "status": 200,
+    "route": "/",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      "Blocked call to navigator.vibrate because user hasn't tapped on the frame or any embedded frame yet: https://www.chromestatus.com/feature/5644273861001216."
+    ],
+    "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\mobile-verify\\mobile-home.png"
+  },
+  {
+    "name": "mobile-login",
+    "ok": true,
+    "status": 200,
+    "route": "/login",
+    "consoleErrors": [
+      "Failed to load resource: the server responded with a status of 401 (Unauthorized)"
+    ],
+    "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\mobile-verify\\mobile-login.png"
+  },
+  {
+    "name": "mobile-register",
+    "ok": true,
+    "route": "/api/auth/register",
+    "status": 201,
+    "body": "{\"id\":\"94c5a7ad-4628-432e-835c-2a75cd6af7f5\",\"email\":\"mobile_verify_1775261982440@example.com\",\"referralCode\":\"3J65HTBQ\",\"referredBy\":null,\"firstName\":\"Mobile\",\"lastName\":\"Verify\",\"profileImageUrl\":null,\"googleId\":null,\"isAdmin\":false,\"kycStatus\":\"none\",\"kycSubmittedAt\":null,\"createdAt\":\"2026-04-04T00:19:43.648Z\",\"updatedAt\":\"2026-04-04T00:19:43.648Z\",\"isSuperAdmin\":false}"
+  },
+  {
+    "name": "mobile-dashboard",
+    "ok": true,
+    "status": 200,
+    "route": "/dashboard",
+    "consoleErrors": [],
+    "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\mobile-verify\\mobile-dashboard.png"
+  },
+  {
+    "name": "mobile-activity",
+    "ok": true,
+    "status": 200,
+    "route": "/activity",
+    "consoleErrors": [],
+    "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\mobile-verify\\mobile-activity.png"
+  },
+  {
+    "name": "mobile-settings",
+    "ok": true,
+    "status": 200,
+    "route": "/settings",
+    "consoleErrors": [],
+    "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\mobile-verify\\mobile-settings.png"
+  },
+  {
+    "name": "mobile-events",
+    "ok": true,
+    "status": 200,
+    "route": "/events",
+    "consoleErrors": [],
+    "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\mobile-verify\\mobile-events.png"
+  }
+]

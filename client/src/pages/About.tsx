@@ -1,12 +1,11 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { Logo } from "@/components/ui/logo";
-import { Mascot } from "@/components/ui/mascot";
-import { GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
-import { Button } from "@/components/ui/button";
-import { Heart, TrendingUp, Shield, Users, ArrowRight, Sprout, Sparkles } from "lucide-react";
+import { ArrowRight, Shield, BookOpen, Eye, Gift } from "lucide-react";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
+import { GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
+import { Button } from "@/components/ui/button";
+import { FounderMedia } from "@/components/ui/founder-media";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   return (
@@ -27,185 +26,181 @@ export default function About() {
     <div className="min-h-screen bg-background">
       <Nav />
 
+      {/* Hero */}
       <section className="relative pt-20 pb-16 md:pt-32 md:pb-24 overflow-hidden gemini-warm-section">
         <GeminiHeroGradient />
-        <div className="max-w-4xl mx-auto px-4 relative z-10 text-center">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="mb-8"
-          >
-            <Mascot size="xl" className="mx-auto" context="about-hero" />
+        <div className="max-w-3xl mx-auto px-4 relative z-10">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <h1 className="font-heading text-4xl md:text-6xl font-bold text-foreground tracking-tight leading-tight" data-testid="text-about-headline">
+              Most birthday gifts are forgotten by <GradientText>Tuesday</GradientText>.
+            </h1>
+            <p className="mt-6 text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl">
+              The check gets lost. The savings bond sits in a drawer for a decade. The toy breaks in a week.
+            </p>
+            <p className="mt-4 text-lg md:text-xl font-semibold text-foreground">
+              Kiddo is different.
+            </p>
           </motion.div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="font-heading text-4xl md:text-6xl font-bold text-foreground tracking-tight mb-6"
-            data-testid="text-about-headline"
-          >
-            Every gift is a <GradientText>seed</GradientText>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.6 }}
-            className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto"
-            data-testid="text-about-subheading"
-          >
-            We started Kora because we believe the most meaningful gifts are the ones that keep growing long after the wrapping paper is gone.
-          </motion.p>
         </div>
       </section>
 
+      {/* What Kiddo does */}
       <section className="py-20 md:py-28">
-        <div className="max-w-4xl mx-auto px-4">
-          <FadeIn>
-            <div className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12">
-              <div className="flex items-start gap-4 mb-6">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Heart className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-4" data-testid="text-why-heading">
-                    Why we built Kora
-                  </h2>
-                </div>
+        <div className="max-w-3xl mx-auto px-4">
+          <FadeIn className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12 space-y-5">
+            <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+              Family and friends gift money in under 60 seconds. No account needed. No app to download. Just a link, a stock pick, and a note.
+            </p>
+            <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+              That gift gets automatically invested in real stocks inside your child's UTMA account.{" "}
+              <span className="font-semibold text-foreground">Disney. Apple. Nike.</span>{" "}
+              Whatever feels meaningful to them.
+            </p>
+            <p className="text-base md:text-lg font-semibold text-foreground">And it keeps growing.</p>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Memory Book */}
+      <section className="py-20 md:py-28 gemini-warm-section">
+        <div className="max-w-3xl mx-auto px-4">
+          <FadeIn className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                <BookOpen className="h-6 w-6 text-primary" />
               </div>
-              <div className="space-y-5 text-muted-foreground leading-relaxed">
-                <p>
-                  When we were kids, a family member gave us savings bonds. It felt like a really thoughtful gift at the time. Fifteen years later, we finally cashed them in. They had barely grown. The same amount put into almost any popular stock or index fund would have been worth so much more.
-                </p>
-                <p>
-                  The love behind that gift was real. But the outcome didn't match. And we realized this happens all the time. People want to give something meaningful, something that lasts. But the options are either forgettable (toys, gift cards) or locked behind confusing brokerage accounts that nobody wants to deal with.
-                </p>
-                <p>
-                  So we built Kora. A simple way to give stock investments as gifts. No brokerage account needed for the giver. No confusing forms. Just tap a link, pick an amount, and you've planted a gift that actually grows over time.
-                </p>
-                <p>
-                  A $50 birthday gift invested in the stock market could grow into nearly $280 over 18 years at historical averages. That's not a toy forgotten in a closet. That's a head start.
-                </p>
-                <p>
-                  We built Kora for parents who want something better for their kids. For grandparents who want their generosity to compound. For friends at baby showers who want to give something truly lasting. And for anyone who ever received a well-meaning gift that just didn't grow.
-                </p>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Memory Book</p>
+                <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
+                  Every gift. Every note. Every person who showed up.
+                </h2>
               </div>
+            </div>
+            <div className="space-y-4 text-muted-foreground leading-relaxed">
+              <p>Every gift, every note, every person who showed up for your kid gets captured in the Memory Book.</p>
+              <p>A living record of everyone who believed in them before they even knew what a stock was.</p>
+              <p className="font-medium text-foreground">
+                This is the most differentiated feature in Kiddo. Not a transaction log. A story.
+              </p>
             </div>
           </FadeIn>
         </div>
       </section>
 
-      <section className="py-20 md:py-28 gemini-warm-section">
-        <div className="max-w-4xl mx-auto px-4">
-          <FadeIn className="text-center mb-16">
-            <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight" data-testid="text-values-heading">
-              What we <GradientText>believe</GradientText>
-            </h2>
+      {/* Kid View */}
+      <section className="py-20 md:py-28">
+        <div className="max-w-3xl mx-auto px-4">
+          <FadeIn className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Eye className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Kid View</p>
+                <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
+                  They watch it grow. Real numbers. Real stocks.
+                </h2>
+              </div>
+            </div>
+            <div className="space-y-4 text-muted-foreground leading-relaxed">
+              <p>
+                The Kid View lets them see their fund. The companies they own. The gifts that built it. Real financial education that does not feel like education.
+              </p>
+              <p>
+                A 10-year-old opens the app and sees Disney stock growing. They own a piece of it. Someone in their family put it there for them.
+              </p>
+              <p className="font-medium text-foreground">That is the moment. That is what changes how they think about money forever.</p>
+            </div>
           </FadeIn>
-          <div className="grid md:grid-cols-2 gap-6">
-            {[
-              {
-                icon: Sprout,
-                title: "Small gifts matter",
-                desc: "A $25 gift is meaningful. We celebrate every contribution because time is the real multiplier, not the dollar amount.",
-              },
-              {
-                icon: Users,
-                title: "Gifting should be effortless",
-                desc: "Gift-givers should never need to create an account, download an app, or fill out paperwork. Tap a link, pick an amount, done.",
-              },
-              {
-                icon: Sparkles,
-                title: "Money talk shouldn't be scary",
-                desc: "We use plain language, not Wall Street jargon. A UTMA is 'an account you manage for your child.' Auto-invest means 'we handle it for you.'",
-              },
-              {
-                icon: Shield,
-                title: "Trust is earned, not assumed",
-                desc: "Real regulated accounts. SIPC protection up to $500,000. Transparent fees shown before every transaction. Your money is held at DriveWealth, LLC, a FINRA-registered broker-dealer. Never by us.",
-              },
-              {
-                icon: Heart,
-                title: "Gifts carry emotions",
-                desc: "Every gift comes with a message that's saved in the Memory Book forever. Years from now, your child can read what Grandma wrote on their first birthday.",
-              },
-              {
-                icon: TrendingUp,
-                title: "Time is the secret ingredient",
-                desc: "Compound growth turns small gifts into something remarkable. We help families think in decades, not days.",
-              },
-            ].map((value, i) => (
-              <FadeIn key={value.title} delay={i * 0.08}>
-                <div className="bg-card rounded-2xl shadow-premium-sm p-6 h-full" data-testid={`card-value-${i}`}>
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-4">
-                    <value.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="font-heading text-lg font-semibold text-foreground mb-2">{value.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{value.desc}</p>
-                </div>
-              </FadeIn>
-            ))}
-          </div>
         </div>
       </section>
 
+      {/* Age-18 handoff */}
+      <section className="py-20 md:py-28 gemini-warm-section">
+        <div className="max-w-3xl mx-auto px-4">
+          <FadeIn className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Gift className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">The moment it all comes together</p>
+                <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
+                  When they turn 18, they do not just get the money. They get the whole story.
+                </h2>
+              </div>
+            </div>
+            <div className="space-y-4 text-muted-foreground leading-relaxed">
+              <p>
+                Every gift. Every note. Every stock pick. Every person who believed in them. Delivered at the moment it matters most.
+              </p>
+              <p>
+                Not just a brokerage balance dropped on them one day. A record of everyone who showed up for them. Starting from before they could even say thank you.
+              </p>
+              <p className="font-heading text-xl font-semibold text-foreground">That is Kiddo.</p>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Trust / Security */}
       <section className="py-20 md:py-28" id="trust">
-        <div className="max-w-4xl mx-auto px-4">
-          <FadeIn>
-            <div className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12">
-              <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-6 text-center" data-testid="text-how-safe-heading">
-                How we keep your money <GradientText>safe</GradientText>
-              </h2>
-              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-[hsl(var(--kora-evergreen))]/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Shield className="h-4 w-4 text-[hsl(var(--kora-evergreen))]" />
+        <div className="max-w-3xl mx-auto px-4">
+          <FadeIn className="bg-card rounded-2xl shadow-premium-sm p-8 md:p-12">
+            <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-6 text-center">Your child's money is not sitting with us.</h2>
+            <div className="space-y-6">
+              {[
+                "Investments are held through DriveWealth, LLC, a FINRA-registered broker-dealer.",
+                "Accounts are protected by SIPC up to $500,000 in securities.",
+                "If Kiddo disappeared tomorrow, the underlying assets would not disappear with it.",
+              ].map((line) => (
+                <div key={line} className="flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Shield className="h-4 w-4 text-primary" />
                   </div>
-                  <div>
-                    <p className="font-medium text-foreground mb-1">We never hold your money</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">Your investments are held at DriveWealth, LLC, a FINRA-registered broker-dealer, completely separate from Kora. Even if something happened to us, your assets are safe.</p>
-                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{line}</p>
                 </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-[hsl(var(--kora-evergreen))]/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Shield className="h-4 w-4 text-[hsl(var(--kora-evergreen))]" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground mb-1">SIPC protection up to $500,000</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">The Securities Investor Protection Corporation covers your account. It's like FDIC for investments.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-full bg-[hsl(var(--kora-evergreen))]/10 flex items-center justify-center shrink-0 mt-0.5">
-                    <Shield className="h-4 w-4 text-[hsl(var(--kora-evergreen))]" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground mb-1">Bank-level encryption</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">256-bit SSL encryption on every transaction. The same security standard used by major banks worldwide.</p>
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </FadeIn>
         </div>
       </section>
 
+      {/* Team */}
       <section className="py-20 md:py-28 gemini-warm-section">
+        <div className="max-w-5xl mx-auto px-4">
+          <FadeIn className="text-center mb-14">
+            <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight">The people behind Kiddo</h2>
+          </FadeIn>
+          <FadeIn>
+            <FounderMedia />
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-20 md:py-28">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <FadeIn>
-            <Mascot size="lg" className="mx-auto mb-6" context="about-cta" />
-            <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight mb-4" data-testid="text-cta-heading">
-              Ready to give something that <GradientText>grows</GradientText>?
+            <h2 className="font-heading text-2xl md:text-4xl font-bold text-foreground tracking-tight mb-4">
+              Start your child's fund today.
             </h2>
-            <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-              Set up a fund in under 2 minutes. No credit card required.
+            <p className="text-muted-foreground max-w-xl mx-auto mb-8">
+              Free to start. Takes about 2 minutes. Your family and friends can begin gifting right away.
             </p>
-            <Link href="/get-started">
-              <Button size="lg" className="h-14 px-10 text-base" data-testid="button-about-cta">
-                Get Started Free
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/get-started">
+                <Button size="lg" className="h-14 px-10 text-base" data-testid="button-about-cta">
+                  Start your child's fund
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+              <Link href="/faq">
+                <Button variant="outline" size="lg" className="h-14 px-10 text-base" data-testid="button-about-faq">
+                  Read the FAQ
+                </Button>
+              </Link>
+            </div>
           </FadeIn>
         </div>
       </section>

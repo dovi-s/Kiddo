@@ -1,0 +1,9 @@
+Name,Description,Labels,Members,Due Date,Checklist
+Host re-engagement reminder engine,"Implement reminder triggers for hosts before key gifting windows.","retention,reminders,backend,frontend","Backend,Frontend",,"- [ ] Hosts receive targeted reminders before key event windows"
+Repeat gifter prompt flow,"Add contextual one-tap flow for prior gifters to gift again.","retention,gifters,frontend,growth","Frontend,Growth",,"- [ ] Prior gifters are prompted contextually with one-tap repeat flow"
+12-week cohort retention table,"Populate retention table with week and fund-type filters.","cohorts,retention,data,admin","Data,Frontend",,"- [ ] Cohort table is populated and filterable by week and fund type"
+AFRG cohort trend panel,"Add AFRG trend visualization by cohort start week.","afrg,cohorts,data,admin","Data,Frontend",,"- [ ] AFRG trend visible by cohort start week with stable definitions"
+Time-to-first-gift diagnostics,"Show median and P75 first-gift timing with week-over-week movement.","diagnostics,data,first-gift",Data,,"- [ ] Median and P75 time-to-first-gift shown with weekly movement"
+In-app milestone nudges,"Introduce milestone prompts to support retention and re-engagement.","retention,milestones,frontend,product","Frontend,Product",,"- [ ] Milestone prompts appear at sensible thresholds and can be dismissed"
+Repeat gifter rate KPI card,"Add repeat gifter KPI card with detail drill-down.","admin,kpi,gifters,retention",Frontend,,"- [ ] KPI card displays repeat gifter rate with drill-down list"
+Week 6 retention scorecard,"Publish weekly retention scorecard with core loop deltas.","growth,data,retention,reporting","Growth,Data",,"- [ ] Scorecard includes AFRG repeat gifter rate and time-to-first-gift deltas"

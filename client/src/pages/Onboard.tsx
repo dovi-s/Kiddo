@@ -3,6 +3,9 @@ import { useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { Loader2, Check } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { SetupProgressNudge, TrustMicroStrip } from "@/components/ui/ux-foundations";
+const MOTION_DUR = 0.2;
+const PAGE_MAX = "max-w-lg md:max-w-2xl mx-auto px-4";
 
 export default function Onboard() {
   const search = useSearch();
@@ -39,7 +42,7 @@ export default function Onboard() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-40 gemini-glass-nav">
-        <div className="max-w-lg md:max-w-xl mx-auto px-4 h-14 flex items-center justify-center">
+        <div className={`${PAGE_MAX} h-14 flex items-center justify-center`}>
           <Logo size="md" className="text-primary" />
         </div>
       </header>
@@ -48,12 +51,13 @@ export default function Onboard() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: MOTION_DUR }}
           className="text-center max-w-sm"
         >
           <motion.div
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: MOTION_DUR }}
             className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-8 shadow-premium"
           >
             <Check size={36} className="text-success" />
@@ -79,6 +83,23 @@ export default function Onboard() {
             <p className="text-sm text-muted-foreground leading-relaxed">
               <span className="font-semibold text-foreground">Next step:</span> Activate investing to start receiving gifts that become real investments.
             </p>
+          </div>
+
+          <div className="mt-4 text-left">
+            <SetupProgressNudge
+              title="Account created"
+              subtitle="One more quick step to unlock automatic investing on incoming gifts."
+              percent={85}
+              items={[
+                "Fund setup complete",
+                "Dashboard ready",
+                "Identity verification remaining",
+              ]}
+            />
+          </div>
+
+          <div className="mt-4">
+            <TrustMicroStrip />
           </div>
         </motion.div>
       </main>

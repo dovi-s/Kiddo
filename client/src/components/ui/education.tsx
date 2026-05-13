@@ -8,6 +8,8 @@ interface EducationTipProps {
   icon?: "help" | "tip" | "security";
   variant?: "inline" | "expandable" | "tooltip";
   className?: string;
+  fundId?: string | null;
+  eventId?: string | null;
 }
 
 const iconMap = {
@@ -16,9 +18,39 @@ const iconMap = {
   security: Shield,
 };
 
-export function EducationTip({ title, children, icon = "help", variant = "expandable", className = "" }: EducationTipProps) {
+export function EducationTip({ title, children, icon = "help", variant = "expandable", className = "", fundId = null, eventId = null }: EducationTipProps) {
   const [isOpen, setIsOpen] = useState(false);
   const Icon = iconMap[icon];
+  const trackEducationEvent = async (action: "education_tooltip_open" | "education_tooltip_click") => {
+    try {
+      await fetch("/api/referrals/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          fundId,
+          eventId,
+          channel: "education_tip",
+          metadata: {
+            title,
+            variant,
+            icon,
+          },
+        }),
+      });
+    } catch {
+      // non-blocking analytics event
+    }
+  };
+
+  const handleToggle = () => {
+    const next = !isOpen;
+    setIsOpen(next);
+    trackEducationEvent("education_tooltip_click");
+    if (next) {
+      trackEducationEvent("education_tooltip_open");
+    }
+  };
 
   if (variant === "inline") {
     return (
@@ -36,7 +68,7 @@ export function EducationTip({ title, children, icon = "help", variant = "expand
     return (
       <span className="relative inline-flex items-center">
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={handleToggle}
           className="ml-1 text-muted-foreground hover:text-foreground transition-colors"
           data-testid="education-tip-trigger"
         >
@@ -66,7 +98,7 @@ export function EducationTip({ title, children, icon = "help", variant = "expand
   return (
     <div className={`rounded-2xl border border-border/50 overflow-hidden ${className}`} data-testid="education-tip-expandable">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className="w-full flex items-center gap-3 p-4 text-left hover:bg-muted/30 transition-colors"
         data-testid="education-tip-toggle"
       >
@@ -105,11 +137,11 @@ export const educationContent = {
   },
   sipc: {
     title: "What is SIPC protection?",
-    content: "SIPC (Securities Investor Protection Corporation) protects your investments up to $500,000 if anything ever happens to the brokerage firm. It's like FDIC insurance, but for investment accounts.",
+    content: "Your fund is held through DriveWealth, the brokerage behind Kiddo. SIPC protection covers up to $500,000 if anything ever happens to the brokerage firm. It does not protect against market losses.",
   },
   fees: {
     title: "How do fees work?",
-    content: "There are two types of fees: payment processing paid by the gift-giver (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at just 0.8% max $5) and the Kora platform fee. On the Free tier, a flat $2 platform fee applies per gift. On Starter ($5/month per fund) and Family ($12/month or $119/year), the platform fee is waived entirely. Free and Starter users can also purchase an Event Boost ($29 one-time) to waive the platform fee for a specific event.",
+    content: "There are two parts: payment processing (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at 0.8% max $5) and the platform fee. Free uses a $2 platform fee on gifts up to $200 and 1% above $200 (minimum gift: $10 on Free). Kiddo+ and Kiddo Family remove the platform fee from contributions. Contributions of $10,000 or more include a separate 0.1% large-gift processing fee on every plan. All fees are shown before checkout.",
   },
   pendingCash: {
     title: "What does 'pending' mean?",
@@ -125,7 +157,7 @@ export const educationContent = {
   },
   withdrawals: {
     title: "Can I sell or withdraw?",
-    content: "Yes. You can sell investments and withdraw cash to your bank account, subject to standard trade settlement (typically T+1). For custodial (UTMA) accounts, withdrawals must benefit the child. For personal accounts, you have full control. Kora does not charge withdrawal fees.",
+    content: "Yes. You can sell investments and withdraw cash to your bank account, subject to standard trade settlement (typically T+1). For custodial (UTMA) accounts, withdrawals must benefit the child. For personal accounts, you have full control. Kiddo does not charge withdrawal fees.",
   },
   paymentMethods: {
     title: "What payment methods are accepted?",
@@ -148,3 +180,136 @@ export const educationContent = {
     content: "UTMA accounts automatically transfer to the child's full control at the age of majority, which is 18 or 21 depending on your state. At that point, they can keep the investments, sell them, or transfer to another brokerage. All gifts to a UTMA account are irrevocable, meaning once the gift is made, it legally belongs to the child.",
   },
 };
+
+export type MoneyLessonDrip = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  body: string;
+  whyNow: string;
+};
+
+type MoneyLessonDripInput = {
+  ageYears: number | null;
+  totalValue: number;
+  giftCount: number;
+  hasHoldings: boolean;
+  hasRecentGift: boolean;
+  accountType?: string | null;
+  fundName?: string | null;
+};
+
+export function getMonthlyMoneyLesson({
+  ageYears,
+  totalValue,
+  giftCount,
+  hasHoldings,
+  hasRecentGift,
+  accountType,
+  fundName,
+}: MoneyLessonDripInput): MoneyLessonDrip {
+  const baseLessons: MoneyLessonDrip[] = [];
+
+  if (typeof ageYears === "number" && ageYears <= 6) {
+    baseLessons.push({
+      id: "young-stock-story",
+      eyebrow: "This month's money lesson",
+      title: "How to explain a stock to a young child",
+      body: `Try this: “A stock is a tiny piece of a real company. When people buy from that company, your ${fundName || "fund"} can grow too.”`,
+      whyNow: "This works best at younger ages, when simple stories build the first emotional connection.",
+    });
+  }
+
+  if (typeof ageYears === "number" && ageYears >= 7 && ageYears <= 12) {
+    baseLessons.push({
+      id: "middle-compounding",
+      eyebrow: "This month's money lesson",
+      title: "Show them that money can grow while they wait",
+      body: "Open the Child View and compare what people gave with what the fund is worth now. That is the easiest first lesson in growth over time.",
+      whyNow: "Kids in this age range can start connecting patience with progress.",
+    });
+  }
+
+  if (typeof ageYears === "number" && ageYears >= 13) {
+    baseLessons.push({
+      id: "teen-ownership",
+      eyebrow: "This month's money lesson",
+      title: "Start treating the fund like a conversation, not a surprise",
+      body: "Talk through what the fund owns, why those companies or ETFs are there, and what decisions stay with you until adulthood.",
+      whyNow: "Teen years are when the fund can become part of real money judgment, not just a nice story.",
+    });
+  }
+
+  if (giftCount > 0 && totalValue < 200) {
+    baseLessons.push({
+      id: "first-gift-meaning",
+      eyebrow: "This month's money lesson",
+      title: "Use the first gifts to make the fund feel real",
+      body: "Point to one gift and explain that it did two things at once: someone showed love, and the money started working for the future.",
+      whyNow: "Early gifts create the emotional language your child will remember later.",
+    });
+  }
+
+  if (totalValue >= 200 && totalValue < 1000) {
+    baseLessons.push({
+      id: "two-hundred-milestone",
+      eyebrow: "This month's money lesson",
+      title: "Your fund just crossed a real-money milestone",
+      body: "Show your child what $200 or more means in one place. It is no longer abstract. It is money with a visible job and a visible future.",
+      whyNow: "Milestones like this are ideal moments to come back into the product between gifting occasions.",
+    });
+  }
+
+  if (totalValue >= 1000) {
+    baseLessons.push({
+      id: "four-figure-trust",
+      eyebrow: "This month's money lesson",
+      title: "A four-figure fund is a trust-building moment",
+      body: "Explain that this money is not sitting still. It lives in a real custodial investment account and does not automatically disappear or liquidate at age 18.",
+      whyNow: "As balances grow, parents usually start asking more serious long-term questions.",
+    });
+  }
+
+  if (hasHoldings) {
+    baseLessons.push({
+      id: "diversification",
+      eyebrow: "This month's money lesson",
+      title: "Use the holdings list to teach diversification",
+      body: "A simple script: “We do not need one company to do everything. We spread the fund across different companies and funds so one bad day does not decide everything.”",
+      whyNow: "Once there are real holdings, diversification stops being theory and becomes something parents can point to.",
+    });
+  }
+
+  if (hasRecentGift) {
+    baseLessons.push({
+      id: "recent-gift-conversation",
+      eyebrow: "This month's money lesson",
+      title: "A fresh gift is the best lesson prompt",
+      body: "When a new gift lands, show your child who gave it, what they said, and where the money now lives. That turns a transaction into a memory and a money lesson at the same time.",
+      whyNow: "Lessons stick better when they are attached to a real moment the child just experienced.",
+    });
+  }
+
+  if (String(accountType || "").toUpperCase() === "UTMA") {
+    baseLessons.push({
+      id: "parent-guardrails",
+      eyebrow: "This month's money lesson",
+      title: "Parent guardrails are part of the lesson too",
+      body: "You can tell your child: “This account is for you, but I manage it until you are old enough. My job is to protect it and teach you how it works.”",
+      whyNow: "That framing builds trust without making the child feel shut out.",
+    });
+  }
+
+  if (baseLessons.length === 0) {
+    baseLessons.push({
+      id: "foundational-stock",
+      eyebrow: "This month's money lesson",
+      title: "Start with one simple truth",
+      body: "A gift fund is not just stored money. It is money with time, meaning, and the chance to grow.",
+      whyNow: "This is the clearest foundational idea for parents to repeat early and often.",
+    });
+  }
+
+  const monthIndex = new Date().getMonth();
+  return baseLessons[monthIndex % baseLessons.length];
+}

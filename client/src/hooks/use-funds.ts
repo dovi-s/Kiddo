@@ -1,69 +1,48 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Fund, Event, Gift, Holding, InsertFund, InsertEvent } from "@shared/schema";
-
-async function fetchFunds(): Promise<Fund[]> {
-  const response = await fetch("/api/funds", { credentials: "include" });
-  if (response.status === 401) return [];
-  if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-  return response.json();
-}
-
-async function fetchFund(id: string): Promise<Fund | null> {
-  const response = await fetch(`/api/funds/${id}`, { credentials: "include" });
-  if (response.status === 401 || response.status === 404) return null;
-  if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-  return response.json();
-}
-
-async function fetchFundEvents(fundId: string): Promise<Event[]> {
-  const response = await fetch(`/api/funds/${fundId}/events`, { credentials: "include" });
-  if (response.status === 401) return [];
-  if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-  return response.json();
-}
-
-async function fetchFundHoldings(fundId: string): Promise<Holding[]> {
-  const response = await fetch(`/api/funds/${fundId}/holdings`, { credentials: "include" });
-  if (response.status === 401) return [];
-  if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-  return response.json();
-}
-
-async function fetchFundGifts(fundId: string): Promise<Gift[]> {
-  const response = await fetch(`/api/funds/${fundId}/gifts`, { credentials: "include" });
-  if (response.status === 401) return [];
-  if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-  return response.json();
-}
-
-async function createFund(data: Partial<InsertFund>): Promise<Fund> {
-  const response = await fetch("/api/funds", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-  return response.json();
-}
-
-async function updateFund(id: string, data: Partial<InsertFund>): Promise<Fund> {
-  const response = await fetch(`/api/funds/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify(data),
-  });
-  if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-  return response.json();
-}
+import type { Fund, Event, Gift, Holding, InsertFund } from "@shared/schema";
+import {
+  createFund,
+  fetchFund,
+  fetchFundEvents,
+  fetchFundGifts,
+  fetchFundHoldings,
+  fetchFunds,
+  updateFund,
+} from "@kora/api";
+import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { useAuth } from "@/hooks/use-auth";
 
 export function useFunds() {
+  // Gate the funds query on auth state. Logged-out visitors land on public
+  // pages (Claim, marketing, /:fund gift checkout) where always-mounted
+  // components like GlobalShareModal and Claim.tsx call useFunds() — without
+  // the gate, every page-load fires /api/funds, gets a 401, and graceful-
+  // returns []. Functionally fine but produces console noise on every public
+  // page.
+  //
+  // Why both isAuthenticated AND isAuthChecked: useAuth hydrates from
+  // localStorage initialData synchronously, so isAuthenticated can briefly
+  // be true even when the actual server session has expired. Without the
+  // isAuthChecked guard, the funds query would fire during that brief
+  // window, hit the server, get 401, and produce the exact console noise
+  // we're trying to eliminate. isAuthChecked flips true only after the
+  // auth query has fetched from the server, so downstream queries wait
+  // for ground truth before firing.
+  const { isAuthenticated, isAuthChecked } = useAuth();
   return useQuery<Fund[]>({
     queryKey: ["/api/funds"],
-    queryFn: fetchFunds,
+    queryFn: async () => {
+      const funds = await fetchFunds();
+      writeLocalCache(LOCAL_CACHE_KEYS.funds, funds);
+      return funds;
+    },
+    enabled: isAuthChecked && isAuthenticated,
+    initialData: () => (isAuthenticated ? readLocalCache<Fund[]>(LOCAL_CACHE_KEYS.funds) : []),
+    initialDataUpdatedAt: 0,
     retry: false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 2 * 60_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -73,7 +52,7 @@ export function useFund(id: string | undefined) {
     queryFn: () => id ? fetchFund(id) : Promise.resolve(null),
     enabled: !!id,
     retry: false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: Infinity,
   });
 }
 
@@ -83,7 +62,7 @@ export function useFundEvents(fundId: string | undefined) {
     queryFn: () => fundId ? fetchFundEvents(fundId) : Promise.resolve([]),
     enabled: !!fundId,
     retry: false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: Infinity,
   });
 }
 
@@ -93,7 +72,7 @@ export function useFundHoldings(fundId: string | undefined) {
     queryFn: () => fundId ? fetchFundHoldings(fundId) : Promise.resolve([]),
     enabled: !!fundId,
     retry: false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: Infinity,
   });
 }
 
@@ -103,7 +82,7 @@ export function useFundGifts(fundId: string | undefined) {
     queryFn: () => fundId ? fetchFundGifts(fundId) : Promise.resolve([]),
     enabled: !!fundId,
     retry: false,
-    staleTime: 1000 * 60 * 5,
+    staleTime: Infinity,
   });
 }
 
@@ -111,7 +90,22 @@ export function useCreateFund() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createFund,
-    onSuccess: () => {
+    onSuccess: (newFund) => {
+      // Optimistically inject the new fund into the funds list cache so the
+      // dashboard switcher shows it instantly — without waiting for a refetch
+      // round-trip. The invalidate still fires below to reconcile any
+      // server-side fields we don't have locally.
+      queryClient.setQueryData<Fund[] | undefined>(["/api/funds"], (prev) => {
+        if (!newFund) return prev;
+        const list = Array.isArray(prev) ? prev : [];
+        if (list.some((f) => String(f?.id) === String(newFund.id))) return list;
+        return [newFund as Fund, ...list];
+      });
+      try {
+        writeLocalCache(LOCAL_CACHE_KEYS.funds, queryClient.getQueryData<Fund[]>(["/api/funds"]) || []);
+      } catch {
+        // best-effort local cache write
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
     },
   });

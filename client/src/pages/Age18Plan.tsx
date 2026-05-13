@@ -1,0 +1,838 @@
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { TrustMicroStrip } from "@/components/ui/ux-foundations";
+import { Button } from "@/components/ui/button";
+import { NoteEditorSheet } from "@/components/NoteEditorSheet";
+import { useFunds } from "@/hooks/use-funds";
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
+import { getAge18Transition, formatAgeTransitionDate } from "@/lib/age-transition";
+import { getPronouns } from "@/lib/pronouns";
+import { haptic } from "@/lib/haptics";
+import { useCountUp } from "@/hooks/use-count-up";
+
+// Checklist items factory — parameterized on majorityAge so copy reflects the
+// fund's state-specific transfer age (18 in most states, 21 in CA/KY/IN,
+// 19 in AL/NE, 20 in MS). For 21-state customers, hardcoded "18" reads as
+// factually wrong and contradicts the state-aware lifecycle worker. Same
+// shape as buildTimeline / buildFaq below.
+function buildChecklist(majorityAge: number) {
+  return [
+    {
+      id: "money-convo",
+      label: "Have the money conversation",
+      detail: `Talk about what the fund is, why you built it, and what you hope they do with it. Start at 15 or 16 -- before the pressure of ${majorityAge} arrives.`,
+    },
+    {
+      id: "tax-position",
+      label: "Understand the tax position",
+      detail: "UTMA assets are subject to kiddie tax rules. Talk to a CPA about your situation before the transfer happens.",
+    },
+    {
+      id: "investment-strategy",
+      label: "Review the investment strategy",
+      detail: `Shift to a more conservative allocation as ${majorityAge} approaches. Less growth, more stability. Protect what was built.`,
+    },
+    {
+      id: "estate-docs",
+      label: "Set the successor custodian",
+      detail: `If something happens to you before ${majorityAge}, who manages the fund? Set the in-app successor in Settings (so support knows who to contact), and make sure your will formally names them as successor custodian under your state's UTMA statute. Both layers matter.`,
+    },
+    {
+      id: "co-parent",
+      label: "Align with co-parent or guardian",
+      detail: `Both parents should understand what happens at ${majorityAge} and agree on what message to give the child before the transfer.`,
+    },
+  ];
+}
+
+// Timeline + FAQ copy is parameterized on the child's first name
+// rather than the previous hardcoded "she / her" — those broke for
+// any fund whose pronoun setting is "he" or "they". Using the name
+// directly also reads more naturally for adult-tone copy
+// ("Tell Emma..." beats "Tell her..." in a written FAQ register).
+// The few sentences where the name would feel repetitive use
+// neutral phrasings ("the 18th birthday", "the fund") instead of
+// pronouns. Inverse of the earlier "always pronoun" approach.
+// Timeline + FAQ: parameterized on childName AND state-specific majority age.
+// The teenage-stage labels (13-14, 15-16, 17, 17.5) are calibrated to attention
+// spans + life-events near the transfer — those age ranges stay. The transfer-
+// age references ("after 18", "It is yours at 18", "Age 18") become state-aware.
+//
+// The few sentences where the name would feel repetitive use neutral
+// phrasings ("the {majorityOrdinal} birthday", "the fund") instead of
+// pronouns. Inverse of the earlier "always pronoun" approach.
+function buildTimeline(childName: string, majorityAge: number, majorityOrdinal: string) {
+  return [
+    {
+      label: "Age 13 to 14",
+      heading: "Plant the seed",
+      detail: `Tell ${childName} the fund exists. Keep it simple: there is money invested in your name. It is yours at ${majorityAge}. Let curiosity do the rest.`,
+    },
+    {
+      label: "Age 15 to 16",
+      heading: "Show the numbers",
+      detail: `Walk ${childName} through the fund together. Show the holdings, the gift history, the Memory Book. Start talking about what investing means.`,
+    },
+    {
+      label: "Age 17",
+      heading: "Have the real conversation",
+      detail: `What does ${childName} want to do after ${majorityAge}? College, a business, hold it longer? Align expectations before the transfer.`,
+    },
+    {
+      label: "Age 17.5",
+      heading: "Review tax and legal position",
+      detail: "Talk to a CPA. Understand gains, kiddie tax rules, and what the transfer means. File correctly the year it happens.",
+    },
+    {
+      label: `Age ${majorityAge}`,
+      heading: "Control transfers",
+      detail: `Legal custodianship ends. ${childName} gets full control. The investments stay exactly where they are. Nothing sells. Nothing changes except who decides.`,
+    },
+  ];
+}
+
+function buildFaq(childName: string, majorityAge: number, majorityOrdinal: string) {
+  return [
+    {
+      q: `Does the fund automatically liquidate at ${majorityAge}?`,
+      a: `No. Nothing sells automatically. On the ${majorityOrdinal} birthday, legal control transfers under state UTMA law. The investments stay exactly where they are. ${childName} decides whether to hold, sell, or reinvest.`,
+    },
+    {
+      q: `Can ${childName} access the fund before ${majorityAge}?`,
+      a: `No. Only you, as the custodian, can authorize transactions before the transfer. After ${majorityAge}, full control transfers.`,
+    },
+    {
+      q: `What if ${childName} doesn't want the money at ${majorityAge}?`,
+      a: "The fund can stay invested. Nothing forces a decision. It keeps compounding. There's no rush.",
+    },
+    {
+      q: "What taxes are owed?",
+      a: `UTMA gains are taxed at ${childName}'s rate once ownership transfers. For most ${majorityAge}-year-olds, the long-term capital gains rate can be 0% on gains up to roughly $47,000. Talk to a CPA about your specific situation.`,
+    },
+    {
+      q: `What happens if I pass away before ${childName} turns ${majorityAge}?`,
+      a: "The successor custodian named in your will takes over management of the fund. If no custodian is named, the court appoints one. Update your estate documents to reflect your wishes.",
+    },
+  ];
+}
+
+function formatCurrency(n: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
+}
+
+// Conservative-honest yearly return assumption used for ALL Kora projections
+// (recurring projection, edit-recurring diff, cancel loss-aversion, Age18Plan).
+// 7% maps to long-run S&P real return (~10% nominal − ~3% inflation). Inflated
+// projections are greenwashing too — same rule that bans "$0.00 (+$0.00)" in
+// the green direction. If we ever change this, change it ONCE here and let
+// every surface inherit. Disclaimer text lives next to every render.
+const KIDDO_PROJECTED_RETURN = 0.07;
+const KIDDO_PROJECTION_DISCLAIMER = "Assuming 7% yearly average. Markets vary. Time is what compounds.";
+
+function projectAt18(balance: number, yearsLeft: number, monthlyContrib: number): number {
+  if (yearsLeft <= 0) return balance;
+  const r = KIDDO_PROJECTED_RETURN;
+  const grown = balance * Math.pow(1 + r, yearsLeft);
+  const months = yearsLeft * 12;
+  const monthRate = r / 12;
+  const contribFV = monthlyContrib > 0 ? monthlyContrib * ((Math.pow(1 + monthRate, months) - 1) / monthRate) : 0;
+  return Math.round(grown + contribFV);
+}
+
+export default function Age18Plan() {
+  const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: funds = [] } = useFunds();
+  // Active fund held in component state so the page reacts to AppHeader
+  // fund switches. Was reading getActiveFundId() inline every render —
+  // pulls fresh from localStorage but doesn't trigger a re-render when
+  // the user changes funds (localStorage writes don't auto-rerender
+  // React). Same parallel bug Projection.tsx and TaxDocuments.tsx had;
+  // same listener-based fix.
+  const [storedFundId, setStoredFundId] = useState<string>(() => getActiveFundId());
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const newId = (e as CustomEvent<{ id: string }>).detail?.id;
+      if (newId && typeof newId === "string") setStoredFundId(newId);
+    };
+    window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
+    return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
+  }, []);
+  const activeFund = funds.find((f) => f.id === storedFundId) ?? funds[0];
+
+  const age18Transition = useMemo(
+    () => getAge18Transition(activeFund?.recipientBirthdate, Number((activeFund as any)?.majorityAge) || 18),
+    [activeFund?.recipientBirthdate, (activeFund as any)?.majorityAge],
+  );
+
+  const totalValue = useMemo(() => {
+    if (!activeFund) return 0;
+    return (
+      parseFloat(String(activeFund.balance || 0)) +
+      parseFloat(String(activeFund.pendingBalance || 0)) +
+      parseFloat(String((activeFund as any).cashBalance || 0))
+    );
+  }, [activeFund]);
+
+  const yearsLeft = age18Transition ? age18Transition.daysUntil18 / 365.25 : 0;
+
+  // Minute-tick — once-per-minute re-render so the live countdown's hour and
+  // minute values stay current. Deliberately NOT once-per-second:
+  //   - Seconds-resolution on a 4000+-day countdown is the streak/dazzle
+  //     pattern feedback_no_ai_slop.md rejects
+  //   - 1Hz re-renders are pointless CPU when the visible numbers don't move
+  // Once-per-minute is enough for the hours/minutes line to feel alive
+  // (it ticks visibly when you're staring at the page) without becoming a
+  // game.
+  const [minuteTick, setMinuteTick] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setMinuteTick((t) => (t + 1) % 1_000_000), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
+  // Compute the live countdown from the actual 18th-birthday timestamp.
+  // Re-runs every minute via minuteTick. Returns null when adult/no fund —
+  // the countdown card is gated separately.
+  const liveCountdown = useMemo(() => {
+    if (!age18Transition || age18Transition.stage === "adult") return null;
+    const target = age18Transition.eighteenthBirthday.getTime();
+    const now = Date.now();
+    const diffMs = Math.max(0, target - now);
+    const totalMinutes = Math.floor(diffMs / 60_000);
+    const totalHours = Math.floor(totalMinutes / 60);
+    const totalDays = Math.floor(totalHours / 24);
+    const years = Math.floor(totalDays / 365.25);
+    const daysAfterYears = Math.floor(totalDays - years * 365.25);
+    const hours = totalHours % 24;
+    const minutes = totalMinutes % 60;
+    return {
+      years,
+      daysAfterYears,
+      hours,
+      minutes,
+      totalDays,
+      // When the event is 5+ years out, the hours/minutes line is visually
+      // inert (the numbers do change but the eye doesn't notice on a 4000+
+      // day count). Hide them then to keep the screen calm.
+      showHoursMinutes: totalDays <= 365 * 5,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [age18Transition, minuteTick]);
+
+  const projections = [
+    { label: "Gifts only, no monthly", monthly: 0 },
+    { label: "+ $25/month recurring", monthly: 25 },
+    { label: "+ $50/month recurring", monthly: 50 },
+    { label: "+ $100/month recurring", monthly: 100 },
+  ].map((p) => ({ ...p, value: projectAt18(totalValue, yearsLeft, p.monthly) }));
+
+  // Count-up on the projection numbers. Two surfaces here:
+  //   1. The "On track for" hero number — projectionAt18 from current
+  //      fund state (zero-monthly scenario).
+  //   2. The four "What it could look like" scenarios in the grid
+  //      below.
+  // The countdown clock above intentionally STAYS plain — it ticks
+  // every minute by design and a count-up there would conflict with
+  // the live-update register.
+  const heroProjection = projectAt18(totalValue, yearsLeft, 0);
+  const { value: animatedHeroProjection, isAnimating: heroProjectionAnimating } = useCountUp({
+    from: heroProjection * 0.6,
+    to: heroProjection,
+    duration: 1200,
+    enabled: heroProjection > 0,
+  });
+  // Each scenario gets its own count-up. The four are hoisted to
+  // fixed-position hooks (rules-of-hooks) and re-bound to the
+  // corresponding scenario's value via array indexing below.
+  const { value: animatedProj0, isAnimating: proj0Animating } = useCountUp({
+    from: projections[0].value * 0.6,
+    to: projections[0].value,
+    duration: 1200,
+    enabled: projections[0].value > 0,
+  });
+  const { value: animatedProj1, isAnimating: proj1Animating } = useCountUp({
+    from: projections[1].value * 0.6,
+    to: projections[1].value,
+    duration: 1200,
+    enabled: projections[1].value > 0,
+  });
+  const { value: animatedProj2, isAnimating: proj2Animating } = useCountUp({
+    from: projections[2].value * 0.6,
+    to: projections[2].value,
+    duration: 1200,
+    enabled: projections[2].value > 0,
+  });
+  const { value: animatedProj3, isAnimating: proj3Animating } = useCountUp({
+    from: projections[3].value * 0.6,
+    to: projections[3].value,
+    duration: 1200,
+    enabled: projections[3].value > 0,
+  });
+  const animatedProjections = [animatedProj0, animatedProj1, animatedProj2, animatedProj3];
+  const projectionsAnimating = [proj0Animating, proj1Animating, proj2Animating, proj3Animating];
+
+  // Parent letter query. Includes media fields so the NoteEditorSheet can
+  // pre-load any saved voice/photo/video when the parent re-opens to edit
+  // (re-recording a 5-minute message you already left would be cruel UX).
+  const { data: parentLetter } = useQuery<{
+    id: string;
+    content: string;
+    type: string;
+    authorName?: string;
+    photoUrl?: string | null;
+    videoUrl?: string | null;
+    audioUrl?: string | null;
+    audioTranscript?: string | null;
+  } | null>({
+    queryKey: ["memory", activeFund?.id, "parent_letter"],
+    queryFn: async () => {
+      if (!activeFund?.id) return null;
+      const res = await fetch(`/api/funds/${activeFund.id}/memory`, { credentials: "include" });
+      if (!res.ok) return null;
+      const entries: any[] = await res.json();
+      return entries.find((e) => e.type === "parent_letter") ?? null;
+    },
+    enabled: !!activeFund?.id,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const [noteEditorOpen, setNoteEditorOpen] = useState(false);
+
+  // Checklist - persisted in localStorage per fund
+  const checklistKey = `age18-checklist-${activeFund?.id}`;
+  const [checked, setChecked] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(checklistKey);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    if (!activeFund?.id) return;
+    try { localStorage.setItem(checklistKey, JSON.stringify(Array.from(checked))); } catch {}
+  }, [checked, checklistKey]);
+
+  const toggle = useCallback((id: string) => {
+    haptic("selection");
+    setChecked((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [openTimeline, setOpenTimeline] = useState<number | null>(null);
+
+  const childName = activeFund?.recipientFirstName || "your child";
+  // Use the actual stored pronoun on the fund — Emma's set to "she", Jordan
+  // might be "they". Falls back to they/their when no pronoun is stored,
+  // matching getPronouns()' default. Old code guessed from name presence
+  // and ignored the explicit choice the parent made at fund creation.
+  const fundPronouns = getPronouns((activeFund as any)?.pronoun);
+  const she = fundPronouns.subject;
+  const her = fundPronouns.possAdj;
+  const hers = fundPronouns.possNoun;
+  // State-specific UTMA majority age (18-21 by state). Same locked discipline
+  // as Projection.tsx — every "18" in copy must derive from fund.majorityAge.
+  // For 21-state customers (CA, KY, IN), hardcoded "18" reads as factually
+  // wrong and contradicts the state-aware lifecycle worker. See
+  // project_state_majority_age_sweep.md.
+  const majorityAge = Number((activeFund as any)?.majorityAge) || 18;
+  const majorityOrdinal = (() => {
+    const n = majorityAge;
+    const lastTwo = n % 100;
+    if (lastTwo >= 11 && lastTwo <= 13) return `${n}th`;
+    const lastOne = n % 10;
+    if (lastOne === 1) return `${n}st`;
+    if (lastOne === 2) return `${n}nd`;
+    if (lastOne === 3) return `${n}rd`;
+    return `${n}th`;
+  })();
+  // Derive checklist, timeline, FAQ arrays from the state-aware factories
+  // once per render. Single source of truth — every usage below picks up
+  // the same majority-age-aware copy.
+  const checklistItems = buildChecklist(majorityAge);
+  const timelineItems = buildTimeline(childName, majorityAge, majorityOrdinal);
+  const faqItems = buildFaq(childName, majorityAge, majorityOrdinal);
+  const progress = Math.round((checked.size / checklistItems.length) * 100);
+  // Verb agreement helper — "she reads" vs "they read". Without this,
+  // sentences like "she reads it on her 18th birthday" silently break
+  // for any fund with pronoun="they".
+  const reads = fundPronouns.singular ? "reads" : "read";
+  // Capitalize-first pronoun, for sentence starts ("She reads..." /
+  // "They read..." / "Hers forever." / "Theirs forever.").
+  const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const eighteenthDate = age18Transition ? formatAgeTransitionDate(age18Transition.eighteenthBirthday) : "";
+  const parentName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
+  const noteWordCount = parentLetter?.content
+    ? parentLetter.content.trim().split(/\s+/).filter(Boolean).length
+    : 0;
+
+  return (
+    <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
+      <AppHeader />
+      <div className="kiddo-canvas px-4 py-6 space-y-0 max-w-lg">
+        {/* In-content "← Home" link removed 2026-05-11. Age18Plan is
+            Tier-1 fund-scoped per page-scope.ts; AppHeader +
+            DesktopSidebar + MobileNav already provide global nav.
+            Apple-Settings register has no in-page back chrome. */}
+
+        {/* Page title */}
+        <div className="mb-6">
+          <h1 className="font-heading text-2xl font-bold text-foreground">
+            What happens when {childName} turns {majorityAge}.
+          </h1>
+          {eighteenthDate && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {activeFund?.recipientFirstName
+                ? `${activeFund.recipientFirstName}'s ${majorityOrdinal} birthday`
+                : `The ${majorityOrdinal} birthday`} &middot; {eighteenthDate}
+            </p>
+          )}
+        </div>
+
+        {/* Countdown — live, ticking once per minute. Multi-unit display
+            (years / days / hours / minutes) when within 5 years; coarsens
+            to years + days only when farther out. Within ~18 months, the
+            primary unit becomes months so the headline number isn't always
+            "0 years" for kids close to majority. No seconds: see comment
+            above on minuteTick. */}
+        {age18Transition && age18Transition.stage !== "adult" && liveCountdown && (
+          <div className="kiddo-card p-5 mb-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Time remaining</p>
+                {age18Transition.monthsUntil18 <= 18 ? (
+                  // Final 18 months — months as the headline unit so the
+                  // number doesn't read "0 years" the whole runway.
+                  <>
+                    <p className="text-3xl font-bold text-foreground font-heading leading-none tabular-nums">
+                      {age18Transition.monthsUntil18} month{age18Transition.monthsUntil18 === 1 ? "" : "s"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1.5 tabular-nums">
+                      {age18Transition.daysUntil18.toLocaleString()} days
+                      {liveCountdown.showHoursMinutes && (
+                        <> · {liveCountdown.hours}h {liveCountdown.minutes}m</>
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  // Multi-year runway — years headline, days secondary,
+                  // hours+minutes only when within 5 years.
+                  <>
+                    <div className="flex items-baseline gap-3 flex-wrap tabular-nums">
+                      <span className="text-3xl font-bold text-foreground font-heading leading-none">
+                        {liveCountdown.years}
+                        <span className="text-base font-semibold text-muted-foreground ml-1">{liveCountdown.years === 1 ? "year" : "years"}</span>
+                      </span>
+                      <span className="text-3xl font-bold text-foreground font-heading leading-none">
+                        {liveCountdown.daysAfterYears}
+                        <span className="text-base font-semibold text-muted-foreground ml-1">days</span>
+                      </span>
+                    </div>
+                    {liveCountdown.showHoursMinutes && (
+                      <p className="text-xs text-muted-foreground mt-2 tabular-nums">
+                        {liveCountdown.hours} hours · {liveCountdown.minutes} minutes
+                      </p>
+                    )}
+                    {!liveCountdown.showHoursMinutes && (
+                      <p className="text-xs text-muted-foreground mt-2 tabular-nums">
+                        {age18Transition.daysUntil18.toLocaleString()} days total
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+              {totalValue > 0 && (
+                <div className="text-right shrink-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">On track for</p>
+                  <p
+                    className="text-2xl font-bold text-[hsl(var(--kiddo-evergreen))] font-heading leading-none tabular-nums"
+                    aria-live={heroProjectionAnimating ? "off" : "polite"}
+                    aria-label={formatCurrency(heroProjection)}
+                  >
+                    {formatCurrency(animatedHeroProjection)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1.5">at 7% yearly average*</p>
+                </div>
+              )}
+            </div>
+            <div className="mt-4 pt-4 border-t border-border/40">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Nothing sells automatically. Legal control transfers to {childName} under state UTMA law.
+                The investments stay exactly where they are.
+              </p>
+              {totalValue > 0 && (
+                <p className="text-[10px] text-muted-foreground/55 leading-snug mt-2">
+                  *{KIDDO_PROJECTION_DISCLAIMER}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* THE FUND */}
+        <div className="kiddo-card mb-4 overflow-hidden">
+          <div className="px-5 pt-5 pb-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The fund</p>
+            <p className="font-serif text-sm italic text-foreground/70 leading-relaxed mb-4">
+              "Everything stays exactly where it is. Nothing gets sold. Nothing disappears. The investments keep growing."
+            </p>
+            <div className="space-y-2.5">
+              {[
+                `Legal control transfers to ${childName} on ${eighteenthDate || `the ${majorityOrdinal} birthday`}.`,
+                `Based on your state's UTMA law. Your child gets full control at ${majorityAge}.`,
+                // countdownLabel from age-transition.ts is state-aware
+                // ("X months until age 21" for 21-state). Strip the matching
+                // suffix so we don't double-print the majority age in the
+                // compact line — was hardcoded " until age 18" which silently
+                // left the suffix in for non-18 states.
+                age18Transition
+                  ? `Nothing happens automatically. You have ${age18Transition.countdownLabel.replace(` until age ${majorityAge}`, "")} to prepare.`
+                  : "Nothing happens automatically.",
+              ].map((line, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <span className="text-sm mt-0.5 shrink-0">✅</span>
+                  <p className="text-sm text-muted-foreground leading-snug">{line}</p>
+                </div>
+              ))}
+            </div>
+            {totalValue > 0 && age18Transition && (
+              <div className="mt-4 bg-[hsl(var(--kiddo-evergreen)/0.08)] rounded-xl px-4 py-3">
+                <p className="text-xs text-[hsl(var(--kiddo-evergreen))] font-medium">
+                  On track for <strong>{formatCurrency(Math.round(totalValue * Math.pow(1 + KIDDO_PROJECTED_RETURN, age18Transition.daysUntil18 / 365.25)))}</strong> by {majorityAge} at 7% yearly average.<span className="opacity-60">*</span>
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="h-px bg-border/40 mx-5 mt-5" />
+          <div className="px-5 py-4">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              What can {childName} do at {majorityAge}? Keep investing. Add to it. Manage it {fundPronouns.reflexive}.
+              Withdraw some or all for college, a business, a house. Anything. No restrictions. No penalties.
+            </p>
+          </div>
+        </div>
+
+        {/* YOUR NOTE */}
+        <div className="kiddo-card mb-4 overflow-hidden">
+          <div className="px-5 pt-5 pb-5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">Your note</p>
+            {/* Italic "doesn't just receive a fund. She receives a letter."
+                teaser removed 2026-05-11. Three things wrong:
+                  1. Marketing voice on a product surface (AI-slop
+                     rhythm "doesn't just X. She Y.")
+                  2. "Receives a fund" is technically wrong — the kid
+                     takes legal ownership at majority, doesn't
+                     receive it like a gift item
+                  3. Hardcoded "She" pronoun ignored the fund's
+                     pronoun setting; broke for he/they kids
+                The eyebrow + status + Edit button below already say
+                what the card IS. No teaser needed. */}
+            {parentLetter ? (
+              <div>
+                {(() => {
+                  // Acknowledge whatever the parent has actually saved — if
+                  // they recorded a voice memory but didn't type anything,
+                  // "0 words saved" is wrong and erases the artifact they
+                  // DID create.
+                  const parts: string[] = [];
+                  if (noteWordCount > 0) parts.push(`${noteWordCount} word${noteWordCount === 1 ? "" : "s"}`);
+                  if (parentLetter.audioUrl) parts.push("voice");
+                  if (parentLetter.videoUrl) parts.push("video");
+                  if (parentLetter.photoUrl) parts.push("photo");
+                  const summary = parts.length === 0 ? "Letter started" : parts.join(" + ") + " saved";
+                  return (
+                    <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] mb-1">
+                      ✓ {summary}
+                    </p>
+                  );
+                })()}
+                <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                  {capFirst(she)} {reads} it on {her} {majorityOrdinal} birthday.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { haptic("medium"); setNoteEditorOpen(true); }}
+                  className="inline-flex items-center gap-2 text-xs font-semibold text-foreground bg-muted/60 hover:bg-muted transition-colors rounded-full px-4 py-2"
+                >
+                  ✉️ Edit →
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
+                  Write or record something for {childName} to read or hear on {her} {majorityOrdinal} birthday.
+                </p>
+                <Button
+                  className="rounded-full text-xs h-9 px-5"
+                  onClick={() => { haptic("medium"); setNoteEditorOpen(true); }}
+                >
+                  ✉️ Write {childName !== "your child" ? `${activeFund?.recipientFirstName}'s` : "the"} letter →
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* THE MEMORY BOOK */}
+        <div className="kiddo-card mb-4 overflow-hidden">
+          <div className="px-5 pt-5 pb-5">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The Memory Book</p>
+            {/* Italic teaser removed (same anti-pattern as the "Your
+                note" card above — marketing rhythm, wrong verb,
+                hardcoded pronoun). Bullets below describe what the
+                Memory Book IS without the "believed in her future"
+                love-mark phrasing the kid-at-18 lens flags. */}
+            <div className="space-y-2 mb-4">
+              {[
+                "Every gift. Every note. Every photo.",
+                "Every gifter, and what they wrote.",
+                `Searchable, shareable, ${hers} forever.`,
+              ].map((line, i) => (
+                <div key={i} className="flex items-start gap-2.5">
+                  <span className="text-sm shrink-0">📖</span>
+                  <p className="text-sm text-muted-foreground leading-snug">{line}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => { haptic("selection"); setLocation(`/memory/${activeFund?.id}`); }}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-white bg-[hsl(var(--kiddo-evergreen))] hover:opacity-90 transition-opacity rounded-full px-4 py-2"
+            >
+              Open Memory Book →
+            </button>
+          </div>
+        </div>
+
+        {/* Handoff checklist */}
+        <div className="kiddo-card mb-4 overflow-hidden">
+          <div className="p-5 pb-4">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="text-base font-bold text-foreground">Preparation checklist</h2>
+              <span className="text-sm font-semibold text-muted-foreground">{progress}%</span>
+            </div>
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden mb-4">
+              <motion.div
+                className="h-full bg-[hsl(var(--kiddo-evergreen))] rounded-full"
+                initial={false}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+              />
+            </div>
+            <div className="space-y-0">
+              {checklistItems.map((item, i) => (
+                <div key={item.id}>
+                  {i > 0 && <div className="border-t border-border/40 my-1" />}
+                  <button
+                    type="button"
+                    onClick={() => toggle(item.id)}
+                    className="w-full flex items-start gap-3 py-3 text-left"
+                  >
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                      checked.has(item.id)
+                        ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen))]"
+                        : "border-border"
+                    }`}>
+                      {checked.has(item.id) && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold leading-snug ${checked.has(item.id) ? "text-muted-foreground line-through" : "text-foreground"}`}>
+                        {item.label}
+                      </p>
+                      <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{item.detail}</p>
+                    </div>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Suggested timeline */}
+        <div className="kiddo-card mb-4 overflow-hidden">
+          <div className="p-5">
+            <h2 className="text-base font-bold text-foreground mb-4">Suggested timeline</h2>
+            <div className="space-y-0">
+              {timelineItems.map((item, i) => (
+                <div key={i}>
+                  {i > 0 && <div className="border-t border-border/40" />}
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); setOpenTimeline(openTimeline === i ? null : i); }}
+                    className="w-full flex items-start gap-3 py-3.5 text-left"
+                  >
+                    <div className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen))] mt-2 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-0.5">{item.label}</p>
+                      <p className="text-sm font-semibold text-foreground">{item.heading}</p>
+                      <AnimatePresence>
+                        {openTimeline === i && (
+                          <motion.p
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="text-xs text-muted-foreground leading-relaxed mt-1.5 overflow-hidden"
+                          >
+                            {item.detail}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                    <div className="shrink-0 mt-1">
+                      {openTimeline === i
+                        ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                    </div>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Growth projections */}
+        {totalValue > 0 && yearsLeft > 0 && (
+          <div className="kiddo-card mb-4 overflow-hidden">
+            <div className="p-5">
+              <h2 className="text-base font-bold text-foreground mb-1">What the fund could look like at {majorityAge}</h2>
+              <p className="text-xs text-muted-foreground mb-4">
+                Starting from {formatCurrency(totalValue)} &middot; assumes 7% yearly average*
+              </p>
+              <div className="space-y-2">
+                {projections.map((p, i) => (
+                  <div
+                    key={i}
+                    className={`flex items-center justify-between rounded-xl px-4 py-3 ${
+                      i === 0 ? "bg-[hsl(var(--kiddo-evergreen)/0.08)]" : "bg-muted/40"
+                    }`}
+                  >
+                    <p className="text-xs text-muted-foreground leading-snug">{p.label}</p>
+                    <p
+                      className="text-sm font-bold text-foreground font-heading tabular-nums"
+                      aria-live={projectionsAnimating[i] ? "off" : "polite"}
+                      aria-label={formatCurrency(p.value)}
+                    >{formatCurrency(animatedProjections[i] ?? p.value)}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
+                *{KIDDO_PROJECTION_DISCLAIMER} Illustrative only. Past performance does not guarantee future results. Kiddo does not provide investment advice.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* FAQ */}
+        <div className="kiddo-card mb-4 overflow-hidden">
+          <div className="p-5">
+            <h2 className="text-base font-bold text-foreground mb-4">Common questions</h2>
+            <div className="space-y-0">
+              {faqItems.map((item, i) => (
+                <div key={i}>
+                  {i > 0 && <div className="border-t border-border/40" />}
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); setOpenFaq(openFaq === i ? null : i); }}
+                    className="w-full flex items-start gap-2 py-3.5 text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground leading-snug">{item.q}</p>
+                      <AnimatePresence>
+                        {openFaq === i && (
+                          <motion.p
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="text-xs text-muted-foreground leading-relaxed mt-2 overflow-hidden"
+                          >
+                            {item.a}
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                    <div className="shrink-0 mt-0.5">
+                      {openFaq === i
+                        ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                        : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                    </div>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* The money conversation */}
+        <div className="kiddo-card mb-4 p-5">
+          <p className="text-sm font-bold text-foreground mb-2">The money conversation does not start at {majorityAge}.</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Families who do this well start at 13 or 14. Not about the numbers.
+            About the values behind the numbers. What does money mean? What would you do with it?
+            What does {childName} care about?
+          </p>
+        </div>
+
+        {/* Physical book + Kiddo Card - coming soon */}
+        <div className="space-y-3 mb-5 opacity-50">
+          <div className="kiddo-card p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">The physical book</p>
+              <span className="text-[9px] font-bold uppercase tracking-wide bg-muted text-muted-foreground rounded-full px-2 py-0.5">Coming soon</span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              A hardcover Memory Book, printed and mailed to your door on {childName !== "your child" ? `${activeFund?.recipientFirstName}'s` : her} {majorityOrdinal} birthday. Every gift. Every photo. Your note on page one.
+            </p>
+          </div>
+          <div className="kiddo-card p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">The Kiddo Card</p>
+              <span className="text-[9px] font-bold uppercase tracking-wide bg-muted text-muted-foreground rounded-full px-2 py-0.5">Coming soon</span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              When {childName} turns {majorityAge}, {she} {fundPronouns.singular ? "gets" : "get"} a Kiddo Card linked to {her} fund. {capFirst(hers)} to use. Still compounding. Still {hers}.
+            </p>
+          </div>
+        </div>
+
+        {/* Closing quote */}
+        {age18Transition && eighteenthDate && (
+          <div className="rounded-2xl px-5 py-5 mb-5 text-center" style={{ background: "rgb(252,250,246)" }}>
+            <p className="font-serif text-sm italic text-foreground/60 leading-relaxed">
+              "You started this fund. You grew it. You protected it. On {eighteenthDate}, {childName} opens a book, reads your note, and sees what a head start looks like. That's the whole thing."
+            </p>
+          </div>
+        )}
+
+        <TrustMicroStrip />
+
+      </div>
+
+      <NoteEditorSheet
+        open={noteEditorOpen}
+        onClose={() => setNoteEditorOpen(false)}
+        fundId={activeFund?.id ?? ""}
+        childName={activeFund?.recipientFirstName || "them"}
+        parentName={parentName}
+        pronoun={(activeFund as any)?.pronoun}
+        majorityAge={majorityAge}
+        existingEntry={parentLetter ?? null}
+        onSaved={() => {
+          void queryClient.invalidateQueries({ queryKey: ["memory", activeFund?.id, "parent_letter"] });
+          void queryClient.invalidateQueries({ queryKey: ["memory", activeFund?.id] });
+        }}
+      />
+    </div>
+  );
+}

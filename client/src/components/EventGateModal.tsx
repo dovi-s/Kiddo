@@ -1,39 +1,56 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 import { useToast } from "@/hooks/use-toast";
 import { GradientText } from "@/components/ui/gemini";
 import { Star, Crown, Check, Gift, ArrowRight } from "lucide-react";
+import { KORA_FAMILY_MONTHLY, KORA_STARTER_MONTHLY } from "@shared/monetization";
 
 interface EventGateModalProps {
   open: boolean;
   onClose: () => void;
+  showKiddoPlusOption?: boolean;
 }
 
-export function EventGateModal({ open, onClose }: EventGateModalProps) {
-  const [loading, setLoading] = useState<"event-pass" | "family" | null>(null);
+export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: EventGateModalProps) {
+  const [loading, setLoading] = useState<"starter" | "family" | null>(null);
   const { toast } = useToast();
 
-  const handleEventPass = async () => {
-    setLoading("event-pass");
+  const parseCheckoutResponse = async (res: Response) => {
+    const raw = await res.text();
+    try {
+      const parsed = raw ? JSON.parse(raw) : {};
+      const details = parsed?.details
+        ? `\n${typeof parsed.details === "string" ? parsed.details : JSON.stringify(parsed.details)}`
+        : "";
+      return {
+        url: parsed?.url as string | undefined,
+        error: `${parsed?.error || parsed?.message || `HTTP ${res.status}`}${details}`,
+      };
+    } catch {
+      return { url: undefined, error: raw || `HTTP ${res.status}` };
+    }
+  };
+
+  const handleStarterPlan = async () => {
+    setLoading("starter");
     haptic("medium");
     try {
-      const res = await fetch("/api/stripe/checkout/event-pass", {
+      const res = await fetch("/api/stripe/checkout/starter-plan", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ returnTo: "/events", cancelTo: "/events" }),
       });
-      const data = await res.json();
+      const data = await parseCheckoutResponse(res);
       if (data.url) {
         window.location.href = data.url;
       } else {
-        toast({ title: "Could not start checkout", description: data.error || "Please try again", variant: "destructive" });
+        toast({ title: "Could not start checkout", description: data.error, variant: "destructive" });
         setLoading(null);
       }
-    } catch {
-      toast({ title: "Could not start checkout", description: "Please try again", variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Could not start checkout", description: error instanceof Error ? error.message : "Please try again", variant: "destructive" });
       setLoading(null);
     }
   };
@@ -46,16 +63,17 @@ export function EventGateModal({ open, onClose }: EventGateModalProps) {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ returnTo: "/events", cancelTo: "/events" }),
       });
-      const data = await res.json();
+      const data = await parseCheckoutResponse(res);
       if (data.url) {
         window.location.href = data.url;
       } else {
-        toast({ title: "Could not start checkout", description: data.error || "Please try again", variant: "destructive" });
+        toast({ title: "Could not start checkout", description: data.error, variant: "destructive" });
         setLoading(null);
       }
-    } catch {
-      toast({ title: "Could not start checkout", description: "Please try again", variant: "destructive" });
+    } catch (error) {
+      toast({ title: "Could not start checkout", description: error instanceof Error ? error.message : "Please try again", variant: "destructive" });
       setLoading(null);
     }
   };
@@ -65,116 +83,111 @@ export function EventGateModal({ open, onClose }: EventGateModalProps) {
       <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Create an Event</DialogTitle>
         <div className="p-6 pb-2 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
             <Gift size={24} className="text-primary" />
           </div>
-          <h2 className="font-heading text-xl font-bold text-foreground mb-2">
-            Create a new event
-          </h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Your free account includes one permanent gift page. To create events for birthdays, holidays, and more, choose an option below.
+          <h2 className="mb-2 font-heading text-xl font-bold text-foreground">You already have an active event running.</h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Free supports 1 active event at a time. Upgrade to run multiple occasions at once and remove platform fees on every gift.
           </p>
         </div>
 
-        <div className="p-6 space-y-3">
-          <button
-            onClick={handleEventPass}
-            disabled={loading !== null}
-            className="w-full p-4 rounded-2xl border-2 border-border bg-card hover:border-primary/30 transition-all text-left group"
-            data-testid="button-gate-event-pass"
-          >
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                <Star size={18} />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-heading font-semibold text-foreground">
-                    <GradientText>Event Boost</GradientText>
-                  </h3>
-                  <span className="text-sm font-semibold text-foreground">$29</span>
+        <div className="space-y-3 p-6">
+          {showKiddoPlusOption ? (
+            <button
+              onClick={handleStarterPlan}
+              disabled={loading !== null}
+              className="group w-full rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:border-primary/30"
+              data-testid="button-gate-kora-plus"
+            >
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Star size={18} />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  One-time purchase for a single event
-                </p>
-                <ul className="mt-2 space-y-1">
-                  <li className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Check size={12} className="text-primary shrink-0" />
-                    Waives the $2 platform fee on all gifts for this event
-                  </li>
-                  <li className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Check size={12} className="text-primary shrink-0" />
-                    Premium themes, goal cards, thank-you automation
-                  </li>
-                </ul>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-heading font-semibold text-foreground">
+                      <GradientText>Kiddo Plus</GradientText>
+                    </h3>
+                    <span className="text-sm font-semibold text-foreground">{`$${KORA_STARTER_MONTHLY.toFixed(2)}/mo`}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    One child. No platform fees.
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Check size={12} className="shrink-0 text-primary" />
+                      Up to 3 active events at a time
+                    </li>
+                    <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Check size={12} className="shrink-0 text-primary" />
+                      No platform fee on any gift
+                    </li>
+                    <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Check size={12} className="shrink-0 text-primary" />
+                      Recurring investments and custom investment mix
+                    </li>
+                  </ul>
+                </div>
               </div>
-            </div>
-            <div className="mt-3 flex justify-end">
-              <span className="text-xs font-medium text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
-                {loading === "event-pass" ? "Redirecting..." : "Get Event Boost"}
-                <ArrowRight size={12} />
-              </span>
-            </div>
-          </button>
+              <div className="mt-3 flex justify-end">
+                <span className="flex items-center gap-1 text-xs font-medium text-primary transition-all group-hover:gap-2">
+                  {loading === "starter" ? "Redirecting..." : "Upgrade to Kiddo Plus"}
+                  <ArrowRight size={12} />
+                </span>
+              </div>
+            </button>
+          ) : null}
 
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-xs text-muted-foreground">or</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
+          {showKiddoPlusOption ? (
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+          ) : null}
 
           <button
             onClick={handleFamilyPlan}
             disabled={loading !== null}
-            className="w-full p-4 rounded-2xl border-2 border-primary/20 bg-primary/5 hover:border-primary/40 transition-all text-left group"
+            className="group w-full rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 text-left transition-all hover:border-primary/40"
             data-testid="button-gate-family-plan"
           >
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+              <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Crown size={18} />
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-heading font-semibold text-foreground">Family Plan</h3>
-                  <span className="text-sm font-semibold text-foreground">$12/mo</span>
+                  <h3 className="font-heading font-semibold text-foreground">Kiddo Family</h3>
+                  <span className="text-sm font-semibold text-foreground">{`$${KORA_FAMILY_MONTHLY.toFixed(2)}/mo`}</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Unlimited events, premium features, fee savings
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Every child. Unlimited events. One price.
                 </p>
                 <ul className="mt-2 space-y-1">
-                  <li className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Check size={12} className="text-primary shrink-0" />
-                    Unlimited premium event pages
+                  <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Check size={12} className="shrink-0 text-primary" />
+                    Unlimited funds and unlimited active events
                   </li>
-                  <li className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Check size={12} className="text-primary shrink-0" />
-                    Platform fee waived on all gifts
+                  <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Check size={12} className="shrink-0 text-primary" />
+                    No platform fee on any gift, any fund
                   </li>
-                  <li className="text-xs text-muted-foreground flex items-center gap-1.5">
-                    <Check size={12} className="text-primary shrink-0" />
-                    Household dashboard and priority support
+                  <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Check size={12} className="shrink-0 text-primary" />
+                    Recurring investments across all funds
                   </li>
                 </ul>
               </div>
             </div>
             <div className="mt-3 flex justify-end">
-              <span className="text-xs font-medium text-primary flex items-center gap-1 group-hover:gap-2 transition-all">
-                {loading === "family" ? "Redirecting..." : "Upgrade to Family"}
+              <span className="flex items-center gap-1 text-xs font-medium text-primary transition-all group-hover:gap-2">
+                {loading === "family" ? "Redirecting..." : "Upgrade to Kiddo Family"}
                 <ArrowRight size={12} />
               </span>
             </div>
           </button>
-        </div>
-
-        <div className="px-6 pb-5">
-          <Button
-            variant="ghost"
-            className="w-full text-muted-foreground"
-            onClick={onClose}
-            data-testid="button-gate-cancel"
-          >
-            Maybe later
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

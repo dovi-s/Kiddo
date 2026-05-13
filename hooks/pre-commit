@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# Kiddo pre-commit hook. Runs the secrets-scan against staged files.
+#
+# Install for this clone:
+#   npm run setup:hooks
+#
+# Or manually:
+#   cp hooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Bypass intentionally is NOT supported. If you must bypass for an
+# emergency, document the bypass in incidents/YYYY-MM-DD-shortname.md
+# per policies/incident-response.md.
+
+node script/check-no-secrets.mjs
+exit $?

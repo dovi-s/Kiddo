@@ -20,6 +20,7 @@ async function fetchActivity(id: string): Promise<ActivityWithFund> {
 function formatDate(dateStr: string | Date | null | undefined): string {
   if (!dateStr) return "";
   const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
   return date.toLocaleDateString('en-US', { 
     weekday: 'long',
     month: 'long', 
@@ -28,6 +29,17 @@ function formatDate(dateStr: string | Date | null | undefined): string {
     hour: 'numeric',
     minute: '2-digit'
   });
+}
+
+function normalizeType(type?: string | null): string {
+  return (type || "event_update").toString();
+}
+
+function formatAmount(amount?: string | number | null): string | null {
+  if (amount == null) return null;
+  const parsed = typeof amount === "number" ? amount : Number.parseFloat(String(amount));
+  if (!Number.isFinite(parsed)) return null;
+  return parsed.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function getTypeConfig(type: string) {
@@ -47,7 +59,7 @@ function getTypeConfig(type: string) {
     case "subscription_started":
       return { icon: Sparkles, bg: "bg-purple-100", color: "text-purple-600", label: "Subscription Started" };
     case "event_pass_purchased":
-      return { icon: PartyPopper, bg: "bg-pink-100", color: "text-pink-600", label: "Event Boost" };
+      return { icon: PartyPopper, bg: "bg-pink-100", color: "text-pink-600", label: "Premium Event Coverage" };
     case "subscription_canceled":
       return { icon: XCircle, bg: "bg-red-100", color: "text-red-500", label: "Subscription Canceled" };
     case "payment_failed":
@@ -101,9 +113,17 @@ export default function ActivityDetail() {
     );
   }
 
-  const typeConfig = getTypeConfig(activity.type);
+  const normalizedType = normalizeType(activity.type);
+  const typeConfig = getTypeConfig(normalizedType);
   const TypeIcon = typeConfig.icon;
-  const fundDisplayName = activity.recipientFirstName || activity.fundName || "Fund";
+  const fundDisplayName = activity.fundName || activity.recipientFirstName || "Fund";
+  const amountLabel = formatAmount(activity.amount as any);
+  const metadataLabel =
+    typeof activity.metadata === "string"
+      ? activity.metadata
+      : activity.metadata
+        ? JSON.stringify(activity.metadata)
+        : "";
 
   return (
     <PageTransition>
@@ -134,20 +154,20 @@ export default function ActivityDetail() {
                   <TypeIcon size={24} className={typeConfig.color} />
                 </div>
                 <div className="flex-1">
-                  <h1 className="text-xl font-semibold text-foreground" data-testid="text-activity-title">{activity.title}</h1>
-                  <p className="text-muted-foreground mt-1" data-testid="text-activity-description">{activity.description}</p>
+                  <h1 className="text-xl font-semibold text-foreground" data-testid="text-activity-title">{activity.title || "Fund update"}</h1>
+                  <p className="text-muted-foreground mt-1" data-testid="text-activity-description">{activity.description || "No additional details."}</p>
                 </div>
               </div>
 
-              {activity.amount && (
+              {amountLabel && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.1 }}
+                  transition={{ delay: 0.040 }}
                   className="text-center py-6 border-y border-border"
                 >
                   <p className="font-serif text-4xl font-bold text-foreground" data-testid="text-activity-amount">
-                    ${parseFloat(activity.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ${amountLabel}
                   </p>
                   <div className="flex items-center justify-center gap-2 mt-2">
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${typeConfig.bg} ${typeConfig.color} flex items-center gap-1.5`}>
@@ -166,7 +186,7 @@ export default function ActivityDetail() {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Fund</p>
-                      <p className="font-medium text-foreground" data-testid="text-activity-fund">{fundDisplayName}'s Future Fund</p>
+                      <p className="font-medium text-foreground" data-testid="text-activity-fund">{fundDisplayName}</p>
                     </div>
                   </div>
                 )}
@@ -193,34 +213,34 @@ export default function ActivityDetail() {
               </div>
             </div>
 
-            {activity.metadata && (
+            {metadataLabel && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
+                transition={{ delay: 0.060 }}
                 className="bg-[hsl(var(--kora-gold)/0.08)] border border-[hsl(var(--kora-gold)/0.2)] rounded-2xl p-5"
               >
                 <div className="flex items-center gap-2 mb-3">
                   <MessageCircle size={16} className="text-[hsl(var(--kora-gold))]" />
                   <p className="text-sm font-medium text-[hsl(var(--kora-gold))]">Details</p>
                 </div>
-                <p className="text-foreground leading-relaxed" data-testid="text-activity-metadata">{activity.metadata}</p>
+                <p className="text-foreground leading-relaxed" data-testid="text-activity-metadata">{metadataLabel}</p>
               </motion.div>
             )}
 
-            {activity.type === "gift_received" && (
+            {normalizedType === "gift_received" && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
+                transition={{ delay: 0.120 }}
               >
                 <Button
                   variant="outline"
                   className="w-full h-12 rounded-xl"
                   onClick={() => {
                     navigator.share?.({
-                      title: `Gift received for ${fundDisplayName}'s Future Fund!`,
-                      text: activity.description || `A gift was received for ${fundDisplayName}'s future.`
+                      title: `Gift received for ${fundDisplayName}!`,
+                      text: activity.description || `A gift was received for ${fundDisplayName}.`
                     }).catch(() => {});
                   }}
                   data-testid="button-share-gift"

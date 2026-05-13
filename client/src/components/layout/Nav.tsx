@@ -1,4 +1,4 @@
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { Menu, Settings, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -17,24 +17,8 @@ interface NavProps {
 export function Nav({ showDashboard, accountType, profileName }: NavProps) {
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth();
-  const [location, setLocation] = useLocation();
   
   const displayName = user?.firstName || profileName || "User";
-
-  const scrollToSection = (href: string) => {
-    const [path, hash] = href.split('#');
-    const targetPath = path || '/';
-    const isHome = location === '/' || location === '';
-    
-    if (isHome && targetPath === '/') {
-      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      setLocation(targetPath);
-      setTimeout(() => {
-        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
-      }, 300);
-    }
-  };
 
   return (
     <motion.nav 
@@ -74,26 +58,33 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
               </motion.div>
             </>
           ) : (
+            // Desktop nav restraint: 3 second-tier surfaces + 1 CTA.
+            // Hera / Stripe register. The earlier 5-item set (How It
+            // Works / FAQ / Pricing / About / Guides) creeped past the
+            // discipline; FAQ + About + Guides are demoted to the footer
+            // (and remain in the mobile sheet for thumb-reach access).
+            // The three slots are the questions a first-time visitor
+            // actually asks: "what does it do," "what does it cost,"
+            // "do other parents use it." See PRODUCT.md §3 (competitive
+            // frame) for why Stories beats Compare in the third slot —
+            // the proof gallery is the moat surface.
             <>
-              <span 
-                onClick={() => scrollToSection('/#how-it-works')}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              <Link
+                href="/how-it-works"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 data-testid="link-how-it-works-nav"
               >
-                How It Works
-              </span>
-              <Link href="/faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-faq-nav">
-                FAQ
+                How it works
               </Link>
-              <span 
-                onClick={() => scrollToSection('/#pricing')}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              <Link
+                href="/pricing"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 data-testid="link-pricing-nav"
               >
                 Pricing
-              </span>
-              <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-about-nav">
-                About
+              </Link>
+              <Link href="/stories" className="text-sm text-muted-foreground hover:text-foreground transition-colors" data-testid="link-stories-nav">
+                Stories
               </Link>
             </>
           )}
@@ -107,7 +98,7 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
               </Link>
               <Link href="/get-started">
                 <Button size="sm" data-testid="button-get-started-nav" onClick={() => haptic('light')}>
-                  Get Started
+                  Start for free
                 </Button>
               </Link>
             </>
@@ -135,13 +126,15 @@ export function Nav({ showDashboard, accountType, profileName }: NavProps) {
                   </>
                 ) : (
                   <>
-                    <span onClick={() => { setIsOpen(false); scrollToSection('/#how-it-works'); }} className="font-medium cursor-pointer">How It Works</span>
+                    <Link href="/how-it-works" onClick={() => setIsOpen(false)} className="font-medium">How it works</Link>
+                    <Link href="/pricing" onClick={() => setIsOpen(false)} className="font-medium">Pricing</Link>
+                    <Link href="/stories" onClick={() => setIsOpen(false)} className="font-medium">Stories</Link>
                     <Link href="/faq" onClick={() => setIsOpen(false)} className="font-medium">FAQ</Link>
-                    <span onClick={() => { setIsOpen(false); scrollToSection('/#pricing'); }} className="font-medium cursor-pointer">Pricing</span>
                     <Link href="/about" onClick={() => setIsOpen(false)} className="font-medium">About</Link>
+                    <Link href="/blog" onClick={() => setIsOpen(false)} className="font-medium">Guides</Link>
                     <hr />
                     <Link href="/login" onClick={() => setIsOpen(false)} className="font-medium">Log in</Link>
-                    <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Get started</Button></Link>
+                    <Link href="/get-started"><Button className="w-full" onClick={() => setIsOpen(false)}>Start for free</Button></Link>
                   </>
                 )}
               </div>

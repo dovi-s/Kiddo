@@ -4,8 +4,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-serif: 'Bricolage Grotesque', system-ui, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -34,7 +34,8 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
   
-  /* Kora Brand Colors */
+  /* Brand color bridges (Tailwind v4 @theme). The --kora-* CSS vars are
+     legacy aliases for --kiddo-*; both names resolve to the same color. */
   --color-kora-evergreen: hsl(var(--kora-evergreen));
   --color-kora-evergreen-light: hsl(var(--kora-evergreen-light));
   --color-kora-gold: hsl(var(--kora-gold));
@@ -50,7 +51,7 @@
 }
 
 :root {
-  /* Kora Design Tokens - Premium, Calm, Trustworthy */
+  /* Kiddo Design Tokens — Premium, Calm, Trustworthy */
   /* Palette: Deep Evergreen + Warm Gold + Soft Neutrals */
   
   /* Premium Spacing Scale (4px base) */
@@ -77,10 +78,10 @@
   --text-4xl: 2.25rem;    /* 36px */
   
   /* Letter spacing for premium feel */
-  --tracking-tight: -0.025em;
+  --tracking-tight: 0;
   --tracking-normal: 0;
-  --tracking-wide: 0.025em;
-  --tracking-wider: 0.05em;
+  --tracking-wide: 0;
+  --tracking-wider: 0;
   
   /* Line heights */
   --leading-none: 1;
@@ -89,25 +90,63 @@
   --leading-normal: 1.5;
   --leading-relaxed: 1.625;
   
-  /* Premium transition timings */
+  /* ── Motion tokens — single source of truth for animation timing ──
+     Use these instead of inline `duration: 0.2` / `transition: 'all 200ms'`.
+     Picking from the right token = consistent perceived speed across the
+     app. Mid-tier apps drift into 4-5 different durations on the same
+     page — premium apps stick to 2-3.
+
+     Durations:
+       --duration-instant (100ms): exits, dismissals (out of the way fast)
+       --duration-fast    (150ms): hover states, button presses, icon swaps
+       --duration-normal  (200ms): card lifts, modal open, drawer reveal
+       --duration-slow    (300ms): page-level entrances, heavy reveals
+
+     Easing:
+       --ease-out-expo  : entrances — fast start, gentle settle (Apple's
+                          default; what feels "deliberate" arriving)
+       --ease-in-quad   : exits — accelerates away (gets out of the way)
+       --ease-out-back  : playful overshoot for celebrations (sprout, seal)
+       --ease-spring    : bigger overshoot — use sparingly, reserved for
+                          dopamine moments (toast pop, success haptic)
+
+     Rule of thumb: enter on --ease-out-expo, exit on --ease-in-quad.
+     Animations longer than --duration-slow (300ms) will feel laggy. */
   --duration-instant: 100ms;
   --duration-fast: 150ms;
   --duration-normal: 200ms;
   --duration-slow: 300ms;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-quad: cubic-bezier(0.4, 0, 1, 1);
   --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   
-  /* Kora Brand Colors */
-  --kora-evergreen: 152 45% 18%;      /* Deep evergreen #1B4332 */
-  --kora-evergreen-light: 152 35% 28%; /* Lighter evergreen */
-  --kora-evergreen-hover: 152 45% 22%; /* Hover state */
-  --kora-evergreen-active: 152 45% 15%; /* Active/pressed state */
-  --kora-gold: 36 72% 52%;             /* Warm gold #D4A04A */
-  --kora-gold-light: 40 65% 70%;       /* Light gold for accents */
-  --kora-gold-glow: 36 80% 60%;        /* Glowing gold */
-  --kora-cream: 40 30% 97%;            /* Warm off-white */
-  --kora-ink: 150 15% 12%;             /* Near-black with green tint */
+  /* Brand color aliases: legacy --kora-* names map to the canonical
+     --kiddo-* palette below. Components written against either name
+     resolve to the same Kiddo color — no visual drift, no codemod
+     needed across hundreds of usages. The four variants without a
+     direct --kiddo-* counterpart (-light / -hover / -active / -glow)
+     are regenerated against the canonical kiddo evergreen + gold so
+     the whole palette stays internally consistent. */
+  --kora-evergreen: var(--kiddo-evergreen);
+  --kora-evergreen-light: 152 32% 27%; /* derived: lighter than --kiddo-evergreen */
+  --kora-evergreen-hover: 152 37% 21%; /* derived: hover lifts ~4% above base */
+  --kora-evergreen-active: 152 37% 14%; /* derived: pressed dims ~3% below base */
+  --kora-gold: var(--kiddo-gold);
+  --kora-gold-light: var(--kiddo-gold-light);
+  --kora-gold-glow: 34 78% 58%;        /* derived: glowing variant of --kiddo-gold */
+  --kora-cream: var(--kiddo-cream);
+  --kora-ink: var(--kiddo-ink);
+  --kiddo-evergreen: 152 37% 17%;       /* #1B3A2D */
+  --kiddo-evergreen-deep: 152 45% 10%;  /* #0E2518 — hero gradient endpoint */
+  --kiddo-cream: 38 36% 96%;            /* #F8F5F0 */
+  --kiddo-cream-dark: 36 28% 90%;       /* #EDE7DC */
+  --kiddo-gold: 34 74% 45%;             /* #C5821E */
+  --kiddo-gold-light: 40 78% 66%;       /* #EDC164 — balance flash + warm highlight */
+  --kiddo-ink: 40 23% 8%;               /* #1A1710 */
+  --kiddo-muted: 32 7% 44%;             /* #7A7268 */
+  --kiddo-border: 33 24% 86%;           /* #E5DDD4 */
+  --kiddo-border-light: 33 24% 86% / 0.6; /* faded variant for inner row dividers */
   
   --background: 40 30% 97%;            /* Warm off-white cream */
   --foreground: 150 15% 12%;           /* Near-black ink */
@@ -116,7 +155,7 @@
   --touch-target-min: 44px;
   --spacing-safe-bottom: env(safe-area-inset-bottom, 0px);
 
-  --card: 40 25% 99%;
+  --card: 38 38% 99%;
   --card-foreground: 150 15% 12%;
 
   /* Deep Evergreen - Primary Brand Color */
@@ -144,8 +183,8 @@
   --destructive-foreground: 0 0% 100%;
 
   /* Borders - Soft gray with warmth */
-  --border: 40 12% 88%;
-  --input: 40 12% 88%;
+  --border: 33 24% 86%;
+  --input: 33 24% 86%;
   --ring: 152 45% 18%;
 
   --radius: 0.625rem;
@@ -154,6 +193,7 @@
   --radius-card: 20px;
   --radius-inner: 14px;
   --radius-control: 10px;
+  --radius-pill: 9999px;
 
   /* Chart - Evergreen-based palette */
   --chart-1: 152 45% 18%;
@@ -202,36 +242,47 @@
     font-feature-settings: "cv11", "ss01", "kern" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
+    overflow-x: hidden;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-serif font-semibold;
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
   h1 {
-    letter-spacing: -0.05em;
+    letter-spacing: 0;
   }
   h2 {
-    letter-spacing: -0.045em;
+    letter-spacing: 0;
   }
   button, [role="button"], .btn {
-    letter-spacing: -0.025em;
+    cursor: pointer;
+    letter-spacing: 0;
     font-feature-settings: "kern" 1;
   }
   label {
-    letter-spacing: -0.015em;
+    letter-spacing: 0;
   }
   p {
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
   a {
-    letter-spacing: -0.02em;
+    letter-spacing: 0;
   }
   input, textarea, select {
-    letter-spacing: -0.015em;
+    letter-spacing: 0;
   }
   .font-medium, .font-semibold, .font-bold {
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
+  }
+  .tracking-tighter,
+  .tracking-tight,
+  .tracking-normal,
+  .tracking-wide,
+  .tracking-wider,
+  .tracking-widest,
+  [class*="tracking-["] {
+    letter-spacing: 0 !important;
   }
 }
 
@@ -342,6 +393,85 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   100% { opacity: 1; transform: translateY(0); }
 }
 
+/* "Who loves Emma" avatar polish.
+   - `:hover` on the wrapper button gives a subtle lift + shadow boost on
+     desktop ("color preview" feel — answers a hover with motion, not just
+     a tooltip).
+   - `kiddo-gifter-avatar-pulse` adds a soft expanding-ring animation for
+     gifters who gave within the last 48 hours, drawing gentle attention
+     to "new" arrivals without being noisy. The animation respects
+     prefers-reduced-motion. */
+.kiddo-gifter-avatar:hover > div:first-child > div:first-child {
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 0 0 2.5px hsl(143, 47%, 28%, 0.15), 0 6px 18px rgba(26, 23, 16, 0.18) !important;
+}
+.kiddo-gifter-avatar-pulse {
+  position: relative;
+}
+/* Pulse animation: hover-capable devices only.
+   - On desktop, the constant pulse reads as ambient "this gifter is fresh"
+     signal. The gap around each avatar absorbs the ring's 1.18 scale.
+   - On mobile/touch, avatars sit tighter (gap: 16 → adjacent rings can
+     overlap), the screen is smaller, and the animation stutters on
+     lower-end devices without hardware acceleration. The recency date +
+     count below each avatar already carries the same "loved lately"
+     signal in less visual noise — pulse becomes redundant.
+   `@media (hover: hover) and (pointer: fine)` matches mouse/trackpad
+   environments specifically (not stylus, not touch). */
+@media (hover: hover) and (pointer: fine) {
+  .kiddo-gifter-avatar-pulse::after {
+    content: "";
+    position: absolute;
+    /* Long-form positions instead of `inset:` shorthand for older WebKit
+       compatibility on positioned pseudo-elements. */
+    top: -3px;
+    right: -3px;
+    bottom: -3px;
+    left: -3px;
+    border-radius: 9999px;
+    border: 2px solid hsl(43, 85%, 50%);
+    opacity: 0;
+    animation: kiddo-gifter-pulse 2s ease-out infinite;
+    pointer-events: none;
+    /* Hint hardware acceleration so the pulse stays smooth even when
+       the section is scrolled or other animations are active. */
+    will-change: transform, opacity;
+  }
+}
+@keyframes kiddo-gifter-pulse {
+  0% { opacity: 0.6; transform: scale(0.95); }
+  70% { opacity: 0; transform: scale(1.18); }
+  100% { opacity: 0; transform: scale(1.18); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kiddo-gifter-avatar-pulse::after { animation: none; opacity: 0; }
+  .kiddo-gifter-avatar:hover > div:first-child > div:first-child {
+    transform: none;
+  }
+}
+
+/* Milestone celebration — restraint version of the original "stars
+   burst from the balance" idea. No particles, no sparkle elements
+   (locked: feedback_no_ai_slop). Instead: a brief gold-ring breath
+   on the milestone card itself, runs ONCE on first render of a
+   freshly-stamped milestone (< 1 hour old), then settles. The
+   single-iteration loop is load-bearing: an infinite pulse on a
+   milestone card would read as "your fund is alarming" rather than
+   "your fund hit a number worth marking." Gradient breathes from
+   3px gold ring to nothing over 2.4s. Respects reduced motion. */
+.kiddo-milestone-celebrate {
+  position: relative;
+  animation: kiddo-milestone-breath 2.4s ease-out 1;
+}
+@keyframes kiddo-milestone-breath {
+  0%   { box-shadow: 0 0 0 0 hsl(43, 85%, 50%, 0.42), 0 0 24px 0 hsl(43, 85%, 50%, 0.18); }
+  35%  { box-shadow: 0 0 0 6px hsl(43, 85%, 50%, 0.32), 0 0 36px 6px hsl(43, 85%, 50%, 0.22); }
+  100% { box-shadow: 0 0 0 0 hsl(43, 85%, 50%, 0), 0 0 0 0 hsl(43, 85%, 50%, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kiddo-milestone-celebrate { animation: none; }
+}
+
 /* ===== MOBILE-NATIVE EXPERIENCE ===== */
 
 /* Safe area padding for notched devices */
@@ -352,8 +482,214 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   padding-top: max(12px, env(safe-area-inset-top));
 }
 
+.mobile-app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.mobile-app-shell--with-nav {
+  padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-topbar {
+  background: hsl(var(--background) / 0.94);
+  backdrop-filter: blur(16px) saturate(1.08);
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  border-bottom: 1px solid hsl(var(--border) / 0.8);
+  box-shadow: 0 1px 0 hsl(var(--background) / 0.75);
+}
+
+.mobile-nav-shell {
+  border: 1px solid hsl(var(--border) / 0.9);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, hsl(var(--card) / 0.98), hsl(var(--background) / 0.98));
+  box-shadow:
+    0 18px 40px -26px rgba(24, 33, 28, 0.42),
+    0 8px 18px -16px rgba(24, 33, 28, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.52);
+  backdrop-filter: blur(14px) saturate(1.04);
+  -webkit-backdrop-filter: blur(14px) saturate(1.04);
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
+
+.get-started-screen {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 50% -10%, hsl(var(--kora-gold) / 0.1), transparent 28%),
+    radial-gradient(circle at 100% 10%, hsl(var(--kora-evergreen) / 0.08), transparent 32%),
+    linear-gradient(180deg, hsl(var(--background)), hsl(40 24% 95%));
+  overflow-x: hidden;
+}
+
+.get-started-screen__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 25%, hsl(var(--kora-evergreen) / 0.05), transparent 24%),
+    radial-gradient(circle at 80% 65%, hsl(var(--kora-gold) / 0.06), transparent 26%);
+}
+
+.get-started-panel {
+  border-radius: 28px;
+  border: 1px solid hsl(var(--border) / 0.7);
+  background: hsl(var(--card) / 0.94);
+  padding: 1.25rem;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.03),
+    0 10px 28px -18px rgba(24, 33, 28, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.get-started-hero-card {
+  border-radius: 30px;
+  border: 1px solid hsl(var(--border) / 0.7);
+  background: hsl(var(--card) / 0.94);
+  padding: 1.5rem 1.75rem;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.04),
+    0 18px 36px -24px rgba(24, 33, 28, 0.28);
+}
+
+.get-started-mini-card {
+  border-radius: 20px;
+  border: 1px solid hsl(var(--border) / 0.6);
+  background: hsl(var(--card) / 0.9);
+  padding: 0.95rem 0.85rem;
+  text-align: center;
+  box-shadow: 0 8px 24px -20px rgba(24, 33, 28, 0.22);
+}
+
+.get-started-auth-button {
+  display: flex;
+  height: 56px;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 20px;
+  border: 1px solid hsl(var(--border) / 0.75);
+  background: hsl(var(--card) / 0.94);
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: 0 8px 24px -20px rgba(24, 33, 28, 0.22);
+  transition: transform 0.15s ease-out, border-color 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+.get-started-auth-button:hover {
+  border-color: hsl(var(--primary) / 0.25);
+  box-shadow: 0 12px 28px -22px rgba(24, 33, 28, 0.28);
+}
+
+.get-started-auth-button:active {
+  transform: scale(0.98);
+}
+
+.get-started-input {
+  height: 52px;
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background) / 0.92);
+  padding: 0 1rem;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 18px -18px rgba(24, 33, 28, 0.25);
+}
+
+.get-started-choice {
+  width: 100%;
+  border-radius: 28px;
+  border: 1px solid hsl(var(--border) / 0.7);
+  background: hsl(var(--card) / 0.94);
+  padding: 1.25rem;
+  text-align: left;
+  box-shadow: 0 12px 28px -24px rgba(24, 33, 28, 0.22);
+  transition: transform 0.15s ease-out, border-color 0.15s ease-out, background 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+.get-started-choice:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -22px rgba(24, 33, 28, 0.28);
+}
+
+.get-started-choice--active {
+  border-color: hsl(var(--primary) / 0.4);
+  background: hsl(var(--primary) / 0.05);
+  box-shadow:
+    0 0 0 1px hsl(var(--primary) / 0.08),
+    0 16px 32px -24px rgba(24, 33, 28, 0.26);
+}
+
+.get-started-choice__icon {
+  display: flex;
+  height: 48px;
+  width: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+}
+
+.get-started-dock-wrap {
+  pointer-events: none;
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 45;
+  padding: 0 1rem max(14px, env(safe-area-inset-bottom));
+}
+
+.get-started-dock {
+  pointer-events: auto;
+  border: 1px solid hsl(var(--border) / 0.8);
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, hsl(var(--card) / 0.98), hsl(var(--background) / 0.96));
+  padding: 0.95rem;
+  box-shadow:
+    0 -8px 30px -24px rgba(24, 33, 28, 0.28),
+    0 18px 40px -28px rgba(24, 33, 28, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px) saturate(1.04);
+  -webkit-backdrop-filter: blur(16px) saturate(1.04);
+}
+
 /* Edge-to-edge mobile layouts */
 @media (max-width: 640px) {
+  /* iOS Safari zoom-on-focus prevention. When an input's computed font-size
+     is < 16px on mobile, iOS auto-zooms the page when the input gains focus —
+     which (a) feels like a glitch, (b) loses the user's place, and (c) won't
+     un-zoom on blur. Forcing 16px+ on every text-entry element site-wide is
+     the canonical fix. Specific exclusions for non-text inputs (checkbox,
+     radio, file) so their small visuals are preserved. The Input primitive
+     applies its own `text-base sm:text-sm` for the same reason; this block
+     catches any inline <input>/<textarea>/<select> that bypassed the
+     primitive. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: max(16px, 1rem);
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top, hsl(var(--kora-gold) / 0.08), transparent 34%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(40 24% 95%));
+  }
+
+  .mobile-app-shell {
+    background:
+      radial-gradient(circle at 50% -10%, hsl(var(--kora-evergreen) / 0.05), transparent 42%);
+  }
+
+  .mobile-app-shell--with-nav {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
   .mobile-edge {
     margin-left: -1rem;
     margin-right: -1rem;
@@ -362,6 +698,18 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   .mobile-full {
     padding-left: 0;
     padding-right: 0;
+  }
+
+  .mobile-topbar {
+    background: hsl(var(--background) / 0.96);
+  }
+
+  .get-started-dock-wrap {
+    padding-inline: 0.75rem;
+  }
+
+  .get-started-dock {
+    border-radius: 24px;
   }
 }
 
@@ -687,18 +1035,18 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 /* Premium shadow levels */
 .shadow-premium-sm {
   box-shadow: 
-    0 1px 2px rgba(0, 0, 0, 0.04),
-    0 2px 4px rgba(0, 0, 0, 0.02);
+    0 1px 3px rgba(26, 23, 16, 0.06),
+    0 4px 16px rgba(26, 23, 16, 0.06);
 }
 .shadow-premium {
   box-shadow: 
-    0 2px 4px rgba(0, 0, 0, 0.04),
-    0 4px 12px rgba(0, 0, 0, 0.06);
+    0 1px 4px rgba(26, 23, 16, 0.07),
+    0 10px 24px rgba(26, 23, 16, 0.07);
 }
 .shadow-premium-lg {
   box-shadow: 
-    0 4px 8px rgba(0, 0, 0, 0.04),
-    0 8px 24px rgba(0, 0, 0, 0.08);
+    0 2px 8px rgba(26, 23, 16, 0.08),
+    0 18px 36px rgba(26, 23, 16, 0.10);
 }
 
 /* Magnetic button effect */
@@ -760,6 +1108,299 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 }
 .btn-premium:hover::before {
   transform: translateX(100%);
+}
+
+.btn-action {
+  background: hsl(var(--kora-evergreen));
+  color: hsl(var(--primary-foreground));
+}
+
+.btn-action:hover {
+  background: hsl(var(--kora-evergreen-hover));
+}
+
+.btn-monetization {
+  background: hsl(var(--kora-gold));
+  color: hsl(var(--kora-ink));
+  box-shadow: 0 10px 24px -14px hsl(var(--kora-gold) / 0.7);
+}
+
+.btn-monetization:hover {
+  background: hsl(var(--kora-gold-light));
+  color: hsl(var(--kora-ink));
+}
+
+.btn-destructive-intent {
+  background: hsl(var(--destructive));
+  color: hsl(var(--destructive-foreground));
+}
+
+.kiddo-app-page {
+  min-height: 100vh;
+  background: hsl(var(--kiddo-cream));
+  font-family: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.font-heading {
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+.kiddo-canvas {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+}
+
+.kiddo-card {
+  border: 1px solid hsl(var(--kiddo-border));
+  border-radius: 16px;
+  background: hsl(var(--card));
+  /* The inset 1px-white-top is the "glass" edge that catches light — single
+     biggest detail separating premium-feeling cards from flat ones. Pair
+     with the standard drop shadow for depth-from-light + depth-from-mass.
+     Transition covers hover lift + active press without affecting layout. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 3px rgba(26, 23, 16, 0.06),
+    0 4px 16px rgba(26, 23, 16, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.kiddo-card:hover {
+  /* Lift 2px on hover — Apple HIG card treatment. Restraint is key: 2px is
+     felt, not seen. Anything bigger reads as a UI lie when the card is a
+     static container (which most kiddo-cards are). */
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 2px 8px rgba(26, 23, 16, 0.08),
+    0 12px 28px rgba(26, 23, 16, 0.10);
+}
+
+.kiddo-card:active {
+  /* Press response — scale 0.5% so it never reads as a click target lie on
+     a static card, but firmly registers a press on tappable ones. */
+  transform: scale(0.995) translateY(0);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 1px 2px rgba(26, 23, 16, 0.06),
+    0 2px 8px rgba(26, 23, 16, 0.05);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kiddo-card,
+  .kiddo-card:hover,
+  .kiddo-card:active {
+    transform: none;
+    transition: none;
+  }
+}
+
+.kiddo-card-soft {
+  border: 1px solid hsl(var(--kiddo-border) / 0.78);
+  border-radius: 16px;
+  background: hsl(var(--kiddo-cream) / 0.72);
+}
+
+.kiddo-hero-card {
+  border: 1px solid hsl(var(--kiddo-evergreen) / 0.14);
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, hsl(var(--kiddo-evergreen)) 0%, hsl(153 48% 11%) 100%);
+  box-shadow:
+    0 1px 3px rgba(26, 23, 16, 0.08),
+    0 16px 34px rgba(27, 58, 45, 0.16);
+}
+
+.kiddo-hero-card .text-foreground,
+.kiddo-hero-card h1,
+.kiddo-hero-card h2,
+.kiddo-hero-card h3 {
+  color: hsl(var(--kiddo-cream)) !important;
+}
+
+.kiddo-hero-card .text-muted-foreground,
+.kiddo-hero-card p {
+  color: hsl(var(--kiddo-cream) / 0.76) !important;
+}
+
+.kiddo-hero-card .border-border\/30,
+.kiddo-hero-card .border-border\/50 {
+  border-color: hsl(var(--kiddo-cream) / 0.16) !important;
+}
+
+.kiddo-hero-card .bg-background\/70 {
+  background: hsl(var(--kiddo-cream) / 0.08) !important;
+}
+
+.kiddo-gold-button {
+  background: hsl(var(--kiddo-gold));
+  color: white;
+  border-color: hsl(var(--kiddo-gold));
+  box-shadow: none;
+}
+
+.kiddo-gold-button:hover {
+  background: hsl(34 76% 40%);
+  color: white;
+}
+
+.kiddo-sidebar {
+  width: 264px;
+  border-right: 1px solid hsl(var(--kiddo-border));
+  background: hsl(var(--card));
+}
+
+.kiddo-sidebar-card {
+  border: 1px solid hsl(var(--kiddo-border));
+  border-radius: 16px;
+  background: hsl(var(--kiddo-evergreen) / 0.08);
+}
+
+/* Section labels — sentence case, warmer feel. The original treatment was
+   uppercase with letter-spacing (Bank Statement Energy). The product's
+   "Your part of [child]'s story" / "What [child] owns" / "Who loves [child]"
+   are emotional headers, not data tags. Sentence case + slightly larger
+   font + the foreground color make them feel written by a person rather
+   than auto-generated. Letter-spacing kept at near-zero — sentence case
+   doesn't benefit from tracking. */
+.kiddo-section-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  color: hsl(var(--kiddo-foreground));
+}
+
+.kiddo-tab-row {
+  display: inline-flex;
+  gap: 4px;
+  border-radius: 16px;
+  background: hsl(var(--kiddo-cream-dark));
+  padding: 4px;
+}
+
+.kiddo-tab-item {
+  border-radius: 10px;
+  padding: 8px 18px;
+  font-size: 0.82rem;
+  color: hsl(var(--kiddo-muted));
+  transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.kiddo-tab-item[data-active="true"] {
+  background: white;
+  color: hsl(var(--kiddo-ink));
+  box-shadow: 0 1px 3px rgba(26, 23, 16, 0.08);
+}
+
+.kiddo-segmented {
+  display: flex;
+  gap: 4px;
+  border: 1px solid hsl(var(--kiddo-border));
+  border-radius: 999px;
+  background: hsl(var(--kiddo-cream-dark) / 0.54);
+  padding: 4px;
+}
+
+.kiddo-segmented-item {
+  border-radius: 999px;
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: hsl(var(--kiddo-muted));
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.kiddo-segmented-item[data-active="true"] {
+  background: hsl(var(--card));
+  color: hsl(var(--kiddo-ink));
+  box-shadow: 0 1px 2px rgba(26, 23, 16, 0.06);
+}
+
+.kiddo-sprout-mark {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  height: 88px;
+  width: 88px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 50% 18%, hsl(var(--kora-gold) / 0.32), transparent 34%),
+    linear-gradient(180deg, hsl(var(--card)), hsl(var(--kora-cream)));
+  border: 1px solid hsl(var(--kora-gold) / 0.35);
+  box-shadow:
+    0 18px 42px -26px hsl(var(--kora-evergreen) / 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.kiddo-sprout-mark::before {
+  content: "";
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  height: 28px;
+  width: 4px;
+  border-radius: 999px;
+  background: hsl(var(--kora-evergreen));
+  transform: translateX(-50%) scaleY(0);
+  transform-origin: bottom;
+  animation: kiddo-sprout-stem 520ms var(--ease-out-expo) 120ms forwards;
+}
+
+.kiddo-sprout-mark::after {
+  content: "";
+  position: absolute;
+  bottom: 42px;
+  left: 50%;
+  height: 22px;
+  width: 42px;
+  border-radius: 999px 999px 999px 2px;
+  background: hsl(var(--kora-evergreen));
+  transform: translateX(-28%) rotate(-26deg) scale(0);
+  transform-origin: left bottom;
+  box-shadow: 20px 9px 0 -1px hsl(var(--kora-evergreen-light));
+  animation: kiddo-sprout-leaves 540ms var(--ease-out-back) 360ms forwards;
+}
+
+.kiddo-note-seal {
+  animation: kiddo-seal-pop 380ms var(--ease-out-back) forwards;
+}
+
+@keyframes kiddo-sprout-stem {
+  from { transform: translateX(-50%) scaleY(0); opacity: 0; }
+  to { transform: translateX(-50%) scaleY(1); opacity: 1; }
+}
+
+@keyframes kiddo-sprout-leaves {
+  from { transform: translateX(-28%) rotate(-26deg) scale(0); opacity: 0; }
+  to { transform: translateX(-28%) rotate(-26deg) scale(1); opacity: 1; }
+}
+
+@keyframes kiddo-seal-pop {
+  from { opacity: 0; transform: translateY(4px) scale(0.92); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kiddo-sprout-mark::before,
+  .kiddo-sprout-mark::after,
+  .kiddo-note-seal {
+    animation: none;
+    opacity: 1;
+  }
+
+  .kiddo-sprout-mark::before {
+    transform: translateX(-50%) scaleY(1);
+  }
+
+  .kiddo-sprout-mark::after {
+    transform: translateX(-28%) rotate(-26deg) scale(1);
+  }
 }
 
 /* Breathing animation for pending states */
@@ -1289,4 +1930,169 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   background: linear-gradient(to bottom, hsl(var(--background)), transparent);
   pointer-events: none;
   z-index: 5;
+}
+
+/* ============================================ */
+/* LOVE MARKS ANIMATION SYSTEM                  */
+/* Every motion earns its place.                */
+/* ============================================ */
+
+/* --- Activity feed: new items slide in from right --- */
+@keyframes slideFromRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.activity-slide-in {
+  animation: slideFromRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --- Activity item: amber highlight flash on arrival --- */
+@keyframes amberFlash {
+  0%   { background-color: hsl(36 72% 52% / 0.18); }
+  100% { background-color: transparent; }
+}
+.activity-new-highlight {
+  animation: amberFlash 1.2s ease-out forwards;
+}
+
+/* --- Stock picker: selection glow ring --- */
+@keyframes stockGlowIn {
+  from { box-shadow: 0 0 0 0 hsl(var(--primary) / 0); }
+  to   { box-shadow: 0 0 0 3px hsl(var(--primary) / 0.25), 0 4px 16px -4px hsl(var(--primary) / 0.2); }
+}
+.stock-selected-glow {
+  animation: stockGlowIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.25), 0 4px 16px -4px hsl(var(--primary) / 0.2);
+}
+
+/* --- Progress bar: liquid fill animation --- */
+@keyframes liquidFill {
+  0%   { transform: scaleX(0); }
+  85%  { transform: scaleX(1.02); }
+  100% { transform: scaleX(1); }
+}
+.progress-liquid {
+  transform-origin: left;
+  animation: liquidFill 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --- Warm loading pulse (warmer than cold shimmer) --- */
+@keyframes warmPulse {
+  0%, 100% { background-color: hsl(40 25% 92%); }
+  50%       { background-color: hsl(40 30% 88%); }
+}
+.warm-pulse {
+  animation: warmPulse 1.4s ease-in-out infinite;
+  border-radius: inherit;
+}
+
+/* --- Fund value: count-up landing bounce --- */
+@keyframes valueLand {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.015); }
+  100% { transform: scale(1); }
+}
+.value-land {
+  animation: valueLand 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  display: inline-block;
+}
+
+/* --- Milestone burst ring --- */
+@keyframes milestoneRing {
+  0%   { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+.milestone-ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: inherit;
+  border: 2px solid hsl(var(--kora-gold) / 0.6);
+  animation: milestoneRing 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+/* --- Milestone number build from below --- */
+@keyframes numberBuild {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.92); }
+  70%  { transform: translateY(-2px) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.number-build {
+  animation: numberBuild 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- Paper airplane: send animation --- */
+@keyframes paperPlane {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1); opacity: 1; }
+  60%  { transform: translate(60px, -50px) rotate(-25deg) scale(0.8); opacity: 1; }
+  100% { transform: translate(120px, -100px) rotate(-35deg) scale(0.4); opacity: 0; }
+}
+.paper-plane-fly {
+  animation: paperPlane 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  pointer-events: none;
+  position: absolute;
+}
+
+/* --- Kid View: company card bob animation --- */
+@keyframes gentleBob {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-4px); }
+}
+.card-bob {
+  animation: gentleBob 3s ease-in-out infinite;
+}
+.card-bob:nth-child(2) { animation-delay: 0.5s; }
+.card-bob:nth-child(3) { animation-delay: 1.1s; }
+.card-bob:nth-child(4) { animation-delay: 1.6s; }
+.card-bob:nth-child(5) { animation-delay: 0.8s; }
+.card-bob:nth-child(6) { animation-delay: 1.9s; }
+
+/* --- Heartbeat pulse for birthday countdown --- */
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  15%       { transform: scale(1.12); opacity: 1; }
+  30%       { transform: scale(1); opacity: 0.85; }
+  45%       { transform: scale(1.06); opacity: 1; }
+}
+.heartbeat {
+  animation: heartbeat 1.4s ease-in-out infinite;
+}
+
+/* --- Live badge: soft green glow pulse --- */
+@keyframes livePulse {
+  0%, 100% { box-shadow: 0 0 0 0 hsl(152 55% 35% / 0.4); }
+  50%       { box-shadow: 0 0 0 6px hsl(152 55% 35% / 0); }
+}
+.live-badge-pulse {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+/* --- Celebration confetti particle --- */
+@keyframes confettiDrift {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(-80px) rotate(360deg); opacity: 0; }
+}
+.confetti-particle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: confettiDrift 1.5s ease-out forwards;
+  pointer-events: none;
+}
+
+/* --- Seeded confetti timing offsets --- */
+.confetti-particle:nth-child(1)  { animation-delay: 0ms; animation-duration: 1.2s; }
+.confetti-particle:nth-child(2)  { animation-delay: 80ms; animation-duration: 1.5s; }
+.confetti-particle:nth-child(3)  { animation-delay: 160ms; animation-duration: 1.1s; }
+.confetti-particle:nth-child(4)  { animation-delay: 40ms; animation-duration: 1.4s; }
+.confetti-particle:nth-child(5)  { animation-delay: 200ms; animation-duration: 1.6s; }
+.confetti-particle:nth-child(6)  { animation-delay: 120ms; animation-duration: 1.3s; }
+.confetti-particle:nth-child(7)  { animation-delay: 60ms; animation-duration: 1.7s; }
+.confetti-particle:nth-child(8)  { animation-delay: 180ms; animation-duration: 1.2s; }
+
+/* --- Global: tabular nums on all currency displays --- */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }

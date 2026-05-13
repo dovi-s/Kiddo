@@ -4,3 +4,23 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+.env
+.env.local
+uploads
+.expo-home
+.tmp
+.tmp_dev.log
+apps/mobile/.expo-export
+apps/mobile/.expo
+
+# Ephemeral local state — dev server logs, replit agent caches,
+# disaster-recovery backups, outbox spool files. None of this belongs
+# in version control.
+.local/
+.npm-cache/
+.claude/
+*.log
+
+# IDE
+.vscode/
+.idea/

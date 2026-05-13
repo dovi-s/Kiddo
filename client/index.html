@@ -2,30 +2,41 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <!-- viewport-fit=cover enables env(safe-area-inset-*) on notched iOS devices.
+         maximum-scale removed: blocking pinch-zoom is an accessibility regression
+         (low-vision users rely on it). iOS input-zoom is prevented by ensuring all
+         inputs use font-size: 16px+ instead. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Cash gifts disappear. Kiddo gifts last. Create a child's fund, share one link, and let family gift in under a minute." />
+    <meta name="robots" content="index,follow" />
 
-    <meta property="og:title" content="Kora - A gift they'll still have in 10 years" />
-    <meta property="og:description" content="Turn birthday gifts into long-term investments. Friends and family contribute in under 60 seconds. SIPC protected." />
+    <meta property="og:title" content="Kiddo | Cash Gifts Disappear. Kiddo Gifts Last." />
+    <meta property="og:description" content="Create a child's fund, share one link, and let family send investment gifts in under a minute." />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="/kora-og-image.png" />
+    <meta property="og:url" content="/" />
+    <meta property="og:site_name" content="Kiddo" />
+    <meta property="og:image" content="/kiddo-og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@replit" />
-    <meta name="twitter:title" content="Kora - A gift they'll still have in 10 years" />
-    <meta name="twitter:description" content="Turn birthday gifts into long-term investments. Friends and family contribute in under 60 seconds. SIPC protected." />
-    <meta name="twitter:image" content="/kora-og-image.png" />
+    <meta name="twitter:site" content="@getkiddo" />
+    <meta name="twitter:title" content="Kiddo | Cash Gifts Disappear. Kiddo Gifts Last." />
+    <meta name="twitter:description" content="Create a child's fund, share one link, and let family send investment gifts in under a minute." />
+    <meta name="twitter:image" content="/kiddo-og-image.png" />
+    <meta name="twitter:image:alt" content="Kiddo gifting and investing preview" />
 
-    <title>Kora</title>
+    <title>Kiddo</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#1B4332" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Kora" />
+    <meta name="apple-mobile-web-app-title" content="Kiddo" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>

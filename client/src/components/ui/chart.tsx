@@ -1,5 +1,9 @@
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
+import type {
+  LegendPayload as RechartsLegendPayload,
+  TooltipContentProps as RechartsTooltipContentProps,
+} from "recharts"
 
 import { cn } from "@/lib/utils"
 
@@ -102,7 +106,7 @@ const ChartTooltip = RechartsPrimitive.Tooltip
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<typeof RechartsPrimitive.Tooltip> &
+  Partial<RechartsTooltipContentProps<any, any>> &
     React.ComponentProps<"div"> & {
       hideLabel?: boolean
       hideIndicator?: boolean
@@ -188,7 +192,14 @@ const ChartTooltipContent = React.forwardRef<
             .map((item, index) => {
               const key = `${nameKey || item.name || item.dataKey || "value"}`
               const itemConfig = getPayloadConfigFromPayload(config, item, key)
-              const indicatorColor = color || item.payload.fill || item.color
+              const indicatorColor =
+                color ||
+                (typeof item.payload === "object" &&
+                item.payload !== null &&
+                "fill" in item.payload
+                  ? String(item.payload.fill)
+                  : undefined) ||
+                item.color
 
               return (
                 <div
@@ -261,7 +272,8 @@ const ChartLegend = RechartsPrimitive.Legend
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<"div"> &
-    Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+    Pick<RechartsPrimitive.LegendProps, "verticalAlign"> & {
+      payload?: ReadonlyArray<RechartsLegendPayload>
       hideIcon?: boolean
       nameKey?: string
     }

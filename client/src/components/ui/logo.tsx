@@ -1,5 +1,6 @@
+import type React from "react";
 import { Link } from "wouter";
-import koraMarkImg from "../../assets/kora-logo-cropped.png";
+import koraMarkImg from "../../assets/kiddo-logo-cropped.png";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg";
@@ -7,6 +8,14 @@ interface LogoProps {
   className?: string;
   linkTo?: string | null;
 }
+
+const SHIMMER_STYLE: React.CSSProperties = {
+  backgroundImage: "linear-gradient(135deg, #1a3d2b 0%, #b8791a 100%)",
+  backgroundClip: "text",
+  WebkitBackgroundClip: "text",
+  color: "transparent",
+  WebkitTextFillColor: "transparent",
+};
 
 export function Logo({ size = "md", showWordmark = true, className = "", linkTo = "/" }: LogoProps) {
   const sizes = {
@@ -21,14 +30,15 @@ export function Logo({ size = "md", showWordmark = true, className = "", linkTo 
     <span className={`flex items-center ${s.gap} ${className}`}>
       <img
         src={koraMarkImg}
-        alt="Kora"
+        alt="Kiddo"
         className={`${s.icon} object-contain`}
       />
       {showWordmark && (
         <span
-          className={`font-serif font-semibold ${s.text} tracking-[0.01em] text-[hsl(var(--kora-evergreen))]`}
+          className={`font-serif font-semibold ${s.text} tracking-[0.01em]`}
+          style={SHIMMER_STYLE}
         >
-          Kora
+          Kiddo
         </span>
       )}
     </span>
@@ -57,7 +67,7 @@ export function LogoMark({ size = "md", className = "" }: { size?: "sm" | "md" |
   return (
     <img
       src={koraMarkImg}
-      alt="Kora"
+      alt="Kiddo"
       className={`${s.dim} object-contain ${className}`}
     />
   );

@@ -37,7 +37,10 @@ const sheetVariants = cva(
       side: {
         top: "inset-x-0 top-0 border-b rounded-b-3xl p-6 data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
         bottom:
-          "inset-x-0 bottom-0 rounded-t-[28px] pt-3 px-6 pb-8 max-h-[92vh] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom overflow-hidden",
+          // max-h uses dvh (dynamic viewport) so the sheet doesn't extend
+          // below the visible area on mobile Safari when the URL bar is
+          // showing. Falls back to vh on browsers that don't support dvh.
+          "inset-x-0 bottom-0 rounded-t-[28px] pt-3 px-6 pb-8 max-h-[92vh] max-h-[92dvh] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom overflow-hidden",
         left: "inset-y-0 left-0 h-full w-3/4 border-r p-6 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
         right:
           "inset-y-0 right-0 h-full w-3/4 border-l p-6 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",

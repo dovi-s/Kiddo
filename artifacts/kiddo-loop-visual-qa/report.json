@@ -1,0 +1,166 @@
+{
+  "baseUrl": "http://127.0.0.1:5000",
+  "generatedAt": "2026-04-21T21:32:16.963Z",
+  "results": [
+    {
+      "name": "checkout-320",
+      "width": 320,
+      "page": "checkout",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\checkout-320.png"
+    },
+    {
+      "name": "success-320",
+      "width": 320,
+      "page": "success",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\success-320.png"
+    },
+    {
+      "name": "checkout-375",
+      "width": 375,
+      "page": "checkout",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\checkout-375.png"
+    },
+    {
+      "name": "success-375",
+      "width": 375,
+      "page": "success",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\success-375.png"
+    },
+    {
+      "name": "checkout-390",
+      "width": 390,
+      "page": "checkout",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\checkout-390.png"
+    },
+    {
+      "name": "success-390",
+      "width": 390,
+      "page": "success",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\success-390.png"
+    },
+    {
+      "name": "checkout-430",
+      "width": 430,
+      "page": "checkout",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\checkout-430.png"
+    },
+    {
+      "name": "success-430",
+      "width": 430,
+      "page": "success",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\success-430.png"
+    },
+    {
+      "name": "checkout-768",
+      "width": 768,
+      "page": "checkout",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\checkout-768.png"
+    },
+    {
+      "name": "success-768",
+      "width": 768,
+      "page": "success",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\success-768.png"
+    },
+    {
+      "name": "checkout-1024",
+      "width": 1024,
+      "page": "checkout",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\checkout-1024.png"
+    },
+    {
+      "name": "success-1024",
+      "width": 1024,
+      "page": "success",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\success-1024.png"
+    },
+    {
+      "name": "checkout-1280",
+      "width": 1280,
+      "page": "checkout",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\checkout-1280.png"
+    },
+    {
+      "name": "success-1280",
+      "width": 1280,
+      "page": "success",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\success-1280.png"
+    },
+    {
+      "name": "checkout-1440",
+      "width": 1440,
+      "page": "checkout",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\checkout-1440.png"
+    },
+    {
+      "name": "success-1440",
+      "width": 1440,
+      "page": "success",
+      "ok": true,
+      "details": [
+        "ok"
+      ],
+      "screenshot": "C:\\Apps\\Kora (newest)\\artifacts\\kiddo-loop-visual-qa\\success-1440.png"
+    }
+  ]
+}

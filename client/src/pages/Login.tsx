@@ -1,19 +1,68 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowRight, Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, Lock, Mail, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
-import { ThinkingOrb, GeminiHeroGradient, GradientText } from "@/components/ui/gemini";
+import { ThinkingOrb } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
-import brandMark from "@/assets/kora-brand-mark.png";
+import { useQueryClient } from "@tanstack/react-query";
+import { prefetchDashboard } from "@/lib/prefetch";
+import { getActiveFundId } from "@/hooks/use-active-fund";
+import brandMark from "@/assets/kiddo-logo-cropped.png";
+
+function getSafeRedirectTarget(value: string | null | undefined) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
+  if (value.startsWith("/login")) return "/dashboard";
+  return value;
+}
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [oauthProviders, setOauthProviders] = useState({ google: false, apple: false, biometricReady: false });
   const { login, isLoggingIn, loginError } = useAuth();
+  const queryClient = useQueryClient();
+  const url = typeof window !== "undefined" ? new URL(window.location.href) : null;
+  const oauthErrorParam = url?.searchParams.get("error");
+  const oauthProviderParam = url?.searchParams.get("oauth");
+  const redirectTarget = getSafeRedirectTarget(url?.searchParams.get("redirect"));
+  const friendlyLoginError =
+    loginError === "Invalid email or password"
+      ? "That email and password do not match. Check them and try again."
+      : loginError;
+  const oauthError =
+    oauthErrorParam && oauthProviderParam
+      ? `${oauthProviderParam[0].toUpperCase()}${oauthProviderParam.slice(1)} sign in is not ready yet. Finish the provider setup and try again.`
+      : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/auth/providers", { credentials: "include" })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json();
+      })
+      .then((payload) => {
+        if (!cancelled && payload) {
+          setOauthProviders({
+            google: Boolean(payload.google),
+            apple: Boolean(payload.apple),
+            biometricReady: Boolean(payload.biometricReady),
+          });
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,7 +70,16 @@ export default function Login() {
     try {
       await login({ email, password });
       haptic('success');
-      setLocation("/dashboard");
+      // Pre-warm the dashboard the user is about to land on. Fires in
+      // parallel with setLocation — by the time React renders the new route,
+      // /api/funds is in flight (or already settled). Saves the post-login
+      // "blank dashboard with spinner" moment that defines first impressions.
+      // Uses stored active fund id from a previous session if present;
+      // otherwise the funds list alone primes the AppHeader.
+      if (redirectTarget === "/dashboard" || redirectTarget.startsWith("/dashboard")) {
+        prefetchDashboard(queryClient, getActiveFundId());
+      }
+      setLocation(redirectTarget);
     } catch {
       haptic('error');
     }
@@ -31,20 +89,29 @@ export default function Login() {
     haptic('light');
   };
 
-  return (
-    <div className="min-h-screen bg-background gemini-warm-section relative overflow-hidden">
-      <GeminiHeroGradient />
-      <header className="sticky top-0 z-40 gemini-glass-nav">
-        <div className="max-w-lg md:max-w-xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Logo size="md" className="text-foreground" />
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Lock size={12} />
-            <span>Secure</span>
-          </div>
-        </div>
-      </header>
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail.trim()) return;
+    haptic('medium');
+    setResetLoading(true);
+    try {
+      await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resetEmail.trim().toLowerCase() }),
+      });
+    } catch {
+      // silently ignore network errors - always show success to avoid email enumeration
+    } finally {
+      setResetLoading(false);
+      setResetSent(true);
+      haptic('success');
+    }
+  };
 
-      <main className="max-w-lg md:max-w-xl mx-auto px-4 py-16">
+  return (
+    <div className="kiddo-app-page relative overflow-hidden">
+      <main className="max-w-lg md:max-w-xl mx-auto px-4 py-16 md:py-20">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -53,40 +120,94 @@ export default function Login() {
           <div className="text-center space-y-4">
             <motion.img
               src={brandMark}
-              alt="Kora"
+              alt="Kiddo"
               data-testid="img-brand-mark-login"
-              className="w-32 h-auto mx-auto drop-shadow-sm"
+              className="w-36 h-auto mx-auto drop-shadow-sm"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: "spring", stiffness: 200, damping: 20 }}
             />
-            <div className="space-y-1">
-              <h1 className="text-2xl font-semibold text-foreground">Welcome <GradientText>back</GradientText></h1>
-              <p className="text-muted-foreground">Sign in to manage your funds</p>
+            <div className="space-y-2">
+              <div className="flex items-center justify-center">
+                <Logo size="lg" showWordmark={true} linkTo={null} />
+              </div>
+              <h1 className="text-3xl font-semibold text-foreground">Welcome back</h1>
+              <p className="text-base text-muted-foreground">Your child's future is growing.</p>
             </div>
           </div>
 
-          {loginError && (
+          {friendlyLoginError && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-sm text-destructive text-center"
               data-testid="text-login-error"
             >
-              {loginError}
+              {friendlyLoginError}
+            </motion.div>
+          )}
+
+          {oauthError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-sm text-destructive text-center"
+              data-testid="text-oauth-error"
+            >
+              {oauthError}
             </motion.div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-6 space-y-5 gemini-soft-container">
+              {(oauthProviders.google || oauthProviders.apple) && (
+                <div className="space-y-3">
+                  {oauthProviders.google && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        haptic("medium");
+                        window.location.assign("/api/auth/oauth/google");
+                      }}
+                      className="w-full h-12 rounded-xl border-2 border-border/60 bg-background text-foreground font-medium hover:border-primary/40 hover:bg-muted/30 transition-all duration-150"
+                      data-testid="button-login-google"
+                    >
+                      Continue with Google
+                    </button>
+                  )}
+                  {oauthProviders.apple && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        haptic("medium");
+                        window.location.assign("/api/auth/oauth/apple");
+                      }}
+                      className="w-full h-12 rounded-xl border-2 border-border/60 bg-background text-foreground font-medium hover:border-primary/40 hover:bg-muted/30 transition-all duration-150"
+                      data-testid="button-login-apple"
+                    >
+                      Continue with Apple
+                    </button>
+                  )}
+                  <div className="flex items-center gap-3 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                    <div className="h-px flex-1 bg-border/70" />
+                    <span>Or use email</span>
+                    <div className="h-px flex-1 bg-border/70" />
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  Email
+                <label htmlFor="login-email" className="block text-sm font-medium text-foreground">
+                  Email address
                 </label>
                 <div className="relative">
                   <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
+                    id="login-email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
+                    inputMode="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     onFocus={handleFocus}
@@ -99,13 +220,16 @@ export default function Login() {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
+                <label htmlFor="login-password" className="block text-sm font-medium text-foreground">
                   Password
                 </label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
+                    id="login-password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onFocus={handleFocus}
@@ -116,13 +240,28 @@ export default function Login() {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
+                    onClick={() => {
+                      setShowPassword(!showPassword);
+                      haptic("light");
+                    }}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     data-testid="button-toggle-password"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+                  onClick={() => { haptic('light'); setResetEmail(email); setShowForgotPassword(true); setResetSent(false); }}
+                  data-testid="button-forgot-password"
+                >
+                  Forgot password?
+                </button>
               </div>
             </div>
 
@@ -131,7 +270,7 @@ export default function Login() {
               disabled={!email || !password || isLoggingIn}
               data-testid="button-login"
               whileTap={{ scale: 0.97 }}
-              className="gemini-btn-shimmer w-full h-14 bg-primary text-primary-foreground text-base font-semibold rounded-2xl hover:bg-primary/90 shadow-premium transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.97]"
+              className="kiddo-gold-button w-full h-14 text-base font-semibold rounded-2xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.97]"
             >
               {isLoggingIn ? (
                 <motion.div className="flex items-center gap-3">
@@ -152,24 +291,96 @@ export default function Login() {
             </motion.button>
           </form>
 
-          <div className="text-center space-y-4">
-            <button 
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
-              onClick={() => haptic('light')}
-            >
-              Forgot password?
-            </button>
-            <div className="text-sm text-muted-foreground">
-              Don't have an account?{" "}
+          <div className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-5 text-center space-y-4">
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Don't have an account yet?</p>
               <Link href="/get-started">
-                <span className="text-foreground font-medium hover:underline cursor-pointer">
-                  Get started
+                <span className="text-foreground font-medium hover:underline cursor-pointer" data-testid="link-start-child-fund">
+                  Start your child's fund &rarr;
                 </span>
               </Link>
+            </div>
+
+            <div className="rounded-xl border border-border/50 bg-muted/20 px-4 py-3">
+              <div className="flex items-center justify-center gap-2 text-sm text-foreground">
+                <ShieldCheck size={16} className="text-primary" />
+                <span className="font-medium">256-bit SSL encryption</span>
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Brokerage services provided by DriveWealth, member FINRA and SIPC.
+              </p>
             </div>
           </div>
         </motion.div>
       </main>
+
+      {showForgotPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4" onClick={() => setShowForgotPassword(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 24 }}
+            className="w-full max-w-sm bg-card rounded-2xl border border-border shadow-2xl p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {resetSent ? (
+              <div className="text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                  <ShieldCheck size={22} className="text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground">Check your inbox</h3>
+                <p className="text-sm text-muted-foreground">
+                  If an account exists for <span className="font-medium text-foreground">{resetEmail}</span>, we've sent a password reset link.
+                </p>
+                <button
+                  onClick={() => setShowForgotPassword(false)}
+                  className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Reset your password</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Enter your email and we'll send you a reset link.</p>
+                </div>
+                <form onSubmit={handleForgotPassword} className="space-y-3">
+                  <label htmlFor="reset-email" className="sr-only">Email address</label>
+                  <input
+                    id="reset-email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    className="w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
+                    data-testid="input-reset-email"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!resetEmail.trim() || resetLoading}
+                    className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    data-testid="button-reset-submit"
+                  >
+                    {resetLoading ? "Sending..." : "Send reset link"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(false)}
+                    className="w-full h-11 rounded-xl font-medium text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </form>
+              </>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "Kiddo",
+    "slug": "kiddo-mobile",
+    "scheme": "kiddo",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.kiddo.mobile",
+      "associatedDomains": [
+        "applinks:kiddofund.com",
+        "applinks:*.kiddofund.com",
+        "applinks:kora.link",
+        "applinks:*.kora.link"
+      ]
+    },
+    "android": {
+      "package": "app.kiddo.mobile",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": false,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "kiddofund.com"
+            },
+            {
+              "scheme": "https",
+              "host": "kora.link"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-notifications"
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:5000",
+      "eas": {
+        "projectId": "YOUR_EXPO_EAS_PROJECT_ID"
+      }
+    },
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}

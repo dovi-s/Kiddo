@@ -1,0 +1,100 @@
+import { Link } from "wouter";
+import { Lock, Shield, Wallet } from "lucide-react";
+import { Nav } from "@/components/layout/Nav";
+import { Footer } from "@/components/layout/Footer";
+import { Button } from "@/components/ui/button";
+import { usePageSeo } from "@/lib/seo";
+
+export default function Security() {
+  usePageSeo({
+    title: "Kiddo Security | Your child's money is protected.",
+    description: "SIPC insured. FINRA regulated. Bank-level encryption. Here is exactly how Kiddo protects your child's investments.",
+    ogType: "article",
+  });
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Nav />
+
+      <section className="pt-24 pb-16 md:pt-32 md:pb-20">
+        <div className="mx-auto max-w-5xl px-4 text-center">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Security</p>
+          <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
+            Your child&apos;s money is protected.
+          </h1>
+          <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
+            Here is exactly how. No jargon. No fine print buried at the bottom. Just the truth, plainly stated.
+          </p>
+        </div>
+      </section>
+
+      <section className="pb-20 md:pb-24">
+        <div className="mx-auto grid max-w-5xl gap-6 px-4 md:grid-cols-3">
+          {[
+            {
+              icon: Wallet,
+              title: "We do not hold your child&apos;s money. DriveWealth does.",
+              body: "Kiddo is the experience. DriveWealth is the broker-custodian layer that holds the investments.",
+            },
+            {
+              icon: Shield,
+              title: "What protects your child&apos;s fund",
+              body: "SIPC coverage, FINRA oversight, encrypted data handling, and private fund links sit underneath the product experience.",
+            },
+            {
+              icon: Lock,
+              title: "What we cannot protect against",
+              body: "Investing involves risk. SIPC protects against broker failure, not market losses. We will always say that plainly.",
+            },
+          ].map((item) => (
+            <div key={item.title} className="rounded-3xl border border-border bg-card p-7 shadow-premium-sm">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+                <item.icon className="h-6 w-6 text-primary" />
+              </div>
+              <h2 className="mt-5 font-heading text-xl font-semibold text-foreground">{item.title}</h2>
+              <p className="mt-3 text-sm leading-7 text-muted-foreground">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="pb-20 md:pb-24">
+        <div className="mx-auto max-w-4xl px-4">
+          <div className="rounded-[32px] border border-border bg-card p-8 shadow-premium-sm md:p-12">
+            <h2 className="font-heading text-3xl font-bold tracking-tight text-foreground">
+              What happens if Kiddo shuts down?
+            </h2>
+            <p className="mt-5 text-base leading-8 text-muted-foreground">
+              Your child&apos;s investments are not Kiddo&apos;s assets. They remain at the broker-custodian layer. If Kiddo disappeared tomorrow, the underlying assets would still exist.
+            </p>
+
+            <h3 className="mt-10 font-heading text-2xl font-semibold text-foreground">How we think about privacy</h3>
+            <p className="mt-4 text-base leading-8 text-muted-foreground">
+              Kiddo is invitation-driven, not search-driven. A child&apos;s fund should feel shareable for family, not publicly discoverable by strangers.
+            </p>
+
+            <h3 className="mt-10 font-heading text-2xl font-semibold text-foreground">Who regulates what</h3>
+            <p className="mt-4 text-base leading-8 text-muted-foreground">
+              Kiddo is the technology layer. DriveWealth is the broker-dealer and custodian. Stripe handles payment processing. Each layer has a distinct job.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-4 text-sm">
+              <Link href="/faq" className="text-primary hover:underline">Read the FAQ</Link>
+              <Link href="/contact" className="text-primary hover:underline">Contact us</Link>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row">
+              <Link href="/get-started">
+                <Button data-testid="button-security-primary">Start your child&apos;s fund</Button>
+              </Link>
+              <Link href="/faq">
+                <Button variant="outline" data-testid="button-security-secondary">Read the FAQ</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+    </div>
+  );
+}

@@ -1,21 +1,47 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Lock, CheckCircle2, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+// Sparkles dropped 2026-05-12 — banned per feedback_no_ai_slop.md.
+// Replaced with Lightbulb (gentle-nudge "Coming soon" banner) +
+// TrendingUp (Growth projection header — locked semantic). Note: Send
+// page is currently a UI prototype/demo per project memory.
+import { Shield, Lock, CheckCircle2, ChevronDown, ChevronUp, Lightbulb, TrendingUp } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { ThinkingOrb } from "@/components/ui/gemini";
 import { Mascot } from "@/components/ui/mascot";
+import { StockLogo } from "@/components/ui/stock-logo";
+import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 
 const STOCKS = [
-  { symbol: "AAPL", name: "Apple", price: 178.50 },
-  { symbol: "DIS", name: "Disney", price: 92.30 },
-  { symbol: "TSLA", name: "Tesla", price: 248.75 },
-  { symbol: "AMZN", name: "Amazon", price: 178.25 },
-  { symbol: "GOOGL", name: "Google", price: 141.80 },
-  { symbol: "MSFT", name: "Microsoft", price: 378.90 },
-  { symbol: "NFLX", name: "Netflix", price: 628.50 },
-  { symbol: "NVDA", name: "NVIDIA", price: 875.30 },
-];
+  { symbol: "AAPL",  name: "Apple" },
+  { symbol: "DIS",   name: "Disney" },
+  { symbol: "AMZN",  name: "Amazon" },
+  { symbol: "GOOGL", name: "Google" },
+  { symbol: "NFLX",  name: "Netflix" },
+  { symbol: "NKE",   name: "Nike" },
+  { symbol: "SBUX",  name: "Starbucks" },
+  { symbol: "SPOT",  name: "Spotify" },
+  { symbol: "RBLX",  name: "Roblox" },
+  { symbol: "TGT",   name: "Target" },
+  { symbol: "CMCSA", name: "Comcast" },
+  { symbol: "DUOL",  name: "Duolingo" },
+  { symbol: "ABNB",  name: "Airbnb" },
+  { symbol: "NTDOY", name: "Nintendo" },
+  { symbol: "DPZ",   name: "Domino's" },
+  { symbol: "CHWY",  name: "Chewy" },
+  { symbol: "ADBE",  name: "Adobe" },
+] as const;
+type SendStock = (typeof STOCKS)[number] & {
+  price: number;
+  isEstimate?: boolean;
+};
+type MarketQuoteResponse = {
+  quotes: Array<{ symbol: string; price: number; isEstimate?: boolean }>;
+};
+const MOTION_DUR = 0.2;
+const PAGE_MAX = "max-w-lg md:max-w-2xl mx-auto px-4";
+const PRIMARY_CTA = "w-full py-4 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors text-lg";
 
 export default function Send() {
   const [step, setStep] = useState(0);
@@ -24,14 +50,31 @@ export default function Send() {
   const [recipientPhone, setRecipientPhone] = useState("");
   const [secretPhrase, setSecretPhrase] = useState("");
   const [showExtraSecurity, setShowExtraSecurity] = useState(false);
-  const [selectedStock, setSelectedStock] = useState<typeof STOCKS[0] | null>(null);
+  const [selectedStock, setSelectedStock] = useState<SendStock | null>(null);
   const [amount, setAmount] = useState("50");
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [deliveryType, setDeliveryType] = useState<"stock" | "cash">("stock");
+  const quoteSymbols = STOCKS.map((stock) => stock.symbol).join(",");
+  const { data: marketQuoteData } = useQuery<MarketQuoteResponse>({
+    queryKey: ["market-quotes", quoteSymbols],
+    queryFn: async () => {
+      const res = await fetch(`/api/market/quotes?symbols=${encodeURIComponent(quoteSymbols)}`);
+      if (!res.ok) throw new Error("Could not load quote estimates");
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+  const stocks: SendStock[] = STOCKS.map((stock) => {
+    const quote = marketQuoteData?.quotes?.find((row) => row.symbol === stock.symbol);
+    return {
+      ...stock,
+      price: quote?.price || 100,
+      isEstimate: quote?.isEstimate ?? true,
+    };
+  });
 
-  const filteredStocks = STOCKS.filter(s => 
+  const filteredStocks = stocks.filter(s =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.symbol.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -69,7 +112,7 @@ export default function Send() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 gemini-glass-nav">
-        <div className="max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className={`${PAGE_MAX} h-14 flex items-center justify-between`}>
           <Link href="/">
             <span className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</span>
           </Link>
@@ -80,7 +123,13 @@ export default function Send() {
         </div>
       </header>
 
-      <main className="max-w-lg md:max-w-2xl mx-auto px-4 py-6">
+      <main className={`${PAGE_MAX} py-6`}>
+        <div className="mb-6 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-4 py-3 flex items-start gap-3">
+          <Lightbulb size={16} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-amber-800 dark:text-amber-300">
+            <span className="font-semibold">Coming soon.</span> Direct stock gifting is in development. This is a preview of the flow. Amounts are not charged and nothing is sent.
+          </p>
+        </div>
         <AnimatePresence mode="wait">
           
           {step === 0 && (
@@ -89,7 +138,7 @@ export default function Send() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: MOTION_DUR }}
             >
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-semibold text-foreground mb-2">Who's receiving?</h1>
@@ -184,7 +233,7 @@ export default function Send() {
                 onClick={() => setStep(1)}
                 disabled={!canProceed}
                 data-testid="button-continue-step0"
-                className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors text-lg"
+                className={`${PRIMARY_CTA} disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 Continue
               </button>
@@ -193,6 +242,9 @@ export default function Send() {
                 <Lock size={11} />
                 We'll verify it's really them before they can claim
               </p>
+              <div className="mt-4">
+                <TrustMicroStrip />
+              </div>
             </motion.div>
           )}
 
@@ -202,13 +254,13 @@ export default function Send() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: MOTION_DUR }}
             >
               <button 
                 onClick={() => setStep(0)}
                 className="text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
               >
-                ← Back
+                Back
               </button>
 
               <div className="flex items-center gap-2 mb-6">
@@ -229,35 +281,54 @@ export default function Send() {
               />
 
               <div className="space-y-2 mb-6 max-h-[50vh] overflow-auto">
-                {filteredStocks.map((stock) => (
-                  <button
-                    key={stock.symbol}
-                    onClick={() => setSelectedStock(stock)}
-                    data-testid={`stock-${stock.symbol}`}
-                    className={`w-full p-4 text-left rounded-xl border transition-all ${
-                      selectedStock?.symbol === stock.symbol
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card hover:border-muted-foreground"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className={`font-medium ${selectedStock?.symbol === stock.symbol ? "text-primary-foreground" : "text-foreground"}`}>{stock.name}</p>
-                        <p className={`text-sm ${selectedStock?.symbol === stock.symbol ? "text-primary-foreground/70" : "text-muted-foreground"}`}>{stock.symbol}</p>
+                {filteredStocks.map((stock) => {
+                  const active = selectedStock?.symbol === stock.symbol;
+                  const estimatedShares = parseFloat(amount || "0") / stock.price;
+                  const estimatedSharesLabel = estimatedShares >= 1 ? estimatedShares.toFixed(2) : estimatedShares.toFixed(4);
+                  return (
+                    <button
+                      key={stock.symbol}
+                      onClick={() => setSelectedStock(stock)}
+                      data-testid={`stock-${stock.symbol}`}
+                      className={`w-full rounded-2xl border p-3 text-left transition-all ${
+                        active
+                          ? "border-primary bg-primary/10 shadow-premium-sm"
+                          : "border-border bg-card hover:border-primary/30 hover:bg-primary/5"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <StockLogo ticker={stock.symbol} size={38} className="shadow-[0_8px_18px_rgba(26,23,16,0.08)]" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="truncate font-medium text-foreground">{stock.name}</p>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold tracking-[0.06em] ${active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                              {stock.symbol}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                            <span className="font-semibold text-primary">~{estimatedSharesLabel} shares</span>
+                            <span className="text-muted-foreground">Est. ${stock.price.toLocaleString()}/share</span>
+                          </div>
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            Estimated price. Final shares may change.
+                          </p>
+                        </div>
                       </div>
-                      <p className={selectedStock?.symbol === stock.symbol ? "text-primary-foreground" : "text-muted-foreground"}>${stock.price}</p>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
 
               <button 
                 onClick={() => setStep(2)}
                 disabled={!selectedStock}
-                className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors text-lg"
+                className={`${PRIMARY_CTA} disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 {selectedStock ? `Continue with ${selectedStock.name}` : "Select a stock"}
               </button>
+              <div className="mt-4">
+                <TrustMicroStrip />
+              </div>
             </motion.div>
           )}
 
@@ -267,13 +338,13 @@ export default function Send() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: MOTION_DUR }}
             >
               <button 
                 onClick={() => setStep(1)}
                 className="text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
               >
-                ← Back
+                Back
               </button>
 
               <div className="flex items-center gap-2 mb-6">
@@ -281,7 +352,7 @@ export default function Send() {
                   {recipientName.charAt(0).toUpperCase()}
                 </div>
                 <span className="text-muted-foreground">{recipientName}</span>
-                <span className="text-border">·</span>
+                <span className="text-border">{" | "}</span>
                 <span className="text-muted-foreground">{selectedStock?.symbol}</span>
               </div>
 
@@ -299,7 +370,10 @@ export default function Send() {
                 />
               </div>
               <p className="text-sm text-muted-foreground mb-6">
-                ≈ {shares.toFixed(4)} shares
+                ~ {shares.toFixed(4)} shares
+              </p>
+              <p className="-mt-4 mb-6 text-xs text-muted-foreground">
+                Estimated price per share. Final shares may change when the gift executes.
               </p>
 
               <div className="flex gap-2 mb-8">
@@ -320,7 +394,7 @@ export default function Send() {
 
               <div className="p-5 bg-gradient-to-br from-primary to-primary/90 text-primary-foreground rounded-2xl mb-6">
                 <div className="flex items-center gap-2 mb-3">
-                  <Sparkles size={16} className="text-[hsl(var(--kora-gold))]" />
+                  <TrendingUp size={16} className="text-[hsl(var(--kora-gold))]" />
                   <span className="text-sm text-primary-foreground/70">Growth projection</span>
                 </div>
                 <div className="flex justify-between items-end">
@@ -350,7 +424,7 @@ export default function Send() {
                         onClick={() => { setStep(0); setShowExtraSecurity(true); }}
                         className="text-xs font-medium text-[hsl(var(--kora-gold))] hover:text-[hsl(var(--kora-gold-light))]"
                       >
-                        Add phone →
+                        Add phone {"->"}
                       </button>
                     </div>
                   </div>
@@ -386,7 +460,7 @@ export default function Send() {
                 onClick={handleSend}
                 disabled={isProcessing || parseFloat(amount) < 1}
                 data-testid="button-send"
-                className="w-full py-4 bg-primary text-primary-foreground rounded-xl font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors text-lg"
+                className={`${PRIMARY_CTA} disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 {isProcessing ? (
                   <span className="flex items-center justify-center gap-2">
@@ -404,6 +478,9 @@ export default function Send() {
                 {isValidPhone ? " via SMS +" : " via"} email
                 {hasSecretPhrase ? " + secret phrase" : ""} to claim
               </p>
+              <div className="mt-4">
+                <TrustMicroStrip />
+              </div>
             </motion.div>
           )}
 
@@ -475,7 +552,7 @@ export default function Send() {
               </div>
 
               <p className="text-xs text-muted-foreground mt-8">
-                30 days to claim · Unclaimed gifts are refunded automatically
+                30 days to claim - Unclaimed gifts are refunded automatically
               </p>
             </motion.div>
           )}

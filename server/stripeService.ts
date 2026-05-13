@@ -1,7 +1,17 @@
 import { getUncachableStripeClient, getStripePublishableKey } from './stripeClient';
 import type Stripe from 'stripe';
+import {
+  calculateKoraContributionFee,
+  getGiftAddOn,
+  type GiftAddOnId,
+  KORA_FREE_VARIABLE_RATE,
+  KORA_LARGE_GIFT_FLAT_FEE,
+  KORA_LARGE_GIFT_RATE,
+  KORA_LARGE_GIFT_THRESHOLD,
+  type FundCoverageState,
+} from '@shared/monetization';
 
-export type PaymentMethodPreference = 'card' | 'apple_pay' | 'bank' | 'cashapp';
+export type PaymentMethodPreference = 'card' | 'apple_pay' | 'bank' | 'cashapp' | 'paypal';
 
 export interface GiftCheckoutParams {
   fundId: string;
@@ -10,9 +20,14 @@ export interface GiftCheckoutParams {
   senderName: string;
   senderEmail?: string;
   message?: string;
+  photoUrl?: string;
+  videoUrl?: string;
+  audioUrl?: string;
   coverFees: boolean;
+  hasLegacyPremiumEventCoverage?: boolean;
   hasEventBoost?: boolean;
-  hasPaidPlan?: boolean;
+  hostPlan?: 'free' | 'starter' | 'family' | 'legacy';
+  coverageStatus?: FundCoverageState;
   fundUserId?: string;
   recipientName?: string;
   successUrl: string;
@@ -20,48 +35,116 @@ export interface GiftCheckoutParams {
   paymentMethod?: PaymentMethodPreference;
   executionModel?: string;
   selectedTicker?: string;
+  giftAddOn?: GiftAddOnId | null;
+  // Explicit anonymous flag — when true, the resulting gift row is
+  // marked is_anonymous=true and never appears in the public
+  // social-proof carousel. Sender name in metadata is still set
+  // (to a friendly fallback) for the success-page rendering, but
+  // every public surface treats anonymous as anonymous regardless.
+  isAnonymous?: boolean;
+  idempotencyKey?: string;
+  isParentContribution?: boolean;
+  // When the parent is contributing through their own recurring schedule
+  // (the "Contribute now" / "Add now" button on a schedule card), this is
+  // the schedule id. Flowing it through Stripe metadata lets the resulting
+  // gift carry it back into the activity row, which is what the per-schedule
+  // history modal filters on. Optional — bare one-time contributions
+  // (no schedule context) leave this empty and surface in the "all
+  // one-time contributions" view instead.
+  parentContributionId?: string;
 }
 
 export interface FeeCalculation {
   baseAmount: number;
   processingFee: number;
   koraFee: number;
+  koraBaseFee: number;
+  koraVariableFee: number;
+  koraLargeGiftFee: number;
+  giftAddOnFee: number;
+  giftAddOnId: GiftAddOnId;
+  giftAddOnName: string;
+  largeGiftThreshold: number;
+  largeGiftRate: number;
+  largeGiftCap: number;
   totalCharge: number;
   netToFund: number;
 }
 
 export class StripeService {
-  calculateFees(amount: number, coverFees: boolean, hasEventBoost: boolean = false, hasPaidPlan: boolean = false, paymentMethod: PaymentMethodPreference = 'card'): FeeCalculation {
+  getFeePolicy() {
+    return {
+      freePlanBaseFee: 0,
+      freeFlatThreshold: 0,
+      freeVariableRate: KORA_FREE_VARIABLE_RATE,
+      starterRate: 0,
+      familyRate: 0,
+      largeGiftThreshold: KORA_LARGE_GIFT_THRESHOLD,
+      largeGiftRate: KORA_LARGE_GIFT_RATE,
+      largeGiftFlatFee: KORA_LARGE_GIFT_FLAT_FEE,
+    };
+  }
+
+  private isValidEmail(email?: string | null): boolean {
+    if (!email) return false;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  }
+
+  calculateFees(
+    amount: number,
+    coverFees: boolean,
+    hasLegacyPremiumEventCoverage: boolean = false,
+    coverageStatus: FundCoverageState = "uncovered",
+    hostPlan: 'free' | 'starter' | 'family' | 'legacy' = 'free',
+    paymentMethod: PaymentMethodPreference = 'card',
+    giftAddOn: GiftAddOnId | null = null,
+  ): FeeCalculation {
     const baseAmount = amount;
     let processingFee: number;
     if (paymentMethod === 'bank') {
+      // ACH: 0.8%, capped at $5. Cheapest rail by far.
       processingFee = Math.round(Math.min(5, amount * 0.008) * 100) / 100;
+    } else if (paymentMethod === 'paypal') {
+      // PayPal in US via Stripe: 3.49% + $0.49. Slightly higher than card
+      // processing, but the demographic gap it covers (older grandparents
+      // who refuse to type card numbers) more than justifies the spread.
+      processingFee = Math.round((amount * 0.0349 + 0.49) * 100) / 100;
     } else {
+      // Card / Apple Pay / Google Pay / Cash App all share Stripe's
+      // standard 2.9% + $0.30 card-rail pricing.
       processingFee = Math.round((amount * 0.029 + 0.30) * 100) / 100;
     }
     
-    let koraFee = 0;
-    if (!hasPaidPlan && !hasEventBoost) {
-      koraFee = 2.00;
-    }
+    const effectivePlan =
+      coverageStatus === "trial_active"
+        ? "trial"
+        : hasLegacyPremiumEventCoverage && hostPlan === "free"
+          ? "starter"
+          : hostPlan;
+    const feeBreakdown = calculateKoraContributionFee(baseAmount, effectivePlan);
+    const koraBaseFee = feeBreakdown.flatComponent;
+    const koraVariableFee = feeBreakdown.variableComponent;
+    const koraLargeGiftFee = feeBreakdown.largeGiftComponent;
+    const koraFee = feeBreakdown.total;
+    const selectedAddOn = getGiftAddOn(giftAddOn);
+    const giftAddOnFee = selectedAddOn.price;
 
-    if (coverFees) {
-      return {
-        baseAmount,
-        processingFee,
-        koraFee,
-        totalCharge: baseAmount + processingFee + koraFee,
-        netToFund: baseAmount,
-      };
-    } else {
-      return {
-        baseAmount,
-        processingFee,
-        koraFee,
-        totalCharge: baseAmount,
-        netToFund: baseAmount - processingFee - koraFee,
-      };
-    }
+    return {
+      baseAmount,
+      processingFee,
+      koraFee,
+      koraBaseFee,
+      koraVariableFee,
+      koraLargeGiftFee,
+      giftAddOnFee,
+      giftAddOnId: selectedAddOn.id,
+      giftAddOnName: selectedAddOn.name,
+      largeGiftThreshold: KORA_LARGE_GIFT_THRESHOLD,
+      largeGiftRate: KORA_LARGE_GIFT_RATE,
+      largeGiftCap: 0,
+      totalCharge: baseAmount + processingFee + koraFee + giftAddOnFee,
+      netToFund: baseAmount,
+    };
   }
 
   async getPublishableKey(): Promise<string> {
@@ -98,6 +181,11 @@ export class StripeService {
         return ['us_bank_account'];
       case 'cashapp':
         return ['cashapp', 'card'];
+      case 'paypal':
+        // PayPal-only at Stripe Checkout; no card fallback because the
+        // user explicitly chose PayPal (the typical demographic actively
+        // does NOT want to be funneled into entering card details).
+        return ['paypal'];
       case 'apple_pay':
       case 'card':
       default:
@@ -110,20 +198,28 @@ export class StripeService {
     const fees = this.calculateFees(
       params.amount, 
       params.coverFees, 
-      params.hasEventBoost || false, 
-      params.hasPaidPlan || false,
-      params.paymentMethod
+      params.hasLegacyPremiumEventCoverage ?? params.hasEventBoost ?? false, 
+      params.coverageStatus || "uncovered",
+      params.hostPlan || 'free',
+      params.paymentMethod,
+      params.giftAddOn || null,
     );
     const paymentMethodTypes = this.getPaymentMethodTypes(params.paymentMethod);
 
     const recipientLabel = params.recipientName || 'recipient';
     const giftAmountCents = Math.round(fees.netToFund * 100);
     const processingFeeCents = Math.round(fees.processingFee * 100);
-    const koraFeeCents = Math.round(fees.koraFee * 100);
+    const koraBaseFeeCents = Math.round(fees.koraBaseFee * 100);
+    const koraVariableFeeCents = Math.round(fees.koraVariableFee * 100);
+    const giftAddOnFeeCents = Math.round(fees.giftAddOnFee * 100);
+    if (giftAmountCents < 1) {
+      throw new Error("Gift amount is too low. Increase the gift amount to continue.");
+    }
 
-    const payMethodLabel = params.paymentMethod === 'bank' ? 'ACH bank transfer' 
+    const payMethodLabel = params.paymentMethod === 'bank' ? 'ACH bank transfer'
       : params.paymentMethod === 'apple_pay' ? 'Apple Pay / Google Pay'
       : params.paymentMethod === 'cashapp' ? 'Cash App'
+      : params.paymentMethod === 'paypal' ? 'PayPal'
       : 'Card';
 
     const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = [
@@ -132,9 +228,7 @@ export class StripeService {
           currency: 'usd',
           product_data: {
             name: `Investment gift for ${recipientLabel}`,
-            description: params.coverFees
-              ? `Full $${params.amount.toFixed(2)} goes to ${recipientLabel}'s investment fund`
-              : `$${fees.netToFund.toFixed(2)} deposited into ${recipientLabel}'s investment fund`,
+            description: `Full $${params.amount.toFixed(2)} goes to ${recipientLabel}'s investment fund`,
           },
           unit_amount: giftAmountCents,
         },
@@ -158,36 +252,81 @@ export class StripeService {
       });
     }
 
-    if (koraFeeCents > 0) {
+    if (koraBaseFeeCents > 0) {
       line_items.push({
         price_data: {
           currency: 'usd',
           product_data: {
-            name: 'Kora platform fee',
-            description: '$2.00 per gift on Free plan. Upgrade to Starter or Family to remove this fee.',
+            name: 'Kiddo service fee',
+            description: 'Kiddo service fee applied to this gift.',
           },
-          unit_amount: koraFeeCents,
+          unit_amount: koraBaseFeeCents,
         },
         quantity: 1,
       });
     }
 
-    if (fees.koraFee === 0 && (params.hasEventBoost || params.hasPaidPlan)) {
-      const waiver = params.hasPaidPlan 
-        ? 'Kora platform fee waived by your subscription'
-        : 'Kora platform fee waived by Event Boost';
+    if (koraVariableFeeCents > 0) {
       line_items.push({
         price_data: {
           currency: 'usd',
           product_data: {
-            name: `${waiver}`,
-            description: 'Normally $2.00 per gift. Saving you money on every gift.',
+            name: 'Kiddo contribution fee',
+            description: 'Kiddo contribution fee applied under the current plan.',
           },
-          unit_amount: 0,
+          unit_amount: koraVariableFeeCents,
         },
         quantity: 1,
       });
     }
+
+    if (Math.round(fees.koraLargeGiftFee * 100) > 0) {
+      line_items.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Large gift premium',
+            description: 'Flat Kiddo service fee for gifts of $1,000 or more.',
+          },
+          unit_amount: Math.round(fees.koraLargeGiftFee * 100),
+        },
+        quantity: 1,
+      });
+    }
+
+    if (giftAddOnFeeCents > 0) {
+      line_items.push({
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: fees.giftAddOnName,
+            description: 'Optional premium gift upgrade. The gift amount stays whole.',
+          },
+          unit_amount: giftAddOnFeeCents,
+        },
+        quantity: 1,
+      });
+    }
+
+    const senderEmail = this.isValidEmail(params.senderEmail) ? params.senderEmail!.trim() : undefined;
+
+    let customerId: string | undefined;
+    if (senderEmail) {
+      try {
+        const customer = await this.getOrCreateCustomer(
+          senderEmail,
+          params.senderName,
+          undefined,
+        );
+        customerId = customer.id;
+      } catch (customerErr) {
+        console.error("Gift checkout customer lookup failed:", customerErr);
+      }
+    }
+
+    const customerParams: Partial<Stripe.Checkout.SessionCreateParams> = customerId
+      ? { customer: customerId }
+      : (senderEmail ? { customer_email: senderEmail } : {});
 
     return await stripe.checkout.sessions.create({
       payment_method_types: paymentMethodTypes,
@@ -195,43 +334,71 @@ export class StripeService {
       mode: 'payment',
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
-      customer_email: params.senderEmail,
+      ...customerParams,
       metadata: {
         type: 'gift',
         fundId: params.fundId,
         fundUserId: params.fundUserId || '',
         eventId: params.eventId || '',
-        senderName: params.senderName,
+        senderName: params.senderName.slice(0, 100),
         senderEmail: params.senderEmail || '',
-        message: params.message || '',
+        message: (params.message || '').slice(0, 490),
+        photoUrl: (params.photoUrl || '').slice(0, 2000),
+        videoUrl: (params.videoUrl || '').slice(0, 2000),
+        audioUrl: (params.audioUrl || '').slice(0, 2000),
         baseAmount: params.amount.toString(),
         processingFee: fees.processingFee.toString(),
         koraFee: fees.koraFee.toString(),
+        koraBaseFee: fees.koraBaseFee.toString(),
+        koraVariableFee: fees.koraVariableFee.toString(),
+        koraLargeGiftFee: fees.koraLargeGiftFee.toString(),
+        giftAddOn: fees.giftAddOnId,
+        giftAddOnFee: fees.giftAddOnFee.toString(),
+        giftAddOnName: fees.giftAddOnName,
         netToFund: fees.netToFund.toString(),
         coverFees: params.coverFees.toString(),
-        hasEventBoost: (params.hasEventBoost || false).toString(),
-        hasPaidPlan: (params.hasPaidPlan || false).toString(),
+        hasLegacyPremiumEventCoverage: String(params.hasLegacyPremiumEventCoverage ?? params.hasEventBoost ?? false),
+        hasEventBoost: String(params.hasLegacyPremiumEventCoverage ?? params.hasEventBoost ?? false),
+        hostPlan: params.hostPlan || 'free',
+        coverageStatus: params.coverageStatus || 'uncovered',
         paymentMethod: params.paymentMethod || 'card',
         executionModel: params.executionModel || 'auto',
         selectedTicker: params.selectedTicker || '',
+        isParentContribution: params.isParentContribution ? 'true' : '',
+        parentContributionId: params.parentContributionId || '',
+        isAnonymous: params.isAnonymous ? 'true' : '',
       },
       payment_intent_data: {
-        description: `Gift of $${fees.netToFund.toFixed(2)} to ${recipientLabel}'s investment fund via Kora`,
+        description: `Gift of $${fees.netToFund.toFixed(2)} to ${recipientLabel}'s investment fund via Kiddo`,
         metadata: {
           type: 'gift',
           fundId: params.fundId,
           fundUserId: params.fundUserId || '',
           eventId: params.eventId || '',
           senderName: params.senderName,
+          senderEmail: params.senderEmail || '',
+          message: (params.message || '').slice(0, 490),
+          photoUrl: (params.photoUrl || '').slice(0, 2000),
+          videoUrl: (params.videoUrl || '').slice(0, 2000),
+          audioUrl: (params.audioUrl || '').slice(0, 2000),
           baseAmount: params.amount.toString(),
           processingFee: fees.processingFee.toString(),
           koraFee: fees.koraFee.toString(),
+          koraBaseFee: fees.koraBaseFee.toString(),
+          koraVariableFee: fees.koraVariableFee.toString(),
+          koraLargeGiftFee: fees.koraLargeGiftFee.toString(),
+          giftAddOn: fees.giftAddOnId,
+          giftAddOnFee: fees.giftAddOnFee.toString(),
+          giftAddOnName: fees.giftAddOnName,
           netToFund: fees.netToFund.toString(),
           executionModel: params.executionModel || 'auto',
           selectedTicker: params.selectedTicker || '',
+          isParentContribution: params.isParentContribution ? 'true' : '',
+          parentContributionId: params.parentContributionId || '',
+          isAnonymous: params.isAnonymous ? 'true' : '',
         },
       },
-    });
+    }, params.idempotencyKey ? { idempotencyKey: params.idempotencyKey } : undefined);
   }
 
   async createCheckoutSession(
@@ -240,12 +407,13 @@ export class StripeService {
     successUrl: string, 
     cancelUrl: string,
     metadata?: Record<string, string>,
-    customerId?: string
+    customerId?: string,
+    idempotencyKey?: string
   ): Promise<Stripe.Checkout.Session> {
     const stripe = await getUncachableStripeClient();
     
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
-      payment_method_types: ['card'],
+      // Omitting payment_method_types lets Stripe automatically show card, Apple Pay, Google Pay
       line_items: [{ price: priceId, quantity: 1 }],
       mode,
       success_url: successUrl,
@@ -256,8 +424,14 @@ export class StripeService {
     if (customerId) {
       sessionParams.customer = customerId;
     }
+    if (mode === "subscription" && metadata) {
+      sessionParams.subscription_data = { metadata };
+    }
 
-    return await stripe.checkout.sessions.create(sessionParams);
+    return await stripe.checkout.sessions.create(
+      sessionParams,
+      idempotencyKey ? { idempotencyKey } : undefined,
+    );
   }
 
   async createCustomerPortalSession(customerId: string, returnUrl: string): Promise<Stripe.BillingPortal.Session> {

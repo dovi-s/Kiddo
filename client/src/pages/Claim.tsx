@@ -1,15 +1,23 @@
 import { useState } from "react";
-import { Link, useParams } from "wouter";
+import { Link, useLocation, useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, TrendingUp, Gift as GiftIcon, Shield, Lock, ChevronRight, Plus, Loader2 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
-import { Confetti } from "@/components/ui/confetti";
+// Confetti import removed 2026-05-12 per feedback_animation_primitives.md
+// locked rule: "Confetti at most on the at-18 ceremony moment, if at all.
+// Not on first-gift, not on subscription upgrade, not on Memory Book
+// milestones." Claim flow is a gift-claim success state — celebration tied
+// to investment activity (the gift becomes invested in the fund), which
+// sits in the same Robinhood-precedent regulatory zone the MA-AG consent
+// order addressed. The InvestmentReveal below is the locked-discipline-
+// appropriate confirmation pattern; no particle-confetti needed.
 import { InvestmentReveal } from "@/components/ui/live-ticker";
 import { haptic } from "@/lib/haptics";
 import { ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
+import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 
 interface PublicGiftData {
   id: string;
@@ -25,7 +33,14 @@ interface PublicGiftData {
   recipientFirstName: string | null;
 }
 
+type MarketQuoteResponse = {
+  quotes: Array<{ symbol: string; price: number; isEstimate?: boolean }>;
+};
+
 type ClaimStep = "preview" | "auth" | "destination" | "success";
+const MOTION_DUR = 0.2;
+const PAGE_MAX = "max-w-2xl mx-auto px-4";
+const PRIMARY_CTA = "w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors";
 
 export default function Claim() {
   const { token } = useParams<{ token: string }>();
@@ -58,6 +73,20 @@ export default function Claim() {
     retry: false,
   });
 
+  const giftTicker = gift?.selectedTicker?.trim().toUpperCase() || "";
+  const giftQuoteSymbol = giftTicker || (gift ? "VTI" : "");
+  const { data: marketQuoteData } = useQuery<MarketQuoteResponse>({
+    queryKey: ["market-quotes", giftQuoteSymbol],
+    queryFn: async () => {
+      const res = await fetch(`/api/market/quotes?symbols=${encodeURIComponent(giftQuoteSymbol)}`);
+      if (!res.ok) throw new Error("Could not load quote estimate");
+      return res.json();
+    },
+    enabled: !!giftQuoteSymbol,
+    staleTime: 60_000,
+  });
+  const giftQuote = marketQuoteData?.quotes?.find((quote) => quote.symbol === giftQuoteSymbol);
+
   const claimMutation = useMutation({
     mutationFn: async (data: { fundId?: string; newFundName?: string }) => {
       const res = await fetch(`/api/gifts/${token}/claim`, {
@@ -82,7 +111,11 @@ export default function Claim() {
 
   const giftValue = gift ? parseFloat(gift.netAmount) : 0;
   const giftAmount = gift ? parseFloat(gift.amount) : 0;
+  const giftEstimatedPrice = giftQuote?.price || 100;
+  const giftEstimatedShares = giftQuoteSymbol ? (giftValue / giftEstimatedPrice).toFixed(4) : "";
   const projectedValue = Math.round(giftValue * 4.6);
+  const claimStepOrder: ClaimStep[] = ["preview", "auth", "destination"];
+  const claimStepIndex = claimStepOrder.indexOf(step);
 
   const handleAuth = async () => {
     try {
@@ -92,8 +125,11 @@ export default function Claim() {
         await login({ email, password });
       }
       haptic('medium');
+      await queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
       setStep("destination");
-    } catch {}
+    } catch {
+      // errors are displayed via loginError / registerError
+    }
   };
 
   const handleClaim = () => {
@@ -125,11 +161,11 @@ export default function Claim() {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-40 gemini-glass-nav">
-          <div className="max-w-2xl mx-auto px-4 h-14 flex items-center">
+          <div className={`${PAGE_MAX} h-14 flex items-center`}>
             <Logo size="md" className="text-foreground" />
           </div>
         </header>
-        <main className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
+        <main className={`${PAGE_MAX} py-16 text-center space-y-4`}>
           <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
             <GiftIcon className="w-8 h-8 text-muted-foreground" />
           </div>
@@ -152,7 +188,7 @@ export default function Claim() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 gemini-glass-nav">
-        <div className="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+        <div className={`${PAGE_MAX} h-14 flex items-center justify-between`}>
           <Logo size="md" className="text-foreground" />
           {step !== "success" && (
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -161,9 +197,16 @@ export default function Claim() {
             </div>
           )}
         </div>
+        {step !== "success" && claimStepIndex >= 0 && (
+          <div className={`${PAGE_MAX} pb-2`}>
+            <p className="text-center text-xs text-muted-foreground">
+              Step {claimStepIndex + 1} of {claimStepOrder.length}
+            </p>
+          </div>
+        )}
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8 lg:py-12">
+      <main className={`${PAGE_MAX} py-8 lg:py-12`}>
         <AnimatePresence mode="wait">
           {step === "preview" && (
             <motion.div
@@ -171,6 +214,7 @@ export default function Claim() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: MOTION_DUR }}
               className="space-y-8"
             >
               <div className="text-center space-y-3">
@@ -235,7 +279,7 @@ export default function Claim() {
                     <button
                       onClick={handleClaimButtonClick}
                       data-testid="button-claim-gift"
-                      className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                      className={`${PRIMARY_CTA} flex items-center justify-center gap-2`}
                     >
                       Claim your gift
                       <ChevronRight size={18} />
@@ -253,16 +297,7 @@ export default function Claim() {
                 )}
               </div>
 
-              <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <Shield size={14} />
-                  <span>SIPC protected</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Lock size={14} />
-                  <span>Bank-level security</span>
-                </div>
-              </div>
+              <TrustMicroStrip />
             </motion.div>
           )}
 
@@ -272,6 +307,7 @@ export default function Claim() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: MOTION_DUR }}
               className="space-y-6"
             >
               <button
@@ -348,9 +384,9 @@ export default function Claim() {
                   </div>
                 </div>
 
-                {(loginError || registerError) && (
+                {(authMode === "signin" ? loginError : registerError) && (
                   <p className="text-sm text-red-500" data-testid="text-auth-error">
-                    {loginError || registerError}
+                    {authMode === "signin" ? loginError : registerError}
                   </p>
                 )}
 
@@ -358,7 +394,7 @@ export default function Claim() {
                   onClick={handleAuth}
                   disabled={isLoggingIn || isRegistering || !email || !password}
                   data-testid="button-continue-auth"
-                  className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className={`${PRIMARY_CTA} disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
                 >
                   {(isLoggingIn || isRegistering) ? (
                     <>
@@ -376,6 +412,7 @@ export default function Claim() {
                   </p>
                 )}
               </div>
+              <TrustMicroStrip />
             </motion.div>
           )}
 
@@ -385,6 +422,7 @@ export default function Claim() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: MOTION_DUR }}
               className="space-y-6"
             >
               <button
@@ -423,7 +461,7 @@ export default function Claim() {
                       <div>
                         <p className="font-medium text-foreground">{fund.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          Balance: ${parseFloat(fund.balance).toLocaleString()}
+                          Balance: ${parseFloat(fund.balance).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                       </div>
                       {selectedFund === fund.id && !createNewFund && (
@@ -455,7 +493,7 @@ export default function Claim() {
                     </div>
                     <div>
                       <p className="font-medium text-foreground">Create new fund</p>
-                      <p className="text-sm text-muted-foreground">Start a fresh investment fund</p>
+                      <p className="text-sm text-muted-foreground">Start a new fund</p>
                     </div>
                   </div>
                 </button>
@@ -503,7 +541,7 @@ export default function Claim() {
                 onClick={handleClaim}
                 disabled={claimMutation.isPending || (!selectedFund && !createNewFund) || (createNewFund && !newFundName)}
                 data-testid="button-confirm-claim"
-                className="w-full py-4 bg-primary text-primary-foreground text-base font-medium rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className={`${PRIMARY_CTA} disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
               >
                 {claimMutation.isPending ? (
                   <>
@@ -515,8 +553,9 @@ export default function Claim() {
                     <span>Confirm and claim</span>
                     <ChevronRight size={18} />
                   </>
-                )}
-              </button>
+                  )}
+                </button>
+              <TrustMicroStrip />
             </motion.div>
           )}
 
@@ -527,14 +566,15 @@ export default function Claim() {
               animate={{ opacity: 1, scale: 1 }}
               className="text-center space-y-8 py-8"
             >
-              <Confetti isActive={true} />
-              
-              <InvestmentReveal 
+              <InvestmentReveal
                 amount={giftValue}
                 stockSymbol={gift.selectedTicker || "VTI"}
                 stockName={gift.selectedTicker ? `${gift.selectedTicker} Stock` : "Total US Market"}
-                shares={String((giftValue / 268.45).toFixed(4))}
+                shares={giftEstimatedShares}
               />
+              <p className="-mt-5 text-xs text-muted-foreground">
+                Estimated at ${giftEstimatedPrice.toLocaleString()}/share. Final shares may change when the claim executes.
+              </p>
 
               <motion.div 
                 className="space-y-2"

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Footer } from "@/components/layout/Footer";
 type Tab = "terms" | "privacy" | "disclosures";
 
 export default function Legal() {
+  const search = useSearch();
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("terms");
 
   const tabs: { id: Tab; label: string; icon: typeof FileText }[] = [
@@ -17,6 +19,21 @@ export default function Legal() {
     { id: "privacy", label: "Privacy Policy", icon: Eye },
     { id: "disclosures", label: "Disclosures", icon: AlertTriangle },
   ];
+
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const requested = params.get("tab");
+    if (requested === "terms" || requested === "privacy" || requested === "disclosures") {
+      setActiveTab(requested);
+      return;
+    }
+    setActiveTab("terms");
+  }, [search]);
+
+  function handleTabChange(tab: Tab) {
+    setActiveTab(tab);
+    setLocation(`/legal?tab=${tab}`);
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,7 +51,7 @@ export default function Legal() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
                   ? "bg-primary text-primary-foreground shadow-md"
@@ -62,24 +79,24 @@ export default function Legal() {
 
               <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
                 <div>
-                  <h3 className="font-medium text-foreground mb-2">1. What Kora Is</h3>
-                  <p>Kora is a technology platform that makes it easy to give stock investments as gifts. We are not a broker-dealer, investment adviser, or bank. Brokerage services are provided by DriveWealth, LLC, a FINRA-registered broker-dealer and member of SIPC.</p>
+                  <h3 className="font-medium text-foreground mb-2">1. What Kiddo Is</h3>
+                  <p>Kiddo is a technology platform that makes it easy to give stock investments as gifts. We are not a broker-dealer, investment adviser, or bank. Brokerage services are provided by DriveWealth, LLC, a FINRA-registered broker-dealer and member of SIPC.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">2. Account Eligibility</h3>
-                  <p>You must be at least 18 years old and a U.S. resident to create a Kora account. Custodial (UTMA) accounts can be opened for minors by a parent or legal guardian. Gift-givers do not need an account to send gifts.</p>
+                  <p>You must be at least 18 years old and a U.S. resident to create a Kiddo account. Custodial (UTMA) accounts can be opened for minors by a parent or legal guardian. Gift-givers do not need an account to send gifts.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">3. How Gifts Work</h3>
-                  <p>When someone sends a gift through Kora, the payment is processed via Stripe. Once the payment clears (typically 1 to 2 business days), the funds are directed to the recipient's investment account. Depending on the fund's settings, the money may be automatically invested or held as cash until the account owner decides.</p>
+                  <p>When someone sends a gift through Kiddo, the payment is processed via Stripe. Once the payment clears (typically 1 to 2 business days), the funds are directed to the recipient's investment account. Depending on the fund's settings, the money may be automatically invested or held as cash until the account owner decides.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">4. Fees</h3>
-                  <p>Kora's platform fee depends on your subscription tier. Free tier: $2 flat platform fee per gift. Starter ($5/month per fund): no platform fee, includes 2 event pages per fund, Memory Book, and auto-invest. Family ($12/month or $119/year): no platform fee, unlimited funds, unlimited event pages, household dashboard, recurring gift management, and priority support. Event Boost ($29 one-time) is available to Free and Starter users and waives the $2 platform fee for that event, plus includes premium themes, goal cards, and thank-you automation; Family Plan members receive these features automatically. Payment processing fees are paid by the gift-giver: card, Apple Pay, and Google Pay are approximately 2.9% + $0.30 per transaction; bank transfers (ACH) are 0.8%, capped at $5. All fees are disclosed to the giver before payment.</p>
+                  <p>Kiddo offers Free, Kiddo+, and Kiddo Family household pricing. Free gifts use a $2 platform fee up to $200 and a 1% platform fee above $200 (minimum gift: $10 on Free). Kiddo+ costs $4.99 per month or $44.99 per year, covers one child, and removes the platform fee from contributions. Kiddo Family costs $9.99 per month or $89.99 per year, covers every fund you manage, and also removes the platform fee from contributions. Contributions of $10,000 or more include a separate 0.1% large-gift processing fee on every plan. Payment processing fees are paid by the gift-giver: card, Apple Pay, and Google Pay are approximately 2.9% + $0.30 per transaction, and bank transfers (ACH) are 0.8%, capped at $5. All fees are disclosed before payment.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">5. Investment Risk</h3>
-                  <p>All investments involve risk, including the possible loss of principal. Past performance does not guarantee future results. The value of your investments may go up or down. Kora does not provide investment advice. You are responsible for your own investment decisions.</p>
+                  <p>All investments involve risk, including the possible loss of principal. Past performance does not guarantee future results. The value of your investments may go up or down. Kiddo does not provide investment advice. You are responsible for your own investment decisions.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">6. UTMA Accounts</h3>
@@ -91,7 +108,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">8. Changes to Terms</h3>
-                  <p>We may update these terms from time to time. We will notify you of material changes via email or in-app notification. Continued use of Kora after changes constitutes acceptance of the updated terms.</p>
+                  <p>We may update these terms from time to time. We will notify you of material changes via email or in-app notification. Continued use of Kiddo after changes constitutes acceptance of the updated terms.</p>
                 </div>
               </div>
             </div>
@@ -105,7 +122,7 @@ export default function Legal() {
               <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
                 <div>
                   <h3 className="font-medium text-foreground mb-2">What We Collect</h3>
-                  <p>We collect information you provide when creating an account (name, email, password), activating investing (legal name, date of birth, address, last 4 of SSN), and sending gifts (name, email, message). We also collect usage data to improve the platform.</p>
+                  <p>We collect information you provide when creating an account (name, email, password), activating investing (legal name, date of birth, address, SSN or other identity details required for account opening), and sending gifts (name, email, message, payment details handled by our payment processor). We also collect usage and device data needed to operate, secure, and improve the platform.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">How We Use Your Information</h3>
@@ -113,7 +130,11 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Who We Share With</h3>
-                  <p>We share information with DriveWealth, LLC (to open and manage investment accounts), payment processors (to process transactions), and as required by law. We do not sell or rent your personal information to third parties for marketing purposes.</p>
+                  <p>We share information with DriveWealth, LLC to open and manage brokerage accounts, Stripe to process payments, and other service providers that help us run the product. These may include identity-verification and KYC vendors, transactional email providers, analytics providers, cloud hosting or storage vendors, messaging providers, and customer support tools when those services are enabled. We do not sell or rent your personal information to third parties for their own marketing.</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">Service Providers and Processors</h3>
+                  <p>Depending on which features are enabled, Kiddo may use processors or sub-processors for brokerage custody, payment processing, identity verification, bank linking, transactional email, analytics, messaging, push notifications, support, or storage. Our current stack prominently includes DriveWealth for custody and Stripe for payments. If we enable services such as Plaid, Postmark, SendGrid, Klaviyo, Mixpanel, Google Analytics, Firebase Cloud Messaging, Twilio, or Intercom, those providers will process limited data only for the services they support.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Children's Privacy</h3>
@@ -121,15 +142,19 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Data Security</h3>
-                  <p>We use 256-bit SSL encryption, secure data storage, and follow industry best practices for data protection. Your identity verification data (like SSN) is encrypted and transmitted directly to DriveWealth, LLC.</p>
+                  <p>We use 256-bit SSL encryption, secure data storage, and follow industry best practices for data protection. Sensitive identity and payment information is transmitted only to the providers responsible for custody, payments, or identity verification and is not exposed publicly in the product experience.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Your Rights</h3>
                   <p>You can request access to, correction of, or deletion of your personal information at any time by contacting us. California residents have additional rights under the CCPA.</p>
                 </div>
                 <div>
-                  <h3 className="font-medium text-foreground mb-2">Cookies</h3>
-                  <p>We use essential cookies for authentication and session management. We use analytics cookies to understand how people use Kora so we can make it better. You can disable non-essential cookies in your browser settings.</p>
+                  <h3 className="font-medium text-foreground mb-2">Cookies, Analytics, and Messaging</h3>
+                  <p>We use essential cookies for authentication and session management. If analytics tools are enabled, we may also use measurement technologies to understand usage, improve conversion, detect errors, and evaluate product performance. If push notifications, lifecycle messaging, or support tools are enabled, we may use providers such as Firebase Cloud Messaging, Twilio, Klaviyo, or Intercom for those communications. You can disable non-essential browser storage in your browser settings, though some core product functionality may require essential cookies.</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-foreground mb-2">Bank Linking and ACH</h3>
+                  <p>If Kiddo enables ACH bank transfers or bank-linking features through a provider such as Plaid, that provider may receive your banking credentials, account metadata, and account verification information solely to support bank connection, verification, and payment flows. When that functionality is live, the provider will be treated as a named data processor in this policy.</p>
                 </div>
               </div>
             </div>
@@ -143,11 +168,11 @@ export default function Legal() {
               <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
                 <div className="bg-primary/5 rounded-xl p-5 border border-primary/10">
                   <p className="font-medium text-foreground mb-2">Important Notice</p>
-                  <p>Kora Inc. is a technology company, not a broker-dealer, investment adviser, or bank. Kora does not provide investment advice or recommendations.</p>
+                  <p>Kora Inc. is a technology company, not a broker-dealer, investment adviser, or bank. Kiddo does not provide investment advice or recommendations.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Brokerage Services</h3>
-                  <p>Securities are offered through DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. Clearing and custody services are provided by DriveWealth. Kora facilitates the user experience but does not execute trades or hold customer assets.</p>
+                  <p>Securities are offered through DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. Clearing and custody services are provided by DriveWealth. Kiddo facilitates the user experience but does not execute trades or hold customer assets.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">SIPC Coverage</h3>

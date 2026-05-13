@@ -66,10 +66,33 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
     },
   });
 
+  const sendMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/funds/${fundId}/thank-yous/${id}/send`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to send");
+      return res.json();
+    },
+    onSuccess: async (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "thank-yous"] });
+      if (data.deliveryMethod === "email" && data.deliveryUrl) {
+        window.location.href = data.deliveryUrl;
+        toast({ title: "Email draft opened", description: "Your email app opened with a pre-filled thank-you." });
+      } else if (data.deliveryMethod === "copy" && data.copiedText) {
+        await navigator.clipboard.writeText(data.copiedText);
+        toast({ title: "Message copied", description: "Sender email missing, so we copied the thank-you text." });
+      }
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Could not send thank-you", variant: "destructive" });
+    },
+  });
+
   const handleMarkSent = (id: string) => {
     haptic("success");
-    updateMutation.mutate({ id, updates: { status: "sent" } });
-    toast({ title: "Marked as sent", description: "Thank-you note marked as sent" });
+    sendMutation.mutate(id);
   };
 
   const handleSaveEdit = (id: string) => {
@@ -162,7 +185,7 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
               data-testid="button-send-all"
             >
               <CheckCheck size={13} />
-              Send All
+              Mark All Sent
             </Button>
           )}
         </div>
@@ -254,6 +277,7 @@ export function ThankYouManager({ fundId, fundName }: ThankYouManagerProps) {
                       <button
                         className="p-1.5 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors text-muted-foreground hover:text-green-600"
                         onClick={() => handleMarkSent(ty.id)}
+                        disabled={sendMutation.isPending}
                         data-testid={`button-mark-sent-${ty.id}`}
                       >
                         <Send size={14} />

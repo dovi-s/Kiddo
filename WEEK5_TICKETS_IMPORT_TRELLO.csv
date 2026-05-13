@@ -1,0 +1,9 @@
+Name,Description,Labels,Members,Due Date,Checklist
+Attribution source normalization,"Normalize source and channel tracking on top acquisition events.","growth,analytics,attribution,backend","Backend,Growth",,"- [ ] Top acquisition events include stable source/channel fields"
+Founder content cadence tracker,"Track founder content output and downstream traffic impact.","growth,content,founder,reporting",Growth,,"- [ ] Weekly dashboard shows founder posts and downstream traffic"
+Creator pilot intake workflow,"Create structured creator campaign intake and status workflow.","growth,creator,ops,workflow","Growth,Ops",,"- [ ] Creator roster status and campaign links tracked in one place"
+Channel to first-gift conversion report,"Report conversion by source channel from visit to first gift.","data,growth,conversion,reporting",Data,,"- [ ] Report shows conversion by channel from visit to first gift"
+Share-link UTM propagation,"Preserve and propagate UTM params into conversion events.","utm,frontend,backend,attribution","Frontend,Backend",,"- [ ] UTM params are preserved and tied to conversion events"
+Gift page referral context module,"Display optional campaign source context on gift page.","frontend,gift-page,referral,ux",Frontend,,"- [ ] Gift page can display optional campaign/source context cleanly"
+Weekly growth experiment template,"Standardize hypothesis and experiment logging process.","growth,process,experiments",Growth,,"- [ ] Team uses one standardized template for hypotheses and outcomes"
+Week 5 channel scorecard,"Publish weekly channel scorecard with spend and outcome metrics.","growth,data,scorecard,reporting","Growth,Data",,"- [ ] Scorecard lists top channels with spend conversion and AFRG impact"

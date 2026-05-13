@@ -1,0 +1,9 @@
+title,description,priority,state,assignee,estimate,sprint,labels
+Host re-engagement reminder engine,"Implement reminder triggers for hosts before key gifting windows. Acceptance: Hosts receive targeted reminders before key event windows.",1,Todo,Backend + Frontend,1.5,Week 6,"retention,reminders,backend,frontend"
+Repeat gifter prompt flow,"Add contextual one-tap flow for prior gifters to gift again. Acceptance: Prior gifters are prompted contextually with one-tap repeat flow.",2,Todo,Frontend + Growth,1,Week 6,"retention,gifters,frontend,growth"
+12-week cohort retention table,"Populate retention table with week and fund-type filters. Acceptance: Cohort table is populated and filterable by week and fund type.",1,Todo,Data + Admin Frontend,1,Week 6,"cohorts,retention,data,admin"
+AFRG cohort trend panel,"Add AFRG trend visualization by cohort start week. Acceptance: AFRG trend visible by cohort start week with stable definitions.",2,Todo,Data + Admin Frontend,0.75,Week 6,"afrg,cohorts,data,admin"
+Time-to-first-gift diagnostics,"Show median and P75 first-gift timing with week-over-week movement. Acceptance: Median and P75 time-to-first-gift shown with weekly movement.",2,Todo,Data,0.75,Week 6,"diagnostics,data,first-gift"
+In-app milestone nudges,"Introduce milestone prompts to support retention and re-engagement. Acceptance: Milestone prompts appear at sensible thresholds and can be dismissed.",3,Todo,Product + Frontend,0.75,Week 6,"retention,milestones,frontend,product"
+Repeat gifter rate KPI card,"Add repeat gifter KPI card with detail drill-down. Acceptance: KPI card displays repeat gifter rate with drill-down list.",2,Todo,Admin Frontend,0.5,Week 6,"admin,kpi,gifters,retention"
+Week 6 retention scorecard,"Publish weekly retention scorecard with core loop deltas. Acceptance: Scorecard includes AFRG, repeat gifter rate, and time-to-first-gift deltas.",2,Todo,Growth + Data,0.5,Week 6,"growth,data,retention,reporting"

@@ -14,7 +14,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      "fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-auto flex-col items-center gap-2",
+      "fixed top-4 left-1/2 -translate-x-1/2 z-[100] flex max-h-screen w-[min(92vw,380px)] flex-col items-stretch gap-2",
       className
     )}
     {...props}
@@ -27,9 +27,9 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: "w-full justify-between space-x-4 rounded-md border p-6 pr-8 shadow-lg border bg-background text-foreground data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+        default: "w-full justify-between space-x-3 rounded-xl border px-4 py-3 pr-10 shadow-md bg-background text-foreground data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
         destructive:
-          "w-full justify-between space-x-4 rounded-md border p-6 pr-8 shadow-lg destructive group border-destructive bg-destructive text-destructive-foreground data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+          "w-full justify-between space-x-3 rounded-xl border px-4 py-3 pr-10 shadow-md destructive group border-destructive bg-destructive text-destructive-foreground data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full",
         saved:
           "justify-center gap-1.5 px-3 py-1.5 rounded-full bg-foreground/90 text-background text-xs font-medium shadow-lg backdrop-blur-sm data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
       },
@@ -77,13 +77,13 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "absolute right-2 top-2 rounded-md p-1 text-foreground/40 transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
       className
     )}
     toast-close=""
     {...props}
   >
-    <X className="h-4 w-4" />
+    <X className="h-3.5 w-3.5" />
   </ToastPrimitives.Close>
 ))
 ToastClose.displayName = ToastPrimitives.Close.displayName

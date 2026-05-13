@@ -1,132 +1,392 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
-import { ChevronDown, Search, Shield, Lock, ArrowRight } from "lucide-react";
-import { Mascot } from "@/components/ui/mascot";
+import { ChevronDown, Lock, Search, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const faqItems = [
   {
-    id: "how-invested",
-    question: "How does the money actually get invested?",
-    answer: "Kora uses an embedded brokerage model, similar to how apps like Robinhood and Acorns work. When a gift comes in, the money is invested through DriveWealth, LLC, a FINRA-registered broker-dealer. You get a real brokerage account with real investments, including fractional shares down to 8 decimal places. There are no trading commissions. Kora never holds your money directly.",
+    id: "international-availability",
+    category: "Getting Started",
+    question: "Is Kiddo available outside the US?",
+    answer: (
+      <>
+        Not yet. Kiddo is built around the US UTMA (Uniform Transfers to Minors Act) custodial structure,
+        and our brokerage partner (DriveWealth) serves US residents only. Tax documents like the 1099 also
+        assume US tax filing. If you live outside the US and want a note when we open to your country,
+        join the waitlist on the signup screen. No concrete date today.
+      </>
+    ),
   },
   {
-    id: "utma",
-    question: "What is a UTMA account?",
-    answer: "A UTMA (Uniform Transfers to Minors Act) account is simply an investment account you manage for your child until they turn 18. You control the investments, and when your child becomes an adult, the account transfers to them.",
-  },
-  {
-    id: "safety",
-    question: "Is my child's money safe?",
-    answer: "Yes. All accounts are held at DriveWealth, LLC, a FINRA-registered broker-dealer, and protected by SIPC (Securities Investor Protection Corporation) for up to $500,000. This is the same protection that covers accounts at major brokerages. Kora never holds custody of your funds.",
-  },
-  {
-    id: "fees",
-    question: "What are the fees?",
-    answer: "There are two parts to each gift's fees. First, payment processing (paid by the gift-giver): card, Apple Pay, and Google Pay cost about 2.9% + $0.30 per transaction. Bank transfers (ACH) are much cheaper at just 0.8%, capped at $5. Second, the Kora platform fee depends on your plan. On the Free tier, there is a flat $2 platform fee per gift. On Starter ($5/month per fund) and Family ($12/month or $119/year), the platform fee is completely waived. Free and Starter users can also purchase an Event Boost ($29 one-time) to waive the $2 platform fee for a specific event, plus unlock premium themes, goal cards, and thank-you automation. Family Plan members get all Event Boost features included automatically.",
-  },
-  {
-    id: "turns-18",
-    question: "What happens when my child turns 18?",
-    answer: "When your child turns 18, the UTMA account transfers into their name and they gain full control. They can keep the investments growing, sell them, or transfer to another brokerage. It becomes theirs.",
+    id: "why-kiddo",
+    category: "Getting Started",
+    question: "Why use Kiddo instead of opening a child account somewhere else?",
+    answer: (
+      <>
+        Fidelity and Schwab are great places to hold investments for a child. What they do not give you is
+        the gifting ritual. With Kiddo, family and friends can open one link, choose an amount, and give
+        in under a minute. Every gift can be invested, every note can be saved, and birthdays or baby
+        showers can have a real event page instead of another round of checks and Venmos. If you want a
+        more occasion-based walkthrough, start with{" "}
+        <Link href="/blog/best-way-to-invest-birthday-money-for-kids" className="text-primary hover:underline">
+          our birthday guide
+        </Link>
+        .{" "}
+        <Link href="/compare" className="text-primary hover:underline">
+          See how Kiddo compares to other options &rarr;
+        </Link>
+        . Already have a brokerage UTMA?{" "}
+        <Link href="/compare/fidelity-utma" className="text-primary hover:underline">
+          Kiddo vs Fidelity UTMA &rarr;
+        </Link>
+        . Switching from EarlyBird? Compare{" "}
+        <Link href="/compare/earlybird" className="text-primary hover:underline">
+          Kiddo vs EarlyBird &rarr;
+        </Link>{" "}
+        and{" "}
+        <Link href="/compare/acorns-early" className="text-primary hover:underline">
+          Kiddo vs Acorns Early &rarr;
+        </Link>
+        .
+      </>
+    ),
   },
   {
     id: "no-account",
-    question: "Do gift-givers need an account?",
-    answer: "No! Gift-givers do not need to create an account or download an app. They just open the link, pick an amount, pay, and they are done. The whole process takes about 60 seconds.",
+    category: "Giving Gifts",
+    question: "Do people need a Kiddo account to send a gift?",
+    answer: "No. That is one of the most important parts of the product. They open the link, choose an amount, pay, and they are done. No app download. No account required.",
   },
   {
-    id: "taxes",
-    question: "What about taxes?",
-    answer: "Most gifts fall well under the IRS gift tax exclusion (currently $19,000 per person per year), so in nearly every case there is nothing to report. For the child's account, the \"kiddie tax\" only kicks in when unearned income (like dividends and gains) exceeds a few thousand dollars per year (the threshold changes annually, so check the latest IRS guidelines). This is uncommon for most gift-sized accounts. Also, the cost basis (what was originally paid for the investments) carries over from the giver, which can help reduce taxes later.",
+    id: "gift-code",
+    category: "Giving Gifts",
+    question: "Can I gift a child without having their fund link?",
+    answer: (
+      <>
+        Yes. Every Kiddo fund has a gift code. Ask the parent, grandparent, or anyone in the family for
+        the code, then go to{" "}
+        <Link href="/gift" className="text-primary hover:underline">
+          /gift
+        </Link>{" "}
+        and enter it. That opens the same private gift page without requiring the link.
+        <br />
+        <br />
+        If the child does not have a Kiddo fund yet, you can save a parent invitation request from the
+        same page so they can set one up first.
+      </>
+    ),
   },
   {
-    id: "vs-savings",
-    question: "How is this different from a savings account?",
-    answer: "A savings account currently earns around 4% per year. Historically, the S&P 500 has averaged around 10% per year. Over 18 years, that difference is massive. Plus, your child gets real ownership in companies they actually know and use, which is a great way to teach them about money and investing.",
+    id: "occasion-same-fund",
+    category: "Giving Gifts",
+    question: "Do occasion gifts go to a separate account?",
+    answer: (
+      <>
+        No. Every gift goes directly into the same fund, no matter which link you used.
+        <br />
+        <br />
+        Whether you gifted through the birthday link, the holiday page, or the main fund link, it all lands in the same place. Occasions are just a way to celebrate a specific moment and track who gave what for it. One fund. Always.
+      </>
+    ),
   },
   {
-    id: "payment-methods",
-    question: "How can gift-givers pay?",
-    answer: "Givers can pay with Apple Pay, Google Pay, any major credit or debit card, or a bank transfer (ACH). Apple Pay and Google Pay are the fastest, just one tap. Bank transfers have lower processing fees, which is great for larger gifts. Every method is secure and encrypted.",
+    id: "gifter-updates",
+    category: "Giving Gifts",
+    question: "Will I receive any updates after I gift?",
+    answer: (
+      <>
+        Only if you choose to. After gifting, you can opt in to receive occasional milestone updates
+        about the child&apos;s fund. If you opt in, Kiddo can send an annual birthday reminder, occasional
+        parent-shared Memory Book updates, and one final notification when the child reaches adulthood.
+        <br />
+        <br />
+        We never send portfolio performance emails or imply that a gifter owns the account. Parents stay
+        in control of what is shared, and every update includes a one-click unsubscribe.
+      </>
+    ),
   },
   {
-    id: "withdraw-sell",
-    question: "Can I sell investments or withdraw money?",
-    answer: "Yes. For custodial (UTMA) accounts, the parent or guardian can sell investments and withdraw funds, as long as the money is used for the child's benefit (that is the law for custodial accounts). For adult accounts, you have full control to sell and withdraw. Sold investments settle in about one business day (T+1), after which you can transfer to your bank. Kora does not charge withdrawal fees. Gifts are irrevocable once made, meaning they belong to the recipient, but the custodian manages them until the child reaches adulthood.",
-  },
-  {
-    id: "transfer-out",
-    question: "Can I transfer to another brokerage?",
-    answer: "Yes. You can transfer the account to any other brokerage using a standard ACATS transfer. There are no lock-ups or penalties. Your investments move as-is to the new brokerage.",
-  },
-  {
-    id: "auto-invest",
-    question: "What is 'auto-invest'?",
-    answer: "Auto-invest means that when a gift comes in, the money automatically buys a diversified mix of investments at the next available trading window. You do not have to pick stocks or time the market. It is a simple, hands-off way to make sure every gift starts growing right away.",
-  },
-  {
-    id: "gift-safe",
-    question: "How do gift-givers know their gift is safe?",
-    answer: "Gift-givers see transparent fees before they check out, so there are no surprises. Every dollar goes into a real, SIPC-protected brokerage account at DriveWealth, LLC. It is not a prepaid card or store credit. It is a real investment in their name.",
-  },
-  {
-    id: "choose-stocks",
-    question: "Can I choose specific stocks?",
-    answer: "Yes! Givers can pick from a curated list of popular brands and companies, or they can simply let auto-invest handle it. Either way, the gift goes into real investments held in the child's account.",
+    id: "utma",
+    category: "Account Basics",
+    question: "What is the account behind my child's fund?",
+    answer: "Most child funds use a UTMA legal structure. That means you manage the fund until your child reaches adulthood, usually 18 or 21 depending on your state. Then it becomes fully theirs. Kiddo keeps that legal complexity underneath the gifting experience.",
   },
   {
     id: "utma-vs-529",
-    question: "What is the difference between a UTMA and a 529?",
-    answer: "A 529 is specifically for education expenses (tuition, room and board, etc.) and offers tax-free growth when used for qualified education costs. A UTMA account has no restrictions on how the money is used. Your child can use it for anything: a first car, starting a business, a down payment on a home, or even education. The tradeoff is that UTMA investment gains are subject to the kiddie tax, though the first few thousand dollars of unearned income per year is generally not taxed (thresholds change annually, so check the latest IRS guidelines). Many families use both: a 529 for college savings and a UTMA on Kora for everything else.",
+    category: "Account Basics",
+    question: "How is this different from a 529?",
+    answer: (
+      <>
+        A 529 is mainly for education expenses. A child fund through Kiddo is more flexible later: college, a first car, a down payment, or something else entirely. Many families use both: a 529 for school and a Kiddo fund for gifts that can grow. To see what consistent investing through a UTMA could grow into for your situation, try the{" "}
+        <Link href="/tools/at-18-calculator" className="text-primary hover:underline">
+          at-18 calculator
+        </Link>
+        .
+      </>
+    ),
+  },
+  {
+    id: "fafsa-financial-aid",
+    category: "Account Basics",
+    question: "Will my child's Kiddo fund affect their college financial aid?",
+    answer: (
+      <>
+        Maybe, depending on whether you use the fund for college and how much is in it. UTMA accounts count as the child's asset on the FAFSA and are assessed at roughly 20% of value when calculating expected family contribution. A parent-owned 529 plan is assessed at a maximum of 5.64%, and a grandparent-owned 529 is currently assessed at 0% if used for the child's education. So if your only goal for this fund is paying for college, a 529 will usually have less impact on need-based financial aid than a UTMA will. Most Kiddo families use both: a 529 for college specifically, and a Kiddo fund for everything else (first car, gap year, business, down payment, whatever your child decides at 18). Kiddo's whole positioning is that this fund isn't a worse 529. It's a different tool for the cases where 'this is just for college' is the wrong frame. If your fund is large enough that the FAFSA difference is material to your aid eligibility, talk to a financial aid advisor before submitting the form. To see what consistent investing for your specific situation could grow into, try the{" "}
+        <Link href="/tools/at-18-calculator" className="text-primary hover:underline">
+          at-18 calculator
+        </Link>
+        .
+      </>
+    ),
+  },
+  {
+    id: "transfer-out",
+    category: "Account Basics",
+    question: "Can I move my child's fund to another brokerage?",
+    answer: "Yes. Custodial accounts can be transferred. Kiddo doesn't charge a fee to leave. If the receiving brokerage charges an account-transfer fee, we cover it. Some brokerages accept in-kind transfers (the actual shares move over without selling); some require liquidation first (we sell, settle, then send cash). Which path applies depends on the receiving brokerage and how they handle UTMAs. If liquidation is required, the sale realizes capital gains under your child's tax ID. If unrealized gains exceed roughly $2,600 in a year, kiddie-tax rules apply. A CPA can help you sequence a large transfer across tax years to minimize the bill. Email transfers@kiddofund.com and support will walk you through the specific path for your fund.",
+  },
+  {
+    id: "custodian-death",
+    category: "Account Basics",
+    question: "What happens to my child's fund if I die before they turn 18?",
+    answer: "The fund passes to the successor custodian under your state's UTMA statute. Kiddo stores your designated successor in fund settings so the team knows who to contact and notifications reach the right person, but the in-app designation is not a substitute for your will. The legal transfer of custodianship happens through your estate's executor and the will's named successor custodian. If you need to report a custodian's death, email support@kiddofund.com and the team will walk the successor and executor through the brokerage transfer.",
+  },
+  {
+    id: "utma-in-trust",
+    category: "Account Basics",
+    question: "Can I put my child's UTMA in a trust?",
+    answer: "No, and you don't need to. A UTMA is already a legal structure designed for minor beneficiaries: the assets belong to the child, you manage them as custodian until they reach majority age (18 or 21 depending on your state), and ownership transfers automatically. Retitling a UTMA into a trust would defeat its purpose. If your family has complex estate planning needs (multi-generational planning, irrevocable trusts, asset-protection structures), talk to an estate attorney about how the UTMA fits alongside those structures rather than as a substitute for them. Many families use a UTMA for the kid-fund use case and a separate trust for broader estate planning.",
+  },
+  {
+    id: "fees",
+    category: "Pricing & Fees",
+    question: "How much does Kiddo cost?",
+    answer: "Kiddo is free to start. Free includes one child fund, a gift link, basic Memory Book features, and Kid View Lite. Kiddo Plus is $4.99 per month or $39 per year for one child, and includes co-parent access so a partner can follow the fund. Kiddo Family is $7.99 per month or $69 per year for every child fund you manage. Across every plan, Kiddo charges 0.10% per year on invested assets only. Cash and pending gifts are not charged. Payment processing on gifts is separate and shown before checkout.",
+  },
+  {
+    id: "contribution-fees",
+    category: "Pricing & Fees",
+    question: "Are there fees on gifts?",
+    answer: "Kiddo does not charge a platform fee on gifts. The gift amount stays whole, and the gifter pays payment processing separately. There is no required Kiddo large-gift fee. Optional premium gift upgrades are separate and shown before checkout.",
+  },
+  {
+    id: "events-free-plan",
+    category: "Pricing & Fees",
+    question: "How do events work on the free plan?",
+    answer: "You can run 1 active basic occasion at a time on Free. Once it closes, you can create another. Kiddo Plus gives one child richer occasion pages, reminders, and Memory Book features. Kiddo Family covers every child fund you manage.",
+  },
+  {
+    id: "auto-invest",
+    category: "Investing",
+    question: "What happens after a gift comes in?",
+    answer: "Every fund has one family default. Most families use a managed recurring-investment style like Growth Mix or Steady & Balanced. Some choose a specific default stock. Others prefer to hold gifts as cash until they invest later. Gifts follow that family default unless the parent has explicitly allowed a stock override or a cash option in fund settings.",
+  },
+  {
+    id: "rebalancing",
+    category: "Investing",
+    question: "How does Kiddo keep the portfolio balanced over time?",
+    answer: "Kiddo doesn't sell to rebalance. Most adult-investor apps drift back to target by selling whatever's overrepresented and buying the underrepresented side, which realizes capital gains every time. On a child's UTMA those gains land on the child's tax ID and can pull the fund into kiddie-tax territory faster than necessary. Kiddo's approach: when an allocation drifts off target, future gifts are weighted toward the underweight side until the mix lands back where it should be. No sales, no surprise tax bill, the same long-term shape. If you ever change strategy explicitly, that does involve sales of the previous holdings, and the kiddie-tax rules apply at that point. Most families never do.",
+  },
+  {
+    id: "safe",
+    category: "Safety & Trust",
+    question: "Is my child's money safe?",
+    answer: (
+      <>
+        Investments are held by DriveWealth, LLC, a FINRA-registered broker-dealer. Eligible brokerage
+        assets are covered by SIPC up to $500,000 if the broker-dealer fails. Market prices can still
+        move up or down. Kiddo handles the product experience, but DriveWealth holds the assets. If you want the trust-focused version, read{" "}
+        <Link href="/security" className="text-primary hover:underline">
+          Security
+        </Link>
+        .
+      </>
+    ),
+  },
+  {
+    id: "shutdown",
+    category: "Safety & Trust",
+    question: "What happens if Kiddo shuts down?",
+    answer: (
+      <>
+        Your child's investments are not Kiddo's assets. They are held through DriveWealth. If Kiddo ever
+        disappeared, the fund's underlying investments would still exist and would not
+        disappear with the company. We break that down in more detail on the{" "}
+        <Link href="/security" className="text-primary hover:underline">
+          Security page
+        </Link>
+        .
+      </>
+    ),
+  },
+  {
+    id: "privacy",
+    category: "Safety & Trust",
+    question: "Can strangers find my child's fund?",
+    answer: "No. Kiddo uses private gift links. The fund is shared by invitation, not by public search. It is not meant to act like a social profile or public payment handle.",
+  },
+  {
+    id: "earlybird-vs-kiddo",
+    category: "Getting Started",
+    question: "How is Kiddo different from EarlyBird?",
+    answer: (
+      <>
+        Both use child-fund structures and both let family gift easily. The difference is what the
+        product focuses on. EarlyBird centers on video messages from loved ones. Kiddo centers on the
+        gifting experience, the Memory Book, event pages for birthdays and baby showers, and an
+        age-appropriate Kid View that grows with your child from age 5 to 17.
+        <br />
+        <br />
+        Gifts through Kiddo are invested automatically with notes saved permanently. Parents can run event
+        pages for specific occasions and share a fund link anyone can gift through in under a minute.{" "}
+        <Link href="/compare/earlybird" className="text-primary hover:underline">
+          See the full Kiddo vs EarlyBird comparison &rarr;
+        </Link>
+      </>
+    ),
+  },
+  {
+    id: "personal-funds",
+    category: "Getting Started",
+    question: "Can I create a fund for myself, not a child?",
+    answer: (
+      <>
+        Yes. Kiddo supports personal funds for adults. Your personal fund still gives you a
+        shareable link, simple gifting for friends and family, and a real investment account behind it.
+        <br />
+        <br />
+        The difference is the account type. A child fund uses a legal child-fund structure. A personal
+        fund uses your own personal brokerage account. Start at{" "}
+        <Link href="/get-started" className="text-primary hover:underline">
+          get started
+        </Link>{" "}
+        and choose <span className="font-medium text-foreground">For myself</span>.
+      </>
+    ),
+  },
+  {
+    id: "taxes",
+    category: "Taxes",
+    question: "What about taxes?",
+    answer: (
+      <>
+        Most Kiddo-sized gifts are nowhere near the annual gift-tax exclusion, so families usually do not
+        need to worry about gift-tax filing just because a grandparent sent a birthday gift. Investment
+        income inside the account can create tax reporting over time, and the kiddie tax can matter if
+        unearned income grows beyond the annual thresholds. For many families starting small, that is not
+        an immediate issue, but it is worth understanding as the fund grows. If you are deciding between
+        account types, compare{" "}
+        <Link href="/blog/utma-vs-529-for-family-gifting" className="text-primary hover:underline">
+          child funds vs 529s for family gifting
+        </Link>
+        .
+      </>
+    ),
+  },
+  {
+    id: "tax-docs",
+    category: "Taxes",
+    question: "Do I get tax documents?",
+    answer: "Yes. If the account generates taxable activity, the brokerage side of the experience provides the relevant tax documents. Parents should expect standard year-end reporting when it applies.",
   },
   {
     id: "financial-aid",
-    question: "Does a UTMA account affect financial aid?",
-    answer: "It can, but the impact is often smaller than people think. UTMA accounts are considered the student's asset on the FAFSA, which means up to 20% of the value may count against financial aid eligibility. Parent-owned 529 plans are generally assessed at a lower rate. The actual impact depends on the account size, who owns the 529, and the school's aid formulas. For most families, the amounts in a Kora fund are modest enough that the financial aid impact is minimal. If this is a concern, we recommend consulting a financial advisor for your specific situation.",
+    category: "Taxes",
+    question: "Could this affect financial aid?",
+    answer: "It can, because child-fund assets are generally treated differently from 529 assets in aid calculations. For many families, the balances start small enough that the practical impact is limited, but it is still worth understanding before the fund gets large.",
   },
   {
-    id: "why-kora",
-    question: "Why not just open a free UTMA at Fidelity or Vanguard?",
-    answer: "You absolutely can, and those are great brokerages. What Kora adds is the gifting layer. With Fidelity or Vanguard, you would need to collect money from family members separately (Venmo, checks, etc.), deposit it yourself, and then invest it manually. With Kora, grandma just opens a link, picks an amount, pays with Apple Pay, and the money is automatically invested in your child's account. Plus, every gift comes with a message that gets saved in your child's Memory Book. Kora also gives you shareable event pages for birthdays and baby showers, so guests can gift investments instead of another toy. That social gifting layer is what makes Kora different.",
+    id: "turns-18",
+    category: "Account Basics",
+    question: "What happens when my child turns 18?",
+    answer: (
+      <>
+        When your child reaches the age of majority for your state, the fund legally becomes theirs. In
+        most states that is age 18 or 21. The investments do not automatically get sold just because that
+        birthday arrives. The money stays where it is unless the new account owner decides to sell,
+        withdraw, or transfer it.
+        <br />
+        <br />
+        What changes is control. You stop acting as custodian for that child&apos;s fund, and your child gains
+        full legal control over it. That is one reason many parents use Kiddo not just to invest, but to
+        build healthy money conversations along the way.
+      </>
+    ),
   },
   {
-    id: "monthly-fees",
-    question: "Are there monthly fees?",
-    answer: "Kora offers a Free tier with no monthly fees and no account minimums. You only pay a flat $2 platform fee when a gift is made. For more features, the Starter plan is $5/month per fund and includes no platform fee, 2 event pages per fund, Memory Book, and auto-invest. The Family plan is $12/month or $119/year and includes unlimited funds, unlimited event pages, no platform fee, a household dashboard, recurring gift management, and priority support. Free and Starter users can also grab an Event Boost for $29 one-time to waive the platform fee for a specific event and unlock premium features.",
+    id: "memory-book",
+    category: "Kid View & Education",
+    question: "What is the Memory Book?",
+    answer: (
+      <>
+        Every gift someone sends through Kiddo can include a personal note. Those notes are saved
+        permanently in the child&apos;s Memory Book, organized by occasion: birthday, baby shower,
+        graduation, or just because. Over years, the Memory Book becomes a record of every person who
+        showed up for them and what they wrote.
+        <br />
+        <br />
+        At 18, your child gets both the account and the story behind it: who gave, what they wrote, and
+        how much each gift grew since the day it arrived. It is the part of the product that makes parents
+        emotional every time.
+      </>
+    ),
   },
   {
-    id: "who-holds",
-    question: "Who holds my investments?",
-    answer: "Your investments are held by DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. DriveWealth provides the brokerage infrastructure that powers Kora, including account opening, trade execution, custody, and settlement. They support fractional shares down to 8 decimal places, so every dollar of a gift gets fully invested. Kora is a technology platform that provides the user experience, but DriveWealth holds and safeguards your assets. Your securities are held in an omnibus account structure at DriveWealth, with your ownership individually tracked and protected by SIPC up to $500,000.",
+    id: "child-view",
+    category: "Kid View & Education",
+    question: "What is the Kid View?",
+    answer:
+      "The Kid View is how your child grows up understanding ownership, seeing which people invested in them, and learning to have real money conversations. Not a brokerage dashboard. Age-appropriate language, real company logos, and the names of the people who showed up for them.",
   },
   {
-    id: "tax-implications",
-    question: "What are the tax implications of gifting stock to a child?",
-    answer: "There are a few tax concepts to be aware of. First, the gift itself: each person can give up to $19,000 per recipient per year without any gift tax reporting (married couples can give up to $38,000). Most gifts on Kora are well under this. Second, cost basis: when stock is gifted, the recipient inherits the giver's original cost basis and holding period, not the value at the time of the gift. This means capital gains are calculated from what was originally paid. Third, the kiddie tax: for children under 19 (or under 24 if full-time students), unearned income over $2,600 per year may be taxed at the parent's rate. The first $1,300 is tax-free, the next $1,300 is taxed at the child's rate. Most custodial accounts on Kora stay well below these thresholds. We always recommend consulting a tax professional for advice specific to your situation.",
+    id: "child-view-ages",
+    category: "Kid View & Education",
+    question: "How does the Kid View change as my child gets older?",
+    answer:
+      "Kiddo adapts the experience by age. Younger kids get simple company recognition and the idea that gifts can grow. Older kids get clearer explanations of what they own and what companies do. Teenagers can start having real investing conversations, including suggesting stocks for future gifts.",
+  },
+  {
+    id: "child-control",
+    category: "Kid View & Education",
+    question: "Can my child trade or withdraw money from the fund?",
+    answer:
+      "No. The Kid View is read-only before adulthood. Parents stay in control of trades, withdrawals, and account settings until the legal transfer age for the child fund is reached.",
   },
 ];
 
-function AccordionItem({ item, isOpen, onToggle }: { item: typeof faqItems[0]; isOpen: boolean; onToggle: () => void }) {
+function AccordionItem({
+  item,
+  isOpen,
+  onToggle,
+}: {
+  item: typeof faqItems[number] & { answer: ReactNode };
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <div className="border-b border-border last:border-b-0" data-testid={`faq-item-${item.id}`}>
+    <div className="border-b border-border last:border-b-0">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between py-5 px-1 text-left group"
+        className="group flex w-full items-center justify-between px-1 py-5 text-left"
         data-testid={`faq-toggle-${item.id}`}
-        aria-expanded={isOpen}
       >
-        <span className="font-heading text-base md:text-lg font-medium text-foreground pr-4 group-hover:text-primary transition-colors">
-          {item.question}
-        </span>
+        <div className="pr-4">
+          <span className="mb-1.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[11px] text-primary">
+            {item.category}
+          </span>
+          <p className="font-heading text-base font-medium text-foreground transition-colors group-hover:text-primary md:text-lg">
+            {item.question}
+          </p>
+        </div>
         <motion.div
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.3 }}
           className="shrink-0"
         >
-          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          <ChevronDown className="h-5 w-5 text-muted-foreground" />
         </motion.div>
       </button>
       <AnimatePresence initial={false}>
@@ -135,12 +395,12 @@ function AccordionItem({ item, isOpen, onToggle }: { item: typeof faqItems[0]; i
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <p className="pb-5 px-1 text-muted-foreground leading-relaxed text-sm md:text-base" data-testid={`faq-answer-${item.id}`}>
+            <div className="px-1 pb-5 text-sm leading-relaxed text-muted-foreground md:text-base">
               {item.answer}
-            </p>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -150,58 +410,78 @@ function AccordionItem({ item, isOpen, onToggle }: { item: typeof faqItems[0]; i
 
 export default function FAQ() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [openId, setOpenId] = useState<string | null>(null);
-
-  const filteredFaqs = faqItems.filter(
-    (item) =>
-      item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.answer.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [openId, setOpenId] = useState<string | null>("why-kiddo");
+  const allCategories = ["All", ...Array.from(new Set(faqItems.map((item) => item.category)))];
+  const filteredFaqs = faqItems.filter((item) => {
+    const answerText = typeof item.answer === "string" ? item.answer.toLowerCase() : "";
+    return (
+      (item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        answerText.includes(searchQuery.toLowerCase())) &&
+      (activeCategory === "All" || item.category === activeCategory)
+    );
+  });
 
   return (
     <div className="min-h-screen bg-background">
       <Nav />
 
-      <section className="pt-24 pb-16 md:pt-32 md:pb-24">
+      <section className="pb-16 pt-24 md:pb-24 md:pt-32">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
+          <div className="mx-auto max-w-3xl">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="text-center mb-10"
+              className="mb-10 text-center"
             >
-              <Mascot size="lg" className="mx-auto mb-6 drop-shadow-lg" context="faq-hero" />
-              <h1 className="font-heading text-3xl md:text-4xl lg:text-5xl font-semibold text-foreground tracking-tight mb-4" data-testid="text-page-title">
-                Frequently Asked Questions
+              <h1
+                className="mb-4 font-heading text-3xl font-semibold tracking-tight text-foreground md:text-5xl"
+                data-testid="text-page-title"
+              >
+                Questions? Good. Here are the answers.
               </h1>
-              <p className="text-lg text-muted-foreground max-w-xl mx-auto" data-testid="text-page-subtitle">
-                Everything you need to know about gifting investments with Kora.
+              <p className="mx-auto max-w-xl text-lg text-muted-foreground">
+                Every question a parent, grandparent, or gifter might have. If something is missing, email us.
               </p>
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
+              transition={{ delay: 0.080, duration: 0.5 }}
               className="relative mb-8"
             >
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 placeholder="Search questions..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-border bg-card text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 transition-all"
+                className="w-full rounded-2xl border border-border bg-card py-3.5 pl-12 pr-4 text-foreground placeholder:text-muted-foreground transition-all focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/20"
                 data-testid="input-faq-search"
               />
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-              className="bg-card rounded-2xl border border-border shadow-premium-sm overflow-hidden"
+            <div className="mb-5 flex flex-wrap gap-2">
+              {allCategories.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => setActiveCategory(category)}
+                  className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                    activeCategory === category
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+
+            <div
+              className="overflow-hidden rounded-2xl border border-border bg-card shadow-premium-sm"
               data-testid="faq-accordion"
             >
               {filteredFaqs.length > 0 ? (
@@ -214,28 +494,69 @@ export default function FAQ() {
                   />
                 ))
               ) : (
-                <div className="py-12 text-center text-muted-foreground" data-testid="text-no-results">
-                  <p>No matching questions found. Try a different search term.</p>
+                <div className="py-12 text-center text-muted-foreground">
+                  <p>No matching questions found.</p>
                 </div>
               )}
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.140 }}
+              className="mt-10 space-y-4 text-center"
+            >
+              <p className="text-sm text-muted-foreground">
+                Still have questions? You can start with the basics on the{" "}
+                <Link href="/how-it-works" className="text-primary hover:underline">
+                  How it works
+                </Link>{" "}
+                page.
+              </p>
+              <div className="flex flex-wrap justify-center gap-4 text-sm">
+                <Link href="/security" className="text-primary hover:underline">
+                  Security
+                </Link>
+                <Link href="/blog/utma-vs-529-for-family-gifting" className="text-primary hover:underline">
+                  Child funds vs 529s
+                </Link>
+                <Link
+                  href="/blog/how-to-ask-family-to-invest-instead-of-buying-toys"
+                  className="text-primary hover:underline"
+                >
+                  How to ask family
+                </Link>
+              </div>
+              <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/70">
+                <Lock className="h-3.5 w-3.5" />
+                <span>SIPC protected</span>
+                <span className="text-border">|</span>
+                <Shield className="h-3.5 w-3.5" />
+                <span>DriveWealth custody</span>
+              </div>
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="text-center mt-10 space-y-4"
+              transition={{ delay: 0.180 }}
+              className="mt-12 rounded-2xl border border-border bg-card p-8 text-center shadow-premium-sm"
             >
-              <p className="text-sm text-muted-foreground">
-                Still have questions? Check out how Kora works on our{" "}
-                <Link href="/#how-it-works" className="text-primary hover:underline">home page</Link>.
+              <h2 className="mb-3 font-heading text-2xl font-semibold text-foreground">Ready to start?</h2>
+              <p className="mb-6 text-muted-foreground">
+                Your child's fund takes about 2 minutes to set up. Free to start.
               </p>
-              <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/70">
-                <Lock className="w-3.5 h-3.5" />
-                <span>SIPC protected</span>
-                <span className="text-border">|</span>
-                <Shield className="w-3.5 h-3.5" />
-                <span>FINRA regulated</span>
+              <div className="flex flex-col justify-center gap-4 sm:flex-row">
+                <Link href="/get-started">
+                  <Button size="lg" data-testid="button-faq-cta-primary">
+                    Start your child's fund
+                  </Button>
+                </Link>
+                <Link href="/pricing">
+                  <Button variant="outline" size="lg" data-testid="button-faq-cta-secondary">
+                    See pricing
+                  </Button>
+                </Link>
               </div>
             </motion.div>
           </div>

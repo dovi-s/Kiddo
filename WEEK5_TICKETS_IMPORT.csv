@@ -1,0 +1,9 @@
+Issue Key,Title,Description,Priority,Status,Assignee,Estimate (days),Sprint,Labels,Acceptance Criteria
+KORA-W5-001,Attribution source normalization,Normalize source and channel tracking on top acquisition events,P0,todo,Backend + Growth,1,Week 5,"growth,analytics,attribution,backend","Top acquisition events include stable source/channel fields"
+KORA-W5-002,Founder content cadence tracker,Track founder content output and downstream traffic impact,P1,todo,Growth,0.5,Week 5,"growth,content,founder,reporting","Weekly dashboard shows founder posts and downstream traffic"
+KORA-W5-003,Creator pilot intake workflow,Create structured creator campaign intake and status workflow,P1,todo,Growth + Ops,1,Week 5,"growth,creator,ops,workflow","Creator roster status and campaign links tracked in one place"
+KORA-W5-004,Channel to first-gift conversion report,Report conversion by source channel from visit to first gift,P0,todo,Data,0.75,Week 5,"data,growth,conversion,reporting","Report shows conversion by channel from visit to first gift"
+KORA-W5-005,Share-link UTM propagation,Preserve and propagate UTM params into conversion events,P1,todo,Frontend + Backend,0.75,Week 5,"utm,frontend,backend,attribution","UTM params are preserved and tied to conversion events"
+KORA-W5-006,Gift page referral context module,Display optional campaign source context on gift page,P2,todo,Frontend,0.75,Week 5,"frontend,gift-page,referral,ux","Gift page can display optional campaign/source context cleanly"
+KORA-W5-007,Weekly growth experiment template,Standardize hypothesis and experiment logging process,P1,todo,Growth,0.5,Week 5,"growth,process,experiments","Team uses one standardized template for hypotheses and outcomes"
+KORA-W5-008,Week 5 channel scorecard,Publish weekly channel scorecard with spend and outcome metrics,P1,todo,Growth + Data,0.5,Week 5,"growth,data,scorecard,reporting","Scorecard lists top channels with spend conversion and AFRG impact"

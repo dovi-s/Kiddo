@@ -1,7 +1,879 @@
-import { getStripeSync, getUncachableStripeClient } from './stripeClient';
+import Stripe from 'stripe';
+import { getStripeSecretKey, getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
+import { db } from './db';
+import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships } from '@shared/schema';
+import { eq, sql } from 'drizzle-orm';
+import { captureError, sendOpsAlert } from './ops';
+import { recordEvent } from './analytics';
+import fs from 'fs/promises';
+import path from 'path';
+import { DEFAULT_CUSTOM_ALLOCATIONS, getFundCustomAllocations } from './fundStrategyConfig';
+import {
+  fireMoneyCrossMilestones,
+  fireReturningGifterMilestone,
+  fireUniqueGiftersMilestone,
+  fireFirstVoiceMilestone,
+  fireFirstPhotoMilestone,
+} from './milestones';
+import { getMarketQuote, ADMIN_ASSET_UNIVERSE } from './marketQuotes';
+import { publishToUser } from './realtime';
 
 export class WebhookHandlers {
+  private static readonly INVESTMENT_CONFIG_PATH = path.join(process.cwd(), '.local', 'investment-config.json');
+  private static readonly LARGE_GIFT_HOLD_THRESHOLD = 1000;
+
+  private static readonly DEFAULT_AUTO_STRATEGIES: Record<string, { label: string; allocations: Record<string, number> }> = {
+    growth: {
+      label: 'Growth Mix',
+      allocations: { VTI: 0.50, VXUS: 0.25, BND: 0.15, VGT: 0.10 },
+    },
+    balanced: {
+      label: 'Balanced Mix',
+      allocations: { VTI: 0.35, VXUS: 0.15, BND: 0.35, VGT: 0.15 },
+    },
+    // For children approaching 18 — heavy bonds, capital preservation tilt.
+    conservative: {
+      label: 'Conservative Mix',
+      allocations: { VTI: 0.30, BND: 0.40, VXUS: 0.20, VGT: 0.10 },
+    },
+  };
+
+  private static readonly DEFAULT_UNIVERSE: Record<string, { name: string; source: 'auto_invest' | 'stock_pick' | 'both'; enabled: boolean }> = {
+    VTI:  { name: 'Vanguard Total Stock Market ETF',         source: 'auto_invest', enabled: true },
+    VXUS: { name: 'Vanguard Total International Stock ETF',  source: 'auto_invest', enabled: true },
+    BND:  { name: 'Vanguard Total Bond Market ETF',          source: 'auto_invest', enabled: true },
+    VGT:  { name: 'Vanguard Information Technology ETF',     source: 'auto_invest', enabled: true },
+    VUG:  { name: 'Vanguard Growth ETF',                     source: 'auto_invest', enabled: true },
+    VYM:  { name: 'Vanguard High Dividend Yield ETF',        source: 'auto_invest', enabled: true },
+    SCHD: { name: 'Schwab US Dividend Equity ETF',           source: 'auto_invest', enabled: true },
+    QQQ:  { name: 'Invesco QQQ Trust (Nasdaq 100)',          source: 'auto_invest', enabled: true },
+  };
+
+  private static readonly ALLOWED_VIDEO_HOSTS = ["youtube.com", "youtu.be", "vimeo.com", "loom.com"];
+
+  private static normalizeHttpUrl(value: unknown): string | null {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed.length > 2000) return null;
+    if (trimmed.startsWith("/uploads/")) return trimmed;
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+      return parsed.toString();
+    } catch {
+      return null;
+    }
+  }
+
+  private static normalizeVideoUrl(value: unknown): string | null {
+    const normalized = this.normalizeHttpUrl(value);
+    if (!normalized) return null;
+    if (normalized.startsWith("/uploads/")) return normalized;
+    if (normalized.startsWith("/")) return null;
+    const host = new URL(normalized).hostname.toLowerCase();
+    const allowed = this.ALLOWED_VIDEO_HOSTS.some((d) => host === d || host.endsWith(`.${d}`));
+    return allowed ? normalized : null;
+  }
+
+  private static async reconcileFundFromGifts(fundId?: string | null): Promise<void> {
+    if (!fundId) return;
+    const fund = await storage.getFund(fundId);
+    if (!fund) return;
+    const fundGifts = await storage.getGiftsByFund(fundId);
+
+    const pendingFromGifts = fundGifts
+      .filter((g) => g.status === 'pending' || g.status === 'processing')
+      .reduce((sum, g) => sum + parseFloat(g.netAmount || g.amount || '0'), 0);
+
+    const contributorCount = new Set(
+      fundGifts
+        .map((g) => (g.senderEmail || g.senderName || '').trim().toLowerCase())
+        .filter(Boolean)
+    ).size;
+
+    const updates: any = {
+      pendingBalance: pendingFromGifts.toFixed(2),
+      contributorCount,
+    };
+
+    // If real paid gifts exist, keep fund accessible in dashboard as active.
+    if (fund.status === 'draft' && fundGifts.length > 0) {
+      updates.status = 'active';
+    }
+
+    await storage.updateFund(fundId, updates);
+  }
+
+  private static shouldHoldGiftForHostDecision(metadata: any): boolean {
+    const coverageStatus = String(metadata?.coverageStatus || "uncovered").toLowerCase();
+    const hostPlan = String(metadata?.hostPlan || "free").toLowerCase();
+    const coverFees = String(metadata?.coverFees || "false").toLowerCase() === "true";
+    const amount = Number(metadata?.baseAmount || 0);
+    if (coverFees) return false;
+    if (!Number.isFinite(amount) || amount < this.LARGE_GIFT_HOLD_THRESHOLD) return false;
+    if (coverageStatus === "trial_active") return false;
+    return hostPlan === "free" && coverageStatus === "uncovered";
+  }
+
+  static async completeGiftPostPayment(giftId: string, metadata: any): Promise<void> {
+    const gift = await storage.getGift(giftId);
+    if (!gift) return;
+    const fund = await storage.getFund(gift.fundId);
+    if (!fund) return;
+
+    // Snapshot the fund's TOTAL value before the gift credits — used by
+    // money-cross milestones to detect threshold crossings on this update.
+    // Total = balance + pending + cash, since money in any of these
+    // counts toward the parent's "fund worth this much" reading.
+    const prevTotal =
+      parseFloat(fund.balance || '0') +
+      parseFloat(fund.pendingBalance || '0') +
+      parseFloat(String((fund as any).cashBalance || '0'));
+
+    try {
+      const nextPending = parseFloat(fund.pendingBalance || '0') + parseFloat(gift.netAmount || gift.amount || '0');
+      const nextContributors = Math.max(0, Number(fund.contributorCount || 0)) + 1;
+      await storage.updateFund(fund.id, {
+        pendingBalance: nextPending.toFixed(2),
+        contributorCount: nextContributors,
+      });
+    } catch (fundCreditError) {
+      console.error('[Webhook] Failed to credit pending balance for gift:', gift.id, fundCreditError);
+    }
+
+    await this.ensureFundPendingCoversPendingGifts(gift.fundId);
+    await this.reconcileFundFromGifts(gift.fundId);
+    await this.investGiftImmediatelyIfNeeded(gift.id);
+
+    // Update the gifter-notification subscriber record's per-gifter counts
+    // when the sender is opted in. The fund's aggregate contributorCount
+    // got bumped above; the matching subscriber record's contributionCount
+    // and totalContributed used to never increment, leaving the
+    // Settings → Notifications "Gifter subscribers" panel showing
+    // "0 gifts · $0" for every subscriber regardless of actual giving.
+    // Skip for parent self-contributions — those flow through the
+    // parent's own UI, not the gifter-notification path.
+    if (String(metadata?.isParentContribution || '').toLowerCase() !== 'true') {
+      try {
+        const { recordGifterGiftContribution } = await import("./gifterNotificationWorker");
+        await recordGifterGiftContribution(
+          gift.fundId,
+          gift.senderEmail,
+          parseFloat(gift.netAmount || gift.amount || "0"),
+          gift.createdAt ? new Date(gift.createdAt) : new Date(),
+        );
+      } catch (recordErr) {
+        console.warn("[Webhook] Failed to record gifter contribution:", recordErr);
+      }
+    }
+
+    const isParentContrib = String(metadata?.isParentContribution || '').toLowerCase() === 'true';
+    if (!isParentContrib) {
+      try {
+        await this.ensureMemoryEntryForGift(gift.id, this.normalizeVideoUrl(metadata?.videoUrl), metadata?.audioUrl || null);
+        console.log('[Webhook] Memory entry created for gift:', gift.id);
+      } catch (memoryError) {
+        console.error('[Webhook] Failed to create memory entry for gift:', gift.id, memoryError);
+      }
+    }
+
+    try {
+      const isParentContrib = String(metadata?.isParentContribution || '').toLowerCase() === 'true';
+      // Reconcile fields are passed through by the recurring worker (and any
+      // future one-time parent flow) so the History row can show payment
+      // method + receipt link inline. Empty strings collapse to null so the
+      // metadata stays clean for older rows that pre-date this enrichment.
+      const reconcileBrand = typeof metadata?.paymentMethodBrand === 'string' && metadata.paymentMethodBrand ? metadata.paymentMethodBrand : null;
+      const reconcileLast4 = typeof metadata?.paymentMethodLast4 === 'string' && metadata.paymentMethodLast4 ? metadata.paymentMethodLast4 : null;
+      const reconcileReceiptUrl = typeof metadata?.stripeReceiptUrl === 'string' && metadata.stripeReceiptUrl ? metadata.stripeReceiptUrl : null;
+      const reconcileDescriptor = typeof metadata?.descriptor === 'string' && metadata.descriptor ? metadata.descriptor : null;
+      await storage.createActivity({
+        userId: metadata?.fundUserId || metadata?.userId || null,
+        fundId: gift.fundId,
+        type: isParentContrib ? 'parent_contribution' : 'gift_received',
+        title: isParentContrib
+          ? `You contributed $${parseFloat(gift.amount || '0').toFixed(2)}`
+          : `Gift from ${gift.senderName}`,
+        description: isParentContrib
+          ? (gift.selectedTicker ? `Investing into ${String(gift.selectedTicker).toUpperCase()}` : 'Investing across the diversified mix')
+          : (gift.message ? `"${gift.message}"` : 'No note.'),
+        amount: gift.amount,
+        metadata: JSON.stringify({
+          giftId: gift.id,
+          ticker: gift.selectedTicker || null,
+          message: gift.message || null,
+          eventId: gift.eventId || null,
+          executionModel: (gift as any).executionModel || null,
+          senderEmail: gift.senderEmail || null,
+          isParentContribution: isParentContrib,
+          // Schedule link: prefer the gift's own column (set at creation
+          // for both worker and Contribute-Now flows) so the per-schedule
+          // history modal picks up every fire. Fall back to the metadata
+          // flag if the gift somehow didn't capture it.
+          parentContributionId: (gift as any).parentContributionId || metadata?.parentContributionId || null,
+          paymentMethodBrand: reconcileBrand,
+          paymentMethodLast4: reconcileLast4,
+          stripeReceiptUrl: reconcileReceiptUrl,
+          descriptor: reconcileDescriptor,
+        }),
+      });
+    } catch (activityError) {
+      console.error('[Webhook] Failed to create activity for gift:', gift.id, activityError);
+    }
+
+    if (gift.eventId) {
+      try {
+        await storage.incrementEventGiftStats(gift.eventId, parseFloat(gift.amount || '0'));
+      } catch (eventStatsError) {
+        console.error('[Webhook] Failed to increment event stats for gift:', gift.id, eventStatsError);
+      }
+    } else {
+      // No eventId means the gift came via the fund URL directly. Attribute to the permanent event.
+      try {
+        const fundEvents = await storage.getEventsByFund(gift.fundId);
+        const permanentEvent = fundEvents.find((e: any) => e.isPermanent);
+        if (permanentEvent) {
+          await storage.incrementEventGiftStats(permanentEvent.id, parseFloat(gift.amount || '0'));
+        }
+      } catch (permEventError) {
+        console.error('[Webhook] Failed to update permanent event stats for gift:', gift.id, permEventError);
+      }
+    }
+
+    try {
+      const existingThankYous = await storage.getThankYousByFund(gift.fundId);
+      const alreadyExists = existingThankYous.some((ty) => ty.giftId === gift.id);
+      if (!alreadyExists) {
+        const message = `Thank you ${gift.senderName} for your generous gift of $${parseFloat(gift.amount || '0').toFixed(2)} to ${fund?.name || 'the fund'}!`;
+        await storage.createThankYou({
+          fundId: gift.fundId,
+          giftId: gift.id,
+          senderName: gift.senderName,
+          senderEmail: gift.senderEmail || null,
+          message,
+          status: 'draft',
+        });
+      }
+    } catch (thankYouError) {
+      console.error('[Webhook] Error auto-generating thank-you:', thankYouError);
+    }
+
+    // Milestones engine — fire celebratory rows for emotional moments the
+    // raw transaction log doesn't capture. Each helper is best-effort and
+    // dedup-guarded internally, so re-running this method is idempotent.
+    // We re-fetch the fund AFTER all updates above to read the post-state
+    // total accurately. Skipped entirely for parent contributions on the
+    // returning-gifter / unique-gifters paths (those are about external
+    // community moments, not the parent's own money).
+    try {
+      const isParentContrib = String(metadata?.isParentContribution || '').toLowerCase() === 'true';
+      const settledFund = await storage.getFund(gift.fundId);
+      if (settledFund && (settledFund as any).userId) {
+        const ownerId = String((settledFund as any).userId);
+        const newTotal =
+          parseFloat(settledFund.balance || '0') +
+          parseFloat(settledFund.pendingBalance || '0') +
+          parseFloat(String((settledFund as any).cashBalance || '0'));
+        await fireMoneyCrossMilestones(gift.fundId, ownerId, prevTotal, newTotal);
+        if (!isParentContrib) {
+          if (gift.senderEmail) {
+            await fireReturningGifterMilestone(gift.fundId, ownerId, gift.senderEmail, gift.senderName || null);
+          }
+          await fireUniqueGiftersMilestone(gift.fundId, ownerId);
+        }
+        // First-X memory-media milestones (only when the gift carried a
+        // photo or audio that gets stamped into the Memory Book — covered
+        // by ensureMemoryEntryForGift above).
+        if (!isParentContrib) {
+          if (typeof metadata?.audioUrl === 'string' && metadata.audioUrl.trim()) {
+            await fireFirstVoiceMilestone(gift.fundId, ownerId);
+          }
+          // Photo URL lands via different metadata keys depending on the
+          // gift checkout path; check the conventional ones.
+          const photoUrlMaybe = metadata?.photoUrl || metadata?.photo_url || null;
+          if (typeof photoUrlMaybe === 'string' && photoUrlMaybe.trim()) {
+            await fireFirstPhotoMilestone(gift.fundId, ownerId);
+          }
+        }
+      }
+    } catch (milestoneError) {
+      console.warn('[Webhook] Milestones engine non-fatal failure:', milestoneError);
+    }
+
+    // Realtime nudge to any parent dashboard tabs the fund owner has open.
+    // The payload is a hint, not state — the client re-fetches the
+    // dashboard summary on receipt. See server/realtime.ts. Both the
+    // Stripe webhook path and the recurring-contribution worker funnel
+    // through this method, so one publish covers both arrival sources.
+    // Failures here must NEVER mask the gift completion; swallow them.
+    try {
+      const ownerIdForRealtime = String((fund as any).userId || '');
+      if (ownerIdForRealtime) {
+        publishToUser(ownerIdForRealtime, {
+          type: 'gift.arrived',
+          fundId: fund.id,
+          giftId: gift.id,
+        });
+      }
+    } catch (realtimeError) {
+      console.warn('[Webhook] Realtime publish failed (non-fatal):', realtimeError);
+    }
+  }
+
+  private static getAutoInvestBasket() {
+    return [
+      { ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', weight: 0.50 },
+      { ticker: 'VXUS', name: 'Vanguard Total International Stock ETF', weight: 0.25 },
+      { ticker: 'BND', name: 'Vanguard Total Bond Market ETF', weight: 0.15 },
+      { ticker: 'VGT', name: 'Vanguard Information Technology ETF', weight: 0.10 },
+    ];
+  }
+
+  private static normalizeAllocations(raw: Record<string, unknown>): Record<string, number> {
+    const allocations: Record<string, number> = {};
+    let total = 0;
+    for (const [tickerRaw, weightRaw] of Object.entries(raw || {})) {
+      const ticker = String(tickerRaw || '').trim().toUpperCase();
+      const weight = Number(weightRaw);
+      if (!ticker || !Number.isFinite(weight) || weight <= 0) continue;
+      allocations[ticker] = weight;
+      total += weight;
+    }
+    if (total <= 0) return {};
+    for (const ticker of Object.keys(allocations)) {
+      allocations[ticker] = allocations[ticker] / total;
+    }
+    return allocations;
+  }
+
+  // Tax-smart contribution rebalancing.
+  //
+  // Acorns rebalances by selling — but in a UTMA each sale is a taxable event for the
+  // child. Instead, we let the portfolio drift toward target by weighting NEW contributions
+  // toward whichever strategy tickers are currently UNDER their target weight.
+  //
+  // Inputs:
+  //   targetBasket   — the strategy's target weights (sum to 1, decimals)
+  //   fundId         — to read current holdings
+  //   newAmount      — the dollar amount of this contribution
+  //
+  // Output: per-ticker dollar allocations summing to newAmount.
+  private static async computeContributionAllocations(
+    targetBasket: Array<{ ticker: string; name: string; weight: number }>,
+    fundId: string,
+    newAmount: number,
+  ): Promise<Array<{ ticker: string; name: string; weight: number; dollars: number }>> {
+    if (!targetBasket.length || newAmount <= 0) return [];
+
+    const holdings = await storage.getHoldingsByFund(fundId);
+    const currentByTicker = new Map<string, number>();
+    let currentTotal = 0;
+    for (const asset of targetBasket) {
+      const h = holdings.find((x: any) => String(x.ticker || "").toUpperCase() === asset.ticker.toUpperCase());
+      const v = h ? parseFloat(String((h as any).currentValue || (h as any).cost_basis || 0)) : 0;
+      currentByTicker.set(asset.ticker.toUpperCase(), Number.isFinite(v) ? v : 0);
+      currentTotal += Number.isFinite(v) ? v : 0;
+    }
+
+    // No managed-mix history yet: just apply target weights.
+    if (currentTotal <= 0.01) {
+      return targetBasket.map(a => ({ ticker: a.ticker, name: a.name, weight: a.weight, dollars: newAmount * a.weight }));
+    }
+
+    // Compute under-weight gap per ticker, projected against the post-contribution total.
+    const totalAfter = currentTotal + newAmount;
+    const gaps = targetBasket.map(a => {
+      const targetDollars = totalAfter * a.weight;
+      const currentDollars = currentByTicker.get(a.ticker.toUpperCase()) || 0;
+      const gap = Math.max(0, targetDollars - currentDollars);
+      return { asset: a, gap };
+    });
+    const totalGap = gaps.reduce((s, g) => s + g.gap, 0);
+
+    // Edge case: nothing under-weight (everything overshoots target). Should be rare.
+    // Fall back to plain target weights so we always invest something.
+    if (totalGap <= 0.01) {
+      return targetBasket.map(a => ({ ticker: a.ticker, name: a.name, weight: a.weight, dollars: newAmount * a.weight }));
+    }
+
+    return gaps.map(g => ({
+      ticker: g.asset.ticker,
+      name: g.asset.name,
+      weight: g.asset.weight,
+      dollars: newAmount * (g.gap / totalGap),
+    }));
+  }
+
+  private static async getAutoInvestBasketFromConfig(strategy?: string | null, fundId?: string | null) {
+    try {
+      const raw = await fs.readFile(this.INVESTMENT_CONFIG_PATH, 'utf8');
+      const parsed = JSON.parse(raw || '{}') as any;
+      const universeRaw = (parsed?.universe && typeof parsed.universe === 'object') ? parsed.universe : {};
+      const strategiesRaw = (parsed?.autoStrategies && typeof parsed.autoStrategies === 'object') ? parsed.autoStrategies : {};
+
+      const universe: Record<string, { name: string; source: 'auto_invest' | 'stock_pick' | 'both'; enabled: boolean }> = { ...this.DEFAULT_UNIVERSE };
+      for (const [tickerRaw, rowRaw] of Object.entries(universeRaw)) {
+        const ticker = String(tickerRaw || '').trim().toUpperCase();
+        if (!ticker) continue;
+        const row: any = rowRaw || {};
+        const source = row.source === 'auto_invest' || row.source === 'stock_pick' || row.source === 'both'
+          ? row.source
+          : 'stock_pick';
+        universe[ticker] = {
+          name: String(row.name || ticker),
+          source,
+          enabled: row.enabled !== false,
+        };
+      }
+
+      const normalizedStrategies: Record<string, { label: string; allocations: Record<string, number> }> = {};
+      for (const [keyRaw, stratRaw] of Object.entries(strategiesRaw)) {
+        const key = String(keyRaw || '').trim().toLowerCase();
+        if (!key) continue;
+        const strat: any = stratRaw || {};
+        const allocations = this.normalizeAllocations((strat.allocations && typeof strat.allocations === 'object') ? strat.allocations : {});
+        if (Object.keys(allocations).length === 0) continue;
+        normalizedStrategies[key] = {
+          label: String(strat.label || key),
+          allocations,
+        };
+      }
+      const strategies = Object.keys(normalizedStrategies).length > 0 ? normalizedStrategies : this.DEFAULT_AUTO_STRATEGIES;
+      const requested = String(strategy || '').trim().toLowerCase();
+      const allocations = requested === "custom" && fundId
+        ? ((await getFundCustomAllocations(fundId)) || DEFAULT_CUSTOM_ALLOCATIONS)
+        : ((strategies[requested] || strategies.balanced || strategies.growth || Object.values(strategies)[0])?.allocations || {});
+      const rows = Object.entries(allocations)
+        .map(([ticker, weight]) => {
+          const meta = universe[ticker];
+          const enabled = meta?.enabled !== false;
+          const source = meta?.source || 'stock_pick';
+          const allowedForAuto = source === 'auto_invest' || source === 'both';
+          if (!enabled || !allowedForAuto || Number(weight) <= 0) return null;
+          return {
+            ticker,
+            name: meta?.name || ticker,
+            weight: Number(weight),
+          };
+        })
+        .filter((x): x is { ticker: string; name: string; weight: number } => Boolean(x));
+
+      const total = rows.reduce((sum, r) => sum + r.weight, 0);
+      if (total <= 0) return this.getAutoInvestBasket();
+      return rows.map((r) => ({ ...r, weight: r.weight / total }));
+    } catch {
+      return this.getAutoInvestBasket();
+    }
+  }
+
+  private static async investGiftImmediatelyIfNeeded(giftId: string): Promise<void> {
+    const gift = await storage.getGift(giftId);
+    if (!gift) return;
+    if (gift.status === 'invested') return;
+    if (gift.status === 'host_hold') return;
+
+    const executionRaw = String(gift.executionModel || '').toLowerCase();
+    const isCash = executionRaw === 'cash';
+    const isPick = !isCash && executionRaw.includes('pick') && !!gift.selectedTicker;
+    // isAuto when neither cash nor pick — that's the legacy default behavior
+    // (managed-strategy auto-allocation). isCash short-circuits both branches
+    // so the cash-park fallback below handles it cleanly.
+    const isAuto = !isCash && !isPick;
+
+    const fund = await storage.getFund(gift.fundId);
+    if (!fund) return;
+
+    const investAmount = parseFloat(gift.netAmount || gift.amount || '0');
+    if (investAmount <= 0) return;
+
+    // Track which assets were invested so activity can describe them precisely
+    let investedPositions: Array<{ ticker: string; name: string; shares: number; price: number }> = [];
+    let pickSharesAcquired: number | null = null;
+    let pickPriceAtPurchase: number | null = null;
+
+    if (isPick) {
+      const ticker = String(gift.selectedTicker || '').toUpperCase();
+      // No valid ticker on a pick gift — let it fall through to the post-loop check,
+      // which will park the money in cashBalance instead of leaving it stranded in
+      // pendingBalance with no resolution path.
+      if (!ticker) {
+        // intentionally skip the pick branch; investedPositions stays empty
+      } else {
+      const quote = await getMarketQuote(ticker);
+      const price = quote?.price || 100;
+      const sharesBought = investAmount / price;
+      pickSharesAcquired = sharesBought;
+      pickPriceAtPurchase = price;
+
+      const existingHolding = await storage.getHoldingByFundAndTicker(fund.id, ticker);
+      if (existingHolding) {
+        const nextShares = parseFloat(existingHolding.shares || '0') + sharesBought;
+        const nextCostBasis = parseFloat(existingHolding.costBasis || '0') + investAmount;
+        const nextCurrentValue = parseFloat(existingHolding.currentValue || '0') + investAmount;
+        await storage.updateHolding(existingHolding.id, {
+          shares: nextShares.toFixed(6),
+          costBasis: nextCostBasis.toFixed(2),
+          currentValue: nextCurrentValue.toFixed(2),
+          gain: (nextCurrentValue - nextCostBasis).toFixed(2),
+        });
+      } else {
+        // Use the proper brand name from the asset universe so the dashboard
+        // doesn't end up showing "AAPL · AAPL" duplicated. Fall back to the
+        // ticker as a last resort.
+        const brandName = ADMIN_ASSET_UNIVERSE[ticker]?.name || ticker;
+        await storage.createHolding({
+          fundId: fund.id,
+          ticker,
+          name: brandName,
+          shares: sharesBought.toFixed(6),
+          costBasis: investAmount.toFixed(2),
+          currentValue: investAmount.toFixed(2),
+          gain: '0.00',
+        });
+      }
+      // Record the precise allocation: this gift fully funded this ticker.
+      // Used by the holding detail sheet for exact contributor attribution.
+      await storage.createGiftAllocation({
+        giftId: gift.id,
+        fundId: fund.id,
+        ticker,
+        costBasis: investAmount.toFixed(2),
+        shares: sharesBought.toFixed(6),
+        source: "pick",
+      });
+      investedPositions = [{ ticker, name: ticker, shares: sharesBought, price }];
+      }
+    } else if (isAuto) {
+      const strategyKey = String((fund as any).investmentStrategy || (fund as any).strategy || "growth").toLowerCase();
+      const autoBasket = await this.getAutoInvestBasketFromConfig(strategyKey, fund.id);
+
+      // Contribution-only rebalancing: instead of mechanically applying the strategy
+      // weights to this single contribution, we bias the new dollars toward whichever
+      // strategy tickers are currently UNDER target. This way the portfolio drifts back
+      // to the target allocation over time WITHOUT triggering taxable sells in the UTMA.
+      // Falls back to plain target weights when the basket is brand-new (no holdings yet)
+      // or when nothing is under-weight.
+      const allocations = await this.computeContributionAllocations(autoBasket, fund.id, investAmount);
+
+      for (const allocation of allocations) {
+        const portion = allocation.dollars;
+        if (portion < 0.01) continue;
+        const asset = { ticker: allocation.ticker, name: allocation.name, weight: allocation.weight };
+        const quote = await getMarketQuote(asset.ticker);
+        const price = quote?.price || 100;
+        const sharesBought = portion / price;
+        const existingHolding = await storage.getHoldingByFundAndTicker(fund.id, asset.ticker);
+        if (existingHolding) {
+          const nextShares = parseFloat(existingHolding.shares || '0') + sharesBought;
+          const nextCostBasis = parseFloat(existingHolding.costBasis || '0') + portion;
+          const nextCurrentValue = parseFloat(existingHolding.currentValue || '0') + portion;
+          await storage.updateHolding(existingHolding.id, {
+            shares: nextShares.toFixed(6),
+            costBasis: nextCostBasis.toFixed(2),
+            currentValue: nextCurrentValue.toFixed(2),
+            gain: (nextCurrentValue - nextCostBasis).toFixed(2),
+          });
+        } else {
+          await storage.createHolding({
+            fundId: fund.id,
+            ticker: asset.ticker,
+            name: asset.name,
+            shares: sharesBought.toFixed(6),
+            costBasis: portion.toFixed(2),
+            currentValue: portion.toFixed(2),
+            gain: '0.00',
+          });
+        }
+        // Record the slice this gift contributed to this managed-mix ticker.
+        await storage.createGiftAllocation({
+          giftId: gift.id,
+          fundId: fund.id,
+          ticker: asset.ticker,
+          costBasis: portion.toFixed(2),
+          shares: sharesBought.toFixed(6),
+          source: "auto",
+        });
+        investedPositions.push({ ticker: asset.ticker, name: asset.name, shares: sharesBought, price });
+      }
+    }
+
+    const currentPending = parseFloat(fund.pendingBalance || '0');
+    const currentBalance = parseFloat(fund.balance || '0');
+    const currentCash = parseFloat(String((fund as any).cashBalance || '0'));
+    const nextPending = Math.max(0, currentPending - investAmount);
+
+    // Cash branch — three sources land here:
+    //   1. Explicit cash mode (parent chose "Hold as cash" in the one-time
+    //      flow; reason = 'explicit_cash')
+    //   2. Pick gift with a missing/invalid ticker (reason = 'pick_failed')
+    //   3. Auto allocation that produced zero positions — empty strategy
+    //      basket, disabled universe, custom mix with no rows
+    //      (reason = 'empty_basket')
+    // All three park the money in cashBalance instead of inflating `balance`
+    // (which would desync from the holdings sum). Mark the gift `invested`
+    // so it still counts toward volume/contributor totals; activity copy
+    // distinguishes the explicit-choice case from the fallback cases so
+    // the parent isn't told "we couldn't allocate" when they specifically
+    // asked us not to.
+    if (isCash || investedPositions.length === 0) {
+      await storage.updateFund(fund.id, {
+        pendingBalance: nextPending.toFixed(2),
+        cashBalance: (currentCash + investAmount).toFixed(2),
+      });
+      await storage.updateGift(gift.id, {
+        status: 'invested',
+        investedAt: new Date(),
+      });
+      const reason = isCash ? 'explicit_cash' : (isPick ? 'pick_failed' : 'empty_basket');
+      const title = isCash
+        ? 'Held as cash'
+        : 'Gift received — held as cash';
+      const description = isCash
+        ? `$${investAmount.toFixed(2)} added to cash. Invest from the dashboard whenever you're ready.`
+        : `$${investAmount.toFixed(2)} added to cash. Invest from the dashboard when ready.`;
+      await storage.createActivity({
+        userId: fund.userId,
+        fundId: fund.id,
+        type: 'gift_received_cash',
+        title,
+        description,
+        amount: investAmount.toFixed(2),
+        metadata: JSON.stringify({
+          giftId: gift.id,
+          reason,
+          executionModel: (gift as any).executionModel || null,
+          selectedTicker: (gift as any).selectedTicker || null,
+        }),
+      });
+      recordEvent({
+        name: "gift_completed",
+        fundId: fund.id,
+        source: "webhook",
+        props: {
+          amount: investAmount,
+          executionModel: gift.executionModel || null,
+          parked: "cash",
+          reason,
+          isParentContribution: !!(gift as any).parentContributionId,
+        },
+      });
+      return;
+    }
+
+    const nextBalance = currentBalance + investAmount;
+
+    await storage.updateFund(fund.id, {
+      pendingBalance: nextPending.toFixed(2),
+      balance: nextBalance.toFixed(2),
+    });
+
+    const isSinglePosition = investedPositions.length === 1;
+    const singlePos = isSinglePosition ? investedPositions[0] : null;
+    // For single-position auto investments, record shares/price so Memory Book can show them
+    const finalShares = pickSharesAcquired ?? (singlePos ? singlePos.shares : null);
+    const finalPrice = pickPriceAtPurchase ?? (singlePos ? singlePos.price : null);
+    const finalTicker = (gift as any).selectedTicker ?? (singlePos ? singlePos.ticker : null);
+
+    await storage.updateGift(gift.id, {
+      status: 'invested',
+      investedAt: new Date(),
+      ...(finalShares !== null ? { sharesAcquired: finalShares.toFixed(6) } : {}),
+      ...(finalPrice !== null ? { priceAtPurchase: finalPrice.toFixed(4) } : {}),
+      ...(finalTicker && !(gift as any).selectedTicker ? { selectedTicker: finalTicker } : {}),
+    });
+
+    const positionLine = isSinglePosition
+      ? `${investedPositions[0].name} (${investedPositions[0].ticker})`
+      : investedPositions.map(p => p.ticker).join(' · ');
+    await storage.createActivity({
+      userId: fund.userId,
+      fundId: fund.id,
+      type: 'gift_invested',
+      title: isSinglePosition
+        ? `Invested in ${investedPositions[0].name}`
+        // Locked copy: drop the "Auto-" prefix. The parent doesn't need
+        // to know whether the strategy allocator or a single pick fired
+        // — they just need to know the gift settled across N positions.
+        : `Invested across ${investedPositions.length} positions`,
+      description: `$${investAmount.toFixed(2)} into ${positionLine}`,
+      amount: investAmount.toFixed(2),
+      metadata: JSON.stringify({
+        giftId: gift.id,
+        tickers: investedPositions.map(p => p.ticker),
+        ticker: isSinglePosition ? (investedPositions[0]?.ticker ?? null) : null,
+        message: gift.message || null,
+        eventId: gift.eventId || null,
+        executionModel: (gift as any).executionModel || null,
+        // Carry the schedule link onto the invest row too — both rows
+        // (parent_contribution and gift_invested) need it so the modal's
+        // schedule filter catches the full lifecycle.
+        parentContributionId: (gift as any).parentContributionId || null,
+      }),
+    });
+
+    recordEvent({
+      name: "gift_completed",
+      fundId: fund.id,
+      source: "webhook",
+      props: {
+        amount: investAmount,
+        executionModel: gift.executionModel || null,
+        parked: "invested",
+        positionCount: investedPositions.length,
+        ticker: isSinglePosition ? (investedPositions[0]?.ticker ?? null) : null,
+        isParentContribution: !!(gift as any).parentContributionId,
+      },
+    });
+  }
+
+  private static async ensureMemoryEntryForGift(giftId: string, fallbackVideoUrl?: string | null, fallbackAudioUrl?: string | null): Promise<void> {
+    const gift = await storage.getGift(giftId);
+    if (!gift) return;
+
+    const [existingEntry] = await db
+      .select({ id: memoryEntries.id })
+      .from(memoryEntries)
+      .where(eq(memoryEntries.giftId, gift.id));
+    if (existingEntry) return;
+
+    // Sanitize the message before persisting it as memory_entry content.
+    // Three categories of input must NEVER reach Emma's eye at 18:
+    //   1) Test-pattern messages from dev/QA ("test for recurring",
+    //      "tstgin with recurring", "qqqqq…")
+    //   2) Legacy auto-invest boilerplate ("Auto-invest contribution
+    //      to {fund}") — system-generated, not a love letter
+    //   3) Empty or whitespace-only messages
+    const rawMessage = String(gift.message || "").trim();
+    const isTestMessage = /^(test|testing|tstgin|tstng|qqqqq|tester)\b/i.test(rawMessage);
+    const isBoilerplate = /^auto-invest contribution to /i.test(rawMessage);
+    const cleanMessage = (rawMessage && !isTestMessage && !isBoilerplate) ? rawMessage : null;
+
+    // Read media from the gift row first (canonical post-migration 0010),
+    // fall back to metadata for legacy gifts created before the columns
+    // landed.
+    const resolvedVideoUrl = (gift as any).videoUrl || fallbackVideoUrl || null;
+    const resolvedAudioUrl = (gift as any).audioUrl || fallbackAudioUrl || null;
+    const resolvedPhotoUrl = gift.photoUrl || null;
+
+    // Memory Book inversion rule (project_memory_book_inversion): the
+    // note IS the entry, the transaction is metadata. If there is no
+    // human note AND no photo / video / voice attached, this gift does
+    // NOT belong in the Memory Book — the gift still exists in the
+    // gift list, but the Book is reserved for moments with real human
+    // content. Skipping the write here prevents a Memory Book full of
+    // "Someone who loves Emma sent a gift of $50.00" template entries
+    // that read like a bank statement when Emma opens it at 18.
+    //
+    // Auto-invest from the parent's recurring schedule is the same: no
+    // note + no media = no entry. The recurring "stamp once" rule (per
+    // the same memory) is handled separately at the recurring-worker
+    // first-cycle path, which writes ONE intentional parent note.
+    const hasRealContent = Boolean(cleanMessage) || Boolean(resolvedPhotoUrl) || Boolean(resolvedVideoUrl) || Boolean(resolvedAudioUrl);
+    if (!hasRealContent) {
+      return;
+    }
+
+    // Per-fund moderation gate. OFF by default everywhere. When the parent
+    // has flipped fund.gifterMemoryModeration on, gifter-submitted entries
+    // land as 'pending_review' so they're hidden from Memory Book + KidView
+    // until the parent approves. Parent-authored entries don't take this
+    // path — they go through the parent memory routes and are always
+    // 'published'. Best-effort: if the fund lookup fails, default to
+    // 'published' so a transient DB hiccup never silently quarantines
+    // grandma's voice note.
+    let entryStatus: 'published' | 'pending_review' = 'published';
+    try {
+      const fund = await storage.getFund(gift.fundId);
+      if (fund && (fund as any).gifterMemoryModeration === true) {
+        entryStatus = 'pending_review';
+      }
+    } catch {
+      // Default to published on lookup failure — the alternative is silent
+      // quarantine, which is exactly the broken-promise scenario this
+      // codebase is designed to avoid.
+    }
+
+    await storage.createMemoryEntry({
+      fundId: gift.fundId,
+      giftId: gift.id,
+      type: 'gift_message',
+      content: cleanMessage,
+      authorName: gift.senderName,
+      photoUrl: resolvedPhotoUrl,
+      videoUrl: resolvedVideoUrl,
+      audioUrl: resolvedAudioUrl,
+      status: entryStatus,
+    });
+  }
+
+  static async finalizeHeldGiftRelease(
+    giftId: string,
+    options?: { releasedByUserId?: string | null; releaseReason?: string | null },
+  ): Promise<void> {
+    const gift = await storage.getGift(giftId);
+    if (!gift) return;
+    const fund = await storage.getFund(gift.fundId);
+    if (!fund) return;
+
+    await this.completeGiftPostPayment(gift.id, {
+      fundUserId: fund.userId,
+    });
+
+    await storage.createActivity({
+      userId: options?.releasedByUserId || fund.userId,
+      fundId: fund.id,
+      type: "large_gift_hold_released",
+      title: "Large gift released",
+      description:
+        options?.releaseReason === "upgraded_release"
+          ? "A held large gift was released after coverage was upgraded."
+          : "A held large gift was released using the current free-plan fee.",
+      amount: gift.amount,
+    });
+  }
+
+  static async ensureFundPendingCoversPendingGifts(fundId?: string | null): Promise<void> {
+    if (!fundId) return;
+    try {
+      const [fund, fundGifts] = await Promise.all([
+        storage.getFund(fundId),
+        storage.getGiftsByFund(fundId),
+      ]);
+      if (!fund) return;
+
+      const pendingFromGifts = fundGifts
+        .filter((g) => g.status === 'pending' || g.status === 'processing')
+        .reduce((sum, g) => sum + parseFloat(g.netAmount || g.amount || '0'), 0);
+
+      const currentPending = parseFloat(fund.pendingBalance || '0');
+      if (pendingFromGifts > currentPending + 0.0001) {
+        await storage.updateFund(fundId, {
+          pendingBalance: pendingFromGifts.toFixed(2),
+        });
+      }
+      await this.reconcileFundFromGifts(fundId);
+    } catch (err) {
+      console.error('[Webhook] Failed pending-balance reconciliation for fund:', fundId, err);
+    }
+  }
+
+  static async selfHealPendingGifts(fundId: string): Promise<void> {
+    const fundGifts = await storage.getGiftsByFund(fundId);
+    const stuck = fundGifts.filter((g) => {
+      const s = String(g.status || '').toLowerCase();
+      return s === 'pending' || s === 'processing';
+    });
+    for (const g of stuck) {
+      try {
+        await this.investGiftImmediatelyIfNeeded(g.id);
+      } catch {}
+    }
+    if (stuck.length > 0) {
+      try { await this.reconcileFundFromGifts(fundId); } catch {}
+    }
+  }
+
   static async processWebhook(payload: Buffer, signature: string): Promise<void> {
     if (!Buffer.isBuffer(payload)) {
       throw new Error(
@@ -12,30 +884,156 @@ export class WebhookHandlers {
       );
     }
 
-    const sync = await getStripeSync();
-    await sync.processWebhook(payload, signature);
+    const secret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!secret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET must be set for webhook verification.');
+    }
+
+    const stripeSecretKey = await getStripeSecretKey();
+    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-11-17.clover' });
+    const event = stripe.webhooks.constructEvent(payload, signature, secret);
+    const inserted = await db.insert(webhookEvents).values({
+      stripeEventId: event.id,
+      eventType: event.type,
+      status: 'processing',
+      attempts: 1,
+    }).onConflictDoNothing({ target: webhookEvents.stripeEventId }).returning();
+
+    if (inserted.length === 0) {
+      const [existing] = await db
+        .select()
+        .from(webhookEvents)
+        .where(eq(webhookEvents.stripeEventId, event.id));
+      if (existing?.status === 'processed') {
+        console.log('[Webhook] Duplicate processed event ignored:', event.id);
+        return;
+      }
+      await db.update(webhookEvents).set({
+        status: 'processing',
+        error: null,
+        attempts: sql`${webhookEvents.attempts} + 1`,
+      }).where(eq(webhookEvents.stripeEventId, event.id));
+    }
+
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed':
+          await this.handleCheckoutCompleted(event.data.object as any);
+          break;
+        case 'customer.subscription.updated':
+          await this.handleSubscriptionUpdated(event.data.object as any);
+          break;
+        case 'customer.subscription.deleted':
+          await this.handleSubscriptionDeleted(event.data.object as any);
+          break;
+        case 'customer.deleted':
+          await this.handleCustomerDeleted(event.data.object as any);
+          break;
+        case 'payment_intent.succeeded':
+          await this.handlePaymentIntentSucceeded(event.data.object as any);
+          break;
+        case 'payment_intent.payment_failed':
+          await this.handlePaymentIntentFailed(event.data.object as any);
+          break;
+        case 'charge.refunded':
+          await this.handleChargeRefunded(event.data.object as any);
+          break;
+        case 'invoice.paid':
+          await this.handleInvoicePaid(event.data.object as any);
+          break;
+        case 'invoice.payment_failed':
+          await this.handleInvoicePaymentFailed(event.data.object as any);
+          break;
+        default:
+          console.log('[Webhook] Ignored event type:', event.type);
+      }
+
+      await db.update(webhookEvents).set({
+        status: 'processed',
+        processedAt: new Date(),
+        error: null,
+      }).where(eq(webhookEvents.stripeEventId, event.id));
+    } catch (err: any) {
+      await db.update(webhookEvents).set({
+        status: 'failed',
+        error: err?.message?.slice(0, 1000) || 'unknown webhook error',
+      }).where(eq(webhookEvents.stripeEventId, event.id));
+      await captureError(err, {
+        area: "webhook-handler",
+        eventId: event.id,
+        eventType: event.type,
+      });
+      await sendOpsAlert(
+        {
+          title: "Webhook event failed",
+          severity: "critical",
+          source: "webhook-handler",
+          details: { eventId: event.id, eventType: event.type, message: err?.message || "unknown" },
+        },
+        `webhook-event-failed:${event.id}`,
+      );
+      throw err;
+    }
   }
 
   static async handleCheckoutCompleted(session: any): Promise<void> {
     const metadata = session.metadata || {};
     const type = metadata.type;
 
+    const [existingTx] = await db
+      .select({ id: transactions.id })
+      .from(transactions)
+      .where(eq(transactions.stripeCheckoutSessionId, session.id));
+    if (existingTx) {
+      console.log('[Webhook] Checkout session already processed:', session.id);
+      if (type === 'gift') {
+        const paymentIntentId = typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent?.id;
+        if (paymentIntentId) {
+          const gift = await storage.getGiftByPaymentIntent(paymentIntentId);
+          if (gift) {
+            if (String(gift.status || "").toLowerCase() !== "host_hold") {
+              await this.investGiftImmediatelyIfNeeded(gift.id);
+              await this.reconcileFundFromGifts(gift.fundId);
+            }
+          }
+        }
+        await this.ensureFundPendingCoversPendingGifts(metadata.fundId || null);
+      }
+      return;
+    }
+
     console.log('[Webhook] checkout.session.completed:', { type, sessionId: session.id });
 
     if (type === 'gift') {
       await this.handleGiftPayment(session);
+    } else if (type === 'starter_plan') {
+      await this.handleStarterPlanPurchase(session);
     } else if (type === 'family_plan') {
       await this.handleFamilyPlanPurchase(session);
+    } else if (type === 'legacy_plan') {
+      await this.handleLegacyPlanPurchase(session);
     } else if (type === 'event_pass') {
       await this.handleEventPassPurchase(session);
     }
 
+    const paymentIntentId = typeof session.payment_intent === 'string'
+      ? session.payment_intent
+      : session.payment_intent?.id;
+    let giftId: string | null = null;
+    if (type === 'gift' && paymentIntentId) {
+      const linkedGift = await storage.getGiftByPaymentIntent(paymentIntentId);
+      giftId = linkedGift?.id || null;
+    }
+
     await storage.createTransaction({
-      userId: metadata.userId || null,
+      userId: metadata.fundUserId || metadata.userId || null,
       type: type || 'unknown',
       stripeCheckoutSessionId: session.id,
-      stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
+      stripePaymentIntentId: paymentIntentId,
       stripeCustomerId: typeof session.customer === 'string' ? session.customer : session.customer?.id,
+      giftId,
       amount: ((session.amount_total || 0) / 100).toString(),
       currency: session.currency || 'usd',
       status: 'completed',
@@ -49,83 +1047,202 @@ export class WebhookHandlers {
 
   static async handleGiftPayment(session: any): Promise<void> {
     const metadata = session.metadata || {};
+    const rawExecutionModel = String(metadata.executionModel || '').toLowerCase();
+    const normalizedExecutionModel =
+      rawExecutionModel.includes('pick')
+        ? 'pick'
+        : rawExecutionModel.includes('family')
+          ? 'family'
+          : 'auto';
     
+    const paymentIntentId = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id;
+    if (!paymentIntentId) {
+      throw new Error('Gift checkout session missing payment_intent id');
+    }
+
+    const existingGift = await storage.getGiftByPaymentIntent(paymentIntentId);
+    if (existingGift) {
+      console.log('[Webhook] Gift already exists for payment intent:', paymentIntentId);
+      if (String(existingGift.status || "").toLowerCase() !== "host_hold") {
+        await this.investGiftImmediatelyIfNeeded(existingGift.id);
+        // Parent contributions never get a Memory Book entry from the gift
+        // itself — the parent's REAL note (set on a recurring schedule, or
+        // explicitly attached to a one-time contribution) is the only entry
+        // that should land in the Book. Boilerplate "Auto-invest contribution
+        // to Emma's Fund" messages don't pollute Emma's view at 18.
+        // Per `feedback_memory_book_inversion`: note IS the entry, transaction
+        // is metadata. The same guard exists in completeGiftPostPayment
+        // line 148; mirroring it here closes the early-return-for-existing-
+        // gift path that was bypassing it.
+        const isParentContrib = String(metadata?.isParentContribution || '').toLowerCase() === 'true';
+        if (!isParentContrib) {
+          await this.ensureMemoryEntryForGift(existingGift.id, this.normalizeVideoUrl(metadata.videoUrl), metadata?.audioUrl || null);
+        }
+        await this.ensureFundPendingCoversPendingGifts(existingGift.fundId);
+      }
+      return;
+    }
+
+    // Explicit anonymous flag from Stripe metadata. The boolean ride-
+    // through is the truth source for downstream display and public
+    // social-proof filtering. The senderName fallback below is for
+    // the success-page render only — the gift IS anonymous if the
+    // gifter checked the toggle, regardless of what name string lands.
+    const isAnonymous = String(metadata.isAnonymous || '').toLowerCase() === 'true';
+
+    // Anonymous gates ALL three media types — see
+    // feedback_anonymous_as_explicit_flag.md. Belt + suspenders: the
+    // gift-checkout endpoint already nulls these server-side when the
+    // anonymous toggle is on, but mirroring the rule here means a stale
+    // checkout session created before the toggle was added still can't
+    // sneak media into the Memory Book.
+    const giftPhotoUrl = isAnonymous ? null : (this.normalizeHttpUrl(metadata.photoUrl) || null);
+    const giftVideoUrl = isAnonymous ? null : (this.normalizeVideoUrl(metadata.videoUrl) || null);
+    const giftAudioUrl = isAnonymous ? null : (this.normalizeHttpUrl(metadata.audioUrl) || null);
+
     const giftData = {
       fundId: metadata.fundId,
       eventId: metadata.eventId || null,
       senderName: metadata.senderName || 'Anonymous',
       senderEmail: metadata.senderEmail || null,
+      isAnonymous,
       amount: metadata.baseAmount || ((session.amount_total || 0) / 100).toString(),
       processingFee: metadata.processingFee || '0',
       koraFee: metadata.koraFee || '0',
       netAmount: metadata.netToFund || metadata.baseAmount || ((session.amount_total || 0) / 100).toString(),
       message: metadata.message || null,
-      executionModel: metadata.executionModel || 'auto_invest',
+      photoUrl: giftPhotoUrl,
+      // Mirror video and audio onto the gift row alongside photo. Before this
+      // landed, these URLs lived ONLY in Stripe metadata, which made the
+      // Memory Book entry creation a single point of failure. With the
+      // columns persisted, ensureMemoryEntryForGift can read from the gift
+      // row directly and the metadata path becomes a fallback for legacy.
+      videoUrl: giftVideoUrl,
+      audioUrl: giftAudioUrl,
+      executionModel: normalizedExecutionModel,
       selectedTicker: metadata.selectedTicker || null,
-      status: 'pending',
-      stripePaymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
+      status: this.shouldHoldGiftForHostDecision(metadata) ? 'host_hold' : 'pending',
+      stripePaymentIntentId: paymentIntentId,
+      // Persist the schedule link if the parent fired this through the
+      // "Contribute now" button on a recurring card. Empty / missing =
+      // a bare one-time contribution with no schedule context.
+      parentContributionId: typeof metadata.parentContributionId === 'string' && metadata.parentContributionId
+        ? metadata.parentContributionId
+        : null,
     };
 
     const gift = await storage.createGift(giftData);
     console.log('[Webhook] Gift created:', gift.id);
-
-    if (gift.message) {
-      await storage.createMemoryEntry({
-        fundId: gift.fundId,
-        giftId: gift.id,
-        type: 'gift_message',
-        content: gift.message,
-        authorName: gift.senderName,
-      });
-      console.log('[Webhook] Memory entry created for gift:', gift.id);
-    }
-
-    await storage.createActivity({
-      userId: metadata.userId || session.customer,
-      fundId: metadata.fundId,
-      type: 'gift_received',
-      title: `Gift from ${giftData.senderName}`,
-      description: `$${giftData.amount} gift received`,
-      amount: giftData.amount,
-    });
-
-    if (metadata.eventId) {
-      await storage.incrementEventGiftStats(metadata.eventId, parseFloat(giftData.amount));
-    }
-
-    try {
-      let shouldAutoThankYou = false;
-
-      if (metadata.eventId) {
-        const event = await storage.getEvent(metadata.eventId);
-        if (event?.hasEventPass) shouldAutoThankYou = true;
+    if (giftData.status === "host_hold") {
+      try {
+        await storage.createActivity({
+          userId: metadata.fundUserId || metadata.userId || null,
+          fundId: metadata.fundId,
+          type: "large_gift_hold_started",
+          title: "Large gift waiting for your decision",
+          description: "A large gift is holding for up to 24 hours so you can choose how to invest it with care.",
+          amount: giftData.amount,
+        });
+      } catch (activityError) {
+        console.error('[Webhook] Failed to create large gift hold activity:', gift.id, activityError);
       }
+      return;
+    }
 
-      if (!shouldAutoThankYou && metadata.fundId) {
-        const fund = await storage.getFund(metadata.fundId);
-        if (fund?.userId) {
-          const subscription = await storage.getSubscription(fund.userId);
-          if (subscription && (subscription.plan === 'family' || subscription.plan === 'starter') && subscription.status === 'active') {
-            shouldAutoThankYou = true;
+    await this.completeGiftPostPayment(gift.id, metadata);
+  }
+
+  static async handleLegacyPlanPurchase(session: any): Promise<void> {
+    const metadata = session.metadata || {};
+    const userId = metadata.userId;
+
+    if (!userId) {
+      console.error('[Webhook] Legacy plan purchase missing userId');
+      return;
+    }
+
+    const subscriptionId = typeof session.subscription === 'string'
+      ? session.subscription
+      : session.subscription?.id;
+
+    if (subscriptionId) {
+      const stripe = await getUncachableStripeClient();
+      const subscription: any = await stripe.subscriptions.retrieve(subscriptionId);
+
+      await storage.upsertSubscription({
+        userId,
+        stripeSubscriptionId: subscriptionId,
+        stripeCustomerId: typeof session.customer === 'string' ? session.customer : session.customer?.id || null,
+        plan: 'legacy',
+        billingInterval: 'yearly',
+        status: subscription.status,
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      });
+
+      await storage.createActivity({
+        userId,
+        type: 'subscription_started',
+        // Legacy activation description aligned with the honest bullet
+        // list 2026-05-12. Was previously: "advanced planning, and premium
+        // family support" — both features that don't exist in code. Per
+        // project_acorns_bundle_inflation_pattern.md, only the real
+        // differential is 2 Occasion credits/yr beyond Family.
+        title: 'Kiddo Legacy activated',
+        description: 'Everything in Kiddo Family, plus 2 Occasion credits per year.',
+      });
+
+      try {
+        const memberships = await storage.getFundMembershipsByUser(userId);
+        const activeStarterMemberships = memberships.filter((m) => {
+          if (m.plan !== "starter" || !m.stripeSubscriptionId) return false;
+          const status = String(m.status || "").toLowerCase();
+          if (status === "active") return true;
+          if (status !== "canceled") return false;
+          if (!m.currentPeriodEnd) return true;
+          const end = new Date(m.currentPeriodEnd);
+          return !Number.isNaN(end.getTime()) && end.getTime() > Date.now();
+        });
+        let canceledCount = 0;
+        for (const membership of activeStarterMemberships) {
+          try {
+            const starterSub: any = await stripe.subscriptions.retrieve(String(membership.stripeSubscriptionId));
+            const starterStatus = String(starterSub?.status || "").toLowerCase();
+            if (starterStatus && starterStatus !== "canceled" && starterStatus !== "incomplete_expired") {
+              if (!starterSub.cancel_at_period_end) {
+                await stripe.subscriptions.update(String(membership.stripeSubscriptionId), {
+                  cancel_at_period_end: true,
+                });
+              }
+              await storage.updateFundMembership(membership.id, {
+                status: "canceled",
+                canceledAt: new Date(),
+                currentPeriodEnd: starterSub.current_period_end
+                  ? new Date(starterSub.current_period_end * 1000)
+                  : membership.currentPeriodEnd || null,
+              });
+              canceledCount += 1;
+            }
+          } catch (starterErr) {
+            console.error('[Webhook] Failed to schedule starter overlap cancellation after Legacy activation:', {
+              userId,
+              membershipId: membership.id,
+              fundId: membership.fundId,
+              error: starterErr,
+            });
           }
         }
+        if (canceledCount > 0) {
+          await storage.createActivity({
+            userId,
+            type: 'subscription_canceled',
+            title: 'Kiddo Plus plans scheduled to cancel',
+            description: `We scheduled ${canceledCount} Kiddo Plus plan${canceledCount === 1 ? '' : 's'} to cancel at period end to avoid double billing while Legacy is active.`,
+          });
+        }
+      } catch (overlapErr) {
+        console.error('[Webhook] Failed overlap cleanup after Legacy activation:', overlapErr);
       }
-
-      if (shouldAutoThankYou) {
-        const fund = await storage.getFund(metadata.fundId);
-        const message = `Thank you ${giftData.senderName} for your generous gift of $${parseFloat(giftData.amount).toFixed(2)} to ${fund?.name || 'the fund'}!`;
-        await storage.createThankYou({
-          fundId: metadata.fundId,
-          giftId: gift.id,
-          senderName: giftData.senderName,
-          senderEmail: giftData.senderEmail || null,
-          message,
-          status: 'draft',
-        });
-        console.log('[Webhook] Auto-generated thank-you draft for gift:', gift.id);
-      }
-    } catch (thankYouError) {
-      console.error('[Webhook] Error auto-generating thank-you:', thankYouError);
     }
   }
 
@@ -145,13 +1262,15 @@ export class WebhookHandlers {
     if (subscriptionId) {
       const stripe = await getUncachableStripeClient();
       const subscription: any = await stripe.subscriptions.retrieve(subscriptionId);
+      const recurringInterval = subscription?.items?.data?.[0]?.price?.recurring?.interval;
+      const billingInterval = recurringInterval === 'year' ? 'yearly' : 'monthly';
       
       await storage.upsertSubscription({
         userId,
         stripeSubscriptionId: subscriptionId,
         stripeCustomerId: typeof session.customer === 'string' ? session.customer : session.customer?.id || null,
         plan: 'family',
-        billingInterval: 'yearly',
+        billingInterval,
         status: subscription.status,
         currentPeriodStart: new Date(subscription.current_period_start * 1000),
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
@@ -160,8 +1279,108 @@ export class WebhookHandlers {
       await storage.createActivity({
         userId,
         type: 'subscription_started',
-        title: 'Family Plan activated',
-        description: 'Your Family Plan subscription is now active',
+        title: 'Kiddo Family activated',
+        description: 'Your Kiddo Family subscription is now active',
+      });
+
+      try {
+        const memberships = await storage.getFundMembershipsByUser(userId);
+        const activeStarterMemberships = memberships.filter((m) => {
+          if (m.plan !== "starter" || !m.stripeSubscriptionId) return false;
+          const status = String(m.status || "").toLowerCase();
+          if (status === "active") return true;
+          if (status !== "canceled") return false;
+          if (!m.currentPeriodEnd) return true;
+          const end = new Date(m.currentPeriodEnd);
+          return !Number.isNaN(end.getTime()) && end.getTime() > Date.now();
+        });
+        let canceledCount = 0;
+        for (const membership of activeStarterMemberships) {
+          try {
+            const starterSub: any = await stripe.subscriptions.retrieve(String(membership.stripeSubscriptionId));
+            const starterStatus = String(starterSub?.status || "").toLowerCase();
+            if (starterStatus && starterStatus !== "canceled" && starterStatus !== "incomplete_expired") {
+              if (!starterSub.cancel_at_period_end) {
+                await stripe.subscriptions.update(String(membership.stripeSubscriptionId), {
+                  cancel_at_period_end: true,
+                });
+              }
+              await storage.updateFundMembership(membership.id, {
+                status: "canceled",
+                canceledAt: new Date(),
+                currentPeriodEnd: starterSub.current_period_end
+                  ? new Date(starterSub.current_period_end * 1000)
+                  : membership.currentPeriodEnd || null,
+              });
+              canceledCount += 1;
+            }
+          } catch (starterErr) {
+            console.error('[Webhook] Failed to schedule starter overlap cancellation:', {
+              userId,
+              membershipId: membership.id,
+              fundId: membership.fundId,
+              error: starterErr,
+            });
+          }
+        }
+        if (canceledCount > 0) {
+          await storage.createActivity({
+            userId,
+            type: 'subscription_canceled',
+            title: 'Kiddo Plus plans scheduled to cancel',
+            description: `We scheduled ${canceledCount} Kiddo Plus plan${canceledCount === 1 ? '' : 's'} to cancel at period end to avoid double billing while Family is active.`,
+          });
+        }
+      } catch (overlapErr) {
+        console.error('[Webhook] Failed overlap cleanup after Family activation:', overlapErr);
+      }
+    }
+  }
+
+  static async handleStarterPlanPurchase(session: any): Promise<void> {
+    const metadata = session.metadata || {};
+    const userId = metadata.userId;
+    const fundId = metadata.fundId;
+
+    if (!userId || !fundId) {
+      console.error('[Webhook] Kiddo Plus purchase missing userId or fundId');
+      return;
+    }
+
+    const fund = await storage.getFund(fundId);
+    if (!fund || fund.userId !== userId) {
+      console.error('[Webhook] Kiddo Plus purchase fund does not belong to user', { userId, fundId });
+      return;
+    }
+
+    const subscriptionId = typeof session.subscription === 'string'
+      ? session.subscription
+      : session.subscription?.id;
+
+    if (subscriptionId) {
+      const stripe = await getUncachableStripeClient();
+      const subscription: any = await stripe.subscriptions.retrieve(subscriptionId);
+      const recurringInterval = subscription?.items?.data?.[0]?.price?.recurring?.interval;
+      const billingInterval = recurringInterval === 'year' ? 'yearly' : 'monthly';
+
+      await storage.upsertFundMembership({
+        userId,
+        fundId,
+        stripeSubscriptionId: subscriptionId,
+        stripeCustomerId: typeof session.customer === 'string' ? session.customer : session.customer?.id || null,
+        plan: 'starter',
+        billingInterval,
+        status: subscription.status,
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      });
+
+      await storage.createActivity({
+        userId,
+        fundId,
+        type: 'subscription_started',
+        title: 'Kiddo Plus activated',
+        description: `Kiddo Plus is now active for ${fund.name}.`,
       });
     }
   }
@@ -177,7 +1396,7 @@ export class WebhookHandlers {
     }
 
     await storage.updateEvent(eventId, {
-      hasEventPass: true, // Event Boost active (DB column name retained)
+      hasEventPass: true, // Legacy DB column retained for premium event coverage compatibility
       eventPassPurchasedAt: new Date(),
     });
 
@@ -185,28 +1404,68 @@ export class WebhookHandlers {
       await storage.createActivity({
         userId,
         type: 'event_pass_purchased',
-        title: 'Event Boost purchased',
-        description: 'Platform fee waived for gifts on this event',
+        title: `${String(metadata.occasionTier || 'premium').replace(/^\w/, (c) => c.toUpperCase())} Kiddo Occasion activated`,
+        description: 'This occasion now has a polished gift page and premium Memory Book moment.',
       });
     }
   }
 
   static async handleSubscriptionUpdated(subscription: any): Promise<void> {
-    console.log('[Webhook] subscription.updated:', subscription.id, subscription.status);
+    console.log('[Webhook] subscription.updated:', subscription.id, subscription.status, 'cancel_at_period_end:', subscription.cancel_at_period_end);
 
-    const customerId = typeof subscription.customer === 'string' 
-      ? subscription.customer 
-      : subscription.customer.id;
+    // When cancel_at_period_end is true, Stripe still reports status:"active".
+    // We map this to "canceled" in our DB so the UI correctly shows "scheduled to cancel".
+    const effectiveStatus = subscription.cancel_at_period_end ? 'canceled' : subscription.status;
+    const recurringInterval = subscription?.items?.data?.[0]?.price?.recurring?.interval;
+    const billingInterval: 'monthly' | 'yearly' | undefined = recurringInterval === 'year' ? 'yearly' : recurringInterval === 'month' ? 'monthly' : undefined;
 
     const existingSub = await storage.getSubscriptionByStripeId(subscription.id);
-    
     if (existingSub) {
+      const wasCanceled = existingSub.status === 'canceled';
+      const isNowActive = effectiveStatus === 'active';
       await storage.updateSubscription(existingSub.id, {
-        status: subscription.status,
+        status: effectiveStatus,
         currentPeriodStart: new Date(subscription.current_period_start * 1000),
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+        canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : (subscription.cancel_at_period_end && !existingSub.canceledAt ? new Date() : existingSub.canceledAt),
+        ...(billingInterval ? { billingInterval } : {}),
       });
+      // Subscription came back to life — un-pause schedules that we paused due to subscription_ended.
+      // Manually-paused rows stay paused (their pause_reason isn't 'subscription_ended').
+      if (wasCanceled && isNowActive) {
+        try {
+          const { parentContributionsResumed, recurringGiftsResumed } = await storage.resumeScheduledItemsForUserAfterSubscriptionRestart(existingSub.userId);
+          if (parentContributionsResumed > 0 || recurringGiftsResumed > 0) {
+            console.log(`[Webhook] cascade-resumed ${parentContributionsResumed} parent contributions and ${recurringGiftsResumed} recurring gifts for user ${existingSub.userId}`);
+          }
+        } catch (resumeErr) {
+          console.error('[Webhook] subscription cascade-resume failed:', resumeErr);
+        }
+      }
+      return;
+    }
+
+    const existingFundMembership = await storage.getFundMembershipByStripeId(subscription.id);
+    if (existingFundMembership) {
+      const wasCanceled = existingFundMembership.status === 'canceled';
+      const isNowActive = effectiveStatus === 'active';
+      await storage.updateFundMembership(existingFundMembership.id, {
+        status: effectiveStatus,
+        currentPeriodStart: new Date(subscription.current_period_start * 1000),
+        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : (subscription.cancel_at_period_end && !existingFundMembership.canceledAt ? new Date() : existingFundMembership.canceledAt),
+        ...(billingInterval ? { billingInterval } : {}),
+      });
+      if (wasCanceled && isNowActive) {
+        try {
+          const { parentContributionsResumed, recurringGiftsResumed } = await storage.resumeScheduledItemsForUserAfterSubscriptionRestart(existingFundMembership.userId);
+          if (parentContributionsResumed > 0 || recurringGiftsResumed > 0) {
+            console.log(`[Webhook] cascade-resumed ${parentContributionsResumed} parent contributions and ${recurringGiftsResumed} recurring gifts for user ${existingFundMembership.userId}`);
+          }
+        } catch (resumeErr) {
+          console.error('[Webhook] fundMembership cascade-resume failed:', resumeErr);
+        }
+      }
     }
   }
 
@@ -214,19 +1473,121 @@ export class WebhookHandlers {
     console.log('[Webhook] subscription.deleted:', subscription.id);
 
     const existingSub = await storage.getSubscriptionByStripeId(subscription.id);
-    
+
     if (existingSub) {
       await storage.updateSubscription(existingSub.id, {
         status: 'canceled',
         canceledAt: new Date(),
       });
 
+      // Cascade: actually pause every active recurring schedule (parent contributions
+      // and gifter recurring gifts) tied to this user's funds. The cancel-modal copy
+      // promised this; now we deliver it.
+      try {
+        const { parentContributionsPaused, recurringGiftsPaused } = await storage.pauseScheduledItemsForUserOnSubscriptionEnd(existingSub.userId);
+        if (parentContributionsPaused > 0 || recurringGiftsPaused > 0) {
+          console.log(`[Webhook] cascade-paused ${parentContributionsPaused} parent contributions and ${recurringGiftsPaused} recurring gifts for user ${existingSub.userId}`);
+        }
+      } catch (cascadeErr) {
+        console.error('[Webhook] subscription.deleted cascade-pause failed:', cascadeErr);
+      }
+
       await storage.createActivity({
         userId: existingSub.userId,
         type: 'subscription_canceled',
-        title: 'Family Plan canceled',
-        description: 'Your Family Plan subscription has been canceled',
+        title: existingSub.plan === 'legacy' ? 'Kiddo Legacy canceled' : 'Kiddo Family canceled',
+        description: existingSub.plan === 'legacy' ? 'Your Kiddo Legacy subscription has been canceled' : 'Your Kiddo Family subscription has been canceled',
       });
+      return;
+    }
+
+    const existingFundMembership = await storage.getFundMembershipByStripeId(subscription.id);
+    if (existingFundMembership) {
+      await storage.updateFundMembership(existingFundMembership.id, {
+        status: 'canceled',
+        canceledAt: new Date(),
+      });
+
+      // Per-fund Kiddo Plus end: cascade pause for that user's funds. Same helper
+      // since recurring items live at the fund level.
+      try {
+        const { parentContributionsPaused, recurringGiftsPaused } = await storage.pauseScheduledItemsForUserOnSubscriptionEnd(existingFundMembership.userId);
+        if (parentContributionsPaused > 0 || recurringGiftsPaused > 0) {
+          console.log(`[Webhook] cascade-paused ${parentContributionsPaused} parent contributions and ${recurringGiftsPaused} recurring gifts for user ${existingFundMembership.userId}`);
+        }
+      } catch (cascadeErr) {
+        console.error('[Webhook] fundMembership.deleted cascade-pause failed:', cascadeErr);
+      }
+
+      await storage.createActivity({
+        userId: existingFundMembership.userId,
+        fundId: existingFundMembership.fundId,
+        type: 'subscription_canceled',
+        title: 'Kiddo Plus canceled',
+        description: 'Kiddo Plus for this fund has been canceled.',
+      });
+    }
+  }
+
+  static async handleCustomerDeleted(customer: any): Promise<void> {
+    const customerId = typeof customer?.id === 'string' ? customer.id : null;
+    if (!customerId) return;
+    console.log('[Webhook] customer.deleted:', customerId);
+
+    const linkedSubscriptions = await db
+      .select({
+        id: subscriptions.id,
+        userId: subscriptions.userId,
+        stripeSubscriptionId: subscriptions.stripeSubscriptionId,
+      })
+      .from(subscriptions)
+      .where(eq(subscriptions.stripeCustomerId, customerId));
+
+    const linkedFundMemberships = await db
+      .select({
+        id: fundMemberships.id,
+        userId: fundMemberships.userId,
+        fundId: fundMemberships.fundId,
+        stripeSubscriptionId: fundMemberships.stripeSubscriptionId,
+      })
+      .from(fundMemberships)
+      .where(eq(fundMemberships.stripeCustomerId, customerId));
+
+    for (const linked of linkedSubscriptions) {
+      await storage.updateSubscription(linked.id, {
+        status: 'canceled',
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        canceledAt: new Date(),
+      });
+
+      if (linked.userId) {
+        await storage.createActivity({
+          userId: linked.userId,
+          type: 'subscription_canceled',
+          title: 'Billing customer removed',
+          description: 'Stripe customer record was deleted and subscription link was cleared.',
+        });
+      }
+    }
+
+    for (const linked of linkedFundMemberships) {
+      await storage.updateFundMembership(linked.id, {
+        status: 'canceled',
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        canceledAt: new Date(),
+      });
+
+      if (linked.userId) {
+        await storage.createActivity({
+          userId: linked.userId,
+          fundId: linked.fundId,
+          type: 'subscription_canceled',
+          title: 'Billing customer removed',
+          description: 'Stripe customer record was deleted and starter subscription link was cleared.',
+        });
+      }
     }
   }
 
@@ -261,8 +1622,8 @@ export class WebhookHandlers {
   static async handleChargeRefunded(charge: any): Promise<void> {
     console.log('[Webhook] charge.refunded:', charge.id);
 
-    const paymentIntentId = typeof charge.payment_intent === 'string' 
-      ? charge.payment_intent 
+    const paymentIntentId = typeof charge.payment_intent === 'string'
+      ? charge.payment_intent
       : charge.payment_intent?.id;
 
     if (paymentIntentId) {
@@ -271,15 +1632,52 @@ export class WebhookHandlers {
         await storage.updateGift(gift.id, { status: 'refunded' });
       }
 
+      const refundAmount = ((charge.amount_refunded || 0) / 100);
       await storage.createTransaction({
         type: 'refund',
         stripePaymentIntentId: paymentIntentId,
-        amount: ((charge.amount_refunded || 0) / 100).toString(),
+        amount: refundAmount.toString(),
         currency: charge.currency,
         status: 'completed',
         description: 'Refund processed',
         completedAt: new Date(),
       });
+
+      // Surface the refund as a first-class History row so the parent can
+      // see it (and reconcile against the bank statement). Previously
+      // refunds existed only in the transactions table — invisible to the
+      // user even though `refund` is a defined activity type with red
+      // styling. Without an activity row the parent would see the gift
+      // disappear from the fund without explanation. Best-effort; never
+      // fail the webhook over an activity write.
+      if (gift) {
+        try {
+          const fund = await storage.getFund(gift.fundId);
+          const refundedRefund = Array.isArray(charge.refunds?.data) ? charge.refunds.data[0] : null;
+          const senderLabel = gift.senderName || 'a gifter';
+          await storage.createActivity({
+            userId: fund?.userId || null,
+            fundId: gift.fundId,
+            type: 'refund',
+            title: 'Gift refunded',
+            description: `$${refundAmount.toFixed(2)} from ${senderLabel} was returned to the original payment method.`,
+            amount: refundAmount.toFixed(2),
+            metadata: JSON.stringify({
+              giftId: gift.id,
+              senderName: gift.senderName || null,
+              senderEmail: gift.senderEmail || null,
+              ticker: (gift as any).selectedTicker || null,
+              refundedAt: new Date().toISOString(),
+              stripeChargeId: charge.id,
+              stripeRefundId: refundedRefund?.id || null,
+              stripeReceiptUrl: charge.receipt_url || null,
+              descriptor: charge.statement_descriptor || charge.calculated_statement_descriptor || null,
+            }),
+          } as any);
+        } catch (activityErr) {
+          console.error('[Webhook] Failed to record refund activity:', gift.id, activityErr);
+        }
+      }
     }
   }
 
@@ -290,21 +1688,145 @@ export class WebhookHandlers {
       ? invoice.subscription
       : invoice.subscription?.id;
 
-    if (subscriptionId) {
-      const existingSub = await storage.getSubscriptionByStripeId(subscriptionId);
-      if (existingSub) {
-        await storage.createTransaction({
+    if (!subscriptionId) return;
+
+    // Determine billing period from the invoice if available
+    const periodEnd = invoice.lines?.data?.[0]?.period?.end
+      ? new Date(invoice.lines.data[0].period.end * 1000)
+      : null;
+    const periodStart = invoice.lines?.data?.[0]?.period?.start
+      ? new Date(invoice.lines.data[0].period.start * 1000)
+      : null;
+    const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
+    const amountNum = ((invoice.amount_paid || 0) / 100);
+    const amount = amountNum.toString();
+
+    // Pull card brand + last4 (and a hosted receipt link) from the underlying
+    // charge so the History row can show "Visa ····4242" — the bank-line
+    // reconciliation detail that lets a parent match the Kiddo charge to
+    // their statement. One extra Stripe round-trip per renewal is cheap
+    // and only fires on real billing events. All best-effort: never fail
+    // the webhook because of a card-detail lookup.
+    const reconcile: { brand: string | null; last4: string | null; receiptUrl: string | null; descriptor: string | null } = {
+      brand: null, last4: null, receiptUrl: null, descriptor: null,
+    };
+    try {
+      const chargeId = typeof invoice.charge === 'string' ? invoice.charge : invoice.charge?.id;
+      if (chargeId) {
+        const stripe = await getUncachableStripeClient();
+        const charge: any = await stripe.charges.retrieve(chargeId);
+        reconcile.brand = charge?.payment_method_details?.card?.brand || null;
+        reconcile.last4 = charge?.payment_method_details?.card?.last4 || null;
+        reconcile.receiptUrl = charge?.receipt_url || null;
+        reconcile.descriptor = charge?.statement_descriptor || charge?.calculated_statement_descriptor || null;
+      }
+    } catch (chargeErr) {
+      console.warn('[Webhook] invoice.paid: failed to fetch charge for reconcile metadata:', chargeErr);
+    }
+    // Fall back to the hosted invoice URL if we couldn't pull the receipt.
+    const receiptOrInvoiceUrl = reconcile.receiptUrl || invoice.hosted_invoice_url || null;
+
+    const existingSub = await storage.getSubscriptionByStripeId(subscriptionId);
+    if (existingSub) {
+      const updates: any = {};
+      if (periodEnd) updates.currentPeriodEnd = periodEnd;
+      if (periodStart) updates.currentPeriodStart = periodStart;
+      // Renewal reactivates a canceled-at-period-end sub if Stripe kept it going
+      if (existingSub.status === 'canceled' && periodEnd && periodEnd > new Date()) {
+        updates.status = 'active';
+        updates.canceledAt = null;
+      }
+      if (Object.keys(updates).length > 0) await storage.updateSubscription(existingSub.id, updates);
+      await storage.createTransaction({
+        userId: existingSub.userId,
+        type: 'subscription_renewal',
+        stripeSubscriptionId: subscriptionId,
+        stripeInvoiceId: invoice.id,
+        stripeCustomerId: customerId,
+        amount,
+        currency: invoice.currency || 'usd',
+        status: 'completed',
+        description: 'Kiddo Family renewal',
+        completedAt: new Date(),
+      });
+      // Mirror the renewal as a History activity row (Gap 1: subscription
+      // billing was previously invisible in Activity — only landed in the
+      // transactions table). Includes payment-method last4 + receipt URL
+      // so the row earns its place in the parent's reconciliation flow.
+      try {
+        const planLabel = existingSub.plan === 'family' ? 'Kiddo Family' : existingSub.plan === 'legacy' ? 'Kiddo Legacy' : 'Kiddo';
+        const reconcileTail = reconcile.last4 ? ` to ${reconcile.brand ? reconcile.brand.charAt(0).toUpperCase() + reconcile.brand.slice(1) : 'card'} ····${reconcile.last4}` : '';
+        await storage.createActivity({
           userId: existingSub.userId,
           type: 'subscription_renewal',
-          stripeSubscriptionId: subscriptionId,
-          stripeInvoiceId: invoice.id,
-          stripeCustomerId: typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id,
-          amount: ((invoice.amount_paid || 0) / 100).toString(),
-          currency: invoice.currency || 'usd',
-          status: 'completed',
-          description: 'Family Plan renewal',
-          completedAt: new Date(),
-        });
+          title: `${planLabel} renewed`,
+          description: `$${amountNum.toFixed(2)} charged${reconcileTail}.`,
+          amount: amountNum.toFixed(2),
+          metadata: JSON.stringify({
+            plan: existingSub.plan,
+            paymentMethodBrand: reconcile.brand,
+            paymentMethodLast4: reconcile.last4,
+            descriptor: reconcile.descriptor,
+            stripeReceiptUrl: receiptOrInvoiceUrl,
+            stripeInvoiceId: invoice.id,
+            stripeSubscriptionId: subscriptionId,
+            periodStart: periodStart ? periodStart.toISOString() : null,
+            periodEnd: periodEnd ? periodEnd.toISOString() : null,
+          }),
+        } as any);
+      } catch (activityErr) {
+        console.error('[Webhook] Failed to record subscription_renewal activity:', activityErr);
+      }
+      return;
+    }
+
+    const existingMembership = await storage.getFundMembershipByStripeId(subscriptionId);
+    if (existingMembership) {
+      const updates: any = {};
+      if (periodEnd) updates.currentPeriodEnd = periodEnd;
+      if (periodStart) updates.currentPeriodStart = periodStart;
+      if (existingMembership.status === 'canceled' && periodEnd && periodEnd > new Date()) {
+        updates.status = 'active';
+        updates.canceledAt = null;
+      }
+      if (Object.keys(updates).length > 0) await storage.updateFundMembership(existingMembership.id, updates);
+      await storage.createTransaction({
+        userId: existingMembership.userId,
+        fundId: existingMembership.fundId,
+        type: 'subscription_renewal',
+        stripeSubscriptionId: subscriptionId,
+        stripeInvoiceId: invoice.id,
+        stripeCustomerId: customerId,
+        amount,
+        currency: invoice.currency || 'usd',
+        status: 'completed',
+        description: 'Kiddo Plus renewal',
+        completedAt: new Date(),
+      });
+      // Same mirror for per-fund Plus memberships.
+      try {
+        const reconcileTail = reconcile.last4 ? ` to ${reconcile.brand ? reconcile.brand.charAt(0).toUpperCase() + reconcile.brand.slice(1) : 'card'} ····${reconcile.last4}` : '';
+        await storage.createActivity({
+          userId: existingMembership.userId,
+          fundId: existingMembership.fundId,
+          type: 'subscription_renewal',
+          title: 'Kiddo+ renewed',
+          description: `$${amountNum.toFixed(2)} charged${reconcileTail}.`,
+          amount: amountNum.toFixed(2),
+          metadata: JSON.stringify({
+            plan: 'starter',
+            paymentMethodBrand: reconcile.brand,
+            paymentMethodLast4: reconcile.last4,
+            descriptor: reconcile.descriptor,
+            stripeReceiptUrl: receiptOrInvoiceUrl,
+            stripeInvoiceId: invoice.id,
+            stripeSubscriptionId: subscriptionId,
+            periodStart: periodStart ? periodStart.toISOString() : null,
+            periodEnd: periodEnd ? periodEnd.toISOString() : null,
+          }),
+        } as any);
+      } catch (activityErr) {
+        console.error('[Webhook] Failed to record subscription_renewal activity (membership):', activityErr);
       }
     }
   }
@@ -316,16 +1838,28 @@ export class WebhookHandlers {
       ? invoice.subscription
       : invoice.subscription?.id;
 
-    if (subscriptionId) {
-      const existingSub = await storage.getSubscriptionByStripeId(subscriptionId);
-      if (existingSub) {
-        await storage.createActivity({
-          userId: existingSub.userId,
-          type: 'payment_failed',
-          title: 'Payment failed',
-          description: 'Your subscription payment failed. Please update your payment method.',
-        });
-      }
+    if (!subscriptionId) return;
+
+    const existingSub = await storage.getSubscriptionByStripeId(subscriptionId);
+    if (existingSub) {
+      await storage.createActivity({
+        userId: existingSub.userId,
+        type: 'payment_failed',
+        title: 'Kiddo Family payment failed',
+        description: 'Your Kiddo Family payment failed. Please update your payment method in Settings.',
+      });
+      return;
+    }
+
+    const existingMembership = await storage.getFundMembershipByStripeId(subscriptionId);
+    if (existingMembership) {
+      await storage.createActivity({
+        userId: existingMembership.userId,
+        fundId: existingMembership.fundId,
+        type: 'payment_failed',
+        title: 'Kiddo Plus payment failed',
+        description: 'Your Kiddo Plus payment failed for this fund. Please update your payment method in Settings.',
+      });
     }
   }
 }

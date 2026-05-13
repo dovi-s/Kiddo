@@ -102,7 +102,7 @@ export function ShareKit({
       `I'm collecting gifts for ${recipientName}'s investment fund - a gift that grows over time!\n\n` +
       `Instead of toys or gift cards, you can contribute to their future. Every gift is invested and grows alongside ${recipientName}.\n\n` +
       `Contribute here: ${shareUrl}\n\n` +
-      `Thank you for being part of ${recipientName}'s journey!`
+      `Thank you for helping ${recipientName}'s fund grow.`
     );
     window.open(`mailto:?subject=${subject}&body=${body}`, "_blank");
   };
@@ -371,7 +371,7 @@ export function ShareKit({
                       {eventTitle && (
                         <p className="text-primary-foreground/60 text-xs mb-1">{eventTitle}</p>
                       )}
-                      <p className="text-primary-foreground text-sm font-mono tracking-tight">{fundSlug}.kora.com</p>
+                      <p className="text-primary-foreground text-sm font-mono tracking-tight">{fundSlug}.kiddofund.com</p>
                     </div>
                     <div className="bg-primary-foreground/10 rounded-lg p-2">
                       <QRCodeSVG 

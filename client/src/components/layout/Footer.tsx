@@ -1,111 +1,114 @@
-import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { Link } from "wouter";
 import { Logo } from "@/components/ui/logo";
-import { Mascot } from "@/components/ui/mascot";
 
-export function Footer() {
-  const [location, setLocation] = useLocation();
+const topRowLinks: Array<{ href: string; label: string; external?: boolean }> = [
+  { href: "/how-it-works", label: "How it works" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/about", label: "About" },
+  { href: "/stories", label: "Stories" },
+  { href: "/blog", label: "Guides" },
+];
 
-  const productLinks = [
-    { href: "/get-started", label: "Get Started" },
-    { href: "/#how-it-works", label: "How It Works" },
-    { href: "/#pricing", label: "Pricing" },
-    { href: "/faq", label: "FAQ" },
-  ];
+const bottomRowLinks: Array<{ href: string; label: string; external?: boolean }> = [
+  { href: "/compare", label: "Compare" },
+  { href: "/tools/at-18-calculator", label: "At-18 calculator" },
+  { href: "/tools/utma-by-state", label: "UTMA by state" },
+  { href: "/security", label: "Security" },
+  { href: "/age-18", label: "Age-18" },
+  { href: "/personal-funds", label: "Personal funds" },
+  { href: "/legal?tab=privacy", label: "Privacy policy" },
+  { href: "/legal?tab=terms", label: "Terms of service" },
+  { href: "/contact", label: "Contact" },
+];
 
-  const companyLinks = [
-    { href: "/about", label: "About" },
-    { href: "/about#trust", label: "Trust & Security" },
-  ];
+function FooterLink({ href, label, external }: { href: string; label: string; external?: boolean }) {
+  const className =
+    "inline-block cursor-pointer text-sm text-muted-foreground transition-colors hover:text-foreground";
 
-  const legalLinks = [
-    { href: "/legal", label: "Terms of Service" },
-    { href: "/legal", label: "Privacy Policy" },
-    { href: "/legal", label: "Disclosures" },
-  ];
-
-  const handleLinkClick = (href: string) => {
-    const hasHash = href.includes('#');
-    if (!hasHash) return;
-
-    const [path, hash] = href.split('#');
-    const targetPath = path || '/';
-    const isCurrentPage = location === targetPath || (targetPath === '/' && location === '/');
-
-    if (isCurrentPage) {
-      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      setLocation(targetPath);
-      setTimeout(() => {
-        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
-      }, 300);
-    }
-  };
-
-  const renderLinks = (links: { href: string; label: string }[]) => (
-    <ul className="space-y-3 text-sm text-muted-foreground">
-      {links.map((link) => {
-        const hasHash = link.href.includes('#');
-        const inner = (
-          <motion.span
-            className="hover:text-foreground transition-colors inline-block cursor-pointer"
-            whileHover={{ x: 2 }}
-            transition={{ duration: 0.2 }}
-            data-testid={`link-footer-${link.label.toLowerCase().replace(/\s+/g, '-')}`}
-          >
-            {link.label}
-          </motion.span>
-        );
-
-        return (
-          <li key={link.label}>
-            {hasHash ? (
-              <span onClick={() => handleLinkClick(link.href)}>{inner}</span>
-            ) : (
-              <Link href={link.href}>{inner}</Link>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
+  if (external) {
+    return (
+      <a
+        href={href}
+        className={className}
+        data-testid={`link-footer-${label.toLowerCase().replace(/\s+/g, "-")}`}
+      >
+        {label}
+      </a>
+    );
+  }
 
   return (
+    <Link
+      href={href}
+      className={className}
+      data-testid={`link-footer-${label.toLowerCase().replace(/\s+/g, "-")}`}
+    >
+      {label}
+    </Link>
+  );
+}
+
+export function Footer() {
+  return (
     <footer className="border-t border-border/40">
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid gap-10 md:grid-cols-4">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Mascot size="sm" context="footer" />
-              <Logo size="md" className="text-foreground" linkTo={null} />
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-[200px]">
-              Give something that grows.
-            </p>
+      <div className="container mx-auto px-4 py-14 md:py-16">
+        <div className="flex flex-col items-center text-center">
+          <div className="flex items-center gap-3">
+            <Logo size="md" className="text-foreground" linkTo={null} />
+          </div>
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
+            Give something that grows with them.
+          </p>
+        </div>
+
+        <div className="mt-10 border-t border-border/50 pt-8">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+            {topRowLinks.map((link) => (
+              <FooterLink key={link.label} href={link.href} label={link.label} />
+            ))}
           </div>
 
-          <div>
-            <h4 className="text-sm font-medium mb-4 text-foreground">Product</h4>
-            {renderLinks(productLinks)}
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium mb-4 text-foreground">Company</h4>
-            {renderLinks(companyLinks)}
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium mb-4 text-foreground">Legal</h4>
-            {renderLinks(legalLinks)}
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+            {bottomRowLinks.map((link) => (
+              <FooterLink key={link.label} href={link.href} label={link.label} external={link.external} />
+            ))}
+            <a
+              href="mailto:support@kiddofund.com"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+              data-testid="link-footer-support-email"
+            >
+              support@kiddofund.com
+            </a>
           </div>
         </div>
 
-        <div className="mt-16 pt-8 border-t space-y-4">
-          <p className="text-xs text-muted-foreground leading-relaxed max-w-3xl">
-            Securities offered through DriveWealth, LLC, Member FINRA/SIPC. Not FDIC insured. Not bank guaranteed. May lose value.
+        <div className="mt-10 border-t border-border/50 pt-6 text-center">
+          <p className="mx-auto max-w-3xl text-xs leading-relaxed text-muted-foreground">
+            Investments are held by DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. Investing involves risk, including possible loss of principal. Investments are not FDIC insured, not bank guaranteed, and may lose value. Past performance is not indicative of future results.
           </p>
-          <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Kora. All rights reserved.
+          {/* Simulated-content disclosure — FINRA Rule 2210 covers
+              communications-with-the-public; marketing surfaces showing
+              example app screens, hypothetical testimonials with specific
+              dollar amounts, or sample Memory Book entries need this line.
+              Footer is the catch-all because it renders on 23 pages
+              including Home / Pricing / Compare / HowItWorks / About — all
+              of which carry simulated example content. Safe-to-add-now per
+              the locked honest-disclosure trio in
+              project_launch_readiness_drivewealth.md (entity-agnostic,
+              industry-standard wording, no RIA claim implied). */}
+          <p className="mx-auto mt-3 max-w-3xl text-xs leading-relaxed text-muted-foreground">
+            Screen images and example dollar amounts shown across the site are simulated and subject to change. They illustrate how Kiddo works and do not reflect any specific account or guaranteed outcome.
+          </p>
+          {/* Geographic scope. Kora is currently US-only — UTMA legal
+              structure + US-resident brokerage + 1099 tax reporting. The
+              footer is the catch-all surface for visitors who missed the
+              cue on Home / Pricing / signup. */}
+          <p className="mx-auto mt-3 max-w-3xl text-xs leading-relaxed text-muted-foreground">
+            Currently available to families in the United States.
+          </p>
+          <p className="mt-4 text-xs text-muted-foreground">
+            &copy; {new Date().getFullYear()} Kiddo. All rights reserved.
           </p>
         </div>
       </div>

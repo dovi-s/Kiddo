@@ -1,20 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
+import {
   Users, 
   Calendar, 
-  Gift, 
+  Gift,
   Heart, 
   Share2, 
-  ChevronRight, 
+  ChevronRight,
   X, 
-  Bell,
-  Repeat,
   UserPlus,
-  Sparkles,
   Check
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+
+function toFundLabel(name: string) {
+  const trimmed = (name || "").trim();
+  if (!trimmed) return "this fund";
+  const lower = trimmed.toLowerCase();
+  if (lower.endsWith(" fund")) return trimmed;
+  return `${trimmed}'s fund`;
+}
 
 interface ReferralPromptProps {
   recipientName: string;
@@ -23,45 +29,48 @@ interface ReferralPromptProps {
 }
 
 export function ReferralPrompt({ recipientName, onShare, onDismiss }: ReferralPromptProps) {
+  const fundLabel = toFundLabel(recipientName);
+  const shareLabel = "Share";
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="bg-gradient-to-r from-rose-50 to-pink-50 rounded-xl p-4 border border-rose-100"
+      className="rounded-2xl border border-border/60 bg-card p-4 shadow-premium-sm"
     >
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
-          <Heart className="w-5 h-5 text-rose-500" />
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <Heart className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-stone-900 mb-1">
-            Know someone who'd love to give?
+          <p className="text-sm font-semibold text-foreground mb-1">
+            Let the next gift last, too
           </p>
-          <p className="text-xs text-stone-500 mb-3">
-            Share {recipientName}'s fund with friends and family who might want to contribute
+          <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+            Send {fundLabel} to the people who usually ask what to get. They can give in under a minute, no account needed.
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={onShare}
               data-testid="button-referral-share"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 text-white text-sm font-medium rounded-lg hover:bg-rose-600 transition-colors"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               <Share2 size={14} />
-              Share fund
+              {shareLabel}
             </button>
             <button
               onClick={onDismiss}
               data-testid="button-referral-dismiss"
-              className="px-3 py-1.5 text-stone-500 text-sm hover:text-stone-700 transition-colors"
+              className="min-h-10 rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              Maybe later
+              Skip for now
             </button>
           </div>
         </div>
         <button 
           onClick={onDismiss}
-          className="text-stone-300 hover:text-stone-500 transition-colors"
+          className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label="Dismiss sharing prompt"
         >
           <X size={16} />
         </button>
@@ -73,55 +82,69 @@ export function ReferralPrompt({ recipientName, onShare, onDismiss }: ReferralPr
 interface RecurringGiftNudgeProps {
   lastGiftDate: string;
   recipientName: string;
+  occasionName?: string;
   onSetupRecurring: () => void;
   onDismiss: () => void;
 }
 
-export function RecurringGiftNudge({ 
-  lastGiftDate, 
-  recipientName, 
-  onSetupRecurring, 
-  onDismiss 
+// Renamed in spirit: this is a reminder nudge, not a recurring-charge nudge. The component
+// name stays for backwards compatibility with the export; behavior and copy are now honest.
+export function RecurringGiftNudge({
+  lastGiftDate,
+  recipientName,
+  occasionName,
+  onSetupRecurring,
+  onDismiss
 }: RecurringGiftNudgeProps) {
+  const lastGift = lastGiftDate ? new Date(lastGiftDate) : null;
+  const lastGiftLabel = lastGift && !Number.isNaN(lastGift.getTime())
+    ? lastGift.toLocaleDateString("en-US", { month: "long", day: "numeric" })
+    : null;
+  const nudgeCopy = occasionName
+    ? `Want a reminder when ${recipientName}'s ${occasionName} comes around again? We'll email you so you don't have to remember.`
+    : lastGiftLabel
+      ? `Want a reminder to gift ${recipientName} again? We'll email you when it's time. No bank connection, no auto-charge.`
+      : `Want a reminder to gift ${recipientName} again? We'll email you when it's time. No bank connection, no auto-charge.`;
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100"
+      className="rounded-2xl border border-border/60 bg-card p-4 shadow-premium-sm"
     >
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-          <Repeat className="w-5 h-5 text-blue-500" />
+        <div className="w-10 h-10 rounded-xl bg-[hsl(var(--kiddo-gold)/0.16)] flex items-center justify-center shrink-0">
+          <Calendar className="w-5 h-5 text-[hsl(var(--kiddo-ink))]" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-stone-900 mb-1">
-            Make your gift go further
+          <p className="text-sm font-semibold text-foreground mb-1">
+            Set a reminder for next time
           </p>
-          <p className="text-xs text-stone-500 mb-3">
-            Set up a recurring gift to {recipientName}. Small amounts grow big over time.
+          <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+            {nudgeCopy}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={onSetupRecurring}
-              data-testid="button-setup-recurring"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors"
+              data-testid="button-setup-reminder"
+              className="kiddo-gold-button inline-flex min-h-10 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition-colors"
             >
               <Calendar size={14} />
-              Set up recurring
+              Set a reminder
             </button>
             <button
               onClick={onDismiss}
-              data-testid="button-recurring-dismiss"
-              className="px-3 py-1.5 text-stone-500 text-sm hover:text-stone-700 transition-colors"
+              data-testid="button-reminder-dismiss"
+              className="min-h-10 rounded-full px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              Not now
+              No thanks
             </button>
           </div>
         </div>
-        <button 
+        <button
           onClick={onDismiss}
-          className="text-stone-300 hover:text-stone-500 transition-colors"
+          className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label="Dismiss reminder prompt"
         >
           <X size={16} />
         </button>
@@ -134,49 +157,87 @@ interface RecurringSetupModalProps {
   isOpen: boolean;
   onClose: () => void;
   recipientName: string;
-  onConfirm: (amount: number, frequency: string) => void;
+  // Email pre-filled from the gifter's checkout session (Stripe) when available.
+  // The user can edit it inside the modal — they may want reminders sent to a
+  // different inbox than the receipt one.
+  defaultEmail?: string;
+  onConfirm: (amount: number, frequency: string, email: string) => void;
 }
 
-export function RecurringSetupModal({ 
-  isOpen, 
-  onClose, 
+// Renamed in spirit: a reminder picker, not a recurring-charge setup. Export name kept for
+// backwards compatibility; copy and flow are now honest about what actually happens
+// (we email a reminder; no bank, no auto-charge).
+export function RecurringSetupModal({
+  isOpen,
+  onClose,
   recipientName,
-  onConfirm 
+  defaultEmail = "",
+  onConfirm
 }: RecurringSetupModalProps) {
-  const [amount, setAmount] = useState(25);
-  const [frequency, setFrequency] = useState("monthly");
-  
+  const [amount, setAmount] = useState(50);
+  const [frequency, setFrequency] = useState("yearly");
+  const [email, setEmail] = useState(defaultEmail);
+  const [emailTouched, setEmailTouched] = useState(false);
+
+  // When the modal opens, sync the email field with whatever the parent
+  // knows (Stripe receipt email, prior updates email, etc). Don't override
+  // if the user has already started typing.
+  useEffect(() => {
+    if (isOpen && !emailTouched) {
+      setEmail(defaultEmail);
+    }
+    if (!isOpen) {
+      // Reset touched state on close so a re-open syncs again.
+      setEmailTouched(false);
+    }
+  }, [isOpen, defaultEmail, emailTouched]);
+
+  const trimmedEmail = email.trim();
+  const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail);
+
   const amounts = [10, 25, 50, 100];
   const frequencies = [
-    { id: "weekly", label: "Weekly", description: "Every week" },
-    { id: "monthly", label: "Monthly", description: "Every month" },
-    { id: "yearly", label: "Yearly", description: "Every year (great for birthdays)" },
+    { id: "yearly", label: "Once a year", description: "Right around the birthday or anniversary" },
+    { id: "quarterly", label: "Every 3 months", description: "A steadier rhythm without being too much" },
+    { id: "monthly", label: "Every month", description: "For the closest family or biggest fans" },
   ];
-
-  const projections: Record<string, { years: number; total: number; growth: number }> = {
-    weekly: { years: 18, total: 23400, growth: 38200 },
-    monthly: { years: 18, total: 5400, growth: 8800 },
-    yearly: { years: 18, total: 450, growth: 734 },
-  };
-
-  const currentProjection = projections[frequency];
-  const adjustedTotal = (currentProjection.total * amount) / 25;
-  const adjustedGrowth = (currentProjection.growth * amount) / 25;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md bg-white p-0 gap-0">
+      <DialogContent className="max-w-md bg-white p-0 gap-0 max-h-[92vh] max-h-[92dvh] overflow-y-auto" aria-describedby={undefined}>
         <div className="p-5 border-b border-stone-100">
-          <DialogTitle className="font-semibold text-stone-900">Set up recurring gift</DialogTitle>
+          <DialogTitle className="font-semibold text-stone-900">Set a gift reminder</DialogTitle>
           <p className="text-sm text-stone-500 mt-0.5">
-            Consistency beats timing. Small gifts compound over time.
+            We'll email you when it's time to gift {recipientName} again. No bank connection. No auto-charge. Just a nudge.
           </p>
         </div>
 
         <div className="p-5 space-y-6">
           <div>
+            <label className="block text-sm font-medium text-stone-700 mb-2" htmlFor="reminder-email-input">
+              Send reminder to
+            </label>
+            <input
+              id="reminder-email-input"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setEmailTouched(true); }}
+              placeholder="you@example.com"
+              data-testid="input-reminder-email"
+              className="w-full px-4 py-3 rounded-xl border border-stone-200 bg-white text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/20 focus:border-stone-400"
+            />
+            <p className="mt-2 text-[11px] text-stone-500">
+              {defaultEmail && !emailTouched
+                ? "Pre-filled from your gift receipt. Change it if you want reminders sent to a different inbox."
+                : "Where we'll send the reminder. One email per reminder, unsubscribe anytime."}
+            </p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-stone-700 mb-3">
-              Amount per gift
+              Suggested amount
             </label>
             <div className="grid grid-cols-4 gap-2">
               {amounts.map((a) => (
@@ -194,11 +255,14 @@ export function RecurringSetupModal({
                 </button>
               ))}
             </div>
+            <p className="mt-2 text-[11px] text-stone-500">
+              We'll suggest this amount in the reminder email. You can change it when you actually send the gift.
+            </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-stone-700 mb-3">
-              Frequency
+              How often
             </label>
             <div className="space-y-2">
               {frequencies.map((f) => (
@@ -224,17 +288,15 @@ export function RecurringSetupModal({
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100">
+          <div className="rounded-xl border border-[hsl(var(--kiddo-gold)/0.3)] bg-[hsl(var(--kiddo-cream))] p-4">
             <div className="flex items-start gap-3">
-              <Sparkles className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+              <Heart className="w-5 h-5 text-[hsl(var(--kiddo-ink))] shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-stone-900 mb-1">
-                  In {currentProjection.years} years...
+                  Just a reminder. Nothing automatic.
                 </p>
                 <p className="text-xs text-stone-600">
-                  Your ${amount}/{frequency === "weekly" ? "week" : frequency === "monthly" ? "month" : "year"} could grow from{" "}
-                  <span className="font-medium">${adjustedTotal.toLocaleString()}</span> to{" "}
-                  <span className="font-medium text-emerald-600">${adjustedGrowth.toLocaleString()}</span>
+                  When the time comes, we'll email you a one-tap link back to {recipientName}'s gift page. You decide whether to send and how much. Unsubscribe from the email anytime.
                 </p>
               </div>
             </div>
@@ -243,14 +305,20 @@ export function RecurringSetupModal({
 
         <div className="p-5 border-t border-stone-100 space-y-3">
           <button
-            onClick={() => onConfirm(amount, frequency)}
-            data-testid="button-confirm-recurring"
-            className="w-full py-3 bg-stone-900 text-white font-medium rounded-xl hover:bg-stone-800 transition-colors"
+            onClick={() => emailIsValid && onConfirm(amount, frequency, trimmedEmail)}
+            disabled={!emailIsValid}
+            data-testid="button-confirm-reminder"
+            className="kiddo-gold-button w-full py-3 font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Start ${amount}/{frequency === "weekly" ? "week" : frequency === "monthly" ? "month" : "year"} recurring gift
+            Save reminder
           </button>
+          {!emailIsValid && trimmedEmail.length > 0 && (
+            <p className="text-xs text-red-500 text-center">
+              Enter a valid email so we know where to send the reminder.
+            </p>
+          )}
           <p className="text-xs text-stone-400 text-center">
-            Cancel anytime from your dashboard
+            No Kiddo account required. Unsubscribe anytime from the reminder email.
           </p>
         </div>
       </DialogContent>
@@ -270,40 +338,43 @@ export function CollaboratorInvite({ fundName, onInvite, onDismiss }: Collaborat
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-4 border border-violet-100"
+      className="rounded-2xl border border-border/50 bg-card p-4 shadow-premium-sm"
     >
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
-          <Users className="w-5 h-5 text-violet-500" />
+        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <Users className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-stone-900 mb-1">
+          <p className="text-sm font-semibold text-foreground mb-1">
             Invite a co-parent or family admin
           </p>
-          <p className="text-xs text-stone-500 mb-3">
+          <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
             Give a partner access to manage {fundName} together
           </p>
           <div className="flex gap-2">
-            <button
+            <Button
               onClick={onInvite}
               data-testid="button-invite-collaborator"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-500 text-white text-sm font-medium rounded-lg hover:bg-violet-600 transition-colors"
+              size="sm"
+              className="rounded-full"
             >
               <UserPlus size={14} />
               Invite someone
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={onDismiss}
               data-testid="button-collaborator-dismiss"
-              className="px-3 py-1.5 text-stone-500 text-sm hover:text-stone-700 transition-colors"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
             >
               Later
-            </button>
+            </Button>
           </div>
         </div>
         <button 
           onClick={onDismiss}
-          className="text-stone-300 hover:text-stone-500 transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors"
         >
           <X size={16} />
         </button>
@@ -356,17 +427,17 @@ export function CollaboratorInviteModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md bg-white p-0 gap-0">
-        <div className="p-5 border-b border-stone-100">
-          <DialogTitle className="font-semibold text-stone-900">Invite to {fundName}</DialogTitle>
-          <p className="text-sm text-stone-500 mt-0.5">
+      <DialogContent className="max-w-md bg-card p-0 gap-0 border border-border/50 shadow-premium-lg" aria-describedby={undefined}>
+        <div className="p-5 border-b border-border/50">
+          <DialogTitle className="font-heading font-semibold text-foreground">Invite to {fundName}</DialogTitle>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Add a family member to help manage this fund
           </p>
         </div>
 
         <div className="p-5 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Email address
             </label>
             <input
@@ -375,12 +446,12 @@ export function CollaboratorInviteModal({
               onChange={(e) => setEmail(e.target.value)}
               placeholder="partner@example.com"
               data-testid="input-collaborator-email"
-              className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-300"
+              className="w-full px-4 py-3 border border-border rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-3">
+            <label className="block text-sm font-medium text-foreground mb-3">
               Role
             </label>
             <div className="space-y-2">
@@ -391,18 +462,18 @@ export function CollaboratorInviteModal({
                   data-testid={`button-role-${r.id}`}
                   className={`w-full p-4 rounded-xl text-left transition-all ${
                     role === r.id
-                      ? "bg-violet-50 border-2 border-violet-500"
-                      : "bg-stone-50 border-2 border-transparent hover:bg-stone-100"
+                      ? "bg-primary/5 border-2 border-primary"
+                      : "bg-muted/30 border-2 border-transparent hover:bg-muted/50"
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium text-stone-900">{r.label}</p>
-                    {role === r.id && <Check size={18} className="text-violet-500" />}
+                    <p className="font-medium text-foreground">{r.label}</p>
+                    {role === r.id && <Check size={18} className="text-primary" />}
                   </div>
-                  <p className="text-sm text-stone-500 mb-2">{r.description}</p>
+                  <p className="text-sm text-muted-foreground mb-2">{r.description}</p>
                   <div className="flex flex-wrap gap-1">
                     {r.permissions.map((p) => (
-                      <span key={p} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full">
+                      <span key={p} className="text-[10px] bg-background text-muted-foreground px-2 py-0.5 rounded-full border border-border/50">
                         {p}
                       </span>
                     ))}
@@ -413,12 +484,12 @@ export function CollaboratorInviteModal({
           </div>
         </div>
 
-        <div className="p-5 border-t border-stone-100">
-          <button
+        <div className="p-5 border-t border-border/50">
+          <Button
             onClick={handleSend}
             disabled={!email || isSending}
             data-testid="button-send-invite"
-            className="w-full py-3 bg-violet-500 text-white font-medium rounded-xl hover:bg-violet-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSending ? (
               <>
@@ -431,7 +502,7 @@ export function CollaboratorInviteModal({
                 Send invite
               </>
             )}
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -446,48 +517,59 @@ interface GiftReceivedToastProps {
   onDismiss: () => void;
 }
 
-export function GiftReceivedToast({ 
-  giverName, 
-  amount, 
+export function GiftReceivedToast({
+  giverName,
+  amount,
   recipientName,
-  onViewActivity, 
-  onDismiss 
+  onViewActivity,
+  onDismiss
 }: GiftReceivedToastProps) {
+  const fundLabel = toFundLabel(recipientName);
+  const childFirst = (recipientName || "").split(" ")[0].trim();
+  const displayName = (giverName || "").trim() || (childFirst ? `Someone who loves ${childFirst}` : "Someone");
+  const formattedAmount = `$${Number.isFinite(amount) ? amount.toFixed(2).replace(/\.00$/, "") : "0"}`;
+
+  useEffect(() => {
+    const timer = setTimeout(onDismiss, 7000);
+    return () => clearTimeout(timer);
+  }, [onDismiss]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 50, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.9 }}
-      className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:w-96 bg-white rounded-2xl shadow-2xl border border-stone-200 p-4 z-50"
+      className="fixed bottom-24 left-4 right-4 md:left-auto md:right-6 md:w-96 bg-background rounded-2xl shadow-2xl border border-border p-4 z-50"
     >
       <div className="flex items-start gap-3">
-        <motion.div 
+        <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shrink-0"
+          className="w-11 h-11 rounded-full bg-[hsl(var(--kiddo-evergreen))] flex items-center justify-center shrink-0"
         >
-          <Gift className="w-6 h-6 text-white" />
+          <Gift className="w-5 h-5 text-white" />
         </motion.div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-stone-900">
-            {giverName} just gifted ${amount}!
+          <p className="text-sm font-semibold text-foreground leading-snug">
+            {displayName} just gifted {formattedAmount}
           </p>
-          <p className="text-xs text-stone-500 mt-0.5">
-            {recipientName}'s fund is growing
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {fundLabel} is growing.
           </p>
           <button
             onClick={onViewActivity}
             data-testid="button-view-gift-activity"
-            className="mt-2 text-xs text-emerald-600 font-medium hover:text-emerald-700 transition-colors flex items-center gap-1"
+            className="mt-2 text-xs text-[hsl(var(--kiddo-evergreen))] font-medium hover:opacity-80 transition-opacity flex items-center gap-1"
           >
             View activity
             <ChevronRight size={12} />
           </button>
         </div>
-        <button 
+        <button
           onClick={onDismiss}
-          className="text-stone-300 hover:text-stone-500 transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors mt-0.5"
+          aria-label="Dismiss"
         >
           <X size={16} />
         </button>

@@ -1,954 +1,1103 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check, Lock, Shield, Plus, Trash2, User, Users, Sparkles, TrendingUp, Heart, Gift, Star, ChevronRight, Wallet } from "lucide-react";
-import { Logo } from "@/components/ui/logo";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Link, useLocation, useSearch } from "wouter";
+// Sparkles import dropped 2026-05-12 — banned per feedback_no_ai_slop.md.
+// Three usages removed: (1) Google button icon (replaced with no icon),
+// (2) "The difference" gold-bg card rotating Sparkles (animation banned per
+// feedback_animation_primitives.md — replace with static text-only), (3)
+// two orbiting Sparkles around the success Check (the worst AI-slop
+// pattern in the file — deleted entirely; the pulsing Check is enough).
+import { Apple, ArrowLeft, ArrowRight, CalendarIcon, Check, Copy, Gift, Lock, Mail, MessageSquare, PiggyBank, QrCode, Search, Shield, TrendingUp, User, Users, X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Logo } from "@/components/ui/logo";
+import { StockLogo } from "@/components/ui/stock-logo";
+import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { haptic } from "@/lib/haptics";
-import { useCreateFund } from "@/hooks/use-funds";
+import { extractUtmMetadata, isUserReferralCode } from "@/lib/acquisition";
+import { USOnlyOffRamp } from "@/components/USOnlyOffRamp";
 import { useAuth } from "@/hooks/use-auth";
-import { Mascot } from "@/components/ui/mascot";
+import type {
+  AuthProvidersStatus,
+  OnboardingAccountType,
+  OnboardingAuthMode,
+  OnboardingDraft,
+  OnboardingInvestmentChoice,
+  OnboardingStep,
+} from "@kora/types";
+import {
+  createFund as createFundRequest,
+  fetchAuthProviders,
+  trackReferralEvent as trackReferralEventRequest,
+  updateInvestmentPreferences,
+  type InvestmentPreferencesUpdate,
+} from "@kora/api";
+import {
+  childDobError,
+  formatCurrencyWhole,
+  getProjectionSnapshot,
+  onboardingAnnualGiftOptions,
+  onboardingStockChoices,
+  projectContributionSeries,
+  slugify,
+  yearsTo18,
+} from "@kora/utils";
 
-type AccountType = "parent" | "adult" | null;
+const DRAFT_KEY = "kiddo:get-started-v2";
+const PAGE = "mx-auto w-full max-w-lg";
+const STEP_ORDER: OnboardingStep[] = ["welcome", "who", "details", "projection", "investment", "kyc", "live"];
 
-interface ChildProfile {
-  id: string;
-  name: string;
-  relationship: string;
+function getOnboardingFlow(accountType: OnboardingAccountType): OnboardingStep[] {
+  // Two-phase onboarding: fund creation first, KYC deferred to Activate Investing.
+  //
+  // The "projection" step is the load-bearing aha moment for child accounts:
+  // it shows the parent what $X/yr in gifts could compound into by the kid's
+  // 18th birthday, with a savings-account comparison that makes the
+  // difference visceral. Skipping it (the previous behavior) meant parents
+  // hit "create fund" without ever seeing the math — they signed up on
+  // intent alone, with no anchor for what they were actually building.
+  // Cross-category onboarding research (Speak, BitePal, Yindo, Brilliant)
+  // shows the personalized-outcome-after-quiz pattern lifts conversion
+  // 5-20%; for a custodial-investment product where the outcome is the
+  // entire value prop, omitting this moment is leaving the conversion
+  // lever on the floor. Personal accounts skip it because the math is
+  // less load-bearing without an age-of-majority anchor.
+  if (accountType === "personal") return ["details"];
+  return ["who", "details", "projection"];
 }
 
-type Step = "hook" | "choose" | "personalize" | "projection" | "account" | "children" | "success";
+function ScreenLead({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="space-y-3">
+      {eyebrow && <p className="text-sm font-medium text-primary">{eyebrow}</p>}
+      <h1 className="font-heading text-[2rem] font-semibold leading-tight text-foreground sm:text-[2.2rem]">{title}</h1>
+      {description && <p className="max-w-md text-base leading-relaxed text-muted-foreground">{description}</p>}
+    </div>
+  );
+}
 
-const fadeSlide = {
-  initial: { opacity: 0, x: 20 },
-  animate: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -20 },
-  transition: { duration: 0.15 }
-};
+function Dock({
+  primary,
+  secondary,
+}: {
+  primary: React.ReactNode;
+  secondary?: React.ReactNode;
+}) {
+  return (
+    <div className="get-started-dock-wrap">
+      <div className={`${PAGE} get-started-dock`}>
+        <div className="space-y-3">
+          {primary}
+          {secondary}
+        </div>
+      </div>
+    </div>
+  );
+}
 
-const staggerChildren = {
-  animate: { transition: { staggerChildren: 0.05 } }
-};
+function AnimatedBlock({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.28 }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
-const fadeUp = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.15 }
-};
+function Shell({
+  children,
+  back,
+  progress,
+  direction,
+}: {
+  children: React.ReactNode;
+  back?: () => void;
+  progress?: { current: number; total: number };
+  direction: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: direction >= 0 ? 28 : -28, scale: 0.985 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: direction >= 0 ? -20 : 20, scale: 0.992 }}
+      transition={{ duration: 0.32 }}
+      className="get-started-screen"
+    >
+      <div className="get-started-screen__glow" />
+      <header className="sticky top-0 z-40 mobile-topbar">
+        <div className={`${PAGE} flex h-16 items-center justify-between px-4`}>
+          {back ? (
+            <button onClick={back} className="flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-card/95 shadow-premium-sm press-effect" data-testid="button-onboarding-back">
+              <ArrowLeft size={18} />
+            </button>
+          ) : <div className="w-11" />}
+          {progress ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-1.5">
+                {Array.from({ length: progress.total }).map((_, i) => <span key={i} className={`h-1.5 rounded-full ${i < progress.current ? "w-7 bg-primary" : "w-3 bg-border"}`} />)}
+              </div>
+              <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Step {progress.current} of {progress.total}</span>
+            </div>
+          ) : <Logo size="sm" className="text-primary" linkTo={null} />}
+          <div className="w-11" />
+        </div>
+      </header>
+      <main className={`${PAGE} relative flex min-h-[calc(100dvh-4rem)] flex-col px-4 pb-40 pt-5`}>{children}</main>
+    </motion.div>
+  );
+}
 
 export default function GetStarted() {
   const [, setLocation] = useLocation();
-  const createFundMutation = useCreateFund();
-  const { register, isAuthenticated } = useAuth();
-  const [step, setStep] = useState<Step>("hook");
-  const [authError, setAuthError] = useState("");
-  const [accountType, setAccountType] = useState<AccountType>(null);
+  const search = useSearch();
+  const refCode = new URLSearchParams(search).get("ref");
+  const refSource = new URLSearchParams(search).get("src") || "unknown";
+  const loopTouchpoint = new URLSearchParams(search).get("loop_touchpoint") || null;
+  const loopChannel = new URLSearchParams(search).get("loop_channel") || null;
+  const giftSessionId = new URLSearchParams(search).get("gift_session_id") || null;
+  const utm = extractUtmMetadata(search);
+  const registerReferralCode = isUserReferralCode(refCode) ? refCode?.trim().toUpperCase() : undefined;
+  const { register, isAuthenticated, isRegistering } = useAuth();
+  const [step, setStep] = useState<OnboardingStep>("welcome");
+  const [authMode, setAuthMode] = useState<OnboardingAuthMode>("none");
+  const [oauth, setOauth] = useState<AuthProvidersStatus>({ google: false, apple: false });
+  const [accountType, setAccountType] = useState<OnboardingAccountType>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [recipientName, setRecipientName] = useState("");
-  const [children, setChildren] = useState<ChildProfile[]>([
-    { id: "1", name: "", relationship: "Parent" }
-  ]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [projectedAmount, setProjectedAmount] = useState(500);
+  // Country gate. Defaults empty so the user makes an explicit choice
+  // before the rest of the details step renders. "US" continues the
+  // normal flow; "OTHER" swaps the form for the international off-ramp.
+  // Asking here (start of details, post-auth) rather than in the welcome
+  // step avoids hurting the 99% US conversion path; the parent is
+  // already invested enough to make the choice meaningful.
+  const [country, setCountry] = useState<"US" | "OTHER" | "">("");
+  const [name, setName] = useState("");
+  const [birthdate, setBirthdate] = useState("");
+  const [occasion, setOccasion] = useState("");
+  const [gifterAudience, setGifterAudience] = useState("");
+  const [annualGift, setAnnualGift] = useState(500);
+  const [investment, setInvestment] = useState<OnboardingInvestmentChoice>("sp500");
+  const [ticker, setTicker] = useState("DIS");
+  const [authError, setAuthError] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [creating, setCreating] = useState(false);
+  // recipientFirstName captured separately from name. UTMA funds
+  // auto-generate fund.name as "[Child]'s Fund" — appending "'s fund
+  // is live" against that string produces duplicates ("Solomon's
+  // Fund's fund is live"). Capturing the first name lets the
+  // celebration headline + share button + QR header all use the
+  // clean child-name possessive.
+  const [created, setCreated] = useState<{ id: string; slug: string; name: string; recipientFirstName: string }
+    | null>(null);
+  const [direction, setDirection] = useState(1);
+  const [projectionMilestone, setProjectionMilestone] = useState(18);
+  const [stockSearch, setStockSearch] = useState("");
+  const [showSkipWarning, setShowSkipWarning] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const trackedStepViewsRef = useRef<Set<string>>(new Set());
 
-  const projectedGrowth = Math.round(projectedAmount * Math.pow(1.10, 15));
-  const fundName = recipientName || (accountType === "parent" ? "Your child" : "You");
+  const dobIssue = accountType === "child" ? childDobError(birthdate) : "";
+  const years = accountType === "child" ? yearsTo18(birthdate) : 15;
+  const projection = getProjectionSnapshot(annualGift, years);
+  const savings = projection.savings;
+  const invested = projection.invested;
+  const diff = projection.difference;
 
-  const addChild = () => {
-    setChildren([...children, { 
-      id: Date.now().toString(), 
-      name: "", 
-      relationship: "Parent" 
-    }]);
-  };
+  const milestoneInvested = useMemo(() => {
+    const series = projectContributionSeries(annualGift, projectionMilestone, 0.07);
+    return series[series.length - 1]?.projectedValue ?? 0;
+  }, [annualGift, projectionMilestone]);
 
-  const removeChild = (id: string) => {
-    if (children.length > 1) {
-      setChildren(children.filter(c => c.id !== id));
-    }
-  };
+  const milestoneSavings = useMemo(() => {
+    const series = projectContributionSeries(annualGift, projectionMilestone, 0.005);
+    return series[series.length - 1]?.projectedValue ?? 0;
+  }, [annualGift, projectionMilestone]);
 
-  const updateChild = (id: string, field: keyof ChildProfile, value: string) => {
-    setChildren(children.map(c => c.id === id ? { ...c, [field]: value } : c));
-  };
+  const milestoneDiff = milestoneInvested - milestoneSavings;
+  const displayName = name.trim() || (accountType === "child" ? "your child" : "you");
+  const shareUrl = created ? `${window.location.origin}/${created.slug}` : "";
+  const onboardingFlow = useMemo(() => getOnboardingFlow(accountType), [accountType]);
+  const projectionOptions = accountType === "personal" ? [10, 20, 30, 40] : [18, 30, 40, 65];
+  const personalFundTitle = name.trim() || "your fund";
 
-  const canProceed = () => {
-    if (step === "choose") return accountType !== null;
-    if (step === "personalize") return recipientName.trim().length > 0;
-    if (step === "account") return email && password.length >= 8;
-    if (step === "children") return children.every(c => c.name.trim());
-    return true;
-  };
-
-  const handleNext = async () => {
-    haptic('selection');
-    if (step === "hook") setStep("choose");
-    else if (step === "choose") setStep("personalize");
-    else if (step === "personalize") setStep("projection");
-    else if (step === "projection") setStep("account");
-    else if (step === "account") {
-      if (!isAuthenticated) {
-        setIsSubmitting(true);
-        setAuthError("");
-        try {
-          await register({ email, password });
-        } catch (err: any) {
-          setAuthError(err.message || "Failed to create account");
-          setIsSubmitting(false);
-          return;
-        }
-        setIsSubmitting(false);
-      }
-      if (accountType === "parent") {
-        if (recipientName) {
-          setChildren([{ id: "1", name: recipientName, relationship: "Parent" }]);
-        }
-        setStep("children");
-      } else {
-        handleSubmit();
-      }
-    } else if (step === "children") {
-      handleSubmit();
-    }
-  };
-
-  const handleSubmit = async () => {
-    haptic('medium');
-    setIsSubmitting(true);
-    
-    try {
-      if (accountType === "parent") {
-        const childrenToCreate = children.filter(c => c.name.trim());
-        for (const child of childrenToCreate) {
-          await createFundMutation.mutateAsync({
-            name: `${child.name.trim()}'s Future`,
-            slug: child.name.trim().toLowerCase().replace(/\s+/g, '-') + '-fund',
-            accountType: "UTMA",
-            status: "draft",
-            recipientFirstName: child.name.trim(),
-            recipientRelation: child.relationship || "Parent",
-          });
-        }
-      } else {
-        await createFundMutation.mutateAsync({
-          name: recipientName.trim() ? `${recipientName.trim()}'s Fund` : "My Fund",
-          slug: (recipientName.trim() || "my-fund").toLowerCase().replace(/\s+/g, '-') + '-fund',
-          accountType: "Individual",
-          status: "draft",
-        });
-      }
-      
-      haptic('success');
-      setStep("success");
-    } catch (error) {
-      console.error("Failed to create fund:", error);
-      haptic('error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleBack = () => {
-    haptic('light');
-    if (step === "choose") setStep("hook");
-    else if (step === "personalize") setStep("choose");
-    else if (step === "projection") setStep("personalize");
-    else if (step === "account") setStep("projection");
-    else if (step === "children") setStep("account");
-  };
-
-  const getProgress = () => {
-    const parentSteps: Step[] = ["personalize", "projection", "account", "children"];
-    const adultSteps: Step[] = ["personalize", "projection", "account"];
-    const steps = accountType === "parent" ? parentSteps : adultSteps;
-    const current = steps.indexOf(step);
-    if (current === -1) return null;
-    return { current: current + 1, total: steps.length };
-  };
-
-  const progress = getProgress();
-
-  const PremiumHeader = ({ showBack = true }: { showBack?: boolean }) => (
-    <header className="sticky top-0 z-40 gemini-glass-nav">
-      <div className="max-w-lg md:max-w-2xl mx-auto px-4 flex items-center justify-between">
-        {showBack ? (
-          <button 
-            onClick={handleBack} 
-            className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150"
-          >
-            <ArrowLeft size={18} />
-          </button>
-        ) : (
-          <div className="w-10" />
-        )}
-        {progress && (
-          <div className="flex gap-1.5">
-            {Array.from({ length: progress.total }).map((_, i) => (
-              <motion.div 
-                key={i}
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: i * 0.05, duration: 0.15 }}
-                className={`h-1.5 rounded-full transition-all duration-200 ${
-                  i < progress.current 
-                    ? "w-8 bg-primary" 
-                    : "w-4 bg-border"
-                }`} 
-              />
-            ))}
-          </div>
-        )}
-        <div className="w-10" />
-      </div>
-    </header>
+  const isLastStep = useMemo(
+    () => onboardingFlow.length > 0 && onboardingFlow.indexOf(step) === onboardingFlow.length - 1,
+    [onboardingFlow, step],
   );
 
+  const canContinue = useMemo(() => {
+    if (step === "welcome") return isAuthenticated || authMode === "none" || (authMode === "email" && email.trim().length > 3 && password.length >= 8);
+    if (step === "who") return Boolean(accountType);
+    if (step === "details") return country === "US" && (accountType === "child" ? name.trim().length > 0 && birthdate.trim().length > 0 && !dobIssue && Boolean(occasion) && Boolean(gifterAudience) : name.trim().length > 0);
+    if (step === "investment") return investment !== "stock" || Boolean(ticker);
+    return true;
+  }, [accountType, authMode, birthdate, dobIssue, email, gifterAudience, investment, isAuthenticated, name, occasion, password.length, step, ticker]);
+
+  const progress = useMemo(() => {
+    const i = onboardingFlow.indexOf(step);
+    return i === -1 ? undefined : { current: i + 1, total: onboardingFlow.length };
+  }, [onboardingFlow, step]);
+
+  const moveToStep = (next: OnboardingStep) => {
+    const currentIndex = STEP_ORDER.indexOf(step);
+    const nextIndex = STEP_ORDER.indexOf(next);
+    setDirection(nextIndex >= currentIndex ? 1 : -1);
+    setStep(next);
+  };
+
+  const trackReferralEvent = async (action: "visit" | "signup", metadata?: Record<string, unknown>) => {
+    if (!refCode) return;
+    try {
+      await trackReferralEventRequest({
+        refCode,
+        action,
+        refSource,
+        metadata: {
+          ...(metadata || {}),
+          ...utm,
+          loopTouchpoint,
+          loopChannel,
+          giftSessionId,
+        },
+      });
+    } catch {}
+  };
+
+  const trackOnboardingSignal = async (
+    action: "visit" | "signup" | "cta_click" | "fund_created" | "fund_link_shared",
+    channel: string,
+    metadata?: Record<string, unknown>,
+  ) => {
+    try {
+      await fetch("/api/referrals/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          refCode: refCode || `onboarding:${accountType || "unknown"}`,
+          fundId: created?.id || null,
+          eventId: null,
+          action,
+          channel,
+          metadata: {
+            step,
+            accountType,
+            authMode,
+            investment,
+            ticker: investment === "stock" ? ticker : null,
+            onboardingSource: refSource,
+            loopTouchpoint,
+            loopChannel,
+            ...(metadata || {}),
+          },
+        }),
+      });
+    } catch {
+      // non-blocking analytics signal
+    }
+  };
+
+  useEffect(() => {
+    void trackReferralEvent("visit");
+    void trackOnboardingSignal("visit", "onboarding_visit");
+  }, []);
+
+  useEffect(() => {
+    const key = `${accountType || "unknown"}:${step}`;
+    if (trackedStepViewsRef.current.has(key)) return;
+    trackedStepViewsRef.current.add(key);
+    void trackOnboardingSignal("visit", "onboarding_step_view", {
+      stepViewed: step,
+      progressCurrent: progress?.current || null,
+      progressTotal: progress?.total || null,
+    });
+  }, [accountType, progress?.current, progress?.total, step]);
+
+  useEffect(() => {
+    const handlePageHide = () => {
+      if (step === "live") return;
+      void trackOnboardingSignal("visit", "onboarding_exit", {
+        stepViewed: step,
+        progressCurrent: progress?.current || null,
+        progressTotal: progress?.total || null,
+        hasName: Boolean(name.trim()),
+        hasBirthdate: Boolean(birthdate),
+        hasEmail: Boolean(email.trim()),
+        hasAccountType: Boolean(accountType),
+        investmentChoice: investment,
+      });
+    };
+
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
+  }, [accountType, birthdate, email, investment, name, progress?.current, progress?.total, step]);
+
+  useEffect(() => {
+    void fetchAuthProviders().then(setOauth).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw);
+      if (d.step) setStep(d.step);
+      if (d.authMode) setAuthMode(d.authMode);
+      if (d.accountType) setAccountType(d.accountType);
+      if (d.email) setEmail(d.email);
+      if (d.name) setName(d.name);
+      if (d.birthdate) setBirthdate(d.birthdate);
+      if (typeof d.annualGift === "number") setAnnualGift(d.annualGift);
+      if (d.investment) setInvestment(d.investment);
+      if (d.ticker) setTicker(d.ticker);
+    } catch {
+      window.sessionStorage.removeItem(DRAFT_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (step === "live") {
+      window.sessionStorage.removeItem(DRAFT_KEY);
+      return;
+    }
+    const draft: OnboardingDraft = { step, authMode, accountType, email, name, birthdate, annualGift, investment, ticker };
+    window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [accountType, annualGift, authMode, birthdate, email, investment, name, step, ticker]);
+
+  useEffect(() => {
+    if (!projectionOptions.includes(projectionMilestone)) {
+      setProjectionMilestone(projectionOptions[0]);
+    }
+  }, [projectionMilestone, projectionOptions]);
+
+  const goBack = () => {
+    haptic("light");
+    if (step === "who") {
+      moveToStep("welcome");
+      return;
+    }
+    // kyc is no longer in the main flow - treat it as if on the last real step
+    if (step === "kyc") {
+      moveToStep("investment");
+      return;
+    }
+
+    const currentIndex = onboardingFlow.indexOf(step);
+    if (currentIndex > 0) {
+      moveToStep(onboardingFlow[currentIndex - 1]);
+      return;
+    }
+
+    if (step === "details") moveToStep("who");
+  };
+
+  const startOAuth = (provider: "google" | "apple") => {
+    haptic("medium");
+    const draft: OnboardingDraft = {
+      step: "who",
+      authMode,
+      accountType,
+      email,
+      name,
+      birthdate,
+      annualGift,
+      investment,
+      ticker,
+    };
+    window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    const returnTo = search ? `/get-started?${search}` : "/get-started";
+    window.location.assign(`/api/auth/oauth/${provider}?returnTo=${encodeURIComponent(returnTo)}`);
+  };
+
+  const applyPreferences = async (fundId: string) => {
+    if (investment === "sp500") return;
+    const body: InvestmentPreferencesUpdate = investment === "stock"
+      ? { defaultMode: "stock", defaultTicker: ticker, allowGifterStockPick: false, allowGifterCashGift: false }
+      : { defaultMode: "cash", allowGifterStockPick: false, allowGifterCashGift: true };
+    await updateInvestmentPreferences(fundId, body);
+  };
+
+  const createFund = async () => {
+    setSubmitError("");
+    setCreating(true);
+    haptic("medium");
+    try {
+      const trimmedName = name.trim();
+      const fundName = accountType === "personal" ? trimmedName : `${trimmedName}'s Fund`;
+      const fund = await createFundRequest({
+        name: fundName,
+        slug: `${slugify(name)}-${Date.now().toString(36)}`,
+        accountType: accountType === "child" ? "UTMA" : "Personal",
+        status: "draft",
+        recipientFirstName: trimmedName,
+        recipientRelation: accountType === "child" ? "Parent" : "self",
+        recipientBirthdate: accountType === "child" ? new Date(`${birthdate}T12:00:00.000Z`) : undefined,
+        investmentStrategy: "growth",
+        yearsUntilMaturity: years,
+        projectedValue: String(invested),
+      });
+      await applyPreferences(fund.id);
+      await trackReferralEvent("signup", {
+        accountType: accountType || "child",
+        investment,
+        ticker: investment === "stock" ? ticker : null,
+        occasion,
+        gifterAudience,
+        onboardingSource: refSource,
+        convertedFromGiftLoop: Boolean(loopTouchpoint),
+      });
+      await trackOnboardingSignal("signup", "onboarding_fund_created", {
+        fundId: fund.id,
+        projectedValue: invested,
+        yearsUntilMaturity: years,
+        occasion,
+        gifterAudience,
+      });
+      await trackOnboardingSignal("fund_created", "fund_created_to_link_shared", {
+        baselineEvent: "fund_created",
+        fundId: fund.id,
+        projectedValue: invested,
+        yearsUntilMaturity: years,
+        occasion,
+        gifterAudience,
+      });
+      setCreated({
+        id: fund.id,
+        slug: String(fund.slug),
+        name: String(fund.name || fund.recipientFirstName || name),
+        recipientFirstName: String(fund.recipientFirstName || name || ""),
+      });
+      setStep("live");
+      haptic("success");
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : "Could not create the fund right now.");
+      haptic("error");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleContinue = async () => {
+    if (!canContinue) return;
+    if (step === "welcome") {
+      void trackOnboardingSignal("cta_click", "onboarding_continue", { step: "welcome" });
+      setAuthError("");
+      if (isAuthenticated) {
+        moveToStep("who");
+        return;
+      }
+      if (authMode !== "email") {
+        setAuthMode("email");
+        return;
+      }
+      try {
+        await register({ email: email.trim(), password, referralCode: registerReferralCode });
+        moveToStep("who");
+      } catch (error) {
+        setAuthError(error instanceof Error ? error.message : "Could not create your account.");
+        haptic("error");
+      }
+      return;
+    }
+    void trackOnboardingSignal("cta_click", "onboarding_continue", { step });
+    haptic("selection");
+    if (step === "who") {
+      moveToStep("details");
+      return;
+    }
+    const currentIndex = onboardingFlow.indexOf(step);
+    if (currentIndex !== -1 && currentIndex < onboardingFlow.length - 1) {
+      moveToStep(onboardingFlow[currentIndex + 1]);
+      return;
+    }
+    // Last step in the flow (or kyc fallback) - create the fund now.
+    // KYC is phase 2: deferred to Activate Investing after the parent sees the fund.
+    if (!created) await createFund();
+  };
+
+  const shareFund = async () => {
+    if (!shareUrl) return;
+    try {
+      const title = accountType === "personal" ? created?.name || personalFundTitle : `${displayName}'s Kiddo fund`;
+      const text = accountType === "personal"
+        ? `I just started ${created?.name || personalFundTitle}.`
+        : `I just started ${displayName}'s Kiddo fund.`;
+      const usedNativeShare = Boolean(navigator.share);
+      if (usedNativeShare) await navigator.share!({ title, text, url: shareUrl });
+      else await navigator.clipboard.writeText(shareUrl);
+      void trackOnboardingSignal("cta_click", "onboarding_live_share", {
+        destination: usedNativeShare ? "native_share" : "clipboard",
+      });
+      void trackOnboardingSignal("fund_link_shared", "fund_created_to_link_shared", {
+        baselineEvent: "fund_link_shared",
+        fundId: created?.id || null,
+        destination: usedNativeShare ? "native_share" : "clipboard",
+      });
+      haptic("success");
+    } catch {
+      window.prompt("Copy this fund link:", shareUrl);
+      void trackOnboardingSignal("cta_click", "onboarding_live_share", {
+        destination: "prompt_fallback",
+      });
+      void trackOnboardingSignal("fund_link_shared", "fund_created_to_link_shared", {
+        baselineEvent: "fund_link_shared",
+        fundId: created?.id || null,
+        destination: "prompt_fallback",
+      });
+      haptic("light");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background overflow-hidden">
+    <div className="min-h-screen bg-background">
       <AnimatePresence mode="wait">
-        
-        {/* HOOK - Premium welcome */}
-        {step === "hook" && (
-          <motion.div
-            key="hook"
-            {...fadeSlide}
-            className="min-h-screen flex flex-col"
-          >
-            <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative">
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.1, duration: 0.2 }}
-                className="relative z-10 text-center max-w-md"
-              >
-                <Logo size="lg" className="mx-auto mb-8 text-primary" />
-                
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.15, duration: 0.2 }}
-                  className="mb-8"
-                >
-                  <div className="w-28 h-28 mx-auto rounded-3xl bg-primary flex items-center justify-center shadow-lg">
-                    <Gift className="w-14 h-14 text-primary-foreground" />
-                  </div>
-                </motion.div>
-
-                <h1 className="text-3xl md:text-4xl font-semibold text-foreground mb-4 leading-tight">
-                  Give something that<br />
-                  <span className="text-[hsl(var(--kora-evergreen))]">grows with them</span>
+        {step === "welcome" && (
+          <Shell key="welcome" direction={direction}>
+            <div className="flex min-h-[calc(100dvh-10rem)] flex-col justify-center">
+              <AnimatedBlock className="text-center">
+                <Logo size="lg" className="mx-auto text-primary" linkTo={null} />
+                {/* Headline: emotional brand promise condensed. The contrast
+                    structure ("X disappear. Y last.") names the alternative
+                    (cash) and the upgrade (a permanent record of investments)
+                    in 6 words. Functional headlines like "Set up the gift
+                    link first" don't make that case — they describe a task. */}
+                <h1 className="mt-8 font-heading text-[2.5rem] font-semibold leading-[1.02] text-foreground">
+                  Cash gifts disappear.
+                  <br />
+                  Kiddo gifts last.
                 </h1>
-                
-                <p className="text-lg text-muted-foreground mb-10 leading-relaxed">
-                  Transform birthday money into real investments that compound over time.
-                </p>
-
-                <motion.div
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.25, duration: 0.2 }}
-                  className="space-y-4"
-                >
-                  <Button
-                    onClick={handleNext}
-                    size="lg"
-                    className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 shadow-lg"
-                    data-testid="button-start"
-                  >
-                    Start in 2 minutes
-                    <ArrowRight className="ml-2 w-5 h-5" />
-                  </Button>
-                  
-                  <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1.5">
-                      <Shield size={14} />
-                      <span>SIPC protected</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Lock size={14} />
-                      <span>Bank-level security</span>
-                    </div>
+                <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Set up a fund once. Share one link. Anyone in your family can gift real stock in under a minute. No app, no account, nothing to download.</p>
+              </AnimatedBlock>
+              <AnimatedBlock className="mt-8 grid grid-cols-3 gap-3">
+                {[
+                  // "to set up" beats "to start" — concrete (the parent
+                  // imagines the actual setup) vs. vague (start what?).
+                  { label: "2 min", copy: "to set up" },
+                  { label: "1 link", copy: "to share" },
+                  // "No app for gifters" answers the actual friction concern
+                  // ("will Grandma have to install something?") more directly
+                  // than "Real stocks from day one" (which lives elsewhere on
+                  // the page, e.g. trust microstrip + investment step).
+                  { label: "No app", copy: "for gifters" },
+                ].map((item) => (
+                  <div key={item.label} className="get-started-mini-card">
+                    <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                    <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{item.copy}</p>
                   </div>
-                </motion.div>
-              </motion.div>
-            </div>
-
-            <div className="px-6 pb-8 text-center">
-              <p className="text-sm text-muted-foreground">
-                Already have an account? <Link href="/login"><span className="text-foreground underline">Sign in</span></Link>
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* CHOOSE - Who is this fund for? */}
-        {step === "choose" && (
-          <motion.div
-            key="choose"
-            {...fadeSlide}
-            className="min-h-screen flex flex-col"
-          >
-            <PremiumHeader />
-
-            <main className="flex-1 px-6 pb-12 max-w-lg md:max-w-2xl mx-auto w-full">
-              <div className="relative mb-8">
-                <motion.div {...fadeUp} className="relative">
-                  <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
-                    Who is this fund for?
-                  </h1>
-                  <p className="text-muted-foreground">
-                    Choose the account type that fits your situation
-                  </p>
-                </motion.div>
-              </div>
-
-              <motion.div 
-                variants={staggerChildren}
-                initial="initial"
-                animate="animate"
-                className="space-y-4"
-              >
-                <motion.button
-                  variants={fadeUp}
-                  onClick={() => setAccountType("parent")}
-                  data-testid="option-parent"
-                  className={`w-full p-5 rounded-2xl border-2 text-left transition-all duration-150 ${
-                    accountType === "parent"
-                      ? "border-primary bg-card shadow-lg ring-4 ring-primary/5"
-                      : "border-border bg-card hover:border-muted-foreground/30 hover:shadow-md"
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-150 ${
-                      accountType === "parent" 
-                        ? "bg-primary shadow-lg" 
-                        : "bg-muted"
-                    }`}>
-                      <Users size={22} className={accountType === "parent" ? "text-primary-foreground" : "text-muted-foreground"} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground text-lg mb-1">For my child</p>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        You manage everything. They get a custodial investment account that transfers at 18-21.
-                      </p>
-                      <div className="mt-3 flex items-center gap-2">
-                        <span className="px-2.5 py-1 bg-success/10 text-success rounded-lg text-xs font-medium">Most popular</span>
-                      </div>
-                    </div>
-                    {accountType === "parent" && (
-                      <motion.div 
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ duration: 0.15 }}
-                        className="w-6 h-6 bg-primary rounded-full flex items-center justify-center flex-shrink-0"
-                      >
-                        <Check size={14} className="text-primary-foreground" />
-                      </motion.div>
-                    )}
+                ))}
+              </AnimatedBlock>
+              <AnimatedBlock className="mt-10 space-y-3">
+                {oauth.apple && <button onClick={() => startOAuth("apple")} className="get-started-auth-button" data-testid="button-signup-apple"><Apple size={18} />Continue with Apple</button>}
+                {oauth.google && <button onClick={() => startOAuth("google")} className="get-started-auth-button" data-testid="button-signup-google">Continue with Google</button>}
+                {(oauth.apple || oauth.google) && <div className="flex items-center gap-3 py-1 text-xs uppercase tracking-[0.18em] text-muted-foreground"><div className="h-px flex-1 bg-border" /><span>or</span><div className="h-px flex-1 bg-border" /></div>}
+                {authMode === "email" && (
+                  <div className="get-started-panel space-y-3">
+                    {/* sr-only labels — the placeholders give a visible hint
+                        but screen readers need the explicit association.
+                        autoComplete pairs (email + new-password) feed
+                        password managers correctly. */}
+                    <label htmlFor="get-started-email" className="sr-only">Email address</label>
+                    <input
+                      id="get-started-email"
+                      name="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="get-started-input"
+                      placeholder="you@example.com"
+                      type="email"
+                      data-testid="input-email"
+                    />
+                    <label htmlFor="get-started-password" className="sr-only">Password</label>
+                    <input
+                      id="get-started-password"
+                      name="password"
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="get-started-input"
+                      placeholder="At least 8 characters"
+                      type="password"
+                      data-testid="input-password"
+                    />
+                    {authError && <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{authError}</div>}
                   </div>
-                </motion.button>
-
-                <motion.button
-                  variants={fadeUp}
-                  onClick={() => setAccountType("adult")}
-                  data-testid="option-adult"
-                  className={`w-full p-5 rounded-2xl border-2 text-left transition-all duration-150 ${
-                    accountType === "adult"
-                      ? "border-primary bg-card shadow-lg ring-4 ring-primary/5"
-                      : "border-border bg-card hover:border-muted-foreground/30 hover:shadow-md"
-                  }`}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-150 ${
-                      accountType === "adult" 
-                        ? "bg-primary shadow-lg" 
-                        : "bg-muted"
-                    }`}>
-                      <User size={22} className={accountType === "adult" ? "text-primary-foreground" : "text-muted-foreground"} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground text-lg mb-1">For myself</p>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        Personal investment fund. Perfect for weddings, graduations, or any milestone.
-                      </p>
-                    </div>
-                    {accountType === "adult" && (
-                      <motion.div 
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ duration: 0.15 }}
-                        className="w-6 h-6 bg-primary rounded-full flex items-center justify-center flex-shrink-0"
-                      >
-                        <Check size={14} className="text-primary-foreground" />
-                      </motion.div>
-                    )}
-                  </div>
-                </motion.button>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.15 }}
-                className="mt-8"
-              >
-                <Button
-                  onClick={handleNext}
-                  disabled={!accountType}
-                  size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 disabled:opacity-40 shadow-lg"
-                  data-testid="button-continue-choose"
-                >
-                  Continue
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-                
-                {accountType === "parent" && (
-                  <motion.p 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.15 }}
-                    className="text-xs text-muted-foreground text-center mt-4"
-                  >
-                    You can add a personal fund for yourself later
-                  </motion.p>
                 )}
-              </motion.div>
-            </main>
-          </motion.div>
+              </AnimatedBlock>
+              <Dock
+                primary={
+                  <Button onClick={() => void handleContinue()} disabled={!canContinue || isRegistering} className="h-14 w-full rounded-2xl text-base btn-action" data-testid="button-welcome-continue">
+                  {isAuthenticated ? "Continue" : authMode === "email" ? (isRegistering ? "Creating account..." : "Continue with email") : "Continue with email"}
+                  {!isRegistering && <ArrowRight className="ml-2 h-5 w-5" />}
+                  </Button>
+                }
+                secondary={
+                  <>
+                    <TrustMicroStrip />
+                    <p className="text-center text-sm text-muted-foreground">Already have an account? <Link href="/login"><span className="font-medium text-foreground underline">Sign in</span></Link></p>
+                  </>
+                }
+              />
+            </div>
+          </Shell>
         )}
 
-        {/* PERSONALIZE - Name entry */}
-        {step === "personalize" && (
-          <motion.div
-            key="personalize"
-            {...fadeSlide}
-            className="min-h-screen flex flex-col"
-          >
-            <PremiumHeader />
-
-            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg md:max-w-2xl mx-auto w-full">
-              <div className="relative mb-8">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg ${
-                    accountType === "parent" 
-                      ? "bg-[hsl(var(--kora-gold))]" 
-                      : "bg-primary"
-                  }`}
+        {step === "who" && (
+          <Shell key="who" back={goBack} progress={progress} direction={direction}>
+            <div className="flex flex-1 flex-col">
+              <AnimatedBlock><ScreenLead title="Who is this fund for?" /></AnimatedBlock>
+              <AnimatedBlock className="mt-8 space-y-4">
+                <button
+                  onClick={() => { haptic("medium"); setAccountType("child"); moveToStep("details"); }}
+                  className="get-started-choice"
+                  data-testid="option-child-fund"
                 >
-                  {accountType === "parent" ? (
-                    <Heart className="w-8 h-8 text-white" />
-                  ) : (
-                    <User className="w-8 h-8 text-primary-foreground" />
-                  )}
-                </motion.div>
-
-                <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
-                  {accountType === "parent" 
-                    ? "What's your child's name?" 
-                    : "What's your first name?"}
-                </h1>
-                <p className="text-muted-foreground">
-                  {accountType === "parent"
-                    ? "We'll create their personalized Future Fund"
-                    : "We'll personalize your fund and shareable link"}
-                </p>
-              </div>
-
-              <div className="flex-1">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                    onFocus={() => haptic('light')}
-                    placeholder={accountType === "parent" ? "e.g., Mila" : "e.g., Sarah"}
-                    autoFocus
-                    data-testid="input-recipient-name"
-                    className="w-full h-14 px-5 text-xl font-medium border-2 border-border/50 rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 shadow-premium-sm transition-all duration-150 bg-card"
-                  />
-                </div>
-
-                <AnimatePresence>
-                  {recipientName && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10, height: 0 }}
-                      animate={{ opacity: 1, y: 0, height: "auto" }}
-                      exit={{ opacity: 0, y: -10, height: 0 }}
-                      transition={{ duration: 0.15 }}
-                      className="mt-4 overflow-hidden"
-                    >
-                      <div className="p-4 rounded-2xl bg-success/10 border border-success/20">
-                        <p className="text-sm text-[hsl(var(--kora-evergreen))]">
-                          <span className="font-semibold">{recipientName}'s Future Fund</span>, {accountType === "parent" ? "their" : "your"} personalized investment account
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div className="mt-auto pt-8">
-                <Button
-                  onClick={handleNext}
-                  disabled={!canProceed()}
-                  size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 disabled:opacity-40 shadow-lg"
-                  data-testid="button-continue-personalize"
-                >
-                  Continue
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </div>
-            </main>
-          </motion.div>
-        )}
-
-        {/* PROJECTION - Growth calculator */}
-        {step === "projection" && (
-          <motion.div
-            key="projection"
-            {...fadeSlide}
-            className="min-h-screen flex flex-col"
-          >
-            <PremiumHeader />
-
-            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg md:max-w-2xl mx-auto w-full">
-              <div className="relative mb-6">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className="w-16 h-16 rounded-2xl bg-success flex items-center justify-center mb-6 shadow-lg"
-                >
-                  <TrendingUp className="w-8 h-8 text-success-foreground" />
-                </motion.div>
-
-                <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
-                  Watch {fundName}'s future grow
-                </h1>
-                <p className="text-muted-foreground">
-                  See how gifts compound into something meaningful
-                </p>
-              </div>
-
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.15 }}
-                className="flex-1"
-              >
-                <div className="bg-card rounded-3xl p-6 shadow-lg border border-border mb-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <span className="text-sm text-muted-foreground">Annual gifts</span>
-                    <span className="font-serif text-2xl font-bold text-foreground">${projectedAmount}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="get-started-choice__icon text-xl">🧒</div>
+                    <p className="text-lg font-semibold text-foreground">For my child.</p>
                   </div>
-                  
-                  <input
-                    type="range"
-                    min="100"
-                    max="2000"
-                    step="100"
-                    value={projectedAmount}
-                    onChange={(e) => setProjectedAmount(Number(e.target.value))}
-                    className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-primary"
-                    data-testid="slider-projection"
-                  />
-                  
-                  <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                    <span>$100</span>
-                    <span>$2,000</span>
-                  </div>
-
-                  <div className="mt-8 pt-6 border-t border-border">
-                    <div className="flex items-end justify-between">
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">In 15 years</p>
-                        <motion.p 
-                          key={projectedGrowth}
-                          initial={{ scale: 1.05 }}
-                          animate={{ scale: 1 }}
-                          transition={{ duration: 0.15 }}
-                          className="font-serif text-4xl font-bold text-success"
-                        >
-                          ${projectedGrowth.toLocaleString()}
-                        </motion.p>
-                      </div>
-                      <div className="text-right">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-success/10 rounded-full text-success text-sm font-medium">
-                          <TrendingUp size={14} />
-                          {((projectedGrowth / (projectedAmount * 15) - 1) * 100).toFixed(0)}% growth
-                        </div>
-                      </div>
+                </button>
+                <button
+                  disabled
+                  className="get-started-choice opacity-50 cursor-not-allowed"
+                  data-testid="option-personal-fund"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="get-started-choice__icon text-xl">🙋</div>
+                    <div className="flex items-center gap-3">
+                      <p className="text-lg font-semibold text-foreground">For myself.</p>
+                      <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">Coming soon</span>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-4 bg-muted rounded-2xl border border-border">
-                  <Sparkles className="w-5 h-5 text-[hsl(var(--kora-gold))] flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-muted-foreground">
-                    Based on the S&P 500's historical average of ~10% annually. Past performance doesn't guarantee future results.
-                  </p>
-                </div>
-              </motion.div>
-
-              <div className="mt-auto pt-8">
-                <Button
-                  onClick={handleNext}
-                  size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 shadow-lg"
-                  data-testid="button-continue-projection"
-                >
-                  Continue
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </div>
-            </main>
-          </motion.div>
+                </button>
+              </AnimatedBlock>
+            </div>
+          </Shell>
         )}
 
-        {/* ACCOUNT - Create account */}
-        {step === "account" && (
-          <motion.div
-            key="account"
-            {...fadeSlide}
-            className="min-h-screen flex flex-col"
-          >
-            <PremiumHeader />
-
-            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg md:max-w-2xl mx-auto w-full">
-              <div className="relative mb-8">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mb-6 shadow-lg"
-                >
-                  <Wallet className="w-8 h-8 text-primary-foreground" />
-                </motion.div>
-
-                <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
-                  Create your account
-                </h1>
-                <p className="text-muted-foreground">
-                  {accountType === "parent" 
-                    ? `You'll manage ${recipientName}'s fund from here`
-                    : "Secure your fund with an account"}
-                </p>
-              </div>
-
-              {authError && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-sm text-destructive text-center"
-                >
-                  {authError}
-                </motion.div>
-              )}
-
-              <motion.div 
-                variants={staggerChildren}
-                initial="initial"
-                animate="animate"
-                className="flex-1 space-y-5"
-              >
-                <motion.div variants={fadeUp}>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Email address
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    data-testid="input-email"
-                    className="w-full px-4 py-4 border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-150 bg-card"
-                  />
-                </motion.div>
-
-                <motion.div variants={fadeUp}>
-                  <label className="block text-sm font-medium text-foreground mb-2">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Create a secure password"
-                    data-testid="input-password"
-                    className="w-full px-4 py-4 border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-150 bg-card"
-                  />
-                  <p className="text-xs text-muted-foreground mt-2">At least 8 characters</p>
-                </motion.div>
-
-                <motion.div variants={fadeUp} className="pt-4 flex items-center justify-center gap-6 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <Shield size={14} />
-                    <span>SIPC protected</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Lock size={14} />
-                    <span>256-bit encryption</span>
-                  </div>
-                </motion.div>
-              </motion.div>
-
-              <div className="mt-auto pt-8">
-                <Button
-                  onClick={handleNext}
-                  disabled={!canProceed() || isSubmitting}
-                  size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 disabled:opacity-40 shadow-lg"
-                  data-testid="button-continue-account"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <motion.div 
-                        className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full mr-2"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      />
-                      Creating account...
-                    </>
-                  ) : (
-                    <>
-                      {accountType === "adult" ? "Create my fund" : "Continue"}
-                      {accountType === "adult" ? <Check className="ml-2 w-5 h-5" /> : <ArrowRight className="ml-2 w-5 h-5" />}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </main>
-          </motion.div>
-        )}
-
-        {/* CHILDREN - Confirm child details (parent flow only) */}
-        {step === "children" && (
-          <motion.div
-            key="children"
-            {...fadeSlide}
-            className="min-h-screen flex flex-col"
-          >
-            <PremiumHeader />
-
-            <main className="flex-1 flex flex-col px-6 pb-12 max-w-lg md:max-w-2xl mx-auto w-full">
-              <div className="relative mb-8">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                  className="w-16 h-16 rounded-2xl bg-[hsl(var(--kora-gold))] flex items-center justify-center mb-6 shadow-lg"
-                >
-                  <Heart className="w-8 h-8 text-white" />
-                </motion.div>
-
-                <h1 className="text-2xl md:text-3xl font-semibold text-foreground mb-3">
-                  Confirm the details
-                </h1>
-                <p className="text-muted-foreground">
-                  You can add more children later from your dashboard
-                </p>
-              </div>
-
-              <motion.div 
-                variants={staggerChildren}
-                initial="initial"
-                animate="animate"
-                className="flex-1 space-y-4"
-              >
-                {children.map((child, index) => (
-                  <motion.div
-                    key={child.id}
-                    variants={fadeUp}
-                    className="bg-card rounded-2xl border-2 border-border p-5 shadow-sm"
+        {step === "details" && (
+          <Shell key="details" back={goBack} progress={progress} direction={direction}>
+            <div className="flex flex-1 flex-col">
+              <AnimatedBlock>
+                <ScreenLead
+                  title={accountType === "child" ? "Who's this fund for?" : "What should we call your fund?"}
+                  description={accountType === "personal" ? "This is what people will see when they land on your page." : "One thing at a time. Name, occasion, then who should get the link."}
+                />
+              </AnimatedBlock>
+              {/* Country gate — the silent-break catch. Kora is structurally
+                  US-only at launch; asking here (post-auth, pre-details)
+                  catches non-US visitors before they invest time naming
+                  the child, picking occasion, etc. only to hit the state
+                  picker later and find their country isn't an option. */}
+              <AnimatedBlock className="mt-8">
+                <p className="text-sm font-semibold text-foreground mb-3">Where do you live?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); setCountry("US"); }}
+                    className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium ${country === "US" ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-foreground"}`}
+                    data-testid="option-country-us"
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-sm font-medium text-foreground">
-                        Child {index + 1}
-                      </span>
-                      {children.length > 1 && (
+                    United States
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); setCountry("OTHER"); }}
+                    className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium ${country === "OTHER" ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-foreground"}`}
+                    data-testid="option-country-other"
+                  >
+                    Outside the US
+                  </button>
+                </div>
+              </AnimatedBlock>
+              {country === "OTHER" && (
+                <AnimatedBlock className="mt-4">
+                  <USOnlyOffRamp sourceSurface="get-started-details" />
+                </AnimatedBlock>
+              )}
+              {country === "US" && (
+              <AnimatedBlock className="get-started-panel mt-8 space-y-5">
+                <label htmlFor="get-started-recipient" className="sr-only">
+                  {accountType === "child" ? "Child's first name" : "Fund name"}
+                </label>
+                <input
+                  id="get-started-recipient"
+                  name={accountType === "child" ? "recipientFirstName" : "fundName"}
+                  autoComplete="off"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={accountType === "child" ? "Emma" : "Sarah's Fund"}
+                  className="get-started-input"
+                  data-testid="input-recipient-name"
+                />
+                {accountType === "child" && (
+                  <div className="space-y-3">
+                    <Popover>
+                      <PopoverTrigger asChild>
                         <button
-                          onClick={() => removeChild(child.id)}
-                          data-testid={`button-remove-child-${index}`}
-                          className="text-muted-foreground hover:text-foreground p-1 transition-colors duration-150"
+                          type="button"
+                          data-testid="input-recipient-birthdate"
+                          className="get-started-input flex w-full items-center justify-between text-left"
                         >
-                          <Trash2 size={16} />
+                          <span className={birthdate ? "text-foreground" : "text-muted-foreground"}>
+                            {birthdate
+                              ? new Date(birthdate + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                              : "Date of birth"}
+                          </span>
+                          <CalendarIcon size={16} className="shrink-0 text-muted-foreground" />
                         </button>
-                      )}
-                    </div>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm text-muted-foreground mb-2">
-                          First name
-                        </label>
-                        <input
-                          type="text"
-                          value={child.name}
-                          onChange={(e) => updateChild(child.id, "name", e.target.value)}
-                          placeholder="e.g., Mila"
-                          data-testid={`input-child-name-${index}`}
-                          className="w-full px-4 py-3 border-2 border-border rounded-xl text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-150 bg-card"
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          captionLayout="dropdown"
+                          selected={birthdate ? new Date(birthdate + "T12:00:00") : undefined}
+                          onSelect={(date) => {
+                            if (!date) return;
+                            const y = date.getFullYear();
+                            const m = String(date.getMonth() + 1).padStart(2, "0");
+                            const d = String(date.getDate()).padStart(2, "0");
+                            setBirthdate(`${y}-${m}-${d}`);
+                          }}
+                          fromYear={new Date().getFullYear() - 18}
+                          toYear={new Date().getFullYear()}
+                          defaultMonth={birthdate ? new Date(birthdate + "T12:00:00") : new Date(new Date().getFullYear() - 5, 0)}
+                          disabled={{ after: new Date() }}
                         />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-muted-foreground mb-2">
-                          Your relationship
-                        </label>
-                        <select
-                          value={child.relationship}
-                          onChange={(e) => updateChild(child.id, "relationship", e.target.value)}
-                          data-testid={`select-relationship-${index}`}
-                          className="w-full px-4 py-3 border-2 border-border rounded-xl text-foreground bg-card focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-150"
+                      </PopoverContent>
+                    </Popover>
+                    {dobIssue && <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">{dobIssue}</div>}
+                  </div>
+                )}
+                {accountType === "child" && name.trim().length > 0 && birthdate && !dobIssue && (
+                  <div className="space-y-3" data-testid="section-onboarding-occasion">
+                    <p className="text-sm font-semibold text-foreground">What's the occasion?</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {["Birthday", "Holiday", "Just because", "Other"].map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => { haptic("selection"); setOccasion(value); }}
+                          className={`rounded-2xl border px-3 py-3 text-left text-sm font-medium ${occasion === value ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-foreground"}`}
+                          data-testid={`option-occasion-${value.toLowerCase().replace(/\s+/g, "-")}`}
                         >
-                          <option value="Parent">Parent</option>
-                          <option value="Legal guardian">Legal guardian</option>
-                          <option value="Grandparent">Grandparent</option>
-                        </select>
-                      </div>
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {accountType === "child" && occasion && (
+                  <div className="space-y-3" data-testid="section-onboarding-gifters">
+                    <p className="text-sm font-semibold text-foreground">Who'll be gifting?</p>
+                    <div className="space-y-2">
+                      {["Family only", "Friends too", "Everyone"].map((value) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => { haptic("selection"); setGifterAudience(value); }}
+                          className={`w-full rounded-2xl border px-4 py-3 text-left text-sm font-medium ${gifterAudience === value ? "border-primary bg-primary/5 text-primary" : "border-border bg-background text-foreground"}`}
+                          data-testid={`option-gifters-${value.toLowerCase().replace(/\s+/g, "-")}`}
+                        >
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </AnimatedBlock>
+              )}
+              {country === "US" && accountType === "child" && name.trim().length >= 2 && birthdate && !dobIssue && (
+                <AnimatedBlock className="rounded-2xl border border-primary/20 bg-primary/5 px-5 py-4 mt-4">
+                  <p className="font-heading text-lg font-semibold text-foreground">
+                    {name}. Born {new Date(birthdate + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">Let's build something incredible for {name}.</p>
+                </AnimatedBlock>
+              )}
+              <Dock primary={<Button onClick={() => void handleContinue()} disabled={!canContinue || creating} className="h-14 w-full rounded-2xl text-base btn-action" data-testid="button-details-continue">{isLastStep ? (creating ? "Creating fund..." : "Create fund and get gift link") : "Continue"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>} />
+            </div>
+          </Shell>
+        )}
+
+        {step === "projection" && (
+          <Shell key="projection" back={goBack} progress={progress} direction={direction}>
+            <div className="flex flex-1 flex-col">
+              <AnimatedBlock>
+                <ScreenLead title={accountType === "personal" ? "Here is what your gifts could become." : `Here is what starting today looks like for ${displayName}.`} />
+              </AnimatedBlock>
+              <AnimatedBlock className="mt-6 space-y-3">
+                <div className="flex flex-wrap gap-2">{onboardingAnnualGiftOptions.map((amount) => <button key={amount} onClick={() => { haptic("selection"); setAnnualGift(amount); }} className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${annualGift === amount ? "bg-primary text-primary-foreground shadow-premium-sm" : "bg-card text-foreground"}`} data-testid={`projection-amount-${amount}`}>${amount}/yr</button>)}</div>
+              </AnimatedBlock>
+              <AnimatedBlock className="get-started-panel relative mt-6 overflow-hidden">
+                <div className="pointer-events-none absolute inset-x-10 top-3 h-20 rounded-full bg-[hsl(var(--kora-gold))]/10 blur-3xl" />
+                <p className="text-xs text-muted-foreground mb-4">
+                  {accountType === "child" && birthdate
+                    ? `If ${displayName}'s family gifts $${annualGift}/yr. By the time ${displayName} is 18:`
+                    : `If you receive $${annualGift}/yr in gifts:`}
+                </p>
+                <div className="grid gap-4">
+                  <motion.div layout className="grid grid-cols-[1fr_auto] items-end gap-4 rounded-2xl border border-border/60 bg-background p-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-muted-foreground"><PiggyBank size={16} /><span className="text-sm font-medium">Savings account</span></div>
+                      <motion.p key={`savings-${savings}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-2xl font-semibold text-foreground">{formatCurrencyWhole(savings)}</motion.p>
+                    </div>
+                    <div className="flex h-20 items-end gap-2">
+                      <motion.span className="w-3 rounded-full bg-border/80" animate={{ height: ["24%", "32%"] }} transition={{ duration: 0.45, ease: "easeOut" }} />
+                      <motion.span className="w-3 rounded-full bg-primary/25" animate={{ height: ["68%", "84%"] }} transition={{ duration: 0.55, ease: "easeOut" }} />
                     </div>
                   </motion.div>
-                ))}
-
-                <motion.button
-                  variants={fadeUp}
-                  onClick={addChild}
-                  data-testid="button-add-child"
-                  className="w-full py-4 border-2 border-dashed border-border rounded-2xl text-muted-foreground hover:border-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-150 flex items-center justify-center gap-2"
-                >
-                  <Plus size={18} />
-                  <span>Add another child</span>
-                </motion.button>
-              </motion.div>
-
-              <div className="mt-auto pt-8">
-                <Button
-                  onClick={handleNext}
-                  disabled={!canProceed() || isSubmitting}
-                  size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 disabled:opacity-40 shadow-lg"
-                  data-testid="button-create-fund"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <motion.div 
-                        className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full mr-2"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      />
-                      Creating fund...
-                    </>
-                  ) : (
-                    <>
-                      Create {children.length > 1 ? `${children.length} funds` : `${children[0]?.name || "the"}'s fund`}
-                      <Check className="ml-2 w-5 h-5" />
-                    </>
-                  )}
-                </Button>
-
-                <p className="text-xs text-muted-foreground text-center mt-4 leading-relaxed">
-                  By continuing, you agree to Kora's Terms of Service and Privacy Policy
-                </p>
-              </div>
-            </main>
-          </motion.div>
-        )}
-
-        {/* SUCCESS */}
-        {step === "success" && (
-          <motion.div
-            key="success"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-            className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative"
-          >
-            <div className="relative z-10 text-center max-w-sm w-full">
-              <motion.div
-                initial={{ scale: 0, rotate: -10 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
-                className="mb-6 mx-auto"
-              >
-                <Mascot size="xl" className="mx-auto" context="getstarted-success" />
-              </motion.div>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.15 }}
-                className="text-3xl font-semibold text-foreground mb-3"
-              >
-                {accountType === "parent" && children.length > 1 
-                  ? "Funds created!" 
-                  : `${recipientName}'s fund is ready!`}
-              </motion.h1>
-
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25, duration: 0.15 }}
-                className="text-muted-foreground mb-10 leading-relaxed"
-              >
-                Share the link with family and friends to start receiving gifts that grow
-              </motion.p>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3, duration: 0.15 }}
-                className="space-y-3"
-              >
-                <Button
-                  onClick={() => {
-                    const childNames = children.map(c => c.name).join(",");
-                    setLocation(`/activate?type=${accountType === "parent" ? "child" : "personal"}&children=${encodeURIComponent(childNames)}`);
-                  }}
-                  size="lg"
-                  className="w-full h-14 text-base rounded-2xl bg-primary hover:bg-primary/90 shadow-lg"
-                  data-testid="button-activate-investing"
-                >
-                  <Shield className="mr-2 w-5 h-5" />
-                  Activate investing
-                </Button>
-                
-                <p className="text-xs text-muted-foreground text-center">
-                  Quick verification (~2 min) so gifts become real investments
-                </p>
-
-                <div className="relative py-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-border"></div>
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="px-3 bg-background text-xs text-muted-foreground">or</span>
-                  </div>
+                  <motion.div layout className="grid grid-cols-[1fr_auto] items-end gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                    <div>
+                      <div className="flex items-center gap-2 text-primary"><TrendingUp size={16} /><span className="text-sm font-medium">Kiddo estimate</span></div>
+                      <motion.p key={`invested-${invested}`} initial={{ opacity: 0, y: 10, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="mt-2 text-2xl font-semibold text-foreground">{formatCurrencyWhole(invested)}</motion.p>
+                    </div>
+                    <div className="flex h-20 items-end gap-2">
+                      <motion.span className="w-3 rounded-full bg-border/80" animate={{ height: ["24%", "32%"] }} transition={{ duration: 0.45, ease: "easeOut" }} />
+                      <motion.span className="w-3 rounded-full bg-primary" animate={{ height: ["64%", "84%"] }} transition={{ duration: 0.6, ease: "easeOut" }} />
+                    </div>
+                  </motion.div>
+                  <motion.div key={`diff-${diff}`} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="rounded-2xl bg-[hsl(var(--kora-gold))]/10 px-4 py-3">
+                    {/* Rotating-sparkles icon removed 2026-05-12 — the gold-bg
+                        + label + value is enough. Per feedback_animation_primitives.md
+                        rotate+scale animation on a celebratory icon is the AI-slop
+                        pattern banned. */}
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-foreground">The difference: {formatCurrencyWhole(diff)}</p>
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">The difference? Time. And you just gave {displayName === "your child" || displayName === "you" ? "them" : displayName} that. Estimated at 7% hypothetical annual growth. Not guaranteed.</p>
+                  </motion.div>
                 </div>
-
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    const childNames = children.map(c => c.name).join(",");
-                    setLocation(`/dashboard?type=${accountType === "parent" ? "child" : "personal"}&name=${encodeURIComponent(recipientName)}&children=${encodeURIComponent(childNames)}&new=true`);
-                  }}
-                  size="lg"
-                  className="w-full h-12 text-base rounded-2xl"
-                  data-testid="button-go-to-dashboard"
-                >
-                  Skip for now, go to dashboard
-                </Button>
-                
-                <p className="text-xs text-muted-foreground text-center">
-                  You can activate anytime from your dashboard
-                </p>
-              </motion.div>
+              </AnimatedBlock>
+              {isLastStep && submitError && <div className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{submitError}</div>}
+              <Dock primary={<Button onClick={() => void handleContinue()} disabled={creating} className="h-14 w-full rounded-2xl text-base btn-premium" data-testid="button-projection-continue">{isLastStep ? (creating ? "Creating fund..." : "Create my fund") : "This is why I'm starting"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>} />
             </div>
-          </motion.div>
+          </Shell>
         )}
+
+        {step === "investment" && (
+          <Shell key="investment" back={goBack} progress={progress} direction={direction}>
+            <div className="flex flex-1 flex-col">
+              <AnimatedBlock><ScreenLead title="What should gifts do by default?" description="Pick the family default for new gifts. Gifter overrides only appear later if you allow them in settings." /></AnimatedBlock>
+              <AnimatedBlock className="mt-8 space-y-4">
+                <button onClick={() => { haptic("selection"); setInvestment("sp500"); }} className={`get-started-choice ${investment === "sp500" ? "get-started-choice--active" : ""}`} data-testid="option-investment-sp500"><div className="flex items-center gap-3"><span className="text-xl">📈</span><p className="text-lg font-semibold text-foreground">Managed auto-invest</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Recommended for most families. You can refine the investment mix any time in settings.</p></button>
+                <button onClick={() => { haptic("selection"); setInvestment("stock"); }} className={`get-started-choice ${investment === "stock" ? "get-started-choice--active" : ""}`} data-testid="option-investment-stock"><div className="flex items-center gap-3"><span className="text-xl">⭐</span><p className="text-lg font-semibold text-foreground">One default stock</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Every gift follows one stock unless you later allow a gifter override.</p></button>
+                {investment === "stock" && (
+                  <div className="get-started-panel space-y-4">
+                    <div className="relative">
+                      <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <label htmlFor="get-started-stock-search" className="sr-only">Search any company</label>
+                      <input
+                        id="get-started-stock-search"
+                        name="stockSearch"
+                        type="search"
+                        autoComplete="off"
+                        value={stockSearch}
+                        onChange={(e) => setStockSearch(e.target.value)}
+                        placeholder="Search any company..."
+                        className="h-11 w-full rounded-2xl border border-border bg-background pl-9 pr-4 text-sm outline-none focus:border-primary"
+                        data-testid="input-stock-search"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {onboardingStockChoices
+                        .filter((s) => !stockSearch || s.name.toLowerCase().includes(stockSearch.toLowerCase()) || s.ticker.toLowerCase().includes(stockSearch.toLowerCase()))
+                        .map((stock) => (
+                          <button key={stock.ticker} onClick={() => { haptic("selection"); setTicker(stock.ticker); }} className={`flex items-center gap-3 rounded-2xl border px-4 py-3 text-left ${ticker === stock.ticker ? "border-primary bg-primary/5 shadow-premium-sm" : "border-border bg-background"}`} data-testid={`option-stock-${stock.ticker}`}>
+                            <StockLogo ticker={stock.ticker} size={28} />
+                            <div><p className="text-sm font-semibold text-foreground">{stock.name}</p><p className="text-xs text-muted-foreground">{stock.ticker}</p></div>
+                          </button>
+                        ))}
+                    </div>
+                    {stockSearch && onboardingStockChoices.filter((s) => s.name.toLowerCase().includes(stockSearch.toLowerCase()) || s.ticker.toLowerCase().includes(stockSearch.toLowerCase())).length === 0 && (
+                      <p className="text-center text-sm text-muted-foreground">No match in popular picks. Full search coming soon.</p>
+                    )}
+                  </div>
+                )}
+                <button onClick={() => { haptic("selection"); setInvestment("cash"); }} className={`get-started-choice ${investment === "cash" ? "get-started-choice--active" : ""}`} data-testid="option-investment-cash"><div className="flex items-center gap-3"><span className="text-xl">💵</span><p className="text-lg font-semibold text-foreground">Hold as cash</p></div><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Gifts land as cash until you decide when to invest them.</p></button>
+              </AnimatedBlock>
+              <AnimatedBlock className="mt-4"><p className="text-center text-sm text-muted-foreground">This sets the default for new gifts. You can change it any time in settings.</p></AnimatedBlock>
+              {submitError && <div className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{submitError}</div>}
+              <Dock primary={<Button onClick={() => void handleContinue()} disabled={!canContinue || creating} className="h-14 w-full rounded-2xl text-base btn-premium" data-testid="button-investment-continue">{isLastStep ? (creating ? "Creating fund..." : accountType === "personal" ? "Create my fund" : `Create ${displayName}'s fund`) : "Continue"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>} />
+            </div>
+          </Shell>
+        )}
+
+        {step === "kyc" && (
+          <Shell key="kyc" back={goBack} progress={progress} direction={direction}>
+            <div className="flex flex-1 flex-col">
+              <AnimatedBlock className="get-started-panel bg-primary/5"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Shield size={24} /></div><p className="mt-5 text-sm font-medium text-primary">One more thing.</p><h1 className="mt-2 font-heading text-[2rem] font-semibold leading-tight text-foreground">{accountType === "personal" ? "To open your investment account, we need to verify your identity." : `To open ${displayName}'s investment account, we need to verify your identity.`}</h1>{accountType !== "personal" && <p className="mt-2 text-sm font-medium text-primary">Your identity, the account holder. Not {displayName}'s.</p>}<p className="mt-3 text-base leading-relaxed text-muted-foreground">Required by law for all investment accounts. Takes about 2 minutes.</p></AnimatedBlock>
+              <AnimatedBlock className="get-started-panel mt-6"><p className="text-sm font-semibold text-foreground">You will need</p><div className="mt-4 space-y-3 text-sm text-muted-foreground"><div className="flex items-start gap-3"><Mail size={16} className="mt-0.5 text-primary" /><span>Your full legal name</span></div><div className="flex items-start gap-3"><Check size={16} className="mt-0.5 text-primary" /><span>Your date of birth</span></div><div className="flex items-start gap-3"><Lock size={16} className="mt-0.5 text-primary" /><span>Your Social Security Number</span></div><div className="flex items-start gap-3"><Gift size={16} className="mt-0.5 text-primary" /><span>Your home address</span></div></div></AnimatedBlock>
+              <AnimatedBlock className="get-started-panel mt-6 space-y-3"><p className="text-sm leading-relaxed text-foreground">This is the same identity check you would see at Fidelity, Vanguard, or any regulated investment account.</p><p className="text-sm leading-relaxed text-muted-foreground">Asking for your Social Security Number can feel like a big ask. It is required by federal law for all investment accounts. Not optional. Not a Kiddo rule.</p><p className="text-sm leading-relaxed text-muted-foreground">256-bit encryption. Always. We never store your SSN in plain text. Ever.</p></AnimatedBlock>
+              {submitError && <div className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{submitError}</div>}
+              <Dock primary={<Button onClick={() => void handleContinue()} disabled={creating} className="h-14 w-full rounded-2xl text-base btn-premium" data-testid="button-kyc-ready">{creating ? "Creating fund..." : "I'm ready"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>} />
+            </div>
+          </Shell>
+        )}
+
+        {step === "live" && created && (() => {
+          // Single source of truth for the child-name possessive used
+          // across this celebration screen (headline, copy button, SMS
+          // template, QR header). UTMA funds auto-generate name as
+          // "[Child]'s Fund," so reading from name directly produces
+          // "Solomon's Fund's fund is live." Use recipientFirstName
+          // when present; fall back to stripping "'s Fund" / " Fund"
+          // suffix from name for legacy rows.
+          const firstName = created.recipientFirstName.trim();
+          const childDisplayName = firstName
+            || String(created.name || "")
+                .replace(/\s*'s\s+Fund\s*$/i, "")
+                .replace(/\s+Fund\s*$/i, "")
+                .trim()
+            || "Your child";
+          return (
+          <Shell key="live" direction={direction}>
+            <div className="flex min-h-[calc(100dvh-10rem)] flex-col justify-center">
+              <AnimatedBlock className="text-center">
+                <div className="relative mx-auto flex h-28 w-28 items-center justify-center">
+                  <motion.div className="absolute inset-0 rounded-[34px] bg-[hsl(var(--kora-gold))]/10 blur-2xl" animate={{ scale: [0.9, 1.08, 1], opacity: [0.4, 0.7, 0.45] }} transition={{ duration: 1.8, repeat: Infinity, repeatType: "mirror" }} />
+                  <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-[28px] bg-primary/10 text-primary shadow-premium-sm pulse-success"><Check size={34} /></div>
+                  {/* Two orbiting Sparkles deleted 2026-05-12 — the worst
+                      AI-slop pattern in the file. Pulsing gold halo behind +
+                      pulse-success Check icon already carries the success
+                      moment without celebration-particle decoration. Per
+                      feedback_no_ai_slop.md and Robinhood-precedent ban on
+                      celebratory imagery tied to investment activity. */}
+                </div>
+                <h1 className="mt-8 font-heading text-[2.4rem] font-semibold leading-tight text-foreground">{accountType === "personal" ? `${created.name} is live.` : `${childDisplayName}'s fund is live.`}</h1>
+                <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Share the link and the first gift can happen today. When you are ready to open the real investment account, tap Activate Investing. It takes 2 minutes.</p>
+              </AnimatedBlock>
+              <AnimatedBlock className="get-started-panel mt-8"><p className="text-sm font-semibold text-foreground">Your private fund link</p><div className="mt-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground break-all">{shareUrl}</div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">Text it, email it, or drop it into an invitation. The moment someone gifts through this link, the story begins.</p></AnimatedBlock>
+              <AnimatedBlock className="mt-8 grid grid-cols-3 gap-3">
+                {[
+                  { label: "Fund live", copy: "ready for its first gift" },
+                  { label: "Memory Book", copy: "starts with the first note" },
+                  { label: "Investing", copy: "activate when ready" },
+                ].map((item) => (
+                  <div key={item.label} className="get-started-mini-card">
+                    <p className="text-sm font-semibold text-foreground">{item.label}</p>
+                    <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{item.copy}</p>
+                  </div>
+                ))}
+              </AnimatedBlock>
+              <Dock
+                primary={
+                  <div className="space-y-2">
+                    <button
+                      onClick={async () => {
+                        try { await navigator.clipboard.writeText(shareUrl); } catch {}
+                        setLinkCopied(true);
+                        setTimeout(() => setLinkCopied(false), 2000);
+                        void trackOnboardingSignal("cta_click", "onboarding_live_share", { destination: "clipboard" });
+                        void trackOnboardingSignal("fund_link_shared", "fund_created_to_link_shared", { baselineEvent: "fund_link_shared", fundId: created.id, destination: "clipboard" });
+                        haptic("success");
+                      }}
+                      className="flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-primary text-primary-foreground text-base font-semibold shadow-premium-sm press-effect"
+                      data-testid="button-copy-fund-link"
+                    >
+                      {linkCopied ? <Check size={20} /> : <Copy size={18} />}
+                      {linkCopied ? "Copied!" : `Copy ${accountType === "personal" ? "your" : `${childDisplayName}'s`} gifting link`}
+                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => {
+                          const text = accountType === "personal"
+                            ? `Gift ${created.name}: ${shareUrl}`
+                            : `Gift ${childDisplayName}: ${shareUrl}`;
+                          window.open(`sms:?body=${encodeURIComponent(text)}`, "_self");
+                          void trackOnboardingSignal("cta_click", "onboarding_live_share", { destination: "sms" });
+                          void trackOnboardingSignal("fund_link_shared", "fund_created_to_link_shared", { baselineEvent: "fund_link_shared", fundId: created.id, destination: "sms" });
+                          haptic("medium");
+                        }}
+                        className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-border bg-card text-sm font-medium text-foreground press-effect"
+                        data-testid="button-share-via-text"
+                      >
+                        <MessageSquare size={16} />
+                        Share via text
+                      </button>
+                      <button
+                        onClick={() => { setShowQR(true); haptic("medium"); }}
+                        className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-border bg-card text-sm font-medium text-foreground press-effect"
+                        data-testid="button-download-qr"
+                      >
+                        <QrCode size={16} />
+                        QR code
+                      </button>
+                    </div>
+                  </div>
+                }
+                secondary={
+                  <div className="space-y-3">
+                    <Button variant="outline" onClick={() => { void trackOnboardingSignal("cta_click", "onboarding_activate_investing", { fundId: created.id }); setLocation(`/activate?fundId=${encodeURIComponent(created.id)}`); }} className="h-12 w-full rounded-2xl text-base" data-testid="button-activate-investing">Activate investing</Button>
+                    {showSkipWarning ? (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-3">
+                        <p className="text-sm font-semibold text-amber-900">Before you go. Send yourself the link first.</p>
+                        <p className="text-sm text-amber-800">You worked too hard to lose the moment.</p>
+                        <div className="flex flex-col gap-2">
+                          <Button variant="outline" className="w-full rounded-2xl" onClick={async () => { try { await navigator.clipboard.writeText(shareUrl); } catch {} void trackOnboardingSignal("cta_click", "onboarding_send_self_link", { fundId: created.id }); setLocation("/dashboard"); }} data-testid="button-send-self-link">Send to myself</Button>
+                          <button onClick={() => { void trackOnboardingSignal("cta_click", "onboarding_skip_to_dashboard", { fundId: created.id }); setLocation("/dashboard"); }} className="w-full py-2 text-sm font-medium text-muted-foreground" data-testid="button-go-dashboard-later">I will do this later</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => setShowSkipWarning(true)} className="w-full py-3 text-sm font-medium text-muted-foreground" data-testid="button-show-skip-warning">I'll share it later</button>
+                    )}
+                  </div>
+                }
+              />
+
+              {/* QR code modal */}
+              <AnimatePresence>
+                {showQR && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+                    onClick={() => setShowQR(false)}
+                  >
+                    <motion.div
+                      initial={{ scale: 0.9, y: 20 }}
+                      animate={{ scale: 1, y: 0 }}
+                      exit={{ scale: 0.9, y: 20 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      className="bg-card rounded-3xl p-8 shadow-2xl w-full max-w-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-between mb-6">
+                        <p className="font-heading text-lg font-semibold text-foreground">
+                          {accountType === "personal" ? "Your gifting QR" : `${childDisplayName}'s gifting QR`}
+                        </p>
+                        <button onClick={() => setShowQR(false)} className="p-1.5 rounded-full hover:bg-muted transition-colors"><X size={18} /></button>
+                      </div>
+                      <div className="flex justify-center bg-white rounded-2xl p-5">
+                        <QRCodeSVG value={shareUrl} size={200} level="M" />
+                      </div>
+                      <p className="mt-4 text-center text-sm text-muted-foreground">Screenshot this and share it anywhere. Anyone who scans it can gift directly.</p>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </Shell>
+          );
+        })()}
       </AnimatePresence>
     </div>
   );

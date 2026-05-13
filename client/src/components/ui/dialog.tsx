@@ -26,6 +26,18 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
+// A11y rule for every DialogContent usage in the codebase:
+//   - If you render a <DialogDescription> inside the dialog, pass NO aria-describedby
+//     prop. Radix's context-binding will auto-associate the Description's id for you.
+//   - If you do NOT render a DialogDescription, pass `aria-describedby={undefined}`
+//     explicitly. This signals "I considered this and chose not to provide a
+//     description" and suppresses Radix's dev warning.
+//   - NEVER pass `aria-describedby={undefined}` AND render a DialogDescription.
+//     The explicit undefined wins and breaks the Description's a11y association —
+//     the visible Description text renders but screen readers don't see it as the
+//     dialog's description. 2026-05-12 audit fixed three sites where the wrong
+//     pattern was in place: share-modal.tsx + share-kit.tsx (missing opt-out) and
+//     PersonalFundWaitlistModal.tsx (had both — the bug).
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
@@ -33,7 +45,7 @@ const DialogContent = React.forwardRef<
   React.useEffect(() => {
     haptic('light')
   }, [])
-  
+
   return (
     <DialogPortal>
       <DialogOverlay />

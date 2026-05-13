@@ -1,0 +1,270 @@
+
+Friendship
+Financial Markets Regulat...
+Trust
+Personal Finance Advice
+Stock Trading
+Investment Portfolio Mana...
+International Banking & F...
+Financial Law
+Financial Advice
++ 5
+Can I legally trade stocks for a trusted friend (for free) from another country? She can't read the English but would like to invest in the market by sending me the money and having me manage her portfolio.
+Sort
+Profile photo for Jim Beekhuizen
+Jim Beekhuizen
+Former Financial Advisor (Top 50 in US for my firm)Author has 2.2K answers and 1.4M answer views5y
+Whose name will be on the account? This is who will be receiving the tax consequences.
+
+If you put the account in your name, you run the risk of having to pay tax on the transfer of funds as income. You also will have a 1099 sent to the IRS for gains/losses in your name. Getting them to allow you to not recognize that is not easy. Would she incur higher or lower taxes?
+
+If you create the account in her name, you might have problems at the broker dealer. They might be required to deduct taxes on gains/losses and remit those directly to her government. She can always designate you as authorized to do her transactions, and there would be little consequence. If you do not have such authority, then you run the risk of her claiming you created losses for her. Without an authorization, the SEC could claim you are acting as an unregistered advisor. Not likely, but possible.
+
+In other words. be very careful about what you are doing. It’s not illegal, but you will have to follow the taxation rules.
+
+4.5K viewsView upvotes
+Promoted by ComparisonAdviser
+What secret about your industry can you share now that you don’t work for them anymore?
+Profile photo for Carl Madden
+Carl Madden
+Finance Security Expert
+ · 
+Sep 12
+Oh boy, where do I even start? After 8 years as an auto insurance agent, I have zero loyalty left to protect these companies.
+
+We Had "Loyalty Lists" Every month, I'd get a report of customers who hadn't shopped around in 2+ years. These were our golden geese - we could raise their rates aggressively because they'd proven they wouldn't leave. One customer I remember was paying $3,200 annually for coverage that should have cost $1,800. She stayed for 5 years.
+
+The "File and Use" Scam Here's something most people don't know: in many states, insurance companies can raise your rates immediately and ju
+
+Related questions
+My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+What is the best way to legally invest (in the stock market) a pool of money with my friends?
+Can I trade on my friend’s brokerage account and share the profit with him in the US? If yes, what is the best way for him to send me my share of the profit without getting into any legal and tax trouble? Do you have any other suggestion?
+I have a few friends that want me to manage their trading accounts. Is this legal, and what would I need to make it legal?
+Is there any harm to me if my friend uses my account for investing money in stocks?
+Profile photo for David Reece
+David Reece
+Former Innovation Systems Specialist at Africa Rice CenterAuthor has 13.3K answers and 7.1M answer views
+ · 
+5y
+And what could possibly go wrong…
+
+That sounds like a really daft plan. Anyway, the answer depends on where you are. If you are in the UK then you need a license to manage investments for other people, and if you do this without a license that is a criminal matter. You should also check the terms and conditions of any brokerage that you plan to use: you will probably find that you have to make a declaration that all the funds you invest with them are your property, and obviously it is an offence to make a false declaration when opening an account.
+
+Related
+Is it legal to invest in the stock market for someone else?
+Profile photo for Jim Seidman
+Jim Seidman
+Retired Investment AdviserAuthor has 1.3K answers and 6.1M answer views
+ · 
+10y
+If you are in the United States, the number of clients is what really matters. Generally, under the federal Investment Advisers Act of 1940, you would need to qualify for the "private-adviser exemption" from registering, requiring you to have fewer than 15 clients and not holding yourself out to the public as an investment adviser. Your state has a variation of the Uniform Securities Act. In most states, you need to register when you reach five clients. Basically, you could manage money for a few friends and family.
+
+Even so, I wouldn't recommend proceeding as an unlicensed investment adviser. Y
+
+Related
+Is it legal to invest in the stock market for someone else?
+Profile photo for Harsh S
+Harsh S
+Former Self Employed at Financial ServicesAuthor has 71 answers and 87.5K answer views
+ · 
+7y
+Strictly speaking, no you can't invest in the stocks on behalf of someone else because there is finalcial reward associated with it (be it on the positive side or in the negative side), if someone randomly trades the person in question could incur huge losses. But if anyone gives any other person right through POA then he or she may trade on behalf of someone else. Brokers usually place trade using call and trade and even give you loans against securities because they have already POA with them
+
+Promoted by The Penny Hoarder
+What's your most unhinged advice to combat the insane cost of living?
+Profile photo for Lisa Dawson
+Lisa Dawson
+Personal Finance Writer at The Penny Hoarder (2010–present)
+ · 
+Updated Jan 25
+Let’s be real — the usual advice about skipping lattes or canceling Netflix is a joke. The cost of living has gone feral, and a $6 coffee isn’t the reason most of us are broke.
+
+If you actually want to survive right now, you need tricks that feel a little off the rails — like slashing bills you didn’t even know were ripping you off, or getting paid for stuff you already waste time on anyway. It’s not glamorous, but it works. Here are the “unhinged” money moves that actually make a dent.
+
+1. Cancel Your Car Insurance
+
+You might not even realize it, but your car insurance company is probably overcharg
+
+Related questions
+I want to pool my money with friends and invest it. Do I need any type of license?
+Can you legally trade for profit through someone else's broker account?
+Can a trusted family member trade in my brokerage account using a limited trade authorization or do they have to be a licensed financial advisor?
+Can I trade in someone else’s broker account with their permission on a profit sharing basis without any legal hassles?
+What are the laws around trading for other individuals? Is it legal for an individual to give me their account details, and I trade for them on their account?
+Related
+Is it legal to invest in the stock market for someone else?
+Profile photo for Dan Gibbs
+Dan Gibbs
+Landlord (2016–present)Author has 7.5K answers and 51.2M answer views
+ · 
+5y
+Yes. You do have to have that person’s permission of course.
+
+One way to do it is to get a power of attorney. Then you can basically trade stocks on that person’s behalf. This can be good if the person is in jail or in a hospital or is in some other way unable to fulfill all of their financial responsibilities.
+
+Another way to do it is through some kind of investment partnership. For example, you form a company with that other person that then gives you the money to invest. This is the way hedge funds work.
+
+Related
+Is it legal to invest in the stock market for someone else?
+Profile photo for Swapnil Keshri
+Swapnil Keshri
+Studied at St. Joseph's College, Allahabad
+ · 
+Updated 5y
+If a person wishes to invest someone else's money from his/her demat account they can do so.
+
+But to be more practical,
+
+There is a constant fluctuation in the stock market, and all of a sudden an investor can earn many bucks or he can incur heavy losses.
+
+This clearly states that, if one is investing another persons money in the stock and he suffers loss then he himself has to bear the loss for the other person.
+
+To be on a safer side, one should invest his own money in the stock market to avoid this unwanted pressure of others.
+
+Promoted by Almedia
+Is it really possible to earn real cash just by watching YouTube every day?
+Profile photo for Charlee Anthony
+Charlee Anthony
+Go-to Resource for Realistic, Side Hustle Ideas
+ · 
+Dec 16
+Yes. I made up to $1,110 in only 15 days… from just watching YouTube videos in my free time.
+
+I didn’t even want to share this because I’ll definitely get a ton of hate. I know what I say sounds ridiculous. But it’s all real with freecash.
+
+I learned about it when my co-worker bought drinks on him after finding this “new side hustle”. When he said he gets paid for watching videos, I couldn’t stop laughing. Of course, I had to try it🤭 Got a $5 welcome bonus, invested it in an in-app purchase, and got it back as “cashback”.
+
+I said "invested” intentionally. I got my money back every time. I really th
+
+Related
+My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+Profile photo for Steven Jon Kaplan
+Steven Jon Kaplan
+Investing since 1981; registered with finra.org as an investment advisor.Author has 115 answers and 62.9K answer views
+ · 
+6y
+This is fully legal. You should study for your Series 65 exam, pass it, and then apply for a state RIA registration. Once that is done, set up a state-registered LLC and file a Schedule C each year with your Form 1040. You can then take clients by setting up separately-managed accounts. This is done by having each client fill out and authorize a document from their brokerage account where you are
+
+Related
+Is it legal for friends to pool their money together so that one of them can invest in the stock market on everyone's behalf?
+Profile photo for David Schwartz
+David Schwartz
+Trading forex, stocks, and options for a very long timeAuthor has 13.7K answers and 27.5M answer views
+ · 
+4y
+Is it legal for friends to pool their money together so that one of them can invest in the stock market on everyone's behalf?
+
+Yes. However:
+
+You must create a legal entity (typically some form of partnership).
+If the total amount invested will exceed $25 million, there are licensing and registration requirements.
+You can only invest in securities and other types of investments that are available to the general public, unless you jump through a number of hoops. (This means you can’t buy stock in privately held companies, you can’t be an angel investor, you can’t back lawsuits, and so on.)
+These are g
+
+Promoted by NerdWallet
+Is using a HELOC for home renovations a smart move or an easy way to overextend?
+Profile photo for NerdWallet
+NerdWallet
+Providing clarity for all of life's financial decisions
+ · 
+Feb 4
+This is one of those ‘it depends’ answers, but the details really matter here.
+
+If your renovation has a solid plan, you’ve compared HELOC options, and you’re confident in your ability to pay it back — a HELOC can be a smart financing tool to get you one step closer to that updated summer yard, or the dream reading nook you always imagined.
+
+But if you’re unsure about budget, timeline, or your ability to handle rate increases, it might be better to look at alternatives like a personal loan, home equity loan or tapping into your savings.
+
+Be sure to choose what's right for you and consider all option
+
+Related
+Is it illegal/inside trading if my friend told me to buy his company's stock because he thinks it's worth more?
+Profile photo for Ross
+Ross
+Former WizardAuthor has 4.6K answers and 116.8M answer views
+ · 
+5y
+It is only illegal if the friend provides information that 1) is not available to the public 2) material information that changes the firms outlook signficantly, from a financial aspect.
+
+A chap saying, dude, I just started flipping burgers at McDonalds in Stoke On Trent. McDonalds rules bra! You do that shite with stock no? I belief it worth more yo!
+
+That, that is not illegal :)
+
+
+Related
+Is it legal to invest in the stock market for someone else?
+Profile photo for Ayush Singh
+Ayush Singh
+Investor
+ · 
+3y
+Yes, it is legal to invest in the stock market on behalf of someone else. This is typically done through a power of attorney agreement, in which the person granting the power of attorney (the principal) grants another person (the attorney-in-fact) the authority to make investment decisions on their behalf.
+
+Related
+Is it legal to invest in the stock market for someone else?
+Profile photo for Mahendra
+Mahendra
+Stock market related issues Explains Latest News
+ · 
+2y
+According to a post on Analyzing Alpha, trading securities for others is illegal unless you are a licensed investment professional. Investment professionals must be registered with the Securities and Exchange Commission or have a federal license. However, you can legally buy stock for someone else, but depending on how you do it, you could end up holding the bag on a loss or having to pay extra income tax 1.
+
+I hope this helps! Let me know if you have any other questions.
+
+Related
+What are the terms and conditions set by investment banks like Goldman Sachs for doing personal trading for its employees and contingent workers? Does it allow them to buy and sell stocks after a review? How difficult is getting their approval?
+Profile photo for Joseph Wang
+Joseph Wang
+Ex-VP Quant - Investment banking - Hong KongAuthor has 31.8K answers and 137.5M answer views
+ · 
+4y
+Where I worked at JPMorgan, there was a toll-free number where you pre-cleared your trades. You called them up, you gave them the name of the stock, they said yes or no. The thing is that they would never tell you *why* the answer was yes or no.
+
+The big gotcha was that they could tell you to buy, but then when it comes time to sell you can’t. So you had to remember that when you called them up, you got authorization for a stop-loss order, that would execute automatically. Otherwise you could get into my situation where I bought HP stock with permission, then when it started to tank, I couldn’t
+
+Related
+Is it legal for me to manage my friend's personal financial portfolio of stocks?
+Profile photo for Pete Zeman
+Pete Zeman
+Investment Management ConsultingAuthor has 4.8K answers and 6.8M answer views
+ · 
+7y
+It’s legal.
+
+There’s no law or regulation that says you can’t. In fact, people do it all the time; they regularly give trading authority or power of attorney to relatives, friends, attorneys and accountants.
+
+Can they sue you? Sure, of course. People who invest on behalf of another person can definitely be held liable if they breach certain legal standards that may apply to their conduct:
+
+If the person doing the trading is licensed by the security industry they have, at minimum, an obligation to buy only suitable investments and an obligation to be supervised by the firm they work for.
+Non licensed
+Related questions
+My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+What is the best way to legally invest (in the stock market) a pool of money with my friends?
+Can I trade on my friend’s brokerage account and share the profit with him in the US? If yes, what is the best way for him to send me my share of the profit without getting into any legal and tax trouble? Do you have any other suggestion?
+I have a few friends that want me to manage their trading accounts. Is this legal, and what would I need to make it legal?
+Is there any harm to me if my friend uses my account for investing money in stocks?
+I want to pool my money with friends and invest it. Do I need any type of license?
+Can you legally trade for profit through someone else's broker account?
+Can a trusted family member trade in my brokerage account using a limited trade authorization or do they have to be a licensed financial advisor?
+Can I trade in someone else’s broker account with their permission on a profit sharing basis without any legal hassles?
+What are the laws around trading for other individuals? Is it legal for an individual to give me their account details, and I trade for them on their account?
+What is the legality of trading stocks with other's money?
+Is stock trading on another person’s behalf legal?
+Is it legal to invest in the stock market for someone else?
+Is it legal to trade stocks with friends’ money?
+Can a person have multiple investment accounts at one brokerage?
+Related questions
+My friends want me to manage their money like a hedge fund does. How do I go about this? What do I have to do to do this legally. Do I need a license? Are there monetary limits to needing a license?
+What is the best way to legally invest (in the stock market) a pool of money with my friends?
+Can I trade on my friend’s brokerage account and share the profit with him in the US? If yes, what is the best way for him to send me my share of the profit without getting into any legal and tax trouble? Do you have any other suggestion?
+I have a few friends that want me to manage their trading accounts. Is this legal, and what would I need to make it legal?
+Is there any harm to me if my friend uses my account for investing money in stocks?
+I want to pool my money with friends and invest it. Do I need any type of license?
+
+AD
+
+
+AD
+
+Advertisement
+AboutCareersPrivacyTermsContactLanguagesYour Ad ChoicesPress© Quora, Inc. 2026

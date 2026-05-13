@@ -1,0 +1,87 @@
+# Continuous integration: runs on every push + every pull request.
+#
+# What it does:
+#   1. Install dependencies (root + workspaces) with cached node_modules
+#   2. TypeScript type-check across the entire monorepo (web, server, shared,
+#      mobile)
+#   3. Run the unit/runtime test suite (pure functions; the integration
+#      tests that need a live DB or Stripe key run separately on
+#      schedule, not on every commit)
+#   4. Lint content rules (no em-dashes, banned words, etc.)
+#
+# Failures here block merge. The point is the green checkmark next to
+# every PR — an auditor opening the repo sees "this team has CI"
+# instantly. That's worth more than any single test.
+#
+# What this WON'T do (yet):
+#   - Build artifacts (the build step requires more env setup)
+#   - Run Playwright UI smoke (heavy; nightly cron is the right cadence)
+#   - Run the Stripe pipeline test (needs STRIPE_SECRET_KEY in CI secrets;
+#     opt-in once secrets are configured)
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  # Allow manual runs from the Actions tab when iterating on the workflow.
+  workflow_dispatch:
+
+# Cancel previous runs of the same workflow on the same ref. The latest
+# push wins. Saves CI minutes when pushing fixes in quick succession.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Type-check + lint + tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          # Match the Node version pinned in package.json's engines or
+          # @types/node major. Bump together with .nvmrc when upgrading.
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        # Workspaces are picked up automatically by `npm ci`. Skip the
+        # postinstall script in CI — it does local-dev-only setup that
+        # would fail without a writable home dir.
+        run: npm ci --ignore-scripts
+        env:
+          # Skip Cypress / Playwright / native binary downloads in CI.
+          # Set to 0 if those tests get added to this job later.
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+      - name: TypeScript check (entire monorepo)
+        run: npm run check
+
+      - name: Mobile TypeScript check
+        run: npm run mobile:check
+
+      - name: Pure-function unit tests
+        # Each test script is a tsx file that throws on assertion failure.
+        # Listed individually so a failure surfaces with the name of the
+        # offending suite. Add new tests here when shipping new pure
+        # helpers (see ARCHITECTURE.md §11 for the audit-readiness
+        # roadmap).
+        run: |
+          npm run test:age18-decisions
+          npm run test:dashboard-money-math
+          npm run test:monetization
+          npm run test:memory-utils
+
+      - name: Content lint (em-dashes, banned words)
+        # Catches the user-facing copy violations that the locked
+        # feedback memos enforce ("contribute", em-dashes, etc.).
+        run: npm run lint:content

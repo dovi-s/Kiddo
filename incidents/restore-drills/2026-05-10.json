@@ -1,0 +1,124 @@
+{
+  "drillType": "monthly_count_drill",
+  "drilledAt": "2026-05-10T11:07:36.463Z",
+  "databaseUrlHost": "aws-1-us-west-2.pooler.supabase.com",
+  "tables": {
+    "activities": {
+      "rowCount": 182,
+      "sizeBytes": 278528
+    },
+    "age18_reminder_state": {
+      "rowCount": 0,
+      "sizeBytes": 16384
+    },
+    "age_transitions": {
+      "rowCount": 0,
+      "sizeBytes": 40960
+    },
+    "analytics_events": {
+      "rowCount": 1,
+      "sizeBytes": 98304
+    },
+    "audit_logs": {
+      "rowCount": 2926,
+      "sizeBytes": 1605632
+    },
+    "bank_accounts": {
+      "rowCount": 3,
+      "sizeBytes": 81920
+    },
+    "events": {
+      "rowCount": 335,
+      "sizeBytes": 286720
+    },
+    "feature_flags": {
+      "rowCount": 0,
+      "sizeBytes": 16384
+    },
+    "fund_collaborators": {
+      "rowCount": 1,
+      "sizeBytes": 49152
+    },
+    "fund_memberships": {
+      "rowCount": 3,
+      "sizeBytes": 114688
+    },
+    "fund_snapshots": {
+      "rowCount": 376,
+      "sizeBytes": 245760
+    },
+    "funds": {
+      "rowCount": 275,
+      "sizeBytes": 237568
+    },
+    "gift_allocations": {
+      "rowCount": 40,
+      "sizeBytes": 98304
+    },
+    "gifter_funds": {
+      "rowCount": 0,
+      "sizeBytes": 49152
+    },
+    "gifters": {
+      "rowCount": 0,
+      "sizeBytes": 40960
+    },
+    "gifts": {
+      "rowCount": 125,
+      "sizeBytes": 163840
+    },
+    "holdings": {
+      "rowCount": 43,
+      "sizeBytes": 65536
+    },
+    "memory_entries": {
+      "rowCount": 135,
+      "sizeBytes": 196608
+    },
+    "notifications": {
+      "rowCount": 0,
+      "sizeBytes": 81920
+    },
+    "parent_contributions": {
+      "rowCount": 22,
+      "sizeBytes": 81920
+    },
+    "recurring_gifts": {
+      "rowCount": 2,
+      "sizeBytes": 49152
+    },
+    "referral_events": {
+      "rowCount": 3111,
+      "sizeBytes": 2211840
+    },
+    "sessions": {
+      "rowCount": 7,
+      "sizeBytes": 147456
+    },
+    "subscriptions": {
+      "rowCount": 199,
+      "sizeBytes": 188416
+    },
+    "thank_yous": {
+      "rowCount": 51,
+      "sizeBytes": 90112
+    },
+    "transactions": {
+      "rowCount": 30,
+      "sizeBytes": 155648
+    },
+    "users": {
+      "rowCount": 245,
+      "sizeBytes": 3260416
+    },
+    "webhook_events": {
+      "rowCount": 0,
+      "sizeBytes": 40960
+    }
+  },
+  "totals": {
+    "tableCount": 28,
+    "rowCountSum": 8112
+  },
+  "elapsed_ms": 6145
+}

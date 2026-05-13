@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Sparkles, Lock, Crown } from "lucide-react";
+// Crown replaces Sparkles 2026-05-12 for the premium-theme indicator —
+// Sparkles banned per feedback_no_ai_slop.md. Crown was already imported
+// for premium-tier markings elsewhere; using it here keeps premium-tier
+// iconography consistent.
+import { Check, Lock, Crown } from "lucide-react";
 
 export interface Theme {
   id: string;
@@ -89,10 +93,10 @@ export function ThemeSelector({
         {!hasEventPass && (
           <button
             onClick={onUpgrade}
-            className="flex items-center gap-1.5 text-xs text-[hsl(var(--kora-gold))] hover:text-[hsl(var(--kora-gold-light))] font-medium"
+            className="flex items-center gap-1.5 text-xs text-[hsl(var(--kiddo-gold))] hover:text-[hsl(var(--kiddo-gold))] font-medium"
           >
             <Crown size={12} />
-            Unlock all themes
+            Upgrade to unlock
           </button>
         )}
       </div>
@@ -105,7 +109,13 @@ export function ThemeSelector({
           return (
             <motion.button
               key={theme.id}
-              onClick={() => !isLocked && onSelectTheme(theme.id)}
+              onClick={() => {
+                if (isLocked) {
+                  onUpgrade?.();
+                  return;
+                }
+                onSelectTheme(theme.id);
+              }}
               whileHover={{ scale: isLocked ? 1 : 1.02 }}
               whileTap={{ scale: isLocked ? 1 : 0.98 }}
               data-testid={`theme-${theme.id}`}
@@ -133,7 +143,7 @@ export function ThemeSelector({
               
               {theme.isPremium && !isLocked && (
                 <div className="absolute top-1.5 left-1.5">
-                  <Sparkles size={12} className="text-[hsl(var(--kora-gold))]" />
+                  <Crown size={12} className="text-[hsl(var(--kiddo-gold))]" />
                 </div>
               )}
               
@@ -172,14 +182,14 @@ export function GoalCard({
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[hsl(var(--kora-gold))]/5 rounded-2xl p-6 border border-[hsl(var(--kora-gold))]/10 shadow-sm"
+      className="bg-[hsl(var(--kiddo-gold))]/5 rounded-2xl p-6 border border-[hsl(var(--kiddo-gold))]/10 shadow-sm"
     >
       <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-full bg-[hsl(var(--kora-gold))]/10 flex items-center justify-center">
-          <Sparkles className="w-4 h-4 text-[hsl(var(--kora-gold))]" />
+        <div className="w-8 h-8 rounded-full bg-[hsl(var(--kiddo-gold))]/10 flex items-center justify-center">
+          <Crown className="w-4 h-4 text-[hsl(var(--kiddo-gold))]" />
         </div>
         <div>
-          <p className="text-xs text-[hsl(var(--kora-gold))] font-medium uppercase tracking-wider">Group Goal</p>
+          <p className="text-xs text-[hsl(var(--kiddo-gold))] font-medium uppercase tracking-wider">Group Goal</p>
           <p className="text-sm font-medium text-foreground">{eventTitle}</p>
         </div>
       </div>
@@ -191,7 +201,7 @@ export function GoalCard({
         </div>
         <div className="h-3 bg-card rounded-full overflow-hidden shadow-inner">
           <motion.div 
-            className="h-full bg-[hsl(var(--kora-gold))] rounded-full"
+            className="h-full bg-[hsl(var(--kiddo-gold))] rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
             transition={{ delay: 0.3, duration: 1, ease: "easeOut" }}
@@ -205,20 +215,20 @@ export function GoalCard({
             {[...Array(Math.min(contributorCount, 4))].map((_, i) => (
               <div 
                 key={i}
-                className="w-6 h-6 rounded-full bg-card border-2 border-[hsl(var(--kora-gold))]/10 flex items-center justify-center text-[10px] font-medium text-muted-foreground"
+                className="w-6 h-6 rounded-full bg-card border-2 border-[hsl(var(--kiddo-gold))]/10 flex items-center justify-center text-[10px] font-medium text-muted-foreground"
               >
                 {String.fromCharCode(65 + i)}
               </div>
             ))}
             {contributorCount > 4 && (
-              <div className="w-6 h-6 rounded-full bg-[hsl(var(--kora-gold))]/10 border-2 border-[hsl(var(--kora-gold))]/10 flex items-center justify-center text-[10px] font-medium text-[hsl(var(--kora-gold))]">
+              <div className="w-6 h-6 rounded-full bg-[hsl(var(--kiddo-gold))]/10 border-2 border-[hsl(var(--kiddo-gold))]/10 flex items-center justify-center text-[10px] font-medium text-[hsl(var(--kiddo-gold))]">
                 +{contributorCount - 4}
               </div>
             )}
           </div>
           <span className="text-muted-foreground">{contributorCount} contributors</span>
         </div>
-        <span className="text-[hsl(var(--kora-gold))] font-medium">${remaining.toLocaleString()} to go</span>
+        <span className="text-[hsl(var(--kiddo-gold))] font-medium">${remaining.toLocaleString()} to go</span>
       </div>
     </motion.div>
   );
@@ -230,11 +240,11 @@ interface EventPassBadgeProps {
 
 export function EventPassBadge({ size = "md" }: EventPassBadgeProps) {
   return (
-    <div className={`inline-flex items-center gap-1.5 bg-[hsl(var(--kora-gold))]/10 text-[hsl(var(--kora-gold))] font-medium rounded-full ${
+    <div className={`inline-flex items-center gap-1.5 bg-[hsl(var(--kiddo-gold))]/10 text-[hsl(var(--kiddo-gold))] font-medium rounded-full ${
       size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-3 py-1 text-xs"
     }`}>
       <Crown size={size === "sm" ? 10 : 12} />
-      Event Boost
+      Kiddo Occasion
     </div>
   );
 }
@@ -254,13 +264,13 @@ export function EventPassUpgrade({ eventTitle, onUpgrade, onDismiss }: EventPass
     >
       <div className="relative">
         <div className="flex items-center gap-2 mb-3">
-          <Crown className="w-5 h-5 text-[hsl(var(--kora-gold))]" />
-          <span className="text-[hsl(var(--kora-gold))] font-medium text-sm">Event Boost</span>
+          <Crown className="w-5 h-5 text-[hsl(var(--kiddo-gold))]" />
+          <span className="text-[hsl(var(--kiddo-gold))] font-medium text-sm">Kiddo Occasions</span>
         </div>
         
         <h3 className="text-xl font-semibold mb-2">Make {eventTitle} unforgettable</h3>
         <p className="text-primary-foreground/60 text-sm mb-6">
-          One-time $29 upgrade. Premium themes, goal cards, thank-you automation, and $2 platform fee waived on all gifts.
+          Premium occasion features now come through Kiddo Plus and Kiddo Family.
         </p>
         
         <ul className="space-y-2 mb-6">
@@ -269,7 +279,7 @@ export function EventPassUpgrade({ eventTitle, onUpgrade, onDismiss }: EventPass
             "Group goal progress card",
             "Automatic thank-you drafts",
             "Priority support",
-            "Platform fee waived on all gifts"
+            "Premium occasion presentation"
           ].map((feature) => (
             <li key={feature} className="flex items-center gap-2 text-sm text-primary-foreground/80">
               <Check size={14} className="text-success" />
@@ -282,16 +292,16 @@ export function EventPassUpgrade({ eventTitle, onUpgrade, onDismiss }: EventPass
           <button
             onClick={onUpgrade}
             data-testid="button-upgrade-event-pass"
-            className="flex-1 py-3 bg-[hsl(var(--kora-gold))] text-primary font-semibold rounded-xl hover:bg-[hsl(var(--kora-gold-light))] transition-colors"
+            className="flex-1 py-3 bg-[hsl(var(--kiddo-gold))] text-primary font-semibold rounded-xl hover:bg-[hsl(var(--kiddo-gold))] transition-colors"
           >
-            Upgrade for $29
+            View plans
           </button>
           <button
             onClick={onDismiss}
             data-testid="button-dismiss-event-pass"
             className="px-4 py-3 text-primary-foreground/60 hover:text-primary-foreground transition-colors"
           >
-            Not now
+            Skip for now
           </button>
         </div>
       </div>
