@@ -5344,11 +5344,18 @@ const [editFundName, setEditFundName] = useState("");
       </Dialog>
 
       <Dialog open={showCancelConfirm} onOpenChange={(o) => { if (!o && !canceling) { setShowCancelConfirm(false); setCancelStep("warn"); } }}>
-        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+        {/* Cancel-plan dialog. max-h + flex column on the outer
+            DialogContent so the inner content can scroll when it
+            exceeds the viewport. 90dvh (dynamic viewport height)
+            handles mobile browser chrome correctly — vh would leave
+            content under the address bar on iOS Safari.
+            overflow-hidden stays on the outer so the rounded-2xl
+            clip works at the corners. */}
+        <DialogContent className="max-w-md w-[95vw] max-h-[90dvh] p-0 gap-0 overflow-hidden rounded-2xl flex flex-col" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Cancel plan</DialogTitle>
 
           {cancelStep === "warn" ? (
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-5 overflow-y-auto">
               {/* Hero. Reassurance first — the parent's first thought
                   opening this dialog is 'is my kid's money safe?' Answer
                   that before anything else. Then frame the billing
@@ -5461,7 +5468,7 @@ const [editFundName, setEditFundName] = useState("");
               </div>
             </div>
           ) : (
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-5 overflow-y-auto">
               <div className="space-y-1">
                 <h2 className="font-heading text-xl font-semibold text-foreground">Cancel {userPlan === "starter" ? "Kiddo+" : "Kiddo Family"}?</h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
