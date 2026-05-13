@@ -5179,34 +5179,15 @@ export default function Dashboard() {
                           </span>
                         </button>
                       )}
-                      {/* Cash sitting uninvested — only shown when nonzero
-                          (silent on the typical case). Honest about money
-                          that's in the fund but not yet in holdings. */}
-                      {periodCash > 0.005 && (
-                        <button
-                          type="button"
-                          // Deep-link to the Dashboard's "Cash is waiting" card
-                          // with gold halo. The natural follow-up action after
-                          // noticing "$X in cash" is to invest it — and the
-                          // cash card has the "Review options" CTA that opens
-                          // the InvestCashModal. Scrolling to that card keeps
-                          // the user in action-mode rather than dumping them
-                          // into the Activity feed (the previous destination,
-                          // which only showed past activity that mentioned
-                          // cash — not the action surface).
-                          onClick={() => summaryScrollTo("cash")}
-                          className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
-                          data-testid="lifetime-row-cash"
-                        >
-                          <span className="text-sm text-muted-foreground">In cash (uninvested)</span>
-                          <span className="inline-flex items-center gap-1.5">
-                            <span className="text-sm font-semibold tabular-nums text-foreground">
-                              {fmtRow(periodCash)}
-                            </span>
-                            <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
-                          </span>
-                        </button>
-                      )}
+                      {/* Cash row was previously rendered HERE (inline with
+                          the input rows like Gifts / One-time / Market
+                          growth). The math was correct but the placement
+                          was misleading: a parent reasonably sums the
+                          visible numbers and gets a total $X higher than
+                          "Worth today" because cash is a SUBSET of the
+                          input flows, not an additive input. Moved below
+                          the Worth today divider as a sub-detail.
+                          Per the 2026-05-13 audit. */}
                       {/* Withdrawals — only shown when nonzero. Negative
                           framing (red, prefixed minus) so it's visually
                           distinct from positive flows. */}
@@ -5260,6 +5241,24 @@ export default function Dashboard() {
                         <p className="text-[11px] text-muted-foreground/70 mt-0.5">
                           since {new Date(fundCreatedMs).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}
                         </p>
+                      )}
+                      {/* Cash-status sub-detail. Subordinate to Worth today
+                          because it's a SUBSET of that total (the portion
+                          not yet invested), not an additive input. Tappable
+                          to scroll to the cash card where the parent can
+                          choose to invest it. Silent when zero. */}
+                      {periodCash > 0.005 && (
+                        <button
+                          type="button"
+                          onClick={() => summaryScrollTo("cash")}
+                          className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors"
+                          data-testid="lifetime-row-cash"
+                        >
+                          <span aria-hidden>·</span>
+                          <span className="tabular-nums">{fmtRow(periodCash)}</span>
+                          <span>still in cash, waiting to invest</span>
+                          <ChevronRight size={12} className="opacity-60" aria-hidden />
+                        </button>
                       )}
                     </div>
 
