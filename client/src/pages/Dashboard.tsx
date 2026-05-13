@@ -12636,145 +12636,116 @@ export default function Dashboard() {
           <DialogTitle className="sr-only">Smart nudge</DialogTitle>
           {smartNudge && (() => {
             const child = capFirst(activeFund?.recipientFirstName) || "The fund";
-            // Object pronoun — "her/him/them" — pulled from getPronouns so the
-            // smart-nudge copy respects the fund's setting. Was hardcoded "her"
-            // when the name existed, "them" otherwise; both ignored pronoun.
-            const her = childPronouns.object;
+            // `her` pronoun + `delta` / `monthIncrease` were used by the
+            // previous comparison-table-shaped variants. Removed 2026-05-13
+            // with the rewrite — the new prose variants don't reference
+            // them. If pronouns become relevant again, grab them from
+            // `childPronouns` inline at the use site.
             const fmt = (n?: number) => n != null ? `~$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "";
             const fmtAmt = (n?: number) => n != null ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "";
-            const delta = smartNudge.doubledProjection && smartNudge.currentProjection
-              ? smartNudge.doubledProjection - smartNudge.currentProjection
-              : null;
-            const monthIncrease = smartNudge.doubledAmt && smartNudge.currentMonthlyAmt
-              ? smartNudge.doubledAmt - smartNudge.currentMonthlyAmt : null;
 
             return (
               <div className="p-6 space-y-5">
+                {/* Three scenarios — outperforming / consistent / milestone.
+                    Rewritten 2026-05-13 from the previous comparison-table
+                    register (math panel + 'Double to \$X' CTA + 🌟 emoji
+                    + platitudinal greeting-card lines) toward calm Kiddo
+                    prose. The information is identical; the surface is
+                    no longer fintech-conversion-funnel anatomy.
+                    Key changes:
+                      - No emoji (🌟 violated brand; only 🌱 is reserved)
+                      - No 'The first \$X is the hardest' platitude (also
+                        slightly inaccurate — next \$X comes at the same
+                        contribution pace; compounding adds ~7%/yr only)
+                      - No math-comparison panel (Acorns/Robinhood pattern)
+                      - No 'Double to \$X' aggressive CTA. 'Adjust recurring'
+                        honestly describes what happens (opens the editor)
+                        without pushing a specific increment. */}
+
                 {/* Scenario 1: Outperforming */}
                 {smartNudge.scenario === "outperforming" && (
-                  <>
-                    <div>
-                      <p className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {child}'s fund is outperforming. 🌟
-                      </p>
-                      <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                        {child}'s fund has grown {smartNudge.returnPct}% this year.
-                      </h2>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Above the 7% historical average.
-                      </p>
-                    </div>
-                    {smartNudge.currentProjection && smartNudge.doubledProjection && smartNudge.currentMonthlyAmt && (
-                      <div className="rounded-xl bg-muted/30 p-4 space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                          {fmtAmt(smartNudge.currentMonthlyAmt)}/month got {her} here.
-                        </p>
-                        <p className="text-sm font-medium text-foreground">
-                          Imagine what {fmtAmt(smartNudge.doubledAmt)}/month does.
-                        </p>
-                        <div className="space-y-2 pt-1">
-                          <div>
-                            <p className="text-[11px] text-muted-foreground">At {fmtAmt(smartNudge.doubledAmt)}/month</p>
-                            <p className="text-lg font-bold text-[hsl(var(--kiddo-evergreen))]">
-                              {child}'s projected value at {majorityAge}: {fmt(smartNudge.doubledProjection)}
-                            </p>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            vs. current projection: {fmt(smartNudge.currentProjection)}
-                          </p>
-                        </div>
-                        {delta && monthIncrease && (
-                          <div className="border-t border-border/40 pt-3 space-y-0.5">
-                            <p className="text-sm font-bold text-foreground">That's {fmtAmt(delta)} more.</p>
-                            <p className="text-sm text-muted-foreground">For {fmtAmt(monthIncrease)} more a month.</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {child}'s fund this year
+                    </p>
+                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
+                      Up {smartNudge.returnPct}%.
+                    </h2>
+                    <p className="mt-2 text-sm text-foreground/80 leading-relaxed">
+                      That's ahead of the 7% historical average. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
+                      {child} is projected to have about {fmt(smartNudge.currentProjection)} at {majorityAge}.
+                      {smartNudge.doubledProjection && smartNudge.doubledAmt && (
+                        <>
+                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to about {fmt(smartNudge.doubledProjection)}.
+                        </>
+                      )}
+                    </p>
+                  </div>
                 )}
 
                 {/* Scenario 2: Consistent streak */}
                 {smartNudge.scenario === "consistent" && (
-                  <>
-                    <div>
-                      <p className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {smartNudge.streakMonths} months of consistent growth. 🌱
-                      </p>
-                      <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                        {child}'s recurring investment has run every month without fail.
-                      </h2>
-                      <p className="mt-2 text-sm text-muted-foreground">You're building something real.</p>
-                      <p className="mt-0.5 text-sm text-muted-foreground">Want to build it faster?</p>
-                    </div>
-                    {smartNudge.currentProjection && smartNudge.doubledProjection && smartNudge.currentMonthlyAmt && (
-                      <div className="rounded-xl bg-muted/30 p-4 space-y-2">
-                        <div>
-                          <p className="text-[11px] text-muted-foreground">At {fmtAmt(smartNudge.doubledAmt)}/month</p>
-                          <p className="text-lg font-bold text-[hsl(var(--kiddo-evergreen))]">
-                            {child}'s projected value at {majorityAge}: {fmt(smartNudge.doubledProjection)}
-                          </p>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          vs. current projection: {fmt(smartNudge.currentProjection)}
-                        </p>
-                        {delta && monthIncrease && (
-                          <div className="border-t border-border/40 pt-2 space-y-0.5">
-                            <p className="text-sm font-bold text-foreground">That's {fmtAmt(delta)} more.</p>
-                            <p className="text-sm text-muted-foreground">For {fmtAmt(monthIncrease)} more a month.</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Steady
+                    </p>
+                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
+                      {smartNudge.streakMonths} months without a missed cycle.
+                    </h2>
+                    <p className="mt-2 text-sm text-foreground/80 leading-relaxed">
+                      Compounding lives here. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
+                      {child} projects to about {fmt(smartNudge.currentProjection)} at {majorityAge}.
+                      {smartNudge.doubledProjection && smartNudge.doubledAmt && (
+                        <>
+                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to about {fmt(smartNudge.doubledProjection)}.
+                        </>
+                      )}
+                    </p>
+                  </div>
                 )}
 
                 {/* Scenario 3: Milestone */}
                 {smartNudge.scenario === "milestone" && (
-                  <>
-                    <div>
-                      <p className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        {child} just hit {fmtAmt(smartNudge.milestoneAmt)}. 🌟
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Milestone
+                    </p>
+                    <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
+                      {child} just crossed {fmtAmt(smartNudge.milestoneAmt)}.
+                    </h2>
+                    {smartNudge.monthsAtCurrentRate && smartNudge.monthsDoubled && smartNudge.milestoneAmt && (
+                      <p className="mt-2 text-sm text-foreground/80 leading-relaxed">
+                        Your monthly investments built this. At your current pace, the next {fmtAmt(smartNudge.milestoneAmt)} arrives in about {smartNudge.monthsAtCurrentRate} months.
+                        {smartNudge.doubledAmt && (
+                          <>
+                            {" "}Bumping the recurring to {fmtAmt(smartNudge.doubledAmt)}/mo would bring that in about {smartNudge.monthsDoubled} months.
+                          </>
+                        )}
                       </p>
-                      <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                        The first {fmtAmt(smartNudge.milestoneAmt)} is the hardest.
-                      </h2>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        The next {fmtAmt(smartNudge.milestoneAmt)} comes faster.
-                      </p>
-                    </div>
-                    {smartNudge.monthsAtCurrentRate && smartNudge.monthsDoubled && (
-                      <div className="rounded-xl bg-muted/30 p-4 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">At your current rate</span>
-                          <span className="text-sm font-semibold text-foreground">{smartNudge.monthsAtCurrentRate} more months</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-[hsl(var(--kiddo-evergreen))] font-medium">Double your recurring investment</span>
-                          <span className="text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">{smartNudge.monthsDoubled} months</span>
-                        </div>
-                      </div>
                     )}
-                  </>
+                  </div>
                 )}
 
-                {/* CTAs */}
+                {/* CTAs. 'Adjust recurring' replaces 'Double to \$X/month'
+                    — the previous label proposed a 100% increase as the
+                    default ask, which is aggressive even when the math
+                    supports it. The button now honestly describes what
+                    happens (opens the recurring-investment editor with
+                    the doubled amount pre-filled as a suggestion, which
+                    the parent can change). */}
                 <div className="space-y-2">
                   <Button
-                    className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl h-11"
+                    className="w-full rounded-xl h-11"
                     onClick={() => {
                       haptic("medium");
                       setSmartNudge(null);
                       if (smartNudge.doubledAmt) setAutoInvestAmount(String(smartNudge.doubledAmt));
-                      // Smart nudge creates a new plan on top of existing ones
                       setEditingContribId(null);
                       setAutoInvestStep("amount");
                       setAutoInvestModalOpen(true);
                     }}
                   >
-                    {smartNudge.scenario === "milestone"
-                      ? `Double to ${fmtAmt(smartNudge.doubledAmt)}/month`
-                      : `Increase to ${fmtAmt(smartNudge.doubledAmt)}/month`}
+                    Adjust recurring
                   </Button>
                   <button
                     type="button"
