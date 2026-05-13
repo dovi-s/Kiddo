@@ -5349,110 +5349,91 @@ const [editFundName, setEditFundName] = useState("");
 
           {cancelStep === "warn" ? (
             <div className="p-6 space-y-5">
-              <div className="space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Before you go</p>
-                <h2 className="font-heading text-xl font-semibold text-foreground">{primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s fund` : "Your fund"} stays safe.</h2>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {userPlan === "starter" ? "Kiddo+" : userPlan === "legacy" ? "Kiddo Legacy" : "Kiddo Family"} remains active
-                  {subscription?.currentPeriodEnd ? ` until ${new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : " until the end of your billing period"}.
-                  After that, you move to Free.
+              {/* Hero. Reassurance first — the parent's first thought
+                  opening this dialog is 'is my kid's money safe?' Answer
+                  that before anything else. Then frame the billing
+                  timeline calmly. Per the 2026-05-13 cancel-dialog rewrite
+                  away from comparison-table register toward prose. */}
+              <div className="space-y-2">
+                <h2 className="font-heading text-xl font-semibold text-foreground">
+                  {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s fund` : "Your fund"} stays safe.
+                </h2>
+                <p className="text-sm text-foreground/80 leading-relaxed">
+                  {userPlan === "starter" ? "Kiddo+" : userPlan === "legacy" ? "Kiddo Legacy" : "Kiddo Family"} is paid through{" "}
+                  {subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "the end of your billing period"}.
+                  After that, the plan moves to Free and your money keeps working. Still invested, still growing, gifts arriving the same way they always have.
+                  {cancellationImpact && cancellationImpact.growthSinceSubscribed > 0.01 && (
+                    <>
+                      {" "}Your {cancellationImpact.funds.length === 1 ? "fund has" : "funds have"} grown ${cancellationImpact.growthSinceSubscribed.toFixed(0)} since you subscribed; that growth stays.
+                    </>
+                  )}
                 </p>
               </div>
 
-              {/* Honest signal — actual growth since they subscribed.
-                  Earlier copy said "growth the market added because you
-                  kept the plan running" which falsely implied the plan
-                  caused the growth. The plan unlocks features (full Memory
-                  Book, auto-invest, projections); the market drives growth
-                  whether or not the parent has Plus. Re-stated to make that
-                  honest: their money keeps working either way. */}
-              {cancellationImpact && cancellationImpact.growthSinceSubscribed > 0.01 && (
-                <div className="rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.08)] border border-[hsl(var(--kiddo-evergreen)/0.20)] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))] mb-1">Since you subscribed</p>
-                  <p className="text-sm text-foreground leading-relaxed">
-                    Your {cancellationImpact.funds.length === 1 ? "fund has" : "funds have"} grown <span className="font-bold">${cancellationImpact.growthSinceSubscribed.toFixed(2)}</span>.
-                    That growth stays. Your money keeps working whether you stay on the plan or not.
-                  </p>
-                </div>
-              )}
+              {/* What changes — prose, not bullets. The same information
+                  the previous comparison-table panel carried, woven into
+                  conversational paragraphs. Personalization happens
+                  inline so the sentence reads as written-by-Kiddo rather
+                  than templated. Per the 2026-05-13 rewrite. */}
+              <div className="space-y-3 text-sm text-foreground/80 leading-relaxed">
+                <p className="font-semibold text-foreground">A few things change when you cancel:</p>
 
-              {/* What stays - green */}
-              <div className="rounded-xl border border-green-200 bg-green-50 p-3 space-y-1.5">
-                <p className="text-xs font-semibold text-green-800 mb-2">What stays</p>
-                {[
-                  `${primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s fund` : "Your fund"} is safe. All money stays invested.`,
-                  "Gifts can still be received.",
-                  "Gift links still work.",
-                  "Memory Book basics stay.",
-                ].map((item) => (
-                  <p key={item} className="flex items-start gap-2 text-xs text-green-800">
-                    <Check size={12} className="mt-0.5 shrink-0 text-green-600" />{item}
-                  </p>
-                ))}
-              </div>
-
-              {/* What stops - amber. Personalized when impact data is available. */}
-              <div className="rounded-xl border border-amber-200/70 bg-amber-50 p-3 space-y-2.5">
-                <p className="text-xs font-semibold text-amber-900">What stops when you cancel</p>
-
-                {/* Recurring-investment schedules — itemized per fund.
-                    Internal field is still parentContributions; only the
-                    user-facing label changed per locked naming rule. */}
-                {cancellationImpact && cancellationImpact.parentContributions.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70">Recurring investments</p>
-                    {cancellationImpact.parentContributions.map(c => (
-                      <p key={c.id} className="flex items-start gap-2 text-xs text-amber-900">
-                        <span className="mt-0.5 shrink-0 text-amber-500">·</span>
-                        <span>
-                          {c.childName}'s recurring investment pauses
-                          {c.executionModel === "pick" && c.selectedTicker ? ` (${c.selectedTicker})` : ""}.
-                          ${c.amount.toFixed(2)}/{c.frequency} stops.
-                        </span>
+                {/* Recurring investments — folded into prose when 1-3
+                    schedules; collapsed to a summary line when more.
+                    Reads like a sentence, not a checklist. */}
+                {cancellationImpact && cancellationImpact.parentContributions.length > 0 && (() => {
+                  const contribs = cancellationImpact.parentContributions;
+                  const monthlyTotal = cancellationImpact.parentContributionsMonthlyTotal;
+                  if (contribs.length <= 3) {
+                    const items = contribs.map((c, i) => {
+                      const destLabel = c.executionModel === "pick" && c.selectedTicker
+                        ? `${c.childName}'s ${c.selectedTicker} pick`
+                        : `${c.childName}'s mix`;
+                      const freq = c.frequency === "weekly" ? "/wk" : c.frequency === "yearly" ? "/yr" : "/mo";
+                      return `$${c.amount.toFixed(0)}${freq} into ${destLabel}`;
+                    });
+                    const joined = items.length === 1
+                      ? items[0]
+                      : items.length === 2
+                        ? `${items[0]} and ${items[1]}`
+                        : `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+                    return (
+                      <p>
+                        Your recurring investments pause: {joined}.
+                        {monthlyTotal > 0 ? ` That's $${monthlyTotal.toFixed(0)}/month of automatic growth that stops until you turn the plan back on.` : ""}
                       </p>
-                    ))}
-                    {cancellationImpact.parentContributionsMonthlyTotal > 0 && (
-                      <p className="ml-3 text-[11px] italic text-amber-900/80">
-                        ${cancellationImpact.parentContributionsMonthlyTotal.toFixed(0)}/month of automatic growth stops.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Gifter reminder schedules — pauses with the subscription */}
-                {cancellationImpact && cancellationImpact.recurringGifts.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70">Gift reminders from family & friends</p>
-                    {cancellationImpact.recurringGifts.map(rg => (
-                      <p key={rg.id} className="flex items-start gap-2 text-xs text-amber-900">
-                        <span className="mt-0.5 shrink-0 text-amber-500">·</span>
-                        <span>
-                          {rg.senderName}'s reminder to gift {rg.childName} pauses. They'll stop getting the email nudge.
-                        </span>
-                      </p>
-                    ))}
-                  </div>
-                )}
-
-                {/* Generic features that always lock when subscription ends */}
-                <div className="space-y-1 pt-1">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70">Premium features</p>
-                  {(userPlan === "starter" ? [
-                    "Full Memory Book locks (existing memories stay, just locked).",
-                    "Fund projections removed.",
-                  ] : [
-                    "Full Memory Books lock on all funds.",
-                    // Renamed from "Family dashboard removed." 2026-05-12 to
-                    // match the consolidated naming on Pricing + Plan-features.
-                    "Household overview locks.",
-                    "Extra funds become read-only.",
-                    "Fund projections removed.",
-                  ]).map((item) => (
-                    <p key={item} className="flex items-start gap-2 text-xs text-amber-900">
-                      <span className="mt-0.5 shrink-0 text-amber-500">·</span>{item}
+                    );
+                  }
+                  return (
+                    <p>
+                      Your {contribs.length} recurring investments pause.
+                      {monthlyTotal > 0 ? ` That's $${monthlyTotal.toFixed(0)}/month of automatic growth that stops until you turn the plan back on.` : ""}
                     </p>
-                  ))}
-                </div>
+                  );
+                })()}
+
+                {/* Gifter reminder schedules — only mentioned when present. */}
+                {cancellationImpact && cancellationImpact.recurringGifts.length > 0 && (
+                  <p>
+                    Gift reminders going out to {cancellationImpact.recurringGifts.length === 1
+                      ? cancellationImpact.recurringGifts[0].senderName
+                      : `${cancellationImpact.recurringGifts.length} family members`} pause. They'll stop getting the email nudge.
+                  </p>
+                )}
+
+                {/* Plan features that lock. Plus vs Family branch handled
+                    via inline prose. Existing media + entries STAY — call
+                    that out explicitly because parents otherwise worry
+                    they'll lose what they've already added. */}
+                {userPlan === "starter" ? (
+                  <p>
+                    The full Memory Book locks. Every photo, voice memo, and parent-authored entry already there stays. New media uploads pause. Fund projections go away too.
+                  </p>
+                ) : (
+                  <p>
+                    The full Memory Book locks across your kids' funds. Everything you've already added stays. New media uploads pause. The household overview and fund projections go away. Funds beyond your first one become read-only.
+                  </p>
+                )}
               </div>
 
               {/* Two-button stack: "Keep my plan" remains the primary action
