@@ -8,6 +8,7 @@ import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { prefetchDashboard } from "@/lib/prefetch";
+import { PasskeySignInButton } from "@/components/PasskeySignInButton";
 import { getActiveFundId } from "@/hooks/use-active-fund";
 import brandMark from "@/assets/kiddo-logo-cropped.png";
 
@@ -290,6 +291,22 @@ export default function Login() {
               )}
             </motion.button>
           </form>
+
+          {/* Passkey sign-in. Per FACE_ID_SPEC.md WebAuthn item.
+              The browser ceremony fires from PasskeySignInButton; on
+              success it calls /api/auth/passkey/authenticate/verify
+              which establishes the same session shape the password
+              flow does. Falls through silently when no passkey is
+              registered or the browser doesn't support WebAuthn. */}
+          <PasskeySignInButton
+            onSuccess={() => {
+              haptic('success');
+              if (redirectTarget === "/dashboard" || redirectTarget.startsWith("/dashboard")) {
+                prefetchDashboard(queryClient, getActiveFundId());
+              }
+              setLocation(redirectTarget);
+            }}
+          />
 
           <div className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-5 text-center space-y-4">
             <div className="space-y-1">

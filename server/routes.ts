@@ -57,7 +57,7 @@ import { DEFAULT_CUSTOM_ALLOCATIONS, getFundCustomAllocations, setFundCustomAllo
 import { getFundInvestmentPreferences, setFundInvestmentPreferences } from "./fundInvestmentPreferences";
 import { getPublicEventGiftingAvailability, getPublicFundGiftingAvailability } from "./publicGiftingState";
 import { ADMIN_ASSET_UNIVERSE, getMarketQuote, startMarketQuoteCacheRefresher } from "./marketQuotes";
-import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftIntents } from "@shared/schema";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftIntents, trustedDevices, passkeys } from "@shared/schema";
 import { toMonthlyEquivalent, sumMonthlyEquivalent } from "@shared/recurring-math";
 import { KIDDO_AUM_FEE_BASIS_POINTS, KIDDO_AUM_FEE_RATE, KIDDO_GIFT_ADD_ONS, KIDDO_LEGACY_INCLUDED_OCCASION_CREDITS, KIDDO_LEGACY_YEARLY, KIDDO_OCCASION_TIERS, KIDDO_REVERSE_TRIAL_DAYS, KORA_DEFAULT_FAMILY_YEARLY, KORA_FAMILY_MONTHLY, KORA_FAMILY_YEARLY_OPTIONS, KORA_FREE_GIFT_FEE, KORA_LARGE_GIFT_FLAT_FEE, KORA_LARGE_GIFT_THRESHOLD, KORA_STARTER_MONTHLY, KORA_STARTER_YEARLY, MONETIZATION_TRIGGER_IDS, calculateKoraContributionFee, estimateAnnualAumFee, getGiftAddOn, getKiddoOccasionTier, type FundCoverageState, type RecommendationState } from "@shared/monetization";
 
@@ -11299,6 +11299,129 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error saving earned-income flag:", error);
       res.status(500).json({ error: "Failed to save your answer" });
+    }
+  });
+
+  // ===== TRUSTED DEVICES (biometric unlock management) =====
+  //
+  // Per FACE_ID_SPEC.md (formerly deferred). Lets the user see + revoke
+  // biometric unlock on a specific device from Settings — even if that
+  // device is lost or stolen.
+  //
+  // Three endpoints:
+  //   POST /api/me/trusted-devices         — register (mobile calls on biometric enable + on each unlock)
+  //   GET  /api/me/trusted-devices         — list my devices
+  //   POST /api/me/trusted-devices/:id/revoke — revoke a device
+
+  app.post('/api/me/trusted-devices', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const deviceId = String(req.body?.deviceId || "").trim();
+      const deviceName = String(req.body?.deviceName || "").trim() || null;
+      const platform = String(req.body?.platform || "").trim().toLowerCase();
+      if (!deviceId) return res.status(400).json({ error: "deviceId is required" });
+      if (platform && !["ios", "android", "web"].includes(platform)) {
+        return res.status(400).json({ error: "Invalid platform" });
+      }
+
+      // Upsert pattern: if (userId, deviceId) exists, update last_unlocked_at
+      // + clear any revoked_at (the user is actively re-enabling). If not,
+      // insert a fresh row.
+      const [existing] = await db.select()
+        .from(trustedDevices)
+        .where(and(eq(trustedDevices.userId, userId), eq(trustedDevices.deviceId, deviceId)))
+        .limit(1);
+      if (existing) {
+        await db.update(trustedDevices).set({
+          deviceName: deviceName || existing.deviceName,
+          platform: platform || existing.platform,
+          lastUnlockedAt: new Date(),
+          revokedAt: null,
+        }).where(eq(trustedDevices.id, existing.id));
+        return res.json({ success: true, id: existing.id, updated: true });
+      }
+      const [created] = await db.insert(trustedDevices).values({
+        userId,
+        deviceId,
+        deviceName,
+        platform: platform || null,
+        biometricEnabledAt: new Date(),
+        lastUnlockedAt: new Date(),
+      } as any).returning();
+      res.json({ success: true, id: created.id, created: true });
+    } catch (error) {
+      console.error("Error registering trusted device:", error);
+      res.status(500).json({ error: "Failed to register device" });
+    }
+  });
+
+  app.get('/api/me/trusted-devices', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const rows = await db.select({
+        id: trustedDevices.id,
+        deviceId: trustedDevices.deviceId,
+        deviceName: trustedDevices.deviceName,
+        platform: trustedDevices.platform,
+        biometricEnabledAt: trustedDevices.biometricEnabledAt,
+        lastUnlockedAt: trustedDevices.lastUnlockedAt,
+        revokedAt: trustedDevices.revokedAt,
+      })
+        .from(trustedDevices)
+        .where(eq(trustedDevices.userId, userId))
+        .orderBy(desc(trustedDevices.lastUnlockedAt));
+      // Surface the current device-id from the request header so the
+      // client can highlight "this device." Mobile sends a custom
+      // X-Kiddo-Device-Id header on requests (set after registration).
+      const currentDeviceId = req.headers["x-kiddo-device-id"] as string | undefined;
+      res.json({ devices: rows, currentDeviceId: currentDeviceId || null });
+    } catch (error) {
+      console.error("Error listing trusted devices:", error);
+      res.status(500).json({ error: "Failed to load devices" });
+    }
+  });
+
+  app.post('/api/me/trusted-devices/:id/revoke', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const [device] = await db.select()
+        .from(trustedDevices)
+        .where(eq(trustedDevices.id, req.params.id))
+        .limit(1);
+      if (!device) return res.status(404).json({ error: "Device not found" });
+      if (device.userId !== userId) return res.status(403).json({ error: "Forbidden" });
+      await db.update(trustedDevices)
+        .set({ revokedAt: new Date() })
+        .where(eq(trustedDevices.id, device.id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error revoking trusted device:", error);
+      res.status(500).json({ error: "Failed to revoke device" });
+    }
+  });
+
+  // Mobile-side check: "is THIS device revoked?" Returns true if the
+  // X-Kiddo-Device-Id header matches a device row with non-null
+  // revoked_at. Mobile polls this on app launch + on each authenticated
+  // request via a header inspection. If revoked: disable biometric
+  // locally, bounce to login. The actual session is still valid (user
+  // can password-login back in); just the biometric trust is revoked.
+  app.get('/api/me/device-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const deviceId = String(req.headers["x-kiddo-device-id"] || "").trim();
+      if (!deviceId) return res.json({ revoked: false, registered: false });
+      const [device] = await db.select({ revokedAt: trustedDevices.revokedAt })
+        .from(trustedDevices)
+        .where(and(eq(trustedDevices.userId, userId), eq(trustedDevices.deviceId, deviceId)))
+        .limit(1);
+      res.json({
+        revoked: !!device?.revokedAt,
+        registered: !!device,
+      });
+    } catch (error) {
+      console.error("Error checking device status:", error);
+      res.json({ revoked: false, registered: false });
     }
   });
 

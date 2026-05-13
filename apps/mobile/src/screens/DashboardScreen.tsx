@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -36,10 +37,18 @@ import { registerForPushNotificationsAsync } from "../push";
 import {
   authenticate as authenticateBiometric,
   getBiometricCapability,
+  getOrCreateDeviceId,
   isBiometricEnabled,
   setBiometricEnabled,
   type BiometricCapability,
 } from "../biometric";
+import * as Device from "expo-device";
+import {
+  apiRegisterTrustedDevice,
+  apiListTrustedDevices,
+  apiRevokeTrustedDevice,
+  type TrustedDeviceRow,
+} from "../api";
 
 type Tab = "home" | "memory" | "gift" | "growth" | "settings";
 
@@ -619,13 +628,49 @@ function AccountTab({
   const [bioBusy, setBioBusy] = useState(false);
   const [bioMessage, setBioMessage] = useState<string | null>(null);
 
+  // Trusted devices panel state. Loaded when bio is enabled so the
+  // user can see + revoke biometric on other devices. Per
+  // FACE_ID_SPEC.md trusted-devices item.
+  const [trustedDevices, setTrustedDevices] = useState<TrustedDeviceRow[]>([]);
+  const [currentDeviceId, setCurrentDeviceId] = useState<string | null>(null);
+
   const loadBiometricState = useCallback(async () => {
     const [cap, on] = await Promise.all([getBiometricCapability(), isBiometricEnabled()]);
     setBioCapability(cap);
     setBioEnabled(on);
   }, []);
 
+  const loadTrustedDevices = useCallback(async () => {
+    try {
+      const result = await apiListTrustedDevices();
+      setTrustedDevices(result.devices.filter((d) => !d.revokedAt));
+      setCurrentDeviceId(result.currentDeviceId);
+    } catch {
+      setTrustedDevices([]);
+    }
+  }, []);
+
   useEffect(() => { loadBiometricState(); }, [loadBiometricState]);
+  useEffect(() => {
+    if (bioEnabled) loadTrustedDevices();
+  }, [bioEnabled, loadTrustedDevices]);
+
+  const handleRevokeDevice = async (device: TrustedDeviceRow) => {
+    try {
+      await apiRevokeTrustedDevice(device.id);
+      await loadTrustedDevices();
+      // If user revoked their own current device, disable biometric
+      // locally too. That's the consistent state — server says no
+      // trust, client honors it.
+      if (device.deviceId === currentDeviceId) {
+        await setBiometricEnabled(false);
+        setBioEnabled(false);
+        setBioMessage("Face ID turned off on this device.");
+      }
+    } catch {
+      // Non-fatal; toast would be nice but RN doesn't have native toast
+    }
+  };
 
   const handleToggleBiometric = async () => {
     if (bioBusy) return;
@@ -650,6 +695,21 @@ function AccountTab({
         await setBiometricEnabled(true);
         setBioEnabled(true);
         setBioMessage("Face ID will be required next time you open Kiddo.");
+        // Register this device for the trusted-devices panel. Best-
+        // effort — if the server call fails the local Face ID still
+        // works, it just won't appear in the user's device list.
+        // Per FACE_ID_SPEC.md trusted-devices item.
+        try {
+          const deviceId = await getOrCreateDeviceId();
+          const deviceName = Device.modelName || Device.deviceName || "Mobile device";
+          await apiRegisterTrustedDevice({
+            deviceId,
+            deviceName,
+            platform: Platform.OS === "ios" ? "ios" : Platform.OS === "android" ? "android" : "web",
+          });
+        } catch {
+          // Non-fatal.
+        }
       } else {
         // Turning OFF — no re-auth required; the user is already in.
         await setBiometricEnabled(false);
@@ -777,6 +837,46 @@ function AccountTab({
           </View>
           {bioMessage ? <Text style={styles.pushMessage}>{bioMessage}</Text> : null}
         </View>
+
+        {/* Trusted devices list. Visible only when biometric is enabled
+            on this device. Lets the user see + revoke biometric on
+            other devices where they've enabled Face ID. Per
+            FACE_ID_SPEC.md (trusted devices panel item). */}
+        {bioEnabled && trustedDevices.length > 0 && (
+          <View style={[styles.pushCard, { marginTop: spacing.sm }]}>
+            <Text style={styles.pushTitle}>Devices using Face ID</Text>
+            <Text style={[styles.pushBody, { marginBottom: spacing.sm }]}>
+              Tap a device to turn Face ID off for it. Your password still works.
+            </Text>
+            {trustedDevices.map((d) => {
+              const isCurrent = d.deviceId === currentDeviceId;
+              const lastUnlockedLabel = d.lastUnlockedAt
+                ? new Date(d.lastUnlockedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                : "Never";
+              return (
+                <Pressable
+                  key={d.id}
+                  onPress={() => handleRevokeDevice(d)}
+                  style={({ pressed }) => [
+                    styles.deviceRow,
+                    pressed && styles.deviceRowPressed,
+                  ]}
+                >
+                  <View style={styles.flexOne}>
+                    <Text style={styles.deviceRowTitle}>
+                      {d.deviceName || "Unknown device"}
+                      {isCurrent ? "  ·  This device" : ""}
+                    </Text>
+                    <Text style={styles.deviceRowMeta}>
+                      Last unlocked {lastUnlockedLabel}
+                    </Text>
+                  </View>
+                  <Text style={styles.deviceRowRevoke}>Turn off</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </Section>
 
       <Section title="Notifications">
@@ -1426,6 +1526,17 @@ const styles = StyleSheet.create({
   pushBody: { color: "#6B7280", fontSize: 13, lineHeight: 19 },
   pushMeta: { color: "#8B948C", fontSize: 12, fontWeight: "700", marginTop: 4 },
   pushMessage: { color: colors.ink, fontSize: 12, lineHeight: 18 },
+  deviceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#EEE8DC",
+  },
+  deviceRowPressed: { opacity: 0.6 },
+  deviceRowTitle: { color: colors.ink, fontSize: 14, fontWeight: "600" },
+  deviceRowMeta: { color: "#8B948C", fontSize: 11, marginTop: 2 },
+  deviceRowRevoke: { color: "#9A4A2C", fontSize: 12, fontWeight: "700" },
   toggleBtn: { borderRadius: 999, backgroundColor: "#F3F4F6", paddingVertical: 8, paddingHorizontal: 14 },
   toggleBtnOn: { backgroundColor: colors.evergreen },
   toggleText: { color: "#6B7280", fontSize: 12, fontWeight: "900" },

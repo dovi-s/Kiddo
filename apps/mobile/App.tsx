@@ -16,6 +16,7 @@ import { FundDetailScreen } from "./src/screens/FundDetailScreen";
 import { GiftLinkEntryScreen } from "./src/screens/GiftLinkEntryScreen";
 import { GifterFlowScreen } from "./src/screens/GifterFlowScreen";
 import { LockScreen } from "./src/screens/LockScreen";
+import { PrivacyOverlay } from "./src/components/PrivacyOverlay";
 
 import { apiGetFunds, apiGetPublicGiftDestination, apiGetUser, apiLogout, type ApiFund, type ApiUser } from "./src/api";
 import {
@@ -634,6 +635,14 @@ export default function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <AppContent />
+        {/* PrivacyOverlay sits OUTSIDE AppContent on purpose. It needs
+            to be the last child of SafeAreaProvider so it renders on
+            top of every screen via z-index + absolute positioning. Its
+            AppState listener is independent of the rest of the app's
+            navigation state, which is correct — it should fire on
+            inactive/background regardless of which screen the user is
+            on. Per FACE_ID_SPEC.md app-switcher privacy item. */}
+        <PrivacyOverlay />
       </SafeAreaProvider>
     </ErrorBoundary>
   );

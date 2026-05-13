@@ -153,6 +153,23 @@ export async function apiGetMarketQuotes(symbols: string[]): Promise<MarketQuote
 }
 
 let _sessionCookie: string | null = null;
+let _deviceId: string | null = null;
+
+// Cached stable per-install device id. Pulled lazily on first request
+// from biometric.ts (which manages the SecureStore key). Sent on every
+// request as X-Kiddo-Device-Id so the server can identify the device
+// for trusted-devices revocation + last-unlocked timestamping. Per
+// FACE_ID_SPEC.md (trusted devices panel item).
+async function getCachedDeviceId(): Promise<string | null> {
+  if (_deviceId) return _deviceId;
+  try {
+    const { getOrCreateDeviceId } = await import("./biometric");
+    _deviceId = await getOrCreateDeviceId();
+    return _deviceId;
+  } catch {
+    return null;
+  }
+}
 
 async function apiFetch(path: string, options: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
@@ -164,6 +181,14 @@ async function apiFetch(path: string, options: RequestInit = {}): Promise<Respon
   // We also manually mirror the session cookie in headers for reliability on physical devices.
   if (_sessionCookie) {
     headers["Cookie"] = _sessionCookie;
+  }
+
+  // Identify this device install for trusted-devices flows. Non-
+  // sensitive header — the server pairs it with the authenticated
+  // session before trusting it.
+  const deviceId = await getCachedDeviceId();
+  if (deviceId) {
+    headers["X-Kiddo-Device-Id"] = deviceId;
   }
 
   const response = await fetch(`${API_BASE}${path}`, {
@@ -219,6 +244,50 @@ export async function apiRegister(
 export async function apiLogout(): Promise<void> {
   await apiFetch("/api/auth/logout", { method: "POST" });
   _sessionCookie = null;
+}
+
+// ===== TRUSTED DEVICES (FACE_ID_SPEC.md) =====
+
+export type TrustedDeviceRow = {
+  id: string;
+  deviceId: string;
+  deviceName: string | null;
+  platform: string | null;
+  biometricEnabledAt: string;
+  lastUnlockedAt: string | null;
+  revokedAt: string | null;
+};
+
+export async function apiRegisterTrustedDevice(input: {
+  deviceId: string;
+  deviceName?: string;
+  platform?: string;
+}): Promise<{ success: boolean; id: string }> {
+  const res = await apiFetch("/api/me/trusted-devices", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return parseJson<{ success: boolean; id: string }>(res);
+}
+
+export async function apiListTrustedDevices(): Promise<{
+  devices: TrustedDeviceRow[];
+  currentDeviceId: string | null;
+}> {
+  const res = await apiFetch("/api/me/trusted-devices");
+  return parseJson<{ devices: TrustedDeviceRow[]; currentDeviceId: string | null }>(res);
+}
+
+export async function apiRevokeTrustedDevice(id: string): Promise<void> {
+  const res = await apiFetch(`/api/me/trusted-devices/${encodeURIComponent(id)}/revoke`, {
+    method: "POST",
+  });
+  await parseJson<{ success: boolean }>(res);
+}
+
+export async function apiGetDeviceStatus(): Promise<{ revoked: boolean; registered: boolean }> {
+  const res = await apiFetch("/api/me/device-status");
+  return parseJson<{ revoked: boolean; registered: boolean }>(res);
 }
 
 export async function apiGetUser(): Promise<ApiUser | null> {

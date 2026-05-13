@@ -10,6 +10,7 @@ import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff } from "lucide
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
+import { PasskeyManager } from "@/components/PasskeyManager";
 
 const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -570,6 +571,12 @@ export default function Account() {
                 </div>
               </div>
             </SectionCard>
+
+            {/* Passkey manager. Per FACE_ID_SPEC.md WebAuthn item.
+                Self-contained — fetches its own list, runs the
+                add/remove ceremonies, falls through silently when
+                no passkeys are registered. */}
+            <PasskeyManager />
 
             <button
               type="button"

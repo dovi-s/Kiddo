@@ -28,6 +28,31 @@ import * as SecureStore from "expo-secure-store";
 // secret per se.
 const KEY_BIOMETRIC_ENABLED = "kiddo_biometric_enabled";
 const KEY_LAST_ACTIVE_AT = "kiddo_last_active_at_ms";
+const KEY_DEVICE_ID = "kiddo_device_id";
+
+// Stable per-install device identifier. Generated on first request and
+// persisted in SecureStore so it survives launches but resets on app
+// reinstall (which is the right semantic — a freshly-installed app
+// IS a new device for trust purposes). Used by the trusted-devices
+// endpoints + the X-Kiddo-Device-Id request header.
+export async function getOrCreateDeviceId(): Promise<string> {
+  try {
+    const existing = await SecureStore.getItemAsync(KEY_DEVICE_ID);
+    if (existing) return existing;
+    // Generate a stable random identifier. crypto.randomUUID would be
+    // cleaner but isn't universally available in RN; build one from
+    // Math.random + timestamp instead. Not security-sensitive on its
+    // own — the server pairs deviceId with the authenticated session,
+    // so guessing a deviceId doesn't grant anything.
+    const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`;
+    await SecureStore.setItemAsync(KEY_DEVICE_ID, id);
+    return id;
+  } catch {
+    // SecureStore failure — return a session-only id so calls succeed.
+    // Worst case: device-trust state doesn't persist across launches.
+    return `transient-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
 
 // 5 minutes per FACE_ID_SPEC.md decision. Industry norm (Robinhood,
 // Acorns, Greenlight). Change this constant — not the call sites — if
@@ -191,4 +216,49 @@ export async function clearLastActive(): Promise<void> {
   } catch {
     // Non-fatal.
   }
+}
+
+// Sensitive-action re-auth helper. Per FACE_ID_SPEC.md bucket 2
+// (formerly deferred item: "re-auth on sensitive actions").
+//
+// Wraps an action behind a fresh biometric prompt even when the
+// app is already unlocked. Used for withdrawal, change bank,
+// change KYC info, view full SSN, close fund — the kind of
+// money-moving / identity-sensitive operations Robinhood etc.
+// gate even inside an active session.
+//
+// Behavior:
+//   - If biometric is NOT enabled in app settings: pass-through
+//     (action proceeds without prompt). The user opted out of the
+//     base lock; we don't override that for individual actions.
+//   - If biometric IS enabled: fire Face ID. On success, invoke
+//     the action. On cancel, return null. On failure, surface the
+//     reason to the caller.
+//
+// Usage:
+//   const result = await requireBiometric("Confirm withdrawal", async () => {
+//     return await fetch("/api/withdrawals", { ... });
+//   });
+//   if (result === null) {
+//     // User cancelled — do nothing
+//     return;
+//   }
+//   // result is the action's return value
+export async function requireBiometric<T>(
+  promptMessage: string,
+  action: () => Promise<T>,
+): Promise<T | null> {
+  const enabled = await isBiometricEnabled();
+  if (!enabled) {
+    // Pass-through. The user has opted out of biometric; respect that.
+    return await action();
+  }
+  const result = await authenticate(promptMessage);
+  if (!result.success) {
+    // Caller can detect cancellation vs error from the null return.
+    // For UX simplicity we surface a single null on any non-success;
+    // the caller decides whether to toast or stay silent.
+    return null;
+  }
+  return await action();
 }

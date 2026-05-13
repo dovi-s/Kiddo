@@ -34,6 +34,7 @@ import {
 } from "openid-client";
 import { URL } from "url";
 import { getUserIdForOAuthIdentity, linkOAuthIdentity } from "./oauthIdentityStore";
+import { registerPasskeyRoutes } from "./passkeyAuth";
 import { z } from "zod";
 
 const emailSchema = z
@@ -979,6 +980,9 @@ export function setupAuth(app: Express) {
       });
     });
   });
+
+  // Register WebAuthn / passkey routes. Per FACE_ID_SPEC.md.
+  registerPasskeyRoutes(app, { isAuthenticated });
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
