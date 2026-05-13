@@ -1,6 +1,6 @@
 import React from "react";
 import * as Notifications from "expo-notifications";
-import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, AppState, AppStateStatus, Linking, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors, radius, spacing } from "@kora/tokens";
 import { appCopy } from "@kora/content";
@@ -15,8 +15,16 @@ import { DashboardScreen } from "./src/screens/DashboardScreen";
 import { FundDetailScreen } from "./src/screens/FundDetailScreen";
 import { GiftLinkEntryScreen } from "./src/screens/GiftLinkEntryScreen";
 import { GifterFlowScreen } from "./src/screens/GifterFlowScreen";
+import { LockScreen } from "./src/screens/LockScreen";
 
-import { apiGetFunds, apiGetPublicGiftDestination, apiGetUser, type ApiFund, type ApiUser } from "./src/api";
+import { apiGetFunds, apiGetPublicGiftDestination, apiGetUser, apiLogout, type ApiFund, type ApiUser } from "./src/api";
+import {
+  BACKGROUND_RELOCK_MS,
+  clearLastActive,
+  getMillisSinceLastActive,
+  isBiometricEnabled,
+  recordAppActiveAt,
+} from "./src/biometric";
 
 type OnboardStep = Extract<OnboardingStep, "welcome" | "who" | "investment">;
 
@@ -30,7 +38,12 @@ type Screen =
   | { name: "fund_detail"; user: ApiUser; fund: ApiFund }
   | { name: "add_fund"; user: ApiUser }
   | { name: "gifter_entry" }
-  | { name: "gifter_flow"; identifier: string; destination: PublicGiftDestination };
+  | { name: "gifter_flow"; identifier: string; destination: PublicGiftDestination }
+  // Smart-lock interstitial. Carries the screen to restore once
+  // biometric unlock completes — preserves the user's place in the
+  // app across background-then-lock cycles, including deep-linked
+  // fund details. Per FACE_ID_SPEC.md.
+  | { name: "locked"; targetScreen: Screen };
 
 function buildDefaultOnboardScreen(): Screen {
   return {
@@ -40,6 +53,15 @@ function buildDefaultOnboardScreen(): Screen {
     investment: "sp500",
     ticker: "DIS",
   };
+}
+
+// Lockable screens — the authenticated parent surface that shows
+// balances and can move money. Auth / onboard / gifter screens are
+// public or pre-login and don't need the biometric gate. Splash /
+// boot_error / locked itself are also excluded (locking a locked
+// screen would loop).
+function isLockableScreen(s: Screen): boolean {
+  return s.name === "dashboard" || s.name === "fund_detail" || s.name === "add_fund";
 }
 
 const STATIC_ROUTE_PREFIXES = new Set([
@@ -172,6 +194,36 @@ function resolveRouteFromUrl(rawUrl: string | null | undefined) {
 function AppContent() {
   const [screen, setScreen] = React.useState<Screen>({ name: "splash" });
 
+  // Ref tracks the latest `screen` for the AppState listener — the
+  // listener is subscribed once on mount but needs the current value
+  // every time it fires. State alone would close over the stale
+  // initial value. Updated on every render below.
+  const screenRef = React.useRef<Screen>(screen);
+  screenRef.current = screen;
+
+  // Routes any "going to authenticated content" intent through the
+  // smart-lock gate. If the user has Face ID enabled, the target
+  // screen is wrapped in a `locked` interstitial; otherwise it sets
+  // directly. Used by boot, openDeepLink, openFundDetailFromIdentifier,
+  // and notification-tap handlers. Per FACE_ID_SPEC.md.
+  const gotoAuthenticatedScreen = React.useCallback(async (target: Screen) => {
+    if (!isLockableScreen(target)) {
+      setScreen(target);
+      return;
+    }
+    try {
+      const locked = await isBiometricEnabled();
+      if (locked) {
+        setScreen({ name: "locked", targetScreen: target });
+        return;
+      }
+    } catch {
+      // SecureStore failure shouldn't block app boot; fall through to
+      // unlocked screen.
+    }
+    setScreen(target);
+  }, []);
+
   const openGiftDestination = React.useCallback(async (identifier: string) => {
     setScreen({ name: "gifter_resolving", identifier });
     try {
@@ -188,17 +240,17 @@ function AppContent() {
         const funds = await apiGetFunds();
         const matchedFund = funds.find((fund) => fund.id === identifier || fund.slug === identifier);
         if (matchedFund) {
-          setScreen({ name: "fund_detail", user, fund: matchedFund });
+          await gotoAuthenticatedScreen({ name: "fund_detail", user, fund: matchedFund });
           return true;
         }
       } catch {
         // Fall back to dashboard when a deep-linked fund cannot be resolved.
       }
 
-      setScreen({ name: "dashboard", user });
+      await gotoAuthenticatedScreen({ name: "dashboard", user });
       return false;
     },
-    [],
+    [gotoAuthenticatedScreen],
   );
 
   const openDeepLink = React.useCallback(
@@ -222,10 +274,10 @@ function AppContent() {
         return true;
       }
 
-      setScreen({ name: "dashboard", user });
+      await gotoAuthenticatedScreen({ name: "dashboard", user });
       return true;
     },
-    [openFundDetailFromIdentifier, openGiftDestination],
+    [gotoAuthenticatedScreen, openFundDetailFromIdentifier, openGiftDestination],
   );
 
   React.useEffect(() => {
@@ -241,7 +293,7 @@ function AppContent() {
 
           const user = await apiGetUser();
           if (user) {
-            setScreen({ name: "dashboard", user });
+            await gotoAuthenticatedScreen({ name: "dashboard", user });
             return;
           }
           setScreen({ name: "auth" });
@@ -252,7 +304,7 @@ function AppContent() {
     });
 
     return () => subscription.remove();
-  }, [openDeepLink]);
+  }, [gotoAuthenticatedScreen, openDeepLink]);
 
   React.useEffect(() => {
     let active = true;
@@ -283,7 +335,13 @@ function AppContent() {
         const user = await apiGetUser();
         if (!active) return;
         if (user) {
-          setScreen({ name: "dashboard", user });
+          // Cold launches ALWAYS lock when the toggle is on — per
+          // FACE_ID_SPEC.md, process restart invalidates any prior
+          // "last active" timestamp. The dashboard target is wrapped
+          // in the locked interstitial inside gotoAuthenticatedScreen
+          // when biometric is enabled.
+          await clearLastActive().catch(() => undefined);
+          await gotoAuthenticatedScreen({ name: "dashboard", user });
         } else {
           setScreen(buildDefaultOnboardScreen());
         }
@@ -300,7 +358,38 @@ function AppContent() {
       active = false;
       clearTimeout(t);
     };
-  }, [openDeepLink]);
+  }, [gotoAuthenticatedScreen, openDeepLink]);
+
+  // AppState listener — drives the background re-lock. On background
+  // transition we stamp `now` into SecureStore. On active transition
+  // we check how long we were gone; if longer than the spec's 5-min
+  // window AND biometric is enabled AND the current screen is one
+  // that shows authenticated content, we push the current screen
+  // into `targetScreen` and replace with the locked interstitial.
+  // Per FACE_ID_SPEC.md re-lock policy.
+  React.useEffect(() => {
+    let prevState: AppStateStatus = AppState.currentState;
+    const subscription = AppState.addEventListener("change", (next) => {
+      if (next === "background") {
+        // Always stamp — cheap. Decision happens on the active edge.
+        void recordAppActiveAt();
+      } else if (next === "active" && prevState !== "active") {
+        void (async () => {
+          // Already locked → nothing to do; the existing locked
+          // screen handles re-prompt itself.
+          if (screenRef.current.name === "locked") return;
+          if (!isLockableScreen(screenRef.current)) return;
+          const enabled = await isBiometricEnabled();
+          if (!enabled) return;
+          const millis = await getMillisSinceLastActive();
+          if (millis < BACKGROUND_RELOCK_MS) return;
+          setScreen({ name: "locked", targetScreen: screenRef.current });
+        })();
+      }
+      prevState = next;
+    });
+    return () => subscription.remove();
+  }, []);
 
   React.useEffect(() => {
     const subscription = Linking.addEventListener("url", ({ url }) => {
@@ -352,6 +441,25 @@ function AppContent() {
           </View>
         </View>
       </View>
+    );
+  }
+
+  if (screen.name === "locked") {
+    const locked = screen;
+    return (
+      <LockScreen
+        onUnlocked={() => {
+          // Stamp now() so the AppState listener doesn't immediately
+          // re-lock on the next foreground edge (e.g. iOS firing
+          // active → inactive → active during the prompt teardown).
+          void recordAppActiveAt();
+          setScreen(locked.targetScreen);
+        }}
+        onSignOut={() => {
+          void apiLogout().catch(() => undefined);
+          setScreen({ name: "auth" });
+        }}
+      />
     );
   }
 

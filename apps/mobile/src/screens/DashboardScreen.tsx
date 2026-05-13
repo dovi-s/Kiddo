@@ -33,6 +33,13 @@ import {
   WEB_BASE,
 } from "../api";
 import { registerForPushNotificationsAsync } from "../push";
+import {
+  authenticate as authenticateBiometric,
+  getBiometricCapability,
+  isBiometricEnabled,
+  setBiometricEnabled,
+  type BiometricCapability,
+} from "../biometric";
 
 type Tab = "home" | "memory" | "gift" | "growth" | "settings";
 
@@ -603,6 +610,57 @@ function AccountTab({
   const [pushBusy, setPushBusy] = useState(false);
   const [pushMessage, setPushMessage] = useState<string | null>(null);
 
+  // Face ID toggle. Per FACE_ID_SPEC.md. Three states surfaced:
+  //   1. capability.supported = false → toggle disabled, reason shown
+  //   2. capability.supported = true,  enabled = false → "Off"
+  //   3. capability.supported = true,  enabled = true  → "On"
+  const [bioCapability, setBioCapability] = useState<BiometricCapability>({ supported: false, enrolled: false });
+  const [bioEnabled, setBioEnabled] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+  const [bioMessage, setBioMessage] = useState<string | null>(null);
+
+  const loadBiometricState = useCallback(async () => {
+    const [cap, on] = await Promise.all([getBiometricCapability(), isBiometricEnabled()]);
+    setBioCapability(cap);
+    setBioEnabled(on);
+  }, []);
+
+  useEffect(() => { loadBiometricState(); }, [loadBiometricState]);
+
+  const handleToggleBiometric = async () => {
+    if (bioBusy) return;
+    setBioMessage(null);
+    if (!bioCapability.supported && !bioEnabled) {
+      // Trying to turn ON without device support — surface the reason.
+      setBioMessage(bioCapability.reason || "Face ID isn't available on this device.");
+      return;
+    }
+    setBioBusy(true);
+    try {
+      if (!bioEnabled) {
+        // Turning ON requires a live biometric check — proves it works
+        // AND lets the user feel the prompt before they live with it.
+        const result = await authenticateBiometric("Enable Face ID for Kiddo");
+        if (!result.success) {
+          if (result.reason !== "cancelled") {
+            setBioMessage(result.message || "Couldn't verify. Face ID stays off.");
+          }
+          return;
+        }
+        await setBiometricEnabled(true);
+        setBioEnabled(true);
+        setBioMessage("Face ID will be required next time you open Kiddo.");
+      } else {
+        // Turning OFF — no re-auth required; the user is already in.
+        await setBiometricEnabled(false);
+        setBioEnabled(false);
+        setBioMessage("Face ID is off.");
+      }
+    } finally {
+      setBioBusy(false);
+    }
+  };
+
   const loadPushPreferences = useCallback(async () => {
     try {
       const prefs = await apiGetMobilePushPreferences();
@@ -692,6 +750,32 @@ function AccountTab({
           <Pressable style={styles.primarySmallBtn}>
             <Text style={styles.primarySmallBtnText}>See Kiddo+</Text>
           </Pressable>
+        </View>
+      </Section>
+
+      <Section title="Security">
+        <View style={styles.pushCard}>
+          <View style={styles.rowBetween}>
+            <View style={styles.flexOne}>
+              <Text style={styles.pushTitle}>Use Face ID to unlock Kiddo</Text>
+              <Text style={styles.pushBody}>
+                Required when you open the app and after 5 minutes in the background.
+              </Text>
+              {!bioCapability.supported ? (
+                <Text style={styles.pushMeta}>{bioCapability.reason}</Text>
+              ) : null}
+            </View>
+            <Pressable
+              disabled={bioBusy || (!bioCapability.supported && !bioEnabled)}
+              onPress={handleToggleBiometric}
+              style={[styles.toggleBtn, bioEnabled && styles.toggleBtnOn]}
+            >
+              <Text style={[styles.toggleText, bioEnabled && styles.toggleTextOn]}>
+                {bioBusy ? "..." : bioEnabled ? "On" : "Off"}
+              </Text>
+            </Pressable>
+          </View>
+          {bioMessage ? <Text style={styles.pushMessage}>{bioMessage}</Text> : null}
         </View>
       </Section>
 

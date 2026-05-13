@@ -42,7 +42,14 @@
       ]
     },
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Kiddo uses Face ID so only you can open your kids' funds."
+        }
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "apiUrl": "http://localhost:5000",
