@@ -4240,7 +4240,7 @@ const [editFundName, setEditFundName] = useState("");
                   <p className="mt-1 text-xs text-muted-foreground">or ${KORA_STARTER_YEARLY}/year</p>
                   <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Make this feel real every month.</p>
                   <div className="mt-5 space-y-2 text-sm text-muted-foreground">
-                    {["Recurring investment for one child fund", "Full Memory Book with photo, video, and voice", "Full Kid View", "Thank-you templates and priority support"].map((item) => (
+                    {["Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Projections and milestone notifications", "Co-parent access and priority support"].map((item) => (
                       <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold))]" />{item}</p>
                     ))}
                   </div>
@@ -4284,7 +4284,7 @@ const [editFundName, setEditFundName] = useState("");
                         features included" rename. Other bullet cleanup done
                         on Pricing.tsx (deleted padding, kept scale-clarifiers).
                         See project_acorns_bundle_inflation_pattern.md. */}
-                    {["Unlimited funds, every child", "Unlimited events with premium features included", "Full Kid View for every child", "One view for every fund in your household"].map((item) => (
+                    {["Unlimited funds, every child", "Unlimited occasions with premium features included", "Kid View for every child", "One view for every fund in your household"].map((item) => (
                       <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold))]" />{item}</p>
                     ))}
                   </div>

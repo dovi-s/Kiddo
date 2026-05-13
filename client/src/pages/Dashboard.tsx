@@ -11284,10 +11284,10 @@ export default function Dashboard() {
                 <div className="space-y-2 text-xs text-muted-foreground">
                   <p className="text-foreground font-semibold">Plus also includes:</p>
                   <ul className="space-y-1 pl-1">
-                    <li>· Full Memory Book with photo, video, and voice</li>
+                    <li>· Add your own photos, videos, and voice to Memory Book entries</li>
                     <li>· Fund projections and milestone notifications</li>
-                    <li>· Co-parent access and thank-you templates</li>
-                    <li>· Full Kid View as {child} grows</li>
+                    <li>· Co-parent access for a partner or guardian</li>
+                    <li>· Occasion reminders and priority support</li>
                   </ul>
                 </div>
 

@@ -453,7 +453,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       { label: "Memory Book of every gift", competitor: "Statement only", kora: "Every gift, every note, photo, video, voice memory" },
       { label: "Sealed letter for the 18th birthday", competitor: "None", kora: "Yes. Text plus voice plus photo plus video, opened only at 18." },
       { label: "Age-18 handoff guidance", competitor: "Statutory only. Account flips to the kid; you figure out the rest.", kora: "Five-stage parent ramp from age 13 through 18, FAQ, checklist, projection, transition worker." },
-      { label: "Kid-facing view", competitor: "None", kora: "Kid View Lite on Free. Full Kid View on Plus, with age-aware copy." },
+      { label: "Kid-facing view", competitor: "None", kora: "Kid View on every plan. Age-aware copy from 5 to 17. Family covers every child." },
       { label: "Brokerage", competitor: "Fidelity", kora: "DriveWealth. SIPC-protected." },
     ],
     sections: [

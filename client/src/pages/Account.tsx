@@ -412,7 +412,7 @@ export default function Account() {
                           // Family-plan event differential is unlimited
                           // events with premium features bundled, not
                           // cross-fund occasion tools.
-                          ? "Unlimited funds, unlimited events, and Full Kid View across every child."
+                          ? "Unlimited funds, unlimited occasions, and Kid View across every child."
                           : userPlan === "legacy"
                             ? "Everything in Family, plus 2 Occasion credits per year."
                             : "One child fund, a gift link, the Memory Book basics, no platform fee on normal gifts."}

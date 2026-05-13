@@ -23,7 +23,8 @@ function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; 
 }
 
 // Plans locked per MEMORY (2026-05-08, 2026-05-12 audit):
-//   Free:   $0 / month, 1 fund, basic features, Kid View Lite, basic text Memory Book.
+//   Free:   $0 / month, 1 fund, basic features, Kid View (full experience for one fund),
+//           basic text Memory Book.
 //           Approved phrasings: "$0 per month", "$0 / per month", "Free to start", "No monthly fee".
 //           Never "$0 forever" or "Always free" — Acorns-scrutiny risk with the 0.10% AUM line.
 //   Plus:   $4.99/mo or $39/yr (annual is 35% off monthly — aggressive).
@@ -55,7 +56,7 @@ const plans = [
       "1 active occasion at a time",
       "Shareable gift link, QR code, and gift code",
       "Text Memory Book entries (gifters can always attach photos, videos, and voice)",
-      "Kid View Lite",
+      "Kid View. Your child sees what they own and how their fund grows",
       "SIPC-insured investments via DriveWealth",
       "0.10% annual fee on invested assets only",
     ],
@@ -75,7 +76,6 @@ const plans = [
       "Everything in Free",
       "Add your own photos, videos, and voice memos to Memory Book entries",
       "Recurring investments (daily, weekly, or monthly)",
-      "Full Kid View",
       "Projections and milestone notifications",
       "Occasion reminders",
       "Co-parent access (invite a partner to follow the fund)",
@@ -97,7 +97,7 @@ const plans = [
       "Everything in Kiddo+",
       "Unlimited children",
       "Full Memory Book authoring for every child",
-      "Full Kid View for every child",
+      "Kid View for every child",
       "One view for every fund in your household",
       "Unlimited occasions with premium features included",
       "0.10% annual fee on invested assets only",
