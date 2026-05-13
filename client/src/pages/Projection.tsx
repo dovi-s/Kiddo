@@ -379,17 +379,6 @@ ${shareUrl}`;
     );
   }
 
-  // For "starting early" tile + closing line — use the active rate so the
-  // comparison matches what the parent is exploring. Years-to-project pulls
-  // from majorityAge (state-aware): for 18-state, "$1,000 at birth" projects
-  // over 18 years; for 21-state, over 21 years. Variable name `atBirthAt18`
-  // retained for stability — the VALUE is majority-aware.
-  const atBirthAt18 = projectFund(1000, 0, rate.rate, majorityAge);
-  // "$1,000 at age 10" projects over (majorityAge - 10) years — 8 for 18-state,
-  // 11 for 21-state. Variable name retained for stability.
-  const at10At18 = projectFund(1000, 0, rate.rate, Math.max(0, majorityAge - 10));
-  const earlyDelta = atBirthAt18 - at10At18;
-
   // Smoothly animate the projected number on every slider/lever change.
   const projectedDisplay = useCountUp(projected);
   // Filled portion of the slider track for the gradient. With N stops, slot i fills
@@ -692,67 +681,16 @@ ${shareUrl}`;
           </div>
         </div>
 
-        {/* Education — power of starting early. Secondary surface, earned by
-            the slider experience above.
-
-            Age-gated 2026-05-12: only shown when currentAge < 10. Above that
-            cutoff, both tiles are retroactive ($1,000 at birth = past, $1,000
-            at age 10 = past or now) — the section reads as counterfactual
-            loss-frame ("look how much more you'd have if you'd started
-            earlier") instead of forward-applicable motivation. That's the
-            Robinhood-zone regret-pattern the locked discipline refuses
-            (feedback_no_greenwashing_losses.md + project_design_lens_kid_at_18.md).
-
-            For kids 0-9, the $1,000-at-age-10 tile is still future-applicable,
-            and the section IS motivating — keep it. For kids 10+ (including
-            Emma at 17 in canonical user data), hide entirely; the slider hero
-            above already does the projection job without retroactive
-            comparison. Same shape as the structure-vs-behavior pattern from
-            feedback_structure_vs_behavior.md: when the same UI hits different
-            customer segments with opposite meanings, the structure adapts. */}
-        {currentAge < 10 && (
-        <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
-          <div>
-            <p className="font-heading text-lg font-bold text-foreground">The power of starting early</p>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-              The same gift, given at different ages, ends up wildly different at {majorityAge}, at {rate.sub}.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            {/* Both tiles get the warm-cream + evergreen-border treatment per spec. The
-                left tile is the "winner" — slightly stronger fill so the visual contrast
-                does the storytelling work before the parent reads the punchline. */}
-            <div className="rounded-2xl bg-[hsl(var(--kiddo-cream))] border-2 border-[hsl(var(--kiddo-evergreen)/0.45)] p-4 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">$1,000 at birth</p>
-              <p className="font-heading text-3xl font-bold text-foreground tabular-nums mt-1" style={{ letterSpacing: "-0.02em" }}>
-                {fmtMoney(atBirthAt18)}
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">at {majorityAge}</p>
-            </div>
-            <div className="rounded-2xl bg-[hsl(var(--kiddo-cream)/0.55)] border-2 border-[hsl(var(--kiddo-evergreen)/0.18)] p-4">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">$1,000 at age 10</p>
-              <p className="font-heading text-3xl font-bold text-foreground/70 tabular-nums mt-1" style={{ letterSpacing: "-0.02em" }}>
-                {fmtMoney(at10At18)}
-              </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">at {majorityAge}</p>
-            </div>
-          </div>
-          <p className="text-sm text-foreground font-semibold leading-relaxed">
-            {/* Difference between "$1k at birth" and "$1k at age 10" projections
-                — that's (majorityAge - 10) years of head start. 8 for 18-state,
-                11 for 21-state. */}
-            {Math.max(0, majorityAge - 10)} years ={" "}
-            <span className="text-[hsl(var(--kiddo-evergreen))] tabular-nums">{fmtMoney(earlyDelta)}</span>{" "}
-            difference.
-            <span className="text-muted-foreground font-normal"> That's the power of starting early.</span>
-          </p>
-          {currentAge > 0 && currentAge < majorityAge && (
-            <p className="text-xs text-muted-foreground italic leading-relaxed">
-              {childName} is {currentAge < 1 ? "under 1" : Math.floor(currentAge)}. {Math.max(0, Math.round(65 - currentAge))} years of compounding ahead. That's the head start.
-            </p>
-          )}
-        </div>
-        )}
+        {/* "Power of starting early" comparison section deleted 2026-05-13.
+            Was previously age-gated to currentAge < 10 (after the 2026-05-12
+            partial restraint pass that hid it for older kids per
+            feedback_no_greenwashing_losses.md). Audit landed at: the slider
+            hero above already does the projection job for every kid; the
+            comparison tiles ("wildly different at 18") read as Acorns-style
+            marketing copy that doesn't match Kiddo's calm register; and
+            parents of kids under 10 don't need to be sold on starting early
+            because they ALREADY started. Preaching to the choir at a volume
+            that doesn't match the brand. Deleted entirely. */}
 
         {/* Share */}
         <button
