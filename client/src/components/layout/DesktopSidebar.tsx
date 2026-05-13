@@ -282,9 +282,15 @@ export function DesktopSidebar() {
     },
     fundSlug && {
       id: "gifter-page",
+      // Same-tab navigation matches every other Quick Link (Share, Kid's
+      // View, New occasion, active occasion). Opening the gifter page in
+      // a new tab broke the row's behavioral consistency — the only
+      // affordance that punched the user out to a new window. The gifter
+      // page is a real route in the SPA, not an external destination, so
+      // setLocation is the correct semantics.
       label: "View gifter page",
       href: `/${fundSlug}`,
-      external: true,
+      external: false,
       onClick: null,
     },
     activeFund?.id && {
