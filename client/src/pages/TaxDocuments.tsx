@@ -375,6 +375,18 @@ export default function TaxDocuments() {
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">Proceeds from any sales or exchanges. None to report unless positions were sold.</p>
                   </div>
                 </div>
+                {/* Plain-English explainer link — surfaced even in the
+                    empty-state so first-time kid-owners can prep before
+                    January. Per AGE_18_HANDOFF_SPEC.md bucket 3. */}
+                <div className="mt-3">
+                  <a
+                    href="/tax-documents/explainer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline underline-offset-2"
+                  >
+                    What these forms mean, in plain English
+                    <span aria-hidden>→</span>
+                  </a>
+                </div>
               </div>
             </div>
           </div>

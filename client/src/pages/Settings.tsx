@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { AddFundSheet } from "@/components/AddFundSheet";
+import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -367,8 +368,11 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
   const [selling, setSelling] = useState(false);
   const [sellAll, setSellAll] = useState(true);
   const [customShares, setCustomShares] = useState("");
+  // First-sell tax explainer state. Mirrors Dashboard.tsx's pattern.
+  // Per AGE_18_HANDOFF_SPEC.md bucket 2.
+  const [sellTaxExplainer, setSellTaxExplainer] = useState<FirstSellTaxExplainerPayload | null>(null);
 
-  const handleSell = async () => {
+  const handleSell = async (opts: { confirmTaxExplainer?: boolean } = {}) => {
     setSelling(true);
     haptic("medium");
     try {
@@ -380,14 +384,19 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
           holdingId: holding.id,
           fundId: fund.id,
           shares: sellAll ? undefined : customShares,
+          ...(opts.confirmTaxExplainer ? { confirmTaxExplainer: true } : {}),
         }),
       });
       const data = await res.json();
       if (res.ok) {
         haptic("success");
         toast({ title: `${holding.ticker} moved to cash`, description: `$${data.saleValue} will settle inside the fund.` });
+        setSellTaxExplainer(null);
         onSuccess();
         onClose();
+      } else if (res.status === 409 && data.error === "first_sell_tax_explainer_required") {
+        haptic("selection");
+        setSellTaxExplainer(data as FirstSellTaxExplainerPayload);
       } else {
         toast({ title: "Could not sell", description: data.error || "Please try again", variant: "destructive" });
       }
@@ -483,7 +492,7 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
             <Button
               className="flex-1 bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 text-white"
               disabled={selling || (!sellAll && (!customShares || parseFloat(customShares) <= 0))}
-              onClick={handleSell}
+              onClick={() => handleSell()}
               data-testid="button-confirm-sell"
             >
               {selling && <Loader2 size={16} className="mr-2 animate-spin" />}
@@ -492,6 +501,15 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
           </div>
         </div>
       </DialogContent>
+      {/* First-sell tax explainer overlay — same modal Dashboard uses.
+          Renders inside the Dialog so it overlays the parent sell sheet.
+          Per AGE_18_HANDOFF_SPEC.md bucket 2. */}
+      <FirstSellTaxExplainerModal
+        payload={sellTaxExplainer}
+        busy={selling}
+        onCancel={() => setSellTaxExplainer(null)}
+        onConfirm={() => handleSell({ confirmTaxExplainer: true })}
+      />
     </Dialog>
   );
 }
@@ -1882,6 +1900,191 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
         </Button>
       )}
     </div>
+  );
+}
+
+// Tax section for kid-owners (post age-18 handoff). Per
+// AGE_18_HANDOFF_SPEC.md bucket 3 — completes the "I have a job"
+// toggle wiring beyond the walkthrough screen 4, surfaces the
+// estimated-income bracket as updatable, and offers the Roth IRA
+// waiting-list opt-in. Hidden entirely for parents (the section
+// only fetches when isKidOwner = true).
+function KidOwnerTaxSection() {
+  type TaxProfile = {
+    isKidOwner: boolean;
+    hasEarnedIncome: boolean;
+    estimatedIncomeBracket: string | null;
+    firstSellCompletedAt: string | null;
+    rothIraInterestAt: string | null;
+  };
+  const [, navigate] = useLocation();
+  const { data, refetch } = useQuery<TaxProfile>({
+    queryKey: ["/api/me/tax-profile"],
+    queryFn: async () => {
+      const res = await fetch("/api/me/tax-profile", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load tax profile");
+      return res.json();
+    },
+  });
+  const [busy, setBusy] = useState(false);
+
+  if (!data || !data.isKidOwner) return null;
+
+  const updateEarnedIncome = async (hasIncome: boolean, bracket: string | null) => {
+    setBusy(true);
+    try {
+      await fetch("/api/users/me/earned-income", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          hasEarnedIncome: hasIncome,
+          estimatedIncomeBracket: bracket,
+        }),
+      });
+      await refetch();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleRothInterest = async () => {
+    setBusy(true);
+    try {
+      const next = !data.rothIraInterestAt;
+      await fetch("/api/users/me/roth-interest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ interested: next }),
+      });
+      await refetch();
+      toast({
+        title: next ? "You're on the list" : "Removed from waiting list",
+        description: next
+          ? "We'll email you when Roth IRA contributions are available in Kiddo."
+          : "You can opt back in any time.",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const bracket = data.estimatedIncomeBracket;
+  const hasIncome = data.hasEarnedIncome;
+
+  return (
+    <>
+      <SectionDivider label="Tax" />
+
+      <SectionCard>
+        <div className="p-5 space-y-3">
+          <div>
+            <p className="text-sm font-bold text-foreground">Do you have a job?</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              We use this to estimate taxes when you sell and to enable Roth IRA features later.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => updateEarnedIncome(true, bracket)}
+              className={`rounded-xl border-2 py-2 px-3 text-sm font-medium transition-colors ${
+                hasIncome
+                  ? "border-primary bg-primary/5 text-foreground"
+                  : "border-border bg-card text-foreground/70 hover:border-foreground/30"
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => updateEarnedIncome(false, null)}
+              className={`rounded-xl border-2 py-2 px-3 text-sm font-medium transition-colors ${
+                !hasIncome
+                  ? "border-primary bg-primary/5 text-foreground"
+                  : "border-border bg-card text-foreground/70 hover:border-foreground/30"
+              }`}
+            >
+              Not yet
+            </button>
+          </div>
+          {hasIncome && (
+            <div className="pt-2 space-y-2">
+              <p className="text-xs text-muted-foreground">Roughly your yearly income:</p>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { val: "0_45", label: "Under $45k" },
+                  { val: "45_100", label: "$45k to $100k" },
+                  { val: "100_plus", label: "Over $100k" },
+                ].map((b) => (
+                  <button
+                    key={b.val}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => updateEarnedIncome(true, b.val)}
+                    className={`rounded-xl border-2 py-2 px-2 text-xs font-medium transition-colors ${
+                      bracket === b.val
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border bg-card text-foreground/70 hover:border-foreground/30"
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+
+      {hasIncome && (
+        <SectionCard>
+          <div className="p-5 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-foreground">Roth IRA setup</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Every dollar you earn at a job, you can put up to that much into a Roth IRA.
+                  Growth comes out tax-free at 59.5. We're working on adding this to Kiddo.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={toggleRothInterest}
+                className={`shrink-0 rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
+                  data.rothIraInterestAt
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card text-foreground/70 hover:border-foreground/30"
+                }`}
+              >
+                {data.rothIraInterestAt ? "On list" : "Notify me"}
+              </button>
+            </div>
+          </div>
+        </SectionCard>
+      )}
+
+      <SectionCard>
+        <div className="p-5 space-y-2">
+          <p className="text-sm font-bold text-foreground">Tax documents</p>
+          <p className="text-xs text-muted-foreground">
+            Your 1099 forms and a plain-English explainer of what they mean.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-xl"
+            onClick={() => navigate("/tax-documents")}
+          >
+            Open tax docs
+          </Button>
+        </div>
+      </SectionCard>
+    </>
   );
 }
 
@@ -4831,6 +5034,11 @@ const [editFundName, setEditFundName] = useState("");
                 </Link>
               </div>
             </SectionCard>
+
+            {/* Kid-owner tax section — hidden for parents. Self-mounts
+                only when GET /api/me/tax-profile returns isKidOwner=true.
+                Per AGE_18_HANDOFF_SPEC.md bucket 3. */}
+            <KidOwnerTaxSection />
           </div>
         )}
 

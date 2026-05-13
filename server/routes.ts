@@ -5798,7 +5798,7 @@ export async function registerRoutes(
   app.post('/api/holdings/sell', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;
-      const { holdingId, fundId, shares } = req.body;
+      const { holdingId, fundId, shares, confirmTaxExplainer } = req.body;
 
       if (!holdingId || !fundId) {
         return res.status(400).json({ error: 'holdingId and fundId are required' });
@@ -5882,6 +5882,72 @@ export async function registerRoutes(
         console.warn('[sell] holding-period lookup failed, defaulting to long_term:', (err as any)?.message || err);
       }
 
+      // First-sell tax explainer gate. Per AGE_18_HANDOFF_SPEC.md
+      // bucket 2. Fires once for a kid-owner: their first sale comes
+      // with a forced read of "here's the realized gain, here's roughly
+      // what you'll owe in tax." Subsequent sells skip the auto-popup
+      // (the kid is now informed). The explainer is also reachable
+      // from Settings for refreshers.
+      //
+      // The client surfaces the 409 as a modal, then re-fires with
+      // confirmTaxExplainer:true. Server stamps users.firstSellCompletedAt
+      // in the success path below so the gate doesn't re-fire even if
+      // the kid sells immediately after confirming the first time.
+      const isKidOwner =
+        String((fund as any).accountType || "").toLowerCase() === "personal" &&
+        String((fund as any).recipientRelation || "").toLowerCase() === "self";
+      let kidOwnerNeedsExplainer = false;
+      let kidOwnerBracket: string | null = null;
+      if (isKidOwner) {
+        const [userRow] = await db
+          .select({
+            firstSellCompletedAt: users.firstSellCompletedAt,
+            estimatedIncomeBracket: users.estimatedIncomeBracket,
+          })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+        kidOwnerBracket = (userRow?.estimatedIncomeBracket as string) || null;
+        if (!userRow?.firstSellCompletedAt && !confirmTaxExplainer) {
+          kidOwnerNeedsExplainer = true;
+        }
+      }
+      if (kidOwnerNeedsExplainer) {
+        // LTCG federal rate buckets. Approximations of 2026 brackets
+        // and intentionally conservative — over-estimating slightly is
+        // friendlier than under-estimating. State tax is NOT included
+        // (varies widely). The modal copy says "federal only, your
+        // state may add more."
+        const longTermRate =
+          kidOwnerBracket === "100_plus" ? 0.20
+            : kidOwnerBracket === "45_100" ? 0.15
+            : kidOwnerBracket === "0_45" ? 0.00
+            : 0.15; // unknown bracket → safe middle estimate
+        // Short-term gains are taxed at ordinary income rates. Use a
+        // bracket-aware approximation: 10% / 22% / 32% for the same
+        // three buckets. Again conservative-friendly.
+        const shortTermRate =
+          kidOwnerBracket === "100_plus" ? 0.32
+            : kidOwnerBracket === "45_100" ? 0.22
+            : kidOwnerBracket === "0_45" ? 0.10
+            : 0.22;
+        const taxRate = holdingPeriod === "long_term" ? longTermRate : shortTermRate;
+        const estimatedTax = Math.max(0, realizedGain) * taxRate;
+        return res.status(409).json({
+          error: "first_sell_tax_explainer_required",
+          ticker: holding.ticker,
+          sharesToSell: sharesToSell.toFixed(6),
+          saleValue: saleValue.toFixed(2),
+          costBasisSold: costBasisSold.toFixed(2),
+          realizedGain: realizedGain.toFixed(2),
+          holdingPeriod,
+          estimatedTax: estimatedTax.toFixed(2),
+          estimatedTaxRate: taxRate,
+          incomeBracket: kidOwnerBracket,
+          message: "First sale. Here's what the IRS sees, in plain English.",
+        });
+      }
+
       if (remainingShares <= 0.0001) {
         await storage.deleteHolding(holdingId);
         // Holding is gone. Drop its allocation rows so per-gift attribution doesn't
@@ -5948,6 +6014,21 @@ export async function registerRoutes(
       } as any);
 
       await captureFundSnapshot(fundId);
+
+      // Stamp first-sell completion for kid-owners so the tax explainer
+      // doesn't re-fire on their next sale. Best-effort; not blocking
+      // the response — if the update fails (e.g. transient DB blip)
+      // the kid sees the explainer again next time, which is the
+      // taxpayer-friendly failure mode.
+      if (isKidOwner) {
+        try {
+          await db.update(users)
+            .set({ firstSellCompletedAt: new Date(), updatedAt: new Date() })
+            .where(and(eq(users.id, userId), sql`${users.firstSellCompletedAt} IS NULL`));
+        } catch (err) {
+          console.warn('[sell] firstSellCompletedAt stamp failed:', (err as any)?.message || err);
+        }
+      }
 
       res.json({
         success: true,
@@ -10733,6 +10814,101 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error completing handoff welcome:", error);
       res.status(500).json({ error: "Failed to record welcome completion" });
+    }
+  });
+
+  // Closed-tab fallback for the welcome walkthrough. If the kid claimed
+  // the fund + completed the ownership transfer but then closed the
+  // tab before finishing the walkthrough, this endpoint surfaces the
+  // pending fund id so Dashboard mount can redirect them to
+  // /welcome-at-18 on next visit. Returns null fundId when nothing's
+  // pending — the common case for everyone who isn't a fresh kid-owner.
+  app.get('/api/me/pending-handoff-welcome', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      // Look for any fund the user owns that's flagged Personal +
+      // relation=self (kid-owner) and has kidWelcomeCompletedAt null.
+      // We return the first one — if a kid somehow has multiple
+      // pending welcomes, each will surface on a subsequent visit
+      // after the first completes. Walking the list one-at-a-time
+      // is cleaner than batching.
+      const [pending] = await db.select({
+        id: funds.id,
+      })
+        .from(funds)
+        .where(
+          and(
+            eq(funds.userId, userId),
+            sql`LOWER(${funds.accountType}) = 'personal'`,
+            sql`LOWER(${funds.recipientRelation}) = 'self'`,
+            sql`${funds.kidWelcomeCompletedAt} IS NULL`,
+          ),
+        )
+        .limit(1);
+      res.json({ fundId: pending?.id || null });
+    } catch (error) {
+      console.error("Error checking pending handoff welcome:", error);
+      // Non-fatal — return null and let the user proceed. A noisy 500
+      // here would block the Dashboard for everyone if a transient DB
+      // hiccup hit.
+      res.json({ fundId: null });
+    }
+  });
+
+  // Tax profile read endpoint for the Settings → Tax section. Bundles
+  // the kid-owner check + earned-income flags + first-sell + Roth
+  // interest flag in one round-trip so Settings can render the whole
+  // section without three separate fetches. Per AGE_18_HANDOFF_SPEC.md
+  // bucket 3 (Settings tax section).
+  app.get('/api/me/tax-profile', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const [row] = await db.select({
+        hasEarnedIncome: users.hasEarnedIncome,
+        estimatedIncomeBracket: users.estimatedIncomeBracket,
+        firstSellCompletedAt: users.firstSellCompletedAt,
+        rothIraInterestAt: users.rothIraInterestAt,
+      }).from(users).where(eq(users.id, userId)).limit(1);
+      const [kidFund] = await db.select({ id: funds.id })
+        .from(funds)
+        .where(
+          and(
+            eq(funds.userId, userId),
+            sql`LOWER(${funds.accountType}) = 'personal'`,
+            sql`LOWER(${funds.recipientRelation}) = 'self'`,
+          ),
+        )
+        .limit(1);
+      res.json({
+        isKidOwner: Boolean(kidFund),
+        hasEarnedIncome: Boolean(row?.hasEarnedIncome),
+        estimatedIncomeBracket: row?.estimatedIncomeBracket || null,
+        firstSellCompletedAt: row?.firstSellCompletedAt || null,
+        rothIraInterestAt: row?.rothIraInterestAt || null,
+      });
+    } catch (error) {
+      console.error("Error loading tax profile:", error);
+      res.status(500).json({ error: "Failed to load tax profile" });
+    }
+  });
+
+  // Toggle Roth IRA early-interest signal. Settings → Tax surfaces this
+  // when hasEarnedIncome is true. Stamping rothIraInterestAt means
+  // "ping me when DriveWealth IRA support ships." Per
+  // AGE_18_HANDOFF_SPEC.md bucket 3 (Roth pipeline; deferred until
+  // DriveWealth IRA is wired).
+  app.post('/api/users/me/roth-interest', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const interested = req.body?.interested === true;
+      await db.update(users).set({
+        rothIraInterestAt: interested ? new Date() : null,
+        updatedAt: new Date(),
+      } as any).where(eq(users.id, userId));
+      res.json({ success: true, interested });
+    } catch (error) {
+      console.error("Error saving Roth interest:", error);
+      res.status(500).json({ error: "Failed to save" });
     }
   });
 

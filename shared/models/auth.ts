@@ -67,6 +67,18 @@ export const users = pgTable("users", {
   // LTCG tax-rate buckets — used by the first-sell tax explainer.
   hasEarnedIncome: boolean("has_earned_income").notNull().default(false),
   estimatedIncomeBracket: text("estimated_income_bracket"),
+  // Stamped the first time the user (kid-owner) confirms through the
+  // first-sell tax explainer modal. After this is set, subsequent
+  // sells skip the explainer auto-popup — they can still open it
+  // from Settings or the per-sale receipt if they want a refresher.
+  // Per AGE_18_HANDOFF_SPEC.md bucket 2.
+  firstSellCompletedAt: timestamp("first_sell_completed_at"),
+  // Roth IRA early-interest signal. Toggled by the placeholder
+  // Settings card so when DriveWealth IRA integration ships, the
+  // waiting-list ping can target these users first. Distinct from
+  // hasEarnedIncome (the prereq); a kid with earned income can
+  // still choose not to opt into Roth notifications.
+  rothIraInterestAt: timestamp("roth_ira_interest_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

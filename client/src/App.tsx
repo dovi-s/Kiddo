@@ -52,6 +52,7 @@ const Security = lazy(() => import("@/pages/Security"));
 const Age18 = lazy(() => import("@/pages/Age18"));
 const Age18Plan = lazy(() => import("@/pages/Age18Plan"));
 const TaxDocuments = lazy(() => import("@/pages/TaxDocuments"));
+const TaxDocsExplainer = lazy(() => import("@/pages/TaxDocsExplainer"));
 const Projection = lazy(() => import("@/pages/Projection"));
 const FundSnapshot = lazy(() => import("@/pages/FundSnapshot"));
 const MemoryBook = lazy(() => import("@/pages/MemoryBook"));
@@ -761,6 +762,7 @@ function Router() {
           <Route path="/admin"><ProtectedRoute><Admin /></ProtectedRoute></Route>
           <Route path="/age-18-plan"><ProtectedRoute><Age18Plan /></ProtectedRoute></Route>
           <Route path="/tax-documents"><ProtectedRoute><TaxDocuments /></ProtectedRoute></Route>
+          <Route path="/tax-documents/explainer"><ProtectedRoute><TaxDocsExplainer /></ProtectedRoute></Route>
           <Route path="/projection/:fundId"><ProtectedRoute><Projection /></ProtectedRoute></Route>
           <Route path="/fund/:fundId/snapshot"><ProtectedRoute><FundSnapshot /></ProtectedRoute></Route>
           <Route path="/memory"><ProtectedRoute><MemoryRedirect /></ProtectedRoute></Route>

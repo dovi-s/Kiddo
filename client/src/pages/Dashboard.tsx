@@ -94,6 +94,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
+import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
 import {
   type FeedActivity,
   parseMetadata as parseActivityMetadata,
@@ -1001,6 +1002,32 @@ export default function Dashboard() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { data: subscription } = useSubscription();
   const queryClient = useQueryClient();
+
+  // Closed-tab fallback for the at-handoff welcome walkthrough. If the
+  // kid completed the ownership transfer but closed the tab before
+  // finishing the walkthrough at /welcome-at-18, the server still has
+  // their fund flagged kidWelcomeCompletedAt=null. Dashboard mount
+  // checks for that and routes them back to the walkthrough — the
+  // moment is too high-leverage to let a closed tab skip. Per
+  // AGE_18_HANDOFF_SPEC.md bucket 1 closed-tab fallback.
+  useEffect(() => {
+    if (!isAuthenticated || authLoading) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch("/api/me/pending-handoff-welcome", { credentials: "include" });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (data?.fundId) {
+          setLocation(`/welcome-at-18?fundId=${encodeURIComponent(data.fundId)}`);
+        }
+      } catch {
+        // Non-fatal — just stay on dashboard if the check fails.
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, authLoading]);
 
   // Action items — surfaces todos that the SetupProgressNudge doesn't
   // cover (KYC failures, payment-failed, large-gift holds) and that
@@ -3989,7 +4016,18 @@ export default function Dashboard() {
   };
 
 
-  const handleSellHolding = async (sharesToSell?: number) => {
+  // First-sell tax explainer state — opened when server returns 409
+  // "first_sell_tax_explainer_required" on a kid-owner's first sale.
+  // Carries the payload (gain, tax estimate, etc.) the modal renders
+  // plus the original sell params so the confirm action can re-fire
+  // the request with confirmTaxExplainer:true. Per AGE_18_HANDOFF_SPEC.md
+  // bucket 2.
+  const [sellTaxExplainer, setSellTaxExplainer] = useState<{
+    payload: FirstSellTaxExplainerPayload;
+    sharesToSell: number;
+  } | null>(null);
+
+  const handleSellHolding = async (sharesToSell?: number, opts: { confirmTaxExplainer?: boolean } = {}) => {
     if (!sellingHolding || sellLoading) return;
     const maxShares = parseFloat(sellingHolding.shares || "0");
     const shares = sharesToSell ?? parseFloat(sellShares);
@@ -4008,6 +4046,7 @@ export default function Dashboard() {
           holdingId: sellingHolding.id,
           fundId: activeFundId,
           shares: shares,
+          ...(opts.confirmTaxExplainer ? { confirmTaxExplainer: true } : {}),
         }),
       });
       const data = await res.json();
@@ -4016,12 +4055,22 @@ export default function Dashboard() {
         setSellSuccess(true);
         toast({ title: "Moved to cash", description: `${formatCurrency(parseFloat(data.saleValue || "0"))} will settle inside the fund.` });
         invalidateActiveFundFreshness();
+        setSellTaxExplainer(null);
         setTimeout(() => {
           setSellingHolding(null);
           setSellShares("");
           setSellMode("dollars");
           setSellSuccess(false);
         }, 1400);
+      } else if (res.status === 409 && data.error === "first_sell_tax_explainer_required") {
+        // First-sell tax explainer — surface the modal with the
+        // server-computed gain + tax estimate. User can continue
+        // (re-fires with confirmTaxExplainer:true) or back out.
+        haptic("selection");
+        setSellTaxExplainer({
+          payload: data as FirstSellTaxExplainerPayload,
+          sharesToSell: shares,
+        });
       } else {
         toast({ title: "Could not move to cash", description: data.error || "Please try again", variant: "destructive" });
       }
@@ -13223,6 +13272,20 @@ export default function Dashboard() {
           />
         );
       })()}
+
+      {/* First-sell tax explainer modal — opens when the server returns
+          409 on a kid-owner's first sale. Continue re-fires the request
+          with confirmTaxExplainer:true. Per AGE_18_HANDOFF_SPEC.md
+          bucket 2. */}
+      <FirstSellTaxExplainerModal
+        payload={sellTaxExplainer?.payload || null}
+        busy={sellLoading}
+        onCancel={() => setSellTaxExplainer(null)}
+        onConfirm={() => {
+          if (!sellTaxExplainer) return;
+          void handleSellHolding(sellTaxExplainer.sharesToSell, { confirmTaxExplainer: true });
+        }}
+      />
     </div>
   );
 }
