@@ -52,6 +52,21 @@ export const users = pgTable("users", {
   // project_account_deletion_spec.md for the full decision matrix.
   deletedAt: timestamp("deleted_at"),
   deletionReason: text("deletion_reason"),
+  // Post-handoff engagement loop. Bucket 3 of AGE_18_HANDOFF_SPEC.md.
+  // Stamped each time the quarterly summary email goes out to a
+  // kid-owner (i.e. a user who claimed a fund via age-transition).
+  // Worker (`server/postHandoffEngagementWorker.ts`) reads this to
+  // decide who's due — fires on Jan/Apr/Jul/Oct mid-month for owners
+  // who haven't been emailed in the last 80 days AND whose first fund
+  // was transferred >60 days ago.
+  lastQuarterlySummaryAt: timestamp("last_quarterly_summary_at"),
+  // Self-reported "I have a job" toggle set in the Age18Welcome
+  // walkthrough screen 4. Drives the future Roth IRA setup nudge
+  // (deferred from MVP until DriveWealth IRA support is wired). The
+  // bracket is one of "0_45" | "45_100" | "100_plus" matching the
+  // LTCG tax-rate buckets — used by the first-sell tax explainer.
+  hasEarnedIncome: boolean("has_earned_income").notNull().default(false),
+  estimatedIncomeBracket: text("estimated_income_bracket"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

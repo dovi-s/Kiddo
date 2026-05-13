@@ -61,6 +61,7 @@ const KidView = lazy(() => import("@/pages/KidView"));
 const AgeTransitionManager = lazy(() => import("@/pages/AgeTransitionManager"));
 const AgeTransitionInvite = lazy(() => import("@/pages/AgeTransitionInvite"));
 const AgeTransitionVerify = lazy(() => import("@/pages/AgeTransitionVerify"));
+const Age18Welcome = lazy(() => import("@/pages/Age18Welcome"));
 const YourStory = lazy(() => import("@/pages/YourStory"));
 const GifterShare = lazy(() => import("@/pages/GifterShare"));
 const GifterUnsubscribe = lazy(() => import("@/pages/GifterUnsubscribe"));
@@ -770,6 +771,7 @@ function Router() {
           <Route path="/transition/fund/:fundId"><ProtectedRoute><AgeTransitionManager /></ProtectedRoute></Route>
           <Route path="/transition/verify/:token"><AgeTransitionVerify /></Route>
           <Route path="/transition/:token"><AgeTransitionInvite /></Route>
+          <Route path="/welcome-at-18"><ProtectedRoute><Age18Welcome /></ProtectedRoute></Route>
           <Route path="/your-story/:fundId"><ProtectedRoute><YourStory /></ProtectedRoute></Route>
           <Route path="/updates/share/:token"><GifterShare /></Route>
           <Route path="/updates/unsubscribe/:token"><GifterUnsubscribe /></Route>

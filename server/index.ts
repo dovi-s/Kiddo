@@ -13,6 +13,7 @@ import { startParentLifecycleWorker } from "./parentLifecycleWorker";
 import { startMobilePushWorker } from "./mobilePushWorker";
 import { startAge18TransitionWorker } from "./age18TransitionWorker";
 import { startDemoResetWorker } from "./demoResetWorker";
+import { startPostHandoffEngagementWorker } from "./postHandoffEngagementWorker";
 import { registerOGMiddleware } from "./ogMiddleware";
 import { users } from "@shared/schema";
 import { getConfiguredSuperAdminEmails, getDefaultSuperAdminEmails } from "@shared/adminAccess";
@@ -619,6 +620,7 @@ app.use((req, res, next) => {
   startRecurringContributionWorker(log);
   startAge18TransitionWorker(log);
   startDemoResetWorker(log);
+  startPostHandoffEngagementWorker(log);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

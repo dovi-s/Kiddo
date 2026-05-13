@@ -557,6 +557,20 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
         respondToToast(Boolean(data.delivered), data.amount);
         onSuccess();
         onClose();
+      } else if (res.status === 409 && data.error === "first_withdrawal_cooldown") {
+        // First-large-withdrawal cooldown for kid-owners post-handoff.
+        // Per AGE_18_HANDOFF_SPEC.md bucket 2. Server has stamped
+        // cooldownStartedAt; client surfaces the timeline so the kid
+        // knows exactly when to come back. Calm tone (not destructive)
+        // because this is product behavior, not an error.
+        const endsAt = data.cooldownEndsAt ? new Date(data.cooldownEndsAt) : null;
+        const endsLabel = endsAt
+          ? endsAt.toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })
+          : "tomorrow";
+        toast({
+          title: "First big withdrawal. 24-hour wait.",
+          description: `${data.message || "We hold for 24 hours so you can sleep on it."} Try again ${endsLabel}.`,
+        });
       } else {
         // "[Child]'s fund is safe" first — failure during a money-movement attempt is
         // exactly when a parent's first thought is "did my kid's money disappear?"

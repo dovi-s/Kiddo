@@ -58,6 +58,22 @@ export const funds = pgTable("funds", {
   successorCustodianRelation: text("successor_custodian_relation"),
   successorCustodianAddedAt: timestamp("successor_custodian_added_at"),
   age18NotifiedAt: timestamp("age_18_notified_at"),
+  // Set the first time the kid (new owner post-handoff) finishes the
+  // Age18Welcome.tsx walkthrough at /welcome-at-18. Null until then;
+  // once stamped the walkthrough never re-fires. Dashboard.tsx checks
+  // this in the closed-tab fallback path too (kid closes the welcome
+  // tab without finishing → next dashboard visit redirects back).
+  // Per AGE_18_HANDOFF_SPEC.md bucket 1.
+  kidWelcomeCompletedAt: timestamp("kid_welcome_completed_at"),
+  // First-large-withdrawal cooldown state. Bucket 2 of the handoff
+  // spec: the kid's first withdrawal of >25% balance OR >$2,000
+  // (whichever lower) triggers a 24h cooldown. cooldownStartedAt is
+  // set when the kid first confirms via the modal; the withdrawal
+  // proceeds only when now() >= cooldownStartedAt + 24h. After it
+  // completes, firstLargeWithdrawalAt is stamped and subsequent
+  // withdrawals bypass the cooldown.
+  firstLargeWithdrawalCooldownStartedAt: timestamp("first_large_withdrawal_cooldown_started_at"),
+  firstLargeWithdrawalAt: timestamp("first_large_withdrawal_at"),
   // Nudges the parent has explicitly dismissed (e.g., "strategy_band_11_13").
   // Each entry is one-shot: once dismissed, that band's nudge never re-fires for this fund.
   // Distinct from age18NotifiedAt because there are multiple nudges across the child's life.

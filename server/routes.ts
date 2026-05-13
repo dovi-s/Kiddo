@@ -6015,8 +6015,65 @@ export async function registerRoutes(
         return res.status(400).json({ error: `Insufficient cash. Available: $${availableCash.toFixed(2)}` });
       }
 
+      // First-large-withdrawal cooldown for kid-owners post-handoff.
+      // Per AGE_18_HANDOFF_SPEC.md bucket 2. Kicks in when:
+      //   1. User is the kid-owner (accountType=Personal + relation=self)
+      //   2. firstLargeWithdrawalAt is null (no prior gated big withdrawal)
+      //   3. Amount > 25% of fund balance OR > $2,000 (whichever lower)
+      // Two-step UX:
+      //   - First qualifying attempt: server stamps cooldownStartedAt
+      //     and returns 409. Client shows the modal and waits.
+      //   - After 24h: same request goes through, stamps
+      //     firstLargeWithdrawalAt, and all future withdrawals on this
+      //     fund bypass the cooldown.
+      // Sub-threshold withdrawals do NOT stamp firstLargeWithdrawalAt —
+      // otherwise a kid could bypass the gate by doing a $5 dummy
+      // withdrawal first.
+      const isKidOwner =
+        String((fund as any).accountType || "").toLowerCase() === "personal" &&
+        String((fund as any).recipientRelation || "").toLowerCase() === "self";
+      const investedBalance = parseFloat(String((fund as any).balance || "0"));
+      const fundTotal = investedBalance + availableCash;
+      const threshold = Math.min(fundTotal * 0.25, 2000);
+      const isLargeWithdrawal = isKidOwner && fundTotal > 0 && withdrawAmount > threshold;
+      const cooldownStamped = Boolean((fund as any).firstLargeWithdrawalAt);
+      const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+      if (isLargeWithdrawal && !cooldownStamped) {
+        const cooldownStart = (fund as any).firstLargeWithdrawalCooldownStartedAt;
+        if (!cooldownStart) {
+          await storage.updateFund(fundId, {
+            firstLargeWithdrawalCooldownStartedAt: new Date(),
+          } as any);
+          return res.status(409).json({
+            error: "first_withdrawal_cooldown",
+            cooldownHours: 24,
+            cooldownStartedAt: new Date().toISOString(),
+            cooldownEndsAt: new Date(Date.now() + COOLDOWN_MS).toISOString(),
+            message: "First big withdrawal. We hold for 24 hours so you can sleep on it.",
+          });
+        }
+        const elapsed = Date.now() - new Date(cooldownStart).getTime();
+        if (elapsed < COOLDOWN_MS) {
+          return res.status(409).json({
+            error: "first_withdrawal_cooldown",
+            cooldownHours: 24,
+            cooldownStartedAt: new Date(cooldownStart).toISOString(),
+            cooldownEndsAt: new Date(new Date(cooldownStart).getTime() + COOLDOWN_MS).toISOString(),
+            message: "The 24-hour wait isn't over yet. We'll let it through automatically once it is.",
+          });
+        }
+        // Cooldown elapsed — fall through and stamp the completion.
+      }
+
       await storage.updateFund(fundId, {
         cashBalance: Math.max(0, availableCash - withdrawAmount).toFixed(2),
+        // Only stamp on a LARGE withdrawal that satisfied the cooldown.
+        // Sub-threshold withdrawals leave the flag alone so a later
+        // large withdrawal still goes through the gate.
+        ...(isLargeWithdrawal && !cooldownStamped
+          ? { firstLargeWithdrawalAt: new Date() }
+          : {}),
       } as any);
 
       // Fire the custodian webhook to actually move money out. If no webhook is configured,
@@ -10590,6 +10647,115 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error updating gift reminder:', error);
       res.status(500).json({ error: 'Failed to update gift reminder' });
+    }
+  });
+
+  // ===== AGE-18 HANDOFF — KID WELCOME WALKTHROUGH =====
+  //
+  // Bucket 1 of AGE_18_HANDOFF_SPEC.md. Three small endpoints that
+  // power the post-claim walkthrough at /welcome-at-18:
+  //   - GET  /api/funds/:fundId/handoff-state  → "should we show it?"
+  //   - POST /api/funds/:fundId/welcome-complete → "kid finished it"
+  //   - POST /api/users/me/earned-income → "I have a job" toggle from
+  //                                         walkthrough screen 4
+  //
+  // The welcome only fires for KID OWNERS (not parents). Distinguished
+  // by funds.accountType === "Personal" set by the /complete handoff
+  // endpoint at line ~5295. Parents who somehow hit this URL get a
+  // 403; the walkthrough is the kid's moment, not a re-tour for parents.
+
+  app.get('/api/funds/:fundId/handoff-state', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      // Kid-owner test: the handoff /complete endpoint flips accountType
+      // from "UTMA" to "Personal" + sets recipientRelation = "self".
+      // Either condition is sufficient evidence the user is the post-
+      // handoff kid owner. Belt-and-suspenders because either field
+      // could drift if a future migration ran without the other.
+      const isKidOwner =
+        String((fund as any).accountType || "").toLowerCase() === "personal" &&
+        String((fund as any).recipientRelation || "").toLowerCase() === "self";
+
+      const welcomeCompleted = Boolean((fund as any).kidWelcomeCompletedAt);
+      const shouldShowWelcome = isKidOwner && !welcomeCompleted;
+
+      res.json({
+        shouldShowWelcome,
+        isKidOwner,
+        welcomeCompleted,
+        // Surface holdings + balance for the walkthrough's screen 1
+        // and screen 2 math without a second fetch. The page is a
+        // one-shot tour; an extra round-trip just to render the
+        // initial state would add latency for no win.
+        fund: {
+          id: fund.id,
+          name: fund.name,
+          recipientFirstName: fund.recipientFirstName,
+          balance: fund.balance,
+          totalGain: (fund as any).totalGain,
+          gainPercent: (fund as any).gainPercent,
+          majorityAge: (fund as any).majorityAge || 18,
+        },
+      });
+    } catch (error) {
+      console.error("Error reading handoff state:", error);
+      res.status(500).json({ error: "Failed to load handoff state" });
+    }
+  });
+
+  app.post('/api/funds/:fundId/welcome-complete', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+      // Idempotent — re-finishing is a no-op (the column already has a
+      // stamp from the first completion). No error, just return the
+      // same shape so the client doesn't have to special-case.
+      if ((fund as any).kidWelcomeCompletedAt) {
+        return res.json({ success: true, alreadyCompleted: true });
+      }
+      await storage.updateFund(fund.id, { kidWelcomeCompletedAt: new Date() } as any);
+      await storage.createActivity({
+        userId,
+        fundId: fund.id,
+        // Activity type lives alongside age18_child_claimed (line ~5246)
+        // — same family of events, kid-side milestone.
+        type: "age18_welcome_completed",
+        title: "Welcome walkthrough complete",
+        description: "You finished the at-handoff walkthrough.",
+      });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error completing handoff welcome:", error);
+      res.status(500).json({ error: "Failed to record welcome completion" });
+    }
+  });
+
+  app.post('/api/users/me/earned-income', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const hasIncome = req.body?.hasEarnedIncome === true;
+      const rawBracket = String(req.body?.estimatedIncomeBracket || "").trim();
+      // Three buckets matching the LTCG rate boundaries (roughly).
+      // The first-sell tax explainer reads this directly. Validation
+      // is strict — null any unrecognized string rather than risk a
+      // bad value flowing into the tax-rate math.
+      const validBrackets = new Set(["0_45", "45_100", "100_plus"]);
+      const bracket = validBrackets.has(rawBracket) ? rawBracket : null;
+      await db.update(users).set({
+        hasEarnedIncome: hasIncome,
+        estimatedIncomeBracket: bracket,
+        updatedAt: new Date(),
+      } as any).where(eq(users.id, userId));
+      res.json({ success: true, hasEarnedIncome: hasIncome, estimatedIncomeBracket: bracket });
+    } catch (error) {
+      console.error("Error saving earned-income flag:", error);
+      res.status(500).json({ error: "Failed to save your answer" });
     }
   });
 

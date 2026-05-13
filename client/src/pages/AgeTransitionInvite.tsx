@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
-import { Link, useParams } from "wouter";
+import { Link, useLocation, useParams } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 // Lightbulb replaces Sparkles 2026-05-12 — Sparkles banned per
 // feedback_no_ai_slop.md. The "What happens next" header is the
@@ -85,6 +85,7 @@ function formatDate(value: string | null | undefined) {
 
 export default function AgeTransitionInvite() {
   const { token } = useParams<{ token: string }>();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user, isAuthenticated, login, register, isLoggingIn, isRegistering } = useAuth();
   const [authMode, setAuthMode] = useState<"register" | "login">("register");
@@ -172,7 +173,21 @@ export default function AgeTransitionInvite() {
         title: "Transfer complete",
         description: payload?.nextStep || "The fund now appears in your Kiddo account.",
       });
-      await refetch();
+      // Route to the at-handoff walkthrough. Per AGE_18_HANDOFF_SPEC.md
+      // bucket 1: the 60 minutes after ownership transfers are where
+      // the kid actually learns what they own and what to do with it.
+      // The walkthrough self-redirects to /dashboard on completion.
+      // fundId is read from the payload OR the existing data.fund.id —
+      // belt-and-suspenders for the case where the server response
+      // shape evolves.
+      const fundId = payload?.fundId || data?.fund.id;
+      if (fundId) {
+        setLocation(`/welcome-at-18?fundId=${encodeURIComponent(fundId)}`);
+      } else {
+        // Fallback if no fund id surfaces — refetch the page so the
+        // existing "transfer complete" state renders.
+        await refetch();
+      }
     },
     onError: (error: Error) => {
       toast({ title: "Could not complete transfer", description: error.message, variant: "destructive" });
