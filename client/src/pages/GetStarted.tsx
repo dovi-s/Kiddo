@@ -18,6 +18,7 @@ import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { haptic } from "@/lib/haptics";
 import { extractUtmMetadata, isUserReferralCode } from "@/lib/acquisition";
 import { USOnlyOffRamp } from "@/components/USOnlyOffRamp";
+import { GiftIntentBanner } from "@/components/GiftIntentBanner";
 import { useAuth } from "@/hooks/use-auth";
 import type {
   AuthProvidersStatus,
@@ -570,6 +571,11 @@ export default function GetStarted() {
         {step === "welcome" && (
           <Shell key="welcome" direction={direction}>
             <div className="flex min-h-[calc(100dvh-10rem)] flex-col justify-center">
+              {/* Gift-intent banner. Renders when arriving via the
+                  gifter-led nudge email (?intent=<token>). Self-
+                  contained — silent when no intent. Per
+                  GIFTER_LED_ACQUISITION_SPEC.md. */}
+              <GiftIntentBanner />
               <AnimatedBlock className="text-center">
                 <Logo size="lg" className="mx-auto text-primary" linkTo={null} />
                 {/* Headline: emotional brand promise condensed. The contrast

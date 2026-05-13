@@ -57,7 +57,7 @@ import { DEFAULT_CUSTOM_ALLOCATIONS, getFundCustomAllocations, setFundCustomAllo
 import { getFundInvestmentPreferences, setFundInvestmentPreferences } from "./fundInvestmentPreferences";
 import { getPublicEventGiftingAvailability, getPublicFundGiftingAvailability } from "./publicGiftingState";
 import { ADMIN_ASSET_UNIVERSE, getMarketQuote, startMarketQuoteCacheRefresher } from "./marketQuotes";
-import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots } from "@shared/schema";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftIntents } from "@shared/schema";
 import { toMonthlyEquivalent, sumMonthlyEquivalent } from "@shared/recurring-math";
 import { KIDDO_AUM_FEE_BASIS_POINTS, KIDDO_AUM_FEE_RATE, KIDDO_GIFT_ADD_ONS, KIDDO_LEGACY_INCLUDED_OCCASION_CREDITS, KIDDO_LEGACY_YEARLY, KIDDO_OCCASION_TIERS, KIDDO_REVERSE_TRIAL_DAYS, KORA_DEFAULT_FAMILY_YEARLY, KORA_FAMILY_MONTHLY, KORA_FAMILY_YEARLY_OPTIONS, KORA_FREE_GIFT_FEE, KORA_LARGE_GIFT_FLAT_FEE, KORA_LARGE_GIFT_THRESHOLD, KORA_STARTER_MONTHLY, KORA_STARTER_YEARLY, MONETIZATION_TRIGGER_IDS, calculateKoraContributionFee, estimateAnnualAumFee, getGiftAddOn, getKiddoOccasionTier, type FundCoverageState, type RecommendationState } from "@shared/monetization";
 
@@ -2612,6 +2612,59 @@ export async function registerRoutes(
           isFirstFund: existingFunds.length === 0,
         },
       });
+
+      // Gift-intent pairing. Per GIFTER_LED_ACQUISITION_SPEC.md: if a
+      // gifter sent a nudge to this parent's email for a kid whose
+      // first name matches the fund's recipient, auto-pair the intent
+      // to the new fund and email the gifter that their gift is ready
+      // to send. Case-insensitive name match. Best-effort; failure
+      // here doesn't roll back the fund creation.
+      try {
+        const userEmail = String((req.user as any).email || "").toLowerCase().trim();
+        const kidName = String(fund.recipientFirstName || "").toLowerCase().trim();
+        if (userEmail && kidName) {
+          const matchingIntents = await db.select()
+            .from(giftIntents)
+            .where(and(
+              eq(giftIntents.recipientEmail, userEmail),
+              sql`LOWER(${giftIntents.kidFirstName}) = ${kidName}`,
+              eq(giftIntents.status, "pending"),
+            ));
+          for (const intent of matchingIntents) {
+            await db.update(giftIntents)
+              .set({ status: "paired", fundId: fund.id, pairedAt: new Date() })
+              .where(eq(giftIntents.id, intent.id));
+            try {
+              const baseUrl = getAppBaseUrl(req);
+              const giftUrl = `${baseUrl}/${fund.slug}?intent=${encodeURIComponent(intent.token)}`;
+              await sendEmail({
+                to: intent.gifterEmail,
+                subject: `${fund.recipientFirstName}'s fund is ready`,
+                text: [
+                  `Hi ${intent.gifterName},`,
+                  ``,
+                  `Good news. ${fund.recipientFirstName}'s parents set up the Kiddo fund you nudged them about.`,
+                  ``,
+                  `Your $${parseFloat(String(intent.amount)).toFixed(2)} is ready to send. One click and it becomes real shares for ${fund.recipientFirstName}.`,
+                  ``,
+                  giftUrl,
+                  ``,
+                  `Kiddo`,
+                ].join("\n"),
+                tags: ["gift-intent-paired"],
+                metadata: { intentId: intent.id, fundId: fund.id },
+              });
+            } catch (mailErr) {
+              console.warn("[gift-intent] paired email failed:", (mailErr as any)?.message || mailErr);
+            }
+          }
+          if (matchingIntents.length > 0) {
+            console.log(`[gift-intent] paired ${matchingIntents.length} intent(s) to fund ${fund.id}`);
+          }
+        }
+      } catch (pairErr) {
+        console.warn("[gift-intent] pairing pass failed (non-fatal):", (pairErr as any)?.message || pairErr);
+      }
 
       if (existingFunds.length === 0 && await isReverseTrialEnabled()) {
         const trial = await startTrialForFund(userId, fund.id);
@@ -10728,6 +10781,210 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error updating gift reminder:', error);
       res.status(500).json({ error: 'Failed to update gift reminder' });
+    }
+  });
+
+  // ===== GIFTER-LED ACQUISITION — GIFT INTENTS =====
+  //
+  // Per GIFTER_LED_ACQUISITION_SPEC.md. A gifter (typically a
+  // grandparent) can express intent to gift to a child whose parent
+  // hasn't yet set up a Kiddo fund. We store the intent, email the
+  // parent a warm nudge, and pair the intent to a real fund when
+  // the parent creates one matching the kid's first name.
+  //
+  // V1 (this endpoint set) is warm-promise: no card charged at
+  // intent creation. Gifter gets a follow-up email after parent
+  // setup with a one-click link to complete the actual gift via
+  // the existing /:fund gift checkout.
+  //
+  // Three core endpoints:
+  //   POST /api/gift-intents           — create + send nudge
+  //   GET  /api/gift-intents/:token    — read the intent (parent-side warm onboarding reads this)
+  //   GET  /api/me/pending-incoming-intents — parent signup check: any pending nudges for my email?
+  //
+  // Pairing logic is woven into POST /api/funds (the parent fund
+  // creation endpoint) — when a parent creates a fund, we look for
+  // matching pending intents and auto-pair them.
+
+  app.post('/api/gift-intents', async (req, res) => {
+    try {
+      const {
+        gifterName,
+        gifterEmail,
+        recipientEmail,
+        kidFirstName,
+        kidBirthdate,
+        amount,
+        message,
+      } = req.body || {};
+
+      // Validation. All five fields are required; everything else is optional.
+      const trimmedGifterName = typeof gifterName === "string" ? gifterName.trim() : "";
+      const trimmedGifterEmail = typeof gifterEmail === "string" ? gifterEmail.trim().toLowerCase() : "";
+      const trimmedRecipientEmail = typeof recipientEmail === "string" ? recipientEmail.trim().toLowerCase() : "";
+      const trimmedKidFirstName = typeof kidFirstName === "string" ? kidFirstName.trim() : "";
+      const parsedAmount = parseFloat(String(amount || "0"));
+
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!trimmedGifterName) return res.status(400).json({ error: "Your name is required" });
+      if (!trimmedGifterEmail || !emailRe.test(trimmedGifterEmail)) return res.status(400).json({ error: "A valid email is required" });
+      if (!trimmedRecipientEmail || !emailRe.test(trimmedRecipientEmail)) return res.status(400).json({ error: "The parent's email is required" });
+      if (!trimmedKidFirstName) return res.status(400).json({ error: "The child's first name is required" });
+      if (!Number.isFinite(parsedAmount) || parsedAmount < 5) return res.status(400).json({ error: "Amount must be at least $5" });
+      if (parsedAmount > 10000) return res.status(400).json({ error: "Amounts over $10,000 — contact us at hello@kiddofund.com" });
+
+      // Anti-spam V1: rate-limit at 5 unique recipient emails per
+      // gifter email per 7 days. Cheap defense; tighter abuse
+      // protections (audit log, hard blocks) are V2.
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000);
+      const recent = await db.select({ recipientEmail: giftIntents.recipientEmail })
+        .from(giftIntents)
+        .where(and(
+          eq(giftIntents.gifterEmail, trimmedGifterEmail),
+          sql`${giftIntents.createdAt} >= ${sevenDaysAgo.toISOString()}`,
+        ));
+      const uniqueRecipients = new Set(recent.map((r) => r.recipientEmail));
+      uniqueRecipients.add(trimmedRecipientEmail);
+      if (uniqueRecipients.size > 5) {
+        return res.status(429).json({ error: "You've sent gift intents to a lot of different parents recently. Contact hello@kiddofund.com if you need to send more." });
+      }
+
+      // Also rate-limit per recipient: max 3 nudges to same email in 7 days
+      // (pooled across gifters). Protects parents from being spammed.
+      const recipientRecent = await db.select({ id: giftIntents.id })
+        .from(giftIntents)
+        .where(and(
+          eq(giftIntents.recipientEmail, trimmedRecipientEmail),
+          sql`${giftIntents.createdAt} >= ${sevenDaysAgo.toISOString()}`,
+        ));
+      if (recipientRecent.length >= 3) {
+        return res.status(429).json({ error: "This parent has already received several gift intents this week. We'll let them respond before we send more." });
+      }
+
+      // Try to associate with an existing gifter account; null is
+      // fine for V1 (anonymous intent creation).
+      const [maybeGifter] = await db.select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, trimmedGifterEmail))
+        .limit(1);
+
+      // Generate unguessable token for the nudge URL.
+      const token = crypto.randomBytes(24).toString("hex");
+      const expiresAt = new Date(Date.now() + 60 * 86400000); // 60 days
+
+      const trimmedMessage = typeof message === "string" ? message.trim().slice(0, 490) : null;
+
+      const [intent] = await db.insert(giftIntents).values({
+        token,
+        gifterUserId: maybeGifter?.id || null,
+        gifterName: trimmedGifterName,
+        gifterEmail: trimmedGifterEmail,
+        recipientEmail: trimmedRecipientEmail,
+        kidFirstName: trimmedKidFirstName,
+        kidBirthdate: typeof kidBirthdate === "string" ? kidBirthdate.trim() : null,
+        amount: parsedAmount.toFixed(2),
+        message: trimmedMessage,
+        status: "pending",
+        expiresAt,
+      } as any).returning();
+
+      // Send the nudge email. Failure to send doesn't roll back the
+      // intent — the gifter can re-trigger from their dashboard.
+      try {
+        const baseUrl = getAppBaseUrl(req);
+        const claimUrl = `${baseUrl}/get-started?intent=${encodeURIComponent(token)}`;
+        await sendEmail({
+          to: trimmedRecipientEmail,
+          subject: `${trimmedGifterName} wants to invest for ${trimmedKidFirstName}`,
+          text: [
+            `Hi,`,
+            ``,
+            `${trimmedGifterName} used Kiddo to start a gift for ${trimmedKidFirstName}. They have $${parsedAmount.toFixed(2)} ready to send.`,
+            ...(trimmedMessage ? [``, `Their note:`, `"${trimmedMessage}"`] : []),
+            ``,
+            `The way Kiddo works: instead of cash that gets spent, the gift becomes real shares of stocks ${trimmedKidFirstName} will own. The fund stays in your name until ${trimmedKidFirstName} is 18, then it's theirs.`,
+            ``,
+            `Set up ${trimmedKidFirstName}'s fund (2 minutes, no card needed) and ${trimmedGifterName}'s gift flows automatically.`,
+            ``,
+            claimUrl,
+            ``,
+            `No rush. ${trimmedGifterName} will get a quick note once you're set up.`,
+            ``,
+            `Kiddo`,
+          ].join("\n"),
+          tags: ["gift-intent-nudge"],
+          metadata: { intentId: intent.id, intentToken: token },
+        });
+      } catch (mailErr) {
+        console.warn("[gift-intent] nudge email failed:", (mailErr as any)?.message || mailErr);
+      }
+
+      res.status(201).json({
+        success: true,
+        id: intent.id,
+        token,
+        expiresAt: intent.expiresAt,
+        recipientEmail: trimmedRecipientEmail,
+      });
+    } catch (error) {
+      console.error("Error creating gift intent:", error);
+      res.status(500).json({ error: "Could not create gift intent" });
+    }
+  });
+
+  // Read intent by token (used by the parent-side warm onboarding
+  // banner). Token-gated so anyone with the URL can see; no auth
+  // required since the parent hasn't signed up yet at this point.
+  app.get('/api/gift-intents/:token', async (req, res) => {
+    try {
+      const token = String(req.params.token || "").trim();
+      if (!token) return res.status(404).json({ error: "Intent not found" });
+      const [intent] = await db.select().from(giftIntents)
+        .where(eq(giftIntents.token, token))
+        .limit(1);
+      if (!intent) return res.status(404).json({ error: "Intent not found" });
+      // Don't leak gifter email or other PII beyond what the parent
+      // needs to see in the warm-onboarding banner.
+      res.json({
+        gifterName: intent.gifterName,
+        kidFirstName: intent.kidFirstName,
+        amount: intent.amount,
+        message: intent.message,
+        status: intent.status,
+        expiresAt: intent.expiresAt,
+      });
+    } catch (error) {
+      console.error("Error reading gift intent:", error);
+      res.status(500).json({ error: "Could not read intent" });
+    }
+  });
+
+  // Parent signup check: returns any pending intent matching this
+  // user's email. Called from Dashboard on first load to surface
+  // the "Your mom sent a $250 intent — claim it?" banner for
+  // parents who signed up cold (not via the nudge link).
+  app.get('/api/me/pending-incoming-intents', isAuthenticated, async (req: any, res) => {
+    try {
+      const userEmail = String((req.user as any).email || "").toLowerCase().trim();
+      if (!userEmail) return res.json({ intents: [] });
+      const rows = await db.select({
+        id: giftIntents.id,
+        token: giftIntents.token,
+        gifterName: giftIntents.gifterName,
+        kidFirstName: giftIntents.kidFirstName,
+        amount: giftIntents.amount,
+        message: giftIntents.message,
+      })
+        .from(giftIntents)
+        .where(and(
+          eq(giftIntents.recipientEmail, userEmail),
+          eq(giftIntents.status, "pending"),
+        ));
+      res.json({ intents: rows });
+    } catch (error) {
+      console.error("Error checking incoming intents:", error);
+      // Non-fatal — parents shouldn't be blocked from the dashboard.
+      res.json({ intents: [] });
     }
   });
 

@@ -964,6 +964,62 @@ export const analyticsEvents = pgTable("analytics_events", {
   index("analytics_events_fund_idx").on(table.fundId),
 ]);
 
+// Gifter-led acquisition: pending gift intents created by a gifter
+// for a child whose parent hasn't set up a Kiddo fund yet. Per
+// GIFTER_LED_ACQUISITION_SPEC.md. V1 ships as warm-promise (no
+// card upfront); V2 may add Stripe SetupIntent for pre-auth.
+//
+// Lifecycle:
+//   pending  -> intent created, nudge email sent to parent, awaiting setup
+//   paired   -> parent created a fund matching this intent; fund_id set
+//   completed -> gifter completed the actual gift payment after pairing
+//   cancelled -> gifter cancelled before completion
+//   expired  -> 60+ days passed with no parent action
+//
+// The pairing logic runs in POST /api/funds when a parent creates a
+// new fund: any pending intent matching the parent's email AND the
+// kid's first name (case-insensitive) gets paired automatically.
+export const giftIntents = pgTable("gift_intents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Token for the nudge URL the parent receives. Unguessable; rotates
+  // never (revoked by status change).
+  token: text("token").notNull().unique(),
+  // Gifter side. Nullable userId because anonymous-creation may be
+  // added later; V1 requires gifter signup so this is always set.
+  gifterUserId: varchar("gifter_user_id").references(() => users.id),
+  gifterName: text("gifter_name").notNull(),
+  gifterEmail: text("gifter_email").notNull(),
+  // Recipient side. Email is required; phone is V2.
+  recipientEmail: text("recipient_email").notNull(),
+  recipientPhone: text("recipient_phone"),
+  // Kid identifier. First name is the matching key for auto-pair
+  // since the kid likely doesn't have a Kiddo presence yet. Birthdate
+  // is optional but improves pairing precision when present.
+  kidFirstName: text("kid_first_name").notNull(),
+  kidBirthdate: text("kid_birthdate"),
+  // The intent's economic core. Amount is the gifter's stated gift;
+  // message is the personal note (490-char Stripe-metadata cap).
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  message: text("message"),
+  // Pairing state. fundId is set when the parent creates a matching fund.
+  status: text("status").notNull().default("pending"),
+  fundId: varchar("fund_id").references(() => funds.id),
+  // Timestamps for the lifecycle. Expires at 60 days from creation
+  // unless gifter extends. Reminder cadence: 7d, 30d nudges to parent.
+  createdAt: timestamp("created_at").defaultNow(),
+  pairedAt: timestamp("paired_at"),
+  completedAt: timestamp("completed_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  expiresAt: timestamp("expires_at"),
+  // Last reminder fired so the worker doesn't double-send.
+  lastReminderAt: timestamp("last_reminder_at"),
+}, (table) => [
+  index("gift_intents_token_idx").on(table.token),
+  index("gift_intents_recipient_email_idx").on(table.recipientEmail),
+  index("gift_intents_gifter_user_id_idx").on(table.gifterUserId),
+  index("gift_intents_status_idx").on(table.status),
+]);
+
 export const insertFundSchema = createInsertSchema(funds).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertHoldingSchema = createInsertSchema(holdings).omit({ id: true, createdAt: true, updatedAt: true });
@@ -985,6 +1041,7 @@ export const insertFundCollaboratorSchema = createInsertSchema(fundCollaborators
 export const insertReferralEventSchema = createInsertSchema(referralEvents).omit({ id: true, createdAt: true });
 export const insertWebhookEventSchema = createInsertSchema(webhookEvents).omit({ id: true, receivedAt: true, processedAt: true });
 export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ id: true, createdAt: true });
+export const insertGiftIntentSchema = createInsertSchema(giftIntents).omit({ id: true, token: true, createdAt: true, pairedAt: true, completedAt: true, cancelledAt: true, expiresAt: true, lastReminderAt: true });
 
 export type InsertFund = z.infer<typeof insertFundSchema>;
 export type Fund = typeof funds.$inferSelect;
@@ -1028,3 +1085,5 @@ export type InsertWebhookEvent = z.infer<typeof insertWebhookEventSchema>;
 export type WebhookEvent = typeof webhookEvents.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertGiftIntent = z.infer<typeof insertGiftIntentSchema>;
+export type GiftIntent = typeof giftIntents.$inferSelect;
