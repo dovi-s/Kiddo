@@ -47,3 +47,9 @@ function main() {
   assert.equal(contributionFallback.currentFundBasis, 40);
   assert.equal(contributionFallback.displayContributionValue, 40);
   assert.equal(contributionFallback.contributionLabel, "Gifts in");
+
+  console.log("✓ calculateDashboardMoneyMath — 3 cases");
+  console.log("\nAll dashboard money math tests passed.");
+}
+
+main();
