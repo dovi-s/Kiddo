@@ -4390,6 +4390,36 @@ export default function Dashboard() {
                       <p style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", lineHeight: 1.55, marginBottom: 22 }}>
                         Share {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your child's"} gift link to start receiving investments for their future.
                       </p>
+                      {/* Acknowledge any scheduled recurring investment.
+                          Without this, the empty state reads as "nothing
+                          is happening" even when the parent has set up a
+                          recurring that's about to fire. Calm honesty per
+                          locked Kiddo register: the share CTA still
+                          headlines (gifter loop is the moat), but the
+                          parent's own setup work gets acknowledged. */}
+                      {(() => {
+                        // parentContributions is already scoped to activeFundId
+                        // via the useQuery key, so no per-fund filter needed.
+                        const fundRecurring = parentContributions.find((c) => c.status === "active");
+                        if (!fundRecurring) return null;
+                        const amt = parseFloat(String(fundRecurring.amount || "0"));
+                        if (!Number.isFinite(amt) || amt <= 0) return null;
+                        const freq = String(fundRecurring.frequency || "monthly").toLowerCase();
+                        const freqLabel =
+                          freq === "weekly" ? "week"
+                            : freq === "yearly" || freq === "annual" || freq === "annually" ? "year"
+                              : freq === "daily" ? "day"
+                                : "month";
+                        const nextDate = fundRecurring.nextRunDate ? new Date(fundRecurring.nextRunDate) : null;
+                        const nextLabel = nextDate && !Number.isNaN(nextDate.getTime())
+                          ? nextDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                          : null;
+                        return (
+                          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.55)", marginBottom: 16 }}>
+                            Your ${amt.toFixed(0)}/{freqLabel} recurring fires{nextLabel ? ` next on ${nextLabel}` : " on schedule"}.
+                          </p>
+                        );
+                      })()}
                       {age18Transition && (
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 14, marginBottom: 18 }}>
                           {capFirst(activeFund?.recipientFirstName) || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)} · {age18Transition.countdownLabel}
