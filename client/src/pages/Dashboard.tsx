@@ -8291,16 +8291,23 @@ export default function Dashboard() {
                                   <p style={{ fontSize: 12, color: "rgba(26,23,16,0.55)", lineHeight: 1.55, margin: 0 }}>{stripHtml(desc)}</p>
                                 )}
 
-                                {/* Goal progress — fund total vs goal. Same
-                                    metric the tile shows. The "Gifts to this
-                                    event" section below carries the
-                                    event-specific number with a different
-                                    label, so the two surfaces don't
-                                    contradict each other. */}
+                                {/* Goal progress — fund-total vs goal. The
+                                    label MUST say "fund" explicitly. Without
+                                    that word the reader treats the modal as
+                                    self-contained ("First Car: $1,917 of
+                                    $5,000" → "$1,917 was gifted to First Car")
+                                    even though gifts are fungible into the
+                                    fund and the goal is just a milestone the
+                                    fund as a whole is tracking. The label
+                                    "{child}'s fund toward this goal" is the
+                                    smallest copy fix that closes the
+                                    contradiction at a glance. */}
                                 {goal > 0 && (
                                   <div>
                                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                                      <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(26,23,16,0.5)" }}>Goal</span>
+                                      <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(26,23,16,0.5)" }}>
+                                        {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund` : "Fund"} toward this goal
+                                      </span>
                                       <span style={{ fontSize: 11, fontWeight: 700, color: goalReached ? "hsl(143,47%,32%)" : "rgb(26,23,16)" }}>
                                         {fmtC(fundTowardGoal)} <span style={{ fontWeight: 400, color: "rgba(26,23,16,0.4)" }}>of {fmtC(goal)}</span>
                                         {goalReached && " 🌟"}
@@ -8403,24 +8410,21 @@ export default function Dashboard() {
                                 })()}
 
                                 {/* Gifts — STRICTLY event-tagged gifts only
-                                    (g.eventId === ev.id). Distinct from the Goal
-                                    row above which shows fund-total progress.
-                                    The two contradict at a glance ("$1,917 of
-                                    $5,000" + "No gifts yet") if the label
-                                    doesn't disclose that this is the event-page
-                                    feed, not all gifts to the fund. So the
-                                    label always reads "via this event page"
-                                    and the empty state explicitly tells the
-                                    user that gifts to the main fund link also
-                                    count toward the goal — they just land in
-                                    the main fund feed, not here. */}
-                                <div>
-                                  <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 8 }}>Gifts via this event page</p>
-                                  {evGifts.length === 0 ? (
-                                    <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", lineHeight: 1.55 }}>
-                                      Nothing through this event page yet. Gifts to {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} main fund link still count toward the goal. This list shows only what came through this event.
-                                    </p>
-                                  ) : (
+                                    (g.eventId === ev.id). Hidden entirely
+                                    when empty: an empty "Gifts" section next
+                                    to a "$1,917 of $5,000" progress bar reads
+                                    as a contradiction no matter how the
+                                    label is phrased, because the user can't
+                                    not see two numbers and try to reconcile
+                                    them. The "Goal" row above tells the
+                                    whole story when no event-specific gifts
+                                    exist. When event-tagged gifts DO exist,
+                                    showing them with the disclosed label
+                                    "via this event page" is honest and
+                                    non-contradictory. */}
+                                {evGifts.length > 0 && (
+                                  <div>
+                                    <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 8 }}>Gifts via this event page</p>
                                     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                                       {evGifts.slice(0, 5).map((g, gi) => {
                                         const gName = displayGifterName(g.senderName, (g as any).isAnonymous);
@@ -8467,8 +8471,8 @@ export default function Dashboard() {
                                         <p style={{ fontSize: 11, color: "rgba(26,23,16,0.4)", textAlign: "center", paddingTop: 6 }}>+{evGifts.length - 5} more</p>
                                       )}
                                     </div>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
 
                                 {/* Event code - active events only */}
                                 {!isArch && dashboardSummary?.eventGiftCodes?.[ev.id] && (() => {
