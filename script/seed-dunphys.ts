@@ -31,6 +31,7 @@ import {
   holdings,
   memoryEntries,
   activities,
+  subscriptions,
   type InsertGift,
   type InsertMemoryEntry,
 } from "../shared/schema";
@@ -323,6 +324,39 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   return fund.id;
 }
 
+async function ensurePhilFamilySubscription(philId: string): Promise<void> {
+  // The demo needs Phil on Family plan so the Family-tier features
+  // (unlimited kids, multi-fund household view, etc.) render properly.
+  // Real users get this via Stripe webhook; for the demo we write the
+  // subscription row directly. Idempotent: upsert by userId.
+  const [existing] = await db.select().from(subscriptions).where(eq(subscriptions.userId, philId)).limit(1);
+  const now = new Date();
+  const oneYearOut = new Date(now);
+  oneYearOut.setFullYear(oneYearOut.getFullYear() + 1);
+  if (existing) {
+    await db.update(subscriptions).set({
+      plan: "family",
+      status: "active",
+      billingInterval: "year",
+      currentPeriodStart: now,
+      currentPeriodEnd: oneYearOut,
+      canceledAt: null,
+    }).where(eq(subscriptions.id, existing.id));
+    return;
+  }
+  await db.insert(subscriptions).values({
+    userId: philId,
+    plan: "family",
+    status: "active",
+    billingInterval: "year",
+    currentPeriodStart: now,
+    currentPeriodEnd: oneYearOut,
+    // Stripe IDs deliberately null — demo doesn't have real Stripe records.
+    stripeSubscriptionId: null,
+    stripeCustomerId: null,
+  } as any);
+}
+
 async function main() {
   console.log("Seeding Dunphy family demo accounts...");
 
@@ -335,6 +369,10 @@ async function main() {
   }
 
   const philId = userIdByEmail.get("phil@dunphyfamily.com")!;
+
+  // 1b. Seed Phil's Family-plan subscription (idempotent).
+  await ensurePhilFamilySubscription(philId);
+  console.log(`  subscription: phil@dunphyfamily.com → Family · active`);
 
   // 2. Check if Phil already has funds. If yes, assume the seed has
   //    already run before and exit early to keep the script idempotent.

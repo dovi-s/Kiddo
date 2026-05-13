@@ -16,6 +16,7 @@ import { getConfiguredSuperAdminEmails, isEmailInAdminSet } from "@shared/adminA
 import { sendEmail } from "./emailDelivery";
 import { sendOpsAlert } from "./ops";
 import { runGifterNotificationWorker, enqueueParentThankYou } from "./gifterNotificationWorker";
+import { isDemoFund } from "./demoSandbox";
 import { queueCustodianTransfer, isCustodianAchEnabled } from "./custodianTransfer";
 import {
   type AgeTransitionRecord as SharedAgeTransitionRecord,
@@ -8456,6 +8457,19 @@ export async function registerRoutes(
     try {
       const { fundId, eventId, amount, senderName, senderEmail, message, photoUrl, videoUrl, audioUrl, coverFees, paymentMethod, executionModel, selectedTicker, giftAddOn, isParentContribution, isAnonymous } = req.body;
       const baseUrl = getAppBaseUrl(req);
+
+      // Demo-fund sandbox: if this is a Dunphy demo fund, return a mock
+      // success response that completes the flow without hitting Stripe.
+      // Per server/demoSandbox.ts + DUNPHY_DEMO_SPEC.md Phase 2. Real
+      // funds (the 99.99% case) fall through to the normal Stripe path.
+      if (await isDemoFund(fundId)) {
+        return res.json({
+          url: `${baseUrl}/gift/success?demo=1&fundId=${encodeURIComponent(fundId)}&amount=${encodeURIComponent(String(amount || 0))}`,
+          sessionId: `demo_${Date.now()}`,
+          isDemo: true,
+          message: "Demo mode. No card was charged.",
+        });
+      }
       const trimmedSenderName = typeof senderName === "string" ? senderName.trim() : "";
       const trimmedEmail = typeof senderEmail === "string" ? senderEmail.trim() : "";
       const hasEmail = trimmedEmail.length > 0;

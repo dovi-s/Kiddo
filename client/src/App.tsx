@@ -47,6 +47,7 @@ const BlogPost = lazy(() => import("@/pages/BlogPost"));
 const Stories = lazy(() => import("@/pages/Stories"));
 const StoryPage = lazy(() => import("@/pages/StoryPage"));
 const Compare = lazy(() => import("@/pages/Compare"));
+const Demo = lazy(() => import("@/pages/Demo"));
 const Security = lazy(() => import("@/pages/Security"));
 const Age18 = lazy(() => import("@/pages/Age18"));
 const Age18Plan = lazy(() => import("@/pages/Age18Plan"));
@@ -720,6 +721,7 @@ function Router() {
         <Switch>
           <Route path="/"><Home /></Route>
           <Route path="/login"><Login /></Route>
+          <Route path="/demo"><Demo /></Route>
           <Route path="/get-started"><GetStarted /></Route>
           <Route path="/onboard"><Onboard /></Route>
           <Route path="/activate"><ProtectedRoute><ActivateInvesting /></ProtectedRoute></Route>
