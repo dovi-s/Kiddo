@@ -1033,7 +1033,19 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 panel list. */}
             <div
               className="flex-1 overflow-y-auto"
-              style={{ paddingTop: 8, paddingBottom: 8, overscrollBehavior: "contain" }}
+              style={{
+                paddingTop: 8,
+                // When the footer is suppressed on non-fund-scoped pages,
+                // the list becomes the last child of the panel — so it
+                // needs its own safe-area-inset-bottom padding, otherwise
+                // the last notification can sit under the iOS home
+                // indicator. When the footer is visible it already
+                // handles safe-area, and the list keeps its tight 8px.
+                paddingBottom: shouldSuppressFundChrome(location)
+                  ? "max(12px, env(safe-area-inset-bottom, 12px))"
+                  : 8,
+                overscrollBehavior: "contain",
+              }}
             >
               {(() => {
                 // Single render-row helper so unread + read sections stay
@@ -1443,45 +1455,58 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 search, filters, money math, pending, scheduled. The
                 Notifications panel is the inbox; Activity is the ledger.
                 Bottom padding respects safe-area-inset-bottom so the link
-                never sits under the iOS home indicator. */}
-            <div style={{
-              borderTop: "1.5px solid rgba(26,23,16,0.10)",
-              paddingTop: 11,
-              paddingLeft: 22,
-              paddingRight: 22,
-              paddingBottom: "max(11px, env(safe-area-inset-bottom, 11px))",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
-            }}>
-              <button
-                type="button"
-                onClick={handleViewAllInActivity}
-                style={{
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  color: "#1A3D2B",
-                  background: "none",
-                  border: "none",
-                  padding: 0,
-                  cursor: "pointer",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                }}
-                data-testid="notif-view-all-activity"
-              >
-                View all in Activity →
-              </button>
-              <Link
-                href="/settings?tab=notifications&from=notifications"
-                onClick={onClose}
-                style={{ fontSize: 11, color: "#9B9088", textDecoration: "none" }}
-              >
-                Settings
-              </Link>
-            </div>
+                never sits under the iOS home indicator.
+
+                SCOPE-GATED: both footer links point at fund-scoped pages
+                (/activity reads the active fund; /settings is the per-fund
+                settings surface). On /funds (household tier) and /account
+                (user tier) there's no active-fund context, so linking
+                there is incoherent — same reason those pages already
+                suppress AppHeader's fund trigger + Quick Links per
+                project_chrome_scope_tiers.md. Hide the footer entirely on
+                non-fund-scoped pages; the notifications above still
+                surface, just without the dangling "go to a fund page you
+                don't have context for" handoff. */}
+            {!shouldSuppressFundChrome(location) && (
+              <div style={{
+                borderTop: "1.5px solid rgba(26,23,16,0.10)",
+                paddingTop: 11,
+                paddingLeft: 22,
+                paddingRight: 22,
+                paddingBottom: "max(11px, env(safe-area-inset-bottom, 11px))",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}>
+                <button
+                  type="button"
+                  onClick={handleViewAllInActivity}
+                  style={{
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    color: "#1A3D2B",
+                    background: "none",
+                    border: "none",
+                    padding: 0,
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                  data-testid="notif-view-all-activity"
+                >
+                  View all in Activity →
+                </button>
+                <Link
+                  href="/settings?tab=notifications&from=notifications"
+                  onClick={onClose}
+                  style={{ fontSize: 11, color: "#9B9088", textDecoration: "none" }}
+                >
+                  Settings
+                </Link>
+              </div>
+            )}
           </motion.div>
         </>
       )}
