@@ -81,14 +81,14 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
-        <DialogTitle className="sr-only">Create an Event</DialogTitle>
+        <DialogTitle className="sr-only">Create an Occasion</DialogTitle>
         <div className="p-6 pb-2 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
             <Gift size={24} className="text-primary" />
           </div>
-          <h2 className="mb-2 font-heading text-xl font-bold text-foreground">You already have an active event running.</h2>
+          <h2 className="mb-2 font-heading text-xl font-bold text-foreground">You already have an active occasion running.</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Free supports 1 active event at a time. Upgrade to run multiple occasions at once and remove platform fees on every gift.
+            Free supports 1 active occasion at a time. Upgrade to run multiple occasions at once and remove platform fees on every gift.
           </p>
         </div>
 
@@ -117,7 +117,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
                   <ul className="mt-2 space-y-1">
                     <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Check size={12} className="shrink-0 text-primary" />
-                      Up to 3 active events at a time
+                      Up to 3 active occasions at a time
                     </li>
                     <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Check size={12} className="shrink-0 text-primary" />
@@ -168,7 +168,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
                 <ul className="mt-2 space-y-1">
                   <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Check size={12} className="shrink-0 text-primary" />
-                    Unlimited funds and unlimited active events
+                    Unlimited funds and unlimited active occasions
                   </li>
                   <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Check size={12} className="shrink-0 text-primary" />

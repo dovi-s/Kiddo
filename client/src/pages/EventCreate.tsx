@@ -258,7 +258,7 @@ export default function EventCreate() {
 
       haptic("success");
       toast({
-        title: isSavingsGoal ? "Goal created!" : "Event created!",
+        title: isSavingsGoal ? "Goal created!" : "Occasion created!",
         description: isSavingsGoal
           ? "Your savings goal is live. Share it with family to let them give."
           : "Your new event is ready to share.",
@@ -314,7 +314,7 @@ export default function EventCreate() {
     if (!hasAnyContent) {
       return (
         <div className="rounded-2xl border border-border bg-card p-6 text-center">
-          <p className="text-xs text-muted-foreground">Your {isSavingsGoal ? "goal" : "event"} preview will appear here as you build it.</p>
+          <p className="text-xs text-muted-foreground">Your {isSavingsGoal ? "goal" : "occasion"} preview will appear here as you build it.</p>
         </div>
       );
     }
@@ -529,7 +529,7 @@ export default function EventCreate() {
           </button>
           <div className="flex-1" />
           <h1 className="text-base font-semibold font-heading text-foreground">
-            {eventCategory === null ? "New event or goal" : isSavingsGoal ? "New savings goal" : "New event"}
+            {eventCategory === null ? "New occasion or goal" : isSavingsGoal ? "New savings goal" : "New occasion"}
           </h1>
           <div className="flex-1" />
         </div>
@@ -566,7 +566,7 @@ export default function EventCreate() {
                   ))}
                 </div>
                 <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-primary">
-                  Create event
+                  Create occasion
                   <ArrowRight size={12} />
                 </div>
               </motion.button>
@@ -609,14 +609,14 @@ export default function EventCreate() {
                 className="mb-8"
               >
                 <h1 className="font-heading text-2xl font-bold text-foreground">
-                  {isSavingsGoal ? "Create savings goal" : "Create event"}
+                  {isSavingsGoal ? "Create savings goal" : "Create occasion"}
                 </h1>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {Number.isFinite(activeEventLimit)
                     ? activeCustomEventCount >= activeEventLimit
-                      ? `${activeEventLimit} of ${activeEventLimit} slots in use. Close an event first.`
+                      ? `${activeEventLimit} of ${activeEventLimit} slots in use. Close an occasion first.`
                       : `${activeEventLimit - activeCustomEventCount} of ${activeEventLimit} slots still available.`
-                    : "Unlimited concurrent active events."}
+                    : "Unlimited concurrent active occasions."}
                 </p>
               </motion.div>
 
@@ -832,10 +832,10 @@ export default function EventCreate() {
                       </>
                     ) : (
                       <>
-                        <h2 className="font-heading text-lg font-semibold text-foreground mb-4">Event details</h2>
+                        <h2 className="font-heading text-lg font-semibold text-foreground mb-4">Occasion details</h2>
                         <div className="space-y-4">
                           <div>
-                            <label className="text-sm font-medium text-foreground block mb-1.5">Event Name</label>
+                            <label className="text-sm font-medium text-foreground block mb-1.5">Occasion name</label>
                             <input
                               type="text"
                               value={eventName}
@@ -854,7 +854,7 @@ export default function EventCreate() {
                             />
                           </div>
                           <div>
-                            <label className="text-sm font-medium text-foreground block mb-1.5">Event Date (optional)</label>
+                            <label className="text-sm font-medium text-foreground block mb-1.5">Occasion date (optional)</label>
                             <Popover>
                               <PopoverTrigger asChild>
                                 <button
@@ -1179,7 +1179,7 @@ export default function EventCreate() {
                     transition={{ duration: 0.25 }}
                   >
                     <h2 className="font-heading text-lg font-semibold text-foreground mb-4">Choose a theme</h2>
-                    <p className="text-sm text-muted-foreground mb-4">Pick a visual theme for your event's gift page</p>
+                    <p className="text-sm text-muted-foreground mb-4">Pick a visual theme for your occasion's gift page</p>
                     <ThemeSelector
                       selectedTheme={selectedTheme}
                       onSelectTheme={(themeId) => { haptic("selection"); setSelectedTheme(themeId); }}
@@ -1209,7 +1209,7 @@ export default function EventCreate() {
                     transition={{ duration: 0.25 }}
                   >
                     <h2 className="font-heading text-lg font-semibold text-foreground mb-4">Link to a fund</h2>
-                    <p className="text-sm text-muted-foreground mb-4">Every gift on this event page goes directly into the fund you choose here.</p>
+                    <p className="text-sm text-muted-foreground mb-4">Every gift on this occasion page goes directly into the fund you choose here.</p>
                     {funds.length === 0 ? (
                       <div className="bg-card rounded-2xl border border-border p-6 text-center">
                         <p className="text-muted-foreground">No funds found. Please create a fund first.</p>
@@ -1268,7 +1268,7 @@ export default function EventCreate() {
                     transition={{ duration: 0.25 }}
                   >
                     <h2 className="font-heading text-lg font-semibold text-foreground mb-1">Almost there.</h2>
-                    <p className="text-sm text-muted-foreground mb-5">Set an optional fundraising goal, then launch your event.</p>
+                    <p className="text-sm text-muted-foreground mb-5">Set an optional fundraising goal, then launch your occasion.</p>
 
                     <div className="mb-6">
                       <label className="text-sm font-medium text-foreground block mb-1.5">Goal Amount (optional)</label>

@@ -8260,7 +8260,7 @@ export default function Dashboard() {
                                     </div>
                                     <button
                                       onClick={() => setExpandedTileIdV2(null)}
-                                      aria-label="Close event details"
+                                      aria-label="Close occasion details"
                                       style={{ background: "rgba(26,23,16,0.06)", border: "none", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "rgb(80,72,64)", fontSize: 13, flexShrink: 0 }}
                                     >
                                       ✕
@@ -8434,7 +8434,7 @@ export default function Dashboard() {
                                     non-contradictory. */}
                                 {evGifts.length > 0 && (
                                   <div>
-                                    <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 8 }}>Gifts via this event page</p>
+                                    <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 8 }}>Gifts via this occasion page</p>
                                     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                                       {evGifts.slice(0, 5).map((g, gi) => {
                                         const gName = displayGifterName(g.senderName, (g as any).isAnonymous);
@@ -8484,7 +8484,7 @@ export default function Dashboard() {
                                   </div>
                                 )}
 
-                                {/* Event code - active events only */}
+                                {/* Occasion code - active occasions only */}
                                 {!isArch && dashboardSummary?.eventGiftCodes?.[ev.id] && (() => {
                                   const evCode = dashboardSummary.eventGiftCodes![ev.id].code;
                                   return (
@@ -8494,9 +8494,9 @@ export default function Dashboard() {
                                         try {
                                           await navigator.clipboard.writeText(evCode);
                                           haptic("success");
-                                          toast({ title: "Event code copied!", description: `${evCode} is now in your clipboard.` });
+                                          toast({ title: "Occasion code copied", variant: "saved", duration: 1200 });
                                         } catch {
-                                          window.prompt("Event code:", evCode);
+                                          window.prompt("Occasion code:", evCode);
                                         }
                                       }}
                                       style={{
@@ -8508,7 +8508,7 @@ export default function Dashboard() {
                                     >
                                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                         <Hash size={12} color="hsl(143,47%,32%)" />
-                                        <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(26,23,16,0.5)", letterSpacing: "0.04em" }}>Event code</span>
+                                        <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(26,23,16,0.5)", letterSpacing: "0.04em" }}>Occasion code</span>
                                       </div>
                                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                         <span style={{ fontSize: 14, fontWeight: 800, color: "hsl(143,47%,28%)", letterSpacing: "0.12em" }}>{evCode}</span>

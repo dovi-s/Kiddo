@@ -29,7 +29,7 @@ const faqItems = [
         Fidelity and Schwab are great places to hold investments for a child. What they do not give you is
         the gifting ritual. With Kiddo, family and friends can open one link, choose an amount, and give
         in under a minute. Every gift can be invested, every note can be saved, and birthdays or baby
-        showers can have a real event page instead of another round of checks and Venmos. If you want a
+        showers can have a real occasion page instead of another round of checks and Venmos. If you want a
         more occasion-based walkthrough, start with{" "}
         <Link href="/blog/best-way-to-invest-birthday-money-for-kids" className="text-primary hover:underline">
           our birthday guide
@@ -173,9 +173,9 @@ const faqItems = [
     answer: "Kiddo does not charge a platform fee on gifts. The gift amount stays whole, and the gifter pays payment processing separately. There is no required Kiddo large-gift fee. Optional premium gift upgrades are separate and shown before checkout.",
   },
   {
-    id: "events-free-plan",
+    id: "occasions-free-plan",
     category: "Pricing & Fees",
-    question: "How do events work on the free plan?",
+    question: "How do occasions work on the free plan?",
     answer: "You can run 1 active basic occasion at a time on Free. Once it closes, you can create another. Kiddo+ gives one child richer occasion pages, reminders, and Memory Book features. Kiddo Family covers every child fund you manage.",
   },
   {
@@ -236,12 +236,12 @@ const faqItems = [
       <>
         Both use child-fund structures and both let family gift easily. The difference is what the
         product focuses on. EarlyBird centers on video messages from loved ones. Kiddo centers on the
-        gifting experience, the Memory Book, event pages for birthdays and baby showers, and an
+        gifting experience, the Memory Book, occasion pages for birthdays and baby showers, and an
         age-appropriate Kid View that grows with your child from age 5 to 17.
         <br />
         <br />
-        Gifts through Kiddo are invested automatically with notes saved permanently. Parents can run event
-        pages for specific occasions and share a fund link anyone can gift through in under a minute.{" "}
+        Gifts through Kiddo are invested automatically with notes saved permanently. Parents can run occasion
+        pages for specific moments and share a fund link anyone can gift through in under a minute.{" "}
         <Link href="/compare/earlybird" className="text-primary hover:underline">
           See the full Kiddo vs EarlyBird comparison &rarr;
         </Link>

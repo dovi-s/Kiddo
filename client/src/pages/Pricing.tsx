@@ -36,7 +36,11 @@ function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; 
 //   The old $2/gift platform fee is RETIRED — was Free-tier monetization, replaced by AUM model.
 // Recurring investments naming locked: never "auto-invest" in user-facing copy.
 // "Contribute" banned in UI copy: use "Add to" or "Invest in"; "gift" for the money/transaction.
-// Events: "1 active event at a time" (not "1 event", not "1 gifting event slot").
+// Occasions: "1 active occasion at a time" (locked 2026-05-13, was "event"
+// previously). User-facing copy uses "occasion" to match the "Kiddo Occasions"
+// premium upgrade product name and to read warmer than calendar-app "event".
+// Internal code (EventCreate, useEvents, eventId, schema.events table, etc.)
+// is unchanged — the rename is display-only.
 const plans = [
   {
     id: "free",
@@ -48,7 +52,7 @@ const plans = [
     featured: false,
     body: [
       "1 child fund (one child's permanent investment account)",
-      "1 active event at a time",
+      "1 active occasion at a time",
       "Shareable gift link, QR code, and gift code",
       "Text Memory Book entries (gifters can always attach photos, videos, and voice)",
       "Kid View Lite",
@@ -95,7 +99,7 @@ const plans = [
       "Full Memory Book authoring for every child",
       "Full Kid View for every child",
       "One view for every fund in your household",
-      "Unlimited events with premium features included",
+      "Unlimited occasions with premium features included",
       "0.10% annual fee on invested assets only",
     ],
   },
@@ -154,8 +158,8 @@ const pricingFaqs = [
     answer: "Yes. New accounts get a 14-day reverse trial of Plus features automatically. Every premium feature unlocks for two weeks so you can decide before upgrading. No credit card required. After 14 days, your fund reverts to the Free plan unless you choose to upgrade.",
   },
   {
-    question: "What is the difference between a fund and an event?",
-    answer: "A fund is your child's permanent investment account. An event is a gifting occasion tied to that fund: a birthday page, a holiday page, a baby shower page. All gifts from all events flow into the same fund. The fund is permanent. Events are temporary.",
+    question: "What is the difference between a fund and an occasion?",
+    answer: "A fund is your child's permanent investment account. An occasion is a gifting moment tied to that fund: a birthday page, a holiday page, a baby shower page. All gifts from all occasions flow into the same fund. The fund is permanent. Occasions are temporary.",
   },
 ];
 

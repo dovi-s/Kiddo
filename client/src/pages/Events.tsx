@@ -39,7 +39,7 @@ function getEventTypeLabel(eventType: string | null | undefined): string {
     case "graduation": return "Graduation";
     case "just_because": return "Just Because";
     case "gift_anytime": return "Anytime gift page";
-    default: return "Event";
+    default: return "Occasion";
   }
 }
 
@@ -101,7 +101,7 @@ function getEventLifecycleSummary(event: Event) {
         ? `$${raised.toFixed(0)} raised from ${giftCount} ${giftCount === 1 ? "person" : "people"}. Every dollar is already invested.`
         : event.isPermanent
           ? "This always-on gift page is not taking new gifts right now."
-          : "This event is closed.",
+          : "This occasion is closed.",
     };
   }
 
@@ -117,7 +117,7 @@ function getEventLifecycleSummary(event: Event) {
       badge: "Date passed",
       copy: raised > 0
         ? `$${raised.toFixed(0)} raised from ${giftCount} ${giftCount === 1 ? "person" : "people"}. Every dollar is already invested.`
-        : "The event date passed. Kiddo keeps the page open until you close it.",
+        : "The occasion date passed. Kiddo keeps the page open until you close it.",
     };
   }
 
@@ -338,7 +338,7 @@ export default function Events() {
           queryClient.invalidateQueries({ queryKey: ["/api/funds", editingEvent.fundId, "events"] });
         }
         haptic("success");
-        toast({ title: "Event updated" });
+        toast({ title: "Occasion updated", variant: "saved", duration: 1200 });
         setEditingEvent(null);
       } else {
         toast({ title: "Could not save changes", variant: "destructive" });
@@ -469,10 +469,10 @@ export default function Events() {
         >
           <div>
             <h1 className="font-heading text-2xl font-bold text-foreground" data-testid="heading-your-events">
-              Your Events
+              Your Occasions
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground" data-testid="text-events-sharing-model">
-              One fund code always opens the anytime gift page for that child. Event links and QR codes open a specific occasion page.
+              One fund code always opens the anytime gift page for that child. Occasion links and QR codes open a specific occasion page.
             </p>
           </div>
           <Button
@@ -508,9 +508,9 @@ export default function Events() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {Number.isFinite(activeEventLimit)
                   ? activeCustomEventCount >= activeEventLimit
-                    ? "At your limit. Close an event to start a new one."
+                    ? "At your limit. Close an occasion to start a new one."
                     : `${activeEventLimit - activeCustomEventCount} more allowed at the same time.`
-                  : "No limit on concurrent events."}
+                  : "No limit on concurrent occasions."}
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 Use the fund code for evergreen sharing. Use event links for birthdays, showers, holidays, and milestone invites.
@@ -524,7 +524,7 @@ export default function Events() {
                   </Link>
                 ) : (
                   <>
-                    <p>{hasAnyStarter ? "Kiddo+ includes 3 active events at a time." : "Free includes 1 active event at a time."}</p>
+                    <p>{hasAnyStarter ? "Kiddo+ includes 3 active occasions at a time." : "Free includes 1 active occasion at a time."}</p>
                     <p>Kiddo Family is unlimited.</p>
                   </>
                 )}
@@ -595,7 +595,7 @@ export default function Events() {
         {events.length > 0 && (
           <div className="mb-5 space-y-3">
             <p className="text-xs text-muted-foreground" data-testid="text-events-context-summary">
-              Showing {Math.round(displayFilteredEventCount)} of {Math.round(displayTotalEventCount)} {Math.round(displayTotalEventCount) === 1 ? "event" : "events"} across {Math.round(displayFundCount)} {Math.round(displayFundCount) === 1 ? "fund" : "funds"}
+              Showing {Math.round(displayFilteredEventCount)} of {Math.round(displayTotalEventCount)} {Math.round(displayTotalEventCount) === 1 ? "occasion" : "occasions"} across {Math.round(displayFundCount)} {Math.round(displayFundCount) === 1 ? "fund" : "funds"}
             </p>
 
             <div className="flex flex-wrap items-center gap-2" data-testid="events-fund-filter-bar">
@@ -647,10 +647,10 @@ export default function Events() {
                 context="events-empty"
                 title={activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s birthday is coming.` : "Birthdays. Baby showers. Holidays."}
                 description={activeFund?.recipientFirstName
-                  ? `Create an event and let family show up for ${activeFund.recipientFirstName}. Takes 2 minutes. Gifts start flowing immediately.`
-                  : "Create a gifting event and give your people a reason to show up. Takes 2 minutes."}
+                  ? `Create an occasion and let family show up for ${activeFund.recipientFirstName}. Takes 2 minutes. Gifts start flowing immediately.`
+                  : "Create a gifting occasion and give your people a reason to show up. Takes 2 minutes."}
                 primaryAction={{
-                  label: `Create ${activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "your"} first event`,
+                  label: `Create ${activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "your"} first occasion`,
                   testId: "button-create-first-event",
                   onClick: () => {
                     haptic("medium");
