@@ -15,7 +15,7 @@ import { isAuthenticated, isAdmin } from "./auth";
 import { getConfiguredSuperAdminEmails, isEmailInAdminSet } from "@shared/adminAccess";
 import { sendEmail } from "./emailDelivery";
 import { sendOpsAlert } from "./ops";
-import { runGifterNotificationWorker } from "./gifterNotificationWorker";
+import { runGifterNotificationWorker, enqueueParentThankYou } from "./gifterNotificationWorker";
 import { queueCustodianTransfer, isCustodianAchEnabled } from "./custodianTransfer";
 import {
   type AgeTransitionRecord as SharedAgeTransitionRecord,
@@ -9893,6 +9893,63 @@ export async function registerRoutes(
       });
       if (!updated) {
         return res.status(404).json({ error: 'Thank-you not found' });
+      }
+
+      // Kora-side delivery: enqueue a branded thank-you email so the
+      // gifter is GUARANTEED to receive a well-formatted note even when
+      // the parent never clicks through to their own email client. The
+      // mailto URL below stays in the response as a back-compat "open
+      // in your own email" affordance, but the primary delivery path
+      // is now Kora-sent. Transactional — sends regardless of the
+      // gifter's unsubscribe state for the fund. Best-effort: failures
+      // do NOT block the response (the status flip already landed) so
+      // the parent's UI still confirms the thank-you was sent.
+      // req.user is the full row populated by Passport; pull the
+      // parent's display name from preferredName first (the explicit
+      // user-set name), falling back to firstName from signup.
+      const reqUser: any = req.user || null;
+      const parentDisplayName = reqUser
+        ? (String(reqUser.preferredName || "").trim()
+            || String(reqUser.firstName || "").trim()
+            || null)
+        : null;
+      const childFirstName = String((fund as any).recipientFirstName || "").trim()
+        || String((fund as any).recipient_first_name || "").trim()
+        || fund.name
+        || "your child";
+      // Pull the underlying gift's anonymous flag so the thank-you
+      // copy can suppress the "Sarah wrote you" framing when the gift
+      // was anonymous — even though the parent's UI shows them they're
+      // sending to "Anonymous", the email still goes to the hidden
+      // address; the salutation just stays generic.
+      let isAnonymous = false;
+      let giftAmount = 0;
+      if (thankYou.giftId) {
+        try {
+          const gift = await storage.getGift(thankYou.giftId);
+          if (gift) {
+            isAnonymous = Boolean((gift as any).isAnonymous);
+            giftAmount = parseFloat(String(gift.amount || "0")) || 0;
+          }
+        } catch { /* non-fatal */ }
+      }
+      if (thankYou.senderEmail) {
+        try {
+          await enqueueParentThankYou({
+            fundId: req.params.fundId,
+            gifterEmail: thankYou.senderEmail,
+            gifterName: isAnonymous ? null : (thankYou.senderName || null),
+            childName: childFirstName,
+            parentMessage: thankYou.message,
+            parentName: isAnonymous ? null : parentDisplayName,
+            giftAmount,
+            isAnonymous,
+          });
+        } catch (enqueueErr) {
+          // Logging-only: the parent's UI already showed success, and
+          // the mailto fallback below still works.
+          console.error('Failed to enqueue parent thank-you email:', enqueueErr);
+        }
       }
 
       const subject = `Thank you for your gift to ${fund.name}`;

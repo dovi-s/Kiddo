@@ -43,6 +43,12 @@ type GifterNotificationSubscriber = {
   // we email about the HIGHEST crossed threshold to avoid spamming the same
   // gifter with three back-to-back emails about the same surge.
   lastMilestoneNotifiedThreshold: number | null;
+  // Dormancy re-engagement dedup. ISO timestamp of the last
+  // "we haven't seen you in a while" check-in email for this fund.
+  // Enforces a 6-month minimum between dormancy nudges so a long-dormant
+  // gifter never gets the same "we miss you" message twice in a year.
+  // Null means we've never sent one (the most common state).
+  lastDormancyCheckinAt: string | null;
   // Per feedback_anonymous_as_explicit_flag.md: when an anonymous
   // gifter opts into milestone updates, the system needs to keep
   // their email to send notifications, but every parent-facing
@@ -251,6 +257,7 @@ function normalizeSubscriber(email: string, raw: any): GifterNotificationSubscri
     lastMilestoneNotifiedThreshold: Number.isFinite(Number(raw?.lastMilestoneNotifiedThreshold))
       ? Math.max(0, Number(raw.lastMilestoneNotifiedThreshold))
       : null,
+    lastDormancyCheckinAt: typeof raw?.lastDormancyCheckinAt === "string" ? raw.lastDormancyCheckinAt : null,
     isAnonymous: Boolean(raw?.isAnonymous),
   };
 }
@@ -540,32 +547,87 @@ function renderHolidayReminder(entry: QueueEntry): RenderedEmail | null {
   };
 }
 
+// Age-18 retrospective email. Enhanced 2026-05-12 to give the gifter
+// their own 18-year story, not just a generic "thanks for being part
+// of the village" closing. The kid-at-18 lens applies to the GIFTER
+// too: this is the moment where they get to see what their consistency
+// (or single gift) actually became over 18 years of compounding.
+// Includes personal stats (their $ contributed, their gift count, the
+// fund's final size, their share of it), the locked majority age (18-21
+// per state), and a forward-looking CTA that does not assume the
+// gifter has young kids of their own (some are grandparents whose kids
+// are grown). Per feedback_no_emdash.md: no em-dashes in copy.
 function renderAge18Notification(entry: QueueEntry): RenderedEmail | null {
   const to = String(entry.email || "").trim().toLowerCase();
   const childName = String(entry.childName || "your child").trim();
   const contributionCount = Number(entry.contributionCount || 0);
+  const senderTotalContributed = Number(entry.senderTotalContributed || 0);
   const totalContributors = Number(entry.totalContributors || 0);
   const totalGifted = Number(entry.totalGifted || 0);
+  const majorityAge = Number(entry.majorityAge || 18);
   const unsubscribeUrl = String(entry.unsubscribeUrl || "").trim();
   const startFundUrl = String(entry.startFundUrl || "").trim();
   if (!to || !childName) return null;
+
+  // Personal share of the fund. Honest fractional math: gifter's
+  // contributions over total fund gifts. Renders as a percentage with
+  // one decimal when meaningful; collapses to a short line when this
+  // gifter contributed a trivially small share so we never imply a
+  // single-gift gifter built half the fund.
+  const personalShareLine = (() => {
+    if (senderTotalContributed <= 0 || totalGifted <= 0) return null;
+    const fraction = senderTotalContributed / totalGifted;
+    if (fraction >= 0.005) {
+      const pct = (fraction * 100).toFixed(fraction >= 0.1 ? 0 : 1);
+      return `Your gifts make up ${pct}% of the fund.`;
+    }
+    return null;
+  })();
+
+  // Personal contribution history. Three states: multi-gift consistent
+  // gifter (most emotional), single-gift gifter (still meaningful), and
+  // opted-in-but-never-gifted (no personal stats, just village context).
+  const personalHistoryLine = (() => {
+    if (contributionCount > 1 && senderTotalContributed > 0) {
+      return `You gave ${childName} $${senderTotalContributed.toFixed(2)} across ${contributionCount} gifts over the years. Every one of those is now theirs.`;
+    }
+    if (contributionCount === 1 && senderTotalContributed > 0) {
+      return `Your $${senderTotalContributed.toFixed(2)} gift compounded over the years. It is now part of what they take into adulthood.`;
+    }
+    if (contributionCount > 0) {
+      return `You gifted ${childName} ${contributionCount} time${contributionCount === 1 ? "" : "s"} over the years.`;
+    }
+    return `You were part of building ${childName}'s future.`;
+  })();
+
+  // Subject locks the majority age. "Turns 18" is the most common
+  // case (most states); other states get the right number. Lowercase
+  // for the "their fund is now theirs" line which reads as a soft
+  // declaration rather than an announcement.
+  const subject = `${childName} turns ${majorityAge} today. Their fund is now theirs.`;
+
   return {
     to,
-    subject: `${childName} turns 18 today. Their fund is now theirs.`,
+    subject,
     text: [
       `Hi${entry.name ? ` ${entry.name}` : ""},`,
       "",
-      `${childName} turns 18 today.`,
+      `${childName} turns ${majorityAge} today.`,
       "",
       `Their fund is now theirs. Everything family and friends built over the years is in their hands.`,
+      "",
+      personalHistoryLine,
+      personalShareLine,
+      `${totalContributors} people gifted a total of $${totalGifted.toFixed(2)} to make this fund what it became.`,
       buildGiftProvenanceLine(childName),
-      contributionCount > 0
-        ? `You gifted ${childName} ${contributionCount} time${contributionCount === 1 ? "" : "s"} over the years.`
-        : `You were part of building ${childName}'s future.`,
-      `${totalContributors} people gifted a total of $${totalGifted.toFixed(2)}.`,
       "",
       "Thank you for being part of the story.",
-      startFundUrl ? `Start a fund for your own child: ${startFundUrl}` : "",
+      "",
+      // CTA reframed: "for someone you love" not "for your own child"
+      // since many age-18 gifters are grandparents whose kids are adults.
+      // The fund-loop still applies (other grandchildren, nieces, godchildren)
+      // but the older copy excluded them.
+      startFundUrl ? `Start a fund for someone you love: ${startFundUrl}` : "",
       "",
       "The Kiddo team",
       unsubscribeUrl ? `Unsubscribe: ${unsubscribeUrl}` : "",
@@ -756,6 +818,153 @@ function renderGifterMilestoneCrossed(entry: QueueEntry): RenderedEmail | null {
   };
 }
 
+// Parent thank-you email. Fires when a parent marks a thank-you note as
+// sent in the dashboard. Distinct from auto-generated transactional
+// receipts because this is a HUMAN message the parent personally wrote
+// (or composed from a template) for this specific gifter. Treated as
+// transactional in terms of unsubscribe gating — a personal thank-you
+// addressed to a specific gifter is not a marketing email even when
+// the gifter has opted out of lifecycle reminders. Per
+// project_seth_godin_kora_alignment.md: a thank-you the gifter forwarded
+// or screenshotted is the cleanest organic acquisition surface we have.
+function renderParentThankYou(entry: QueueEntry): RenderedEmail | null {
+  const to = String(entry.email || "").trim().toLowerCase();
+  const childName = String(entry.childName || "their child").trim();
+  const parentMessage = String(entry.parentMessage || "").trim();
+  const parentName = entry.parentName ? String(entry.parentName).trim() : null;
+  const giftAmount = Number(entry.giftAmount || 0);
+  const giftUrl = String(entry.giftUrl || "").trim();
+  const startFundUrl = String(entry.startFundUrl || "").trim();
+  const unsubscribeUrl = String(entry.unsubscribeUrl || "").trim();
+  if (!to || !childName || !parentMessage) return null;
+
+  // Subject leads with the parent's name when known so the gifter sees
+  // "Sarah sent you a note" not the impersonal "An update from Emma's
+  // family". Falls back gracefully when parent name is missing.
+  const subject = parentName
+    ? `${parentName} sent you a note about your gift to ${childName}`
+    : `A thank-you for your gift to ${childName}`;
+
+  const amountLine = giftAmount > 0
+    ? `Your $${giftAmount.toFixed(2)} gift to ${childName}.`
+    : `Your gift to ${childName}.`;
+
+  return {
+    to,
+    subject,
+    text: [
+      `Hi${entry.name ? ` ${entry.name}` : ""},`,
+      "",
+      parentName
+        ? `${parentName} wrote you a note about your gift:`
+        : `${childName}'s family wrote you a note about your gift:`,
+      "",
+      // Indent the parent's message so it visually reads as a quoted
+      // human note, not Kiddo system copy. Each line gets a "> " prefix.
+      parentMessage.split(/\r?\n/).map((line) => `> ${line}`).join("\n"),
+      "",
+      amountLine,
+      buildGiftProvenanceLine(childName),
+      "",
+      giftUrl ? `Want to do it again? ${giftUrl}` : "",
+      startFundUrl ? `Or start a fund for someone you love: ${startFundUrl}` : "",
+      "",
+      "The Kiddo team",
+      unsubscribeUrl ? `Unsubscribe: ${unsubscribeUrl}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  };
+}
+
+// Dormancy re-engagement email. Fires when a gifter has not given to a
+// fund in 6+ months AND the fund has been active in that gap (other
+// gifts received, milestones crossed). Honest framing: "Emma is N now,
+// her fund has grown to $X, you were part of building it" — not
+// guilt-trip, not "Don't miss out", just a quiet check-in with real
+// context. Once per gifter per fund per 6-month window. Skipped when
+// the gifter is unsubscribed OR when the parent has the birthdayReminders
+// umbrella setting off (same gate as birthday/holiday/age-18 reminders;
+// a gifter who turned off lifecycle nudges does not want dormancy nudges
+// either). Per feedback_no_emdash.md: no em-dashes in the copy.
+function renderDormancyCheckIn(entry: QueueEntry): RenderedEmail | null {
+  const to = String(entry.email || "").trim().toLowerCase();
+  const childName = String(entry.childName || "your child").trim();
+  const monthsSinceLastGift = Number(entry.monthsSinceLastGift || 0);
+  const childAge = Number(entry.childAge || 0);
+  const fundTotalGifted = Number(entry.fundTotalGifted || 0);
+  const fundContributors = Number(entry.fundContributors || 0);
+  const senderTotalContributed = Number(entry.senderTotalContributed || 0);
+  const senderGiftCount = Number(entry.senderGiftCount || 0);
+  const giftUrl = String(entry.giftUrl || "").trim();
+  const startFundUrl = String(entry.startFundUrl || "").trim();
+  const unsubscribeUrl = String(entry.unsubscribeUrl || "").trim();
+  if (!to || !childName || !giftUrl) return null;
+
+  // Time-since phrasing. We keep the framing soft and factual instead
+  // of using guilt-trip copy. "It has been about a year" reads better
+  // than "It has been 12 months", so collapse common ranges.
+  const timeSinceLabel = (() => {
+    if (monthsSinceLastGift >= 24) return `over two years`;
+    if (monthsSinceLastGift >= 18) return `about a year and a half`;
+    if (monthsSinceLastGift >= 12) return `about a year`;
+    if (monthsSinceLastGift >= 9) return `nearly a year`;
+    if (monthsSinceLastGift >= 6) return `about six months`;
+    return `a while`;
+  })();
+
+  // Subject leans on fund momentum, not on the gifter's silence. Tells
+  // them what they MISSED, not that they were silent. Pattern lifted
+  // from milestone-crossed emails which read calmly.
+  const subject = fundTotalGifted >= 1000
+    ? `${childName}'s fund has grown to $${fundTotalGifted.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+    : `An update on ${childName}'s fund`;
+
+  // Personal-history line. If the gifter has given multiple times,
+  // surface the cumulative effort so they feel the relationship,
+  // not the silence.
+  const personalLine = senderGiftCount > 1 && senderTotalContributed > 0
+    ? `You gave ${childName} $${senderTotalContributed.toFixed(2)} across ${senderGiftCount} gifts. That money is still in the fund, still compounding.`
+    : senderTotalContributed > 0
+      ? `Your $${senderTotalContributed.toFixed(2)} gift is still in the fund, still compounding.`
+      : `Your gift is still in the fund, still compounding.`;
+
+  // Village line. Same shape as birthday lead-up so the page register
+  // stays consistent across all fund-context emails.
+  const villageLine = (fundContributors > 0 && fundTotalGifted > 0)
+    ? `${childName}'s fund has $${fundTotalGifted.toFixed(2)} today, built by ${fundContributors} ${fundContributors === 1 ? "person" : "people"}.`
+    : null;
+
+  // Age anchor. Only render when we have an age and it is a meaningful
+  // marker. Quiet, not breathless.
+  const ageLine = childAge > 0 && childAge < 18
+    ? `${childName} is ${childAge} now.`
+    : null;
+
+  return {
+    to,
+    subject,
+    text: [
+      `Hi${entry.name ? ` ${entry.name}` : ""},`,
+      "",
+      `It has been ${timeSinceLabel} since you gave to ${childName}. Here is where their fund stands today.`,
+      "",
+      ageLine,
+      villageLine,
+      personalLine,
+      buildGiftProvenanceLine(childName),
+      "",
+      `Add to ${childName}'s fund: ${giftUrl}`,
+      startFundUrl ? `Or start a fund for someone you love: ${startFundUrl}` : "",
+      "",
+      "The Kiddo team",
+      unsubscribeUrl ? `Unsubscribe: ${unsubscribeUrl}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  };
+}
+
 function renderQueuedEmail(entry: QueueEntry): RenderedEmail | null {
   switch (String(entry.type || "")) {
     case "gift_receipt_followup":
@@ -776,6 +985,10 @@ function renderQueuedEmail(entry: QueueEntry): RenderedEmail | null {
       return renderOptInConfirmation(entry);
     case "gifter_milestone_crossed":
       return renderGifterMilestoneCrossed(entry);
+    case "parent_thank_you":
+      return renderParentThankYou(entry);
+    case "dormancy_checkin":
+      return renderDormancyCheckIn(entry);
     default:
       return null;
   }
@@ -1337,7 +1550,8 @@ async function enqueueRecurringNotifications(log: (message: string, source?: str
     }
 
     if (settings.age18Notification) {
-      const eighteenthBirthday = getMajorityBirthday(fund.recipient_birthdate, Number((fund as any).majority_age) || 18);
+      const majorityAge = Number((fund as any).majority_age) || 18;
+      const eighteenthBirthday = getMajorityBirthday(fund.recipient_birthdate, majorityAge);
       if (now.getTime() >= eighteenthBirthday.getTime()) {
         const aggregate = await getFundGiftAggregate(fund.id);
         for (const [email, subscriber] of activeSubscribers) {
@@ -1349,6 +1563,16 @@ async function enqueueRecurringNotifications(log: (message: string, source?: str
             name: subscriber.name,
             childName: fund.recipient_first_name || fund.name || "your child",
             contributionCount: subscriber.contributionCount,
+            // Personal stats added 2026-05-12 for the 18-year retrospective.
+            // The render function uses these to compute the gifter's share
+            // of the fund and their cumulative contribution narrative.
+            senderTotalContributed: subscriber.totalContributed,
+            // Majority age plumbed through so the email and subject line
+            // honor the locked state-specific UTMA age (18 in most states,
+            // 19 in AL/NE, 21 in MS/PA/etc.). Without this the email
+            // says "turns 18 today" even when the legal majority age for
+            // this fund's state is 21.
+            majorityAge,
             totalContributors: aggregate.totalContributors,
             totalGifted: aggregate.totalGifted,
             startFundUrl: buildLoopStartFundUrl(baseUrl, fund.id, "age_18_email", "email"),
@@ -1371,6 +1595,205 @@ async function enqueueRecurringNotifications(log: (message: string, source?: str
   if (queued > 0) {
     log(`queued ${queued} recurring gifter notification(s)`, "gifter-worker");
   }
+}
+
+// Dormancy re-engagement enqueue. Single highest-ROI repeat-gift
+// conversion lever per the audit — silent gifters get NO existing
+// touchpoint between the day-7 follow-up (or 1st-year anniversary)
+// and the birthday lead-up. For a gifter whose last gift was 6+
+// months ago AND who is NOT in a natural reminder window (birthday
+// lead-up, holiday season, age-18, anniversary), this fills the gap
+// with one quiet "here's where the fund stands" check-in.
+//
+// Eligibility gates:
+//   1. Gifter has actually contributed (totalContributed > 0). Opt-in-
+//      only subscribers with no gifts get the lifecycle reminders, not
+//      this one. Dormancy is for people who gave and went quiet.
+//   2. lastGiftAt >= 6 months ago. Hard floor on "dormant".
+//   3. lastDormancyCheckinAt is null OR >= 6 months ago. Frequency cap.
+//      Same gifter never gets two dormancy emails in one 6-month window.
+//   4. settings.birthdayReminders is true. Same umbrella as the other
+//      lifecycle nudges. A parent who turned off lifecycle reminders
+//      (or a gifter who unsubscribed) does not get this email.
+//   5. NOT inside birthday lead-up window (within 7-14 days of next
+//      birthday). Birthday email handles that nudge; firing dormancy
+//      on top would double-nudge.
+//   6. NOT inside holiday window (Nov 15 - Dec 5). Same reason.
+//   7. childAge < majorityAge. After majority the at-18 ceremony is
+//      the canonical close; don't re-engage past it.
+//
+// Per feedback_no_emdash.md + structure-vs-behavior research: the
+// email is calm and factual, not "Don't miss out!" / "Hurry back!" /
+// guilt-trip copy. Subject leans on what they MISSED (fund value,
+// new milestone) not on their silence.
+async function enqueueDormancyCheckIns(log: (message: string, source?: string) => void) {
+  const store = await loadNotificationStore();
+  const funds = await getFundReminderRows();
+  const now = new Date();
+  const baseUrl = getAppBaseUrl();
+  const SIX_MONTHS_MS = 6 * 30.44 * 24 * 60 * 60 * 1000;
+  let queued = 0;
+  let storeChanged = false;
+
+  for (const fund of funds) {
+    if (!fund.recipient_birthdate) continue;
+
+    const subscribersMap = store.subscribersByFund[fund.id] || {};
+    const activeSubscribers = Object.entries(subscribersMap).filter(
+      ([, subscriber]) => !subscriber.unsubscribed,
+    );
+    if (activeSubscribers.length === 0) continue;
+
+    const settings = normalizeSettings(store.settingsByFund[fund.id]);
+    store.settingsByFund[fund.id] = settings;
+    if (!settings.birthdayReminders) continue; // same umbrella as lifecycle reminders
+
+    // Skip funds inside birthday or holiday windows to avoid double-nudging.
+    const daysUntilBirthday = daysUntilNextBirthday(fund.recipient_birthdate, now);
+    if (daysUntilBirthday >= 7 && daysUntilBirthday <= 14) continue;
+    const todayParts = getDatePartsInTimeZone(now);
+    const inHolidayWindow =
+      (todayParts.month === 11 && todayParts.day >= 15) ||
+      (todayParts.month === 12 && todayParts.day <= 5);
+    if (inHolidayWindow) continue;
+
+    // Skip funds whose owners have reached majority. The at-18 email is
+    // the canonical close of the gifter relationship.
+    const majorityAge = Number((fund as any).majority_age) || 18;
+    const childAge = getAgeOnDate(fund.recipient_birthdate, now);
+    if (childAge >= majorityAge) continue;
+
+    // Fund aggregate computed once per fund for the email context.
+    const aggregate = await getFundGiftAggregate(fund.id);
+
+    for (const [email, subscriber] of activeSubscribers) {
+      // Gate 1: must have contributed.
+      if (subscriber.totalContributed <= 0 || subscriber.contributionCount <= 0) continue;
+      // Gate 2: lastGiftAt must be 6+ months ago.
+      if (!subscriber.lastGiftAt) continue;
+      const lastGiftMs = new Date(subscriber.lastGiftAt).getTime();
+      if (!Number.isFinite(lastGiftMs)) continue;
+      const msSinceLastGift = now.getTime() - lastGiftMs;
+      if (msSinceLastGift < SIX_MONTHS_MS) continue;
+      // Gate 3: no dormancy email within the last 6 months.
+      if (subscriber.lastDormancyCheckinAt) {
+        const lastCheckinMs = new Date(subscriber.lastDormancyCheckinAt).getTime();
+        if (Number.isFinite(lastCheckinMs) && now.getTime() - lastCheckinMs < SIX_MONTHS_MS) {
+          continue;
+        }
+      }
+
+      const monthsSinceLastGift = Math.floor(msSinceLastGift / (30.44 * 24 * 60 * 60 * 1000));
+
+      await appendQueueEntry({
+        type: "dormancy_checkin",
+        fundId: fund.id,
+        email,
+        name: subscriber.name,
+        childName: fund.recipient_first_name || fund.name || "your child",
+        childAge,
+        monthsSinceLastGift,
+        fundTotalGifted: aggregate.totalGifted,
+        fundContributors: aggregate.totalContributors,
+        senderTotalContributed: subscriber.totalContributed,
+        senderGiftCount: subscriber.contributionCount,
+        giftUrl: buildGiftUrl(baseUrl, fund),
+        startFundUrl: buildLoopStartFundUrl(baseUrl, fund.id, "dormancy_checkin_email", "email"),
+        unsubscribeUrl: buildUnsubscribeUrl(baseUrl, subscriber.unsubscribeToken),
+      });
+
+      store.subscribersByFund[fund.id][email] = {
+        ...subscriber,
+        lastDormancyCheckinAt: now.toISOString(),
+      };
+      queued += 1;
+      storeChanged = true;
+    }
+  }
+
+  if (storeChanged) {
+    await saveNotificationStore(store);
+  }
+  if (queued > 0) {
+    log(`queued ${queued} dormancy check-in(s)`, "gifter-worker");
+  }
+}
+
+// Exported enqueue for the parent-thank-you flow. Called from
+// routes.ts when a parent marks a thank-you note as "sent" in the
+// dashboard. Distinct from the auto-generated draft created by the
+// webhook: the parent has personally written (or curated from a
+// template) this message and is choosing to send it. Treats as
+// transactional. Sends even when the gifter has unsubscribed,
+// because a personal thank-you addressed to that specific gifter
+// is not a marketing email. Per feedback_anonymous_as_explicit_flag.md:
+// when the gifter was anonymous on the original gift, the parent's
+// thank-you UI didn't have a name to address (and the gifter's
+// email is held private from the parent). We still send the email
+// to that hidden address because thanks are valuable; the salutation
+// just falls back to "Hi" without a name.
+export async function enqueueParentThankYou(params: {
+  fundId: string;
+  gifterEmail: string;
+  gifterName: string | null;
+  childName: string;
+  parentMessage: string;
+  parentName: string | null;
+  giftAmount: number;
+  isAnonymous?: boolean;
+}): Promise<void> {
+  const normalizedEmail = String(params.gifterEmail || "").trim().toLowerCase();
+  if (!normalizedEmail) return;
+  if (!params.parentMessage || !params.parentMessage.trim()) return;
+
+  const baseUrl = getAppBaseUrl();
+
+  // Pull the fund row so we can build a clean gift URL (slug-based when
+  // available). Best-effort: if the fund lookup fails we skip the
+  // gift_url but still send the thank-you (the message is the point).
+  let giftUrl = "";
+  try {
+    const result = await pool.query(
+      `SELECT id, slug, name, recipient_first_name FROM funds WHERE id = $1 LIMIT 1`,
+      [params.fundId],
+    );
+    const row = result.rows[0];
+    if (row) {
+      giftUrl = row.slug ? `${baseUrl}/${row.slug}` : `${baseUrl}/gift/${row.id}`;
+    }
+  } catch {
+    // non-fatal, continue without gift URL
+  }
+
+  // Look up the subscriber to honor unsubscribe token (so the email
+  // can carry one). We do NOT skip on unsubscribed: thank-yous are
+  // transactional. Missing subscriber record is fine; the email goes
+  // out without an unsubscribe link, which is acceptable because the
+  // gifter never opted into anything.
+  let unsubscribeUrl = "";
+  try {
+    const store = await loadNotificationStore();
+    const sub = store.subscribersByFund[params.fundId]?.[normalizedEmail];
+    if (sub?.unsubscribeToken) {
+      unsubscribeUrl = buildUnsubscribeUrl(baseUrl, sub.unsubscribeToken);
+    }
+  } catch {
+    // non-fatal
+  }
+
+  await appendQueueEntry({
+    type: "parent_thank_you",
+    fundId: params.fundId,
+    email: normalizedEmail,
+    name: params.gifterName,
+    childName: params.childName,
+    parentMessage: params.parentMessage.trim(),
+    parentName: params.parentName,
+    giftAmount: params.giftAmount,
+    giftUrl,
+    startFundUrl: buildLoopStartFundUrl(baseUrl, params.fundId, "parent_thank_you_email", "email"),
+    unsubscribeUrl,
+  });
 }
 
 async function processQueuedNotifications(log: (message: string, source?: string) => void) {
@@ -1595,6 +2018,7 @@ export async function runGifterNotificationWorker(log: (message: string, source?
     await enqueueGiftDay7Followups(log);
     await enqueueGiftAnniversaryEmails(log);
     await enqueueRecurringNotifications(log);
+    await enqueueDormancyCheckIns(log);
     await processQueuedNotifications(log);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
