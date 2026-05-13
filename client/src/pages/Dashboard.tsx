@@ -8402,12 +8402,23 @@ export default function Dashboard() {
                                   );
                                 })()}
 
-                                {/* Gifts */}
+                                {/* Gifts — STRICTLY event-tagged gifts only
+                                    (g.eventId === ev.id). Distinct from the Goal
+                                    row above which shows fund-total progress.
+                                    The two contradict at a glance ("$1,917 of
+                                    $5,000" + "No gifts yet") if the label
+                                    doesn't disclose that this is the event-page
+                                    feed, not all gifts to the fund. So the
+                                    label always reads "via this event page"
+                                    and the empty state explicitly tells the
+                                    user that gifts to the main fund link also
+                                    count toward the goal — they just land in
+                                    the main fund feed, not here. */}
                                 <div>
-                                  <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 8 }}>Gifts</p>
+                                  <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", color: "rgba(26,23,16,0.35)", textTransform: "uppercase", marginBottom: 8 }}>Gifts via this event page</p>
                                   {evGifts.length === 0 ? (
-                                    <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.4)", fontStyle: "italic" }}>
-                                      No gifts yet. Share the link and watch this space fill up.
+                                    <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", lineHeight: 1.55 }}>
+                                      Nothing through this event page yet. Gifts to {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} main fund link still count toward the goal. This list shows only what came through this event.
                                     </p>
                                   ) : (
                                     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
