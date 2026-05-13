@@ -125,7 +125,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       { label: "Gifting link for family", competitor: "Yes", kora: "Yes" },
       { label: "No account needed to give", competitor: "Yes", kora: "Yes" },
       { label: "Event pages", competitor: "Basic", kora: "Custom, with QR codes" },
-      { label: "Memory Book", competitor: "Basic (note + photo)", kora: "Note, photo, video, voice — every gift, every occasion" },
+      { label: "Memory Book", competitor: "Basic (note + photo)", kora: "Note, photo, video, voice. Every gift, every occasion." },
       { label: "Age-18 handoff", competitor: "Not addressed", kora: "UTMA ownership transfer explained clearly" },
     ],
     sections: [

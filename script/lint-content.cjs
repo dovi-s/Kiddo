@@ -95,6 +95,13 @@ function lintSegment(segment) {
   const issues = [];
   const normalized = segment.toLowerCase();
 
+  // Em-dashes are banned in all website/app copy per
+  // feedback_no_emdash.md. They're a stylistic-AI tell at Kora's register
+  // and historically every Kora content review has flagged them. The unicode
+  // codepoint is U+2014 (—); separate from the ASCII double-hyphen (--) which
+  // we don't ban because it's a common code pattern (CLI flags, etc.).
+  if (segment.includes("—")) issues.push("Em-dash (—) in user-facing copy");
+
   for (const phrase of BANNED_PHRASES) {
     if (normalized.includes(phrase)) issues.push(`Banned phrase "${phrase}"`);
   }

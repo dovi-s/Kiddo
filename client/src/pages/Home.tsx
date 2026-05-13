@@ -136,7 +136,7 @@ const BENTO_TILES: BentoTile[] = [
       "Stripe Checkout handles payment. Bank transfer option for larger gifts.",
       "Optional message + photo + video + voice note travels with the gift into the Memory Book.",
       "The gifter sees a confirmation that reads as a gift, not a receipt.",
-      "Per-fund private link — not searchable, not public-indexed.",
+      "Per-fund private link. Not searchable, not public-indexed.",
     ],
     modalCallout: {
       label: "Median time from landing to checkout",
@@ -153,7 +153,7 @@ const BENTO_TILES: BentoTile[] = [
       "Every gift becomes a Memory Book entry. Gifters can attach a note, photo, video, or voice message. Parents can add their own letters, milestones, and a sealed letter the kid only sees on their 18th birthday. The note IS the entry; the transaction is metadata.",
     modalDetails: [
       "Three visibility tiers: kid_now (right now), kid_at_18 (sealed until majority), parent_only (private to the parent).",
-      "Voice memos and videos are first-class — not afterthoughts. The moat is the texture you can't fake.",
+      "Voice memos and videos are first-class, not afterthoughts. The moat is the texture you can't fake.",
       "Sealed letter renders only when the kid claims at 18. Auto-fired milestones (every $500, every 25 contributors) write Memory Book entries too.",
       "Survives the at-18 handoff intact. The kid inherits both the brokerage account and the years of love attached to it.",
     ],
@@ -171,7 +171,7 @@ const BENTO_TILES: BentoTile[] = [
       "Phase 5-8 (wonder): \"You own a piece of Disney. Disney makes the movies you love.\"",
       "Phase 9-13 (explanations): \"A stock is a tiny slice of a company. When the company grows, your slice grows.\"",
       "Phase 14-17 (real participation): the kid can suggest tickers; the parent reviews and approves.",
-      "PIN-gated — the parent decides who has access. Not searchable, not shareable to strangers.",
+      "PIN-gated. The parent decides who has access. Not searchable, not shareable to strangers.",
     ],
     deepLink: { href: "/how-it-works#kid-view", label: "See the Kid View phases" },
   },
@@ -183,7 +183,7 @@ const BENTO_TILES: BentoTile[] = [
     modalLead:
       "Set a monthly amount that fires automatically, so you become the parent who showed up consistently for years. Skip a month, double next month, change the amount anytime. The worker handles retries; if a charge fails, you get an email reminder rather than a silent failure.",
     modalDetails: [
-      "Card-on-file from your subscription is reused — no separate ACH setup needed today.",
+      "Card-on-file from your subscription is reused. No separate ACH setup needed today.",
       "Pause and resume anytime. No fee for changing schedules.",
       "Each scheduled investment can carry a Memory Book note. Parents who want to mark the rhythm can; parents who don't can skip it.",
       "Worker logic: 6-hour cadence, idempotent per fund, falls back to email if card declines.",
@@ -198,10 +198,10 @@ const BENTO_TILES: BentoTile[] = [
     modalLead:
       "Choose a strategy that reflects the parent you want to be: Conservative ⚖️, Balanced 🌿, Growth 📈, or your own 🎯 Custom. Your pick shapes your child's financial foundation for years. The fund's holdings rebalance toward the target on every gift, and every allocation decision is shown with the percentages and the reason. Not a black box.",
     modalDetails: [
-      "Conservative ⚖️ — bond-weighted, lower volatility, suited to short horizons.",
-      "Balanced 🌿 — Vanguard total stock + total international + bonds. Default for most parents.",
-      "Growth 📈 — equity-heavy, longer horizon, fits the 0-10 age bracket.",
-      "Custom 🎯 — pick your own tickers and weights. Plus-tier feature.",
+      "Conservative ⚖️. Bond-weighted, lower volatility, suited to short horizons.",
+      "Balanced 🌿. Vanguard total stock + total international + bonds. Default for most parents.",
+      "Growth 📈. Equity-heavy, longer horizon, fits the 0-10 age bracket.",
+      "Custom 🎯. Pick your own tickers and weights. Plus-tier feature.",
     ],
     modalCallout: { label: "Rebalancing", value: "contribution-based, no drift selling" },
     deepLink: { href: "/how-it-works#mix", label: "Read the strategy details" },
@@ -214,8 +214,8 @@ const BENTO_TILES: BentoTile[] = [
     modalLead:
       "The most consequential moment in the product. The architecture is designed so the kid receives the fund automatically on their 18th birthday regardless of parent attentiveness. T-30 days the parent gets a prep email; T-1 day a reminder; T-0 the kid is auto-emailed the claim link if their email is verified.",
     modalDetails: [
-      "Verification gate — the at-18 invite is NOT auto-sent unless the kid's email has been verified by them clicking a link beforehand.",
-      "Kid creates their own Kiddo account at claim — never the parent's credentials.",
+      "Verification gate. The at-18 invite is NOT auto-sent unless the kid's email has been verified by them clicking a link beforehand.",
+      "Kid creates their own Kiddo account at claim. Never the parent's credentials.",
       "On claim: ownership transfers, Memory Book + sealed letter unlock, year-by-year retrospective becomes available, parent loses the parent-managed view.",
       "Worker is idempotent and runs every 6 hours. Parent attentiveness is not a single point of failure.",
     ],

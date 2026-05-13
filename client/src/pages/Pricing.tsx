@@ -22,68 +22,85 @@ function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; 
   );
 }
 
+// Plans locked per MEMORY (2026-05-08, 2026-05-12 audit):
+//   Free:   $0 / month, 1 fund, basic features, Kid View Lite, basic text Memory Book.
+//           Approved phrasings: "$0 per month", "$0 / per month", "Free to start", "No monthly fee".
+//           Never "$0 forever" or "Always free" — Acorns-scrutiny risk with the 0.10% AUM line.
+//   Plus:   $4.99/mo or $39/yr (annual is 35% off monthly — aggressive).
+//   Family: $7.99/mo or $69/yr (annual is 28% off monthly — standard).
+//   Legacy: PULLED from public pricing 2026-05-12. Existing subscribers keep their plan;
+//           no new signups via the marketing site. NAME preserved for future tier.
+// Fee model locked per MEMORY (2026-05-08):
+//   0.10% AUM annual fee on invested assets across ALL plans (Free included).
+//   NOT charged on cash or pending gifts. NO platform fee on gifts. "Gift amount stays whole."
+//   The old $2/gift platform fee is RETIRED — was Free-tier monetization, replaced by AUM model.
+// Recurring investments naming locked: never "auto-invest" in user-facing copy.
+// "Contribute" banned in UI copy: use "Add to" or "Invest in"; "gift" for the money/transaction.
+// Events: "1 active event at a time" (not "1 event", not "1 gifting event slot").
 const plans = [
   {
     id: "free",
     name: "FREE",
     eyebrow: "For parents just getting started.",
-    price: "$0/mo",
+    price: "$0",
+    pricePeriod: "/ per month",
     cta: "Start for free",
     featured: false,
     body: [
-      "1 fund (one child's permanent investment account)",
-      "1 event page (one active gifting occasion at a time)",
+      "1 child fund (one child's permanent investment account)",
+      "1 active event at a time",
       "Shareable gift link, QR code, and gift code",
-      "Basic Memory Book",
-      "Child View for younger kids",
+      "Basic Memory Book (text notes)",
+      "Kid View Lite",
       "SIPC-insured investments via DriveWealth",
-      "$2 platform fee on gifts up to $200 (minimum gift: $10)",
-      "1% platform fee on gifts above $200",
+      "0.10% annual fee on invested assets only",
     ],
     note: "No credit card. No commitment.",
   },
   {
     id: "kiddo-plus",
     name: "KIDDO+",
-    eyebrow: "For the single-child parent who wants the full experience fee-free.",
-    price: "$44.99/year",
-    annual: "or $4.99/month",
+    eyebrow: "For the single-child parent who wants the full experience.",
+    price: "$39",
+    pricePeriod: "/ per year",
+    annual: "or $4.99 / month",
     cta: "Start with Kiddo+",
     featured: true,
-    note: "Pays for itself after 3 contributions of $10 or more.",
+    note: "Annual is 35% off monthly.",
     body: [
       "Everything in Free",
-      "No platform fee on contributions",
-      "Full Memory Book",
-      "Covers one child fund at a time",
-      "Custom event page design (colors, banner, welcome message)",
-      "3 simultaneous event pages",
-      "Full Child View and financial education features",
-      "Gifter milestone notifications",
+      "Full Memory Book (photo, video, voice memories)",
+      "Recurring investments (daily, weekly, or monthly)",
+      "Full Kid View",
+      "Projections and milestone notifications",
+      "Occasion reminders",
+      "Co-parent access (invite a partner to follow the fund)",
+      "Thank-you templates",
+      "Priority support",
+      "0.10% annual fee on invested assets only",
     ],
   },
   {
     id: "kiddo-family",
     name: "KIDDO FAMILY",
     eyebrow: "For families with two or more children.",
-    price: "$89.99/year",
-    annual: "or $9.99/month",
+    price: "$69",
+    pricePeriod: "/ per year",
+    annual: "or $7.99 / month",
     cta: "Cover all your children",
     featured: false,
-    note: "Best value from your second child onwards.",
+    note: "Annual is 28% off monthly. Best value from your second child onwards.",
     body: [
       "Everything in Kiddo+",
-      "Unlimited funds covered",
-      "No platform fee on contributions",
-      "Unlimited simultaneous event pages",
-      "Custom event URLs",
-      "Full contribution analytics dashboard",
-      "Household dashboard",
-      "Full Child View and financial education features",
-      "Priority support (under 4-hour response)",
+      "Unlimited children",
+      "Premium Memory Books for every child",
+      "Full Kid View for every child",
+      "One view for every fund in your household",
+      "Unlimited events with premium features included",
+      "0.10% annual fee on invested assets only",
     ],
   },
-];
+] as const;
 
 const fitRows = [
   {
@@ -91,7 +108,7 @@ const fitRows = [
     bestPlan: "Free",
   },
   {
-    situation: "One child, want full-value gifting",
+    situation: "One child, want the full experience",
     bestPlan: "Kiddo+",
   },
   {
@@ -104,10 +121,16 @@ const fitRows = [
   },
 ];
 
-const platformFeeExamples = [
-  { gift: "$50 gift", freePlan: "$2 platform fee", paidPlan: "$0 platform fee" },
-  { gift: "$150 gift", freePlan: "$2 platform fee", paidPlan: "$0 platform fee" },
-  { gift: "$250 gift", freePlan: "$2.50 platform fee", paidPlan: "$0 platform fee" },
+// Real-dollar AUM examples. The point is to show how small 0.10% is in
+// practice — kids' funds compound for 18 years, and even a $10k balance
+// only carries a $10/year fee. Same shape as a $0.83/month subscription
+// for a real investment account, but framed as an annual line so the
+// math reads honestly. Cash and pending gifts are excluded from the
+// invested-assets denominator per the locked fee architecture.
+const aumExamples = [
+  { invested: "$1,000 invested", annualFee: "$1.00 / year" },
+  { invested: "$10,000 invested", annualFee: "$10.00 / year" },
+  { invested: "$50,000 invested", annualFee: "$50.00 / year" },
 ] as const;
 
 const pricingFaqs = [
@@ -117,23 +140,23 @@ const pricingFaqs = [
   },
   {
     question: "What happens to my fund if I downgrade?",
-    answer: "Your fund stays active. Your investments stay invested. Future gifts follow the Free plan fee rules again: $2 up to $200, then 1% above $200. Nothing is lost.",
+    answer: "Your fund stays active. Your investments stay invested. Premium features (full Memory Book, recurring investments, co-parent access, projections) become read-only or revert to the Free experience. Your kid's money never leaves the fund.",
   },
   {
-    question: "What does covered mean?",
-    answer: "Covered means that fund is on a paid plan. Standard gifts to that fund skip the normal Free-plan platform fee, and premium features like the full Memory Book and enhanced gifting controls unlock for that fund. Kiddo+ covers one fund at a time. Kiddo Family covers every fund in your household.",
+    question: "Is there a platform fee on gifts?",
+    answer: "No. The gift amount stays whole. $50 from grandma is $50 to the fund. The gifter pays standard payment processing through Stripe (shown in full before checkout). Kiddo's revenue comes from the optional Plus and Family plans, plus a small 0.10% annual fee on invested assets across every tier.",
+  },
+  {
+    question: "What is the 0.10% annual fee?",
+    answer: "Kiddo charges 0.10% per year on invested assets only. Cash sitting in the fund and pending gifts are not charged. The fee is prorated daily and deducted from invested balance. Small enough that even a $10,000 invested fund costs $10 per year. The same rate applies on Free, Kiddo+, and Kiddo Family.",
   },
   {
     question: "Is there a free trial?",
-    answer: "New accounts receive 30 days with no platform fee on their first fund. No credit card required. After 30 days, the Free plan applies unless you upgrade.",
+    answer: "Yes. New accounts get a 14-day reverse trial of Plus features automatically. Every premium feature unlocks for two weeks so you can decide before upgrading. No credit card required. After 14 days, your fund reverts to the Free plan unless you choose to upgrade.",
   },
   {
     question: "What is the difference between a fund and an event?",
     answer: "A fund is your child's permanent investment account. An event is a gifting occasion tied to that fund: a birthday page, a holiday page, a baby shower page. All gifts from all events flow into the same fund. The fund is permanent. Events are temporary.",
-  },
-  {
-    question: "What is the difference between the platform fee and the processing fee?",
-    answer: "The platform fee is Kiddo's fee for operating the platform. On Free, it is $2 on gifts up to $200 and 1% above $200. Kiddo+ and Kiddo Family remove that standard platform fee from normal gifts. The processing fee is Stripe's fee for handling the payment. Contributions of $10,000 or more also include a separate 0.1% large-gift processing fee on every plan.",
   },
 ];
 
@@ -160,55 +183,14 @@ export default function Pricing() {
               One fund equals one child&apos;s permanent investment account. Start with one. Add more any time.
             </p>
             <p className="mx-auto mt-6 max-w-3xl rounded-2xl border border-border bg-card/70 px-5 py-4 text-sm leading-relaxed text-muted-foreground">
-              <span className="font-medium text-foreground">One fund = one child&apos;s permanent investment account.</span>{" "}
-              Start free. Upgrade when you are ready.
+              <span className="font-medium text-foreground">No platform fee on gifts.</span>{" "}
+              The gift amount always stays whole. Kiddo charges 0.10% per year on invested assets only, the same rate on every plan.
             </p>
-            <div className="mx-auto mt-4 max-w-3xl rounded-2xl border border-amber-300/60 bg-amber-50 px-5 py-4 text-sm leading-relaxed text-amber-950">
-              <span className="font-semibold">Important if you are comparing plans:</span> the Free plan charges a{" "}
-              <span className="font-semibold">$2 platform fee on gifts up to $200</span>, then{" "}
-              <span className="font-semibold">1% above $200</span>. Kiddo+ and Kiddo Family remove that standard platform fee from normal gifts.
-            </div>
             <p className="mx-auto mt-4 max-w-3xl rounded-2xl border border-primary/15 bg-primary/5 px-5 py-4 text-sm leading-relaxed text-muted-foreground">
               <span className="font-medium text-foreground">Annual pricing is shown first on paid plans.</span>{" "}
-              Most families choose the yearly option because it lowers the re-evaluation moment to once a year and gives the clearest savings.
+              Most families choose the yearly option because it lowers the re-evaluation moment to once a year and shows the clearest savings.
             </p>
           </motion.div>
-        </div>
-      </section>
-
-      <section className="pb-10 md:pb-14">
-        <div className="mx-auto max-w-5xl px-4">
-          <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm">
-            <div className="text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Fee examples</p>
-              <h2 className="mt-3 font-heading text-2xl font-bold text-foreground md:text-3xl">
-                The free-plan fee is the main thing paid plans remove.
-              </h2>
-              <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                Stripe processing is separate on every plan. The comparison below is just the Kiddo platform fee on a normal gift.
-              </p>
-            </div>
-            <div className="mt-6 overflow-hidden rounded-xl border border-border">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-muted/40 text-foreground">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Gift</th>
-                    <th className="px-4 py-3 font-medium">Free</th>
-                    <th className="px-4 py-3 font-medium">Kiddo+ / Family</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {platformFeeExamples.map((row) => (
-                    <tr key={row.gift} className="border-t border-border">
-                      <td className="px-4 py-3 font-medium text-foreground">{row.gift}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{row.freePlan}</td>
-                      <td className="px-4 py-3 font-medium text-foreground">{row.paidPlan}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </FadeIn>
         </div>
       </section>
 
@@ -229,8 +211,11 @@ export default function Pricing() {
                   <div className="mb-6 text-center">
                     <h2 className="mb-2 font-heading text-xl font-semibold text-foreground">{plan.name}</h2>
                     <p className="text-sm font-medium text-foreground">{plan.eyebrow}</p>
-                    <p className="mt-5 font-heading text-4xl font-bold text-foreground">{plan.price}</p>
-                    {"annual" in plan ? <p className="mt-2 text-sm font-medium text-green-700">{plan.annual}</p> : null}
+                    <div className="mt-5 flex items-baseline justify-center gap-1">
+                      <span className="font-heading text-4xl font-bold text-foreground">{plan.price}</span>
+                      <span className="text-sm font-medium text-muted-foreground">{plan.pricePeriod}</span>
+                    </div>
+                    {"annual" in plan && plan.annual ? <p className="mt-2 text-sm font-medium text-green-700">{plan.annual}</p> : null}
                   </div>
 
                   <ul className="mb-8 flex-1 space-y-3">
@@ -248,7 +233,7 @@ export default function Pricing() {
                     </Button>
                   </Link>
 
-                  {"note" in plan ? <p className="mt-4 text-center text-sm italic text-muted-foreground">{plan.note}</p> : null}
+                  {"note" in plan && plan.note ? <p className="mt-4 text-center text-sm italic text-muted-foreground">{plan.note}</p> : null}
                 </div>
               </FadeIn>
             ))}
@@ -256,43 +241,45 @@ export default function Pricing() {
         </div>
       </section>
 
-      <section className="pb-12">
-        <div className="mx-auto max-w-4xl px-4">
-          <FadeIn className="mb-8 rounded-2xl bg-card p-8 shadow-premium-sm">
-            <div className="mb-5 rounded-2xl border border-border/60 bg-muted/30 p-4">
-              <p className="text-sm font-semibold text-foreground">What “covered” means</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                A covered fund skips the normal Free-plan platform fee on standard gifts and unlocks premium features for that fund. Kiddo+ covers one child fund. Kiddo Family covers every fund you manage.
+      <section className="pb-10 md:pb-14">
+        <div className="mx-auto max-w-5xl px-4">
+          <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm">
+            <div className="text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">How the 0.10% fee works</p>
+              <h2 className="mt-3 font-heading text-2xl font-bold text-foreground md:text-3xl">
+                Small. Transparent. Same on every plan.
+              </h2>
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+                The 0.10% annual fee is charged only on invested assets. Cash sitting in the fund and pending gifts are not charged. It is prorated daily and deducted from invested balance.
               </p>
             </div>
-            <h2 className="font-heading text-2xl font-bold text-foreground">Large gift processing fee</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Contributions above $10,000 include a separate 0.1% processing fee on every plan. This covers the additional compliance and processing overhead that comes with large transfers.
-            </p>
-            <div className="mt-5 overflow-hidden rounded-xl border border-border">
+            <div className="mt-6 overflow-hidden rounded-xl border border-border">
               <table className="w-full text-left text-sm">
                 <thead className="bg-muted/40 text-foreground">
                   <tr>
-                    <th className="px-4 py-3 font-medium">Gift size</th>
-                    <th className="px-4 py-3 font-medium">Large gift fee</th>
+                    <th className="px-4 py-3 font-medium">Invested balance</th>
+                    <th className="px-4 py-3 font-medium">Annual fee</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { amount: "$10,000", fee: "$10.00" },
-                    { amount: "$50,000", fee: "$50.00" },
-                    { amount: "$100,000", fee: "$100.00" },
-                  ].map((row) => (
-                    <tr key={row.amount} className="border-t border-border">
-                      <td className="px-4 py-3 text-muted-foreground">{row.amount}</td>
-                      <td className="px-4 py-3 font-medium text-foreground">{row.fee}</td>
+                  {aumExamples.map((row) => (
+                    <tr key={row.invested} className="border-t border-border">
+                      <td className="px-4 py-3 font-medium text-foreground">{row.invested}</td>
+                      <td className="px-4 py-3 text-muted-foreground">{row.annualFee}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            <p className="mx-auto mt-4 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
+              For context, that is roughly the cost of a single coffee per year per $10,000 invested.
+            </p>
           </FadeIn>
+        </div>
+      </section>
 
+      <section className="pb-12">
+        <div className="mx-auto max-w-4xl px-4">
           <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm">
             <h2 className="mb-5 font-heading text-2xl font-bold text-foreground">Which plan is right for you?</h2>
             <div className="overflow-hidden rounded-xl border border-border">
@@ -324,7 +311,7 @@ export default function Pricing() {
               <div>
                 <h2 className="font-heading text-2xl font-bold text-foreground">Fee transparency</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Kiddo does not mark up payment processing fees. Standard Stripe rates apply.
+                  Kiddo does not mark up payment processing. Standard Stripe rates apply on every gift.
                 </p>
               </div>
               <button
@@ -350,16 +337,19 @@ export default function Pricing() {
                   className="overflow-hidden"
                 >
                   <div className="mt-6 space-y-4 text-sm text-muted-foreground">
-                    <p>Payment processing fees are handled by Stripe and vary by payment method:</p>
+                    <p>
+                      <span className="font-semibold text-foreground">Gifts.</span> No platform fee on gifts. The gift amount always stays whole. The gifter pays standard payment processing handled by Stripe.
+                    </p>
                     <ul className="space-y-2 pl-5">
-                      <li className="list-disc">Credit or debit card: 2.9% + $0.30</li>
-                      <li className="list-disc">ACH bank transfer: 0.8%, capped at $5.00</li>
+                      <li className="list-disc">Card or Apple Pay: 2.9% + $0.30</li>
+                      <li className="list-disc">ACH bank transfer: 0.8%, capped at $5.00 (cheapest rail)</li>
+                      <li className="list-disc">PayPal: 3.49% + $0.49</li>
                     </ul>
                     <p>
-                      Free plan gifts use a $2 platform fee up to $200, then 1% above $200 (minimum gift: $10 on Free). Kiddo+ and Kiddo Family remove the platform fee from contributions. Contributions of $10,000 or more include a separate 0.1% large-gift processing fee on every plan.
+                      <span className="font-semibold text-foreground">Invested assets.</span> 0.10% per year on invested balance only. Cash and pending gifts are not charged. Prorated daily.
                     </p>
                     <p>
-                      Hosts can choose to absorb processing fees for their gifters in fund settings. Fees are always shown in full before checkout. No surprises.
+                      Hosts can choose to absorb processing fees on behalf of their gifters in fund settings. All fees are shown in full before checkout. No surprises.
                     </p>
                     <p className="text-xs">Investments are not FDIC insured, not bank guaranteed, and may lose value.</p>
                   </div>
@@ -374,7 +364,7 @@ export default function Pricing() {
         <div className="mx-auto max-w-4xl px-4">
           <FadeIn className="rounded-2xl bg-card p-8 text-center shadow-premium-sm">
             <p className="mx-auto max-w-2xl text-lg italic text-foreground">
-              &quot;I upgraded to Kiddo+ after the first contribution came in. The math was obvious. I had already paid $6 in fees. The annual plan made the decision even easier.&quot;
+              &quot;I upgraded to Kiddo+ after the first month. The Memory Book with photos and voice memos was what sold me. My daughter is going to read this stuff at 18.&quot;
             </p>
             <p className="mt-4 text-sm text-muted-foreground">Rachel D., mother of one, Texas</p>
           </FadeIn>
@@ -405,7 +395,7 @@ export default function Pricing() {
               Start free. Upgrade when you are ready.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-              Most parents upgrade after their first contribution.
+              Most parents upgrade after their first gift comes in.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
               <Link href="/get-started">
@@ -421,7 +411,7 @@ export default function Pricing() {
               </Link>
             </div>
             <p className="mt-5 text-sm text-muted-foreground">
-              Questions are covered in the <Link href="/faq" className="text-primary hover:underline">full FAQ</Link>.
+              More questions are covered in the <Link href="/faq" className="text-primary hover:underline">full FAQ</Link>.
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
               Looking for a personal investment fund?{" "}
