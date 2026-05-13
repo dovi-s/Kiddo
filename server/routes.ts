@@ -3332,11 +3332,20 @@ export async function registerRoutes(
         return res.status(400).json({ error: "A parent email or phone is required." });
       }
 
+      // Detect contact type. Email gets actual outreach. Anything else
+      // (phone numbers, free text) gets the "we don't text yet, here's a
+      // shareable link" path so the requester knows they need to deliver
+      // it themselves. Previously the phone path was silently dropped
+      // into a .jsonl file with no downstream action, and the success
+      // toast politely lied about it.
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentContact);
+
       await fs.mkdir(path.dirname(GIFT_INVITATION_PATH), { recursive: true });
       await fs.appendFile(
         GIFT_INVITATION_PATH,
         JSON.stringify({
           parentContact,
+          contactType: isEmail ? "email" : "phone_or_other",
           childName: childName || null,
           requesterName: requesterName || null,
           createdAt: new Date().toISOString(),
@@ -3345,8 +3354,19 @@ export async function registerRoutes(
         "utf8",
       );
 
-      let deliveryMode: "email" | "saved_only" = "saved_only";
-      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentContact)) {
+      // Build attribution-tagged URL so when the parent clicks through
+      // and signs up, the welcome experience and analytics can both
+      // close the loop back to who asked them. ref + inviter params
+      // match the same shape the gifter-loop emails use elsewhere
+      // (see buildLoopStartFundUrl in gifterNotificationWorker.ts).
+      const base = getAppBaseUrl(req);
+      const params = new URLSearchParams({ ref: "gift-invitation-request" });
+      if (requesterName) params.set("inviter", requesterName);
+      if (childName) params.set("for", childName);
+      const startUrl = `${base}/get-started?${params.toString()}`;
+
+      let deliveryMode: "email" | "phone_no_outreach" = "phone_no_outreach";
+      if (isEmail) {
         const delivery = await sendEmail({
           to: parentContact.toLowerCase(),
           subject: childName ? `Set up a Kiddo fund for ${childName}` : "Set up a Kiddo fund",
@@ -3358,7 +3378,7 @@ export async function registerRoutes(
               : `Someone wants to gift ${childName || "a child you know"} through Kiddo.`,
             "Create a fund, share one link, and family can gift into a real investment account in under 60 seconds.",
             "",
-            `Get started: ${getAppBaseUrl(req)}/get-started`,
+            `Get started: ${startUrl}`,
             "",
             "The Kiddo team",
           ].join("\n"),
@@ -3369,16 +3389,20 @@ export async function registerRoutes(
             source: "gift_lookup_page",
           },
         });
-        deliveryMode = delivery.mode === "outbox_fallback" ? "saved_only" : "email";
+        deliveryMode = delivery.mode === "outbox_fallback" ? "phone_no_outreach" : "email";
       }
 
       res.json({
         success: true,
+        deliveryMode,
+        // Client uses this for the phone-path UI ("paste this in a text
+        // to them"). Always returned so the client can render a
+        // copy-to-clipboard fallback even on the email path if it wants.
+        shareableUrl: startUrl,
         message:
           deliveryMode === "email"
-            ? "Invitation request sent. The parent can set up a fund and share it back when ready."
-            : "Invitation request saved. The parent can set up a fund and share it back when ready.",
-        deliveryMode,
+            ? "Invitation sent. The parent can set up a fund and share it back when ready."
+            : "We don't text yet. Send this link in a message and we'll guide them from there.",
       });
     } catch (error) {
       console.error("Error saving gift invitation:", error);

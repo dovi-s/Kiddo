@@ -97,10 +97,42 @@ export default function GiftLookup() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save the request.");
       haptic("success");
-      toast({
-        title: "Invitation request saved",
-        description: "Once the parent sets up the fund, they can share the link or fund code back.",
-      });
+      // Branch on delivery mode. Email path = "we sent it" toast.
+      // Phone (or non-email) path = "we don't text yet, here's the link
+      // we already copied to your clipboard for you" toast. This
+      // replaces the previous behavior where phone entries were
+      // silently dropped into a server-side log file and the user got
+      // a polite "request saved" toast covering for nothing happening.
+      if (data?.deliveryMode === "email") {
+        toast({
+          title: "Invitation sent",
+          description: "Once the parent sets up the fund, they can share the link or fund code back.",
+        });
+      } else {
+        // Auto-copy the shareable URL so the requester can paste it
+        // straight into a text message to the parent without having
+        // to hunt for it. Best-effort: clipboard access can be denied
+        // (older Safari, in-app browsers, no HTTPS in dev) so the
+        // toast carries the URL too as the visible fallback.
+        const url = String(data?.shareableUrl || "");
+        let copied = false;
+        if (url && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+          try {
+            await navigator.clipboard.writeText(url);
+            copied = true;
+          } catch {
+            // ignore — fall back to showing the URL in the toast
+          }
+        }
+        toast({
+          title: copied ? "Link copied — text it to them" : "Text this link to them",
+          description: url
+            ? (copied
+                ? `${url} is on your clipboard. Paste it in a message to the parent and we'll guide them from there.`
+                : `Send the parent: ${url}`)
+            : "Send the parent the kiddofund.com/get-started link and we'll guide them from there.",
+        });
+      }
       setParentContact("");
       setChildName("");
       setRequesterName("");
