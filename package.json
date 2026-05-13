@@ -160,9 +160,6 @@
         "path-to-regexp": "0.1.13",
         "picomatch": "4.0.4"
     },
-    "optionalDependencies": {
-        "bufferutil": "^4.0.8"
-    },
     "workspaces": [
         "apps/*",
         "packages/*"
