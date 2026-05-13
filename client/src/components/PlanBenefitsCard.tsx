@@ -84,17 +84,24 @@ const PLUS_BENEFITS = [
   { id: "memory-media", icon: Image, title: "Memory Book photos, videos, voice", body: "Add your own media to your child's timeline." },
   { id: "custom-mix", icon: SlidersHorizontal, title: "Custom fund mix", body: "Pick the stocks yourself instead of the default basket." },
   { id: "co-parent", icon: Users, title: "Co-parent access", body: "Invite your partner or co-guardian to the fund." },
-  { id: "occasions-3", icon: CalendarHeart, title: "3 active occasions at once", body: "Run up to three events in parallel." },
+  // Display says "occasions" per the locked 2026-05-13 copy rule;
+  // internal code still uses `events` (table name, types, etc.).
+  { id: "occasions-3", icon: CalendarHeart, title: "3 active occasions at once", body: "Run up to three in parallel." },
   { id: "priority-support", icon: Headphones, title: "Priority support", body: "Fast-track help when you need it." },
 ] as const;
 
 const FAMILY_BENEFITS = [
   { id: "everything-plus", icon: Check, title: "Everything in Plus", body: "All Plus features, across every child in your household." },
   { id: "unlimited-children", icon: Users, title: "Unlimited children", body: "One subscription covers every kid." },
-  { id: "memory-every-kid", icon: BookOpen, title: "Memory Book for every child", body: "Each kid's full Memory Book with media." },
-  { id: "kid-view-every-kid", icon: Eye, title: "Kid View for every child", body: "Every kid sees their own fund, full experience." },
+  { id: "memory-every-kid", icon: BookOpen, title: "Memory Book for every child", body: "Each kid gets their own full timeline." },
+  // Locked 2026-05-13 Kid View policy: Kid View is FREE across all
+  // plans; the 'Lite vs Full' framing was retired. Family's
+  // differentiator is multi-kid access, NOT fuller-Kid-View-per-kid.
+  // Body says "their own fund" — multi-kid scaling — not "full
+  // experience" which would leak the retired tier framing.
+  { id: "kid-view-every-kid", icon: Eye, title: "Kid View for every child", body: "Each kid sees their own fund." },
   { id: "household-view", icon: Home, title: "Household view", body: "All your kids' funds in one place." },
-  { id: "unlimited-occasions", icon: CalendarHeart, title: "Unlimited occasions", body: "Run as many events as you want." },
+  { id: "unlimited-occasions", icon: CalendarHeart, title: "Unlimited occasions", body: "Run as many as you want." },
 ] as const;
 
 // Nudge candidates — ordered by impact. Picker walks the list and
