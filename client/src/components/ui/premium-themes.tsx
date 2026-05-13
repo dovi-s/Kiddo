@@ -249,62 +249,14 @@ export function EventPassBadge({ size = "md" }: EventPassBadgeProps) {
   );
 }
 
-interface EventPassUpgradeProps {
-  eventTitle: string;
-  onUpgrade: () => void;
-  onDismiss: () => void;
-}
-
-export function EventPassUpgrade({ eventTitle, onUpgrade, onDismiss }: EventPassUpgradeProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-primary rounded-2xl p-6 text-primary-foreground overflow-hidden relative"
-    >
-      <div className="relative">
-        <div className="flex items-center gap-2 mb-3">
-          <Crown className="w-5 h-5 text-[hsl(var(--kiddo-gold))]" />
-          <span className="text-[hsl(var(--kiddo-gold))] font-medium text-sm">Kiddo Occasions</span>
-        </div>
-        
-        <h3 className="text-xl font-semibold mb-2">Make {eventTitle} unforgettable</h3>
-        <p className="text-primary-foreground/60 text-sm mb-6">
-          Premium occasion features now come through Kiddo+ and Kiddo Family.
-        </p>
-        
-        <ul className="space-y-2 mb-6">
-          {[
-            "6 premium page themes",
-            "Group goal progress card",
-            "Automatic thank-you drafts",
-            "Priority support",
-            "Premium occasion presentation"
-          ].map((feature) => (
-            <li key={feature} className="flex items-center gap-2 text-sm text-primary-foreground/80">
-              <Check size={14} className="text-success" />
-              {feature}
-            </li>
-          ))}
-        </ul>
-        
-        <div className="flex gap-3">
-          <button
-            onClick={onUpgrade}
-            data-testid="button-upgrade-event-pass"
-            className="flex-1 py-3 bg-[hsl(var(--kiddo-gold))] text-primary font-semibold rounded-xl hover:bg-[hsl(var(--kiddo-gold))] transition-colors"
-          >
-            View plans
-          </button>
-          <button
-            onClick={onDismiss}
-            data-testid="button-dismiss-event-pass"
-            className="px-4 py-3 text-primary-foreground/60 hover:text-primary-foreground transition-colors"
-          >
-            Skip for now
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+// EventPassUpgrade component removed 2026-05-13. Was the dormant UI for
+// the one-time $7.99 Kiddo Occasion purchase product. Per Path A locked
+// decision: Kora committed to subscription-only pricing for occasions
+// (Free=1 active, Plus=3, Family=unlimited; premium features come via
+// subscription, not per-occasion). The component wasn't rendered anywhere
+// user-facing, the Account.tsx "Kiddo Occasions $7.99" card it complemented
+// was removed in the same commit, and the server-side createOccasionCheckout
+// + handleEventPassPurchase endpoints stay in place (dormant) for legacy
+// data integrity. If a one-time occasion purchase product is ever
+// re-introduced at a different price point, build fresh — don't resurrect
+// this component.

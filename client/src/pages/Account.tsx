@@ -6,9 +6,8 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronRight, LogOut, Shield, Gift, Camera, Eye, EyeOff } from "lucide-react";
+import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff } from "lucide-react";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
-import { KIDDO_OCCASION_TIERS } from "@shared/monetization";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
 
@@ -442,25 +441,6 @@ export default function Account() {
               </button>
             </SectionCard>
 
-            <SectionCard>
-              <div className="flex items-start gap-3 p-5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold)/0.12)] text-[hsl(var(--kiddo-gold))]">
-                  <Gift size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-base font-bold text-foreground">Kiddo Occasions</h2>
-                    <span className="text-xs font-semibold text-[hsl(var(--kiddo-gold))]">${KIDDO_OCCASION_TIERS.basic.price.toFixed(2)}</span>
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Premium occasion upgrades for birthdays, holidays, and milestones.
-                  </p>
-                  <Link href="/events">
-                    <Button variant="outline" className="mt-4 rounded-xl">View events</Button>
-                  </Link>
-                </div>
-              </div>
-            </SectionCard>
           </div>
         )}
 
