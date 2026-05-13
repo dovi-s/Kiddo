@@ -96,7 +96,7 @@ const plans = [
     body: [
       "Everything in Kiddo+",
       "Unlimited children",
-      "Full Memory Book authoring for every child",
+      "Memory Book authoring for every child (photos, videos, voice)",
       "Kid View for every child",
       "One view for every fund in your household",
       "Unlimited occasions with premium features included",

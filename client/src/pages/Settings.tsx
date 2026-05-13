@@ -15,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
   ChevronRight, ChevronDown, Star, Lock, Crown, ArrowUpRight, Wallet, Plus, Loader2,
-  Building2, Trash2, TrendingDown, ArrowDownToLine, X, PieChart, Users, UserPlus, Pencil, Gift, Share2, ExternalLink, Camera,
+  Building2, Trash2, TrendingDown, ArrowDownToLine, X, PieChart, Users, UserPlus, Pencil, Share2, ExternalLink, Camera,
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -35,7 +35,6 @@ import { prefetchDashboard, prefetchMemoryBook, prefetchActivity, prefetchTaxDoc
 import { AppHeader } from "@/components/layout/AppHeader";
 import {
   KIDDO_LEGACY_YEARLY,
-  KIDDO_OCCASION_TIERS,
   KORA_FAMILY_MONTHLY,
   KORA_FAMILY_YEARLY,
   KORA_STARTER_MONTHLY,
@@ -4351,25 +4350,12 @@ const [editFundName, setEditFundName] = useState("");
               );
             })()}
 
-            <SectionCard>
-              <div className="flex items-start gap-3 p-5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold)/0.12)] text-[hsl(var(--kiddo-gold))]">
-                  <Gift size={18} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-base font-bold text-foreground">Kiddo Occasions</h2>
-                    <span className="text-xs font-semibold text-[hsl(var(--kiddo-gold))]">${KIDDO_OCCASION_TIERS.basic.price.toFixed(2)}</span>
-                  </div>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Premium occasion upgrades for birthdays, holidays, and milestones.{userPlan === "legacy" ? " Kiddo Legacy includes 2 Occasion credits per year." : ""}
-                  </p>
-                  <Link href="/events">
-                    <Button variant="outline" className="mt-4 rounded-xl" data-testid="button-add-kiddo-occasion">Add</Button>
-                  </Link>
-                </div>
-              </div>
-            </SectionCard>
+            {/* "Kiddo Occasions $7.99" card removed 2026-05-13 (Path A
+                from the Occasions audit). The dormant one-time upgrade
+                product was retired in favor of subscription-only pricing.
+                The Account.tsx equivalent was removed in commit bb67f5c;
+                this Settings.tsx copy was missed in that pass and is
+                cleaned up here. Per MEMORY's Kiddo Occasions section. */}
 
             {/* ── Close this fund ── */}
             {/* Designed against project_cancellation_dark_pattern_avoidance.md
