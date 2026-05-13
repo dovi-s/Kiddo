@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { AddFundSheet } from "@/components/AddFundSheet";
 import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
+import { PlanBenefitsCard } from "@/components/PlanBenefitsCard";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -4256,6 +4257,7 @@ const [editFundName, setEditFundName] = useState("");
 
             {/* ── Active paid plan status ── */}
             {userPlan !== "free" && subscription?.status !== "canceled" && (
+              <>
               <SectionCard className="border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.055)]">
                 <div className="flex items-start justify-between gap-4 p-5">
                   <div className="flex items-start gap-3 min-w-0">
@@ -4301,6 +4303,12 @@ const [editFundName, setEditFundName] = useState("");
                   </div>
                 </div>
               </SectionCard>
+              {/* Plan Benefits card — the "what you're paying for" surface.
+                  Calm, always-visible, lists what the user has access to +
+                  shows real usage stats + one soft "haven't tried" nudge.
+                  Per the 2026-05-13 plan-benefits audit. */}
+              <PlanBenefitsCard plan={userPlan as "starter" | "family" | "legacy"} />
+              </>
             )}
 
             {/* -- Canceling state - plan active until period end -- */}

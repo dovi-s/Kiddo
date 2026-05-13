@@ -10855,6 +10855,116 @@ export async function registerRoutes(
     }
   });
 
+  // Plan benefits usage — bundled stats for the Settings → Membership
+  // Plan Benefits card. Returns the metrics + binary flags the card
+  // surfaces ("you have X recurring schedules, Y parent-authored
+  // Memory Book entries, no co-parents invited yet"). Single round-
+  // trip so the card renders without four separate fetches.
+  //
+  // Why these specific metrics: each one corresponds to a Plus or
+  // Family feature the user is paying for. Recurring investments is
+  // the Plus headline; parent-authored Memory Book media is the Plus
+  // differentiator that distinguishes gifter-attached vs parent-
+  // authored entries (per the locked 2026-05-13 reconciliation); co-
+  // parent invite is a Plus feature; custom mix is a Plus feature.
+  // Each "haven't tried" nudge on the client maps to one of these
+  // returning 0 / false.
+  app.get('/api/me/plan-benefits-usage', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      // Pull this user's fund ids in one go — every subsequent
+      // aggregate scopes by it.
+      const userFunds = await db.select({ id: funds.id, strategy: funds.investmentStrategy })
+        .from(funds)
+        .where(eq(funds.userId, userId));
+      const fundIds = userFunds.map((f) => f.id);
+      const customMixActive = userFunds.some(
+        (f) => f.strategy && f.strategy !== "auto_invest" && f.strategy !== "default",
+      );
+
+      if (fundIds.length === 0) {
+        return res.json({
+          recurringActiveCount: 0,
+          recurringMonthlyTotal: "0.00",
+          parentMemoryEntriesThisYear: 0,
+          coParentInvitedCount: 0,
+          activeOccasionsCount: 0,
+          customMixActive: false,
+        });
+      }
+
+      const recurring = await db.select({
+        amount: parentContributions.amount,
+        frequency: parentContributions.frequency,
+      })
+        .from(parentContributions)
+        .where(and(
+          eq(parentContributions.userId, userId),
+          eq(parentContributions.status, "active"),
+        ));
+      const recurringActiveCount = recurring.length;
+      // Monthly equivalent — same conversion logic the FundsOverview
+      // section uses. Daily × 30, weekly × 4.33, yearly ÷ 12,
+      // monthly × 1.
+      const recurringMonthlyTotal = recurring.reduce((sum, r) => {
+        const amt = parseFloat(String(r.amount || "0"));
+        if (!Number.isFinite(amt)) return sum;
+        const f = String(r.frequency || "monthly").toLowerCase();
+        if (f === "daily") return sum + amt * 30;
+        if (f === "weekly") return sum + amt * 4.33;
+        if (f === "yearly" || f === "annual" || f === "annually") return sum + amt / 12;
+        return sum + amt;
+      }, 0);
+
+      // Parent-authored Memory Book entries this year. We surface the
+      // count, not the entries themselves — the card isn't a feed,
+      // just a value indicator. Year boundary is the user's clock side,
+      // which is fine for this surface (calm reference data, not a
+      // ledger).
+      const yearStart = new Date(new Date().getUTCFullYear(), 0, 1);
+      const parentMemoryRows = await db.execute(sql`
+        SELECT COUNT(*)::int AS n
+        FROM memory_entries
+        WHERE fund_id IN (${sql.join(fundIds, sql`,`)})
+          AND author_role = 'parent'
+          AND created_at >= ${yearStart.toISOString()}
+      `);
+      const parentMemoryEntriesThisYear = Number((parentMemoryRows.rows as any[])?.[0]?.n || 0);
+
+      // Co-parents invited (any status — pending counts because the
+      // card answers "have you tried this Plus feature" not "is the
+      // co-parent active right now").
+      const coParents = await db.select({ id: fundCollaborators.id })
+        .from(fundCollaborators)
+        .where(and(
+          inArray(fundCollaborators.fundId, fundIds),
+          eq(fundCollaborators.role, "co_parent"),
+        ));
+      const coParentInvitedCount = coParents.length;
+
+      // Active occasions across the user's funds.
+      const occasions = await db.select({ id: events.id })
+        .from(events)
+        .where(and(
+          inArray(events.fundId, fundIds),
+          eq(events.status, "active"),
+        ));
+      const activeOccasionsCount = occasions.length;
+
+      res.json({
+        recurringActiveCount,
+        recurringMonthlyTotal: recurringMonthlyTotal.toFixed(2),
+        parentMemoryEntriesThisYear,
+        coParentInvitedCount,
+        activeOccasionsCount,
+        customMixActive,
+      });
+    } catch (error) {
+      console.error("Error loading plan benefits usage:", error);
+      res.status(500).json({ error: "Failed to load benefits usage" });
+    }
+  });
+
   // Tax profile read endpoint for the Settings → Tax section. Bundles
   // the kid-owner check + earned-income flags + first-sell + Roth
   // interest flag in one round-trip so Settings can render the whole
