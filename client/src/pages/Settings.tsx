@@ -4240,7 +4240,7 @@ const [editFundName, setEditFundName] = useState("");
                   <p className="mt-1 text-xs text-muted-foreground">or ${KORA_STARTER_YEARLY}/year</p>
                   <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Make this feel real every month.</p>
                   <div className="mt-5 space-y-2 text-sm text-muted-foreground">
-                    {["Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Projections and milestone notifications", "Co-parent access and priority support"].map((item) => (
+                    {["Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Custom fund mix (pick your own stocks)", "Co-parent access and priority support"].map((item) => (
                       <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold))]" />{item}</p>
                     ))}
                   </div>

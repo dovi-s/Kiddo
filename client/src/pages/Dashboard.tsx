@@ -11285,9 +11285,9 @@ export default function Dashboard() {
                   <p className="text-foreground font-semibold">Plus also includes:</p>
                   <ul className="space-y-1 pl-1">
                     <li>· Add your own photos, videos, and voice to Memory Book entries</li>
-                    <li>· Fund projections and milestone notifications</li>
+                    <li>· Custom fund mix (pick your own stocks and weights)</li>
                     <li>· Co-parent access for a partner or guardian</li>
-                    <li>· Occasion reminders and priority support</li>
+                    <li>· 3 active occasions at a time, priority support</li>
                   </ul>
                 </div>
 
