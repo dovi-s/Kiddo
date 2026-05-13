@@ -203,13 +203,16 @@ export function PlanBenefitsCard({ plan }: Props) {
   return (
     <div className="kiddo-card">
       <div className="p-5 space-y-5">
-        {/* Header */}
-        <div>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">What you're paying for</p>
-          <h2 className="mt-1 font-heading text-lg font-semibold text-foreground">
-            Your {planLabel} benefits
-          </h2>
-        </div>
+        {/* Header. Earlier version had a "WHAT YOU'RE PAYING FOR"
+            eyebrow — pulled because it read as defensive/transactional
+            ("are you sure you're getting value?") right when the user
+            opens Settings. Apple Settings register: just name the
+            section, let the contents speak. Plan name + Active state
+            already lives in the card directly above this one; the
+            title doesn't need to re-state it. */}
+        <h2 className="font-heading text-lg font-semibold text-foreground">
+          What&apos;s included
+        </h2>
 
         {/* Benefits list — always visible */}
         <ul className="space-y-2.5">
