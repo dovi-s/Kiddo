@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, radius, spacing } from "@kora/tokens";
-import { apiCreateFund, apiJoinInternationalWaitlist, type ApiFund } from "../api";
+import { apiCreateFund, type ApiFund } from "../api";
 
 interface AddFundScreenProps {
   onBack: () => void;
@@ -21,43 +21,12 @@ interface AddFundScreenProps {
 
 export function AddFundScreen({ onBack, onCreated }: AddFundScreenProps) {
   const insets = useSafeAreaInsets();
-  // Country gate. Kora is structurally US-only at launch — asking here
-  // catches non-US users before they fill out child details that won't
-  // pass KYC. Default empty so the user must choose explicitly.
-  const [country, setCountry] = useState<"US" | "OTHER" | "">("");
-  const [waitlistEmail, setWaitlistEmail] = useState("");
-  const [waitlistCountry, setWaitlistCountry] = useState("");
-  const [waitlistSubmitting, setWaitlistSubmitting] = useState(false);
-  const [waitlistSubmitted, setWaitlistSubmitted] = useState(false);
-  const [waitlistError, setWaitlistError] = useState<string | null>(null);
   const [childName, setChildName] = useState("");
   const [childLastName, setChildLastName] = useState("");
   const [birthdate, setBirthdate] = useState("");
   const [relationship, setRelationship] = useState("Parent");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const handleWaitlistSubmit = async () => {
-    setWaitlistError(null);
-    const email = waitlistEmail.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setWaitlistError("Enter a valid email address.");
-      return;
-    }
-    setWaitlistSubmitting(true);
-    try {
-      await apiJoinInternationalWaitlist({
-        email,
-        country: waitlistCountry,
-        sourceSurface: "mobile-add-fund",
-      });
-      setWaitlistSubmitted(true);
-    } catch (err: any) {
-      setWaitlistError(err?.message || "Could not save your email.");
-    } finally {
-      setWaitlistSubmitting(false);
-    }
-  };
 
   // Date bounds: not in future, and child funds are for children under 18.
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -127,88 +96,12 @@ export function AddFundScreen({ onBack, onCreated }: AddFundScreenProps) {
             <Text style={styles.cardTitle}>Child's fund</Text>
             <Text style={styles.cardSubtitle}>Create a giftable fund for a child. The legal account details stay underneath.</Text>
 
-            {/* Country gate. Kora is structurally US-only at launch
-                (UTMA + DriveWealth + US tax docs). Asking before the
-                rest of the form catches non-US users with one tap
-                rather than letting them fill in name/birthdate and
-                hit a wall at KYC. */}
-            <View style={[styles.fieldWrap, { marginTop: 8 }]}>
-              <Text style={styles.label}>Where do you live?</Text>
-              <View style={styles.relRow}>
-                <Pressable
-                  onPress={() => setCountry("US")}
-                  style={[styles.relChip, country === "US" && styles.relChipActive]}
-                >
-                  <Text style={[styles.relChipText, country === "US" && styles.relChipTextActive]}>United States</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setCountry("OTHER")}
-                  style={[styles.relChip, country === "OTHER" && styles.relChipActive]}
-                >
-                  <Text style={[styles.relChipText, country === "OTHER" && styles.relChipTextActive]}>Outside the US</Text>
-                </Pressable>
-              </View>
-            </View>
-
-            {country === "OTHER" && (
-              <View style={styles.waitlistBox}>
-                {waitlistSubmitted ? (
-                  <>
-                    <Text style={styles.waitlistTitle}>You're on the list.</Text>
-                    <Text style={styles.waitlistBody}>
-                      We'll email you if Kora becomes available in your country. No concrete date today.
-                    </Text>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.waitlistTitle}>Kora is US-only at launch.</Text>
-                    <Text style={styles.waitlistBody}>
-                      Our investment accounts use the US UTMA structure and our brokerage partner serves US residents.
-                      If you'd like a note when we open to other countries, leave your email.
-                    </Text>
-                    <TextInput
-                      style={[styles.input, { marginTop: 12 }]}
-                      value={waitlistEmail}
-                      onChangeText={setWaitlistEmail}
-                      placeholder="you@example.com"
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoComplete="email"
-                    />
-                    <TextInput
-                      style={[styles.input, { marginTop: 8 }]}
-                      value={waitlistCountry}
-                      onChangeText={setWaitlistCountry}
-                      placeholder="Country (optional)"
-                      placeholderTextColor="#9CA3AF"
-                    />
-                    {waitlistError && (
-                      <Text style={[styles.errorText, { marginTop: 8 }]}>{waitlistError}</Text>
-                    )}
-                    <Pressable
-                      onPress={handleWaitlistSubmit}
-                      disabled={waitlistSubmitting || !waitlistEmail.trim()}
-                      style={[styles.btn, { marginTop: 12 }, (waitlistSubmitting || !waitlistEmail.trim()) && styles.btnDisabled]}
-                    >
-                      {waitlistSubmitting ? (
-                        <ActivityIndicator color="#FFFFFF" />
-                      ) : (
-                        <Text style={styles.btnText}>Notify me when Kora launches</Text>
-                      )}
-                    </Pressable>
-                  </>
-                )}
-              </View>
-            )}
-
-            {country === "US" && error && (
+            {error && (
               <View style={styles.errorBox}>
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
 
-            {country === "US" && (
             <View style={styles.fields}>
               <View style={styles.nameRow}>
                 <View style={[styles.fieldWrap, { flex: 1 }]}>
@@ -276,114 +169,6 @@ export function AddFundScreen({ onBack, onCreated }: AddFundScreenProps) {
                 New funds start simple. Gifts invest automatically using your family default strategy.
               </Text>
             </View>
-            )}
-          </View>
-
-          <Pressable
-            onPress={handleCreate}
-            disabled={loading || !childName.trim() || !isValidDate || country !== "US"}
-            style={[styles.btn, (loading || !childName.trim() || !isValidDate || country !== "US") && styles.btnDisabled]}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.btnText}>
-                Create {childName.trim() ? `${childName.trim()}'s fund` : "fund"}
-              </Text>
-            )}
-          </Pressable>
-        </ScrollView>
-      </View>
-    </KeyboardAvoidingView>
-  backText: { fontSize: 15, color: colors.evergreen, fontWeight: "600" },
-  headerTitle: { fontSize: 17, fontWeight: "700", color: colors.ink },
-  content: { padding: spacing.md, gap: spacing.md, paddingBottom: 40 },
-  card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: radius.card,
-    padding: spacing.lg,
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: "#F0EDE8",
-  },
-  cardTitle: { fontSize: 18, fontWeight: "700", color: colors.ink },
-  cardSubtitle: { fontSize: 14, color: "#6B7280" },
-  errorBox: {
-    backgroundColor: "#FEF2F2",
-    borderRadius: radius.inner,
-    borderWidth: 1,
-    borderColor: "#FECACA",
-    padding: spacing.sm,
-  },
-  errorText: { color: "#DC2626", fontSize: 13 },
-  fields: { gap: spacing.md },
-  fieldWrap: { gap: 4 },
-  label: { fontSize: 13, fontWeight: "600", color: colors.ink },
-  input: {
-    height: 46,
-    borderWidth: 1.5,
-    borderColor: "#D1D5DB",
-                    value={childName}
-                    onChangeText={setChildName}
-                    placeholder="Mila"
-                    placeholderTextColor="#9CA3AF"
-                    autoCapitalize="words"
-                    autoFocus
-                    returnKeyType="next"
-                  />
-                </View>
-                <View style={[styles.fieldWrap, { flex: 1 }]}>
-                  <Text style={styles.label}>Last name</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={childLastName}
-                    onChangeText={setChildLastName}
-                    placeholder="Smith"
-                    placeholderTextColor="#9CA3AF"
-                    autoCapitalize="words"
-                    returnKeyType="next"
-                  />
-                </View>
-              </View>
-              <Text style={styles.hint}>Legal name required for the UTMA account.</Text>
-
-              <View style={styles.fieldWrap}>
-                <Text style={styles.label}>Birthday</Text>
-                <TextInput
-                  style={styles.input}
-                  value={birthdate}
-                  onChangeText={setBirthdate}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                  returnKeyType="next"
-                />
-  btnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 16 },
-});
-
-
-
-                <View style={styles.relRow}>
-                  {relationships.map((rel) => (
-                    <Pressable
-                      key={rel}
-                      onPress={() => setRelationship(rel)}
-                      style={[styles.relChip, relationship === rel && styles.relChipActive]}
-                    >
-                      <Text style={[styles.relChipText, relationship === rel && styles.relChipTextActive]}>
-                        {rel}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                New funds start simple. Gifts invest automatically using your family default strategy.
-              </Text>
-            </View>
           </View>
 
           <Pressable
@@ -404,7 +189,6 @@ export function AddFundScreen({ onBack, onCreated }: AddFundScreenProps) {
     </KeyboardAvoidingView>
   );
 }
-
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
@@ -476,16 +260,6 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   infoText: { fontSize: 12, color: "#6B7280", lineHeight: 18 },
-  waitlistBox: {
-    backgroundColor: "#FAFAF7",
-    borderRadius: radius.inner,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    marginTop: spacing.sm,
-  },
-  waitlistTitle: { fontSize: 14, fontWeight: "700", color: colors.ink },
-  waitlistBody: { fontSize: 12.5, color: "#6B7280", lineHeight: 18, marginTop: 4 },
   btn: {
     height: 52,
     backgroundColor: colors.evergreen,
