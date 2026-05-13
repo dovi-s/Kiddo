@@ -120,7 +120,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     competitorLabel: "EarlyBird",
     comparisonRows: [
       { label: "Status", competitor: "Acquired by Acorns; brand retired", kora: "Active and growing" },
-      { label: "Monthly fee", competitor: "$3/mo per child (legacy)", kora: "Free to start. Kiddo Plus is $4.99/mo or $39/yr." },
+      { label: "Monthly fee", competitor: "$3/mo per child (legacy)", kora: "Free to start. Kiddo+ is $4.99/mo or $39/yr." },
       { label: "UTMA investment account", competitor: "Yes", kora: "Yes, via DriveWealth" },
       { label: "Gifting link for family", competitor: "Yes", kora: "Yes" },
       { label: "No account needed to give", competitor: "Yes", kora: "Yes" },
@@ -181,7 +181,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     comparisonRows: [
       { label: "Category", competitor: "Micro-investing (parent saves for child)", kora: "Investment gifting (family invests in child)" },
       { label: "How money enters the fund", competitor: "Round-ups and manual deposits from parent", kora: "Gifts from anyone via shareable link" },
-      { label: "Monthly fee", competitor: "$5/mo through Acorns Gold", kora: "Free to start. Kiddo Plus is $4.99/mo or $39/yr." },
+      { label: "Monthly fee", competitor: "$5/mo through Acorns Gold", kora: "Free to start. Kiddo+ is $4.99/mo or $39/yr." },
       { label: "Shareable gift link", competitor: "No", kora: "Yes" },
       { label: "No account needed to give", competitor: "No", kora: "Yes" },
       { label: "Event pages for occasions", competitor: "No", kora: "Yes" },
@@ -508,7 +508,7 @@ const fullComparisonRows: FullComparisonRow[] = [
   },
   {
     feature: "Monthly fee",
-    kiddo: "Free to start. Kiddo Plus is $4.99/mo.",
+    kiddo: "Free to start. Kiddo+ is $4.99/mo.",
     earlybird: "$3/mo per child (no longer available)",
     acornsEarly: "$5/mo bundled with Acorns Gold",
     greenlight: "$4.99 to $14.98/mo depending on tier",

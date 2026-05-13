@@ -137,7 +137,7 @@ export default function ActivateInvesting() {
       if (success === "starter") {
         const fundName = funds.find((f: any) => String(f.id) === String(fundId))?.name;
         toast({
-          title: "Kiddo Plus activated",
+          title: "Kiddo+ activated",
           description: fundName
             ? `Custom strategy is now unlocked for ${fundName}.`
             : "Custom strategy is now unlocked for your selected fund.",
@@ -427,7 +427,7 @@ export default function ActivateInvesting() {
     if (plan === "starter" && !starterFundId) {
       toast({
         title: "Choose a fund first",
-        description: "Pick the fund you want to upgrade with Kiddo Plus.",
+        description: "Pick the fund you want to upgrade with Kiddo+.",
         variant: "destructive",
       });
       return;
@@ -1116,7 +1116,7 @@ export default function ActivateInvesting() {
                             <span className="text-xs px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full">Included in your plan</span>
                           )}
                           {opt.id === "custom" && opt.locked && (
-                            <span className="text-xs px-2 py-0.5 bg-muted text-muted-foreground rounded-full">Kiddo Plus, Family, or Legacy</span>
+                            <span className="text-xs px-2 py-0.5 bg-muted text-muted-foreground rounded-full">Kiddo+, Family, or Legacy</span>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">{opt.description}</p>
@@ -1149,7 +1149,7 @@ export default function ActivateInvesting() {
                                 className="text-xs px-3 py-1.5 rounded-lg border border-border bg-background text-foreground hover:bg-muted disabled:opacity-60"
                                 data-testid="button-upgrade-starter-inline"
                               >
-                                {upgradingPlan === "starter" ? "Opening..." : `Add Kiddo Plus for $${KORA_STARTER_MONTHLY.toFixed(2)}/mo`}
+                                {upgradingPlan === "starter" ? "Opening..." : `Add Kiddo+ for $${KORA_STARTER_MONTHLY.toFixed(2)}/mo`}
                               </button>
                               <button
                                 type="button"

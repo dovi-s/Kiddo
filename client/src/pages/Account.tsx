@@ -60,7 +60,7 @@ export default function Account() {
       : userPlan === "family"
         ? "Kiddo Family"
         : userPlan === "starter"
-          ? "Kiddo Plus"
+          ? "Kiddo+"
           : userPlan === "free"
             ? "Free"
             : "-";

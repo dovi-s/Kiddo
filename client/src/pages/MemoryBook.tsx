@@ -2096,7 +2096,7 @@ export default function MemoryBook() {
           setCoverageReturnNotice({
             type: "success",
             title: "Memory Book unlocked",
-            description: "Kiddo Plus is active for this fund. You can now add and view Memory Book moments.",
+            description: "Kiddo+ is active for this fund. You can now add and view Memory Book moments.",
           });
           haptic("success");
         } else if (coverage === "canceled") {

@@ -270,7 +270,7 @@ export function EventPassUpgrade({ eventTitle, onUpgrade, onDismiss }: EventPass
         
         <h3 className="text-xl font-semibold mb-2">Make {eventTitle} unforgettable</h3>
         <p className="text-primary-foreground/60 text-sm mb-6">
-          Premium occasion features now come through Kiddo Plus and Kiddo Family.
+          Premium occasion features now come through Kiddo+ and Kiddo Family.
         </p>
         
         <ul className="space-y-2 mb-6">

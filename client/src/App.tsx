@@ -210,7 +210,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/pricing") {
     return {
       title: "Kiddo Pricing | Simple, transparent pricing for every family",
-      description: "Free to start. Kiddo Plus is $4.99/mo for one child. Kiddo Family is $7.99/mo for every child fund you manage. Gifters pay transparent processing before checkout.",
+      description: "Free to start. Kiddo+ is $4.99/mo for one child. Kiddo Family is $7.99/mo for every child fund you manage. Gifters pay transparent processing before checkout.",
       robots: "index, follow",
       ogType: "website",
     };

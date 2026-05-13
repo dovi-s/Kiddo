@@ -107,7 +107,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <h3 className="font-heading font-semibold text-foreground">
-                      <GradientText>Kiddo Plus</GradientText>
+                      <GradientText>Kiddo+</GradientText>
                     </h3>
                     <span className="text-sm font-semibold text-foreground">{`$${KORA_STARTER_MONTHLY.toFixed(2)}/mo`}</span>
                   </div>
@@ -132,7 +132,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
               </div>
               <div className="mt-3 flex justify-end">
                 <span className="flex items-center gap-1 text-xs font-medium text-primary transition-all group-hover:gap-2">
-                  {loading === "starter" ? "Redirecting..." : "Upgrade to Kiddo Plus"}
+                  {loading === "starter" ? "Redirecting..." : "Upgrade to Kiddo+"}
                   <ArrowRight size={12} />
                 </span>
               </div>

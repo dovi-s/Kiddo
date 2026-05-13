@@ -799,7 +799,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                       </h3>
                       <p className="mt-2 text-sm text-muted-foreground">
                         {effectivePlan === "starter"
-                          ? "You're on Kiddo Plus, which covers one child. Kiddo Family covers every child."
+                          ? "You're on Kiddo+, which covers one child. Kiddo Family covers every child."
                           : "One price covers every child. No per-fund counting."}
                         {" "}{`$${KORA_FAMILY_MONTHLY.toFixed(2)}/mo or $${KORA_FAMILY_YEARLY.toFixed(2)}/yr.`}
                       </p>

@@ -134,7 +134,7 @@ function getFundCoverageStatus(
     return { label: "Covered by Kiddo Family", tone: "family" };
   }
   if (hasStarterEntitlement(starterByFund[String(fundId)])) {
-    return { label: "Covered by Kiddo Plus", tone: "starter" };
+    return { label: "Covered by Kiddo+", tone: "starter" };
   }
   return { label: "Free", tone: "free" };
 }
@@ -1543,7 +1543,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 {selected === strategy.key && <Check size={16} className="text-primary flex-shrink-0" />}
               </div>
               {isLocked && (
-                <p className="text-[11px] text-muted-foreground mt-1">Requires Kiddo Plus or Family</p>
+                <p className="text-[11px] text-muted-foreground mt-1">Requires Kiddo+ or Family</p>
               )}
             </button>
           );
@@ -2385,16 +2385,16 @@ const [editFundName, setEditFundName] = useState("");
           const fundName = funds.find((f: any) => String(f.id) === String(fundIdFromSuccess))?.name;
           setBillingReturnNotice({
             type: "success",
-            title: "Kiddo Plus activated",
+            title: "Kiddo+ activated",
             description: fundName
-              ? `Kiddo Plus is now active for ${fundName}.`
-              : "Kiddo Plus is now active for your selected fund.",
+              ? `Kiddo+ is now active for ${fundName}.`
+              : "Kiddo+ is now active for your selected fund.",
           });
           toast({
-            title: "Kiddo Plus activated",
+            title: "Kiddo+ activated",
             description: fundName
-              ? `Kiddo Plus is now active for ${fundName}.`
-              : "Kiddo Plus is now active for your selected fund.",
+              ? `Kiddo+ is now active for ${fundName}.`
+              : "Kiddo+ is now active for your selected fund.",
           });
         } else if (success === "family") {
           setBillingReturnNotice({
@@ -2475,7 +2475,7 @@ const [editFundName, setEditFundName] = useState("");
       : userPlan === "family"
         ? `Family applies to all funds (${funds.length})`
       : starterEligibleFunds.length > 0
-        ? `Kiddo Plus active on ${starterEligibleFunds.length} fund${starterEligibleFunds.length === 1 ? "" : "s"}`
+        ? `Kiddo+ active on ${starterEligibleFunds.length} fund${starterEligibleFunds.length === 1 ? "" : "s"}`
         : "Funds are currently on Free rules";
   const selectedStarterMembership = selectedStarterManageFundId
     ? starterByFund[String(selectedStarterManageFundId)]
@@ -2670,7 +2670,7 @@ const [editFundName, setEditFundName] = useState("");
   const handleUpgradeStarter = async (fundId?: string) => {
     const targetFundId = String(fundId || selectedStarterFundId || "");
     if (!targetFundId) {
-      toast({ title: "Choose a fund first", description: "Kiddo Plus applies to one specific fund.", variant: "destructive" });
+      toast({ title: "Choose a fund first", description: "Kiddo+ applies to one specific fund.", variant: "destructive" });
       return;
     }
     setUpgrading(true);
@@ -2746,7 +2746,7 @@ const [editFundName, setEditFundName] = useState("");
       if (res.ok) {
         haptic("success");
         const until = data?.activeUntil ? new Date(data.activeUntil).toLocaleDateString() : null;
-        const planLabel = data?.plan === "starter" ? "Kiddo Plus" : data?.plan === "family" ? "Kiddo Family" : "Your plan";
+        const planLabel = data?.plan === "starter" ? "Kiddo+" : data?.plan === "family" ? "Kiddo Family" : "Your plan";
         toast({
           title: data?.alreadyCanceled ? `${planLabel} already canceling` : `${planLabel} canceled`,
           description: until ? `${planLabel} remains active until ${until}` : "Your cancellation has been scheduled.",
@@ -2860,18 +2860,18 @@ const [editFundName, setEditFundName] = useState("");
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         toast({
-        title: "Could not update Kiddo Plus overlaps",
+        title: "Could not update Kiddo+ overlaps",
         description: data?.error || "Please try again.",
         variant: "destructive",
       });
         return;
       }
       toast({
-        title: "Kiddo Plus overlaps updated",
+        title: "Kiddo+ overlaps updated",
         description:
           Number(data?.canceledCount || 0) > 0
-            ? `${Number(data.canceledCount)} Kiddo Plus plan${Number(data.canceledCount) === 1 ? "" : "s"} scheduled to cancel.`
-            : "No active overlapping Kiddo Plus plans were found.",
+            ? `${Number(data.canceledCount)} Kiddo+ plan${Number(data.canceledCount) === 1 ? "" : "s"} scheduled to cancel.`
+            : "No active overlapping Kiddo+ plans were found.",
       });
       void queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
       void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
@@ -4048,7 +4048,7 @@ const [editFundName, setEditFundName] = useState("");
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">
-                        {userPlan === "starter" ? "Kiddo Plus" : userPlan === "legacy" ? "Kiddo Legacy" : "Kiddo Family"} · Active
+                        {userPlan === "starter" ? "Kiddo+" : userPlan === "legacy" ? "Kiddo Legacy" : "Kiddo Family"} · Active
                       </p>
                       {subscription?.currentPeriodEnd && (
                         <p className="mt-0.5 text-xs text-[hsl(var(--kiddo-evergreen)/0.7)]">
@@ -4097,7 +4097,7 @@ const [editFundName, setEditFundName] = useState("");
                         {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s fund is safe.` : "Your fund is safe."} Always.
                       </p>
                       <p className="mt-1 text-xs text-amber-900/80">
-                        {userPlan === "starter" ? "Kiddo Plus" : "Kiddo Family"} ends {new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric" })}.
+                        {userPlan === "starter" ? "Kiddo+" : "Kiddo Family"} ends {new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric" })}.
                         Gifts still work. You can change your mind right now.
                       </p>
                     </div>
@@ -4115,7 +4115,7 @@ const [editFundName, setEditFundName] = useState("");
                   {/* What's paused — itemized, so the parent sees what they're walking away from */}
                   {cancellationImpact && (cancellationImpact.parentContributions.length > 0 || cancellationImpact.recurringGifts.length > 0) && (
                     <div className="rounded-lg border border-amber-200/60 bg-white/60 p-3 space-y-2">
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70">What pauses when {userPlan === "starter" ? "Kiddo Plus" : "Kiddo Family"} ends</p>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70">What pauses when {userPlan === "starter" ? "Kiddo+" : "Kiddo Family"} ends</p>
                       {cancellationImpact.parentContributions.map(c => (
                         <p key={c.id} className="text-xs text-amber-900 leading-relaxed">
                           ⏸ {c.childName}'s auto-invest{c.executionModel === "pick" && c.selectedTicker ? ` to ${c.selectedTicker}` : ""} — ${c.amount.toFixed(2)}/{c.frequency}
@@ -4151,7 +4151,7 @@ const [editFundName, setEditFundName] = useState("");
 
             {/* Membership cards — badges + buttons are now state-aware
                 based on userPlan. Was previously a static layout that:
-                  (1) showed "Recommended" on Kiddo Plus regardless of
+                  (1) showed "Recommended" on Kiddo+ regardless of
                       whether the user already had Plus / Family / Legacy
                       (a downgrade recommendation for paying users), and
                   (2) had no clear "Current plan" indicator on the active
@@ -4233,7 +4233,7 @@ const [editFundName, setEditFundName] = useState("");
                   </div>
                 )}
                 <div className="p-5 pt-6">
-                  <h2 className="font-heading text-xl font-bold text-foreground">Kiddo Plus</h2>
+                  <h2 className="font-heading text-xl font-bold text-foreground">Kiddo+</h2>
                   <p className="mt-3 text-2xl font-bold leading-none text-[hsl(var(--kiddo-gold))]">
                     ${KORA_STARTER_MONTHLY.toFixed(2)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
                   </p>
@@ -5137,7 +5137,7 @@ const [editFundName, setEditFundName] = useState("");
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Before you go</p>
                 <h2 className="font-heading text-xl font-semibold text-foreground">{primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s fund` : "Your fund"} stays safe.</h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {userPlan === "starter" ? "Kiddo Plus" : userPlan === "legacy" ? "Kiddo Legacy" : "Kiddo Family"} remains active
+                  {userPlan === "starter" ? "Kiddo+" : userPlan === "legacy" ? "Kiddo Legacy" : "Kiddo Family"} remains active
                   {subscription?.currentPeriodEnd ? ` until ${new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : " until the end of your billing period"}.
                   After that, you move to Free.
                 </p>
@@ -5266,7 +5266,7 @@ const [editFundName, setEditFundName] = useState("");
           ) : (
             <div className="p-6 space-y-5">
               <div className="space-y-1">
-                <h2 className="font-heading text-xl font-semibold text-foreground">Cancel {userPlan === "starter" ? "Kiddo Plus" : "Kiddo Family"}?</h2>
+                <h2 className="font-heading text-xl font-semibold text-foreground">Cancel {userPlan === "starter" ? "Kiddo+" : "Kiddo Family"}?</h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   You'll move to Free
                   {subscription?.currentPeriodEnd ? ` on ${new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : " at the end of your billing period"}.

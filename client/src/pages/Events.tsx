@@ -524,7 +524,7 @@ export default function Events() {
                   </Link>
                 ) : (
                   <>
-                    <p>{hasAnyStarter ? "Kiddo Plus includes 3 active events at a time." : "Free includes 1 active event at a time."}</p>
+                    <p>{hasAnyStarter ? "Kiddo+ includes 3 active events at a time." : "Free includes 1 active event at a time."}</p>
                     <p>Kiddo Family is unlimited.</p>
                   </>
                 )}
@@ -962,7 +962,7 @@ export default function Events() {
                                   return false;
                                 })()
                                   ? "Kiddo Occasion styling and premium event features apply here."
-                                  : "Standard Free, Kiddo Plus, or Kiddo Family features apply based on this fund's plan."}
+                                  : "Standard Free, Kiddo+, or Kiddo Family features apply based on this fund's plan."}
                               </p>
                             </div>
 
@@ -1163,11 +1163,11 @@ export default function Events() {
                       <h3 className="sr-only font-heading font-semibold text-foreground mb-1" data-testid="text-events-upgrade-title">
                         Kiddo Occasion upgrades
                       </h3>
-                      <p className="font-heading font-semibold text-foreground mb-1">Kiddo Plus, Family, or Legacy</p>
+                      <p className="font-heading font-semibold text-foreground mb-1">Kiddo+, Family, or Legacy</p>
                       <ul className="space-y-2 mt-3 text-sm text-muted-foreground">
                         <li className="flex items-start gap-2">
                           <Gift size={14} className="mt-0.5 text-primary shrink-0" />
-                          Kiddo Plus gives one child richer occasion pages, reminders, and the full Memory Book.
+                          Kiddo+ gives one child richer occasion pages, reminders, and the full Memory Book.
                         </li>
                         <li className="flex items-start gap-2">
                           <Crown size={14} className="mt-0.5 text-primary shrink-0" />

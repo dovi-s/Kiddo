@@ -6922,7 +6922,7 @@ export async function registerRoutes(
       if (strategy === 'custom') {
         const entitlement = await hasPaidPlanForFund(userId, fund.id);
         if (!entitlement.paid) {
-          return res.status(403).json({ error: 'Custom strategy requires Kiddo Plus, Family, or Legacy' });
+          return res.status(403).json({ error: 'Custom strategy requires Kiddo+, Family, or Legacy' });
         }
         const saved = await setFundCustomAllocations(fund.id, customAllocations || DEFAULT_CUSTOM_ALLOCATIONS);
         if (!saved) {
@@ -7151,8 +7151,8 @@ export async function registerRoutes(
           error: "Event limit reached",
           message:
             paidEntitlement.starter
-              ? "Kiddo Plus supports richer occasion pages. Upgrade to Kiddo Family or Legacy for every child and every occasion."
-              : "Free supports the core gift link. Upgrade to Kiddo Plus for richer occasions or Kiddo Family or Legacy for every child.",
+              ? "Kiddo+ supports richer occasion pages. Upgrade to Kiddo Family or Legacy for every child and every occasion."
+              : "Free supports the core gift link. Upgrade to Kiddo+ for richer occasions or Kiddo Family or Legacy for every child.",
         });
       }
 
@@ -8143,17 +8143,17 @@ export async function registerRoutes(
       const requestedInterval = req.body?.billingInterval === 'yearly' ? 'yearly' : 'monthly';
       const stripeInterval = requestedInterval === 'yearly' ? 'year' : 'month';
       if (!fundId) {
-        return res.status(400).json({ error: "fundId is required for Kiddo Plus." });
+        return res.status(400).json({ error: "fundId is required for Kiddo+." });
       }
       if (await getActiveHouseholdPlan(userId)) {
-        return res.status(409).json({ error: "Kiddo Family or Legacy already covers all funds. Kiddo Plus is unavailable while household coverage is active." });
+        return res.status(409).json({ error: "Kiddo Family or Legacy already covers all funds. Kiddo+ is unavailable while household coverage is active." });
       }
       const fund = await storage.getFund(fundId);
       if (!fund) return res.status(404).json({ error: "Fund not found" });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: "Forbidden" });
       const existingStarter = await storage.getFundMembership(userId, fundId);
       if (existingStarter && hasEntitlementFromStatus(existingStarter.status, existingStarter.currentPeriodEnd)) {
-        return res.status(409).json({ error: "Kiddo Plus is already active for this fund." });
+        return res.status(409).json({ error: "Kiddo+ is already active for this fund." });
       }
       const successPath = resolveInternalReturnPath(
         req.body?.returnTo,
@@ -8165,12 +8165,18 @@ export async function registerRoutes(
       );
 
       const priceId = await findCheckoutPriceId({
-        productNames: ["Kiddo Plus", "Kiddo+", "Kora+", "Starter Plan"],
+        // Historical Stripe product names searched in order. The current
+        // canonical name is "Kiddo+"; the others are kept as fallback
+        // lookups so customers whose Stripe products were created under
+        // older names ("Kora+", "Starter Plan", or the briefly-used
+        // "Kiddo Plus" two-word form) still resolve. Adding to this
+        // list is safe; removing entries can strand existing customers.
+        productNames: ["Kiddo+", "Kiddo Plus", "Kora+", "Starter Plan"],
         mode: "subscription",
         recurringInterval: stripeInterval as "month" | "year",
       });
       if (!priceId) {
-        return res.status(404).json({ error: 'Kiddo Plus price not found in Stripe.' });
+        return res.status(404).json({ error: 'Kiddo+ price not found in Stripe.' });
       }
 
       let customerId: string | undefined;
@@ -8402,7 +8408,7 @@ export async function registerRoutes(
                 : hostPlan === "legacy"
                   ? "Kiddo Legacy plan. 100% of the gift amount goes to the fund."
                   : hostPlan === "starter"
-                  ? "Kiddo Plus plan. 100% of the gift amount goes to the fund."
+                  ? "Kiddo+ plan. 100% of the gift amount goes to the fund."
                   : "Free plan. 100% of the gift amount goes to the fund.";
         const koraLargeGiftExplanation =
           parsedAmount >= KORA_LARGE_GIFT_THRESHOLD
@@ -8414,7 +8420,7 @@ export async function registerRoutes(
           : coverageStatus === "covered_family"
           ? "Kiddo Family covered"
           : coverageStatus === "covered_starter"
-            ? "Kiddo Plus covered"
+            ? "Kiddo+ covered"
             : coverageStatus === "trial_active"
               ? "Trial active"
               : "Free";
@@ -10247,7 +10253,7 @@ export async function registerRoutes(
   // purely an email reminder cadence. The worker (server/recurringContributionWorker.ts
   // → processGifterRecurring) sends an email on each next_charge_date and advances the
   // date; no bank, no NACHA, no Stripe charge. Real recurring auto-invest is parent-only
-  // (parent_contributions + Kiddo Plus / Family subscription gate).
+  // (parent_contributions + Kiddo+ / Family subscription gate).
   app.post('/api/recurring-gifts', async (req: any, res) => {
     try {
       const { fundId, senderName, senderEmail, amount, frequency, occasionType } = req.body;
@@ -10542,7 +10548,7 @@ export async function registerRoutes(
     }
   });
 
-  // ===== PARENT AUTO-INVEST (Kiddo Plus / Family exclusive) =====
+  // ===== PARENT AUTO-INVEST (Kiddo+ / Family exclusive) =====
 
   app.get('/api/funds/:fundId/parent-contributions', isAuthenticated, async (req: any, res) => {
     try {
@@ -10566,7 +10572,7 @@ export async function registerRoutes(
       const isFundStarter = fundMembership?.status === 'active' ||
         (fundMembership?.status === 'canceled' && fundMembership?.currentPeriodEnd && new Date(String(fundMembership.currentPeriodEnd)).getTime() > Date.now());
       if (!isFamily && !isGlobalStarter && !isFundStarter) {
-        return res.status(403).json({ error: 'Kiddo Plus, Family, or Legacy required for auto-invest contributions' });
+        return res.status(403).json({ error: 'Kiddo+, Family, or Legacy required for auto-invest contributions' });
       }
 
       const contributions = await storage.getParentContributionsByFund(req.params.fundId);
@@ -10593,7 +10599,7 @@ export async function registerRoutes(
       const isFundStarter = fundMembership?.status === 'active' ||
         (fundMembership?.status === 'canceled' && fundMembership?.currentPeriodEnd && new Date(String(fundMembership.currentPeriodEnd)).getTime() > Date.now());
       if (!isFamily && !isGlobalStarter && !isFundStarter) {
-        return res.status(403).json({ error: 'Kiddo Plus, Family, or Legacy required for auto-invest contributions' });
+        return res.status(403).json({ error: 'Kiddo+, Family, or Legacy required for auto-invest contributions' });
       }
 
       const { amount, frequency, executionModel, selectedTicker, bankAccountId, note } = req.body;
@@ -12958,7 +12964,7 @@ export async function registerRoutes(
       const userId = req.params.userId;
       const fundId = req.params.fundId;
       const membership = await storage.getFundMembership(userId, fundId);
-      if (!membership) return res.status(404).json({ error: "Kiddo Plus membership not found for this fund" });
+      if (!membership) return res.status(404).json({ error: "Kiddo+ membership not found for this fund" });
 
       const updated = await storage.updateFundMembership(membership.id, {
         status: "canceled",
@@ -12981,9 +12987,9 @@ export async function registerRoutes(
       const userId = req.params.userId;
       const fundId = req.params.fundId;
       const membership = await storage.getFundMembership(userId, fundId);
-      if (!membership) return res.status(404).json({ error: "Kiddo Plus membership not found for this fund" });
+      if (!membership) return res.status(404).json({ error: "Kiddo+ membership not found for this fund" });
       if (!membership.stripeSubscriptionId) {
-        return res.status(400).json({ error: "This Kiddo Plus membership does not have a Stripe subscription id." });
+        return res.status(400).json({ error: "This Kiddo+ membership does not have a Stripe subscription id." });
       }
 
       const stripe = await getUncachableStripeClient();
@@ -16559,7 +16565,7 @@ export async function registerRoutes(
           targetPlan = "starter";
           targetFundId = String(activeStarterMemberships[0].fundId);
         } else if (activeStarterMemberships.length > 1) {
-          return res.status(409).json({ error: "No household plan is active. Choose which Kiddo Plus fund you want to cancel." });
+          return res.status(409).json({ error: "No household plan is active. Choose which Kiddo+ fund you want to cancel." });
         }
       }
 
@@ -16572,17 +16578,17 @@ export async function registerRoutes(
           targetPlan = "starter";
           targetFundId = String(activeStarterMemberships[0].fundId);
         } else if (activeStarterMemberships.length > 1) {
-          return res.status(409).json({ error: "Choose which Kiddo Plus fund you want to cancel." });
+          return res.status(409).json({ error: "Choose which Kiddo+ fund you want to cancel." });
         }
       }
 
       if (targetPlan === "starter") {
         if (!targetFundId) {
-          return res.status(400).json({ error: "fundId is required for Kiddo Plus cancellation" });
+          return res.status(400).json({ error: "fundId is required for Kiddo+ cancellation" });
         }
         const membership = await storage.getFundMembership(userId, targetFundId);
         if (!membership || !membership.stripeSubscriptionId) {
-          return res.status(404).json({ error: "No Kiddo Plus subscription found for this fund" });
+          return res.status(404).json({ error: "No Kiddo+ subscription found for this fund" });
         }
         if (membership.status === "canceled") {
           return res.json({
@@ -16611,8 +16617,8 @@ export async function registerRoutes(
           userId,
           fundId: targetFundId,
           type: "subscription_canceled",
-          title: "Kiddo Plus cancellation scheduled",
-          description: "Kiddo Plus remains active for this fund until period end.",
+          title: "Kiddo+ cancellation scheduled",
+          description: "Kiddo+ remains active for this fund until period end.",
         });
 
         return res.json({
@@ -16671,23 +16677,23 @@ export async function registerRoutes(
     try {
       const userId = (req.user as any).id;
       if (!(await getActiveHouseholdPlan(userId))) {
-        return res.status(409).json({ error: "Kiddo Family or Legacy must be active to clean up overlapping Kiddo Plus plans." });
+        return res.status(409).json({ error: "Kiddo Family or Legacy must be active to clean up overlapping Kiddo+ plans." });
       }
       const stripe = await getUncachableStripeClient();
       const canceledCount = await scheduleStarterOverlapCancellationForFamily(userId, stripe);
       await storage.createActivity({
         userId,
         type: "subscription_canceled",
-        title: "Kiddo Plus overlap cleanup run",
+        title: "Kiddo+ overlap cleanup run",
         description:
           canceledCount > 0
-            ? `${canceledCount} Kiddo Plus plan${canceledCount === 1 ? "" : "s"} scheduled to cancel at period end.`
-            : "No overlapping Kiddo Plus plans needed cleanup.",
+            ? `${canceledCount} Kiddo+ plan${canceledCount === 1 ? "" : "s"} scheduled to cancel at period end.`
+            : "No overlapping Kiddo+ plans needed cleanup.",
       });
       return res.json({ success: true, canceledCount });
     } catch (error) {
       console.error("Error canceling starter overlaps:", error);
-      return res.status(500).json({ error: "Failed to clean up overlapping Kiddo Plus plans" });
+      return res.status(500).json({ error: "Failed to clean up overlapping Kiddo+ plans" });
     }
   });
 
@@ -16699,13 +16705,13 @@ export async function registerRoutes(
       const fundId = String(req.body?.fundId || "");
 
       if (isStarterReactivate) {
-        if (!fundId) return res.status(400).json({ error: "fundId is required for Kiddo Plus reactivation" });
+        if (!fundId) return res.status(400).json({ error: "fundId is required for Kiddo+ reactivation" });
         if (await getActiveHouseholdPlan(userId)) {
-          return res.status(409).json({ error: "Kiddo Family or Legacy is active on your account. Kiddo Plus reactivation is disabled while household coverage is active." });
+          return res.status(409).json({ error: "Kiddo Family or Legacy is active on your account. Kiddo+ reactivation is disabled while household coverage is active." });
         }
         const membership = await storage.getFundMembership(userId, fundId);
         if (!membership || !membership.stripeSubscriptionId) {
-          return res.status(404).json({ error: "No Kiddo Plus subscription found for this fund" });
+          return res.status(404).json({ error: "No Kiddo+ subscription found for this fund" });
         }
 
         const stripe = await getUncachableStripeClient();
@@ -16718,7 +16724,7 @@ export async function registerRoutes(
           const stripeCode = stripeErr?.raw?.code || stripeErr?.code || '';
           if (stripeCode === 'subscription_already_canceled' || stripeCode === 'resource_missing' || stripeErr?.statusCode === 404) {
             await storage.updateFundMembership(membership.id, { status: 'canceled', stripeSubscriptionId: null });
-            return res.status(410).json({ error: 'Subscription has fully expired. Please start a new Kiddo Plus subscription.', expired: true });
+            return res.status(410).json({ error: 'Subscription has fully expired. Please start a new Kiddo+ subscription.', expired: true });
           }
           throw stripeErr;
         }
@@ -16732,8 +16738,8 @@ export async function registerRoutes(
           userId,
           fundId,
           type: 'subscription_started',
-          title: 'Kiddo Plus reactivated',
-          description: 'Kiddo Plus has been reactivated for this fund.',
+          title: 'Kiddo+ reactivated',
+          description: 'Kiddo+ has been reactivated for this fund.',
         });
 
         return res.json({ success: true, fundId });
@@ -16787,9 +16793,9 @@ export async function registerRoutes(
       let stripeCustomerId: string | null = null;
 
       if (isStarterPortal) {
-        if (!fundId) return res.status(400).json({ error: "fundId is required for Kiddo Plus billing portal" });
+        if (!fundId) return res.status(400).json({ error: "fundId is required for Kiddo+ billing portal" });
         const membership = await storage.getFundMembership(userId, fundId);
-        if (!membership) return res.status(404).json({ error: "No Kiddo Plus subscription found for this fund" });
+        if (!membership) return res.status(404).json({ error: "No Kiddo+ subscription found for this fund" });
 
         stripeCustomerId = membership.stripeCustomerId || null;
         if (!stripeCustomerId && membership.stripeSubscriptionId) {

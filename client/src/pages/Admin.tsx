@@ -526,7 +526,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                       )}
                     </div>
                     <div className="bg-card rounded-xl border border-border/50 p-3">
-                      <div className="text-sm font-semibold">Fund-level Kiddo Plus access</div>
+                      <div className="text-sm font-semibold">Fund-level Kiddo+ access</div>
                       {starterMemberships.length > 0 ? (
                         <div className="mt-3 space-y-2">
                           {starterMemberships.map((row: any) => (
@@ -542,7 +542,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                           ))}
                         </div>
                       ) : (
-                        <div className="mt-2 text-xs text-muted-foreground">No fund-level Kiddo Plus memberships yet.</div>
+                        <div className="mt-2 text-xs text-muted-foreground">No fund-level Kiddo+ memberships yet.</div>
                       )}
                     </div>
                   </div>
@@ -552,7 +552,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                     { key: "status", label: "Status", render: (r: any) => <StatusBadge status={String(r.status || "")} /> },
                     {
                       key: "starter_status",
-                      label: "Kiddo Plus",
+                      label: "Kiddo+",
                       render: (r: any) => {
                         const membership = starterMembershipByFundId.get(String(r?.id || ""));
                         return membership ? <StatusBadge status={String(membership?.status || "active")} /> : <span className="text-muted-foreground">free</span>;
@@ -570,7 +570,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                               <button
                                 className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
                                 onClick={() => runAction(
-                                  "Cancel Kiddo Plus",
+                                  "Cancel Kiddo+",
                                   () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}/fund-memberships/${encodeURIComponent(String(r?.id || ""))}/cancel`),
                                 )}
                               >
@@ -580,7 +580,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                               <button
                                 className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
                                 onClick={() => runAction(
-                                  "Activate Kiddo Plus",
+                                  "Activate Kiddo+",
                                   () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}/fund-memberships/${encodeURIComponent(String(r?.id || ""))}/activate`),
                                 )}
                               >
@@ -591,7 +591,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                               <button
                                 className="text-[11px] px-2 py-1 rounded border border-amber-300 text-amber-700 hover:bg-amber-50"
                                 onClick={() => runAction(
-                                  "Resync Kiddo Plus Stripe",
+                                  "Resync Kiddo+ Stripe",
                                   () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.user?.id || ""))}/fund-memberships/${encodeURIComponent(String(r?.id || ""))}/sync-stripe`),
                                 )}
                               >
@@ -640,24 +640,24 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                       {String(fundStarterMembership?.status || "").toLowerCase() === "active" ? (
                         <button
                           className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
-                          onClick={() => runAction("Cancel Kiddo Plus", () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.fund?.user_id || data?.fund?.userId || ""))}/fund-memberships/${encodeURIComponent(String(data?.fund?.id || ""))}/cancel`))}
+                          onClick={() => runAction("Cancel Kiddo+", () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.fund?.user_id || data?.fund?.userId || ""))}/fund-memberships/${encodeURIComponent(String(data?.fund?.id || ""))}/cancel`))}
                         >
-                          Cancel Kiddo Plus
+                          Cancel Kiddo+
                         </button>
                       ) : (
                         <button
                           className="text-[11px] px-2 py-1 rounded border border-border hover:bg-muted"
-                          onClick={() => runAction("Activate Kiddo Plus", () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.fund?.user_id || data?.fund?.userId || ""))}/fund-memberships/${encodeURIComponent(String(data?.fund?.id || ""))}/activate`))}
+                          onClick={() => runAction("Activate Kiddo+", () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.fund?.user_id || data?.fund?.userId || ""))}/fund-memberships/${encodeURIComponent(String(data?.fund?.id || ""))}/activate`))}
                         >
-                          Activate Kiddo Plus
+                          Activate Kiddo+
                         </button>
                       )}
                       {(fundStarterMembership?.stripeSubscriptionId || fundStarterMembership?.stripe_subscription_id) ? (
                         <button
                           className="text-[11px] px-2 py-1 rounded border border-amber-300 text-amber-700 hover:bg-amber-50"
-                          onClick={() => runAction("Resync Kiddo Plus Stripe", () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.fund?.user_id || data?.fund?.userId || ""))}/fund-memberships/${encodeURIComponent(String(data?.fund?.id || ""))}/sync-stripe`))}
+                          onClick={() => runAction("Resync Kiddo+ Stripe", () => postJson(`/api/admin/users/${encodeURIComponent(String(data?.fund?.user_id || data?.fund?.userId || ""))}/fund-memberships/${encodeURIComponent(String(data?.fund?.id || ""))}/sync-stripe`))}
                         >
-                          Resync Kiddo Plus Stripe
+                          Resync Kiddo+ Stripe
                         </button>
                       ) : null}
                     </div>
@@ -675,7 +675,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                           <div><span className="text-muted-foreground">Stripe Sub:</span> <span className="font-mono">{String(fundStarterMembership.stripeSubscriptionId || "-")}</span></div>
                         </div>
                       ) : (
-                        <div className="mt-2 text-xs text-muted-foreground">This fund does not currently have a Kiddo Plus membership record.</div>
+                        <div className="mt-2 text-xs text-muted-foreground">This fund does not currently have a Kiddo+ membership record.</div>
                       )}
                     </div>
                     <div className="bg-card rounded-xl border border-border/50 p-3">
@@ -3489,7 +3489,7 @@ function AdminDeletePreviewModal({
                   )}
                 </div>
                 <div className="rounded-xl border border-border/50 p-3">
-                  <div className="text-sm font-semibold">Fund-level Kiddo Plus memberships</div>
+                  <div className="text-sm font-semibold">Fund-level Kiddo+ memberships</div>
                   {starterMemberships.length > 0 ? (
                     <div className="mt-3 space-y-2 text-xs">
                       {starterMemberships.map((row: any) => (

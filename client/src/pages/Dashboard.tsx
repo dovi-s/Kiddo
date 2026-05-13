@@ -1781,7 +1781,7 @@ export default function Dashboard() {
     [activeFundId],
   );
 
-  // Per-fund Kiddo Plus check. This must come after activeFundId is declared.
+  // Per-fund Kiddo+ check. This must come after activeFundId is declared.
   const activeFundMembership = activeFundId ? (subscription?.starterByFund?.[activeFundId] as any) : null;
   const activeFundHasStarter = activeFundMembership?.status === "active" ||
     (activeFundMembership?.status === "canceled" && activeFundMembership?.currentPeriodEnd && new Date(activeFundMembership.currentPeriodEnd).getTime() > Date.now());
@@ -3588,7 +3588,7 @@ export default function Dashboard() {
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.url) throw new Error(data?.error || "Could not start the Kiddo Plus upgrade.");
+      if (!res.ok || !data?.url) throw new Error(data?.error || "Could not start the Kiddo+ upgrade.");
       window.location.href = data.url;
     } catch (error) {
       toast({ title: "Could not start upgrade", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
@@ -7006,7 +7006,7 @@ export default function Dashboard() {
                 // just hasn't set a recurring investment yet, or (b) parent is on
                 // free and the feature is gated. Same card, different framing for
                 // each. The free-tier framing was previously a wall ("Upgrade to
-                // Kiddo Plus" CTA, no specific projection, no calculator link) —
+                // Kiddo+" CTA, no specific projection, no calculator link) —
                 // a textbook violation of the "never gate aha" principle from
                 // project_setup_aha_habit_per_surface and the "tool-benefit not
                 // fear/loss" framing from project_plus_conversion_framing. The
@@ -7049,7 +7049,7 @@ export default function Dashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                           {!hasAutoInvestAccess && (
-                            <span className="inline-block mb-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-gold))]">Kiddo Plus</span>
+                            <span className="inline-block mb-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-gold))]">Kiddo+</span>
                           )}
                           <p className="text-sm text-foreground">
                             {hasAutoInvestAccess
@@ -11217,7 +11217,7 @@ export default function Dashboard() {
           their fund, not generic feature copy. */}
       <Dialog open={autoInvestUpgradeOpen} onOpenChange={(open) => { if (!open) setAutoInvestUpgradeOpen(false); }}>
         <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
-          <DialogTitle className="sr-only">Upgrade to Kiddo Plus</DialogTitle>
+          <DialogTitle className="sr-only">Upgrade to Kiddo+</DialogTitle>
           {(() => {
             const child = capFirst(activeFund?.recipientFirstName) || "your child";
             const monthly = 25;
@@ -11287,7 +11287,7 @@ export default function Dashboard() {
 
                 <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2.5">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Kiddo Plus</p>
+                    <p className="text-sm font-semibold text-foreground">Kiddo+</p>
                     <p className="text-[11px] text-muted-foreground">$4.99/month or $39/year. Cancel any time.</p>
                   </div>
                 </div>
@@ -12479,7 +12479,7 @@ export default function Dashboard() {
               <DialogTitle className="sr-only">Upgrade {activeFund.name}</DialogTitle>
               <div className="p-6 space-y-5">
                 <div className="space-y-1">
-                  <p className="text-sm text-[hsl(var(--kiddo-gold))] font-medium">Kiddo Plus</p>
+                  <p className="text-sm text-[hsl(var(--kiddo-gold))] font-medium">Kiddo+</p>
                   <h2 className="font-heading text-xl font-semibold text-foreground">Unlock recurring investments for {activeFund.recipientFirstName || activeFund.name}</h2>
                   <p className="text-sm text-muted-foreground">
                     Add recurring investments, projections, richer Memory Book moments, and thank-you templates for this fund.
@@ -12497,7 +12497,7 @@ export default function Dashboard() {
                       <span className="font-medium text-foreground">{formatCurrency(parseFloat(recentGiftForToast.amount || "0"))}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Kiddo Plus keeps the fund growing after every gift, with recurring investments, Memory Book moments, and smart sharing.
+                      Kiddo+ keeps the fund growing after every gift, with recurring investments, Memory Book moments, and smart sharing.
                     </p>
                   </div>
                 )}
@@ -12524,7 +12524,7 @@ export default function Dashboard() {
                     disabled={startingCoverageCheckout}
                     data-testid="button-confirm-cover-fund"
                   >
-                    {startingCoverageCheckout ? "Opening checkout..." : "Start Kiddo Plus"}
+                    {startingCoverageCheckout ? "Opening checkout..." : "Start Kiddo+"}
                   </button>
                   <button
                     type="button"

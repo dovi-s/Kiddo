@@ -1236,8 +1236,8 @@ export class WebhookHandlers {
           await storage.createActivity({
             userId,
             type: 'subscription_canceled',
-            title: 'Kiddo Plus plans scheduled to cancel',
-            description: `We scheduled ${canceledCount} Kiddo Plus plan${canceledCount === 1 ? '' : 's'} to cancel at period end to avoid double billing while Legacy is active.`,
+            title: 'Kiddo+ plans scheduled to cancel',
+            description: `We scheduled ${canceledCount} Kiddo+ plan${canceledCount === 1 ? '' : 's'} to cancel at period end to avoid double billing while Legacy is active.`,
           });
         }
       } catch (overlapErr) {
@@ -1327,8 +1327,8 @@ export class WebhookHandlers {
           await storage.createActivity({
             userId,
             type: 'subscription_canceled',
-            title: 'Kiddo Plus plans scheduled to cancel',
-            description: `We scheduled ${canceledCount} Kiddo Plus plan${canceledCount === 1 ? '' : 's'} to cancel at period end to avoid double billing while Family is active.`,
+            title: 'Kiddo+ plans scheduled to cancel',
+            description: `We scheduled ${canceledCount} Kiddo+ plan${canceledCount === 1 ? '' : 's'} to cancel at period end to avoid double billing while Family is active.`,
           });
         }
       } catch (overlapErr) {
@@ -1343,13 +1343,13 @@ export class WebhookHandlers {
     const fundId = metadata.fundId;
 
     if (!userId || !fundId) {
-      console.error('[Webhook] Kiddo Plus purchase missing userId or fundId');
+      console.error('[Webhook] Kiddo+ purchase missing userId or fundId');
       return;
     }
 
     const fund = await storage.getFund(fundId);
     if (!fund || fund.userId !== userId) {
-      console.error('[Webhook] Kiddo Plus purchase fund does not belong to user', { userId, fundId });
+      console.error('[Webhook] Kiddo+ purchase fund does not belong to user', { userId, fundId });
       return;
     }
 
@@ -1379,8 +1379,8 @@ export class WebhookHandlers {
         userId,
         fundId,
         type: 'subscription_started',
-        title: 'Kiddo Plus activated',
-        description: `Kiddo Plus is now active for ${fund.name}.`,
+        title: 'Kiddo+ activated',
+        description: `Kiddo+ is now active for ${fund.name}.`,
       });
     }
   }
@@ -1508,7 +1508,7 @@ export class WebhookHandlers {
         canceledAt: new Date(),
       });
 
-      // Per-fund Kiddo Plus end: cascade pause for that user's funds. Same helper
+      // Per-fund Kiddo+ end: cascade pause for that user's funds. Same helper
       // since recurring items live at the fund level.
       try {
         const { parentContributionsPaused, recurringGiftsPaused } = await storage.pauseScheduledItemsForUserOnSubscriptionEnd(existingFundMembership.userId);
@@ -1523,8 +1523,8 @@ export class WebhookHandlers {
         userId: existingFundMembership.userId,
         fundId: existingFundMembership.fundId,
         type: 'subscription_canceled',
-        title: 'Kiddo Plus canceled',
-        description: 'Kiddo Plus for this fund has been canceled.',
+        title: 'Kiddo+ canceled',
+        description: 'Kiddo+ for this fund has been canceled.',
       });
     }
   }
@@ -1800,7 +1800,7 @@ export class WebhookHandlers {
         amount,
         currency: invoice.currency || 'usd',
         status: 'completed',
-        description: 'Kiddo Plus renewal',
+        description: 'Kiddo+ renewal',
         completedAt: new Date(),
       });
       // Same mirror for per-fund Plus memberships.
@@ -1857,8 +1857,8 @@ export class WebhookHandlers {
         userId: existingMembership.userId,
         fundId: existingMembership.fundId,
         type: 'payment_failed',
-        title: 'Kiddo Plus payment failed',
-        description: 'Your Kiddo Plus payment failed for this fund. Please update your payment method in Settings.',
+        title: 'Kiddo+ payment failed',
+        description: 'Your Kiddo+ payment failed for this fund. Please update your payment method in Settings.',
       });
     }
   }

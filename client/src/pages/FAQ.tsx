@@ -164,7 +164,7 @@ const faqItems = [
     id: "fees",
     category: "Pricing & Fees",
     question: "How much does Kiddo cost?",
-    answer: "Kiddo is free to start. Free includes one child fund, a gift link, basic Memory Book features, and Kid View Lite. Kiddo Plus is $4.99 per month or $39 per year for one child, and includes co-parent access so a partner can follow the fund. Kiddo Family is $7.99 per month or $69 per year for every child fund you manage. Across every plan, Kiddo charges 0.10% per year on invested assets only. Cash and pending gifts are not charged. Payment processing on gifts is separate and shown before checkout.",
+    answer: "Kiddo is free to start. Free includes one child fund, a gift link, basic Memory Book features, and Kid View Lite. Kiddo+ is $4.99 per month or $39 per year for one child, and includes co-parent access so a partner can follow the fund. Kiddo Family is $7.99 per month or $69 per year for every child fund you manage. Across every plan, Kiddo charges 0.10% per year on invested assets only. Cash and pending gifts are not charged. Payment processing on gifts is separate and shown before checkout.",
   },
   {
     id: "contribution-fees",
@@ -176,7 +176,7 @@ const faqItems = [
     id: "events-free-plan",
     category: "Pricing & Fees",
     question: "How do events work on the free plan?",
-    answer: "You can run 1 active basic occasion at a time on Free. Once it closes, you can create another. Kiddo Plus gives one child richer occasion pages, reminders, and Memory Book features. Kiddo Family covers every child fund you manage.",
+    answer: "You can run 1 active basic occasion at a time on Free. Once it closes, you can create another. Kiddo+ gives one child richer occasion pages, reminders, and Memory Book features. Kiddo Family covers every child fund you manage.",
   },
   {
     id: "auto-invest",
