@@ -2263,18 +2263,44 @@ const [editFundName, setEditFundName] = useState("");
       if (!res.ok) throw new Error(data?.error || "Could not save setting");
       return data;
     },
+    // Optimistic update — the toggle should feel instant. Previously
+    // the visible state waited for the server roundtrip + the funds
+    // query refetch, which introduced a noticeable delay (sometimes
+    // >1s). Now we flip the cache immediately and only roll back on
+    // server failure. Same pattern other toggles in this file use.
+    onMutate: async (enabled: boolean) => {
+      if (!primaryFund?.id) return { previous: null };
+      await queryClient.cancelQueries({ queryKey: ["/api/funds"] });
+      const previous = queryClient.getQueryData<any[]>(["/api/funds"]);
+      if (Array.isArray(previous)) {
+        queryClient.setQueryData(
+          ["/api/funds"],
+          previous.map((f) => (f.id === primaryFund.id ? { ...f, gifterMemoryModeration: enabled } : f)),
+        );
+      }
+      return { previous };
+    },
     onSuccess: (_data, enabled) => {
+      // Pill toast per feedback_toast_pattern_locked.md — "Saved"
+      // pill (1200ms, dark, rounded-full) for confirmation toasts
+      // where the title alone says the result clearly. The settings
+      // panel body text right next to the toggle already explains
+      // what each mode means, so a description on the toast would
+      // just restate what the user can already see.
       toast({
         title: enabled ? "Approval mode on" : "Approval mode off",
-        description: enabled
-          ? "Gifter entries will land in your pending tray for review."
-          : "Gifter entries land in the Memory Book instantly. You can still delete any entry.",
+        variant: "saved",
+        duration: 1200,
       });
       void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
       void queryClient.invalidateQueries({ queryKey: ["/api/funds", primaryFund?.id, "memory"] });
       void queryClient.invalidateQueries({ queryKey: ["/api/funds", primaryFund?.id, "memory", "pending"] });
     },
-    onError: (error: any) => {
+    onError: (error: any, _enabled, context: any) => {
+      // Roll back optimistic update.
+      if (context?.previous) {
+        queryClient.setQueryData(["/api/funds"], context.previous);
+      }
       toast({ title: "Could not save setting", description: error?.message || "Please try again.", variant: "destructive" });
     },
   });
@@ -4485,7 +4511,7 @@ const [editFundName, setEditFundName] = useState("");
                 </div>
                 <NotificationSwitchRow
                   title="Require my approval first"
-                  body="When on, gifter notes, photos, video, and voice land in a pending tray on your Memory Book until you approve them. Most parents leave this off so the loop stays warm."
+                  body="When on, gifter notes, photos, video, and voice land in a pending tray on your Memory Book until you approve them. Most parents leave this off so notes appear in real time as gifters add them."
                   checked={Boolean((primaryFund as any)?.gifterMemoryModeration)}
                   disabled={!primaryFund?.id || updateMemoryModeration.isPending}
                   onCheckedChange={(checked) => updateMemoryModeration.mutate(checked)}
