@@ -176,11 +176,17 @@ function fmtRecurringNextRun(iso: string | null): string {
 function buildRecurringRowSubtitle(item: OverviewRecurringItem): string {
   const parts: string[] = [];
 
-  // 1. Destination (skip for auto — it's the implied default)
+  // 1. Destination. ALWAYS show it — without a destination label the
+  // diversified-mix row reads as a generic "Next May 29" with nothing
+  // to compare against a ticker-pick row's "DUOL · Next May 29". The
+  // canonical Dashboard copy ("Investing across the diversified mix")
+  // shortened to "Diversified mix" here to keep the row scannable.
   if (item.executionModel === "pick" && item.selectedTicker) {
     parts.push(item.selectedTicker);
   } else if (item.executionModel === "family") {
     parts.push("Family mix");
+  } else {
+    parts.push("Diversified mix");
   }
 
   // 2. Schedule
@@ -276,6 +282,20 @@ export default function FundsOverview() {
     haptic("selection");
     setActiveFundId(fundId);
     setLocation("/dashboard");
+  };
+
+  // Recurring rows route to the SCHEDULE's detail modal, not just the
+  // fund. Dashboard.tsx already accepts ?detail=schedule:<id> on mount
+  // and opens DetailHistoryModal scoped to that contribution — see
+  // Dashboard's detailScope effect. Without this, clicking "Emma · DUOL
+  // · Next Jun 6" landed on Emma's Dashboard hero with no way to see
+  // the schedule's history, which is the question the click actually
+  // asks. Per the memory's "every notification destination must match
+  // the verb in its description" rule, extended here to cards.
+  const handleOpenSchedule = (fundId: string, contributionId: string) => {
+    haptic("selection");
+    setActiveFundId(fundId);
+    setLocation(`/dashboard?detail=schedule:${encodeURIComponent(contributionId)}`);
   };
 
   // Explicit error branch. Without this, a 500 from the API silently
@@ -575,7 +595,7 @@ export default function FundsOverview() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => handleOpenFund(item.fundId)}
+                    onClick={() => handleOpenSchedule(item.fundId, item.id)}
                     className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-3 text-left hover:border-[hsl(var(--kiddo-border))]/80 transition-colors"
                     data-testid={`overview-recurring-${item.id}`}
                   >
