@@ -469,16 +469,30 @@ export function setupAuth(app: Express) {
         : process.env.NODE_ENV === "production"
           ? { rejectUnauthorized: process.env.PGSSLMODE !== "no-verify" }
           : { rejectUnauthorized: false };
+    // Session-store pool. Distinct from the main db pool in
+    // server/db.ts. CRITICAL: attach an 'error' handler before
+    // passing this pool to pgStore — without one, a transient
+    // Supabase connection drop emits an unhandled 'error' event
+    // and kills the Node process. The main db pool already has
+    // this handler; this one was missing, which is the root cause
+    // of the 2026-05-14 crash spiral (server crashed 23 times
+    // after Supabase pooler dropped TLS connections, all 500s
+    // upstream came from that). Pool handlers are background-only;
+    // individual query failures still bubble up to callers.
+    const sessionPool = new pg.Pool({
+      connectionString: sessionConString,
+      ssl: sessionSsl,
+      max: 5,
+    });
+    sessionPool.on("error", (error) => {
+      console.error("Session pool error (suppressed to prevent process crash):", error);
+    });
     sessionStore = new pgStore({
       conString: sessionConString,
       createTableIfMissing: true,
       ttl: sessionTtl,
       tableName: "sessions",
-      pool: new pg.Pool({
-        connectionString: sessionConString,
-        ssl: sessionSsl,
-        max: 5,
-      }),
+      pool: sessionPool,
     });
   }
 

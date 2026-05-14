@@ -7,12 +7,27 @@ so the next focused session can execute against it cleanly.
 
 ## The problem
 
+> **Status update 2026-05-14:** Two of the three surfaces this spec
+> originally targeted have shipped contextual upgrade flows (the
+> MemoryMediaPicker Plus-gate and the Dashboard recurring-investments
+> upgrade modal), and both correctly route to the canonical post-
+> Phase-1c-B URL (`/account?tab=plan&upgrade=starter&fundId=X`). The
+> full reusable `<FeatureWallModal>` component described below is
+> still unbuilt; each shipped surface today has its own one-off
+> implementation. Phase 1c-B also moved the canonical home of plan
+> management from Settings to Account, so the references below to
+> `/settings?tab=membership` are historical — the live canonical
+> URL is `/account?tab=plan` (with `&upgrade=...&fundId=...` for the
+> auto-trigger flow).
+
 Today, when a parent on Free hits a feature that requires Plus or
 Family, the friction-removal path is unclear. Most surfaces either:
 
 - **Silently fail** (the feature is hidden if you're not paid for it)
 - **Show a generic "upgrade" link** that routes to `/pricing` or
-  `/settings?tab=membership`, both of which are full tier-comparison matrices
+  the full Account plan & billing tab, both of which are full
+  tier-comparison matrices (the latter was `/settings?tab=membership`
+  pre-Phase-1c-B; same shape, different home)
 - **Show a one-line note** like "Requires Kiddo+" with no context
 
 None of these convert. The full pricing matrix asks the parent to
@@ -118,7 +133,7 @@ type FeatureWallProps = {
   requiredTier: "plus" | "family";
   title: string;              // e.g. "Recurring investments is a Kiddo+ feature."
   body: string;               // 1-2 sentence value prop
-  upgradePath: string;        // /settings?tab=membership&upgrade=plus&fund=X
+  upgradePath: string;        // /account?tab=plan&upgrade=starter&fundId=X (Family: omit fundId; Legacy: ?upgrade=legacy). Per Phase 1c-B 2026-05-14.
   secondaryLink?: string;     // /pricing
 };
 ```
