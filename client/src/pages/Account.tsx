@@ -102,6 +102,37 @@ export default function Account() {
   const profileNeedsPhoto = !user?.profileImageUrl;
   const profileNeedsCompletion = profileNeedsName || profileNeedsPhoto;
 
+  // Stripe billing portal — inline action on the plan card so paid users
+  // can manage their billing without bouncing to Settings. Per the
+  // 2026-05-14 WHO/HOW IA principle (Account = user-as-identity, primary
+  // home for plan + billing); the cancellation modal and multi-tier
+  // upgrade ladder still live on the Settings membership tab because
+  // they are complex multi-step surfaces, and Cancel from Account
+  // routes there with ?action=cancel which auto-opens the cancel flow.
+  const [openingPortal, setOpeningPortal] = useState(false);
+  const handleOpenBillingPortal = async () => {
+    setOpeningPortal(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/subscription/portal", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Could not open billing portal", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not open billing portal", description: "Please try again", variant: "destructive" });
+    } finally {
+      setOpeningPortal(false);
+    }
+  };
+
   const selectTab = (tab: AccountTab) => {
     setAccountTab(tab);
     haptic("selection");
@@ -486,35 +517,99 @@ export default function Account() {
         {/* ── Plan & Billing ── */}
         {accountTab === "plan" && (
           <div className="space-y-4">
+            {/* Plan & billing tab — the primary home of plan management
+                per the 2026-05-14 WHO/HOW IA principle. Inline actions
+                (Manage billing, Cancel plan) sit directly on the active-
+                plan card for paid users so the most common operations
+                don't require bouncing to Settings. The Settings
+                membership tab still hosts the multi-tier upgrade ladder
+                and the cancellation-impact preview modal; those are
+                complex multi-step surfaces and live there until the
+                Phase 1b refactor moves them. Both surfaces remain in
+                sync — Account is the primary, Settings is the depth.
+
+                See feedback_ia_who_vs_how_principle.md (locked
+                memory) for the principle. See IN_APP_UPGRADE_FEATURE_
+                WALL_SPEC.md for the parallel contextual-upgrade work
+                (different problem, different solution; not conflated). */}
             {subLoading ? (
               <div className="kiddo-card h-24 animate-pulse" />
             ) : (
               <SectionCard className="bg-[hsl(var(--kiddo-evergreen)/0.06)] border-[hsl(var(--kiddo-evergreen)/0.18)]">
-                <div className="flex items-start gap-3 p-5">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen))] text-white">
-                    <Check size={17} />
+                <div className="p-5 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen))] text-white">
+                      <Check size={17} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">{planLabel} · Active</p>
+                      {/* Renewal date — only meaningful for paid users.
+                          Pulled from the subscription record; the
+                          presence of currentPeriodEnd is the signal
+                          (free users have no subscription). */}
+                      {userPlan !== "free" && subscription?.currentPeriodEnd && (
+                        <p className="mt-0.5 text-xs text-[hsl(var(--kiddo-evergreen)/0.7)]">
+                          Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                        </p>
+                      )}
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                        {userPlan === "starter"
+                          ? "Recurring investments, photo and video Memory Book entries, custom fund mix, and co-parent access."
+                          : userPlan === "family"
+                            // "Family-wide occasions" → honest rename per
+                            // 2026-05-12 pricing-page cleanup. The actual
+                            // Family-plan event differential is unlimited
+                            // events with premium features bundled, not
+                            // cross-fund occasion tools.
+                            ? "Unlimited funds, unlimited occasions, and Kid View across every child."
+                            : userPlan === "legacy"
+                              ? "Everything in Family, plus 2 Occasion credits per year."
+                              : "One child fund, a gift link, the Memory Book basics, no platform fee on normal gifts."}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">{planLabel} · Active</p>
-                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      {userPlan === "starter"
-                        ? "Recurring investments, photo and video Memory Book entries, custom fund mix, and co-parent access."
-                        : userPlan === "family"
-                          // "Family-wide occasions" → honest rename per
-                          // 2026-05-12 pricing-page cleanup. The actual
-                          // Family-plan event differential is unlimited
-                          // events with premium features bundled, not
-                          // cross-fund occasion tools.
-                          ? "Unlimited funds, unlimited occasions, and Kid View across every child."
-                          : userPlan === "legacy"
-                            ? "Everything in Family, plus 2 Occasion credits per year."
-                            : "One child fund, a gift link, the Memory Book basics, no platform fee on normal gifts."}
-                    </p>
-                  </div>
+                  {/* Paid-tier inline actions. Manage billing fires the
+                      Stripe portal redirect directly (one tap, no
+                      intermediate page). Cancel routes to Settings
+                      membership tab with ?action=cancel which auto-
+                      opens the cancellation-impact preview modal —
+                      that modal is genuinely valuable for retention
+                      (it itemizes what pauses) and is too complex to
+                      duplicate inline. The route-with-auto-open keeps
+                      the UX coherent without forcing duplication. */}
+                  {userPlan !== "free" && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[hsl(var(--kiddo-evergreen)/0.15)]">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-lg text-xs h-8 px-3"
+                        onClick={() => handleOpenBillingPortal()}
+                        disabled={openingPortal}
+                        data-testid="button-account-manage-billing"
+                      >
+                        {openingPortal ? "Opening..." : "Manage billing"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-lg text-xs h-8 px-3 text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/30"
+                        onClick={() => { haptic("light"); navigate("/settings?tab=membership&action=cancel&from=account"); }}
+                        data-testid="button-account-cancel-plan"
+                      >
+                        Cancel plan
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </SectionCard>
             )}
 
+            {/* Secondary CTA card. Tier-aware label so the parent sees
+                the action that matches their situation: Free → upgrade
+                exploration; paid → tier comparison or switching. Routes
+                to the Settings membership tab which still hosts the
+                full upgrade ladder. Phase 1b will move the ladder to
+                this surface and the secondary card becomes redundant. */}
             <SectionCard>
               <button
                 type="button"
@@ -523,11 +618,13 @@ export default function Account() {
                 data-testid="button-manage-membership"
               >
                 <div>
-                  <p className="text-sm font-bold text-foreground">Manage membership</p>
+                  <p className="text-sm font-bold text-foreground">
+                    {userPlan === "free" ? "Explore plans" : "Switch or compare plans"}
+                  </p>
                   <p className="mt-0.5 text-sm text-muted-foreground">
                     {userPlan === "free"
-                      ? "See plans and upgrade options for your funds."
-                      : "View your plan details, billing, and upgrade options."}
+                      ? "See what Plus and Family unlock for your funds."
+                      : "Compare Plus, Family, and what changes if you switch."}
                   </p>
                 </div>
                 <ChevronRight size={18} className="shrink-0 text-muted-foreground" />

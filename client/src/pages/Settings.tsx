@@ -2955,6 +2955,36 @@ const [editFundName, setEditFundName] = useState("");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, user, authLoading]);
 
+  // Auto-open the cancel-confirm modal when redirected here with
+  // ?action=cancel. Added 2026-05-14 to support the inline "Cancel
+  // plan" button on the Account plan-and-billing tab — per the
+  // WHO/HOW IA principle, Account is the primary home of plan
+  // management, but the cancellation-impact preview modal is genuinely
+  // complex (itemizes what pauses, downgrade-tier dialog, two-step
+  // warn → confirm) and lives here in Settings. Routing here with
+  // ?action=cancel auto-opens that modal so the parent never sees
+  // the Settings membership-tab chrome as an intermediate step.
+  // The membership tab is selected as a side-effect because the
+  // cancel modal is rendered inside this page; landing on a different
+  // tab first would flash unrelated content while the modal opens.
+  const hasAutoCancelTriggered = useRef(false);
+  useEffect(() => {
+    if (hasAutoCancelTriggered.current) return;
+    if (authLoading || !user) return;
+    const params = new URLSearchParams(search || "");
+    const action = params.get("action");
+    if (action !== "cancel") return;
+    if (userPlan === "free") return; // No-op for free users.
+    hasAutoCancelTriggered.current = true;
+    params.delete("action");
+    const nextQuery = params.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
+    setSettingsTab("membership");
+    setCancelStep("warn");
+    setShowCancelConfirm(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, user, authLoading, userPlan]);
+
   const handleCancelSubscription = async (opts?: { plan?: "starter" | "family"; fundId?: string }) => {
     setCanceling(true);
     haptic("medium");
