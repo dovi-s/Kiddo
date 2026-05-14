@@ -60,6 +60,14 @@ export interface ApiFund {
   status: string;
   balance: string;
   pendingBalance: string;
+  // Cash that has settled out of Stripe and into DriveWealth but
+  // hasn't yet been invested by the auto-invest worker. Distinct
+  // from pendingBalance (which is Stripe-in-flight). Surfaced on
+  // FundDetailScreen as a small "still settling into investments"
+  // line. Per money-classification audit 2026-05-14; mobile parity
+  // added 2026-05-14. May be missing on older API responses;
+  // consumers should default to "0".
+  cashBalance?: string;
   totalGain: string;
   gainPercent: string;
   contributorCount: number;

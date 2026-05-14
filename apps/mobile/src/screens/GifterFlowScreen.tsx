@@ -108,7 +108,16 @@ export function GifterFlowScreen({ destination, identifier, onBack, onStartFund 
   const stock = onboardingStockChoices.find((choice) => choice.ticker === selectedTicker) || onboardingStockChoices[0];
   const shareCount = useMemo(() => sharesFor(amount, stock.ticker), [amount, stock.ticker]);
   const fee = processingFee(amount, paymentMethod);
-  const kiddoFee = amount >= 1000 ? 9.99 : 0;
+  // Kiddo does NOT charge a platform fee on gifts. Per the locked
+  // "gift amount stays whole" rule in MEMORY.md: $50 from grandma
+  // is $50 to the fund. The gifter pays Stripe processing only.
+  // Mobile gifter flow previously carried a stale $9.99 large-gift
+  // fee for gifts >= $1,000 that contradicted this policy; removed
+  // 2026-05-14 as part of the mobile parity audit. Keeping the
+  // const at 0 (rather than deleting it) so the UI's fee-row
+  // rendering stays structurally identical for future additions if
+  // any Kiddo fees are ever re-introduced.
+  const kiddoFee = 0;
   const total = amount + fee + kiddoFee;
   const childReceives = amount;
 
@@ -239,7 +248,7 @@ export function GifterFlowScreen({ destination, identifier, onBack, onStartFund 
             <View style={styles.feeDivider} />
             <FeeRow label="You pay" value={`$${total.toFixed(2)}`} strong />
             <FeeRow label={`${childName} gets`} value={`$${childReceives.toFixed(2)}`} strong />
-            <Text style={styles.feeNote}>Final fees are confirmed at secure checkout. Kiddo does not charge a normal platform fee. Gifts of $1,000 or more include a flat $9.99 premium.</Text>
+            <Text style={styles.feeNote}>Final fees are confirmed at secure checkout. Kiddo does not charge a platform fee on gifts. The full amount goes to {childName}'s fund.</Text>
           </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -262,6 +271,16 @@ export function GifterFlowScreen({ destination, identifier, onBack, onStartFund 
           <Text style={styles.confirmTitle}>Your note is in the Memory Book.</Text>
           <Text style={styles.sectionBody}>
             A gift from today can become a story {childName} reads years from now.
+          </Text>
+          {/* Settling-window note. Matches the web GiftSuccess fix
+              shipped earlier today. Tells the gifter the gift
+              takes 1 to 2 business days to land in {child}'s
+              investments. Without this, a gifter who checks the
+              kid's balance on day 1 sees a mismatch and wonders
+              where their money went. Per money-classification
+              audit 2026-05-14. */}
+          <Text style={styles.settlingNote}>
+            Settles into {childName}'s investments over the next 1 to 2 business days.
           </Text>
           <Pressable onPress={onStartFund} style={styles.primaryBtn}>
             <Text style={styles.primaryBtnText}>Start a fund for my child</Text>
@@ -319,6 +338,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: "#FFFFFF", borderRadius: 28, padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: "#EEE8DD" },
   sectionTitle: { color: colors.ink, fontSize: 24, lineHeight: 30, fontWeight: "900" },
   sectionBody: { color: "#5E675F", fontSize: 15, lineHeight: 23 },
+  settlingNote: { color: "#8B948C", fontSize: 12, lineHeight: 17, marginTop: 8 },
   amountGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   amountBtn: { width: "47%", borderWidth: 1, borderColor: "#DED7CA", borderRadius: 20, paddingVertical: 18, paddingHorizontal: 12, backgroundColor: "#FAF7F1", gap: 4 },
   amountBtnActive: { backgroundColor: colors.evergreen, borderColor: colors.evergreen },

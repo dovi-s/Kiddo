@@ -105,7 +105,14 @@ export function FundDetailScreen({ fund, onBack }: FundDetailScreenProps) {
   const gain = parseFloat(String(fund.totalGain || "0"));
   const gainPercent = parseFloat(String(fund.gainPercent || "0"));
   const pending = parseFloat(String(fund.pendingBalance || "0"));
-  const hasStarted = balance > 0 || pending > 0 || gifts.length > 0;
+  // Settled cash that hasn't yet been invested. Distinct from
+  // pending (Stripe in flight). Surfaced as its own card below
+  // pending so the parent can see "$50 still waiting to invest"
+  // without confusing it with the 1-3-day Stripe settle. Per
+  // money-classification audit 2026-05-14. Optional on the API
+  // (older responses may omit); defaults to 0.
+  const cash = parseFloat(String((fund as any).cashBalance || "0"));
+  const hasStarted = balance > 0 || pending > 0 || cash > 0 || gifts.length > 0;
 
   return (
     <View style={styles.screen}>
@@ -159,6 +166,20 @@ export function FundDetailScreen({ fund, onBack }: FundDetailScreenProps) {
             <Text style={styles.pendingLabel}>Pending</Text>
             <Text style={styles.pendingAmount}>{formatBalance(fund.pendingBalance)}</Text>
             <Text style={styles.pendingNote}>Gifts processing. Usually settles in 1-3 days.</Text>
+          </View>
+        )}
+
+        {/* Cash settling into investments. Distinct from pending
+            (Stripe in flight). This is money that has cleared
+            Stripe + landed in DriveWealth but the auto-invest
+            worker hasn't picked it up yet. Same card register as
+            pending so the two states read as a related pair. Per
+            money-classification audit 2026-05-14. */}
+        {cash > 0 && (
+          <View style={styles.pendingCard}>
+            <Text style={styles.pendingLabel}>Waiting to invest</Text>
+            <Text style={styles.pendingAmount}>{formatBalance(String(cash))}</Text>
+            <Text style={styles.pendingNote}>Already in {fund.recipientFirstName || "the fund"}'s account. Investing on the next cycle.</Text>
           </View>
         )}
 
