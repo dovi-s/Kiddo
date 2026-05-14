@@ -18387,6 +18387,190 @@ export async function registerRoutes(
     }
   });
 
+  // ===== FUNDS OVERVIEW: CROSS-FUND GIFTER LIST =====
+  //
+  // Powers the Across-all-funds gifters sheet on /funds. Aggregates
+  // every settled gift across the user's owned funds, groups by
+  // lowercased sender_email, returns one row per gifter with the kids
+  // they've given to and a short list of recent gifts for drill-down.
+  //
+  // Privacy: `is_anonymous` is the locked flag for hiding gifter
+  // identity in PUBLIC surfaces (social-proof carousel, kid-view).
+  // This endpoint is parent-private, so we show real names. The Memory
+  // Book parent view follows the same convention. See
+  // feedback_anonymous_as_explicit_flag.md.
+  //
+  // Sorted by most recent gift descending. Capped at the natural
+  // result set size (no pagination yet; typical Family-tier parent
+  // has 5 to 30 unique gifters which fits comfortably in one sheet).
+  app.get('/api/funds-overview/gifters', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const userEmail = String((req.user as any).email || "").trim().toLowerCase();
+
+      // Cross-device email merge. Mirror of /api/funds-overview: if
+      // the parent has multiple user-id rows under the same email
+      // (signed up twice, etc.), union their owned funds.
+      const userIds = new Set<string>([userId]);
+      if (userEmail) {
+        try {
+          const candidates = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(sql`LOWER(${users.email}) = ${userEmail}`);
+          for (const c of candidates) userIds.add(c.id);
+        } catch (mergeErr) {
+          console.warn('[funds-overview/gifters] user merge skipped:', (mergeErr as any)?.message || mergeErr);
+        }
+      }
+      const userIdArr = Array.from(userIds);
+      const userIdsSql = sql.join(userIdArr.map((id) => sql`${id}`), sql`, `);
+
+      // Owned-fund ids + recipient first names (used to build kid
+      // chips in the response). Indexed for color matching with the
+      // funds-overview cards on the client.
+      const fundsResult = await db.execute(sql`
+        SELECT id, recipient_first_name AS "recipientFirstName", name
+        FROM funds
+        WHERE user_id IN (${userIdsSql})
+        ORDER BY created_at DESC
+      `);
+      const funds = ((fundsResult.rows as any[]) || []) as Array<{
+        id: string;
+        recipientFirstName: string | null;
+        name: string | null;
+      }>;
+      if (funds.length === 0) {
+        return res.json({ gifters: [], totalCount: 0 });
+      }
+
+      const fundMeta = new Map<string, { fundId: string; recipientFirstName: string | null; fundColorIndex: number }>();
+      funds.forEach((f, idx) => {
+        fundMeta.set(String(f.id), {
+          fundId: String(f.id),
+          recipientFirstName: f.recipientFirstName || f.name || null,
+          fundColorIndex: idx,
+        });
+      });
+
+      const fundIdsSql = sql.join(funds.map((f) => sql`${f.id}`), sql`, `);
+
+      // Settled gifts only. We exclude pending so a freshly-charged
+      // gift mid-Stripe-flight doesn't appear; failed/refunded/canceled
+      // are excluded so a wave-off doesn't claim a row that won't
+      // ultimately count. Same status filter the funds-overview
+      // unique-gifter count uses.
+      const giftsResult = await db.execute(sql`
+        SELECT
+          id,
+          fund_id AS "fundId",
+          sender_name AS "senderName",
+          sender_email AS "senderEmail",
+          is_anonymous AS "isAnonymous",
+          amount,
+          message,
+          created_at AS "createdAt"
+        FROM gifts
+        WHERE fund_id IN (${fundIdsSql})
+          AND sender_email IS NOT NULL AND sender_email <> ''
+          AND status NOT IN ('failed', 'refunded', 'canceled', 'pending')
+        ORDER BY created_at DESC
+      `);
+      const gifts = (giftsResult.rows as any[]) || [];
+
+      type FundChip = {
+        fundId: string;
+        recipientFirstName: string | null;
+        fundColorIndex: number;
+        giftCount: number;
+      };
+      type RecentGift = {
+        id: string;
+        fundId: string;
+        recipientFirstName: string | null;
+        amount: number;
+        message: string | null;
+        createdAt: string;
+        isAnonymous: boolean;
+      };
+      type GifterRow = {
+        email: string;
+        displayName: string;
+        giftCount: number;
+        totalAmount: number;
+        mostRecentGiftAt: string;
+        fundsGivenTo: FundChip[];
+        recentGifts: RecentGift[];
+      };
+
+      const RECENT_GIFTS_PER_GIFTER = 10;
+      const gifterMap = new Map<string, GifterRow>();
+
+      for (const gift of gifts) {
+        const email = String(gift.senderEmail || '').trim().toLowerCase();
+        if (!email) continue;
+        const meta = fundMeta.get(String(gift.fundId));
+        if (!meta) continue;
+
+        const rawName = String(gift.senderName || '').trim();
+        let entry = gifterMap.get(email);
+        if (!entry) {
+          // First-encountered gift per gifter is the most recent
+          // (gifts are ordered desc), so display name + mostRecentGiftAt
+          // are seeded from this row. Display name resolves to the
+          // non-empty senderName when present, falling back to
+          // "Anonymous" only when truly unknown.
+          entry = {
+            email,
+            displayName: rawName || 'Anonymous',
+            giftCount: 0,
+            totalAmount: 0,
+            mostRecentGiftAt: String(gift.createdAt),
+            fundsGivenTo: [],
+            recentGifts: [],
+          };
+          gifterMap.set(email, entry);
+        }
+
+        entry.giftCount += 1;
+        entry.totalAmount += parseFloat(String(gift.amount || 0)) || 0;
+
+        const existingFund = entry.fundsGivenTo.find((f) => f.fundId === meta.fundId);
+        if (existingFund) {
+          existingFund.giftCount += 1;
+        } else {
+          entry.fundsGivenTo.push({
+            fundId: meta.fundId,
+            recipientFirstName: meta.recipientFirstName,
+            fundColorIndex: meta.fundColorIndex,
+            giftCount: 1,
+          });
+        }
+
+        if (entry.recentGifts.length < RECENT_GIFTS_PER_GIFTER) {
+          entry.recentGifts.push({
+            id: String(gift.id),
+            fundId: meta.fundId,
+            recipientFirstName: meta.recipientFirstName,
+            amount: parseFloat(String(gift.amount || 0)) || 0,
+            message: gift.message ? String(gift.message).slice(0, 200) : null,
+            createdAt: String(gift.createdAt),
+            isAnonymous: Boolean(gift.isAnonymous),
+          });
+        }
+      }
+
+      const gifters = Array.from(gifterMap.values()).sort(
+        (a, b) => new Date(b.mostRecentGiftAt).getTime() - new Date(a.mostRecentGiftAt).getTime(),
+      );
+
+      res.json({ gifters, totalCount: gifters.length });
+    } catch (error) {
+      console.error('[funds-overview/gifters] failed:', error);
+      res.status(500).json({ error: 'Failed to load gifters' });
+    }
+  });
+
   // ===== REALIZED SALES (tax reporting) =====
   //
   // Returns every type='sell' transaction for a fund in a given tax

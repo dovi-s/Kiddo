@@ -21,12 +21,13 @@
 // (count-up balance, gift strip, Memory Book) lives. This page is the
 // big-picture; the kid pages are the management + emotional layers.
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowRight, CalendarClock, Gift, Heart } from "lucide-react";
+import { ArrowRight, CalendarClock, ChevronRight, Gift, Heart } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { GiftersAcrossFundsSheet } from "@/components/GiftersAcrossFundsSheet";
 import { useAuth } from "@/hooks/use-auth";
 import { setActiveFundId } from "@/hooks/use-active-fund";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -211,6 +212,11 @@ function buildRecurringRowSubtitle(item: OverviewRecurringItem): string {
 export default function FundsOverview() {
   const [, setLocation] = useLocation();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  // Slide-up sheet for the cross-fund gifter view. Opens from the
+  // "Across all funds" card below. The household-glance answer to
+  // "Grandma gave to whom and what did she give them?" Closed by
+  // default; the page itself stays calm + administrative.
+  const [giftersSheetOpen, setGiftersSheetOpen] = useState(false);
 
   usePageSeo({
     title: "Your funds | Kiddo",
@@ -697,20 +703,48 @@ export default function FundsOverview() {
             copy says "people have given to your children" — accurate
             and warm without crossing into "family portrait" or
             "dynasty" territory. A single line, no profile circles,
-            no avatars, no leaderboard energy. */}
+            no avatars, no leaderboard energy.
+            Tappable as of 2026-05-14: opens the cross-fund gifter
+            sheet (GiftersAcrossFundsSheet) which answers the
+            household-glance question per-fund Memory Books can't.
+            "Grandma gave to whom and what did she give them?" The
+            sheet itself respects the same calm register (no avatars,
+            no leaderboard); chronologically sorted. The page itself
+            stays visually unchanged; the affordance is just a chevron
+            and a hover tint. */}
         {uniqueGifterCount > 0 && (
           <motion.section
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], delay: 0.18 + funds.length * 0.08 + 0.15 }}
-            className="rounded-3xl border border-border bg-card p-5"
           >
-            <p className="kiddo-section-label mb-2">Across all funds</p>
-            <p className="text-sm text-foreground leading-relaxed">
-              <span className="font-semibold">{uniqueGifterCount}</span>{" "}
-              {uniqueGifterCount === 1 ? "person has" : "people have"} given to your{" "}
-              {funds.length === 1 ? "child" : "children"}.
-            </p>
+            <button
+              type="button"
+              onClick={() => setGiftersSheetOpen(true)}
+              className="w-full text-left rounded-3xl border border-border bg-card p-5 transition-colors hover:bg-[hsl(var(--kiddo-cream))] focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:outline-none"
+              data-testid="across-all-funds-gifters-trigger"
+              aria-label="View gifters across all funds"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="kiddo-section-label mb-2">Across all funds</p>
+                  <p className="text-sm text-foreground leading-relaxed">
+                    <span className="font-semibold">{uniqueGifterCount}</span>{" "}
+                    {uniqueGifterCount === 1 ? "person has" : "people have"} given to your{" "}
+                    {funds.length === 1 ? "child" : "children"}.
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    See who gave to who.
+                  </p>
+                </div>
+                <ChevronRight
+                  size={16}
+                  strokeWidth={2}
+                  className="shrink-0 mt-1 text-muted-foreground"
+                  aria-hidden
+                />
+              </div>
+            </button>
           </motion.section>
         )}
 
@@ -721,6 +755,14 @@ export default function FundsOverview() {
           Each fund stays separate. Open one to see its Memory Book, activity, and settings.
         </p>
       </main>
+
+      {/* Cross-fund gifter sheet. Mounted at the page root so its
+          backdrop covers the full viewport (not just the main column)
+          and the slide-up motion doesn't fight any internal layout. */}
+      <GiftersAcrossFundsSheet
+        open={giftersSheetOpen}
+        onClose={() => setGiftersSheetOpen(false)}
+      />
     </div>
   );
 }
