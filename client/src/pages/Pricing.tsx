@@ -71,8 +71,14 @@ const plans = [
     annual: "or $4.99 / month",
     cta: "Start with Kiddo+",
     featured: true,
-    note: "Annual is 35% off monthly.",
+    note: "Annual is 35% off monthly. Plus is for one child. Adding a second kid means moving to Family.",
     body: [
+      // Single-fund constraint surfaced as the leading bullet so a
+      // multi-kid parent reads the limit before scrolling the
+      // feature list. Per the 2026-05-14 strategic review: the
+      // constraint should be obvious before the parent commits,
+      // not surface-as-friction when they try to add a second kid.
+      "One child fund. Move to Family if you add a second.",
       "Everything in Free",
       "Recurring investments. Set a monthly amount that fires automatically",
       "Add your own photos, videos, and voice memos to Memory Book entries",
@@ -193,6 +199,20 @@ export default function Pricing() {
               <span className="font-medium text-foreground">Annual pricing is shown first on paid plans.</span>{" "}
               Most families choose the yearly option because it lowers the re-evaluation moment to once a year and shows the clearest savings.
             </p>
+            {/* 14-day reverse trial of Plus features fires
+                automatically on every new account. Previously this
+                lived only in the FAQ ("Is there a free trial?"
+                question), buried where most visitors never scroll.
+                Surfaced 2026-05-14 per the strategic pricing review:
+                the trial mechanic is the single highest-leverage
+                conversion lever in the model and was reading as a
+                footnote. Calm reassurance card, not hero-sized
+                (locked principle: marketing-feel chrome stays
+                Apple-Settings register). */}
+            <p className="mx-auto mt-4 max-w-3xl rounded-2xl border border-border bg-card px-5 py-4 text-sm leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground">Every new account gets a 14-day Plus trial.</span>{" "}
+              Every premium feature unlocks for two weeks so you can try before deciding. No credit card. Your fund stays either way.
+            </p>
           </motion.div>
         </div>
       </section>
@@ -276,6 +296,17 @@ export default function Pricing() {
             </div>
             <p className="mx-auto mt-4 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
               For context, that is roughly the cost of a single coffee per year per $10,000 invested.
+            </p>
+            {/* Alignment frame. The AUM fee is small but the deeper
+                story is WHY the model is structured this way: Kiddo
+                only earns more if the kid's fund grows. That puts
+                the platform on the same side of the table as the
+                family. Single sentence makes the trust frame
+                explicit; without it the fee reads as just-another-
+                line-item. Surfaced 2026-05-14 per the strategic
+                pricing review. */}
+            <p className="mx-auto mt-3 max-w-2xl text-center text-sm font-medium leading-relaxed text-foreground">
+              When your child's fund grows, we earn a little more. We are on the same side of the table.
             </p>
           </FadeIn>
         </div>
