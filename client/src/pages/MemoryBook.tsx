@@ -632,7 +632,16 @@ export default function MemoryBook() {
   // milestones, sealed_letters, etc.) pass through unchanged. Conservative —
   // two real separate gifts with different giftIds aren't affected.
   const entries = useMemo(() => {
-    if (!Array.isArray(rawMemoryEntries) || rawMemoryEntries.length === 0) return rawMemoryEntries as MemoryEntry[];
+    // Defensive: if the /api/funds/:id/memory query errors out
+    // (500, network drop), rawMemoryEntries is undefined. Returning
+    // `undefined as MemoryEntry[]` here made every downstream
+    // `for (const e of entries)` throw "entries is not iterable",
+    // which crashed the MemoryBook page into AppErrorBoundary.
+    // Always return an array — empty when there's no data. Caught
+    // alongside the DesktopSidebar.tsx:93 hardening during the
+    // 2026-05-14 schema-DB-drift incident, same shape: API
+    // failure -> undefined data -> iteration crash -> ErrorBoundary.
+    if (!Array.isArray(rawMemoryEntries) || rawMemoryEntries.length === 0) return [] as MemoryEntry[];
     const seenGiftIds = new Set<string>();
     return rawMemoryEntries.filter((e) => {
       const isGiftMessage = e?.type === "gift_message";
