@@ -9995,7 +9995,16 @@ export async function registerRoutes(
       const userId = (req.user as any).id;
       if (!userId) return res.status(401).json({ error: 'Not authenticated' });
       const body = req.body ?? {};
-      const { profileImageUrl, firstName, lastName, preferredName } = body;
+      const {
+        profileImageUrl,
+        firstName,
+        lastName,
+        preferredName,
+        trustedContactName,
+        trustedContactEmail,
+        trustedContactPhone,
+        trustedContactRelation,
+      } = body;
       const maxProfileImageDataUrlBytes = 7 * 1024 * 1024;
 
       if (profileImageUrl != null) {
@@ -10007,12 +10016,53 @@ export async function registerRoutes(
         }
       }
 
+      // Trusted-contact email validation. Permissive on shape (basic
+      // local@domain.tld) so we don't reject grandparent aliases that
+      // a stricter regex might flag, but we still want to catch
+      // obvious garbage. Empty string clears the field.
+      const trustedEmailTrimmed = trustedContactEmail !== undefined
+        ? String(trustedContactEmail).trim()
+        : undefined;
+      if (
+        trustedEmailTrimmed !== undefined &&
+        trustedEmailTrimmed !== '' &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trustedEmailTrimmed)
+      ) {
+        return res.status(400).json({ error: 'Trusted contact email looks invalid.' });
+      }
+
       type UserUpdate = Partial<typeof users.$inferInsert>;
       const updates: UserUpdate = { updatedAt: new Date() };
       if (profileImageUrl != null) updates.profileImageUrl = profileImageUrl;
       if (firstName !== undefined) updates.firstName = String(firstName).slice(0, 100);
       if (lastName !== undefined) updates.lastName = String(lastName).slice(0, 100);
       if (preferredName !== undefined) updates.preferredName = String(preferredName).trim().slice(0, 50) || null;
+
+      // Trusted contact write path. Any field present in the body
+      // counts as a change to the trusted-contact section, so we
+      // stamp `trustedContactUpdatedAt` for audit trail. Empty strings
+      // clear the underlying column (null). String length caps match
+      // the schema column lengths.
+      let trustedContactTouched = false;
+      if (trustedContactName !== undefined) {
+        updates.trustedContactName = String(trustedContactName).trim().slice(0, 200) || null;
+        trustedContactTouched = true;
+      }
+      if (trustedEmailTrimmed !== undefined) {
+        updates.trustedContactEmail = trustedEmailTrimmed.toLowerCase().slice(0, 254) || null;
+        trustedContactTouched = true;
+      }
+      if (trustedContactPhone !== undefined) {
+        updates.trustedContactPhone = String(trustedContactPhone).trim().slice(0, 32) || null;
+        trustedContactTouched = true;
+      }
+      if (trustedContactRelation !== undefined) {
+        updates.trustedContactRelation = String(trustedContactRelation).trim().slice(0, 50) || null;
+        trustedContactTouched = true;
+      }
+      if (trustedContactTouched) {
+        updates.trustedContactUpdatedAt = new Date();
+      }
 
       const [updated] = await db.update(users)
         .set(updates)

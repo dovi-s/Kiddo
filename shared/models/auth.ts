@@ -79,6 +79,20 @@ export const users = pgTable("users", {
   // hasEarnedIncome (the prereq); a kid with earned income can
   // still choose not to opt into Roth notifications.
   rothIraInterestAt: timestamp("roth_ira_interest_at"),
+  // Trusted contact (FINRA Rule 4512). Someone Kiddo / DriveWealth /
+  // Apex can contact when the account holder is unreachable, suspected
+  // of financial exploitation, or where a guardian/executor identity
+  // needs confirmation. Required by carrier-broker rules; doubles as
+  // the right safety net for the kid-at-18 handoff failure path
+  // (parent unreachable at the moment the kid claims their fund).
+  // All fields are optional individually so a user can partial-fill;
+  // the UI prompts to complete the row but doesn't hard-block save.
+  // Name + (email OR phone) are the minimum useful combination.
+  trustedContactName: text("trusted_contact_name"),
+  trustedContactEmail: varchar("trusted_contact_email", { length: 254 }),
+  trustedContactPhone: varchar("trusted_contact_phone", { length: 32 }),
+  trustedContactRelation: varchar("trusted_contact_relation", { length: 50 }),
+  trustedContactUpdatedAt: timestamp("trusted_contact_updated_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

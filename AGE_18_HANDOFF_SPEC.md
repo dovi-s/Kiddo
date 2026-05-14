@@ -299,6 +299,57 @@ as a "we'll let you know when this is ready" placeholder.
 
 ---
 
+## Failure paths (the unhappy versions of handoff)
+
+Added 2026-05-14 after auditing Cash App's Sponsored-Account
+graduation flow. Cash App's flow explicitly handles the "kid can't
+or won't complete the transfer" case by liquidating and closing.
+Kiddo can't simply mirror that. UTMA law constrains us differently
+because the kid is the legal owner from day one. The custodian's
+role ends at majority regardless of whether the kid is reachable.
+The asset still belongs to them.
+
+Each row below is the unhappy version of a handoff path, plus what
+the system should do.
+
+| Failure | Why it happens | Current behavior | Right behavior |
+|---|---|---|---|
+| **Kid is unreachable on T-0** | Stale email, kid never set up an account, parent had a typo in the invite email | T-0 email fires into the void; transfer worker stalls because the kid never claims | Worker retries the invite email at T+7, T+30, T+90. After T+90, surfaces a **stalled-handoff** action item to the parent ("We can't reach Emma. Update her email or provide a trusted contact"). The fund stays in parent's custodial view but read-only, with no new gifts, recurring, or withdrawals. |
+| **Kid can't pass KYC** | Kid signs up but DriveWealth rejects identity (wrong SSN, bad photo ID, name mismatch with the UTMA registration) | Kid sees a generic "verification failed" page; no escalation path | KYC failure surfaces a specific "we need this from you" list (the failure reason from `kycData.lastFailureMessage` per the locked action-items pattern). Kid can retry. After 3 failed attempts, escalate to a real human via support email + parent's trusted contact (if set) gets a heads-up. |
+| **Kid refuses to claim** | Kid is estranged, doesn't want the money, or doesn't trust the brokerage | Fund sits forever in parent's read-only view | UTMA law: the assets STILL belong to the kid as of majority date, even if they refuse to claim them. The parent has no legal authority to do anything but custodial-style preservation. Kiddo's stance: hold the assets indefinitely, send a once-a-year ping to the kid's email, surface the situation to the parent so they can pursue offline (court, mediator, etc.). **Do NOT liquidate.** That would defeat UTMA. |
+| **Parent dies before kid reaches majority** | Real life | Today: account orphaned. Trusted contact (if set) can be reached but has no formal authority. | Successor custodian named at fund creation should kick in. This is the legal mechanism that exists for the case. UI affordance for parent to nominate successor at fund creation, surfaced in the AddFund flow. (Already in `successorName/successorEmail/successorRelation` on the schema; not yet wired to a full takeover flow.) Trusted contact is the bridge: we email them with information about the successor process. |
+| **Kid dies before reaching majority** | Real life, devastating | No formal handling | Parent contacts support. Funds liquidate and distribute per UTMA law (typically to the kid's estate, which is usually the parent). This is the path documented in `HARD_MOMENTS_SPEC.md`. Trusted contact may be the conduit if the parent themselves is unreachable. |
+| **Kid is reached but transfer worker fails mid-flight** | DriveWealth API hiccup, network failure, race condition on `fund.userId` flip | Partial state: kid has claimed but ownership flip didn't land, or vice versa | Worker treats the two-step (`claim` then `complete`) as idempotent. If the second step fails, alert support immediately + retry once per hour for 24h. Don't let the kid see "your fund is in limbo". The UI should say "transfer in progress" and not let them act on the fund yet. |
+| **Trusted contact is the only person we can reach** | Parent died or became incapacitated, no successor was named at fund creation | Today: nothing happens | Trusted contact gets a careful email (template at `server/templates/trusted-contact-fund-stalled.ts`, not yet written) explaining the situation and pointing them at offline-resolution paths (probate court, family attorney). Trusted contact does NOT inherit custodial authority. They're only a confirmation/intermediary channel per FINRA Rule 4512. |
+
+**The discipline this section locks in:** Kiddo doesn't liquidate
+kid funds at majority just because the kid is unreachable. UTMA
+ownership is bedrock, separate from operational convenience. Cash
+App's Sponsored-Account liquidation path is fine for THEM because
+the sponsor was the legal owner the whole time. For Kiddo, the
+kid was always the owner; we just held the assets in trust.
+
+**What this section requires from the broader system:**
+
+1. Trusted-contact field on the parent's account (FINRA Rule 4512).
+   Shipped 2026-05-14: column added to `users` table + UI in Account
+   security tab.
+2. `kycData.lastFailureMessage` surfaced to the kid's claim UI on
+   verification failure. Already exists per the locked action-items
+   pattern in `server/actionItems.ts`.
+3. Stalled-handoff worker. Not yet wired; open follow-up item. Today
+   `age18TransitionWorker.ts` does T-30 / T-1 / T-0 only; it doesn't
+   know how to follow up at T+7 / T+30 / T+90 if the kid never claims.
+4. Successor-custodian takeover flow. Schema columns
+   (`successorName`, `successorEmail`, `successorRelation`) exist but
+   no UI surface or operational handoff is built. Open follow-up item.
+
+**Trigger to re-open this section:** the first time a real fund
+stalls at handoff. Whatever the failure mode that surfaces it, the
+real-world version trumps the spec.
+
+---
+
 ## What's deferred (with trigger conditions)
 
 | Item | Trigger to re-open |

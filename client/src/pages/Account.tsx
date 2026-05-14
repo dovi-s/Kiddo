@@ -6,7 +6,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff } from "lucide-react";
+import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus } from "lucide-react";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
@@ -52,6 +52,34 @@ export default function Account() {
   const [showCurrentPw, setShowCurrentPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+
+  // Trusted contact (FINRA Rule 4512). Lives on the security tab
+  // because semantically it IS a security/safety net for the account,
+  // not a money-management surface. Locally tracked so the parent can
+  // edit without an "edit mode" toggle round-trip; we save via PATCH
+  // /api/user/profile when they hit Save. Empty strings clear fields.
+  const trustedContactSaved = {
+    name: ((user as any)?.trustedContactName as string) || "",
+    email: ((user as any)?.trustedContactEmail as string) || "",
+    phone: ((user as any)?.trustedContactPhone as string) || "",
+    relation: ((user as any)?.trustedContactRelation as string) || "",
+  };
+  const [trustedContactName, setTrustedContactName] = useState(trustedContactSaved.name);
+  const [trustedContactEmail, setTrustedContactEmail] = useState(trustedContactSaved.email);
+  const [trustedContactPhone, setTrustedContactPhone] = useState(trustedContactSaved.phone);
+  const [trustedContactRelation, setTrustedContactRelation] = useState(trustedContactSaved.relation);
+  const [savingTrustedContact, setSavingTrustedContact] = useState(false);
+  const trustedContactDirty =
+    trustedContactName.trim() !== trustedContactSaved.name.trim() ||
+    trustedContactEmail.trim() !== trustedContactSaved.email.trim() ||
+    trustedContactPhone.trim() !== trustedContactSaved.phone.trim() ||
+    trustedContactRelation.trim() !== trustedContactSaved.relation.trim();
+  const trustedContactHasAny = Boolean(
+    trustedContactSaved.name ||
+    trustedContactSaved.email ||
+    trustedContactSaved.phone ||
+    trustedContactSaved.relation,
+  );
 
   const userPlan = subLoading ? null : (subscription?.effectivePlan ?? "free");
   const planLabel =
@@ -172,6 +200,70 @@ export default function Account() {
       toast({ title: "Could not save", description: err?.message || "Network error", variant: "destructive" });
     }
     setSavingPreferredName(false);
+  };
+
+  const handleSaveTrustedContact = async () => {
+    setSavingTrustedContact(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trustedContactName: trustedContactName.trim(),
+          trustedContactEmail: trustedContactEmail.trim(),
+          trustedContactPhone: trustedContactPhone.trim(),
+          trustedContactRelation: trustedContactRelation.trim(),
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        queryClient.setQueryData(["/api/auth/user"], updated);
+        haptic("success");
+        toast({ title: "Trusted contact saved" });
+      } else {
+        let msg = `Status ${res.status}`;
+        try { const d = await res.json(); msg = d.error || d.message || msg; } catch {}
+        toast({ title: "Could not save", description: msg, variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Could not save", description: err?.message || "Network error", variant: "destructive" });
+    }
+    setSavingTrustedContact(false);
+  };
+
+  const handleClearTrustedContact = async () => {
+    setSavingTrustedContact(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          trustedContactName: "",
+          trustedContactEmail: "",
+          trustedContactPhone: "",
+          trustedContactRelation: "",
+        }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        queryClient.setQueryData(["/api/auth/user"], updated);
+        setTrustedContactName("");
+        setTrustedContactEmail("");
+        setTrustedContactPhone("");
+        setTrustedContactRelation("");
+        haptic("success");
+        toast({ title: "Trusted contact removed" });
+      } else {
+        toast({ title: "Could not remove", variant: "destructive" });
+      }
+    } catch (err: any) {
+      toast({ title: "Could not remove", description: err?.message || "Network error", variant: "destructive" });
+    }
+    setSavingTrustedContact(false);
   };
 
   const handleChangePassword = async () => {
@@ -551,6 +643,130 @@ export default function Account() {
                     <p className="mt-0.5 text-xs text-muted-foreground">Coming soon</p>
                   </div>
                   <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">Soon</span>
+                </div>
+              </div>
+            </SectionCard>
+
+            {/* Trusted contact (FINRA Rule 4512). Required-ish field for
+                the brokerage relationship via DriveWealth: someone we
+                can reach if we can't reach the parent, if we suspect
+                financial exploitation, or to confirm a legal-guardian
+                identity. Doubles as the right safety net for the kid-
+                at-18 handoff failure path (parent unreachable at the
+                exact moment a transfer needs to land). Optional in
+                practice today; if/when DriveWealth enforces it the
+                gate can be promoted to a setup-progress step. */}
+            <SectionCard>
+              <div className="p-5">
+                <div className="flex items-start gap-3">
+                  <UserPlus size={18} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground">Trusted contact</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      Someone we can reach if we can't reach you. Used only for account
+                      safety, identity confirmation, or suspected financial exploitation.
+                      Required for FINRA-regulated accounts via our broker DriveWealth.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label htmlFor="account-trusted-name" className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      Name
+                    </label>
+                    <input
+                      id="account-trusted-name"
+                      name="trustedContactName"
+                      type="text"
+                      autoComplete="name"
+                      value={trustedContactName}
+                      onChange={(e) => setTrustedContactName(e.target.value)}
+                      placeholder="Full name"
+                      maxLength={200}
+                      className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      data-testid="input-trusted-contact-name"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="account-trusted-email" className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        Email
+                      </label>
+                      <input
+                        id="account-trusted-email"
+                        name="trustedContactEmail"
+                        type="email"
+                        autoComplete="email"
+                        value={trustedContactEmail}
+                        onChange={(e) => setTrustedContactEmail(e.target.value)}
+                        placeholder="name@example.com"
+                        maxLength={254}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        data-testid="input-trusted-contact-email"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="account-trusted-phone" className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        Phone
+                      </label>
+                      <input
+                        id="account-trusted-phone"
+                        name="trustedContactPhone"
+                        type="tel"
+                        autoComplete="tel"
+                        value={trustedContactPhone}
+                        onChange={(e) => setTrustedContactPhone(e.target.value)}
+                        placeholder="(555) 123-4567"
+                        maxLength={32}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        data-testid="input-trusted-contact-phone"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="account-trusted-relation" className="block text-xs font-medium text-muted-foreground mb-1.5">
+                      Relationship
+                    </label>
+                    <input
+                      id="account-trusted-relation"
+                      name="trustedContactRelation"
+                      type="text"
+                      autoComplete="off"
+                      value={trustedContactRelation}
+                      onChange={(e) => setTrustedContactRelation(e.target.value)}
+                      placeholder="e.g. Spouse, Parent, Sibling, Adult child"
+                      maxLength={50}
+                      className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      data-testid="input-trusted-contact-relation"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      onClick={handleSaveTrustedContact}
+                      disabled={savingTrustedContact || !trustedContactDirty}
+                      className="rounded-xl"
+                      data-testid="button-save-trusted-contact"
+                    >
+                      {savingTrustedContact ? "Saving..." : trustedContactHasAny ? "Update" : "Save"}
+                    </Button>
+                    {trustedContactHasAny && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleClearTrustedContact}
+                        disabled={savingTrustedContact}
+                        className="rounded-xl"
+                        data-testid="button-clear-trusted-contact"
+                      >
+                        Remove contact
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </SectionCard>
