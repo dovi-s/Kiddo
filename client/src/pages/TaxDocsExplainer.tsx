@@ -10,7 +10,7 @@
 // January, what each line means in plain English, how the LTCG vs
 // short-term distinction shows up, where the cost-basis came from,
 // and what to actually do with the form. Designed to be readable in
-// under 5 minutes — same vocabulary as the Age18Welcome screen 3
+// under 5 minutes. Same vocabulary as the Age18Welcome screen 3
 // tax primer but with form-line-specific detail.
 
 import { Link } from "wouter";
@@ -103,6 +103,46 @@ export default function TaxDocsExplainer() {
                   income tax). Same gain, very different bill.
                 </li>
               </ul>
+              <p className="pt-1">
+                One thing to know about losses: if you sell at a loss and buy
+                the same stock back within 30 days, the loss doesn't count this
+                year. It moves into the new shares' cost basis instead (called
+                a "wash sale"). Tax software catches this automatically; if
+                you're filing by hand it shows up on the 1099-B with a code W.
+              </p>
+            </>
+          }
+        />
+
+        <Section
+          icon={<AlertCircle size={16} />}
+          title="If you're under 19 (or in college)"
+          body={
+            <>
+              <p>
+                There's one wrinkle worth knowing about before you file. It's
+                called the "Kiddie Tax" and it applies if you're under 19, or
+                under 24 and a full-time student claimed as a dependent.
+              </p>
+              <p>
+                The first chunk of your unearned income (dividends + capital
+                gains) gets taxed at your rate. Anything above the threshold
+                (around $2,500 for 2024 to 2025; adjusts each year) gets taxed
+                at your parents' rate, which is usually higher than yours.
+              </p>
+              <p>
+                In practice: if your 1099-DIV plus your 1099-B gains add up to
+                more than the threshold, the math on the upper portion follows
+                a different rate. Tax software handles it automatically if you
+                check the dependent box during the filing flow. If you're
+                filing your own return for the first time, this is the line
+                item that surprises people most.
+              </p>
+              <p>
+                Once you're 19 (or 24 if you stayed in college as a dependent),
+                the Kiddie Tax stops applying and your income is taxed at your
+                rate again.
+              </p>
             </>
           }
         />
@@ -147,17 +187,22 @@ export default function TaxDocsExplainer() {
                 from the moment each gift was invested.
               </p>
               <p>
-                When grandma sent $500 at your 10th birthday and it bought 3
-                shares of Disney at $166/share, that $166/share is the cost basis
-                for those 3 shares. When you sell, the difference between $166 and
-                the sale price is your gain. Kiddo's brokerage reports this to
-                the IRS automatically; you don't need to track it yourself.
+                When grandma sent $500 at your 10th birthday and it bought about
+                3 shares of Disney at $166/share, that $166/share is the cost
+                basis for those shares (Kiddo invests in fractional shares too,
+                so the math lands at 3.012 shares; the cost basis is the same
+                per-share number either way). When you sell, the difference
+                between $166 and the sale price is your gain. Kiddo's brokerage
+                reports this to the IRS automatically; you don't need to track
+                it yourself.
               </p>
               <p>
-                If you ever see "cost basis: unknown" on a sale (rare but possible
-                for very old positions), the IRS treats it as $0, which means
-                100% of the sale is taxed as gain. Email us and we'll fix it
-                before you file.
+                If you ever see "cost basis: unknown" on a sale (rare, but
+                possible for very old positions), you'll need to figure it out
+                yourself before filing. If you can't, the safe default is $0,
+                which means 100% of the sale gets taxed as gain. Email us first
+                if this comes up; we can usually reconstruct the basis from
+                your gift records.
               </p>
             </>
           }
