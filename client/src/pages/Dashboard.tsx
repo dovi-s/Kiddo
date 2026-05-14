@@ -5228,13 +5228,25 @@ export default function Dashboard() {
                     <div className="mt-3 pt-3 border-t border-border/50">
                       <div className="flex items-baseline justify-between">
                         <span className="text-sm font-bold text-foreground">Worth today</span>
-                        <span className="font-heading text-lg font-bold tabular-nums text-foreground">
-                          {/* Unsigned — Worth today is a TOTAL VALUE, not a delta.
-                              Was passing signed=true which prepended a "+" that read
-                              as a gain badge ("+$1,575.00") when this is just the
-                              fund's current worth. Other rows in this card that ARE
-                              deltas (Market growth) keep signed=true correctly. */}
-                          {fmtRow(total30)}
+                        {/* Wrap matches the input-row pattern (inline-flex
+                            + gap-1.5 + invisible ChevronRight 14px) so the
+                            right edge of the Worth today number column-aligns
+                            with the right edge of the rows above. Without
+                            this, the rows had a 20px chevron-buffer pushing
+                            their amounts left while Worth today sat flush-
+                            right — a parent scanning the column down sees
+                            the numbers stair-step at the sum line. Visual
+                            alignment fix per the 2026-05-13 audit. */}
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="font-heading text-lg font-bold tabular-nums text-foreground">
+                            {/* Unsigned — Worth today is a TOTAL VALUE, not a delta.
+                                Was passing signed=true which prepended a "+" that read
+                                as a gain badge ("+$1,575.00") when this is just the
+                                fund's current worth. Other rows in this card that ARE
+                                deltas (Market growth) keep signed=true correctly. */}
+                            {fmtRow(total30)}
+                          </span>
+                          <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
                         </span>
                       </div>
                       {fundCreatedMs && (
