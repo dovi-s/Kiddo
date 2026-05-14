@@ -5230,39 +5230,34 @@ export default function Dashboard() {
                         as the sum. Was "Total so far" / "Total this
                         month" — relabeled to make it unambiguous: this
                         is the fund's actual current worth, not a running
-                        tally. The since-date sub-line gives kid-fund
-                        emotional context (especially powerful for older
-                        funds: "since June 14, 2019" reads as "we've
-                        been doing this since the day they were born"). */}
+                        tally.
+
+                        The "since {date}" sub-line was deleted 2026-05-13.
+                        The panel header already shows "{date} → today"
+                        with year for funds older than 365 days; repeating
+                        the date below Worth today was redundant. The
+                        original argument for the duplicate was emotional
+                        anchor for old funds ("since June 14, 2019" reads
+                        as 'we've been doing this since the day they were
+                        born') — but the header already carries that date
+                        for old funds. The Worth today section's other
+                        sub-lines (cash status + next-scheduled preview)
+                        carry NEW information; the date sub-line did not. */}
                     <div className="mt-3 pt-3 border-t border-border/50">
                       <div className="flex items-baseline justify-between">
                         <span className="text-sm font-bold text-foreground">Worth today</span>
                         {/* Wrap matches the input-row pattern (inline-flex
                             + gap-1.5 + invisible ChevronRight 14px) so the
                             right edge of the Worth today number column-aligns
-                            with the right edge of the rows above. Without
-                            this, the rows had a 20px chevron-buffer pushing
-                            their amounts left while Worth today sat flush-
-                            right — a parent scanning the column down sees
-                            the numbers stair-step at the sum line. Visual
-                            alignment fix per the 2026-05-13 audit. */}
+                            with the right edge of the rows above. */}
                         <span className="inline-flex items-center gap-1.5">
                           <span className="font-heading text-lg font-bold tabular-nums text-foreground">
-                            {/* Unsigned — Worth today is a TOTAL VALUE, not a delta.
-                                Was passing signed=true which prepended a "+" that read
-                                as a gain badge ("+$1,575.00") when this is just the
-                                fund's current worth. Other rows in this card that ARE
-                                deltas (Market growth) keep signed=true correctly. */}
+                            {/* Unsigned — Worth today is a TOTAL VALUE, not a delta. */}
                             {fmtRow(total30)}
                           </span>
                           <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
                         </span>
                       </div>
-                      {fundCreatedMs && (
-                        <p className="text-[11px] text-muted-foreground/70 mt-0.5">
-                          since {new Date(fundCreatedMs).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}
-                        </p>
-                      )}
                       {/* Cash-status sub-detail. Subordinate to Worth today
                           because it's a SUBSET of that total (the portion
                           not yet invested), not an additive input. Tappable
