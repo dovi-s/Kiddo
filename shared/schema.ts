@@ -406,6 +406,19 @@ export const ageTransitions = pgTable("age_transitions", {
   childEmailVerificationToken: text("child_email_verification_token"),
   childEmailVerificationSentAt: timestamp("child_email_verification_sent_at"),
   childEmailVerifiedAt: timestamp("child_email_verified_at"),
+  // Stalled-handoff escalation timestamps. Stamped by
+  // server/stalledHandoffWorker.ts when the kid hasn't claimed
+  // the fund N days after the invite went out. Three steps:
+  //   T+7 : gentle nudge to kid + heads-up to parent
+  //   T+30: stronger escalation; mentions trusted contact if set
+  //   T+90: parent action-item surfaced; trusted contact emailed
+  // Each timestamp fires exactly once per fund. Per the locked
+  // discipline in AGE_18_HANDOFF_SPEC.md failure-paths section:
+  // Kiddo does NOT liquidate stalled funds. UTMA ownership
+  // belongs to the kid; we hold until they surface.
+  stalledHandoffT7At: timestamp("stalled_handoff_t7_at"),
+  stalledHandoffT30At: timestamp("stalled_handoff_t30_at"),
+  stalledHandoffT90At: timestamp("stalled_handoff_t90_at"),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
   // Fast lookup by token for the public verify endpoint (kid clicks link).

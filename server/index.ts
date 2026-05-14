@@ -12,6 +12,7 @@ import { logStorageMode } from "./objectStorage";
 import { startParentLifecycleWorker } from "./parentLifecycleWorker";
 import { startMobilePushWorker } from "./mobilePushWorker";
 import { startAge18TransitionWorker } from "./age18TransitionWorker";
+import { startStalledHandoffWorker } from "./stalledHandoffWorker";
 import { startDemoResetWorker } from "./demoResetWorker";
 import { startPostHandoffEngagementWorker } from "./postHandoffEngagementWorker";
 import { registerOGMiddleware } from "./ogMiddleware";
@@ -619,6 +620,7 @@ app.use((req, res, next) => {
   startMobilePushWorker(log);
   startRecurringContributionWorker(log);
   startAge18TransitionWorker(log);
+  startStalledHandoffWorker(log);
   startDemoResetWorker(log);
   startPostHandoffEngagementWorker(log);
 
