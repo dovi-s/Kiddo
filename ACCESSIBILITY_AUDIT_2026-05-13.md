@@ -6,12 +6,38 @@
 > - `--kiddo-muted`: was 4.37:1, now **5.61:1** ✓ AA normal
 > - `--muted-foreground`: was 4.07:1, now **5.33:1** ✓ AA normal
 >
-> Issue 2 (gold text fails AA) NOT yet shipped. It's a design-
-> discipline call (use evergreen text on gold backgrounds, gold for
-> non-text accents only) rather than a single-token darken, and the
-> recommended fix doesn't sit cleanly in one CSS variable swap. The
-> existing audit recommendation stands; needs a per-surface gold-as-
-> text audit to ship cleanly.
+> Issue 2 (gold text fails AA) PARTIALLY shipped 2026-05-14:
+> - Defined the previously-undefined `--kiddo-gold-ink` and
+>   `--kora-gold-ink` tokens (~#6F4611, HSL 34 74% 25%). These
+>   were referenced in 10+ files (Settings, MemoryBook, KidView,
+>   YourStory, EventCreate, AgeTransitionInvite, ClaimFund, Events,
+>   KidAt18WelcomeBanner) but had no CSS definition. Browser was
+>   falling back to inherited color silently. Defining the token
+>   gives those latent references the intended dark-amber finish.
+> - Computed contrasts of the new gold-ink token:
+>   - on cream: **7.5:1** ✓ AAA
+>   - on 15% gold tint over cream: **6.8:1** ✓ comfortable AA
+> - Migrated `ActivityDetail.tsx` "Details" label from
+>   `--kora-gold` to `--kora-gold-ink` for AA compliance.
+>
+> Still open: 5-6 surfaces use `--kora-gold` for text (vs icons or
+> backgrounds) in contexts that would benefit from gold-ink
+> migration:
+> - `client/src/components/ActionItemCard.tsx:93` (icon-as-text on
+>   gold-tinted circle; icons have looser WCAG requirements)
+> - `client/src/components/ui/premium-list-item.tsx:79+164` (avatar
+>   wrappers; same icon-vs-text consideration)
+> - `client/src/components/ui/live-ticker.tsx:268+293` (decorative
+>   animation moment on dark evergreen background; gold-light
+>   would be the right migration target here, not gold-ink)
+> - `client/src/components/ui/share-kit.tsx:366` (Sparkles icon)
+> - `client/src/pages/ActivityDetail.tsx:48+224` (Gift icon + chat
+>   icon; same icon consideration)
+>
+> Decision: leave icon usages as-is (looser WCAG threshold for
+> non-text); the live-ticker decorative case needs the gold-light
+> alternative not gold-ink. The audit closes on "text on cream/tinted-
+> gold" coverage being fixed.
 
 First formal contrast audit of the Kiddo palette. Two real issues
 surfaced, both on muted/accent text against the cream background.

@@ -221,8 +221,8 @@ export default function ActivityDetail() {
                 className="bg-[hsl(var(--kora-gold)/0.08)] border border-[hsl(var(--kora-gold)/0.2)] rounded-2xl p-5"
               >
                 <div className="flex items-center gap-2 mb-3">
-                  <MessageCircle size={16} className="text-[hsl(var(--kora-gold))]" />
-                  <p className="text-sm font-medium text-[hsl(var(--kora-gold))]">Details</p>
+                  <MessageCircle size={16} className="text-[hsl(var(--kora-gold-ink))]" />
+                  <p className="text-sm font-medium text-[hsl(var(--kora-gold-ink))]">Details</p>
                 </div>
                 <p className="text-foreground leading-relaxed" data-testid="text-activity-metadata">{metadataLabel}</p>
               </motion.div>

@@ -170,10 +170,19 @@ parent. Read-only treatment with the "Transferred to Emma" framing
 honors the lifecycle and prevents the parent from clicking buttons
 that no longer do anything.
 
-### Paused recurring row
-The Dashboard "Growing automatically" card hides paused rows. Better:
-collapse them into a single "1 paused" row with a Resume button.
-Otherwise the parent thinks they cancelled when they only paused.
+### Paused recurring row (NOT a gap, confirmed 2026-05-14)
+Original spec assumption was wrong. Dashboard.tsx lines 7274 to 7358
+already render paused recurring rows with `opacity-60` dimming +
+muted text styling + a `paused` indicator prop on the per-row
+component. Filter at line 7089 is `c.status !== "cancelled"` which
+INCLUDES paused, so paused rows are not hidden.
+
+The dimmed-per-row treatment is arguably better than the spec's
+proposed "1 paused · Resume" aggregate because it surfaces WHICH
+ticker is paused, not just a count. Parent can tap into the row's
+DetailHistoryModal to resume.
+
+No work to do here. Updating the spec to reflect actual behavior.
 
 ## Recommended ship order
 

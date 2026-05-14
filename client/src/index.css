@@ -134,6 +134,7 @@
   --kora-evergreen-active: 152 37% 14%; /* derived: pressed dims ~3% below base */
   --kora-gold: var(--kiddo-gold);
   --kora-gold-light: var(--kiddo-gold-light);
+  --kora-gold-ink: var(--kiddo-gold-ink); /* alias, see --kiddo-gold-ink for rationale */
   --kora-gold-glow: 34 78% 58%;        /* derived: glowing variant of --kiddo-gold */
   --kora-cream: var(--kiddo-cream);
   --kora-ink: var(--kiddo-ink);
@@ -143,6 +144,19 @@
   --kiddo-cream-dark: 36 28% 90%;       /* #EDE7DC */
   --kiddo-gold: 34 74% 45%;             /* #C5821E */
   --kiddo-gold-light: 40 78% 66%;       /* #EDC164 — balance flash + warm highlight */
+  /* Gold ink. Darker gold suitable for TEXT use on cream + on
+     gold-tinted backgrounds (the chip / pill / love-mark pattern).
+     The brand --kiddo-gold (#C5821E) is too light for text on
+     cream (2.93:1 contrast, fails WCAG AA). Gold-ink lands at
+     ~#6F4611 (HSL 34 74% 25%) which computes to 7.5:1 on cream
+     (AAA) and 6.8:1 on a 15% gold tint over cream (comfortable AA).
+     References to --kiddo-gold-ink and --kora-gold-ink existed
+     across 10+ files (Settings, MemoryBook, KidView, YourStory,
+     EventCreate, AgeTransitionInvite, etc.) before this token was
+     defined, falling back silently to inherited color. Defining
+     the token fixes those latent references AND closes Issue 2 of
+     ACCESSIBILITY_AUDIT_2026-05-13.md. */
+  --kiddo-gold-ink: 34 74% 25%;         /* #6F4611 */
   --kiddo-ink: 40 23% 8%;               /* #1A1710 */
   /* Darkened from 32 7% 44% (#7A7268) to 32 7% 38% (~#61615A) on
      2026-05-14 to clear WCAG AA normal-text contrast against cream.
