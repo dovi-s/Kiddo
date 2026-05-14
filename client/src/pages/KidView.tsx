@@ -117,51 +117,60 @@ const COMPANY_EXPLAINERS: Record<string, { emoji: string; youngOwner: string; wh
     whatTheyDo: "Spotify streams music to hundreds of millions of people around the world.",
     whyItMatters: "When more people subscribe, Spotify earns more and can keep making music available.",
   },
+  // ETF + diversified-fund explainers — rewritten 2026-05-13 to match
+  // the kid-recognition pattern of the single-stock explainers (DIS,
+  // AAPL, NKE, etc.). The previous versions used abstract finance
+  // language ("hundreds of American companies") while every single-
+  // stock entry painted a concrete scene ("every iPhone", "every red
+  // shopping cart"). For a kid whose fund is 50%% VTI and 10%% AAPL,
+  // the bigger holding shouldn't read more abstractly than the
+  // smaller one. Pattern: name the brands they SEE in the world that
+  // are inside the fund. Evergreen — no numbers, no rankings that age.
   VTI: {
     emoji: "📈",
-    youngOwner: "You own a tiny piece of hundreds of American companies all at once.",
+    youngOwner: "You own a tiny piece of nearly every big US company at once. The store you shop at, the streaming service you watch, the airline your family flies. Pieces of all of them are yours.",
     whatTheyDo: "VTI is an ETF that owns many different US companies all at once.",
     whyItMatters: "Instead of betting on one company, it spreads money across a large part of the stock market.",
   },
   VXUS: {
     emoji: "🌍",
-    youngOwner: "You own a tiny piece of companies from countries all around the world.",
+    youngOwner: "You own a tiny piece of companies all over the world. The car from Japan, the chocolate from Switzerland, the soccer team's sponsor in Europe. Pieces of all of them are yours.",
     whatTheyDo: "VXUS is an ETF that owns companies outside the United States.",
     whyItMatters: "It helps spread your money across the world instead of one country.",
   },
   BND: {
     emoji: "🏦",
-    youngOwner: "You own a tiny piece of many loans that companies and the government pay back over time.",
+    youngOwner: "You own tiny IOUs from companies and the US government. They borrow money from you, and they pay you back a little extra over time.",
     whatTheyDo: "BND is a bond fund, which means it holds many loans instead of company stock.",
     whyItMatters: "Bonds usually move more gently than stocks, which can help smooth the ride.",
   },
   VGT: {
     emoji: "💻",
-    youngOwner: "You own a tiny piece of hundreds of tech companies like Apple, Microsoft, and Nvidia.",
+    youngOwner: "You own a tiny piece of nearly every tech company. Every iPhone, every Windows computer, every Nvidia chip inside a Tesla or an AI server. Pieces of all of them are yours.",
     whatTheyDo: "VGT is an ETF focused on US technology companies: software, hardware, and chips.",
     whyItMatters: "Tech moves fast. When the sector grows, this fund can rise. When it cools, it can fall.",
   },
   VUG: {
     emoji: "🌿",
-    youngOwner: "You own a tiny piece of fast-growing US companies.",
+    youngOwner: "You own a tiny piece of the US companies growing fastest right now. The ones building new things people end up using every day.",
     whatTheyDo: "VUG is an ETF that holds large US companies expected to keep growing.",
     whyItMatters: "Growth funds tend to swing more than the whole market. Bigger ups and bigger downs.",
   },
   VYM: {
     emoji: "💰",
-    youngOwner: "You own a tiny piece of US companies that share their profits with investors.",
+    youngOwner: "You own a tiny piece of steady US companies that share their profits with you. Every few months, a little cash gets paid to your fund just for owning them.",
     whatTheyDo: "VYM is an ETF that holds companies that pay dividends, which are small cash payments to owners.",
     whyItMatters: "Dividend companies tend to be steadier. Slower growth, more income.",
   },
   SCHD: {
     emoji: "📊",
-    youngOwner: "You own a tiny piece of US companies that have grown their dividends over time.",
+    youngOwner: "You own a tiny piece of US companies that have been paying their owners more and more every year for a long time. The reliable kind.",
     whatTheyDo: "SCHD is an ETF focused on companies with reliable, growing dividends.",
     whyItMatters: "Companies that keep raising what they pay tend to be the steady ones.",
   },
   QQQ: {
     emoji: "🚀",
-    youngOwner: "You own a tiny piece of the 100 largest non-financial Nasdaq companies, mostly tech.",
+    youngOwner: "You own a tiny piece of the biggest tech and consumer companies on Nasdaq. Every Netflix show, every Amazon order, every Google search, every Microsoft Word document. Pieces of all of them are yours.",
     whatTheyDo: "QQQ is an ETF tracking the Nasdaq 100, heavy on tech and innovation.",
     whyItMatters: "When tech soars, this rises fast. When tech corrects, it falls fast too.",
   },
@@ -173,7 +182,7 @@ const COMPANY_EXPLAINERS: Record<string, { emoji: string; youngOwner: string; wh
   },
   CMCSA: {
     emoji: "📺",
-    youngOwner: "You own a tiny piece of Comcast: Xfinity internet, NBC, and Universal Studios.",
+    youngOwner: "You own a tiny piece of Comcast. Every Xfinity internet bill, every NBC show, every Universal Studios ride. Pieces of all of it are yours.",
     whatTheyDo: "Comcast runs cable TV, internet, NBC broadcasting, and the Universal theme parks.",
     whyItMatters: "Anytime someone subscribes to Xfinity or watches NBC, Comcast earns.",
   },
@@ -209,13 +218,13 @@ const COMPANY_EXPLAINERS: Record<string, { emoji: string; youngOwner: string; wh
   },
   ADBE: {
     emoji: "🎨",
-    youngOwner: "You own a tiny piece of Adobe: Photoshop, Illustrator, the tools artists use.",
+    youngOwner: "You own a tiny piece of Adobe. Every Photoshop edit, every video cut in Premiere, every PDF opened. Pieces of the company that built them are yours.",
     whatTheyDo: "Adobe makes creative software like Photoshop, Premiere, and PDF tools used worldwide.",
     whyItMatters: "Designers, photographers, and businesses pay Adobe monthly to use its tools.",
   },
   Z: {
     emoji: "🏠",
-    youngOwner: "You own a tiny piece of Zillow, the company most Americans use to look for homes.",
+    youngOwner: "You own a tiny piece of Zillow. Every house people scroll through dreaming, every Zestimate, every for-sale sign that ends up in Zillow's app. Pieces of it are yours.",
     whatTheyDo: "Zillow runs the most-visited home and real estate platform in the US.",
     whyItMatters: "When more people search for homes through Zillow, the company can earn from agents and ads.",
   },
