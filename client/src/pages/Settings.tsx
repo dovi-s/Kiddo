@@ -4212,6 +4212,43 @@ const [editFundName, setEditFundName] = useState("");
                 </Link>
               </div>
             </SectionCard>
+
+            {/* ── Close this fund ── */}
+            {/* Relocated 2026-05-14 from the membership tab to here per
+                the WHO/HOW information-architecture principle: close-
+                this-fund is a per-fund action (it changes one fund's
+                state, not the user's identity or billing), so it
+                belongs in a fund-scoped tab, not in membership which
+                is account-scoped. Placed at the bottom of the child
+                tab per the standard UX convention that destructive
+                actions live at the bottom (keeps them out of
+                accidental-tap reach but findable when the parent
+                goes looking). The close action itself is unchanged.
+                Designed against project_cancellation_dark_pattern_
+                avoidance.md AND project_close_fund_design_lens.md
+                (locked memory). The close action is reversible.
+                Memory Book + audit logs stay intact. Cash stays in
+                the fund (separate withdrawal flow). Recurring
+                investments cancel. No guilt copy. */}
+            {primaryFund && !fundIsClosed && (
+              <SectionCard className="border-border/60">
+                <div className="p-5">
+                  <h2 className="text-base font-bold text-foreground">Close this fund</h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    Stop accepting gifts to {primaryFund.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "this"} fund. The Memory Book and history stay intact, and you can reopen anytime.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4 rounded-xl"
+                    onClick={() => { haptic("light"); setCloseFundOpen(true); }}
+                    data-testid="button-open-close-fund"
+                  >
+                    Close fund
+                  </Button>
+                </div>
+              </SectionCard>
+            )}
           </div>
         )}
 
@@ -4348,12 +4385,12 @@ const [editFundName, setEditFundName] = useState("");
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/70">What pauses when {userPlan === "starter" ? "Kiddo+" : "Kiddo Family"} ends</p>
                       {cancellationImpact.parentContributions.map(c => (
                         <p key={c.id} className="text-xs text-amber-900 leading-relaxed">
-                          ⏸ {c.childName}'s auto-invest{c.executionModel === "pick" && c.selectedTicker ? ` to ${c.selectedTicker}` : ""} — ${c.amount.toFixed(2)}/{c.frequency}
+                          ⏸ {c.childName}'s recurring investment{c.executionModel === "pick" && c.selectedTicker ? ` to ${c.selectedTicker}` : ""}, ${c.amount.toFixed(2)}/{c.frequency}
                         </p>
                       ))}
                       {cancellationImpact.recurringGifts.map(rg => (
                         <p key={rg.id} className="text-xs text-amber-900 leading-relaxed">
-                          ⏸ {rg.senderName}'s gift reminder for {rg.childName} — ${rg.amount.toFixed(2)} every {rg.frequency === "yearly" ? "year" : rg.frequency === "quarterly" ? "3 months" : "month"}
+                          ⏸ {rg.senderName}'s gift reminder for {rg.childName}, ${rg.amount.toFixed(2)} every {rg.frequency === "yearly" ? "year" : rg.frequency === "quarterly" ? "3 months" : "month"}
                         </p>
                       ))}
                     </div>
@@ -4604,31 +4641,13 @@ const [editFundName, setEditFundName] = useState("");
                 this Settings.tsx copy was missed in that pass and is
                 cleaned up here. Per MEMORY's Kiddo Occasions section. */}
 
-            {/* ── Close this fund ── */}
-            {/* Designed against project_cancellation_dark_pattern_avoidance.md
-                AND project_close_fund_design_lens.md (locked memory). The
-                close action is reversible. Memory Book + audit logs stay
-                intact. Cash stays in the fund (separate withdrawal flow).
-                Recurring investments cancel. No guilt copy. */}
-            {primaryFund && !fundIsClosed && (
-              <SectionCard className="border-border/60">
-                <div className="p-5">
-                  <h2 className="text-base font-bold text-foreground">Close this fund</h2>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Stop accepting gifts to {primaryFund.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "this"} fund. The Memory Book and history stay intact, and you can reopen anytime.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4 rounded-xl"
-                    onClick={() => { haptic("light"); setCloseFundOpen(true); }}
-                    data-testid="button-open-close-fund"
-                  >
-                    Close fund
-                  </Button>
-                </div>
-              </SectionCard>
-            )}
+            {/* Close-this-fund used to render here. Relocated to the
+                child tab on 2026-05-14 per the WHO/HOW information-
+                architecture principle (membership = account-level;
+                close-this-fund = per-fund; therefore lives in the
+                fund-scoped tab, not the account-scoped tab). The
+                close behavior itself is unchanged. See the new
+                location at the bottom of the "child" tab. */}
           </div>
         )}
 
