@@ -42,13 +42,36 @@ function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; 
 // premium upgrade product name and to read warmer than calendar-app "event".
 // Internal code (EventCreate, useEvents, eventId, schema.events table, etc.)
 // is unchanged — the rename is display-only.
-const plans = [
+// Plan data shape: each paid plan has explicit yearly + monthly
+// price blocks so the annual/monthly toggle in the JSX can swap
+// between them cleanly. Free has only `flat` since it doesn't
+// have a billing-period split. Per the 2026-05-14 strategic
+// pricing review.
+type PlanPrice =
+  | { kind: "flat"; price: string; period: string }
+  | {
+      kind: "billed";
+      yearly: { price: string; period: string; equivalent: string };
+      monthly: { price: string; period: string; equivalent: string };
+    };
+
+type Plan = {
+  id: string;
+  name: string;
+  eyebrow: string;
+  cta: string;
+  featured: boolean;
+  pricing: PlanPrice;
+  body: readonly string[];
+  note?: string;
+};
+
+const plans: readonly Plan[] = [
   {
     id: "free",
     name: "FREE",
     eyebrow: "For parents just getting started.",
-    price: "$0",
-    pricePeriod: "/ per month",
+    pricing: { kind: "flat", price: "$0", period: "/ per month" },
     cta: "Start for free",
     featured: false,
     body: [
@@ -66,9 +89,11 @@ const plans = [
     id: "kiddo-plus",
     name: "KIDDO+",
     eyebrow: "For the parent who shows up every month.",
-    price: "$39",
-    pricePeriod: "/ per year",
-    annual: "or $4.99 / month",
+    pricing: {
+      kind: "billed",
+      yearly: { price: "$39", period: "/ per year", equivalent: "or $4.99 / month" },
+      monthly: { price: "$4.99", period: "/ per month", equivalent: "Save 35% with $39 / year" },
+    },
     cta: "Start with Kiddo+",
     featured: true,
     note: "Annual is 35% off monthly. Plus is for one child. Adding a second kid means moving to Family.",
@@ -93,9 +118,11 @@ const plans = [
     id: "kiddo-family",
     name: "KIDDO FAMILY",
     eyebrow: "For families with two or more children.",
-    price: "$69",
-    pricePeriod: "/ per year",
-    annual: "or $7.99 / month",
+    pricing: {
+      kind: "billed",
+      yearly: { price: "$69", period: "/ per year", equivalent: "or $7.99 / month" },
+      monthly: { price: "$7.99", period: "/ per month", equivalent: "Save 28% with $69 / year" },
+    },
     cta: "Cover all your children",
     featured: false,
     note: "Annual is 28% off monthly. Best value from your second child onwards.",
@@ -109,7 +136,7 @@ const plans = [
       "0.10% annual fee on invested assets only",
     ],
   },
-] as const;
+];
 
 const fitRows = [
   {
@@ -172,6 +199,12 @@ const pricingFaqs = [
 export default function Pricing() {
   const [showFeeDetails, setShowFeeDetails] = useState(false);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
+  // Annual / monthly toggle. Locked default = annual per
+  // 2026-05-14 strategic pricing review and the hero reassurance
+  // line ("Annual pricing is shown first on paid plans"). Industry-
+  // standard SaaS pattern; massive readability win over the
+  // previous "stacked prices in every card" treatment.
+  const [billingPeriod, setBillingPeriod] = useState<"yearly" | "monthly">("yearly");
 
   return (
     <div className="min-h-screen bg-background">
@@ -219,8 +252,64 @@ export default function Pricing() {
 
       <section className="py-20 md:py-28">
         <div className="mx-auto max-w-6xl px-4">
+          {/* Annual / monthly toggle. Pill-shaped, calm, default
+              to annual (per locked principle "annual pricing is
+              shown first on paid plans"). Affects only the price
+              block on each card; feature lists are billing-period-
+              independent. Free card price is unchanged regardless
+              of toggle state. */}
+          <div className="mb-10 flex justify-center">
+            <div
+              className="inline-flex items-center rounded-full border border-border bg-card p-1 shadow-premium-sm"
+              role="radiogroup"
+              aria-label="Billing period"
+              data-testid="pricing-billing-toggle"
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={billingPeriod === "yearly"}
+                onClick={() => setBillingPeriod("yearly")}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  billingPeriod === "yearly"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="pricing-toggle-yearly"
+              >
+                Annual
+                <span className={`ml-1.5 text-[10px] font-semibold uppercase tracking-wide ${
+                  billingPeriod === "yearly" ? "text-primary-foreground/85" : "text-green-700"
+                }`}>
+                  Save up to 35%
+                </span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={billingPeriod === "monthly"}
+                onClick={() => setBillingPeriod("monthly")}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  billingPeriod === "monthly"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="pricing-toggle-monthly"
+              >
+                Monthly
+              </button>
+            </div>
+          </div>
           <div className="grid gap-8 md:grid-cols-3">
-            {plans.map((plan, index) => (
+            {plans.map((plan, index) => {
+              // Resolve the price block based on the current toggle
+              // state. Flat-priced plans (Free) ignore the toggle.
+              const priceDisplay = plan.pricing.kind === "flat"
+                ? { price: plan.pricing.price, period: plan.pricing.period, equivalent: null as string | null }
+                : billingPeriod === "yearly"
+                  ? { ...plan.pricing.yearly, equivalent: plan.pricing.yearly.equivalent }
+                  : { ...plan.pricing.monthly, equivalent: plan.pricing.monthly.equivalent };
+              return (
               <FadeIn key={plan.id} delay={index * 0.08}>
                 <div className={`relative flex h-full flex-col rounded-2xl bg-card p-8 shadow-premium-sm ${plan.featured ? "ring-2 ring-primary" : ""}`}>
                   {plan.featured ? (
@@ -235,10 +324,10 @@ export default function Pricing() {
                     <h2 className="mb-2 font-heading text-xl font-semibold text-foreground">{plan.name}</h2>
                     <p className="text-sm font-medium text-foreground">{plan.eyebrow}</p>
                     <div className="mt-5 flex items-baseline justify-center gap-1">
-                      <span className="font-heading text-4xl font-bold text-foreground">{plan.price}</span>
-                      <span className="text-sm font-medium text-muted-foreground">{plan.pricePeriod}</span>
+                      <span className="font-heading text-4xl font-bold text-foreground">{priceDisplay.price}</span>
+                      <span className="text-sm font-medium text-muted-foreground">{priceDisplay.period}</span>
                     </div>
-                    {"annual" in plan && plan.annual ? <p className="mt-2 text-sm font-medium text-green-700">{plan.annual}</p> : null}
+                    {priceDisplay.equivalent ? <p className="mt-2 text-sm font-medium text-green-700">{priceDisplay.equivalent}</p> : null}
                   </div>
 
                   <ul className="mb-8 flex-1 space-y-3">
@@ -259,7 +348,8 @@ export default function Pricing() {
                   {"note" in plan && plan.note ? <p className="mt-4 text-center text-sm italic text-muted-foreground">{plan.note}</p> : null}
                 </div>
               </FadeIn>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

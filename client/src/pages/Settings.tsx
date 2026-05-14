@@ -4464,7 +4464,15 @@ const [editFundName, setEditFundName] = useState("");
                   <p className="mt-1 text-xs text-muted-foreground">or ${KORA_STARTER_YEARLY}/year</p>
                   <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Make this feel real every month.</p>
                   <div className="mt-5 space-y-2 text-sm text-muted-foreground">
-                    {["Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Custom fund mix (pick your own stocks)", "Co-parent access and priority support"].map((item) => (
+                    {/* Plus upgrade-card bullets. Synced 2026-05-14 to
+                        match Pricing.tsx leading constraint so existing
+                        users considering upgrade see the single-fund
+                        limit the same way prospects do. Compact list
+                        is intentional (Settings is upgrade-trigger
+                        surface, not marketing); leading bullet sets
+                        the right expectation before the parent
+                        commits. */}
+                    {["One child fund. Move to Family if you add a second.", "Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Custom fund mix (pick your own stocks)", "Co-parent access and priority support"].map((item) => (
                       <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold))]" />{item}</p>
                     ))}
                   </div>
@@ -4508,7 +4516,15 @@ const [editFundName, setEditFundName] = useState("");
                         features included" rename. Other bullet cleanup done
                         on Pricing.tsx (deleted padding, kept scale-clarifiers).
                         See project_acorns_bundle_inflation_pattern.md. */}
-                    {["Unlimited funds, every child", "Unlimited occasions with premium features included", "Kid View for every child", "One view for every fund in your household"].map((item) => (
+                    {/* Family upgrade-card bullets. Synced 2026-05-14
+                        to add the Memory Book authoring differential,
+                        which is the key Plus-vs-Family upgrade lever
+                        per the locked Memory Book tier policy (parent-
+                        authored media unlocks at Plus; multi-child
+                        parent-authored media is the Family delta).
+                        Without this bullet, the Settings upgrade card
+                        underrepresented the actual feature gain. */}
+                    {["Unlimited funds, every child", "Memory Book authoring for every child (photos, videos, voice)", "Unlimited occasions with premium features included", "Kid View for every child", "One view for every fund in your household"].map((item) => (
                       <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold))]" />{item}</p>
                     ))}
                   </div>
