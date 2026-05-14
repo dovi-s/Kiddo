@@ -11446,21 +11446,49 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Primary + secondary CTA shape per
+                    IN_APP_UPGRADE_FEATURE_WALL_SPEC.md. Primary
+                    routes to the Settings membership tab with the
+                    auto-trigger query params so the Stripe upgrade
+                    fires for THIS fund the moment Settings mounts.
+                    Previous behavior routed to /pricing which is a
+                    full tier-comparison matrix, asking the parent to
+                    re-evaluate the entire decision when they were
+                    trying to do one specific thing. The contextual
+                    upgrade flow converts at the locked 3-8x rate of
+                    generic 'see pricing' links per the spec. */}
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     className="rounded-full"
                     onClick={() => { haptic("selection"); setAutoInvestUpgradeOpen(false); }}
                   >
-                    Maybe later
+                    Not now
                   </Button>
                   <Button
                     className="flex-1 rounded-full bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen))]/90 text-white"
-                    onClick={() => { haptic("medium"); setAutoInvestUpgradeOpen(false); setLocation("/pricing"); }}
+                    onClick={() => {
+                      haptic("medium");
+                      setAutoInvestUpgradeOpen(false);
+                      const fundId = activeFund?.id || "";
+                      setLocation(fundId
+                        ? `/settings?tab=membership&upgrade=starter&fundId=${encodeURIComponent(fundId)}`
+                        : "/settings?tab=membership");
+                    }}
                     data-testid="button-auto-invest-upgrade-confirm"
                   >
                     Upgrade to Plus
                   </Button>
+                </div>
+                <div className="-mt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => { haptic("light"); setAutoInvestUpgradeOpen(false); setLocation("/pricing"); }}
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                    data-testid="button-auto-invest-upgrade-see-all"
+                  >
+                    See all Plus features
+                  </button>
                 </div>
               </div>
             );

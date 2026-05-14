@@ -2943,7 +2943,13 @@ const [editFundName, setEditFundName] = useState("");
       void handleUpgradeFamily();
     } else if (upgrade === "legacy") {
       void handleUpgradeLegacy();
-    } else if (upgrade === "starter" && fundIdParam) {
+    } else if ((upgrade === "starter" || upgrade === "plus") && fundIdParam) {
+      // `plus` aliases `starter` defensively. `starter` is the internal
+      // plan name; `plus` is the user-facing one. MemoryMediaPicker and
+      // any future feature-wall surface using the user-facing name now
+      // routes correctly. Without the alias, `upgrade=plus` was a silent
+      // dead-end: the URL landed on the membership tab but never fired
+      // the Stripe checkout. See IN_APP_UPGRADE_FEATURE_WALL_SPEC.md.
       void handleUpgradeStarter(fundIdParam);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

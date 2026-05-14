@@ -255,7 +255,18 @@ export function MemoryMediaPicker({
                 {fundPronouns.subject.charAt(0).toUpperCase() + fundPronouns.subject.slice(1)} hearing your voice on {fundPronouns.possAdj} {majorityOrdinal} birthday is the kind of artifact nothing else gives {fundPronouns.object}. Text entries stay free; media unlocks with Kiddo+ ($4.99/month).
               </p>
               <div className="mt-3">
-                <Link href="/settings?tab=membership&upgrade=plus">
+                {/* Deep-link to Settings membership tab with auto-trigger
+                    params per Settings.tsx:2929 handler. Previously
+                    sent `upgrade=plus` which the handler doesn't
+                    recognize (it expects `starter` / `family` /
+                    `legacy`), so the CTA landed on the membership tab
+                    but never fired the Stripe checkout. Now passes
+                    `upgrade=starter&fundId=X` so the Plus upgrade
+                    fires for the current fund. The defensive alias
+                    for `upgrade=plus` was also added on the handler
+                    side in case other code paths use the user-facing
+                    name. See IN_APP_UPGRADE_FEATURE_WALL_SPEC.md. */}
+                <Link href={`/settings?tab=membership&upgrade=starter&fundId=${fundId}`}>
                   <Button
                     size="sm"
                     className="rounded-xl"
