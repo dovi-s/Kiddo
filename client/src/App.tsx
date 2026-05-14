@@ -25,7 +25,13 @@ const Account = lazy(() => import("@/pages/Account"));
 const Activity = lazy(() => import("@/pages/Activity"));
 const ActivityDetail = lazy(() => import("@/pages/ActivityDetail"));
 const Onboard = lazy(() => import("@/pages/Onboard"));
-const Send = lazy(() => import("@/pages/Send"));
+// /send route was removed 2026-05-14. Send.tsx was a UI-only
+// prototype with a "Coming soon" banner and no real API. Public
+// route to a non-functional feature is worse than no route. The
+// component file is preserved in git as design reference; if the
+// feature ships later, restore the import + the Route below + the
+// page-title mapping + the hidden-paths entries in MobileNav /
+// DesktopSidebar / AppHeader title map.
 const Claim = lazy(() => import("@/pages/Claim"));
 const ClaimFund = lazy(() => import("@/pages/ClaimFund"));
 const InvitationAccept = lazy(() => import("@/pages/InvitationAccept"));
@@ -370,7 +376,6 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname.startsWith("/activity/")) return { ...genericPrivate, title: "Activity Detail | Kiddo", description: "Detailed activity record." };
   if (pathname === "/events") return { ...genericPrivate, title: "Events | Kiddo", description: "Create and manage gifting events for your fund." };
   if (pathname === "/event/create") return { ...genericPrivate, title: "Create Event | Kiddo", description: "Set up a new gifting event in Kiddo." };
-  if (pathname === "/send") return { ...genericPrivate, title: "Send Gift | Kiddo", description: "Send a gift securely." };
   if (pathname.startsWith("/claim/")) return { ...genericPrivate, title: "Claim Gift | Kiddo", description: "Claim and verify your gift." };
   if (pathname === "/onboard") return { ...genericPrivate, title: "Onboarding | Kiddo", description: "Finish account setup and fund preferences." };
   if (pathname === "/activate") return { ...genericPrivate, title: "Activate Investing | Kiddo", description: "Complete investing activation for your fund." };
@@ -746,7 +751,6 @@ function Router() {
           <Route path="/activity/:id"><ProtectedRoute><ActivityDetail /></ProtectedRoute></Route>
           <Route path="/events">{() => { window.location.replace("/dashboard"); return null; }}</Route>
           <Route path="/event/create"><ProtectedRoute><EventCreate /></ProtectedRoute></Route>
-          <Route path="/send"><Send /></Route>
           <Route path="/claim/:token"><Claim /></Route>
           <Route path="/take-over/:token"><ClaimFund /></Route>
           <Route path="/invitations/:token"><InvitationAccept /></Route>

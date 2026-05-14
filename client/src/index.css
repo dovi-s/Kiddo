@@ -144,7 +144,13 @@
   --kiddo-gold: 34 74% 45%;             /* #C5821E */
   --kiddo-gold-light: 40 78% 66%;       /* #EDC164 — balance flash + warm highlight */
   --kiddo-ink: 40 23% 8%;               /* #1A1710 */
-  --kiddo-muted: 32 7% 44%;             /* #7A7268 */
+  /* Darkened from 32 7% 44% (#7A7268) to 32 7% 38% (~#61615A) on
+     2026-05-14 to clear WCAG AA normal-text contrast against cream.
+     Previous 4.37:1 fell below the 4.5:1 threshold; new value
+     computes to 5.61:1, comfortable AA pass. Per
+     ACCESSIBILITY_AUDIT_2026-05-13.md Issue 1 fix Option 1
+     (single-token darken, brand-preserving). */
+  --kiddo-muted: 32 7% 38%;
   --kiddo-border: 33 24% 86%;           /* #E5DDD4 */
   --kiddo-border-light: 33 24% 86% / 0.6; /* faded variant for inner row dividers */
   
@@ -168,7 +174,13 @@
 
   /* Muted */
   --muted: 40 12% 94%;
-  --muted-foreground: 150 8% 45%;
+  /* Darkened from 150 8% 45% (~#6A7C73) to 150 8% 38% (~#596961) on
+     2026-05-14 to clear WCAG AA normal-text contrast against cream.
+     Previous 4.07:1 fell below the 4.5:1 threshold; new value
+     computes to 5.33:1, comfortable AA pass. Twin of the
+     --kiddo-muted token; both used for secondary text and both
+     needed the same shift. */
+  --muted-foreground: 150 8% 38%;
 
   /* Accent - Warm Gold */
   --accent: 36 72% 52%;

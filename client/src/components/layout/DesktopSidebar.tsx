@@ -39,7 +39,7 @@ export function DesktopSidebar() {
     }
   }, [queryClient]);
 
-  const hiddenPaths = ["/checkout", "/get-started", "/onboard", "/activate", "/login", "/claim", "/give", "/send", "/gift", "/fund/"];
+  const hiddenPaths = ["/checkout", "/get-started", "/onboard", "/activate", "/login", "/claim", "/give", "/gift", "/fund/"];
   const shouldHide = hiddenPaths.some(path => location.startsWith(path));
   const isHome = location === "/";
   const isPublicPage =

@@ -31,7 +31,7 @@ export function MobileNav() {
     // data already in cache from auth.
   };
 
-  const hiddenPaths = ["/checkout", "/get-started", "/onboard", "/activate", "/login", "/claim", "/give", "/send", "/fund/"];
+  const hiddenPaths = ["/checkout", "/get-started", "/onboard", "/activate", "/login", "/claim", "/give", "/fund/"];
   const shouldHide = hiddenPaths.some(path => location.startsWith(path));
   const isPublicPage =
     location === "/" ||

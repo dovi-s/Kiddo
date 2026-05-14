@@ -1,5 +1,18 @@
 # Accessibility Audit: 2026-05-13
 
+> **Status update 2026-05-14:** Issue 1 (muted text fails AA normal)
+> SHIPPED via Option 1. Both `--kiddo-muted` and `--muted-foreground`
+> darkened from 44-45% lightness to 38%. New contrasts:
+> - `--kiddo-muted`: was 4.37:1, now **5.61:1** ✓ AA normal
+> - `--muted-foreground`: was 4.07:1, now **5.33:1** ✓ AA normal
+>
+> Issue 2 (gold text fails AA) NOT yet shipped. It's a design-
+> discipline call (use evergreen text on gold backgrounds, gold for
+> non-text accents only) rather than a single-token darken, and the
+> recommended fix doesn't sit cleanly in one CSS variable swap. The
+> existing audit recommendation stands; needs a per-surface gold-as-
+> text audit to ship cleanly.
+
 First formal contrast audit of the Kiddo palette. Two real issues
 surfaced, both on muted/accent text against the cream background.
 Evergreen and ink on cream are AAA-clear. The brand identity is intact;

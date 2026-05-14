@@ -23,7 +23,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/account": "Account",
   "/profile": "Profile",
   "/activate": "Activate",
-  "/send": "Send",
   "/age-18-plan": "Age 18",
   "/tax-documents": "Taxes",
   // Household-glance surface. "Funds" reads as the section name
