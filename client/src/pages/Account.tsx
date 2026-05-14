@@ -6,7 +6,8 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus, Loader2 } from "lucide-react";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
@@ -130,6 +131,55 @@ export default function Account() {
       toast({ title: "Could not open billing portal", description: "Please try again", variant: "destructive" });
     } finally {
       setOpeningPortal(false);
+    }
+  };
+
+  // Cancel-plan flow inline on Account. Per the 2026-05-14 WHO/HOW IA
+  // principle Phase 1b: Account is the primary home of plan management,
+  // and the most common destructive action (cancel) should fire from
+  // here without bouncing to Settings. This is a leaner cancel
+  // experience than Settings — reassurance + two-step warn/confirm,
+  // but no impact-preview itemization (parents who want the richer
+  // preview can still get it on the Settings membership tab via the
+  // ?action=cancel deep-link). The simpler shape is honest: 95% of
+  // cancellations on this surface are intentional, the parent already
+  // knows what pauses, and a calmer flow respects that. Settings
+  // retains the rich preview for the edge cases where the parent is
+  // wavering and would benefit from seeing what they're walking away
+  // from before they commit.
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelStep, setCancelStep] = useState<"warn" | "confirm">("warn");
+  const [canceling, setCanceling] = useState(false);
+  const handleCancelSubscription = async () => {
+    setCanceling(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/subscription/cancel", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        haptic("success");
+        const until = data?.activeUntil ? new Date(data.activeUntil).toLocaleDateString() : null;
+        const cancelPlanLabel = data?.plan === "starter" ? "Kiddo+" : data?.plan === "family" ? "Kiddo Family" : "Your plan";
+        toast({
+          title: data?.alreadyCanceled ? `${cancelPlanLabel} already canceling` : `${cancelPlanLabel} canceled`,
+          description: until ? `${cancelPlanLabel} remains active until ${until}` : "Your cancellation has been scheduled.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+        setShowCancelConfirm(false);
+        setCancelStep("warn");
+      } else {
+        toast({ title: "Could not cancel", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not cancel", description: "Please try again", variant: "destructive" });
+    } finally {
+      setCanceling(false);
     }
   };
 
@@ -593,7 +643,7 @@ export default function Account() {
                         size="sm"
                         variant="outline"
                         className="rounded-lg text-xs h-8 px-3 text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/30"
-                        onClick={() => { haptic("light"); navigate("/settings?tab=membership&action=cancel&from=account"); }}
+                        onClick={() => { haptic("light"); setCancelStep("warn"); setShowCancelConfirm(true); }}
                         data-testid="button-account-cancel-plan"
                       >
                         Cancel plan
@@ -937,6 +987,89 @@ export default function Account() {
             logout();
           }}
         />
+
+        {/* Cancel-plan modal. Two-step warn → confirm flow per the
+            locked Apple-Settings register (cancel is a normal action,
+            not a confession; no "I understand" prefix; "Keep my plan"
+            is primary). Leaner than the Settings membership-tab modal:
+            no impact-preview itemization, no parent-contribution
+            enumeration. The richer preview is still on Settings for
+            edge cases where the parent is wavering and would benefit
+            from the breakdown. Account's flow is for parents who
+            already know they want to cancel and want the action to
+            fire without surface-bouncing. */}
+        <Dialog open={showCancelConfirm} onOpenChange={(o) => { if (!o && !canceling) { setShowCancelConfirm(false); setCancelStep("warn"); } }}>
+          <DialogContent className="max-w-md w-[95vw] max-h-[90dvh] p-0 gap-0 overflow-hidden rounded-2xl flex flex-col" aria-describedby={undefined}>
+            <DialogTitle className="sr-only">Cancel plan</DialogTitle>
+            {cancelStep === "warn" ? (
+              <div className="p-6 space-y-5 overflow-y-auto">
+                <div className="space-y-2">
+                  <h2 className="font-heading text-xl font-semibold text-foreground">
+                    Your fund stays safe.
+                  </h2>
+                  <p className="text-sm text-foreground/80 leading-relaxed">
+                    {planLabel} is paid through{" "}
+                    {subscription?.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "the end of your billing period"}.
+                    After that, the plan moves to Free and your money keeps working. Still invested, still growing, gifts arriving the same way they always have.
+                  </p>
+                </div>
+                <div className="space-y-3 text-sm text-foreground/80 leading-relaxed">
+                  <p className="font-semibold text-foreground">A few things change when you cancel:</p>
+                  {userPlan === "starter" ? (
+                    <p>
+                      Adding new photos, videos, and voice to Memory Book entries pauses. Every photo, voice memo, and parent-authored entry already there stays. Recurring investments and co-parent invites also pause.
+                    </p>
+                  ) : (
+                    <p>
+                      Adding new photos, videos, and voice to Memory Book entries pauses across every child's fund. Everything you've already added stays. Recurring investments and co-parent invites pause too. The household overview becomes read-only, and funds beyond your first become view-only.
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Button
+                    className="w-full rounded-xl"
+                    onClick={() => setShowCancelConfirm(false)}
+                    data-testid="button-account-keep-plan"
+                  >
+                    Keep my plan
+                  </Button>
+                  <button
+                    type="button"
+                    className="w-full text-center text-xs text-muted-foreground hover:text-foreground transition-colors py-1"
+                    onClick={() => setCancelStep("confirm")}
+                    data-testid="button-account-proceed-to-cancel"
+                  >
+                    Continue to cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-6 space-y-5 overflow-y-auto">
+                <div className="space-y-1">
+                  <h2 className="font-heading text-xl font-semibold text-foreground">Cancel {planLabel}?</h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    You'll move to Free
+                    {subscription?.currentPeriodEnd ? ` on ${new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric" })}` : " at the end of your billing period"}.
+                    Your fund stays safe.
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setCancelStep("warn")} disabled={canceling}>
+                    Go back
+                  </Button>
+                  <Button
+                    className="flex-1 rounded-xl bg-destructive hover:bg-destructive/90 text-white"
+                    disabled={canceling}
+                    onClick={() => handleCancelSubscription()}
+                    data-testid="button-account-confirm-cancel"
+                  >
+                    {canceling ? <><Loader2 size={14} className="mr-1.5 animate-spin" />Canceling...</> : "Yes, cancel"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
