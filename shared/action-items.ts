@@ -32,9 +32,17 @@ export type ActionItemType =
   | "activate_investing"       // fund.status !== 'active' (but everything else complete)
   | "recipient_details_missing"// UTMA fund without recipientFirstName + birthdate
   | "bank_not_linked"          // user has no bank account on file
-  | "profile_incomplete";      // user missing firstName
+  | "profile_incomplete"       // user missing firstName
+  // Age-18 handoff stalled. Kid was invited to claim their fund at
+  // majority age but hasn't claimed within 90 days. The stalled-
+  // handoff worker (server/stalledHandoffWorker.ts) has already
+  // fired T+7 + T+30 + T+90 emails; this action item surfaces the
+  // situation on the parent dashboard so they have a visible
+  // affordance to act. Per the locked discipline in AGE_18_HANDOFF
+  // _SPEC.md, the fund STAYS held; nothing is liquidated.
+  | "stalled_handoff";
 
-export type ActionItemCategory = "identity" | "payment" | "fund_setup" | "gift_hold";
+export type ActionItemCategory = "identity" | "payment" | "fund_setup" | "gift_hold" | "lifecycle";
 
 export interface ActionItem {
   // Stable key used for snooze + dedupe. Format: `${type}:${fundId}`.

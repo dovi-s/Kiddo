@@ -632,6 +632,24 @@ export default function GiftSuccess() {
           You just invested ${amount} in {childFirstName ? `${childFirstName}'s` : "their"} future.
         </motion.p>
 
+        {/* Settling-window note. Tells the gifter the gift takes 1 to 2
+            business days to land in the kid's investments. Without this,
+            a gifter who checks the kid's balance on day 1 sees a
+            mismatch between what they sent and what's invested and
+            wonders where the rest went. Per the money-classification
+            audit (2026-05-14), this is the lowest-leverage / highest-
+            confusion gap to close. Calm muted register; not a love
+            mark. */}
+        <motion.p
+          className="mx-auto max-w-md text-center text-xs text-muted-foreground/80 mb-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.62 }}
+          data-testid="text-success-settling-note"
+        >
+          Settles into {childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days.
+        </motion.p>
+
         {/* Affirmative anonymous confirmation. Replaces what would
             otherwise read as "Someone added $50..." (placeholder name)
             with explicit acknowledgment that the gifter chose anonymous

@@ -4495,6 +4495,16 @@ export async function registerRoutes(
           slug: fund.slug,
           recipientFirstName: fund.recipientFirstName,
           balance: fund.balance,
+          // Cash + pending exposed for the teen-phase "$X still
+          // settling" breakdown. Sum of these is what's NOT yet
+          // invested. Per the money-classification audit
+          // (2026-05-14), surfacing the settling window in the
+          // participation phase (14-17) is a real financial-
+          // literacy win: the kid learns "money in flight" is
+          // distinct from "money invested." Younger phases stay
+          // on the single-number abstraction.
+          cashBalance: (fund as any).cashBalance || "0",
+          pendingBalance: fund.pendingBalance || "0",
           totalContributed: totalContributed.toFixed(2),
           totalGain: fund.totalGain,
           projectedValue: fund.projectedValue,

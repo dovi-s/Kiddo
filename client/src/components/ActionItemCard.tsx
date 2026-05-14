@@ -187,6 +187,17 @@ function CategoryIcon({ category }: { category: ActionItem["category"] }) {
       </svg>
     );
   }
+  if (category === "lifecycle") {
+    // Hourglass-ish shape. The stalled-handoff action item is the
+    // only lifecycle-category item today; the glyph reads as "time
+    // is passing" without being alarming.
+    return (
+      <svg {...props}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </svg>
+    );
+  }
   // fund_setup
   return (
     <svg {...props}>

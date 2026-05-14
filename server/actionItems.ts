@@ -325,5 +325,75 @@ export async function deriveActionItemsForUser(
     }
   }
 
+  // Stalled-handoff action items. Per-fund check: if the kid was
+  // invited to claim their fund but hasn't claimed within 90 days,
+  // surface the situation on the parent dashboard. The stalled-
+  // handoff worker (server/stalledHandoffWorker.ts) has already
+  // emailed kid + parent + trusted contact by this point; the
+  // action item is the visible long-term affordance for the parent
+  // to do something.
+  //
+  // Defensive: the JOIN below may fail if age_transitions doesn't
+  // exist (very old DBs) or if stalled_handoff_t90_at column hasn't
+  // been pushed yet. We treat any failure as "no stalled funds"
+  // and log once per derivation rather than 500ing the whole
+  // action-items endpoint.
+  try {
+    const fundIds = funds.map((f) => f.id);
+    if (fundIds.length > 0) {
+      const fundIdsSql = sql.join(
+        fundIds.map((id) => sql`${id}`),
+        sql`, `,
+      );
+      const T90_DAYS = 90;
+      const stalledResult = await db.execute(sql`
+        SELECT
+          at.fund_id            AS "fundId",
+          at.invited_at         AS "invitedAt",
+          at.child_email        AS "childEmail"
+        FROM age_transitions at
+        WHERE at.fund_id IN (${fundIdsSql})
+          AND at.invited_at IS NOT NULL
+          AND at.child_claimed_at IS NULL
+          AND at.ownership_transferred_at IS NULL
+          AND at.invited_at <= NOW() - INTERVAL '${sql.raw(String(T90_DAYS))} days'
+      `);
+      const stalledRows = (stalledResult.rows as any[]) || [];
+      for (const row of stalledRows) {
+        const fund = funds.find((f) => f.id === row.fundId);
+        if (!fund) continue;
+        const snoozeMap = readSnoozeMap(fund);
+        const snoozedUntil = isSnoozedNow(snoozeMap, "stalled_handoff");
+        if (snoozedUntil) continue;
+        const childName = fund.recipientFirstName || "your child";
+        const daysStalled = Math.floor(
+          (Date.now() - new Date(row.invitedAt).getTime()) / (24 * 60 * 60 * 1000),
+        );
+        const monthsStalled = Math.floor(daysStalled / 30);
+        const timeDescriptor = monthsStalled >= 1
+          ? `${monthsStalled} month${monthsStalled === 1 ? '' : 's'}`
+          : `${daysStalled} days`;
+        out.push({
+          id: `stalled_handoff:${fund.id}`,
+          type: "stalled_handoff",
+          fundId: fund.id,
+          fundLabel: fundLabel(fund),
+          title: `${childName} hasn't claimed their fund`,
+          description: `${childName} was sent the claim link ${timeDescriptor} ago and hasn't opened it yet. The money is safe; we'll keep holding it. A quick text to ${childName} usually does the trick.`,
+          ctaLabel: "Open Age-18 plan",
+          ctaPath: "/age-18-plan",
+          snoozedUntil: null,
+          canSnooze: isSnoozable("stalled_handoff"),
+          category: "lifecycle",
+          severity: "advisory",
+        });
+      }
+    }
+  } catch (err) {
+    console.warn(
+      `[action-items] stalled_handoff derivation skipped: ${String((err as any)?.message || err)}`,
+    );
+  }
+
   return out;
 }

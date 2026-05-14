@@ -204,6 +204,12 @@ const ACTION_ITEM_REPRESENTED_TYPES = new Set<string>([
   "payment_failed",
   "large_gift_hold_started",
   "ssn_missing",
+  // age18_handoff_ready fires as an activity row at T-0; once the
+  // handoff stalls past 90 days the stalled_handoff action item
+  // takes over as the visible affordance. Hide the original activity
+  // row from the bell informational list since the action item card
+  // is doing the work.
+  "age18_handoff_ready",
 ]);
 function isRepresentedByActionItem(type?: string | null): boolean {
   return ACTION_ITEM_REPRESENTED_TYPES.has(String(type || ""));

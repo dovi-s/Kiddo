@@ -33,6 +33,14 @@ type KidViewContent = {
     slug?: string;
     recipientFirstName?: string;
     balance: string;
+    // Cash + pending balances surface the settling window in the
+    // teen-phase breakdown ("$50 of $1,917 is still settling into
+    // investments"). Server returns both as decimal strings; client
+    // sums them for the display line. May be undefined on legacy
+    // endpoints that pre-date the 2026-05-14 audit change; treat
+    // undefined as 0 (no settling line shown).
+    cashBalance?: string;
+    pendingBalance?: string;
     totalContributed: string;
     totalGain: string;
     projectedValue?: string;
@@ -738,13 +746,40 @@ export default function KidView() {
               final value is announced exactly once. Pattern locked in
               project_count_up_animation_consistency.md. */}
           <div
-            className="text-4xl font-bold font-heading mb-5"
+            className="text-4xl font-bold font-heading mb-1"
             style={{ fontVariantNumeric: "tabular-nums" }}
             aria-live={balanceAnimating ? "off" : "polite"}
             aria-label={fmtMoney(balanceLiveValue)}
           >
             {fmtMoney(animatedBalance)}
           </div>
+          {/* Teen-phase settling-window breakdown. Younger phases
+              keep the single-number abstraction (cognitive load is
+              the right level for wonder + explanation phases per
+              the locked phase rules). For participation-phase kids
+              (14-17), surfacing "$X is still settling into
+              investments" teaches the distinction between
+              money-in-flight and money-invested. Per money-
+              classification audit 2026-05-14. Conditional on
+              positive uninvested cash so the line only renders
+              when it has real content; otherwise the hero stays
+              clean. */}
+          {(() => {
+            if (content.phase !== "teen") return null;
+            const cash = parseFloat(String(content.fund.cashBalance || "0"));
+            const pending = parseFloat(String(content.fund.pendingBalance || "0"));
+            const uninvested = (Number.isFinite(cash) ? cash : 0) + (Number.isFinite(pending) ? pending : 0);
+            if (uninvested < 1) return null;
+            return (
+              <p
+                className="text-sm opacity-70 mb-4"
+                data-testid="kidview-settling-line"
+              >
+                {fmtMoney(uninvested)} of that is still settling into investments. Lands in your stocks over the next 1 to 2 business days.
+              </p>
+            );
+          })()}
+          <div className="mb-5" />{/* preserves the original spacing */}
           {/* Stats — staggered reveal. delay: 0.18 + i*0.08 lands them
               just after the balance starts climbing, so the eye moves
               hero → balance → stats in a natural reading order. */}
