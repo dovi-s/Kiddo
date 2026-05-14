@@ -5260,9 +5260,19 @@ export default function Dashboard() {
                       </div>
                       {/* Cash-status sub-detail. Subordinate to Worth today
                           because it's a SUBSET of that total (the portion
-                          not yet invested), not an additive input. Tappable
-                          to scroll to the cash card where the parent can
-                          choose to invest it. Silent when zero. */}
+                          not yet invested), not an additive input.
+                          Tappable to scroll to the cash card where the
+                          parent can choose to invest it. Silent when zero.
+
+                          Wording uses "of that" to point back at Worth
+                          today and make the subset relationship explicit.
+                          Earlier versions led with a bullet "·" which
+                          read as "and also" (additive) — a calm user
+                          would math Worth today + $50 cash and conclude
+                          the total was off. Per the 2026-05-13 audit.
+                          The "of that" phrasing eliminates the ambiguity
+                          without splitting into Invested + Cash sub-lines
+                          (which would add a line for marginal info). */}
                       {periodCash > 0.005 && (
                         <button
                           type="button"
@@ -5270,9 +5280,8 @@ export default function Dashboard() {
                           className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors"
                           data-testid="lifetime-row-cash"
                         >
-                          <span aria-hidden>·</span>
                           <span className="tabular-nums">{fmtRow(periodCash)}</span>
-                          <span>still in cash, waiting to invest</span>
+                          <span>of that is still in cash, waiting to invest</span>
                           <ChevronRight size={12} className="opacity-60" aria-hidden />
                         </button>
                       )}
