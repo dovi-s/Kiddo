@@ -255,18 +255,17 @@ export function MemoryMediaPicker({
                 {fundPronouns.subject.charAt(0).toUpperCase() + fundPronouns.subject.slice(1)} hearing your voice on {fundPronouns.possAdj} {majorityOrdinal} birthday is the kind of artifact nothing else gives {fundPronouns.object}. Text entries stay free; media unlocks with Kiddo+ ($4.99/month).
               </p>
               <div className="mt-3">
-                {/* Deep-link to Settings membership tab with auto-trigger
-                    params per Settings.tsx:2929 handler. Previously
-                    sent `upgrade=plus` which the handler doesn't
-                    recognize (it expects `starter` / `family` /
-                    `legacy`), so the CTA landed on the membership tab
-                    but never fired the Stripe checkout. Now passes
-                    `upgrade=starter&fundId=X` so the Plus upgrade
-                    fires for the current fund. The defensive alias
-                    for `upgrade=plus` was also added on the handler
-                    side in case other code paths use the user-facing
-                    name. See IN_APP_UPGRADE_FEATURE_WALL_SPEC.md. */}
-                <Link href={`/settings?tab=membership&upgrade=starter&fundId=${fundId}`}>
+                {/* Deep-link to Account "Plan & billing" tab with auto-
+                    trigger params. Updated 2026-05-14 to point at
+                    /account (the primary home of plan management per
+                    the WHO/HOW IA principle Phase 1b) instead of
+                    /settings?tab=membership. Account has its own
+                    auto-trigger useEffect that fires Stripe checkout
+                    when ?upgrade=starter&fundId=X is present. The
+                    Settings deep-link handler also still works as a
+                    backward-compatibility safety net. See
+                    feedback_ia_who_vs_how_principle.md. */}
+                <Link href={`/account?tab=plan&upgrade=starter&fundId=${fundId}`}>
                   <Button
                     size="sm"
                     className="rounded-xl"

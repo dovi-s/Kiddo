@@ -11471,9 +11471,14 @@ export default function Dashboard() {
                       haptic("medium");
                       setAutoInvestUpgradeOpen(false);
                       const fundId = activeFund?.id || "";
+                      // Routes to Account "Plan & billing" tab per the
+                      // 2026-05-14 WHO/HOW IA principle Phase 1b: Account
+                      // is the primary home of plan management. Auto-
+                      // trigger handler on Account fires Stripe checkout
+                      // when ?upgrade=starter&fundId=X is present.
                       setLocation(fundId
-                        ? `/settings?tab=membership&upgrade=starter&fundId=${encodeURIComponent(fundId)}`
-                        : "/settings?tab=membership");
+                        ? `/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fundId)}`
+                        : "/account?tab=plan");
                     }}
                     data-testid="button-auto-invest-upgrade-confirm"
                   >

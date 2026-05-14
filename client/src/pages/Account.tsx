@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, Link } from "wouter";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
@@ -12,6 +12,13 @@ import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
 import { PasskeyManager } from "@/components/PasskeyManager";
+import {
+  KIDDO_LEGACY_YEARLY,
+  KORA_FAMILY_MONTHLY,
+  KORA_FAMILY_YEARLY,
+  KORA_STARTER_MONTHLY,
+  KORA_STARTER_YEARLY,
+} from "@shared/monetization";
 
 const PROFILE_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -182,6 +189,146 @@ export default function Account() {
       setCanceling(false);
     }
   };
+
+  // Upgrade-ladder state + handlers. Per the 2026-05-14 WHO/HOW IA
+  // principle Phase 1b: Account is the primary surface for plan
+  // management, including upgrade exploration. Each upgrade handler
+  // POSTs to its Stripe checkout endpoint and redirects to the
+  // returned URL. The Plus handler requires a fundId (Plus is single-
+  // fund) and defaults to the user's first fund. The Family and Legacy
+  // handlers are user-level and need no fund context. These are
+  // duplicates of the Settings membership-tab handlers; Phase 1c will
+  // extract to a shared component when the upgrade ladder is removed
+  // from Settings entirely.
+  const [upgrading, setUpgrading] = useState(false);
+  const [selectedStarterFundId, setSelectedStarterFundId] = useState<string>("");
+
+  // Lightweight funds query used only to default the Plus upgrade
+  // selector to the user's first fund. Same data shape as elsewhere;
+  // we only need .id from each row.
+  const { data: funds = [] } = useQuery<Array<{ id: string; name?: string; recipientFirstName?: string | null }>>({
+    queryKey: ["/api/funds"],
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!selectedStarterFundId && funds.length > 0) {
+      setSelectedStarterFundId(String(funds[0].id));
+    }
+  }, [funds, selectedStarterFundId]);
+
+  const handleUpgradeStarter = async (fundId?: string) => {
+    const targetFundId = String(fundId || selectedStarterFundId || "");
+    if (!targetFundId) {
+      toast({ title: "Choose a fund first", description: "Kiddo+ applies to one specific fund.", variant: "destructive" });
+      return;
+    }
+    setUpgrading(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/stripe/checkout/starter-plan", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fundId: targetFundId }),
+      });
+      const raw = await res.text();
+      let data: any = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = { error: raw || `HTTP ${res.status}` };
+      }
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Something went wrong", description: data.error || "Could not start checkout", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({
+        title: "Something went wrong",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  const handleUpgradeFamily = async () => {
+    setUpgrading(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/stripe/checkout/family-plan", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const raw = await res.text();
+      let data: any = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        data = { error: raw || `HTTP ${res.status}` };
+      }
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Something went wrong", description: data.error || "Could not start checkout", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({
+        title: "Something went wrong",
+        description: error instanceof Error ? error.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
+  // Deep-link tab handler. URLs like /account?tab=plan should land
+  // on the plan tab, not the default personal tab. Fires once on
+  // mount and any time the URL changes. Validates the value against
+  // the known AccountTab union before applying so a stray param
+  // doesn't put the page into an undefined state.
+  const VALID_TABS: readonly AccountTab[] = ["personal", "plan", "security"];
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search || "").get("tab");
+    if (tab && (VALID_TABS as readonly string[]).includes(tab)) {
+      setAccountTab(tab as AccountTab);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-trigger Stripe checkout when this page is reached with
+  // ?upgrade=family or ?upgrade=starter&fundId=... (and the `plus`
+  // alias). Mirrors the Settings deep-link handler so in-app upgrade
+  // CTAs that route to Account also fire checkout correctly. Settings
+  // retains its own handler for backward compatibility with deep-links
+  // that still point at /settings?tab=membership.
+  const hasAutoUpgradeTriggered = useRef(false);
+  useEffect(() => {
+    if (hasAutoUpgradeTriggered.current) return;
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search || "");
+    const upgrade = params.get("upgrade");
+    if (!upgrade) return;
+    hasAutoUpgradeTriggered.current = true;
+    const fundIdParam = params.get("fundId") || "";
+    params.delete("upgrade");
+    params.delete("fundId");
+    const nextQuery = params.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
+    setAccountTab("plan");
+    if (upgrade === "family") {
+      void handleUpgradeFamily();
+    } else if ((upgrade === "starter" || upgrade === "plus") && fundIdParam) {
+      void handleUpgradeStarter(fundIdParam);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const selectTab = (tab: AccountTab) => {
     setAccountTab(tab);
@@ -654,32 +801,170 @@ export default function Account() {
               </SectionCard>
             )}
 
-            {/* Secondary CTA card. Tier-aware label so the parent sees
-                the action that matches their situation: Free → upgrade
-                exploration; paid → tier comparison or switching. Routes
-                to the Settings membership tab which still hosts the
-                full upgrade ladder. Phase 1b will move the ladder to
-                this surface and the secondary card becomes redundant. */}
-            <SectionCard>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-4 p-5 text-left transition-colors hover:bg-muted/20"
-                onClick={() => navigate("/settings?tab=membership&from=account")}
-                data-testid="button-manage-membership"
-              >
-                <div>
-                  <p className="text-sm font-bold text-foreground">
-                    {userPlan === "free" ? "Explore plans" : "Switch or compare plans"}
-                  </p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    {userPlan === "free"
-                      ? "See what Plus and Family unlock for your funds."
-                      : "Compare Plus, Family, and what changes if you switch."}
-                  </p>
+            {/* Inline upgrade ladder per the Phase 1b move (2026-05-14).
+                Plus, Family, and Legacy (existing subscribers only)
+                cards with badges, tier-aware CTA labels, and inline
+                checkout firing. This replaces the previous "Explore
+                plans" pass-through CTA that used to route to the
+                Settings membership tab. Account is now the primary
+                home for plan exploration too, not just plan status +
+                cancel. Duplicated JSX with Settings.tsx membership
+                tab — Phase 1c will extract to a shared component
+                when the upgrade ladder is removed from Settings. */}
+            {(() => {
+              const isStarterCurrent = userPlan === "starter";
+              const isFamilyCurrent = userPlan === "family";
+              const isLegacyCurrent = userPlan === "legacy";
+              const planRank = (p: typeof userPlan): number =>
+                p === "legacy" ? 3 : p === "family" ? 2 : p === "starter" ? 1 : 0;
+              const currentRank = planRank(userPlan);
+              const ctaLabel = (cardPlan: "starter" | "family" | "legacy") => {
+                if (cardPlan === userPlan) return "Current plan";
+                const cardRank = planRank(cardPlan);
+                if (cardRank > currentRank) return `Upgrade to ${cardPlan === "starter" ? "Plus" : cardPlan === "family" ? "Family" : "Legacy"}`;
+                return `Switch to ${cardPlan === "starter" ? "Plus" : cardPlan === "family" ? "Family" : "Legacy"}`;
+              };
+              const includedHint = (cardPlan: "starter" | "family" | "legacy") => {
+                if (cardPlan === userPlan) return "";
+                if (planRank(cardPlan) >= currentRank) return "";
+                const currentLabel = userPlan === "family" ? "Kiddo Family" : userPlan === "legacy" ? "Kiddo Legacy" : "your plan";
+                return `Included in ${currentLabel}`;
+              };
+              const recommendedPlan: "starter" | "family" | null =
+                userPlan === "free" ? "starter"
+                : userPlan === "starter" ? "family"
+                : null;
+              const starterBadge =
+                isStarterCurrent ? { label: "Current plan", tone: "current" as const }
+                : recommendedPlan === "starter" ? { label: "Recommended", tone: "gold" as const }
+                : null;
+              const familyBadge =
+                isFamilyCurrent ? { label: "Current plan", tone: "current" as const }
+                : recommendedPlan === "family" ? { label: "Recommended", tone: "gold" as const }
+                : { label: "Best for families", tone: "evergreen" as const };
+              const legacyBadge = isLegacyCurrent
+                ? { label: "Current plan", tone: "current" as const }
+                : null;
+              const badgeClass = (tone: "current" | "gold" | "evergreen") =>
+                tone === "current"
+                  ? "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white"
+                  : tone === "gold"
+                    ? "rounded-full bg-[hsl(var(--kiddo-gold))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white"
+                    : "rounded-full bg-[hsl(var(--kiddo-evergreen))] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white";
+              return (
+                <div className={`grid gap-4 ${isLegacyCurrent ? "xl:grid-cols-3" : "xl:grid-cols-2"}`}>
+                  <SectionCard className={`relative border-2 ${isStarterCurrent ? "border-[hsl(var(--kiddo-evergreen))]" : "border-[hsl(var(--kiddo-gold))]"} shadow-[0_2px_8px_rgba(26,23,16,0.10),0_8px_24px_rgba(26,23,16,0.08)]`}>
+                    {starterBadge && (
+                      <div className={`absolute left-5 top-0 -translate-y-1/2 ${badgeClass(starterBadge.tone)}`}>
+                        {starterBadge.label}
+                      </div>
+                    )}
+                    <div className="p-5 pt-6">
+                      <h2 className="font-heading text-xl font-bold text-foreground">Kiddo+</h2>
+                      <p className="mt-3 text-2xl font-bold leading-none text-[hsl(var(--kiddo-gold-ink))]">
+                        ${KORA_STARTER_MONTHLY.toFixed(2)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">or ${KORA_STARTER_YEARLY}/year</p>
+                      <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Make this feel real every month.</p>
+                      <div className="mt-5 space-y-2 text-sm text-muted-foreground">
+                        {["One child fund. Move to Family if you add a second.", "Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Custom fund mix (pick your own stocks)", "Co-parent access and priority support"].map((item) => (
+                          <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-ink))]" />{item}</p>
+                        ))}
+                      </div>
+                      {includedHint("starter") && (
+                        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-evergreen))]">
+                          <Check size={10} />
+                          {includedHint("starter")}
+                        </p>
+                      )}
+                      <Button
+                        className="mt-5 w-full rounded-xl"
+                        onClick={() => handleUpgradeStarter(selectedStarterFundId)}
+                        disabled={upgrading || isStarterCurrent}
+                        data-testid="button-account-upgrade-starter"
+                      >
+                        {ctaLabel("starter")}
+                      </Button>
+                    </div>
+                  </SectionCard>
+
+                  <div
+                    className={`relative overflow-hidden rounded-2xl ${isFamilyCurrent ? "border-2 border-[hsl(var(--kiddo-evergreen))]" : "border border-[hsl(var(--kiddo-evergreen)/0.22)]"} bg-[linear-gradient(145deg,hsl(var(--kiddo-evergreen))_0%,hsl(153_48%_11%)_100%)] text-white shadow-[0_2px_8px_rgba(26,23,16,0.10),0_18px_38px_rgba(27,58,45,0.20)]`}
+                    data-testid="card-account-kiddo-family"
+                  >
+                    {familyBadge && (
+                      <div className={`absolute right-4 top-4 rounded-full ${familyBadge.tone === "current" ? "bg-white text-[hsl(var(--kiddo-evergreen))]" : "border border-white/12 bg-white/10 text-white/80"} px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em]`}>
+                        {familyBadge.label}
+                      </div>
+                    )}
+                    <div className="relative p-5 pt-8">
+                      <h2 className="font-heading text-xl font-bold text-[hsl(var(--kiddo-cream))]">Kiddo Family</h2>
+                      <p className="mt-3 text-2xl font-bold leading-none text-[hsl(var(--kiddo-gold-light))]">
+                        ${KORA_FAMILY_MONTHLY.toFixed(2)}<span className="text-sm font-normal text-white/50">/mo</span>
+                      </p>
+                      <p className="mt-1 text-xs text-white/45">or ${KORA_FAMILY_YEARLY}/year</p>
+                      <p className="mt-4 text-sm leading-relaxed text-[hsl(var(--kiddo-cream)/0.78)]">For your family, long term. Manage everything in one place.</p>
+                      <div className="mt-5 space-y-2 text-sm text-[hsl(var(--kiddo-cream)/0.84)]">
+                        {["Unlimited funds, every child", "Memory Book authoring for every child (photos, videos, voice)", "Unlimited occasions with premium features included", "Kid View for every child", "One view for every fund in your household"].map((item) => (
+                          <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-light))]" />{item}</p>
+                        ))}
+                      </div>
+                      {includedHint("family") && (
+                        <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-cream))]">
+                          <Check size={10} />
+                          {includedHint("family")}
+                        </p>
+                      )}
+                      <Button
+                        variant="outline"
+                        className="mt-5 w-full rounded-xl border-white/25 bg-white/10 text-white hover:bg-white/15 hover:text-white disabled:opacity-50"
+                        onClick={handleUpgradeFamily}
+                        disabled={upgrading || isFamilyCurrent}
+                        data-testid="button-account-upgrade-family"
+                      >
+                        {ctaLabel("family")}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Legacy tier card — only renders for existing Legacy
+                      subscribers. Pulled from non-Legacy users
+                      2026-05-12 because the previous bullet list
+                      contained 3 features that don't exist in code.
+                      Honest bullets shown here for those subscribers. */}
+                  {isLegacyCurrent && (
+                    <SectionCard className="relative border-2 border-[hsl(var(--kiddo-evergreen))]">
+                      {legacyBadge && (
+                        <div className={`absolute left-5 top-0 -translate-y-1/2 ${badgeClass(legacyBadge.tone)}`}>
+                          {legacyBadge.label}
+                        </div>
+                      )}
+                      <div className="p-5 pt-6">
+                        <h2 className="font-heading text-xl font-bold text-foreground">Kiddo Legacy</h2>
+                        <p className="mt-3 text-2xl font-bold leading-none text-[hsl(var(--kiddo-evergreen))]">
+                          ${KIDDO_LEGACY_YEARLY}<span className="text-sm font-normal text-muted-foreground">/yr</span>
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">annual only</p>
+                        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For families taking this seriously. Plan this properly, long term.</p>
+                        <div className="mt-5 space-y-2 text-sm text-muted-foreground">
+                          {["Everything in Family", "2 Occasion credits per year"].map((item) => (
+                            <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />{item}</p>
+                          ))}
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="mt-5 w-full rounded-xl border-[hsl(var(--kiddo-evergreen)/0.30)] text-[hsl(var(--kiddo-evergreen))]"
+                          disabled
+                          data-testid="button-account-legacy-current"
+                        >
+                          Current plan
+                        </Button>
+                      </div>
+                    </SectionCard>
+                  )}
                 </div>
-                <ChevronRight size={18} className="shrink-0 text-muted-foreground" />
-              </button>
-            </SectionCard>
+              );
+            })()}
 
           </div>
         )}
