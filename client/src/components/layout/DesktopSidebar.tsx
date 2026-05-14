@@ -90,7 +90,18 @@ export function DesktopSidebar() {
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
   const selectedFundId = new URLSearchParams(search).get("fund") || storedFundId || "";
-  const activeFund = (selectedFundId ? funds.find((f) => f.id === selectedFundId) : null) ?? funds[0] ?? null;
+  // Defensive: funds can be null/undefined when the API errors out
+  // (initialData reads from local cache which may serialize JSON
+  // null; the queryFn falls back to [] on non-OK responses but
+  // initialData can land first). Wrap with (?? []) so the .find /
+  // [0] calls never crash the sidebar — a 500 from /api/funds
+  // should degrade to "no active fund," not bring down the chrome
+  // and bubble to AppErrorBoundary. Caught after the
+  // 2026-05-14 connection-drop spiral, where the sidebar crash
+  // amplified a recoverable API failure into a full-page
+  // error-boundary state.
+  const safeFunds = funds ?? [];
+  const activeFund = (selectedFundId ? safeFunds.find((f) => f.id === selectedFundId) : null) ?? safeFunds[0] ?? null;
   const memoryBookHref = activeFund ? `/memory/${activeFund.id}` : "/memory";
   // Scope tiers — household (/funds) and user-scoped (/account)
   // both suppress per-fund affordances; they differ in whether the
