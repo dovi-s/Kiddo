@@ -5087,7 +5087,16 @@ export default function Dashboard() {
                         data-testid="last30-row-gifts"
                       >
                         <span className="text-sm text-muted-foreground">
-                          Gifts from people who love {childPronouns.object}
+                          {/* Name instead of pronoun. The fund's pronoun is
+                              respected elsewhere (Kid View copy, smart-nudge,
+                              age-18 walkthrough), but THIS line reads warmer
+                              with the actual first name. The pronoun default
+                              of 'them' when unset rendered awkwardly for
+                              clearly-gendered names ('Gifts from people who
+                              love them' for Emma's fund). Per the 2026-05-13
+                              audit. Falls back to 'your child' when no first
+                              name is present (e.g. brand-new fund). */}
+                          Gifts from people who love {childFirst}
                         </span>
                         <span className="inline-flex items-center gap-1.5">
                           <span className="text-sm font-semibold text-foreground tabular-nums">
