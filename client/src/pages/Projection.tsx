@@ -288,6 +288,21 @@ export default function Projection() {
     () => projectFund(totalValue, monthly, rate.rate, yearsAhead, contributionYearsCap),
     [totalValue, monthly, rate.rate, yearsAhead, contributionYearsCap],
   );
+
+  // All three rates' projections, so the hero can show the band as a
+  // calm subtitle without forcing the parent to chip-tap through each.
+  // The 5-to-9 spread over a 47-year horizon (kid at 18 → kid at 65)
+  // is ~6× — that's the compounding lesson visible at-a-glance instead
+  // of buried behind interaction. The selected rate stays the hero
+  // number; the OTHER two are surfaced as small text alongside.
+  const projectedByRate = useMemo(() => {
+    return RETURN_RATES.map((r) => ({
+      id: r.id,
+      sub: r.sub,
+      rate: r.rate,
+      value: projectFund(totalValue, monthly, r.rate, yearsAhead, contributionYearsCap),
+    }));
+  }, [totalValue, monthly, yearsAhead, contributionYearsCap]);
   // "You contributed" is the realistic total — current balance plus monthly
   // contributions for ONLY the months they actually flow (capped at 18 for UTMAs).
   // Under the old continuous model this number was inflated by 47 years of
@@ -561,6 +576,23 @@ ${shareUrl}`;
             >
               {fmtMoney(projectedDisplay)}
             </p>
+            {/* Rate-band subtitle — shows the OTHER two rates' projections
+                alongside the headline so the parent feels the variance
+                of compounding without having to chip-tap each rate. The
+                5-to-9 spread over a 47-year horizon (kid at 18 → 65) is
+                roughly 6× — that's the compounding lesson the hero
+                number alone hides. Suppressed when yearsAhead is 0
+                (nothing to project) so the line doesn't appear with
+                three identical "today" values. Per the 2026-05-13 audit
+                on whether we're showing the magnitude brilliantly. */}
+            {yearsAhead > 0 && (
+              <p className="text-[11px] text-white/55 mt-2 tabular-nums">
+                {projectedByRate
+                  .filter((r) => r.id !== rateId)
+                  .map((r) => `${r.sub.replace(" / yr", "")}: ${fmtMoney(r.value)}`)
+                  .join("   ·   ")}
+              </p>
+            )}
             {/* Inline assumption note — locks the projection's two-phase
                 nature to the parent's eye instead of burying it in the
                 disclaimer below. For UTMA accounts: contributions through
