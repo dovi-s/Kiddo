@@ -6,13 +6,28 @@ prototype" per the locked memory rule, so it needs to keep parity
 with web on money classification, locked policy rules, and the
 shipped audit fixes.
 
-Three real issues surfaced. **One was a CRITICAL locked-policy
-violation** that's been silently overcharging large gifts on
-mobile for an unknown period. All three fixed in this commit.
+Three real issues surfaced. **One was a UI-display bug where the
+mobile app showed gifters a math layout that contradicted the
+locked "no platform fee on gifts" policy.** Important nuance after
+end-to-end trace: gifters were NOT actually overcharged. The
+server's fee logic (`shared/monetization.ts:144`) hardcodes
+`largeGiftComponent = 0`, so Stripe charged the correct amount and
+kids received the full gift. The mobile UI just lied about the
+math before the gifter hit checkout. All three issues fixed in
+this commit.
+
+**Correction note (2026-05-14):** The original version of this
+doc framed Issue 1 as "CRITICAL" with language about gifters being
+"silently overcharged" and kids "receiving $9.99 less." That
+framing was overstated. The actual money flow was correct
+end-to-end; only the mobile UI display was wrong. Severity
+downgraded to "UI-display bug" below. The fix shipped is still
+the right one (UI now matches reality); only the framing was
+off.
 
 ## Issues found
 
-### Issue 1: Stale $9.99 large-gift fee (CRITICAL)
+### Issue 1: Stale $9.99 large-gift fee in mobile UI display
 
 **File:** `apps/mobile/src/screens/GifterFlowScreen.tsx`
 
@@ -35,14 +50,36 @@ Gifts of $1,000 or more include a flat $9.99 premium."
 > lowest gifter processing on large gifts. Old $2/gift platform
 > fee is RETIRED.
 
-The web GiftCheckout flow honors this. The mobile flow did not. A
-gifter sending $1,000+ on mobile was paying $9.99 more than they
-should have, AND the kid was receiving $9.99 less than the gifter
-intended.
+**Important nuance: gifters were NOT actually charged the $9.99.**
+End-to-end trace of the money flow:
+
+| Layer | Behavior |
+|---|---|
+| Mobile UI | Computed `total = amount + processing + $9.99` and DISPLAYED that to the gifter |
+| Mobile → Server | Sent only `amount` to `apiCreateGiftCheckout`, not the inflated total |
+| Server (`shared/monetization.ts:144`) | `largeGiftComponent = 0` hardcoded; no fee added |
+| Server Stripe checkout | Charged amount + real Stripe processing only |
+| Kid | Received the full gift amount, no $9.99 deduction |
+
+So the bug was a UI-display bug: the mobile app showed the gifter
+an inflated total before they hit checkout, but Stripe charged the
+correct amount. Two real consequences:
+
+1. **Gifters may have been deterred** from completing $1,000+
+   gifts because the mobile UI showed them a higher number than
+   they expected to pay. Some percentage probably abandoned the
+   flow seeing "$1,049.98 total" when they intended $1,000.
+2. **Trust gap if any gifter compared their Stripe receipt to the
+   mobile display.** They'd see $1,040-ish charged on their card
+   vs $1,049.98 shown in-app. That's a "is Kiddo skimming?"
+   moment even though the actual answer is "no, the UI was just
+   wrong."
+
+The web GiftCheckout flow honored the locked policy correctly. The
+mobile UI did not.
 
 **How long this was live:** Unknown without a git-blame walk. The
-mobile gifter flow has the bug as of the current commit; pre-2026-
-05-14 it was active in production.
+fee logic existed in the mobile gifter flow until 2026-05-14.
 
 **Fix:** Set `kiddoFee = 0` permanently. Update fee note copy to
 match the locked policy. Keeping the const around (rather than
