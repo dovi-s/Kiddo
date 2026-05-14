@@ -4250,7 +4250,16 @@ export default function Dashboard() {
                 The gift link is paused. Memory Book and history are preserved. Reopen any time from Settings.
               </p>
             </div>
-            <Link href="/settings?tab=membership">
+            {/* Reopen-fund banner CTA. Updated 2026-05-14 to point at
+                /settings?tab=child (the per-fund tab where the
+                close/reopen action lives per the WHO/HOW IA — reopen
+                is fund-scoped, not account-scoped). The reopen-banner
+                renders at the top of the Settings page regardless of
+                active tab, so the user lands at the right place to
+                tap "Reopen fund". Previous target /settings?tab=
+                membership would now bounce to Account and the parent
+                would lose the reopen affordance. */}
+            <Link href="/settings?tab=child">
               <button
                 type="button"
                 className="shrink-0 rounded-xl bg-[hsl(var(--kiddo-evergreen))] px-4 py-2 text-xs font-bold text-white hover:opacity-95"

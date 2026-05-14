@@ -823,7 +823,15 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
 
                     <div className="flex flex-col gap-3 pt-1">
                       <Button
-                        onClick={() => { window.location.href = "/settings?upgrade=family"; haptic("medium"); }}
+                        onClick={() => {
+                          haptic("medium");
+                          // Route to Account "Plan & billing" tab per the
+                          // WHO/HOW IA Phase 1c: Account is the primary
+                          // home of plan management. The Account
+                          // auto-trigger useEffect fires Stripe Family
+                          // checkout when ?upgrade=family is present.
+                          window.location.href = "/account?tab=plan&upgrade=family";
+                        }}
                         className="w-full h-12 rounded-2xl text-base font-semibold"
                         data-testid="button-upgrade-to-family"
                       >

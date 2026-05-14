@@ -1186,7 +1186,7 @@ export default function EventCreate() {
                       selectedTheme={selectedTheme}
                       onSelectTheme={(themeId) => { haptic("selection"); setSelectedTheme(themeId); }}
                       hasEventPass={hasPremiumEventAccess}
-                      onUpgrade={() => setLocation("/settings")}
+                      onUpgrade={() => setLocation("/account?tab=plan")}
                     />
                     <div className="mt-6 flex justify-between">
                       <Button variant="outline" onClick={goBack} className="gap-2" data-testid="button-back-step-3">

@@ -2575,6 +2575,34 @@ const [editFundName, setEditFundName] = useState("");
     }
   }, [search]);
 
+  // Phase 1c IA redirect: the Settings membership tab is no longer the
+  // primary surface for plan management — Account is. When a user
+  // lands on the membership tab WITHOUT actionable query params (i.e.
+  // intentional navigation, not a Stripe return or deep-link from an
+  // in-app upgrade CTA), redirect them to /account?tab=plan so they
+  // arrive at the canonical home. Actionable params (?success=,
+  // ?canceled=, ?upgrade=, ?action=) keep the user on the Settings
+  // membership tab so the existing handlers (Stripe-return notice,
+  // upgrade auto-trigger, cancel modal auto-open) fire correctly. Phase
+  // 1c-B (future) will update server-side Stripe success URLs to point
+  // at /account?tab=plan directly, at which point the actionable-params
+  // guard can be loosened further and the membership tab JSX can be
+  // deleted entirely. See feedback_ia_who_vs_how_principle.md.
+  const hasMembershipRedirectFired = useRef(false);
+  useEffect(() => {
+    if (hasMembershipRedirectFired.current) return;
+    if (settingsTab !== "membership") return;
+    const params = new URLSearchParams(window.location.search || "");
+    const hasActionableParam =
+      params.has("success") ||
+      params.has("canceled") ||
+      params.has("upgrade") ||
+      params.has("action");
+    if (hasActionableParam) return;
+    hasMembershipRedirectFired.current = true;
+    navigate("/account?tab=plan");
+  }, [settingsTab, navigate]);
+
   useEffect(() => {
     let canceledEffect = false;
     const params = new URLSearchParams(search || "");
@@ -3544,10 +3572,24 @@ const [editFundName, setEditFundName] = useState("");
 
         <div className="space-y-2">
           <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="settings-tabs">
+            {/* "Membership" tab removed from the in-app navigation
+                on 2026-05-14 per the WHO/HOW IA Phase 1c. Account is
+                now the primary home for plan management; users who
+                tap their avatar -> Account -> Plan & billing land on
+                the right surface. The "membership" tab still exists
+                as a settingsTab value and renders if deep-linked into
+                with actionable query params (?success=, ?canceled=,
+                ?upgrade=, ?action=) — that handles Stripe webhook
+                returns and any in-flight in-app CTAs that still point
+                at /settings?tab=membership. Without actionable params,
+                a redirect useEffect bounces the user to
+                /account?tab=plan. Phase 1c-B (future) will update
+                Stripe success URLs server-side to point at Account
+                directly, then this entire membership tab JSX can be
+                deleted. */}
             {[
               { id: "child", label: "Child" },
               { id: "gifts", label: "Gifts" },
-              { id: "membership", label: "Membership" },
               { id: "notifications", label: "Notifications" },
               { id: "money", label: "Money" },
             ].map((tab) => (
@@ -3957,7 +3999,17 @@ const [editFundName, setEditFundName] = useState("");
                         <Button
                           size="sm"
                           className="mt-3 rounded-xl"
-                          onClick={() => { navigate("/settings?tab=membership"); haptic("selection"); }}
+                          onClick={() => {
+                            haptic("selection");
+                            // Route to Account "Plan & billing" tab per
+                            // the WHO/HOW IA Phase 1c. Includes the
+                            // current fund id so the Plus upgrade
+                            // auto-trigger fires for THIS fund directly.
+                            const fundId = primaryFund?.id;
+                            navigate(fundId
+                              ? `/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fundId)}`
+                              : "/account?tab=plan");
+                          }}
                           data-testid="button-coparent-upgrade"
                         >
                           Upgrade to Kiddo+

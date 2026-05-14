@@ -443,16 +443,21 @@ function getNotifDestination(a: FeedActivity): string {
     return fundId ? `/dashboard?fund=${fundId}&openAutoInvest=1` : "/dashboard";
   }
 
-  // BILLING / SUBSCRIPTION — every billing-related signal lands in
-  // Settings → Membership where the user can manage their plan, see
-  // billing status, and (for payment_failed) update card.
+  // BILLING / SUBSCRIPTION — every billing-related signal lands on
+  // Account → Plan & billing where the user manages their plan, sees
+  // billing status, and (for payment_failed) updates card. Updated
+  // 2026-05-14 from /settings?tab=membership to /account?tab=plan
+  // per the WHO/HOW IA Phase 1c: Account is the primary home of
+  // plan management. The Settings membership tab still works as a
+  // backward-compat redirect for any in-flight notifications that
+  // were enqueued with the old URL.
   if (
     t === "subscription_started" ||
     t === "subscription_canceled" ||
     t === "payment_failed" ||
     t.includes("plan_activated")
   ) {
-    return "/settings?tab=membership";
+    return "/account?tab=plan";
   }
 
   // IDENTITY / VERIFICATION
