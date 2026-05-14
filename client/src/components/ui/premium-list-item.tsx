@@ -76,7 +76,7 @@ export function PremiumListItemAvatar({
 }: PremiumListItemAvatarProps) {
   const variants = {
     primary: "bg-primary/10 text-primary",
-    gold: "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]",
+    gold: "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold-ink))]",
     success: "bg-success/15 text-success",
     muted: "bg-muted text-muted-foreground"
   }
@@ -161,9 +161,9 @@ export function PremiumBadge({
     default: "bg-muted text-muted-foreground",
     success: "bg-success/15 text-success",
     warning: "bg-destructive/15 text-destructive",
-    gold: "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold))]"
+    gold: "bg-[hsl(var(--kora-gold)/0.15)] text-[hsl(var(--kora-gold-ink))]"
   }
-  
+
   return (
     <span className={cn(
       "text-xs font-medium px-2.5 py-1 rounded-full inline-block",

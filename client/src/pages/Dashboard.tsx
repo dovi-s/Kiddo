@@ -5914,7 +5914,7 @@ export default function Dashboard() {
                   transition={{ duration: 0.25 }}
                   className="rounded-2xl border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] p-5"
                 >
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-gold))] mb-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))] mb-1">
                     {childFirst} is growing up 🌱
                   </p>
                   <p className="text-sm font-semibold text-foreground leading-snug">
@@ -7197,7 +7197,7 @@ export default function Dashboard() {
                         </div>
                         <div className="min-w-0 flex-1">
                           {!hasAutoInvestAccess && (
-                            <span className="inline-block mb-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-gold))]">Kiddo+</span>
+                            <span className="inline-block mb-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-gold-ink))]">Kiddo+</span>
                           )}
                           <p className="text-sm text-foreground">
                             {hasAutoInvestAccess
@@ -12636,10 +12636,10 @@ export default function Dashboard() {
               <DialogTitle className="sr-only">Upgrade {activeFund.name}</DialogTitle>
               <div className="p-6 space-y-5">
                 <div className="space-y-1">
-                  <p className="text-sm text-[hsl(var(--kiddo-gold))] font-medium">Kiddo+</p>
+                  <p className="text-sm text-[hsl(var(--kiddo-gold-ink))] font-medium">Kiddo+</p>
                   <h2 className="font-heading text-xl font-semibold text-foreground">Unlock recurring investments for {activeFund.recipientFirstName || activeFund.name}</h2>
                   <p className="text-sm text-muted-foreground">
-                    Add recurring investments, projections, richer Memory Book moments, and thank-you templates for this fund.
+                    Add recurring investments, photo and video Memory Book entries, custom fund mix, and co-parent access for this fund.
                   </p>
                 </div>
 

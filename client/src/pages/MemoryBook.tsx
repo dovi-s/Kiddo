@@ -3036,7 +3036,7 @@ export default function MemoryBook() {
                         "ceremony" across the rest of the product. */}
                     <button
                       onClick={() => { haptic("medium"); setBookPageIndex(0); setBookSlideDirection(0); setBookOpen(true); }}
-                      className="h-11 rounded-2xl border border-[hsl(var(--kiddo-gold)/0.45)] bg-[hsl(var(--kiddo-gold)/0.10)] px-3 text-sm font-semibold text-[hsl(var(--kiddo-gold))] hover:bg-[hsl(var(--kiddo-gold)/0.16)] transition-colors inline-flex items-center gap-1.5"
+                      className="h-11 rounded-2xl border border-[hsl(var(--kiddo-gold)/0.45)] bg-[hsl(var(--kiddo-gold)/0.10)] px-3 text-sm font-semibold text-[hsl(var(--kiddo-gold-ink))] hover:bg-[hsl(var(--kiddo-gold)/0.16)] transition-colors inline-flex items-center gap-1.5"
                       data-testid="button-open-book-view"
                     >
                       <BookOpen size={14} />
@@ -3203,7 +3203,7 @@ export default function MemoryBook() {
                         Backdrop-blur so content doesn't bleed through. */}
                     <h4
                       className={`sticky top-[58px] z-20 -mx-4 px-4 py-2 mb-3 text-[11px] font-bold uppercase tracking-[0.10em] backdrop-blur-md bg-background/85 border-b border-border/30 ${
-                        month === "The Beginning" ? "text-[hsl(var(--kiddo-gold))]" : "text-muted-foreground/70"
+                        month === "The Beginning" ? "text-[hsl(var(--kiddo-gold-ink))]" : "text-muted-foreground/70"
                       }`}
                     >
                       {month}
@@ -3388,7 +3388,7 @@ export default function MemoryBook() {
                         <div className="flex items-center gap-2.5">
                           <span className="text-lg leading-none" aria-hidden>🌱</span>
                           <div className="min-w-0 flex-1">
-                            <p className="text-[10.5px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold))] leading-tight">
+                            <p className="text-[10.5px] font-bold uppercase tracking-[0.10em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">
                               Where it began
                             </p>
                             <p className="text-[12px] text-[rgb(95,85,72)] leading-snug mt-0.5">
@@ -3970,7 +3970,7 @@ export default function MemoryBook() {
                               <div className="flex items-center gap-2 mb-2">
                                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] text-[hsl(var(--kiddo-gold))] text-[14px]" aria-hidden>🎙</span>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold))] leading-tight">Voice note</p>
+                                  <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">Voice note</p>
                                   <p className="text-[11px] text-muted-foreground/80 leading-tight">They wanted {childName ? childName : "her"} to hear this.</p>
                                 </div>
                                 <span className="text-[hsl(var(--kiddo-gold)/0.55)]" aria-hidden><StaticWaveform size="sm" /></span>
@@ -4317,7 +4317,7 @@ export default function MemoryBook() {
                                 <Star size={18} className="text-[hsl(var(--kiddo-gold))]" />
                               </div>
                               <div className="min-w-0 flex-1">
-                                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold))]">Milestone</span>
+                                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">Milestone</span>
                                 <h3 className="mt-1.5 font-heading text-base font-semibold leading-snug text-foreground" data-testid={`text-milestone-${entry.id}`}>
                                   {entry.content}
                                 </h3>
@@ -4646,7 +4646,7 @@ export default function MemoryBook() {
                         sharesRemaining === 0
                           ? "bg-red-50 text-red-700"
                           : sharesRemaining === 1
-                            ? "bg-[hsl(var(--kiddo-gold)/0.12)] text-[hsl(var(--kiddo-gold))]"
+                            ? "bg-[hsl(var(--kiddo-gold)/0.12)] text-[hsl(var(--kiddo-gold-ink))]"
                             : "bg-muted text-muted-foreground"
                       }`}
                       data-testid="text-share-counter"

@@ -42,7 +42,7 @@ export function MilestoneShareCard({ threshold, recipientName }: MilestoneShareC
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold)/0.18)]">
             <Sparkles size={18} className="text-[hsl(var(--kiddo-gold))]" />
           </div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold))]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold-ink))]">
             Milestone
           </p>
         </div>

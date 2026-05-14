@@ -180,7 +180,7 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, on
               <Sprout size={22} className="text-[hsl(var(--kiddo-gold))]" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold))]">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]">
                 Milestone
               </p>
               <h3 className="number-build mt-1 font-heading text-2xl font-bold text-foreground" data-testid="text-milestone-value">

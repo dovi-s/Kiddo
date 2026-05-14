@@ -419,11 +419,11 @@ export default function TaxDocuments() {
                   className={`grid grid-cols-[1fr_auto] md:grid-cols-[80px_1fr_auto_auto_auto_auto] gap-3 px-4 py-3 ${i < basisRows.length - 1 ? "border-b border-[hsl(var(--kiddo-border-light))]" : ""}`}
                 >
                   <div className="hidden md:flex items-center">
-                    <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">{r.ticker}</span>
+                    <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">{r.ticker}</span>
                   </div>
                   <div className="min-w-0">
                     <div className="md:hidden flex items-center gap-2 mb-1">
-                      <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">{r.ticker}</span>
+                      <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">{r.ticker}</span>
                     </div>
                     <p className="text-sm font-semibold text-foreground truncate">{r.name}</p>
                     <div className="md:hidden grid grid-cols-3 gap-2 mt-2 text-[11px]">
@@ -576,13 +576,13 @@ export default function TaxDocuments() {
                     data-testid={`realized-sale-${s.id}`}
                   >
                     <div className="hidden md:flex items-center">
-                      <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">
+                      <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">
                         {s.ticker || "—"}
                       </span>
                     </div>
                     <div className="min-w-0">
                       <div className="md:hidden flex items-center gap-2 mb-1">
-                        <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">
+                        <span className="text-[11px] font-bold text-[hsl(var(--kiddo-gold-ink))] bg-[hsl(var(--kiddo-gold)/0.10)] px-2 py-0.5 rounded">
                           {s.ticker || "—"}
                         </span>
                         <span className="text-[10px] text-muted-foreground">{periodLabel}</span>

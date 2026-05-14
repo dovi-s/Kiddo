@@ -20,24 +20,52 @@
 > - Migrated `ActivityDetail.tsx` "Details" label from
 >   `--kora-gold` to `--kora-gold-ink` for AA compliance.
 >
-> Still open: 5-6 surfaces use `--kora-gold` for text (vs icons or
-> backgrounds) in contexts that would benefit from gold-ink
-> migration:
-> - `client/src/components/ActionItemCard.tsx:93` (icon-as-text on
->   gold-tinted circle; icons have looser WCAG requirements)
-> - `client/src/components/ui/premium-list-item.tsx:79+164` (avatar
->   wrappers; same icon-vs-text consideration)
-> - `client/src/components/ui/live-ticker.tsx:268+293` (decorative
->   animation moment on dark evergreen background; gold-light
->   would be the right migration target here, not gold-ink)
-> - `client/src/components/ui/share-kit.tsx:366` (Sparkles icon)
-> - `client/src/pages/ActivityDetail.tsx:48+224` (Gift icon + chat
->   icon; same icon consideration)
+> Issue 2 (gold text fails AA) FURTHER SHIPPED 2026-05-14 evening:
+> Full sweep of every remaining text-gold-on-light-tint usage
+> across the app. 21 surgical token substitutions across 8 files.
+> Migrated:
+> - `premium-list-item.tsx:79+164` — both `gold` variants in the
+>   design-system component (avatar + badge). Propagates wherever
+>   the variant is used.
+> - `Dashboard.tsx:5917+7200+12639` — age-band suggestion banner
+>   label, Kiddo+ badge on auto-invest setup card, Kiddo+ label in
+>   coverage upgrade modal. The same modal body also dropped the
+>   stale "thank-you templates" line per the locked refuse rule
+>   and was rewritten to match the locked Plus differentials
+>   (recurring investments, Memory Book media, custom mix,
+>   co-parent).
+> - `Settings.tsx:102+1851+1867+4461+4476+4965` — section meta
+>   badge, strategy-switch "What changes" label, after-pill, Plus
+>   pricing card price headline + check icons, bank-not-linked
+>   warning text. Settings 4507+4528 (Family card price + checks)
+>   migrated to `--kiddo-gold-light` instead because the Family
+>   card has a dark evergreen gradient background — gold-light is
+>   the correct light-on-dark register.
+> - `TaxDocuments.tsx:422+426+579+585` — all four ticker pills on
+>   gold-tinted background.
+> - `MemoryBook.tsx:3039+3206+3391+3973+4320+4649` — Read button,
+>   sticky month header for "The Beginning", "Where it began"
+>   ribbon, voice-note label, milestone pill, share-counter pill.
+> - `MilestoneMoment.tsx:183`, `MilestoneShareCard.tsx:45` —
+>   uppercase "Milestone" labels.
+> - `premium-themes.tsx:96+192+224+231+243` — ThemeSelector
+>   upgrade CTA, GoalCard label and "to go" text and contributor
+>   overflow chip, EventPassBadge pill.
 >
-> Decision: leave icon usages as-is (looser WCAG threshold for
-> non-text); the live-ticker decorative case needs the gold-light
-> alternative not gold-ink. The audit closes on "text on cream/tinted-
-> gold" coverage being fixed.
+> Left intentionally as `--kora-gold`/`--kiddo-gold`:
+> - All pure-icon usages (lucide icons in colored circles). Icons
+>   have looser WCAG and the brand-warm gold is the intended
+>   register for these decorative roles. Files: ActionItemCard,
+>   ActivityDetail, FundsOverview, EventCreate, MilestoneMoment,
+>   MilestoneShareCard, premium-themes Crown icons, share-kit
+>   Sparkles, MemoryBook Star icon at 4317, Send.tsx icons.
+> - Background fills and borders (no contrast requirement).
+> - `Settings.tsx:4634+4674` — Star icon inside a gold-tinted
+>   circle (icon-in-pill role) and a hidden-div ✦ glyph that
+>   never renders.
+>
+> The audit closes on text contrast. Future palette work belongs
+> in a separate audit; chart/dark-mode pairs are still untouched.
 
 First formal contrast audit of the Kiddo palette. Two real issues
 surfaced, both on muted/accent text against the cream background.

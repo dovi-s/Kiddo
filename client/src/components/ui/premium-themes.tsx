@@ -93,7 +93,7 @@ export function ThemeSelector({
         {!hasEventPass && (
           <button
             onClick={onUpgrade}
-            className="flex items-center gap-1.5 text-xs text-[hsl(var(--kiddo-gold))] hover:text-[hsl(var(--kiddo-gold))] font-medium"
+            className="flex items-center gap-1.5 text-xs text-[hsl(var(--kiddo-gold-ink))] hover:text-[hsl(var(--kiddo-gold-ink))] font-medium"
           >
             <Crown size={12} />
             Upgrade to unlock
@@ -189,7 +189,7 @@ export function GoalCard({
           <Crown className="w-4 h-4 text-[hsl(var(--kiddo-gold))]" />
         </div>
         <div>
-          <p className="text-xs text-[hsl(var(--kiddo-gold))] font-medium uppercase tracking-wider">Group Goal</p>
+          <p className="text-xs text-[hsl(var(--kiddo-gold-ink))] font-medium uppercase tracking-wider">Group Goal</p>
           <p className="text-sm font-medium text-foreground">{eventTitle}</p>
         </div>
       </div>
@@ -221,14 +221,14 @@ export function GoalCard({
               </div>
             ))}
             {contributorCount > 4 && (
-              <div className="w-6 h-6 rounded-full bg-[hsl(var(--kiddo-gold))]/10 border-2 border-[hsl(var(--kiddo-gold))]/10 flex items-center justify-center text-[10px] font-medium text-[hsl(var(--kiddo-gold))]">
+              <div className="w-6 h-6 rounded-full bg-[hsl(var(--kiddo-gold))]/10 border-2 border-[hsl(var(--kiddo-gold))]/10 flex items-center justify-center text-[10px] font-medium text-[hsl(var(--kiddo-gold-ink))]">
                 +{contributorCount - 4}
               </div>
             )}
           </div>
           <span className="text-muted-foreground">{contributorCount} contributors</span>
         </div>
-        <span className="text-[hsl(var(--kiddo-gold))] font-medium">${remaining.toLocaleString()} to go</span>
+        <span className="text-[hsl(var(--kiddo-gold-ink))] font-medium">${remaining.toLocaleString()} to go</span>
       </div>
     </motion.div>
   );
@@ -240,7 +240,7 @@ interface EventPassBadgeProps {
 
 export function EventPassBadge({ size = "md" }: EventPassBadgeProps) {
   return (
-    <div className={`inline-flex items-center gap-1.5 bg-[hsl(var(--kiddo-gold))]/10 text-[hsl(var(--kiddo-gold))] font-medium rounded-full ${
+    <div className={`inline-flex items-center gap-1.5 bg-[hsl(var(--kiddo-gold))]/10 text-[hsl(var(--kiddo-gold-ink))] font-medium rounded-full ${
       size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-3 py-1 text-xs"
     }`}>
       <Crown size={size === "sm" ? 10 : 12} />

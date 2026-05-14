@@ -99,7 +99,7 @@ function NotificationSwitchRow({
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-bold text-foreground">{title}</p>
           {meta && (
-            <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold))]">
+            <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">
               {meta}
             </span>
           )}
@@ -1848,7 +1848,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
             className="rounded-xl border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.06)] p-3 space-y-2"
             data-testid="strategy-switch-disclosure"
           >
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-gold))]">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))]">
               What changes
             </p>
             {/* Mutation clarity — locked rule per feedback_mutation_clarity.
@@ -1864,7 +1864,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 <span className="font-semibold">{prevStrategy?.label || "Current"}</span>
               </span>
               <span className="text-muted-foreground/60" aria-hidden>→</span>
-              <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] border border-[hsl(var(--kiddo-gold)/0.35)] px-2.5 py-0.5 text-[hsl(var(--kiddo-gold))]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] border border-[hsl(var(--kiddo-gold)/0.35)] px-2.5 py-0.5 text-[hsl(var(--kiddo-gold-ink))]">
                 <span aria-hidden>{nextStrategy?.emoji || "•"}</span>
                 <span className="font-bold">{newLabel}</span>
               </span>
@@ -4458,7 +4458,7 @@ const [editFundName, setEditFundName] = useState("");
                 )}
                 <div className="p-5 pt-6">
                   <h2 className="font-heading text-xl font-bold text-foreground">Kiddo+</h2>
-                  <p className="mt-3 text-2xl font-bold leading-none text-[hsl(var(--kiddo-gold))]">
+                  <p className="mt-3 text-2xl font-bold leading-none text-[hsl(var(--kiddo-gold-ink))]">
                     ${KORA_STARTER_MONTHLY.toFixed(2)}<span className="text-sm font-normal text-muted-foreground">/mo</span>
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">or ${KORA_STARTER_YEARLY}/year</p>
@@ -4473,7 +4473,7 @@ const [editFundName, setEditFundName] = useState("");
                         the right expectation before the parent
                         commits. */}
                     {["One child fund. Move to Family if you add a second.", "Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Custom fund mix (pick your own stocks)", "Co-parent access and priority support"].map((item) => (
-                      <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold))]" />{item}</p>
+                      <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-ink))]" />{item}</p>
                     ))}
                   </div>
                   {includedHint("starter") && (
@@ -4504,7 +4504,7 @@ const [editFundName, setEditFundName] = useState("");
                 )}
                 <div className="relative p-5 pt-8">
                   <h2 className="font-heading text-xl font-bold text-[hsl(var(--kiddo-cream))]">Kiddo Family</h2>
-                  <p className="mt-3 text-2xl font-bold leading-none text-[hsl(var(--kiddo-gold))]">
+                  <p className="mt-3 text-2xl font-bold leading-none text-[hsl(var(--kiddo-gold-light))]">
                     ${KORA_FAMILY_MONTHLY.toFixed(2)}<span className="text-sm font-normal text-white/50">/mo</span>
                   </p>
                   <p className="mt-1 text-xs text-white/45">or ${KORA_FAMILY_YEARLY}/year</p>
@@ -4525,7 +4525,7 @@ const [editFundName, setEditFundName] = useState("");
                         Without this bullet, the Settings upgrade card
                         underrepresented the actual feature gain. */}
                     {["Unlimited funds, every child", "Memory Book authoring for every child (photos, videos, voice)", "Unlimited occasions with premium features included", "Kid View for every child", "One view for every fund in your household"].map((item) => (
-                      <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold))]" />{item}</p>
+                      <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-light))]" />{item}</p>
                     ))}
                   </div>
                   {includedHint("family") && (
@@ -4962,7 +4962,7 @@ const [editFundName, setEditFundName] = useState("");
                 <p className="mt-2 text-sm text-muted-foreground">
                   {bankAccounts.length === 0 ? "No bank accounts linked yet." : `${bankAccounts.length} bank account${bankAccounts.length === 1 ? "" : "s"} linked.`}
                 </p>
-                <p className={`mt-1 text-sm font-semibold ${bankAccounts.length > 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-[hsl(var(--kiddo-gold))]"}`}>
+                <p className={`mt-1 text-sm font-semibold ${bankAccounts.length > 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-[hsl(var(--kiddo-gold-ink))]"}`}>
                   {bankAccounts.length > 0 ? "Withdrawals are connected." : "Link withdrawals to unlock full fund protection."}
                 </p>
                 {bankAccounts.length > 0 && (
