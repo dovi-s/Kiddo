@@ -628,7 +628,7 @@ export class WebhookHandlers {
       const reason = isCash ? 'explicit_cash' : (isPick ? 'pick_failed' : 'empty_basket');
       const title = isCash
         ? 'Held as cash'
-        : 'Gift received — held as cash';
+        : 'Gift received. Held as cash';
       const description = isCash
         ? `$${investAmount.toFixed(2)} added to cash. Invest from the dashboard whenever you're ready.`
         : `$${investAmount.toFixed(2)} added to cash. Invest from the dashboard when ready.`;

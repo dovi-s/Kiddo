@@ -132,7 +132,7 @@ export const educationContent = {
     content: "An investment account you manage for your child until they reach adulthood (usually 18 or 21, depending on your state). You control the investments, and the account transfers to them automatically when they're old enough.",
   },
   autoInvest: {
-    title: "How does auto-invest work?",
+    title: "How does investing automatically work?",
     content: "When your fund receives a gift, the money is automatically invested in a diversified mix of stocks at the next trading window. No action needed from you. You can change the investment strategy anytime.",
   },
   sipc: {

@@ -6842,7 +6842,7 @@ export async function registerRoutes(
         userId,
         type: 'bank_linked',
         title: 'Bank account connected',
-        description: `${created.bankName} ending in ${created.accountLast4} is ready for auto-invest and withdrawals.`,
+        description: `${created.bankName} ending in ${created.accountLast4} is ready for recurring investments and withdrawals.`,
       });
 
       res.status(201).json({
@@ -7060,7 +7060,7 @@ export async function registerRoutes(
       });
     } catch (error) {
       console.error('Error auto-investing:', error);
-      res.status(500).json({ error: 'Failed to auto-invest' });
+      res.status(500).json({ error: 'Failed to invest cash' });
     }
   });
 
@@ -10911,7 +10911,7 @@ export async function registerRoutes(
       if (!trimmedRecipientEmail || !emailRe.test(trimmedRecipientEmail)) return res.status(400).json({ error: "The parent's email is required" });
       if (!trimmedKidFirstName) return res.status(400).json({ error: "The child's first name is required" });
       if (!Number.isFinite(parsedAmount) || parsedAmount < 5) return res.status(400).json({ error: "Amount must be at least $5" });
-      if (parsedAmount > 10000) return res.status(400).json({ error: "Amounts over $10,000 — contact us at hello@kiddofund.com" });
+      if (parsedAmount > 10000) return res.status(400).json({ error: "Amounts over $10,000. Contact us at hello@kiddofund.com" });
 
       // Anti-spam V1: rate-limit at 5 unique recipient emails per
       // gifter email per 7 days. Cheap defense; tighter abuse
@@ -11529,14 +11529,14 @@ export async function registerRoutes(
       const isFundStarter = fundMembership?.status === 'active' ||
         (fundMembership?.status === 'canceled' && fundMembership?.currentPeriodEnd && new Date(String(fundMembership.currentPeriodEnd)).getTime() > Date.now());
       if (!isFamily && !isGlobalStarter && !isFundStarter) {
-        return res.status(403).json({ error: 'Kiddo+, Family, or Legacy required for auto-invest contributions' });
+        return res.status(403).json({ error: 'Kiddo+, Family, or Legacy required for recurring investments' });
       }
 
       const contributions = await storage.getParentContributionsByFund(req.params.fundId);
       res.json(contributions);
     } catch (error) {
       console.error('Error fetching parent contributions:', error);
-      res.status(500).json({ error: 'Failed to fetch auto-invest plans' });
+      res.status(500).json({ error: 'Failed to fetch recurring investment plans' });
     }
   });
 
@@ -11582,7 +11582,7 @@ export async function registerRoutes(
       const isFundStarter = fundMembership?.status === 'active' ||
         (fundMembership?.status === 'canceled' && fundMembership?.currentPeriodEnd && new Date(String(fundMembership.currentPeriodEnd)).getTime() > Date.now());
       if (!isFamily && !isGlobalStarter && !isFundStarter) {
-        return res.status(403).json({ error: 'Kiddo+, Family, or Legacy required for auto-invest contributions' });
+        return res.status(403).json({ error: 'Kiddo+, Family, or Legacy required for recurring investments' });
       }
 
       const { amount, frequency, executionModel, selectedTicker, bankAccountId, note } = req.body;
@@ -11604,7 +11604,7 @@ export async function registerRoutes(
       }
 
       if (!bankAccountId) {
-        return res.status(400).json({ error: 'Choose a connected bank account before starting auto-invest' });
+        return res.status(400).json({ error: 'Choose a connected bank account before starting recurring investments' });
       }
 
       const userBankAccounts = await storage.getBankAccountsByUser(userId);
@@ -11614,7 +11614,7 @@ export async function registerRoutes(
         (account.connectionStatus || "active") === "active"
       );
       if (!selectedBankAccount) {
-        return res.status(400).json({ error: 'Reconnect or choose an active bank account before starting auto-invest' });
+        return res.status(400).json({ error: 'Reconnect or choose an active bank account before starting recurring investments' });
       }
 
       const existingContribs = await storage.getParentContributionsByFund(req.params.fundId);
@@ -11690,7 +11690,7 @@ export async function registerRoutes(
       res.status(201).json(contribution);
     } catch (error) {
       console.error('Error creating parent contribution:', error);
-      res.status(500).json({ error: 'Failed to create auto-invest plan' });
+      res.status(500).json({ error: 'Failed to create recurring investment plan' });
     }
   });
 
@@ -11745,7 +11745,7 @@ export async function registerRoutes(
           (account.connectionStatus || "active") === "active"
         );
         if (!selectedBankAccount) {
-          return res.status(400).json({ error: 'Reconnect or choose an active bank account before updating auto-invest' });
+          return res.status(400).json({ error: 'Reconnect or choose an active bank account before updating recurring investments' });
         }
         updates.bankAccountId = bankAccountId;
       }
@@ -19037,7 +19037,7 @@ export async function registerRoutes(
       // confusing and pollutes the pending list.
       const inviter = req.user as any;
       if (inviter?.email && rawEmail === String(inviter.email).trim().toLowerCase()) {
-        return res.status(400).json({ error: "You can't invite your own email — you already have full access." });
+        return res.status(400).json({ error: "You can't invite your own email. You already have full access." });
       }
 
       // Dedupe: if there's already a row for this (fund, email), update

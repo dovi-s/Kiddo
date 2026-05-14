@@ -208,7 +208,7 @@ export function InvestCashModal({
       if (res.ok) {
         await refetchPrefs();
         toast({
-          title: enabled ? "Auto-investing turned on" : "Auto-investing turned off",
+          title: enabled ? "Investing future gifts automatically" : "Future gifts will sit as cash",
           description: enabled
             ? "Future cash will invest automatically per the fund default."
             : "Cash will sit until you manually invest it.",

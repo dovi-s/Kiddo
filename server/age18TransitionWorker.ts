@@ -288,7 +288,7 @@ async function sendT30Email(row: DueRow, log: LogFn): Promise<void> {
       "Three things to do this month:",
       `  1. Add ${childName}'s email AND send them a verification link so the at-18 invite reaches the right inbox: ${managerUrl}`,
       `  2. Share Kid View with ${childName} so the fund isn't a complete surprise when they take it over. The kid-friendly view of the fund (with their gifts, holdings, and stock explainers) lives behind a private link + PIN you can share now from your dashboard: ${dashboardUrl}`,
-      `  3. Walk through the prep checklist — money conversation, tax position, successor custodian: ${planUrl}`,
+      `  3. Walk through the prep checklist (money conversation, tax position, successor custodian): ${planUrl}`,
       "",
       `When the day arrives, ${childName} gets an email with a private link to claim the fund into their own Kiddo account. They create their own login (no shared passwords). The Memory Book travels with them.`,
       "",
@@ -351,11 +351,11 @@ async function sendKidInviteEmail(
       "",
       "Today's the day. Your family has built something for you, and now it's yours.",
       "",
-      "Open your invite to claim the fund into your own Kiddo account. Everything they built — gifts, notes, photos, the whole Memory Book — comes with you.",
+      "Open your invite to claim the fund into your own Kiddo account. Everything they built (gifts, notes, photos, the whole Memory Book) comes with you.",
       "",
       `Your invite link: ${inviteLink}`,
       "",
-      "Nothing has been sold. The investments stay exactly where they are. What changes is who decides — and from today, that's you.",
+      "Nothing has been sold. The investments stay exactly where they are. What changes is who decides, and from today, that's you.",
       "",
       "The Kiddo team",
     ].join("\n"),
@@ -388,8 +388,8 @@ async function sendTodayParentEmail(
     variant === "configured"
       ? `Today's the day. ${childName} owns the fund.`
       : variant === "unverified"
-        ? `${childName} turns ${majorityAge} today — confirm their email`
-        : `${childName} turns ${majorityAge} today — add their email`;
+        ? `${childName} turns ${majorityAge} today. Confirm their email`
+        : `${childName} turns ${majorityAge} today. Add their email`;
   const body =
     variant === "configured"
       ? [
@@ -426,7 +426,7 @@ async function sendTodayParentEmail(
             "",
             `We don't have ${childName}'s email on file yet, so we couldn't send them the claim link automatically. Add their email here and we'll send it: ${managerUrl}`,
             "",
-            "Until they claim, the fund stays under your account. Nothing was sold and the investments stay where they are — but the legal custodian has changed, and the in-app handoff completes when they accept the invite.",
+            "Until they claim, the fund stays under your account. Nothing was sold and the investments stay where they are. But the legal custodian has changed, and the in-app handoff completes when they accept the invite.",
             "",
             "The Kiddo team",
           ].join("\n");
