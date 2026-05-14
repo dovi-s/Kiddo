@@ -11,6 +11,7 @@ import { Logo } from "@/components/ui/logo";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { haptic } from "@/lib/haptics";
+import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { ProcessingState, SuccessState } from "@/components/ui/gemini";
 import { SetupProgressNudge, TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { toast } from "@/hooks/use-toast";
@@ -54,6 +55,7 @@ export default function ActivateInvesting() {
   const { data: funds = [] } = useFunds();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<Step>("welcome");
+  useScrollResetOnChange(step);
   const [upgradingPlan, setUpgradingPlan] = useState<"starter" | "family" | null>(null);
   const [starterFundId, setStarterFundId] = useState<string>("");
 

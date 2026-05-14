@@ -182,6 +182,12 @@ export function DesktopSidebar() {
     haptic("selection");
     if (location.startsWith("/memory")) setLocation(`/memory/${fund.id}`);
     else if (location.startsWith("/dashboard")) setLocation(`/dashboard?fund=${fund.id}`);
+    // From /funds the implicit intent of picking a kid is "open that
+    // kid's fund" — same semantics as the page-body "Open fund" CTA
+    // on each card. Without this, picking from the sidebar dropdown
+    // silently switches activeFundId but leaves the parent on /funds,
+    // which reads as a no-op.
+    else if (isFundsOverview) setLocation(`/dashboard?fund=${fund.id}`);
   };
 
   const handleAddFund = () => {
@@ -368,14 +374,20 @@ export function DesktopSidebar() {
         </div>
       </div>
 
-      {/* Fund switcher card. Hidden on any nav-hidden page (/account
-          + /funds). On both, the chrome above (AppHeader title +
-          AppHeader dropdown trigger on /funds) already says what
-          surface the user's on — the card was redundant with that
-          and visually noisy on a sidebar that's otherwise empty
-          (no nav items either). The AppHeader's "Your funds ⌄"
-          trigger remains the kid-picker on /funds. */}
-      {activeFund && !hideNav && (
+      {/* Fund switcher card. Visible on every fund-scoped page AND on
+          /funds itself (the household-glance surface): on /funds the
+          card renders in its "Your funds 🌱 · N funds" form, dropdown
+          lets the parent drill into any kid without leaving the
+          sidebar, which matches the page's launching-pad purpose.
+          Hidden only on /account — there the user is operating on
+          themselves, no implicit active kid, so a sidebar kid-picker
+          would read as scope-mismatched. Earlier pass hid the card on
+          BOTH /account and /funds on a "redundant with AppHeader"
+          theory, but the AppHeader trigger is a small inline ⌄ button
+          while this is the load-bearing kid-switcher affordance;
+          re-introduced on /funds for parity with fund-scoped pages.
+          See project_chrome_scope_tiers.md. */}
+      {activeFund && (!hideNav || isFundsOverview) && (
         <div className="relative px-3.5 py-3" ref={fundMenuRef}>
           <button
             type="button"
@@ -530,8 +542,14 @@ export function DesktopSidebar() {
           label: returns the user to whatever non-/account page they
           came from (Memory Book → Account → Back lands on Memory
           Book). Falls back to active fund's home on cold deep-link
-          entry. See client/src/lib/last-location.ts. */}
-      {hideNav && (
+          entry. See client/src/lib/last-location.ts.
+          Scoped to /account specifically (isUserScoped). /funds also
+          has hideNav = true but is a launching pad, not a settled
+          editing surface — "Back to [last page]" is vestigial there
+          and was misreading as "Back to Settings" when the parent
+          drilled in from /settings. The sidebar fund-picker
+          re-introduced above is the right affordance for /funds. */}
+      {isUserScoped && (
         <nav className="px-2.5 pt-3 pb-2">
           <Link href={backHref}>
             <button

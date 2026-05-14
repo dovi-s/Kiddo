@@ -10,6 +10,8 @@ import type { Activity, Fund } from "@shared/schema";
 import { LOCAL_CACHE_KEYS, readLocalCache } from "@/lib/local-cache";
 import { useAuth } from "@/hooks/use-auth";
 import { getActiveFundId, setActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
+import { useActionItems } from "@/hooks/use-action-items";
+import { ActionItemList } from "@/components/ActionItemCard";
 import { haptic } from "@/lib/haptics";
 
 const NOTIF_LAST_READ_KEY = "kiddo.notif.lastReadAt";
@@ -185,6 +187,26 @@ const BELL_EXCLUDED_TYPES = new Set<string>([
 ]);
 function isBellNoise(type?: string | null): boolean {
   return BELL_EXCLUDED_TYPES.has(String(type || ""));
+}
+
+// Activity types that are now rendered as action-item CARDS at the top
+// of the panel (Needs-your-attention section). Filtered out of the
+// informational unread list so the same problem isn't shown twice —
+// once as a card with a Fix CTA, once as a plain informational row.
+// When the action item resolves server-side, the underlying activity
+// row stays in the Activity ledger for the audit trail but stops
+// surfacing here. Kept aligned with the types `deriveActionItemsForUser`
+// emits in `server/actionItems.ts` — if a new derived action-item type
+// gets added there, add the corresponding activity type here too.
+const ACTION_ITEM_REPRESENTED_TYPES = new Set<string>([
+  "kyc_action_required",
+  "kyc_pending_review",
+  "payment_failed",
+  "large_gift_hold_started",
+  "ssn_missing",
+]);
+function isRepresentedByActionItem(type?: string | null): boolean {
+  return ACTION_ITEM_REPRESENTED_TYPES.has(String(type || ""));
 }
 
 // Dedupe paired gift rows — server writes BOTH `gift_received` (social
@@ -632,6 +654,15 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
   // localStorage (markAllRead etc.) it also dispatches the read-state
   // event; the subscriber re-derives, every consumer re-renders.
   const { lastReadAt, readIds, unreadIds } = useNotificationReadState();
+  // Open action items — server-derived, always cross-fund. Unlike the
+  // informational notifications below (which scope to the active fund
+  // on fund-scoped pages), open todos float above the scope filter:
+  // a pending KYC on Liam's fund matters even when the parent is
+  // parked on Emma's Dashboard, because the parent is the actor.
+  // This also keeps the panel's count consistent with the bell badge,
+  // which already counts action items cross-fund regardless of page.
+  const { items: actionItems } = useActionItems();
+  const actionItemCount = actionItems.length;
   // Notifications panel follows the GLOBAL active fund on fund-scoped
   // pages (Dashboard, Memory, Activity, etc.) and switches to ALL
   // funds on non-fund-scoped pages (/funds, /account). No in-panel
@@ -710,6 +741,12 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
       // the full history (search, filter, CSV export); the bell
       // shows what changed that the parent might want to know.
       .filter((a) => !isBellNoise(a.type))
+      // Activity rows that map to derived action items (KYC, SSN,
+      // payment failed, large-gift hold) are rendered as cards in the
+      // Needs-your-attention section at the top of the panel. Drop
+      // them from the informational list so the same problem doesn't
+      // appear twice. The Activity page keeps these rows for audit.
+      .filter((a) => !isRepresentedByActionItem(a.type))
       .filter((a) => fundFilter === "all" || a.fundId === fundFilter);
     const unread: FeedActivity[] = [];
     const read: FeedActivity[] = [];
@@ -748,6 +785,11 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
         // "5 new" because the header was counting bell-noise types
         // that the panel filtered out).
         !isBellNoise(a.type) &&
+        // Mirror the action-item drop from the panel list so the
+        // count tracks what the user actually sees as informational
+        // rows. Action items are reported separately via
+        // actionItemCount and rolled into the header summary below.
+        !isRepresentedByActionItem(a.type) &&
         (fundFilter === "all" || a.fundId === fundFilter) &&
         isActivityUnread(a)
     ).length;
@@ -955,7 +997,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                   <h2 style={{ fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", fontSize: 16, fontWeight: 800, color: "#1A1710", lineHeight: "20px" }}>
                     Notifications
                   </h2>
-                  {unreadCount > 0 && (
+                  {(unreadCount + actionItemCount) > 0 && (
                     <span
                       style={{
                         background: "#1A3D2B",
@@ -967,7 +1009,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                         lineHeight: "14px",
                       }}
                     >
-                      {unreadCount > 9 ? "9+" : unreadCount}
+                      {(unreadCount + actionItemCount) > 9 ? "9+" : (unreadCount + actionItemCount)}
                     </span>
                   )}
                 </div>
@@ -983,12 +1025,21 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                       const name = f.recipientFirstName || f.name || "Fund";
                       return `${name}'s fund`;
                     })();
-                    if (unreadCount === 0) {
+                    // Roll action items into the summary. They're
+                    // cross-fund always, so the count can be > 0 even
+                    // when the scope label says "Emma's fund" — that's
+                    // intentional. The "needs you" half makes it clear
+                    // that those rows are user-scoped to-dos, not
+                    // Emma-specific gifts.
+                    if (unreadCount === 0 && actionItemCount === 0) {
                       return totalReadCount > 0
                         ? `All caught up · ${scopeLabel}`
                         : `Nothing yet · ${scopeLabel}`;
                     }
-                    return `${unreadCount} new · ${scopeLabel}`;
+                    const parts: string[] = [];
+                    if (actionItemCount > 0) parts.push(`${actionItemCount} to do`);
+                    if (unreadCount > 0) parts.push(`${unreadCount} new`);
+                    return `${parts.join(" · ")} · ${scopeLabel}`;
                   })()}
                 </p>
               </div>
@@ -1047,6 +1098,32 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 overscrollBehavior: "contain",
               }}
             >
+              {/* Needs-your-attention section — server-derived open
+                  action items (KYC, SSN, payment failed, large-gift
+                  hold, fund setup gates). Always cross-fund regardless
+                  of which kid's page the parent is parked on, because
+                  the parent IS the actor: a pending KYC on Liam's
+                  fund matters even when looking at Emma's Dashboard.
+                  Each card shows the fund label inline so the parent
+                  knows whose todo it is. Compact variant fits the
+                  panel's narrow column. Tapping a card closes the
+                  panel and routes to the fix surface (handled inside
+                  ActionItemCard). */}
+              {actionItemCount > 0 && (
+                <div
+                  style={{
+                    padding: "10px 16px 14px",
+                    borderBottom: "1px solid rgba(26,23,16,0.07)",
+                    background: "rgba(26,23,16,0.015)",
+                  }}
+                >
+                  <ActionItemList
+                    items={actionItems}
+                    compact
+                    heading="Needs your attention"
+                  />
+                </div>
+              )}
               {(() => {
                 // Single render-row helper so unread + read sections stay
                 // visually consistent. Read items dim slightly so the
@@ -1213,7 +1290,14 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                 };
 
                 // Empty: nothing to show at all (fresh fund, fresh signup).
-                if (visibleUnread.length === 0 && totalReadCount === 0) {
+                // Action items count against "cold" because if there's
+                // a Needs-your-attention card up top, the panel is not
+                // empty — the cold-empty message would read as a lie.
+                if (
+                  visibleUnread.length === 0 &&
+                  totalReadCount === 0 &&
+                  actionItemCount === 0
+                ) {
                   return (
                     <motion.div
                       key={`empty-cold:${openTick}`}
@@ -1229,8 +1313,80 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                   );
                 }
 
+                // Action-items-only: open to-dos but no unread/read
+                // informational rows. Skip the "You're all caught up"
+                // 🌱 (would be a lie — you have to-dos) and skip the
+                // cold empty (the action item card already speaks for
+                // itself up top). Just render nothing below the
+                // section so the cards sit alone, calm.
+                if (
+                  visibleUnread.length === 0 &&
+                  totalReadCount === 0 &&
+                  actionItemCount > 0
+                ) {
+                  return null;
+                }
+
                 // All caught up: no unread, but there's read history. Lead
                 // with the win, then offer to expand the read list inline.
+                // Suppress the 🌱 message when action items exist (the
+                // user is NOT all caught up — they have open todos
+                // displayed in the cards above).
+                if (visibleUnread.length === 0 && actionItemCount > 0) {
+                  // Action items rendered above; just offer the past-
+                  // notifications toggle here so historical context
+                  // is one tap away without claiming everything's done.
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { haptic("light"); setShowRead((v) => !v); }}
+                        style={{
+                          width: "100%",
+                          padding: "11px 22px",
+                          background: "rgba(26,23,16,0.03)",
+                          border: "none",
+                          borderTop: "1px solid rgba(26,23,16,0.07)",
+                          borderBottom: "1px solid rgba(26,23,16,0.07)",
+                          fontSize: 11.5,
+                          fontWeight: 700,
+                          color: "#6F6860",
+                          letterSpacing: "0.02em",
+                          textAlign: "left",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 8,
+                        }}
+                      >
+                        <span>{showRead ? "Hide" : "Show"} {totalReadCount} past notification{totalReadCount === 1 ? "" : "s"}</span>
+                        <motion.span
+                          animate={{ rotate: showRead ? 180 : 0 }}
+                          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                          style={{ display: "inline-flex", lineHeight: 0 }}
+                          aria-hidden
+                        >
+                          <ChevronDown size={13} strokeWidth={2.4} />
+                        </motion.span>
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {showRead && (
+                          <motion.div
+                            key="read-list-actiononly"
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto", transition: { duration: 0.32, ease: [0.16, 1, 0.3, 1] } }}
+                            exit={{ opacity: 0, height: 0, transition: { duration: 0.22, ease: [0.16, 1, 0.3, 1] } }}
+                            style={{ overflow: "hidden" }}
+                          >
+                            {visibleRead.map((a, i) => renderRow(a, { dim: true, index: i }))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </>
+                  );
+                }
+
                 if (visibleUnread.length === 0) {
                   return (
                     <>
@@ -1572,6 +1728,10 @@ export function useNotificationUnreadCount(scope: "active" | "all" = "active"): 
       // needed to know about. Same noise-filter as the bell now keeps
       // the dot honest.
       if (isBellNoise(a.type)) return false;
+      // Drop activity types now represented as Needs-your-attention
+      // cards, mirroring the panel's de-dupe so the activity-tab dot
+      // doesn't double-count a single problem.
+      if (isRepresentedByActionItem(a.type)) return false;
       if (scope === "active" && activeFundId && a.fundId && a.fundId !== activeFundId) return false;
       // Explicit unreadIds win — a past row re-promoted to unread
       // via swipe stays in the count until either tapped (which
@@ -1662,6 +1822,13 @@ export function useBellUnreadCount(scope: "active" | "all" = "active"): number {
     const unreadInformational = (activities as Activity[]).filter((a) => {
       if (isInternalOnlyActivity(a.type)) return false;
       if (isBellNoise(a.type)) return false;
+      // Same de-dupe the panel applies. Activity rows that represent
+      // open action items (KYC, SSN, payment failed, large-gift hold)
+      // are surfaced as cards in the Needs-your-attention section, so
+      // counting them as informational unread AS WELL would double the
+      // badge for a single problem. After my fix the panel renders
+      // them once; the badge needs to mirror that.
+      if (isRepresentedByActionItem(a.type)) return false;
       if (scope === "active" && activeFundId && a.fundId && a.fundId !== activeFundId) return false;
       const idStr = String(a.id);
       if (unreadIds.has(idStr)) return true;

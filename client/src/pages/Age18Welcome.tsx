@@ -25,6 +25,7 @@ import { ArrowRight, BookOpen, Briefcase, Coins, Receipt, Sparkles, TrendingUp }
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { useToast } from "@/hooks/use-toast";
+import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 
 type HandoffState = {
   shouldShowWelcome: boolean;
@@ -80,6 +81,12 @@ export default function Age18Welcome() {
   const [screen, setScreen] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [hasJob, setHasJob] = useState<boolean | null>(null);
   const [bracket, setBracket] = useState<"0_45" | "45_100" | "100_plus" | null>(null);
+  // Screen transitions are state-driven, not URL-driven — so the
+  // global ScrollToTop never fires. Without this, screen 4 (Roth
+  // pitch with income-bracket toggles) inherits screen 3's scroll
+  // position and the kid sees the bottom of the previous screen on
+  // mount. Per the 2026-05-13 onboarding scroll audit.
+  useScrollResetOnChange(screen);
 
   const completeMutation = useMutation({
     mutationFn: async () => {

@@ -5,6 +5,7 @@ import { CalendarIcon, Gift, PartyPopper, Baby, TreeDeciduous, GraduationCap, He
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
+import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { GradientText, EnlighteningReveal, ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -70,6 +71,7 @@ export default function EventCreate() {
   const isSavingsGoal = eventCategory === "savings_goal";
 
   const [step, setStep] = useState(1);
+  useScrollResetOnChange(step);
   const [eventType, setEventType] = useState("");
   const [eventName, setEventName] = useState("");
   const [description, setDescription] = useState("");

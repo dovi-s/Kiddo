@@ -17,6 +17,7 @@ import { StockLogo } from "@/components/ui/stock-logo";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { haptic } from "@/lib/haptics";
 import { extractUtmMetadata, isUserReferralCode } from "@/lib/acquisition";
+import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { USOnlyOffRamp } from "@/components/USOnlyOffRamp";
 import { GiftIntentBanner } from "@/components/GiftIntentBanner";
 import { useAuth } from "@/hooks/use-auth";
@@ -174,6 +175,12 @@ export default function GetStarted() {
   const registerReferralCode = isUserReferralCode(refCode) ? refCode?.trim().toUpperCase() : undefined;
   const { register, isAuthenticated, isRegistering } = useAuth();
   const [step, setStep] = useState<OnboardingStep>("welcome");
+  // Multi-step onboarding transitions happen via React state, not URL —
+  // so the global ScrollToTop in App.tsx never fires on step change.
+  // Without this hook, a parent who scrolled to the bottom of the
+  // welcome step stays scrolled to the bottom when the "who" step
+  // mounts. Fires window-scroll-to-top on every step transition.
+  useScrollResetOnChange(step);
   const [authMode, setAuthMode] = useState<OnboardingAuthMode>("none");
   const [oauth, setOauth] = useState<AuthProvidersStatus>({ google: false, apple: false });
   const [accountType, setAccountType] = useState<OnboardingAccountType>(null);

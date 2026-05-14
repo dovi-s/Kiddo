@@ -14,6 +14,7 @@ import { Logo } from "@/components/ui/logo";
 // appropriate confirmation pattern; no particle-confetti needed.
 import { InvestmentReveal } from "@/components/ui/live-ticker";
 import { haptic } from "@/lib/haptics";
+import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
@@ -48,6 +49,7 @@ export default function Claim() {
   const queryClient = useQueryClient();
 
   const [step, setStep] = useState<ClaimStep>("preview");
+  useScrollResetOnChange(step);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
   const [selectedFund, setSelectedFund] = useState<string | null>(null);
   const [createNewFund, setCreateNewFund] = useState(false);

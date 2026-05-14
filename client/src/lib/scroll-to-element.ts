@@ -1,6 +1,7 @@
 // Params that represent one-shot deep-link targets: stripping them on a
 // "fresh landing" tap is intentional. Things like ?fund=, ?tab=, etc. are
 // load-bearing user state and must be preserved.
+import { useLayoutEffect } from "react";
 import { DEEP_LINK_PARAMS } from "./deep-link-highlight";
 const CONSUMED_DEEP_LINK_PARAMS = DEEP_LINK_PARAMS;
 
@@ -110,6 +111,51 @@ export function scrollToTestId(
     window.cancelAnimationFrame(raf);
     if (timer != null) window.clearTimeout(timer);
   };
+}
+
+// Imperative "reset window scroll to top" — same three-phase reset the
+// global ScrollToTop component does on URL change. Use this in multi-
+// step state-driven flows (GetStarted, Age18Welcome, EventCreate, etc.)
+// where step transitions happen via React state, not URL navigation —
+// so the global ScrollToTop never fires and the user stays scrolled at
+// their previous step's position.
+//
+// Three-phase reset defeats both the AnimatePresence wait-mode delay
+// and any post-mount layout shift on the next step's content:
+//   1) immediate → resets while the current frame is still mounted
+//   2) rAF → resets right after browser paints the transition
+//   3) post-transition timeout → catches the moment the new step
+//      actually swaps in
+//
+// Some Safari versions need both html.scrollTop and body.scrollTop set
+// independently when the layout viewport disagrees with the visual one.
+export function scrollWindowToTop(): void {
+  if (typeof window === "undefined") return;
+  const reset = () => {
+    window.scrollTo(0, 0);
+    if (document.documentElement) document.documentElement.scrollTop = 0;
+    if (document.body) document.body.scrollTop = 0;
+  };
+  reset();
+  window.requestAnimationFrame(reset);
+  window.setTimeout(reset, 140);
+  // No cleanup needed — by the time the next step transition fires
+  // this helper, the previous timers have already done their work or
+  // harmlessly fired against a window that's still at top.
+}
+
+// React hook variant — pass a dependency that changes on step transition,
+// and the window scrolls to top whenever that dep changes. Mounted once
+// per multi-step page; no need to remember to call scrollWindowToTop()
+// in each individual setStep / moveToStep handler.
+//
+// Skips the very first render (initial mount) so the page lands at top
+// naturally without an extra reset cycle. Only fires on actual changes.
+export function useScrollResetOnChange(dep: unknown): void {
+  useLayoutEffect(() => {
+    scrollWindowToTop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dep]);
 }
 
 /**

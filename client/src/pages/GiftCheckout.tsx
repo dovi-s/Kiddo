@@ -11,6 +11,7 @@ import { RichText } from "@/components/ui/rich-text-editor";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { ThinkingOrb } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
+import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition";
 import { getPronouns } from "@/lib/pronouns";
 import { KIDDO_GIFT_ADD_ONS, calculateKoraContributionFee, getGiftAddOn, type GiftAddOnId } from "@shared/monetization";
@@ -208,6 +209,7 @@ export default function GiftCheckout() {
   const { fund: fundSlug, event: eventSlug } = useParams<{ fund: string; event?: string }>();
   const searchString = useSearch();
   const [step, setStep] = useState<GiftStep>("landing");
+  useScrollResetOnChange(step);
   const [selectedAmount, setSelectedAmount] = useState(50);
   const [showCustom, setShowCustom] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
