@@ -18410,18 +18410,28 @@ export async function registerRoutes(
 
       // Cross-device email merge. Mirror of /api/funds-overview: if
       // the parent has multiple user-id rows under the same email
-      // (signed up twice, etc.), union their owned funds.
+      // (signed up twice, etc.), union their owned funds AND collect
+      // all the email variants so we can filter parent-self-gifts out
+      // of the gifter aggregation below. A parent isn't a "gifter" on
+      // their own kid's fund; they're the custodian.
       const userIds = new Set<string>([userId]);
-      if (userEmail) {
-        try {
-          const candidates = await db
-            .select({ id: users.id })
-            .from(users)
-            .where(sql`LOWER(${users.email}) = ${userEmail}`);
-          for (const c of candidates) userIds.add(c.id);
-        } catch (mergeErr) {
-          console.warn('[funds-overview/gifters] user merge skipped:', (mergeErr as any)?.message || mergeErr);
+      const parentEmails = new Set<string>();
+      if (userEmail) parentEmails.add(userEmail);
+      try {
+        const candidates = await db
+          .select({ id: users.id, email: users.email })
+          .from(users)
+          .where(
+            userEmail
+              ? sql`LOWER(${users.email}) = ${userEmail} OR ${users.id} = ${userId}`
+              : sql`${users.id} = ${userId}`,
+          );
+        for (const c of candidates) {
+          userIds.add(c.id);
+          if (c.email) parentEmails.add(String(c.email).toLowerCase());
         }
+      } catch (mergeErr) {
+        console.warn('[funds-overview/gifters] user merge skipped:', (mergeErr as any)?.message || mergeErr);
       }
       const userIdArr = Array.from(userIds);
       const userIdsSql = sql.join(userIdArr.map((id) => sql`${id}`), sql`, `);
@@ -18460,6 +18470,20 @@ export async function registerRoutes(
       // are excluded so a wave-off doesn't claim a row that won't
       // ultimately count. Same status filter the funds-overview
       // unique-gifter count uses.
+      //
+      // CRITICAL: parent_contribution_id IS NULL excludes recurring
+      // auto-invest fires from the gifter list. Those rows are
+      // worker-fired payments from the parent's own card-on-file and
+      // semantically NOT gifts from a third party. Without this gate
+      // the parent appeared as a "gifter" on their own kid's fund,
+      // with the legacy "Auto-invest contribution to {fund}"
+      // boilerplate message bleeding through into a surface that's
+      // supposed to be "who else has shown up." See locked memory on
+      // the auto-invest boilerplate suppression pattern.
+      //
+      // selected_ticker is surfaced so the inline drilldown can show
+      // "Invested in AAPL" instead of a barren row when there's no
+      // gifter message.
       const giftsResult = await db.execute(sql`
         SELECT
           id,
@@ -18469,14 +18493,25 @@ export async function registerRoutes(
           is_anonymous AS "isAnonymous",
           amount,
           message,
+          selected_ticker AS "selectedTicker",
+          parent_contribution_id AS "parentContributionId",
           created_at AS "createdAt"
         FROM gifts
         WHERE fund_id IN (${fundIdsSql})
           AND sender_email IS NOT NULL AND sender_email <> ''
+          AND parent_contribution_id IS NULL
           AND status NOT IN ('failed', 'refunded', 'canceled', 'pending')
         ORDER BY created_at DESC
       `);
       const gifts = (giftsResult.rows as any[]) || [];
+
+      // Legacy boilerplate-message guard. Some pre-parentContributionId
+      // recurring rows lack the column but carry the canonical
+      // "Auto-invest contribution to {fund}" string in `message`.
+      // The locked pattern in MEMORY.md is to suppress these from
+      // surfaces using the regex below. Belt-and-braces on top of the
+      // SQL gate above so old data doesn't bleed into the sheet.
+      const AUTO_INVEST_BOILERPLATE_RE = /^auto-invest contribution to /i;
 
       type FundChip = {
         fundId: string;
@@ -18490,6 +18525,7 @@ export async function registerRoutes(
         recipientFirstName: string | null;
         amount: number;
         message: string | null;
+        selectedTicker: string | null;
         createdAt: string;
         isAnonymous: boolean;
       };
@@ -18509,6 +18545,19 @@ export async function registerRoutes(
       for (const gift of gifts) {
         const email = String(gift.senderEmail || '').trim().toLowerCase();
         if (!email) continue;
+        // Parent self-gifts: even when not worker-fired, a gift the
+        // parent sent to their own kid's fund (one-time, with their
+        // own email in the checkout) shouldn't appear in the cross-
+        // fund gifter sheet. The sheet's purpose is "who else has
+        // shown up." Parent-as-gifter belongs on the per-fund
+        // dashboard "you added $X" line, not here.
+        if (parentEmails.has(email)) continue;
+        // Belt-and-braces legacy boilerplate guard. If a recurring
+        // contribution slipped past the parent_contribution_id gate
+        // (legacy row without the column) but carries the auto-invest
+        // boilerplate, drop it from the aggregation.
+        const rawMessage = gift.message ? String(gift.message) : '';
+        if (AUTO_INVEST_BOILERPLATE_RE.test(rawMessage)) continue;
         const meta = fundMeta.get(String(gift.fundId));
         if (!meta) continue;
 
@@ -18553,7 +18602,10 @@ export async function registerRoutes(
             fundId: meta.fundId,
             recipientFirstName: meta.recipientFirstName,
             amount: parseFloat(String(gift.amount || 0)) || 0,
-            message: gift.message ? String(gift.message).slice(0, 200) : null,
+            message: rawMessage ? rawMessage.slice(0, 200) : null,
+            selectedTicker: gift.selectedTicker
+              ? String(gift.selectedTicker).toUpperCase().slice(0, 10)
+              : null,
             createdAt: String(gift.createdAt),
             isAnonymous: Boolean(gift.isAnonymous),
           });

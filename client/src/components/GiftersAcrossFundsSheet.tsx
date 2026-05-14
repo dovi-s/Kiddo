@@ -50,6 +50,7 @@ type RecentGift = {
   recipientFirstName: string | null;
   amount: number;
   message: string | null;
+  selectedTicker: string | null;
   createdAt: string;
   isAnonymous: boolean;
 };
@@ -93,6 +94,33 @@ function timeAgo(dateStr: string): string {
   if (diff < 48 * 60 * 60 * 1000) return "Yesterday";
   if (diff < 7 * 24 * 60 * 60 * 1000) return `${Math.round(diff / 86400000)} days ago`;
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// Inline gift rows show a fixed-format date (Month Day, plus year if
+// it's not the current year) rather than relative timeAgo. The
+// outer row already shows relative timeAgo ("6 days ago") so the
+// inline list reads as a chronological calendar instead of a second
+// relative pass.
+function fullDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (!Number.isFinite(d.getTime())) return "";
+  const now = new Date();
+  const sameYear = d.getFullYear() === now.getFullYear();
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: sameYear ? undefined : "numeric",
+  });
+}
+
+// Inline-gift descriptor when no gifter message exists. Surfaces the
+// ticker when present ("Invested in AAPL"); falls back to a calm
+// "Gift to {child}" line when neither message nor ticker is
+// available. Never empty, never AI-slop.
+function describeGiftInline(g: RecentGift): string {
+  if (g.selectedTicker) return `Invested in ${g.selectedTicker}`;
+  const child = g.recipientFirstName?.trim();
+  return child ? `Gift to ${child}` : "Gift";
 }
 
 export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsSheetProps) {
@@ -240,6 +268,15 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                               <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                                 {gifter.fundsGivenTo.map((chip) => {
                                   const style = fundChipStyle(chip.fundColorIndex);
+                                  // Per-chip count only when the gifter has
+                                  // given to more than one fund. For a
+                                  // single-fund gifter the count is already
+                                  // shown in the row header ("6 gifts"), so a
+                                  // duplicate "Emma 6" badge reads as noise.
+                                  // Multi-fund gifters genuinely need the per-
+                                  // kid count to make sense of the split.
+                                  const showCount =
+                                    gifter.fundsGivenTo.length > 1 && chip.giftCount > 1;
                                   return (
                                     <span
                                       key={chip.fundId}
@@ -248,8 +285,10 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                       data-testid={`gifter-fund-chip-${gifter.email}-${chip.fundId}`}
                                     >
                                       {chip.recipientFirstName || "Fund"}
-                                      {chip.giftCount > 1 && (
-                                        <span className="ml-1 opacity-70">{chip.giftCount}</span>
+                                      {showCount && (
+                                        <span className="ml-1 opacity-70 tabular-nums">
+                                          · {chip.giftCount}
+                                        </span>
                                       )}
                                     </span>
                                   );
@@ -293,6 +332,16 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                     gifter.fundsGivenTo.find((f) => f.fundId === g.fundId)
                                       ?.fundColorIndex ?? 0,
                                   );
+                                  // Descriptor under the chip row. When the
+                                  // gifter wrote a real message we show it
+                                  // (clamped to 2 lines). When they didn't,
+                                  // surface ticker context if it exists
+                                  // (Invested in AAPL) or a calm "Gift to
+                                  // Emma" fallback. The row never reads
+                                  // barren.
+                                  const inlineDescriptor = g.message?.trim()
+                                    ? { kind: "message" as const, text: g.message.trim() }
+                                    : { kind: "fallback" as const, text: describeGiftInline(g) };
                                   return (
                                     <div
                                       key={g.id}
@@ -308,14 +357,18 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                             {g.recipientFirstName || "Fund"}
                                           </span>
                                           <span className="text-[10.5px] text-muted-foreground tabular-nums">
-                                            {timeAgo(g.createdAt)}
+                                            {fullDate(g.createdAt)}
                                           </span>
                                         </div>
-                                        {g.message && (
-                                          <p className="mt-1 text-[12px] text-muted-foreground leading-snug line-clamp-2">
-                                            {g.message}
-                                          </p>
-                                        )}
+                                        <p
+                                          className={`mt-1 text-[12px] leading-snug ${
+                                            inlineDescriptor.kind === "message"
+                                              ? "text-muted-foreground line-clamp-2"
+                                              : "text-muted-foreground/75 italic"
+                                          }`}
+                                        >
+                                          {inlineDescriptor.text}
+                                        </p>
                                       </div>
                                       <p className="shrink-0 text-sm font-semibold text-foreground tabular-nums">
                                         {formatMoney(g.amount)}
