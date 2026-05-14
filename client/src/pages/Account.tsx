@@ -158,6 +158,11 @@ export default function Account() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelStep, setCancelStep] = useState<"warn" | "confirm">("warn");
   const [canceling, setCanceling] = useState(false);
+  // Reactivate flow — for users whose subscription is canceled but
+  // still in the active-until-period-end window. The amber "your fund
+  // stays safe" card surfaces this state with a one-tap reactivate
+  // button. Mirrors the Settings membership-tab pattern.
+  const [reactivating, setReactivating] = useState(false);
   const handleCancelSubscription = async () => {
     setCanceling(true);
     haptic("medium");
@@ -188,6 +193,40 @@ export default function Account() {
       toast({ title: "Could not cancel", description: "Please try again", variant: "destructive" });
     } finally {
       setCanceling(false);
+    }
+  };
+
+  const handleReactivateSubscription = async (opts?: { plan?: "starter" | "family"; fundId?: string }) => {
+    setReactivating(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/subscription/reactivate", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(opts || {}),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        haptic("success");
+        toast({ title: "Subscription reactivated", description: "Your plan is active again" });
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      } else if (res.status === 410 && data.expired) {
+        // Sub fully expired — start a new checkout instead. Mirrors
+        // the Settings reactivate flow.
+        toast({ title: "Subscription expired", description: "Starting a new checkout for you..." });
+        if (opts?.plan === "starter" && opts?.fundId) {
+          await handleUpgradeStarter(opts.fundId);
+        } else {
+          await handleUpgradeFamily();
+        }
+      } else {
+        toast({ title: "Could not reactivate", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not reactivate", description: "Please try again", variant: "destructive" });
+    } finally {
+      setReactivating(false);
     }
   };
 
@@ -795,6 +834,38 @@ export default function Account() {
                 (different problem, different solution; not conflated). */}
             {subLoading ? (
               <div className="kiddo-card h-24 animate-pulse" />
+            ) : subscription?.status === "canceled" && userPlan !== "free" && subscription?.currentPeriodEnd && new Date(subscription.currentPeriodEnd).getTime() > Date.now() ? (
+              /* CANCELING STATE — sub is canceled but still active until
+                 period end. Amber reassurance card with a one-tap
+                 reactivate button. Showing 'Active' here would be
+                 misleading; the parent is in a queued-cancel state and
+                 needs to know the plan ends on a specific date AND that
+                 their fund stays safe regardless. Per the same pattern
+                 as Settings membership-tab canceling card. */
+              <SectionCard className="border-amber-200 bg-amber-50">
+                <div className="p-5 space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-heading text-base font-semibold text-amber-900">
+                        Your fund stays safe. Always.
+                      </p>
+                      <p className="mt-1 text-xs text-amber-900/80 leading-relaxed">
+                        {userPlan === "starter" ? "Kiddo+" : userPlan === "legacy" ? "Kiddo Legacy" : "Kiddo Family"} ends {new Date(subscription.currentPeriodEnd!).toLocaleDateString("en-US", { month: "long", day: "numeric" })}.
+                        Gifts still work. You can change your mind right now.
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      className="shrink-0 rounded-xl"
+                      disabled={reactivating}
+                      onClick={() => handleReactivateSubscription({ plan: userPlan === "starter" ? "starter" : "family" })}
+                      data-testid="button-account-reactivate-plan"
+                    >
+                      {reactivating ? "Reactivating..." : "Keep my plan"}
+                    </Button>
+                  </div>
+                </div>
+              </SectionCard>
             ) : (
               <SectionCard className="bg-[hsl(var(--kiddo-evergreen)/0.06)] border-[hsl(var(--kiddo-evergreen)/0.18)]">
                 <div className="p-5 space-y-4">
@@ -831,13 +902,8 @@ export default function Account() {
                   </div>
                   {/* Paid-tier inline actions. Manage billing fires the
                       Stripe portal redirect directly (one tap, no
-                      intermediate page). Cancel routes to Settings
-                      membership tab with ?action=cancel which auto-
-                      opens the cancellation-impact preview modal —
-                      that modal is genuinely valuable for retention
-                      (it itemizes what pauses) and is too complex to
-                      duplicate inline. The route-with-auto-open keeps
-                      the UX coherent without forcing duplication. */}
+                      intermediate page). Cancel opens the local cancel-
+                      confirm modal in-place (no bounce to Settings). */}
                   {userPlan !== "free" && (
                     <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[hsl(var(--kiddo-evergreen)/0.15)]">
                       <Button
