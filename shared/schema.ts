@@ -744,6 +744,17 @@ export const parentContributions = pgTable("parent_contributions", {
   pausedAt: timestamp("paused_at"),
   nextRunDate: timestamp("next_run_date"),
   lastRunDate: timestamp("last_run_date"),
+  // Cooldown anchor for the "Time to add to {child}'s fund" decline email.
+  // Recurring charge can fail on consecutive worker ticks (Stripe retry-
+  // every-N-days windows, persistent card declines, expired cards). Without
+  // this anchor every retry sent a fresh email; a parent with a dying card
+  // would get pelted with the same nag once per retry day. Stamped each
+  // time the email is sent; the worker skips the send if this is within
+  // RECURRING_DECLINE_EMAIL_COOLDOWN_HOURS (72h today). Activity row still
+  // fires on every failure so the in-app "Last cycle failed" surface stays
+  // accurate; the cooldown is email-only. Nullable for legacy rows that
+  // pre-date the column.
+  lastDeclineEmailAt: timestamp("last_decline_email_at"),
   totalContributed: decimal("total_contributed", { precision: 12, scale: 2 }).default("0"),
   executionModel: text("execution_model").default("auto"), // auto | pick | family
   selectedTicker: text("selected_ticker"),

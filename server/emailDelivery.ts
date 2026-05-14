@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
 
@@ -12,11 +13,70 @@ export type EmailMessage = {
 
 export type EmailDeliveryResult = {
   delivered: boolean;
-  mode: "postmark" | "sendgrid" | "outbox_fallback";
+  mode: "postmark" | "sendgrid" | "outbox_fallback" | "dedupe_skipped";
   providerId?: string | null;
 };
 
 const EMAIL_OUTBOX_PATH = path.join(process.cwd(), ".local", "email-outbox.jsonl");
+
+// In-process dedupe cache. Maps (canonical payload hash) -> sentAt epoch.
+// This is the SAFETY NET, not the primary dedupe layer. Each worker
+// (gifter, parent-lifecycle, recurring) already maintains its own
+// queue/delivery log to prevent re-sending. The cache here catches the
+// remaining cases:
+//   - Webhook handler retries that re-trigger the same email path
+//     before the per-worker delivery log catches up
+//   - Race conditions during worker tick overlap
+//   - Code paths that bypass worker queues entirely (one-off sends from
+//     route handlers, password resets, etc.)
+// In-memory is intentional. The cache lasts the lifetime of the Node
+// process; on restart the window resets, which is fine because the
+// per-worker delivery logs persist (file-backed JSON / DB activity
+// rows) and own the long-term dedupe responsibility.
+const DEDUPE_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const DEDUPE_MAX_ENTRIES = 5000; // cap memory; LRU-ish via timestamp prune
+
+type DedupeEntry = { sentAt: number; mode: EmailDeliveryResult["mode"] };
+const dedupeCache = new Map<string, DedupeEntry>();
+
+function computeDedupeKey(message: EmailMessage): string {
+  // Canonical payload: lowercased recipient, exact subject, exact text body,
+  // and first tag if present. HTML body excluded because text body is the
+  // semantic signal; html is just a styled mirror. Metadata excluded
+  // because it often carries timestamps that would defeat dedupe.
+  const tag = Array.isArray(message.tags) && message.tags.length > 0 ? message.tags[0] : "";
+  const canonical = [
+    String(message.to || "").trim().toLowerCase(),
+    String(message.subject || ""),
+    String(message.text || ""),
+    tag,
+  ].join("\n--KIDDO-DEDUPE--\n");
+  return crypto.createHash("sha1").update(canonical).digest("hex");
+}
+
+function pruneExpiredDedupe(now: number) {
+  // Lazy cleanup. Runs at most once per send call, walks the map
+  // dropping anything past TTL. Also enforces the size cap by
+  // dropping oldest if we somehow exceed the limit (defensive).
+  // Array.from for iteration to avoid downlevel-iteration requirements
+  // on older tsconfig targets that may still apply here.
+  const expired: string[] = [];
+  Array.from(dedupeCache.entries()).forEach(([k, v]) => {
+    if (now - v.sentAt > DEDUPE_TTL_MS) expired.push(k);
+  });
+  for (const k of expired) dedupeCache.delete(k);
+
+  if (dedupeCache.size > DEDUPE_MAX_ENTRIES) {
+    // Sort by sentAt asc, drop until under cap.
+    const entries = Array.from(dedupeCache.entries()).sort(
+      (a, b) => a[1].sentAt - b[1].sentAt,
+    );
+    const dropCount = dedupeCache.size - DEDUPE_MAX_ENTRIES;
+    for (let i = 0; i < dropCount; i += 1) {
+      dedupeCache.delete(entries[i][0]);
+    }
+  }
+}
 
 function getFromAddress() {
   return (
@@ -107,15 +167,32 @@ async function sendWithSendGrid(message: EmailMessage): Promise<EmailDeliveryRes
 }
 
 export async function sendEmail(message: EmailMessage): Promise<EmailDeliveryResult> {
+  // Dedupe safety net. Check before doing any provider work. If we
+  // would re-send the exact same payload to the exact same recipient
+  // within the TTL window, skip. Each per-worker layer already has its
+  // own dedupe; this catches the cracks (webhook retries, race
+  // conditions, route-handler one-offs that bypass worker queues).
+  const now = Date.now();
+  pruneExpiredDedupe(now);
+  const dedupeKey = computeDedupeKey(message);
+  const prior = dedupeCache.get(dedupeKey);
+  if (prior && now - prior.sentAt < DEDUPE_TTL_MS) {
+    return { delivered: false, mode: "dedupe_skipped", providerId: null };
+  }
+
   const postmarkEnabled = Boolean(String(process.env.POSTMARK_SERVER_TOKEN || "").trim());
   const sendgridEnabled = Boolean(String(process.env.SENDGRID_API_KEY || "").trim());
 
   try {
     if (postmarkEnabled) {
-      return await sendWithPostmark(message);
+      const result = await sendWithPostmark(message);
+      dedupeCache.set(dedupeKey, { sentAt: now, mode: result.mode });
+      return result;
     }
     if (sendgridEnabled) {
-      return await sendWithSendGrid(message);
+      const result = await sendWithSendGrid(message);
+      dedupeCache.set(dedupeKey, { sentAt: now, mode: result.mode });
+      return result;
     }
   } catch (error) {
     await appendOutbox({
@@ -124,6 +201,14 @@ export async function sendEmail(message: EmailMessage): Promise<EmailDeliveryRes
       reason: error instanceof Error ? error.message : String(error),
       ...message,
     });
+    // Stamp dedupe even for outbox fallback. Otherwise a transient ESP
+    // failure that retried via outbox would re-attempt provider sends
+    // on every subsequent call, all hitting the same error, all
+    // appending to the outbox. The cache entry says "we tried this
+    // payload recently; give it some breathing room before trying
+    // again." Real retry should come from operating on the outbox file
+    // out-of-band, not from rapid-fire repeats here.
+    dedupeCache.set(dedupeKey, { sentAt: now, mode: "outbox_fallback" });
     return { delivered: false, mode: "outbox_fallback", providerId: null };
   }
 
@@ -133,5 +218,6 @@ export async function sendEmail(message: EmailMessage): Promise<EmailDeliveryRes
     reason: "No ESP provider configured",
     ...message,
   });
+  dedupeCache.set(dedupeKey, { sentAt: now, mode: "outbox_fallback" });
   return { delivered: false, mode: "outbox_fallback", providerId: null };
 }

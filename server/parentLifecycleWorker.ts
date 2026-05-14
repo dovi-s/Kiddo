@@ -482,7 +482,20 @@ async function enqueueParentLifecycleEmails(log: (message: string, source?: stri
 
     const fundState = state.byFund[row.fund_id] || {};
 
-    if (giftCount === 0) {
+    // Activation gate. Two conditions, both must hold:
+    //   1. No settled gifts currently exist (`giftCount === 0`)
+    //   2. The first-gift email has never fired for this fund
+    //      (`!fundState.firstGiftSentAt`)
+    //
+    // The second condition prevents a subtle re-fire bug: if a gift
+    // settles, the first-gift email queues, then the gift gets refunded
+    // and `giftCount` drops back to 0, the previous gate would resume
+    // sending activation emails ("get your first gift!") to a parent
+    // who has already experienced one. Sending them activation copy in
+    // that emotional context reads as tone-deaf. The firstGiftSentAt
+    // flag persists across refunds, so once we've welcomed the first
+    // gift, activation is permanently retired for this fund.
+    if (giftCount === 0 && !fundState.firstGiftSentAt) {
       const ageDays = daysBetween(createdAt, now);
       if (ageDays >= 1 && !fundState.activationDay1SentAt) {
         await appendQueueEntry({
@@ -543,6 +556,15 @@ async function enqueueParentLifecycleEmails(log: (message: string, source?: stri
       }
     }
 
+    // Track whether the first-gift email is queueing on THIS tick.
+    // Used below to suppress same-tick milestone emails so a generous
+    // opening gift (e.g., Grandpa Jay walks in with $1,500) doesn't
+    // pelt the parent with four emails in one hour: first_gift +
+    // milestone_100 + milestone_500 + milestone_1000. The single
+    // first-gift email covers the emotional beat; milestones for
+    // thresholds the first gift swept through stay silent but their
+    // flags still flip so later gifts don't re-fire them either.
+    let firstGiftQueuedThisTick = false;
     if (giftCount >= 1 && !fundState.firstGiftSentAt) {
       await appendQueueEntry({
         id: `first_gift:${row.fund_id}`,
@@ -559,27 +581,36 @@ async function enqueueParentLifecycleEmails(log: (message: string, source?: stri
       fundState.firstGiftSentAt = now.toISOString();
       queued += 1;
       changed = true;
+      firstGiftQueuedThisTick = true;
     }
 
     for (const milestone of [100, 500, 1000] as const) {
       const key = milestone === 100 ? "milestone100SentAt" : milestone === 500 ? "milestone500SentAt" : "milestone1000SentAt";
       if (totalGifted >= milestone && !fundState[key]) {
-        await appendQueueEntry({
-          id: `milestone:${milestone}:${row.fund_id}`,
-          type: "milestone",
-          fundId: row.fund_id,
-          userId: row.user_id,
-          email,
-          parentFirstName: row.parent_first_name,
-          childName,
-          milestone,
-          totalGifted,
-          contributorCount,
-          giftUrl,
-          dashboardUrl,
-        });
+        // Suppress the milestone email if first_gift just queued on
+        // this same tick. The welcome email is enough; layering a
+        // "you crossed $100!" / "$500!" / "$1,000!" on top reads as
+        // a spammy pile-up. We still mark the flag so the milestone
+        // is considered consumed and won't fire on a future tick
+        // when the threshold would no longer be "new."
+        if (!firstGiftQueuedThisTick) {
+          await appendQueueEntry({
+            id: `milestone:${milestone}:${row.fund_id}`,
+            type: "milestone",
+            fundId: row.fund_id,
+            userId: row.user_id,
+            email,
+            parentFirstName: row.parent_first_name,
+            childName,
+            milestone,
+            totalGifted,
+            contributorCount,
+            giftUrl,
+            dashboardUrl,
+          });
+          queued += 1;
+        }
         fundState[key] = now.toISOString();
-        queued += 1;
         changed = true;
       }
     }

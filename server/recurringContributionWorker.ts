@@ -9,6 +9,14 @@ type LogFn = (message: string, source?: string) => void;
 
 const WORKER_SOURCE = 'recurring-worker';
 
+// How long to wait between consecutive "Time to add to {child}'s fund"
+// decline emails for the same recurring contribution. Stripe retries can
+// fire on N consecutive days; without this gate the parent got one email
+// per retry day. 72h is short enough that a real persistent decline
+// gets re-surfaced reasonably soon, long enough that a single failing
+// card doesn't pelt the parent.
+const RECURRING_DECLINE_EMAIL_COOLDOWN_HOURS = 72;
+
 // Reconcile metadata pulled from the parent's payment method and used to
 // stamp both success (gift_invested) and failure (parent_contribution_failed)
 // rows so the History view can show "Visa ····4242" + a Stripe receipt
@@ -265,27 +273,67 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
   }
 
   if (!charged && parentEmail) {
-    const dashboardUrl = `${getBaseUrl()}/dashboard`;
-    await sendEmail({
-      to: parentEmail,
-      subject: `Time to add to ${childName}'s fund`,
-      text: [
-        `Hi${parentFirstName ? ` ${parentFirstName}` : ''},`,
-        '',
-        `Your scheduled $${amount.toFixed(2)} for ${childName} is ready. We couldn't run it automatically this time.`,
-        '',
-        'Head to your dashboard to add it now:',
-        dashboardUrl,
-        '',
-        'The Kiddo team',
-      ].join('\n'),
-      tags: ['parent_contribution_reminder'],
-      metadata: {
-        contributionId: row.id as string,
-        fundId: row.fund_id as string,
-      },
-    });
-    log(`contribution ${row.id as string}: email reminder sent to ${parentEmail}`, WORKER_SOURCE);
+    // 72h cooldown gate. Stripe retries cluster across multiple worker
+    // ticks; without the gate a dying card produced one email per tick.
+    // We still record the activity row (already done above via
+    // recordRecurringFailure) so the in-app "Last cycle failed" surface
+    // stays current; the gate only suppresses redundant inbox sends.
+    // Defensive against the column being undefined for legacy rows
+    // (treats undefined as "no prior email", which is the legacy
+    // pre-cooldown behavior, so degrades safely).
+    const lastDeclineEmailAt = row.last_decline_email_at
+      ? new Date(row.last_decline_email_at as string)
+      : null;
+    const cooldownMs = RECURRING_DECLINE_EMAIL_COOLDOWN_HOURS * 60 * 60 * 1000;
+    const withinCooldown =
+      lastDeclineEmailAt &&
+      Number.isFinite(lastDeclineEmailAt.getTime()) &&
+      Date.now() - lastDeclineEmailAt.getTime() < cooldownMs;
+
+    if (withinCooldown) {
+      log(
+        `contribution ${row.id as string}: skipped decline email to ${parentEmail} (last sent ${lastDeclineEmailAt!.toISOString()}, cooldown ${RECURRING_DECLINE_EMAIL_COOLDOWN_HOURS}h)`,
+        WORKER_SOURCE,
+      );
+    } else {
+      const dashboardUrl = `${getBaseUrl()}/dashboard`;
+      await sendEmail({
+        to: parentEmail,
+        subject: `Time to add to ${childName}'s fund`,
+        text: [
+          `Hi${parentFirstName ? ` ${parentFirstName}` : ''},`,
+          '',
+          `Your scheduled $${amount.toFixed(2)} for ${childName} is ready. We couldn't run it automatically this time.`,
+          '',
+          'Head to your dashboard to add it now:',
+          dashboardUrl,
+          '',
+          'The Kiddo team',
+        ].join('\n'),
+        tags: ['parent_contribution_reminder'],
+        metadata: {
+          contributionId: row.id as string,
+          fundId: row.fund_id as string,
+        },
+      });
+      // Stamp the cooldown anchor. Direct SQL keeps this worker
+      // self-contained (matches the existing pattern of raw pool queries
+      // for parent_contributions; no storage helper detour). Best-effort:
+      // if the UPDATE fails we still consider the send successful,
+      // worst case the next worker tick re-sends.
+      try {
+        await pool.query(
+          `UPDATE parent_contributions SET last_decline_email_at = NOW() WHERE id = $1`,
+          [row.id as string],
+        );
+      } catch (stampErr) {
+        log(
+          `contribution ${row.id as string}: cooldown stamp failed (non-fatal): ${String(stampErr)}`,
+          WORKER_SOURCE,
+        );
+      }
+      log(`contribution ${row.id as string}: email reminder sent to ${parentEmail}`, WORKER_SOURCE);
+    }
   }
 }
 
@@ -295,6 +343,7 @@ async function processParentContributions(log: LogFn): Promise<void> {
       pc.id, pc.fund_id, pc.user_id, pc.amount, pc.frequency,
       pc.execution_model, pc.selected_ticker, pc.next_run_date,
       pc.last_run_date, pc.total_contributed, pc.note,
+      pc.last_decline_email_at,
       f.name AS fund_name, f.slug AS fund_slug, f.recipient_first_name,
       u.email AS user_email, u.first_name AS user_first_name, u.last_name AS user_last_name,
       s.stripe_customer_id
