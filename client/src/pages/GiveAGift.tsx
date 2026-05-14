@@ -28,7 +28,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { GradientText } from "@/components/ui/gemini";
 import { useToast } from "@/hooks/use-toast";
 import { usePageSeo } from "@/lib/seo";
 import { haptic } from "@/lib/haptics";
@@ -120,7 +119,7 @@ export default function GiveAGift() {
               <div className="rounded-2xl border border-border bg-card p-5 text-left space-y-3 max-w-md mx-auto">
                 <p className="text-sm font-semibold text-foreground">What happens next</p>
                 <ol className="space-y-2 text-sm text-foreground/70 leading-relaxed list-decimal pl-5">
-                  <li>They set up {completed.kidFirstName}'s fund (2 minutes, no card needed).</li>
+                  <li>They set up {completed.kidFirstName}'s fund (a few minutes, no card needed).</li>
                   <li>You get an email saying "ready to send your gift?"</li>
                   <li>One click and your ${completed.amount.toFixed(2)} becomes real shares for {completed.kidFirstName}.</li>
                 </ol>
@@ -159,7 +158,7 @@ export default function GiveAGift() {
               <span>For grandparents, aunts, uncles, anyone</span>
             </div>
             <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight">
-              Give a gift that <GradientText>lasts</GradientText>.
+              Give a gift that lasts.
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
               Want to invest for a child but their parents don't have a Kiddo fund yet?
@@ -279,7 +278,7 @@ export default function GiveAGift() {
                   value={customAmount}
                   onChange={(e) => setCustomAmount(e.target.value)}
                   autoComplete="off"
-                  placeholder="$"
+                  placeholder="e.g. 75"
                 />
               </div>
               <p className="text-xs text-muted-foreground">
@@ -332,16 +331,12 @@ export default function GiveAGift() {
             className="mt-10 grid gap-4 sm:grid-cols-3"
           >
             <HowItWorks icon={<Mail size={16} />} step="1" body="We email the parent saying you have a gift ready." />
-            <HowItWorks icon={<Check size={16} />} step="2" body="They set up the fund in 2 minutes. No card needed." />
+            <HowItWorks icon={<Check size={16} />} step="2" body="They set up the fund in a few minutes. No card needed." />
             <HowItWorks icon={<Heart size={16} />} step="3" body="You complete your gift. It becomes real shares." />
           </motion.section>
 
           <p className="mt-10 text-xs text-center text-muted-foreground">
-            Already have a gift link?{" "}
-            <Link href="/" className="text-primary hover:underline underline-offset-2 font-medium">
-              Open it here
-            </Link>
-            .
+            Already have a gift link from a parent? Open it directly in your browser, or tap it in their email.
           </p>
         </div>
       </main>
