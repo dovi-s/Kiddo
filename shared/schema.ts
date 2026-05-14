@@ -58,6 +58,20 @@ export const funds = pgTable("funds", {
   successorCustodianRelation: text("successor_custodian_relation"),
   successorCustodianAddedAt: timestamp("successor_custodian_added_at"),
   age18NotifiedAt: timestamp("age_18_notified_at"),
+  // Stamped when the kid claims the fund at majority (the
+  // /api/auth/claim flow in server/auth.ts atomically reassigns
+  // fund.userId AND sets this timestamp). Distinct from
+  // fund.updatedAt because the fund.userId reassignment is the
+  // moment of legal transfer; updatedAt churns on every fund-row
+  // write afterward. transferredAt is the canonical signal for
+  // "this fund has crossed majority and is now owned by the
+  // recipient." Enables future post-handoff read-only treatment
+  // on the previous custodian's view (see FUND_STATES_SPEC.md
+  // item 4, "Transferred read-only treatment"). NULL for funds
+  // that haven't crossed majority yet. Once stamped, never
+  // cleared — even if the kid hands the fund back to a parent
+  // for management, the legal-transfer moment is preserved.
+  transferredAt: timestamp("transferred_at"),
   // Set the first time the kid (new owner post-handoff) finishes the
   // Age18Welcome.tsx walkthrough at /welcome-at-18. Null until then;
   // once stamped the walkthrough never re-fires. Dashboard.tsx checks

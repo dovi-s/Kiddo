@@ -1,0 +1,26 @@
+-- Add transferredAt timestamp to the funds table. Stamped when the
+-- kid (recipient) claims the fund at majority via the /api/auth/claim
+-- flow in server/auth.ts. The same update transaction atomically
+-- reassigns fund.user_id to the new owner AND sets transferred_at,
+-- so the row carries both the new-owner pointer and the
+-- legal-transfer-moment timestamp.
+--
+-- Why a dedicated column instead of using fund.updated_at:
+--   - updated_at churns on every fund-row write (gift settles, kid
+--     completes welcome walkthrough, parent updates strategy, etc.).
+--   - transferred_at is the canonical "this fund crossed majority"
+--     signal. Used to gate read-only treatment on the previous
+--     custodian's view per FUND_STATES_SPEC.md item 4.
+--
+-- Forward-only. Historical funds where the kid has ALREADY claimed
+-- pre-migration stay NULL (we don't have a reliable signal to
+-- backfill; the kid_claimed_fund activity row is the source of truth
+-- for the historical question and is queryable in the rare case).
+-- Going forward, every new claim writes transferred_at automatically.
+--
+-- Once stamped, never cleared. Even if the now-adult recipient hands
+-- the fund back to a parent for management (rare, but possible —
+-- divorce / health / etc.), the original legal-transfer moment is
+-- preserved.
+
+ALTER TABLE funds ADD COLUMN IF NOT EXISTS transferred_at TIMESTAMP;

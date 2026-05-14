@@ -725,10 +725,16 @@ export function setupAuth(app: Express) {
 
       // Atomic ownership transfer. After this row update, every fund-scoped
       // permission check (`fund.userId !== req.user.id`) flips for the kid.
+      // transferredAt is set in the same update so the legal-transfer
+      // moment is preserved on the row (distinct from updatedAt which
+      // churns on every subsequent write). Enables future post-handoff
+      // read-only treatment on the previous custodian's view; see
+      // FUND_STATES_SPEC.md item 4 and schema.ts transferredAt comment.
       const previousOwnerId = fund.userId;
+      const transferTime = new Date();
       await dbModule
         .update(fundsTable)
-        .set({ userId: user.id, updatedAt: new Date() })
+        .set({ userId: user.id, transferredAt: transferTime, updatedAt: transferTime })
         .where(eq(fundsTable.id, fund.id));
 
       // Activity log so the parent + admin can see the transition happened.
