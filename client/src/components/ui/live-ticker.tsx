@@ -290,7 +290,13 @@ export function InvestmentReveal({
             
             <p className="text-sm text-primary-foreground/60 mb-1">{stockName}</p>
             <p className="text-3xl font-light mb-1">{shares} shares</p>
-            <p className="text-sm text-[hsl(var(--kora-gold))]">of {stockSymbol}</p>
+            {/* Gold text on the dark evergreen success background.
+                Migrated 2026-05-14 from --kora-gold (3.92:1 on
+                evergreen, fails AA) to --kora-gold-light (7.04:1
+                on evergreen, AAA). Gold-light is the right token
+                for light-on-dark gold register; gold-ink is wrong
+                here because it's darker than the bg. */}
+            <p className="text-sm text-[hsl(var(--kora-gold-light))]">of {stockSymbol}</p>
 
             <motion.div
               initial={{ opacity: 0 }}

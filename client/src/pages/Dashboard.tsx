@@ -4088,6 +4088,41 @@ export default function Dashboard() {
       <AppHeader />
 
       <main className="kiddo-canvas px-4 py-6 space-y-6">
+        {/* Approaching-18 prep banner. Renders when the kid's
+            majority date is within the 90-day window but hasn't
+            arrived yet. Calm card (sage register, not alarm) that
+            routes to /age-18-plan where the full walkthrough lives.
+            Without this banner, the kid reaches majority and the
+            parent gets surprised by the auto-fired transition
+            emails per age18TransitionWorker.ts. Locked spec'd
+            this in FUND_STATES_SPEC.md under "Approaching 18"
+            and "What's missing today" / item 2.
+            Hidden when daysUntil18 <= 0 (already at/past majority;
+            the kid's claim flow takes over) or > 90 (too early,
+            would become wallpaper). */}
+        {age18Transition && age18Transition.daysUntil18 > 0 && age18Transition.daysUntil18 <= 90 && (
+          <button
+            type="button"
+            onClick={() => { haptic("selection"); setLocation("/age-18-plan"); }}
+            className="w-full rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-4 text-left transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.08)]"
+            data-testid="dashboard-approaching-18-banner"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-evergreen))]">
+                  Handoff in {age18Transition.daysUntil18 === 1 ? "1 day" : `${age18Transition.daysUntil18} days`}
+                </p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
+                  {capFirst(activeFund?.recipientFirstName) || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)}.
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Walk through what's about to change and what to prep.
+                </p>
+              </div>
+              <ChevronRight size={18} className="shrink-0 mt-1 text-[hsl(var(--kiddo-evergreen))]" aria-hidden />
+            </div>
+          </button>
+        )}
         {coverageReturnNotice && (
           <div
             className={`rounded-2xl border p-4 shadow-premium-sm ${
@@ -5280,8 +5315,18 @@ export default function Dashboard() {
                           className="mt-2 inline-flex items-center gap-1 text-[11px] text-muted-foreground/80 hover:text-foreground transition-colors"
                           data-testid="lifetime-row-cash"
                         >
+                          {/* Settling-state copy enhancement 2026-05-14
+                              per FUND_STATES_SPEC.md item 1. Original
+                              copy stopped at "waiting to invest" which
+                              left the parent without a time horizon.
+                              Adding "Available in 1 to 2 business
+                              days" matches the locked settling-window
+                              vocabulary used on the gifter side
+                              (GiftSuccess.tsx, mobile GifterFlow
+                              handoff step) so both sides read as one
+                              coherent story. */}
                           <span className="tabular-nums">{fmtRow(periodCash)}</span>
-                          <span>of that is still in cash, waiting to invest</span>
+                          <span>of that is still in cash. Invests on the next cycle, usually 1 to 2 business days.</span>
                           <ChevronRight size={12} className="opacity-60" aria-hidden />
                         </button>
                       )}
