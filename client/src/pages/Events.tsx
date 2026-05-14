@@ -1167,11 +1167,11 @@ export default function Events() {
                       <ul className="space-y-2 mt-3 text-sm text-muted-foreground">
                         <li className="flex items-start gap-2">
                           <Gift size={14} className="mt-0.5 text-primary shrink-0" />
-                          Kiddo+ gives one child richer occasion pages, reminders, and the full Memory Book.
+                          Kiddo+ unlocks premium occasion themes and three active occasions at a time for one child.
                         </li>
                         <li className="flex items-start gap-2">
                           <Crown size={14} className="mt-0.5 text-primary shrink-0" />
-                          Kiddo Family gives you unlimited events, custom URLs, and full analytics.
+                          Kiddo Family unlocks unlimited active occasions with premium themes across every child.
                         </li>
                       </ul>
                       <Link href="/settings">

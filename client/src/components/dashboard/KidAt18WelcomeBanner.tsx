@@ -106,25 +106,25 @@ export function KidAt18WelcomeBanner({
         <li className="flex items-start gap-2">
           <span aria-hidden className="text-foreground font-bold">·</span>
           <span>
-            <span className="text-foreground font-medium">Nothing was sold.</span> The investments stay exactly where they are. You decide what happens next — hold, sell, reinvest.
+            <span className="text-foreground font-medium">Nothing was sold.</span> The investments stay exactly where they are. You decide what happens next: hold, sell, or reinvest.
           </span>
         </li>
         <li className="flex items-start gap-2">
           <span aria-hidden className="text-foreground font-bold">·</span>
           <span>
-            The full Memory Book travels with you. Notes, photos, voice notes, the parent letter — all yours to read whenever.
+            The Memory Book travels with you. Notes, photos, voice notes, the parent letter. All yours to read whenever.
           </span>
         </li>
         <li className="flex items-start gap-2">
           <span aria-hidden className="text-foreground font-bold">·</span>
           <span>
-            This is a custodial brokerage account. There are tax considerations the year you take ownership — talk to a CPA before you make changes.
+            This is a custodial brokerage account. There are tax considerations the year you take ownership. Talk to a CPA before you make changes.
           </span>
         </li>
         <li className="flex items-start gap-2">
           <span aria-hidden className="text-foreground font-bold">·</span>
           <span>
-            The dashboard below is what your parent saw. Same view, your money. Some buttons (gift links, recurring investments) are designed for someone managing a child's fund — feel free to ignore those.
+            The dashboard below is what your parent saw. Same view, your money. Some buttons (gift links, recurring investments) are designed for someone managing a child's fund, so feel free to ignore those.
           </span>
         </li>
       </ul>

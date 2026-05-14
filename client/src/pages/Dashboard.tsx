@@ -12654,7 +12654,7 @@ export default function Dashboard() {
                       <span className="font-medium text-foreground">{formatCurrency(parseFloat(recentGiftForToast.amount || "0"))}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Kiddo+ keeps the fund growing after every gift, with recurring investments, Memory Book moments, and smart sharing.
+                      Kiddo+ keeps the fund growing after every gift with recurring investments and richer Memory Book moments.
                     </p>
                   </div>
                 )}
@@ -12662,7 +12662,7 @@ export default function Dashboard() {
                 <div className="rounded-xl border border-[hsl(var(--kiddo-gold))]/25 bg-[hsl(var(--kiddo-gold))]/8 p-4">
                   <p className="text-sm font-medium text-foreground">${KORA_STARTER_MONTHLY}/month</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Recurring investments, projections, full Memory Book, occasion reminders, and thank-you templates for one child.
+                    Recurring investments, photo and video Memory Book entries, custom fund mix, and co-parent access for one child.
                   </p>
                 </div>
 

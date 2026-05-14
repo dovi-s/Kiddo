@@ -112,7 +112,7 @@ export function EventGateModal({ open, onClose, showKiddoPlusOption = true }: Ev
                     <span className="text-sm font-semibold text-foreground">{`$${KORA_STARTER_MONTHLY.toFixed(2)}/mo`}</span>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    One child. No platform fees.
+                    One child. Recurring investments and premium themes.
                   </p>
                   <ul className="mt-2 space-y-1">
                     <li className="flex items-center gap-1.5 text-xs text-muted-foreground">

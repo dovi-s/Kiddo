@@ -5450,11 +5450,11 @@ const [editFundName, setEditFundName] = useState("");
                     they'll lose what they've already added. */}
                 {userPlan === "starter" ? (
                   <p>
-                    The full Memory Book locks. Every photo, voice memo, and parent-authored entry already there stays. New media uploads pause. Fund projections go away too.
+                    Adding new photos, videos, and voice to Memory Book entries pauses. Every photo, voice memo, and parent-authored entry already there stays. Recurring investments and co-parent invites also pause.
                   </p>
                 ) : (
                   <p>
-                    The full Memory Book locks across your kids' funds. Everything you've already added stays. New media uploads pause. The household overview and fund projections go away. Funds beyond your first one become read-only.
+                    Adding new photos, videos, and voice to Memory Book entries pauses across every child's fund. Everything you've already added stays. Recurring investments and co-parent invites pause too. The household overview becomes read-only, and funds beyond your first become view-only.
                   </p>
                 )}
               </div>

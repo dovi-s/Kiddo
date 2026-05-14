@@ -176,7 +176,7 @@ const pricingFaqs = [
   },
   {
     question: "What happens to my fund if I downgrade?",
-    answer: "Your fund stays active. Your investments stay invested. Premium features (full Memory Book, recurring investments, co-parent access, projections) become read-only or revert to the Free experience. Your kid's money never leaves the fund.",
+    answer: "Your fund stays active and your investments stay invested. Plus features pause: adding new photos and videos to Memory Book entries, recurring investments, custom fund mix, and co-parent invites. Everything you have already added stays. Your kid's money never leaves the fund.",
   },
   {
     question: "Is there a platform fee on gifts?",

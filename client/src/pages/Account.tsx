@@ -498,7 +498,7 @@ export default function Account() {
                     <p className="text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">{planLabel} · Active</p>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                       {userPlan === "starter"
-                        ? "Recurring investments, full Memory Book, full Kid View, and no platform fees."
+                        ? "Recurring investments, photo and video Memory Book entries, custom fund mix, and co-parent access."
                         : userPlan === "family"
                           // "Family-wide occasions" → honest rename per
                           // 2026-05-12 pricing-page cleanup. The actual
