@@ -302,6 +302,69 @@ export default function Account() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Stripe-return handler. Fires when this page is reached with
+  // ?success=starter / ?success=family / ?success=legacy / ?canceled=
+  // (or the legacy ?success=true / ?canceled=true shapes). Surfaces
+  // an activation toast and refreshes the subscription + funds queries
+  // so the UI reflects the new plan state. Added 2026-05-14 per the
+  // WHO/HOW IA Phase 1c-B: Stripe success URLs server-side now route
+  // to /account?tab=plan, and Account needs its own handler for those
+  // params so the toast fires here. The legacy Settings handler also
+  // still works for any in-flight Stripe sessions that pre-date the
+  // server-side URL update.
+  const hasStripeReturnFired = useRef(false);
+  useEffect(() => {
+    if (hasStripeReturnFired.current) return;
+    const params = new URLSearchParams(window.location.search || "");
+    const success = params.get("success");
+    const canceled = params.get("canceled");
+    const fundIdFromSuccess = params.get("fundId");
+    if (!success && !canceled) return;
+    hasStripeReturnFired.current = true;
+
+    const run = async () => {
+      try {
+        if (success === "starter" || success === "family" || success === "legacy") {
+          try {
+            await fetch("/api/subscription/sync-stripe", {
+              method: "POST",
+              credentials: "include",
+            });
+          } catch {
+            // Best-effort sync; the invalidations below still fire and
+            // the next page load will pick up the latest state.
+          }
+        }
+
+        if (success === "starter") {
+          const fundName = funds.find((f) => String(f.id) === String(fundIdFromSuccess))?.name;
+          toast({
+            title: "Kiddo+ activated",
+            description: fundName ? `Kiddo+ is now active for ${fundName}.` : "Kiddo+ is now active for your selected fund.",
+          });
+        } else if (success === "family") {
+          toast({ title: "Kiddo Family activated", description: "Your account is now on Kiddo Family." });
+        } else if (success === "legacy") {
+          toast({ title: "Kiddo Legacy activated", description: "Your account is now on Kiddo Legacy." });
+        } else if (canceled === "true") {
+          toast({ title: "Checkout canceled", description: "No changes were made to your plan." });
+        }
+      } finally {
+        void queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+        void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+        void queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+
+        params.delete("success");
+        params.delete("canceled");
+        params.delete("fundId");
+        const nextQuery = params.toString();
+        window.history.replaceState({}, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
+      }
+    };
+    void run();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [funds]);
+
   // Auto-trigger Stripe checkout when this page is reached with
   // ?upgrade=family or ?upgrade=starter&fundId=... (and the `plus`
   // alias). Mirrors the Settings deep-link handler so in-app upgrade

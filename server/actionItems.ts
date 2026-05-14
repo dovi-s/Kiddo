@@ -150,7 +150,11 @@ export async function deriveActionItemsForUser(
             title: "Payment needs updating",
             description: "Your last subscription charge didn't go through. Update your card to keep things flowing.",
             ctaLabel: "Update payment",
-            ctaPath: "/settings?billing=1",
+            // Routes to Account "Plan & billing" per the WHO/HOW IA
+            // Phase 1c-B. Account has the inline Manage billing button
+            // that opens the Stripe billing portal in one tap, which
+            // is the canonical fix for a failed-charge state.
+            ctaPath: "/account?tab=plan",
             snoozedUntil: null,
             canSnooze: isSnoozable("payment_failed"),
             category: "payment",
@@ -295,7 +299,14 @@ export async function deriveActionItemsForUser(
         title: "Link a bank for withdrawals",
         description: "Required for cashing out at the age-18 handoff. Plaid-backed, view-only access.",
         ctaLabel: "Link bank",
-        ctaPath: "/settings?bank=1",
+        // Bank linking lives in Settings money tab today. The earlier
+        // /settings?bank=1 path didn't specify the tab, so the user
+        // landed on the default Child tab and had to navigate. Now
+        // points at the money tab so the bank-linking UI is one step
+        // away. Per the WHO/HOW IA principle, bank linking is account-
+        // level (one bank per user) and would move to Account in a
+        // future Phase 2 refactor; for now its home is Settings money.
+        ctaPath: "/settings?tab=money",
         snoozedUntil: null,
         canSnooze: isSnoozable("bank_not_linked"),
         category: "fund_setup",

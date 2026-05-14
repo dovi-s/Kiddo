@@ -8264,15 +8264,24 @@ export async function registerRoutes(
         .trim() || undefined;
       const requestedInterval = req.body?.billingInterval === 'yearly' ? 'yearly' : 'monthly';
       const stripeInterval = requestedInterval === 'yearly' ? 'year' : 'month';
+      // Stripe success/cancel URLs route to Account "Plan & billing"
+      // per the WHO/HOW IA Phase 1c-B (locked 2026-05-14). Account is
+      // the canonical post-checkout return surface; its ?success= /
+      // ?canceled= handler fires the activation toast and refreshes
+      // subscription + funds queries. The Settings membership-tab
+      // handler also still works as a backward-compat target for any
+      // in-flight Stripe sessions that pre-date this URL change —
+      // they land on Settings, the Settings handler fires, no
+      // disruption.
       const successPath = resolveInternalReturnPath(
         req.body?.returnTo,
-        `/settings?success=family`,
+        `/account?tab=plan&success=family`,
       );
       const cancelPath = resolveInternalReturnPath(
         req.body?.cancelTo,
-        `/settings?canceled=true`,
+        `/account?tab=plan&canceled=true`,
       );
-      
+
       const priceId = await findCheckoutPriceId({
         productNames: ["Kiddo Family", "Kora Family", "Family Plan"],
         mode: "subscription",
@@ -8325,11 +8334,11 @@ export async function registerRoutes(
         .trim() || undefined;
       const successPath = resolveInternalReturnPath(
         req.body?.returnTo,
-        `/settings?success=legacy`,
+        `/account?tab=plan&success=legacy`,
       );
       const cancelPath = resolveInternalReturnPath(
         req.body?.cancelTo,
-        `/settings?canceled=true`,
+        `/account?tab=plan&canceled=true`,
       );
 
       const priceId = await findCheckoutPriceId({
@@ -8400,11 +8409,11 @@ export async function registerRoutes(
       }
       const successPath = resolveInternalReturnPath(
         req.body?.returnTo,
-        `/settings?success=starter&fundId=${encodeURIComponent(fundId)}`,
+        `/account?tab=plan&success=starter&fundId=${encodeURIComponent(fundId)}`,
       );
       const cancelPath = resolveInternalReturnPath(
         req.body?.cancelTo,
-        `/settings?canceled=true`,
+        `/account?tab=plan&canceled=true`,
       );
 
       const priceId = await findCheckoutPriceId({
@@ -17800,12 +17809,14 @@ export async function registerRoutes(
 
       // Demo-account sandbox. Demo users have no real Stripe customer record,
       // so the real path would 404 on "No billing account found." Return a
-      // mock URL that lands them back on /settings with a demo flag — the
-      // client treats the response identically to a real portal URL.
+      // mock URL that lands them back on Account "Plan & billing" with a
+      // demo flag — the client treats the response identically to a real
+      // portal URL. Routes to /account per the WHO/HOW IA Phase 1c-B; the
+      // real billing portal return below uses the same destination.
       if (await isDemoUser(userId)) {
         const baseUrl = `${req.protocol}://${req.get('host')}`;
         return res.json({
-          url: `${baseUrl}/settings?demo=1&portal=unavailable`,
+          url: `${baseUrl}/account?tab=plan&demo=1&portal=unavailable`,
           isDemo: true,
           message: "Demo mode. The real billing portal isn't available for seeded accounts.",
         });
@@ -17853,7 +17864,11 @@ export async function registerRoutes(
       const baseUrl = `${req.protocol}://${req.get('host')}`;
       const session = await stripe.billingPortal.sessions.create({
         customer: stripeCustomerId,
-        return_url: `${baseUrl}/settings`,
+        // Return to Account "Plan & billing" after the parent finishes
+        // managing their billing in the Stripe portal. Per WHO/HOW
+        // IA Phase 1c-B: Account is the canonical home for plan
+        // management, including post-portal return.
+        return_url: `${baseUrl}/account?tab=plan`,
       });
 
       res.json({ url: session.url });
