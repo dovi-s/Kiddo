@@ -357,7 +357,7 @@ function parseActivityMetadata(a: FeedActivity): { giftId?: string; memoryEntryI
 //     auto_invest, cash_invested  (bell-excluded today, defensive branch)
 //     parent_contribution_failed  (parent must fix payment method)
 //
-//   BILLING / SUBSCRIPTION (→ Settings → Membership)
+//   BILLING / SUBSCRIPTION (→ Account → Plan & billing)
 //     subscription_started, subscription_canceled
 //     payment_failed              (card declined on subscription)
 //     anything matching "plan_activated"

@@ -1124,7 +1124,7 @@ export default function ActivateInvesting() {
                         <p className="text-sm text-muted-foreground">{opt.description}</p>
                         {opt.id === "custom" && opt.locked && (
                           <div className="mt-2.5 space-y-2">
-                            <p className="text-xs text-muted-foreground">Unlock here, or continue and upgrade later in Settings.</p>
+                            <p className="text-xs text-muted-foreground">Unlock here, or continue and upgrade later from your Account.</p>
                             <div className="space-y-1.5">
                               <p className="text-[11px] text-muted-foreground">Choose which fund to cover now:</p>
                               <select

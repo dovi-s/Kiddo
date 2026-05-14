@@ -27,14 +27,31 @@ export type LastLocation = {
   label: string;           // page title from PAGE_TITLES, e.g. "Memory Book"
 };
 
-// Skip saving for ANY nav-hidden path (currently /account + /funds).
-// Both pages have Back affordances that READ from this store; if
-// either page also WROTE to it, navigating Emma's Dashboard →
-// /funds → /account would point /account's Back at /funds (the
-// previous step) instead of Emma's Dashboard (the actual source).
-// Filtering at the save site keeps the journey-source intact.
+// Skip saving for ANY nav-hidden path (currently /account + /funds)
+// AND for /settings.
+//
+// /account and /funds: both pages have Back affordances that READ
+// from this store; if either page also WROTE to it, navigating
+// Emma's Dashboard → /funds → /account would point /account's Back
+// at /funds (the previous step) instead of Emma's Dashboard (the
+// actual source). Filtering at the save site keeps the journey-
+// source intact.
+//
+// /settings: added 2026-05-14 per the WHO/HOW IA Phase 1c. Now that
+// Settings no longer hosts membership management (that moved to
+// Account), Settings is a per-fund side surface for child info,
+// gifts, notifications, and money. A parent visiting Settings is
+// doing a sidequest, not anchoring their journey there — so a Back
+// arrow on Account that reads "Back to Settings" feels wrong (and
+// reads to the user as a residual from the pre-IA-inversion world
+// where Settings was the membership home). Filtering /settings from
+// the journey anchor means: Dashboard → Settings → Account → Back
+// returns to Dashboard, not to Settings. Same shape as Dashboard
+// → /funds → /account → Back returning to Dashboard.
 function shouldSkipSave(path: string): boolean {
-  return shouldHidePrimaryNav(path);
+  if (shouldHidePrimaryNav(path)) return true;
+  if (path === "/settings" || path.startsWith("/settings/")) return true;
+  return false;
 }
 
 // Save the snapshot. Caller passes the current path + a friendly

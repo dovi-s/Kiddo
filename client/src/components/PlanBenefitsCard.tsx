@@ -1,7 +1,10 @@
 // Plan Benefits card. Per the 2026-05-13 "explore plan benefits"
 // audit: pre-purchase Kiddo is excellent at "why you should pay";
 // post-purchase it was nearly silent on "what you're paying for."
-// This card fills that gap inside Settings → Membership.
+// This card fills that gap. Rendered on Account "Plan & billing"
+// tab (primary location per the 2026-05-14 WHO/HOW IA Phase 1c-B)
+// AND on the Settings membership tab (backward-compat target for
+// in-flight Stripe sessions that pre-date the URL move).
 //
 // Three sections:
 //   1. Your benefits — bullet list of features the user has access to
@@ -9,8 +12,8 @@
 //   3. Haven't tried — ONE soft nudge for an unused feature, dismissable
 //
 // Render rules:
-//   - Only shown to paying users (starter / family). Free users see
-//     the existing Membership tab; "Your Free benefits" reads weird.
+//   - Only shown to paying users (starter / family / legacy). Free
+//     users skip the card; "Your Free benefits" reads weird.
 //   - Calm-Apple-Settings register. No upsell language. No comparison
 //     to other tiers (the plan cards below already do that).
 //   - Nudge dismissal is per-nudge + per-device, localStorage Set

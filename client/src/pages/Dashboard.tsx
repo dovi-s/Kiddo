@@ -12040,7 +12040,7 @@ export default function Dashboard() {
                     {activeFund?.recipientFirstName ? ` into ${activeFund.recipientFirstName}'s fund` : ""}
                     {autoInvestExecutionModel === "pick" && autoInvestTicker
                       ? `, going into ${quotedAutoInvestStocks.find(s => s.symbol === autoInvestTicker)?.name ?? autoInvestTicker}`
-                      : ""}. Cancel anytime in Settings.
+                      : ""}. Cancel or change anytime from your dashboard.
                   </p>
                   <p className="text-xs">
                     Investments can go up or down. Past performance is not a guarantee of future results. This is a custodial account. Money invested belongs to the child.

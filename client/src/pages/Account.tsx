@@ -12,6 +12,7 @@ import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
 import { PasskeyManager } from "@/components/PasskeyManager";
+import { PlanBenefitsCard } from "@/components/PlanBenefitsCard";
 import {
   KIDDO_LEGACY_YEARLY,
   KORA_FAMILY_MONTHLY,
@@ -862,6 +863,19 @@ export default function Account() {
                   )}
                 </div>
               </SectionCard>
+            )}
+
+            {/* PlanBenefitsCard — paid users see "what you're paying
+                for" + this-year usage stats + one soft "haven't tried"
+                nudge. Per the 2026-05-13 plan-benefits audit. Was
+                previously rendered only on Settings membership tab;
+                added to Account 2026-05-14 per WHO/HOW IA Phase 1c-B
+                so the post-purchase value reminder lives where the
+                parent actually manages their plan. Free users skip
+                this card per the component's own internal render-
+                rule ("Your Free benefits" reads weird). */}
+            {(userPlan === "starter" || userPlan === "family" || userPlan === "legacy") && (
+              <PlanBenefitsCard plan={userPlan as "starter" | "family" | "legacy"} />
             )}
 
             {/* Inline upgrade ladder per the Phase 1b move (2026-05-14).
