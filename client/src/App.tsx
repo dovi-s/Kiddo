@@ -132,15 +132,27 @@ function isPublicGiftRoute(path: string): boolean {
     "age-18-plan",
     "projection",
     "tax-documents",
-    // Authenticated routes added later — must be reserved or the
-    // fund-slug catch-all (e.g. /:fund for gift checkout) eats them
-    // and silently hides the global nav + fires a public-gift
-    // prefetch for the wrong slug. Any new top-level authenticated
-    // path needs to land in this set.
+    // Routes added later. Originally this carve-out was framed as
+    // "authenticated routes added later," but the rule is broader:
+    // ANY new top-level path (public or authenticated) needs to be
+    // reserved here, or the fund-slug catch-all `/:fund` for gift
+    // checkout silently eats it. The page still renders correctly
+    // (Wouter's Switch picks the right route by exact match), but
+    // App.tsx's isGiftPage check returns true and fires a stale
+    // public-gift prefetch for the wrong slug, surfacing as a 404
+    // in the browser console. Audit + sweep 2026-05-14: seven
+    // additions had drifted out of sync; all caught and added below.
     "funds",
     "invitations",
     "take-over",
     "fund-snapshot",
+    "demo",
+    "profile",
+    "tools",
+    "fund",
+    "welcome-at-18",
+    "give-a-gift",
+    "your-story",
   ]);
 
   if (segments.length === 0) return false;
