@@ -246,6 +246,17 @@ export const gifts = pgTable("gifts", {
   // data; not read by any current code path. Safe to drop in a future
   // schema cleanup pass.
   lessonTag: varchar("lesson_tag", { length: 64 }),
+  // Client source — which surface created the gift. Populated by the
+  // gift-checkout endpoint from a `clientSource` body field that the
+  // mobile app sets explicitly; web clients leave it absent and the
+  // server defaults to 'web'. Values: 'web' | 'mobile_ios' |
+  // 'mobile_android'. Historical rows pre-dating this column are NULL
+  // (unknown). The motivating use case is the OPS_RUNBOOK_MOBILE_FEE_
+  // DISPLAY_BUG_2026-05-14.md "Option C" — when the next mobile-only
+  // UI bug surfaces, we want to triage which subset of gift rows came
+  // from the affected surface without having to fetch user-agent from
+  // every Stripe payment intent one at a time.
+  source: text("source"),
   investedAt: timestamp("invested_at"),
   settledAt: timestamp("settled_at"),
   createdAt: timestamp("created_at").defaultNow(),

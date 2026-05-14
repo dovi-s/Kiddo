@@ -1129,6 +1129,15 @@ export class WebhookHandlers {
       parentContributionId: typeof metadata.parentContributionId === 'string' && metadata.parentContributionId
         ? metadata.parentContributionId
         : null,
+      // Carry the client-source label from Stripe metadata into the
+      // gifts.source column. Server set this from the checkout-endpoint
+      // request body (web omits → 'web' default, mobile sends explicit
+      // mobile_ios / mobile_android). Stripe metadata round-trips it
+      // through the webhook. Historical rows pre-dating this column
+      // are NULL (unknown). See OPS_RUNBOOK_MOBILE_FEE_DISPLAY_BUG.
+      source: typeof metadata.source === 'string' && metadata.source
+        ? metadata.source
+        : null,
     };
 
     const gift = await storage.createGift(giftData);

@@ -8697,8 +8697,17 @@ export async function registerRoutes(
 
   app.post('/api/stripe/checkout/gift', async (req, res) => {
     try {
-      const { fundId, eventId, amount, senderName, senderEmail, message, photoUrl, videoUrl, audioUrl, coverFees, paymentMethod, executionModel, selectedTicker, giftAddOn, isParentContribution, isAnonymous } = req.body;
+      const { fundId, eventId, amount, senderName, senderEmail, message, photoUrl, videoUrl, audioUrl, coverFees, paymentMethod, executionModel, selectedTicker, giftAddOn, isParentContribution, isAnonymous, clientSource } = req.body;
       const baseUrl = getAppBaseUrl(req);
+      // Allowed client-source values. Mobile sends one of these
+      // explicitly; web omits the field and the server defaults to
+      // 'web'. Unknown / spoofed values fall back to 'web' rather
+      // than persisting freeform strings into the gifts.source
+      // column. See OPS_RUNBOOK_MOBILE_FEE_DISPLAY_BUG_2026-05-14.md.
+      const ALLOWED_SOURCES = new Set(['web', 'mobile_ios', 'mobile_android']);
+      const normalizedSource = typeof clientSource === 'string' && ALLOWED_SOURCES.has(clientSource)
+        ? clientSource
+        : 'web';
 
       // Demo-fund sandbox: if this is a Dunphy demo fund, return a mock
       // success response that completes the flow without hitting Stripe.
@@ -8869,6 +8878,7 @@ export async function registerRoutes(
         // / video / audio above already nulled when this flag is true.
         isAnonymous: isAnonymousFlag,
         idempotencyKey,
+        source: normalizedSource,
         // Parent contribution success lands on /dashboard directly. Was
         // landing on `/` which Home then redirects to /dashboard while
         // STRIPPING the query string — so `?parentContrib=1` was lost
@@ -11890,6 +11900,12 @@ export async function registerRoutes(
         // — without this, manual-fire contributions would be invisible
         // in the schedule's detail view even though they belong to it.
         parentContributionId: record.id,
+        // Tag the source for ops triage. Parent fires from the dashboard
+        // recurring card; mobile clients send the explicit clientSource
+        // body field, web omits it and falls back to 'web'.
+        source: (typeof req.body?.clientSource === 'string' && ['web', 'mobile_ios', 'mobile_android'].includes(req.body.clientSource))
+          ? req.body.clientSource
+          : 'web',
       });
 
       res.json({ url: session.url });

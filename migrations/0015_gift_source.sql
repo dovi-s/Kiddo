@@ -1,0 +1,28 @@
+-- Add client-source tag to gifts. Captures which surface initiated
+-- each gift so ops can triage mobile-only vs web-only bugs without
+-- per-row Stripe user-agent lookups.
+--
+-- Values written by current code paths:
+--   'web'               — desktop / mobile-web checkout
+--   'mobile_ios'        — Expo / native iOS app
+--   'mobile_android'    — Expo / native Android app
+--   'recurring_worker'  — server-fired off-session payment intent
+--                         from the parent's recurring schedule
+--
+-- Historical rows pre-dating this column stay NULL (unknown source).
+-- Forward-only; do not attempt to backfill from Stripe metadata or
+-- payment-intent user-agent strings, both because Stripe API rate
+-- limits make per-row enrichment expensive and because the original
+-- mobile UI bug that motivated this column (the inflated $9.99 large-
+-- gift line, see OPS_RUNBOOK_MOBILE_FEE_DISPLAY_BUG_2026-05-14.md)
+-- was UI-only and didn't actually mis-charge anyone — so the answer
+-- to "which historical rows came from the buggy mobile UI" doesn't
+-- need to be known precisely.
+--
+-- Server validates incoming clientSource against an allow-list at the
+-- /api/stripe/checkout/gift endpoint; unknown values silently coerce
+-- to 'web'. The column itself is unconstrained text so the worker can
+-- write 'recurring_worker' without round-tripping through the
+-- endpoint allow-list.
+
+ALTER TABLE gifts ADD COLUMN IF NOT EXISTS source TEXT;

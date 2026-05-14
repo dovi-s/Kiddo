@@ -52,6 +52,13 @@ export interface GiftCheckoutParams {
   // (no schedule context) leave this empty and surface in the "all
   // one-time contributions" view instead.
   parentContributionId?: string;
+  // Which surface initiated this gift. Persists from the request into
+  // Stripe metadata into the gifts.source column at webhook time, so
+  // ops can triage "which gifts came from mobile" without per-row
+  // Stripe API calls. Values: 'web' | 'mobile_ios' | 'mobile_android'.
+  // Defaults to 'web' on the call site if unset. See
+  // OPS_RUNBOOK_MOBILE_FEE_DISPLAY_BUG_2026-05-14.md Option C.
+  source?: string;
 }
 
 export interface FeeCalculation {
@@ -367,6 +374,7 @@ export class StripeService {
         isParentContribution: params.isParentContribution ? 'true' : '',
         parentContributionId: params.parentContributionId || '',
         isAnonymous: params.isAnonymous ? 'true' : '',
+        source: params.source || 'web',
       },
       payment_intent_data: {
         description: `Gift of $${fees.netToFund.toFixed(2)} to ${recipientLabel}'s investment fund via Kiddo`,
@@ -396,6 +404,7 @@ export class StripeService {
           isParentContribution: params.isParentContribution ? 'true' : '',
           parentContributionId: params.parentContributionId || '',
           isAnonymous: params.isAnonymous ? 'true' : '',
+          source: params.source || 'web',
         },
       },
     }, params.idempotencyKey ? { idempotencyKey: params.idempotencyKey } : undefined);

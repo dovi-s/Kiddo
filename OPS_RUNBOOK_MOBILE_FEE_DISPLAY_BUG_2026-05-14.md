@@ -1,5 +1,25 @@
 # Ops Runbook: Mobile Gifter UI Fee-Display Bug
 
+> **Status update 2026-05-14 evening:** Option C (future-proofing)
+> SHIPPED. Added `gifts.source` text column populated by:
+> - `'web'` from the existing gift-checkout endpoint default
+> - `'mobile_ios'` / `'mobile_android'` from the mobile API client
+>   stamping `Platform.OS` onto every `apiCreateGiftCheckout` call
+> - `'recurring_worker'` from `recurringContributionWorker.ts`
+>
+> Server validates incoming `clientSource` against an allow-list and
+> coerces unknowns to `'web'`. Stripe metadata round-trips the value
+> through the payment_intent so the webhook handler writes the same
+> source onto the gifts row at settlement time. Historical rows stay
+> NULL (unknown).
+>
+> Migration: `migrations/0015_gift_source.sql`. Apply with
+> `npm run db:migrate` or `npm run db:push`. Additive; safe to re-run.
+>
+> Option B (don't email gifters; handle reactively) still stands as
+> the recommendation for the historical question. The reactive
+> support template below is still ready.
+
 Operational follow-up to `MOBILE_PARITY_AUDIT_2026-05-14.md` Issue 1.
 Captures the queries, the data limitations, and the decision matrix
 for whether to proactively reach out to any gifters who saw the

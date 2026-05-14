@@ -6,7 +6,17 @@
  * phone talks to your computer instead of trying to call itself.
  */
 import Constants from "expo-constants";
+import { Platform } from "react-native";
 import type { PublicGiftDestination } from "@kora/types";
+
+// Per-app client-source tag stamped on outgoing gift checkout payloads.
+// Lets the server's gifts.source column distinguish mobile vs web at
+// the row level, which is the OPS_RUNBOOK_MOBILE_FEE_DISPLAY_BUG_
+// 2026-05-14.md Option C future-proofing — when the next mobile-only
+// UI bug surfaces, ops can filter rows by surface without paging
+// through Stripe user-agent metadata one payment intent at a time.
+const CLIENT_SOURCE: "mobile_ios" | "mobile_android" =
+  Platform.OS === "android" ? "mobile_android" : "mobile_ios";
 
 function getExpoHostUri() {
   const constants = Constants as any;
@@ -121,6 +131,10 @@ export interface GiftCheckoutPayload {
   paymentMethod?: "apple_pay" | "card" | "bank";
   executionModel?: "auto" | "pick" | "family";
   selectedTicker?: string;
+  // Optional — apiCreateGiftCheckout stamps this from Platform.OS so
+  // callers don't have to pass it. Server validates against an allow-
+  // list and falls back to 'web' on anything unrecognized.
+  clientSource?: "mobile_ios" | "mobile_android" | "web";
 }
 
 export interface ApiEvent {
@@ -432,9 +446,17 @@ export async function apiGetPublicGiftDestination(identifier: string): Promise<P
 }
 
 export async function apiCreateGiftCheckout(payload: GiftCheckoutPayload): Promise<{ url?: string }> {
+  // Stamp clientSource from the running platform if the caller didn't
+  // override it. Server validates against the allow-list and silently
+  // falls back to 'web' on unknown values, so this is best-effort tag
+  // injection, not auth-sensitive.
+  const withSource: GiftCheckoutPayload = {
+    ...payload,
+    clientSource: payload.clientSource ?? CLIENT_SOURCE,
+  };
   const res = await apiFetch("/api/stripe/checkout/gift", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify(withSource),
   });
   return parseJson<{ url?: string }>(res);
 }

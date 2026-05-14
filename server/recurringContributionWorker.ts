@@ -170,6 +170,11 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
             selectedTicker: row.selected_ticker ? String(row.selected_ticker) : null,
             status: 'processing',
             parentContributionId: row.id as string,
+            // Worker-fired off-session payment intent — distinct from
+            // gifter / parent-manual surfaces so ops can filter the
+            // recurring cohort separately. Not derived from any client
+            // request; this code path runs on the server's cron tick.
+            source: 'recurring_worker',
           } as any);
 
           try {
