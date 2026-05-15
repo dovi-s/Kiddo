@@ -4719,27 +4719,44 @@ const [editFundName, setEditFundName] = useState("");
               Close {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "this"} fund
             </DialogTitle>
             <DialogDescription className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              The gift link will stop accepting new contributions. You can reopen the fund any time.
+              The public gift link stops accepting new contributions. You can reopen anytime from this same page.
             </DialogDescription>
 
+            {/* Pre-confirmation disclosure cards. Rewritten 2026-05-15
+                to disclose every actual server-side effect of POST
+                /api/funds/:id/close (server/routes.ts:6335). Previous
+                copy hid two material behaviors: co-parent access
+                revocation + pending-invite revocation. It also
+                under-specified what gifters see at the closed public
+                link and didn't mention the 0.10% AUM fee continuing
+                to apply on invested balance. Per the kid-at-18 lens
+                + the anti-dark-pattern locked principle, deletion-
+                style destructive actions must be HONEST and
+                SPECIFIC, not gentle and vague. */}
             <div className="mt-5 space-y-3">
               <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">What stays</p>
                 <ul className="mt-2 space-y-1 text-sm text-foreground">
-                  <li>· Memory Book entries (notes, photos, videos, voice memos)</li>
-                  <li>· Activity history and audit trail</li>
-                  <li>· Cash and invested holdings (no auto-withdrawal)</li>
-                  <li>· The fund itself — closure is reversible</li>
+                  <li>· Memory Book entries (notes, photos, videos, voice memos). {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "The kid's"} keepsake.</li>
+                  <li>· Activity history and audit trail.</li>
+                  <li>· Cash and invested holdings, safe at DriveWealth. No auto-withdrawal. The 0.10% annual fee still applies to invested balance until you withdraw.</li>
+                  <li>· {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "The kid's"} View. The PIN-protected view keeps working.</li>
+                  <li>· The fund itself. Reversible from this same page, anytime.</li>
                 </ul>
               </div>
               <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">What stops</p>
                 <ul className="mt-2 space-y-1 text-sm text-foreground">
-                  <li>· Public gift link refuses new contributions</li>
-                  <li>· Active recurring investments are canceled</li>
+                  <li>· The public gift link. Visitors see "This gift page is closed" with a friendly note.</li>
+                  <li>· Your active recurring investments. They cancel. You'd re-create them on reopen.</li>
+                  <li>· Co-parent access for everyone on the access list, including pending invites. You'd re-invite on reopen.</li>
+                  <li>· New occasions. Existing occasions stay paused alongside the fund; goal progress is preserved.</li>
                 </ul>
+                <p className="mt-2 text-xs italic text-muted-foreground">
+                  Gifts already paid but still settling (1–2 business days) still arrive in the fund. Closing doesn't claw them back.
+                </p>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Want to take cash out? Use Money → Take money out. That's a separate, deliberate action.
+                  Want to withdraw cash first? Use Money → Take money out. That's a separate, deliberate action.
                 </p>
               </div>
             </div>
@@ -4751,7 +4768,7 @@ const [editFundName, setEditFundName] = useState("");
               <textarea
                 value={closeFundReason}
                 onChange={(e) => setCloseFundReason(e.target.value.slice(0, 200))}
-                placeholder="Optional — helps us improve the product."
+                placeholder="Tell us what didn't work. Not shared, used for product analytics."
                 rows={2}
                 className="mt-2 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))] resize-none"
                 data-testid="input-close-fund-reason"
