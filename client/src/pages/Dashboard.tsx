@@ -9239,11 +9239,22 @@ export default function Dashboard() {
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 flex-1">
+                    {/* Label revised to be specific about what's behind
+                        the tap. The previous "Manage Emma's fund" was
+                        generic — parents wouldn't necessarily connect
+                        "manage" with "this is where I tweak the investment
+                        mix." Apple Settings register: name the actual
+                        things you'd do here, in the order you'd most
+                        likely come to do them. Kid info first (the
+                        most common reason — birthday, photo update),
+                        then strategy (the investment lever), then gift
+                        page (the share-loop), then closing as the
+                        rare destructive action. */}
                     <p className="text-sm font-semibold text-foreground">
-                      Manage {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "this"} fund
+                      {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "Fund"} settings
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Edit name, birthday, strategy, gift page, or close the fund.
+                      Kid info · investment strategy · gift page · close fund
                     </p>
                   </div>
                   <ChevronRight size={16} className="shrink-0 text-muted-foreground" aria-hidden />

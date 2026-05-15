@@ -1437,6 +1437,19 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
   // how to unlock it. Now the modal explains Plus + offers the
   // one-tap upgrade path. Per IN_APP_UPGRADE_FEATURE_WALL_SPEC.md.
   const [customGateWallOpen, setCustomGateWallOpen] = useState(false);
+  // Brief inline caption surfaced after the auto-adjust-on-add path
+  // re-balances from the largest holding. Without this hint the
+  // parent sees VTI silently drop from 50% to 40% when they add VUG
+  // and could read it as a bug. The caption names the ticker that
+  // gave up weight, fades after 3 seconds, and only fires on the
+  // total===100 branch (the other branches don't touch existing
+  // weights so there's nothing to surface).
+  const [autoAdjustHint, setAutoAdjustHint] = useState<{ takenFrom: string; amount: number } | null>(null);
+  useEffect(() => {
+    if (!autoAdjustHint) return;
+    const timer = setTimeout(() => setAutoAdjustHint(null), 3000);
+    return () => clearTimeout(timer);
+  }, [autoAdjustHint]);
   const serializeCustomRows = (rows: Array<{ ticker: string; weight: number }>) =>
     rows
       .filter((row) => row.ticker)
@@ -1580,6 +1593,20 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                     {currentStrategy === strategy.key && (
                       <span className="rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-evergreen))]">
                         ✓ Active
+                      </span>
+                    )}
+                    {/* "Plus" gate pill — visible-at-a-glance signal
+                        that this strategy is locked behind Kiddo+. The
+                        opacity-60 + cursor-not-allowed visual cue was
+                        previously the only signal; a parent had to TAP
+                        to discover it was gated. The pill makes the
+                        gate explicit so the lock is read before the
+                        tap. Same gold-tinted register as upgrade
+                        accents elsewhere on the page (matches the
+                        FeatureWallModal's tier-label visual). */}
+                    {isLocked && (
+                      <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.15)] px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-[0.07em] text-[hsl(var(--kiddo-gold-ink))] inline-flex items-center gap-1">
+                        🔒 Plus
                       </span>
                     )}
                     {/* Stronger "Recommended for Emma" badge — gold/cream
@@ -1979,6 +2006,11 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                       const next = prev.map((r, i) =>
                         i === largestIdx ? { ...r, weight: r.weight - take } : r,
                       );
+                      // Surface a brief caption so the parent sees what
+                      // moved. Without this, the largest weight silently
+                      // dropping looks like a bug. The hint auto-fades
+                      // in 3 seconds via the useEffect above.
+                      setAutoAdjustHint({ takenFrom: prev[largestIdx].ticker, amount: take });
                       return [...next, { ticker: nextOption.ticker, weight: take }];
                     }
                     return [...prev, { ticker: nextOption.ticker, weight: 0 }];
@@ -2014,6 +2046,23 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
               </Button>
             )}
           </div>
+
+          {/* Auto-adjust transparency caption. Surfaces briefly (3s)
+              after the add-handler's "take from largest" path fires
+              so the parent sees exactly which holding gave up weight.
+              Without this caption, the parent watches VTI silently
+              drop from 50% to 40% when they add VUG and could
+              reasonably read it as a bug. Calm informational tone;
+              auto-fades via the useEffect on autoAdjustHint. */}
+          {autoAdjustHint && (
+            <div
+              className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-3 py-2 text-[11px] text-[hsl(var(--kiddo-evergreen))]"
+              data-testid="custom-mix-auto-adjust-hint"
+              aria-live="polite"
+            >
+              Adjusted from {autoAdjustHint.takenFrom} (−{autoAdjustHint.amount}%) to make room for the new holding.
+            </div>
+          )}
 
           {/* Total line. Concrete + color-coded. Replaces the previous
               "we normalize these weights automatically when saved" hint,
