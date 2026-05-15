@@ -19,7 +19,7 @@ import {
   isEmailInAdminSet,
 } from "@shared/adminAccess";
 import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { storage } from "./storage";
 import { recordEvent, eventCtxFromReq } from "./analytics";
 import {
@@ -1181,21 +1181,43 @@ export const isAdmin: RequestHandler = async (req, res, next) => {
 type BlockedFund = {
   id: string;
   recipientFirstName: string | null;
+  // Total funds at risk on this row. Sums invested balance + cash balance +
+  // pending balance so the UI shows the parent the FULL exposure, not just
+  // the invested slice (the bug: a fund with $0 invested but $500 held as
+  // cash used to pass the gate silently).
   balance: number;
+  // Sub-totals so the UI can guide the parent on WHAT to do per slice:
+  //   invested → liquidate before withdraw (separate flow)
+  //   cash     → withdraw directly
+  //   pending  → wait for settlement OR refund, can't withdraw mid-flight
+  investedBalance: number;
+  cashBalance: number;
+  pendingBalance: number;
 };
 
 /**
  * Returns the funds that BLOCK this user's account deletion. A fund blocks
  * deletion when ALL of these are true:
  *   - The user is primary custodian (funds.userId = user.id)
- *   - The fund has no co-parent (no accepted Family-plan collaborator)
- *   - The fund has a positive balance (> $0.01)
+ *   - The fund has no ACCEPTED CO-ADMIN collaborator (viewers and pending
+ *     invites do NOT count — viewers can't act as custodian, pending invites
+ *     might never be accepted)
+ *   - The fund has any non-zero value across invested + cash + pending
+ *     (> $0.01 total)
  *
- * If a co-parent exists, the deletion is NOT blocked — the co-parent
- * inherits primary custodianship during performAccountDeletion below.
+ * If an accepted co-admin exists, the deletion is NOT blocked — the
+ * co-admin inherits primary custodianship during performAccountDeletion
+ * (see Ring B). Zero-value funds with no co-admin are NOT blocked
+ * (they're test/empty funds; soft-deleted alongside the user via the
+ * close-on-delete branch).
  *
- * Per spec V1: zero-balance funds without co-parents are NOT blocked
- * (they're test/empty funds; soft-deleted alongside the user).
+ * History (2026-05-14 audit, see commit log):
+ *   - Earlier version checked only funds.balance, ignoring cashBalance
+ *     and pendingBalance. Money held as cash or in flight passed silently.
+ *   - Earlier version treated any collaborator row as unblocking,
+ *     including pending invites with no userId and viewer-only rows.
+ *     That allowed a parent to invite a fake email and immediately
+ *     delete, orphaning the fund.
  */
 async function getFundsBlockingAccountDeletion(userId: string): Promise<BlockedFund[]> {
   const ownedFunds = await db
@@ -1203,24 +1225,43 @@ async function getFundsBlockingAccountDeletion(userId: string): Promise<BlockedF
       id: funds.id,
       recipientFirstName: funds.recipientFirstName,
       balance: funds.balance,
+      cashBalance: funds.cashBalance,
+      pendingBalance: funds.pendingBalance,
     })
     .from(funds)
     .where(eq(funds.userId, userId));
 
   const blocked: BlockedFund[] = [];
   for (const f of ownedFunds) {
-    const balanceNum = parseFloat(String(f.balance || "0"));
-    if (!Number.isFinite(balanceNum) || balanceNum <= 0.01) continue;
-    const collaborators = await db
+    const investedNum = parseFloat(String(f.balance || "0"));
+    const cashNum = parseFloat(String(f.cashBalance || "0"));
+    const pendingNum = parseFloat(String(f.pendingBalance || "0"));
+    const totalAtRisk =
+      (Number.isFinite(investedNum) ? investedNum : 0) +
+      (Number.isFinite(cashNum) ? cashNum : 0) +
+      (Number.isFinite(pendingNum) ? pendingNum : 0);
+    if (totalAtRisk <= 0.01) continue;
+    // Look for an ACCEPTED CO-ADMIN — the only kind of collaborator
+    // that legally + UX-wise can inherit primary custodianship.
+    const inheritor = await db
       .select({ id: fundCollaborators.id })
       .from(fundCollaborators)
-      .where(eq(fundCollaborators.fundId, f.id))
+      .where(
+        and(
+          eq(fundCollaborators.fundId, f.id),
+          eq(fundCollaborators.role, "co-admin"),
+          eq(fundCollaborators.status, "accepted"),
+        ),
+      )
       .limit(1);
-    if (collaborators.length === 0) {
+    if (inheritor.length === 0) {
       blocked.push({
         id: f.id,
         recipientFirstName: f.recipientFirstName,
-        balance: balanceNum,
+        balance: totalAtRisk,
+        investedBalance: Math.max(0, investedNum),
+        cashBalance: Math.max(0, cashNum),
+        pendingBalance: Math.max(0, pendingNum),
       });
     }
   }
