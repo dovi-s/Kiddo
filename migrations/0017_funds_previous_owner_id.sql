@@ -1,0 +1,28 @@
+-- Add previous_owner_id to funds for the post-handoff read-only
+-- treatment described in FUND_STATES_SPEC.md item 4 ("Transferred
+-- read-only treatment"). Populated atomically with the kid-claim
+-- ownership transfer in server/auth.ts /api/auth/claim.
+--
+-- Why a dedicated column instead of looking up via the
+-- kid_claimed_fund activity row:
+--   - Activity row is the audit record; this column is the live
+--     pointer used for "include in this user's fund list" queries.
+--   - Joining through activity on every fund-list fetch would be
+--     slow and bring in unrelated rows.
+--   - Direct foreign-key-style column matches how the rest of the
+--     funds table tracks user references (user_id is the same shape).
+--
+-- Forward-only. Historical funds where the kid has ALREADY claimed
+-- pre-migration stay NULL (the historical pointer is recoverable
+-- from the kid_claimed_fund activity row if needed, but not
+-- automatically backfilled here — that's a manual migration if
+-- product ever requires it).
+--
+-- Foundation 2026-05-14. The consuming UX (parent's fund list
+-- relaxed to include where user_id = me OR previous_owner_id = me,
+-- with read-only chrome on transferred funds) is multi-day work
+-- and is intentionally deferred. The column itself is useful
+-- today for admin queries that need to identify the previous
+-- custodian of a transferred fund.
+
+ALTER TABLE funds ADD COLUMN IF NOT EXISTS previous_owner_id VARCHAR;

@@ -85,6 +85,48 @@
       "when": 1776400000000,
       "tag": "0011_memory_moderation",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776500000000,
+      "tag": "0012_oauth_identities",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776600000000,
+      "tag": "0013_realized_gains",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1776700000000,
+      "tag": "0014_user_account_deletion",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1776800000000,
+      "tag": "0015_gift_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1776900000000,
+      "tag": "0016_fund_transferred_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1777000000000,
+      "tag": "0017_funds_previous_owner_id",
+      "breakpoints": true
     }
   ]
 }

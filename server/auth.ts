@@ -763,7 +763,12 @@ export function setupAuth(app: Express) {
       const transferTime = new Date();
       await dbModule
         .update(fundsTable)
-        .set({ userId: user.id, transferredAt: transferTime, updatedAt: transferTime })
+        .set({
+          userId: user.id,
+          previousOwnerId,
+          transferredAt: transferTime,
+          updatedAt: transferTime,
+        })
         .where(eq(fundsTable.id, fund.id));
 
       // Activity log so the parent + admin can see the transition happened.

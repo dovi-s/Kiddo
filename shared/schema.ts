@@ -71,6 +71,18 @@ export const funds = pgTable("funds", {
   // has been run, so the schema and DB are in sync. Discipline
   // locked in feedback_schema_migration_sync_discipline.md.
   transferredAt: timestamp("transferred_at"),
+  // The user who used to own this fund — populated atomically with
+  // the kid-claim ownership transfer. Enables the future "parent's
+  // fund list still includes funds they previously owned, but they
+  // render in read-only mode" UX per FUND_STATES_SPEC.md item 4.
+  // Without this column, once fund.userId is reassigned to the kid,
+  // the fund disappears from the parent's view entirely — there's
+  // no signal to keep it visible-but-read-only. Companion to
+  // transferredAt: that says WHEN; this says WHO-WAS. NULL for funds
+  // that haven't crossed majority yet. Foundation 2026-05-14, the
+  // consuming UX is multi-day work and deferred until explicitly
+  // pulled in.
+  previousOwnerId: varchar("previous_owner_id"),
   // Set the first time the kid (new owner post-handoff) finishes the
   // Age18Welcome.tsx walkthrough at /welcome-at-18. Null until then;
   // once stamped the walkthrough never re-fires. Dashboard.tsx checks
