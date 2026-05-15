@@ -9758,6 +9758,15 @@ export async function registerRoutes(
       }
 
       const authorPhotoUrl = String((req.user as any).profileImageUrl || "").trim() || null;
+      // 2026-05-15: capture the author's userId so the 30-day account-
+      // deletion PII scrub worker can later anonymize this entry if
+      // the author deletes their account. Without this column the
+      // scrub worker has no way to identify parent-authored entries
+      // and they'd keep showing the deleted parent's name + photo
+      // forever. Per the locked Memory Book retention principle the
+      // entry's content + media stays on the kid's timeline; only the
+      // authorship attribution is anonymized at scrub time.
+      const authorUserId = String((req.user as any).id || "").trim() || null;
       // Kid-reveal visibility (the new memory_entries.visibility column).
       // Distinct from the audience-visibility sidecar (public/family/private)
       // which controls who sees the entry on the gift PAGE. The column
@@ -9782,6 +9791,7 @@ export async function registerRoutes(
         audioTranscript: audioTranscriptRaw || null,
         visibility: kidVisibility,
         ...(authorPhotoUrl ? { authorPhotoUrl } : {}),
+        ...(authorUserId ? { authorUserId } : {}),
       };
       const entry = await storage.createMemoryEntry(data);
       await patchMemoryMeta(entry.id, {

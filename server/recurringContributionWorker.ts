@@ -249,6 +249,12 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
                     type: 'parent_note',
                     content: recurringNote,
                     authorName: parentName,
+                    // 2026-05-15: stamp authorUserId so the 30-day PII
+                    // scrub worker can anonymize this entry if the
+                    // parent later deletes their account. row.user_id
+                    // is the parent who set up the recurring schedule,
+                    // matching the auth-shaped authorUserId column.
+                    authorUserId: row.user_id as string,
                   } as any);
                 } catch (memErr) {
                   // Memory write is best-effort — payment succeeded, fund credited.

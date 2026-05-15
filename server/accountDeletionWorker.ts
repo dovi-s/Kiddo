@@ -43,11 +43,11 @@
 //
 // What this worker does NOT do today (documented gaps for follow-up):
 //
-//   • Memory Book authorship anonymization. memory_entries rows
-//     carry author_name + author_photo_url as denormalized strings,
-//     not a foreign key to users. There's no clean way to identify
-//     entries authored by THIS user without a schema change (add
-//     author_user_id column). Deferred to a future Ring C3.
+//   • (CLOSED 2026-05-15) Memory Book authorship anonymization.
+//     memory_entries now carries author_user_id (migration 0021).
+//     This worker anonymizes matching entries at scrub time: sets
+//     authorName='Former gifter', authorPhotoUrl=null. Content +
+//     media preserved per the kid-at-18 retention principle.
 //
 //   • Plaid /item/remove. bank_accounts.providerItemId DOES exist
 //     (populated by the /api/plaid/exchange-public-token route), but
@@ -79,7 +79,7 @@
 
 import { db } from "./db";
 import { eq, and, isNull, lt, sql } from "drizzle-orm";
-import { users, subscriptions, fundMemberships, transactions, auditLogs } from "@shared/schema";
+import { users, subscriptions, fundMemberships, transactions, auditLogs, memoryEntries } from "@shared/schema";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "account-deletion-worker";
@@ -91,6 +91,7 @@ type ScrubResult = {
   userId: string;
   stripeCustomersDeleted: number;
   stripeCustomersFailed: number;
+  memoryEntriesAnonymized: number;
 };
 
 /**
@@ -188,6 +189,29 @@ async function deleteStripeCustomers(
 }
 
 /**
+ * Anonymize Memory Book entries authored by this user. Sets
+ * authorName to "Former gifter" and clears authorPhotoUrl. Content,
+ * photos, videos, and voice notes are preserved per the locked
+ * Memory Book retention principle: the entry belongs to the kid's
+ * timeline, not to the parent's account. The kid at 18 still sees
+ * the message, the photo, the voice — just without the deleted
+ * parent's name + face attached.
+ *
+ * Returns the count of rows updated, for the audit metadata.
+ */
+async function anonymizeMemoryEntries(userId: string): Promise<number> {
+  const result = await db
+    .update(memoryEntries)
+    .set({
+      authorName: "Former gifter",
+      authorPhotoUrl: null,
+    })
+    .where(eq(memoryEntries.authorUserId, userId))
+    .returning({ id: memoryEntries.id });
+  return result.length;
+}
+
+/**
  * Apply the in-DB PII scrub for a single user. Anonymizes the user
  * row + stamps pii_scrubbed_at so the worker won't re-process. Each
  * field is set to a stable, non-PII placeholder; the email gets the
@@ -235,6 +259,7 @@ async function scrubOne(userId: string, log: LogFn): Promise<ScrubResult> {
     userId,
     stripeCustomersDeleted: 0,
     stripeCustomersFailed: 0,
+    memoryEntriesAnonymized: 0,
   };
   try {
     const customerIds = await collectStripeCustomerIds(userId);
@@ -243,6 +268,16 @@ async function scrubOne(userId: string, log: LogFn): Promise<ScrubResult> {
     result.stripeCustomersFailed = failed;
   } catch (err: any) {
     log(`Stripe customer collection failed for ${userId}: ${err?.message || err}`, WORKER_SOURCE);
+  }
+  try {
+    result.memoryEntriesAnonymized = await anonymizeMemoryEntries(userId);
+  } catch (err: any) {
+    // Non-fatal: the user-row scrub still completes; failed anonymization
+    // means some Memory Book entries keep showing the deleted name. The
+    // worker re-tries this on next tick because pii_scrubbed_at is
+    // stamped AFTER the row scrub below — if any step in here throws
+    // before that stamp lands, the user falls back into the queue.
+    log(`Memory anonymization failed for ${userId}: ${err?.message || err}`, WORKER_SOURCE);
   }
   try {
     await scrubUserRow(userId);
@@ -259,6 +294,7 @@ async function scrubOne(userId: string, log: LogFn): Promise<ScrubResult> {
       metadata: JSON.stringify({
         stripeCustomersDeleted: result.stripeCustomersDeleted,
         stripeCustomersFailed: result.stripeCustomersFailed,
+        memoryEntriesAnonymized: result.memoryEntriesAnonymized,
         scrubbedAt: new Date().toISOString(),
       }),
       ipAddress: null,

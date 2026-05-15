@@ -528,6 +528,16 @@ export const memoryEntries = pgTable("memory_entries", {
   content: text("content"),
   authorName: text("author_name"),
   authorPhotoUrl: text("author_photo_url"),
+  // Foreign-key reference to users.id when the entry was authored by
+  // an authenticated user (parent or co-parent writing through the
+  // app). NULL for gifter-authored entries (gifters don't have user
+  // accounts) and for milestone entries the server auto-generates.
+  // Added 2026-05-15 so the account-deletion PII scrub worker can
+  // identify and anonymize entries whose author is being scrubbed:
+  // set author_name to "Former gifter", null out author_photo_url,
+  // preserve the content + media (those belong to the kid's Memory
+  // Book and outlast the parent's account per the kid-at-18 lens).
+  authorUserId: varchar("author_user_id").references(() => users.id),
   photoUrl: text("photo_url"),
   videoUrl: text("video_url"),
   audioUrl: text("audio_url"),
