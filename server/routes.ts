@@ -13718,6 +13718,52 @@ export async function registerRoutes(
     }
   });
 
+  // Email suppressions admin (Tier 2 #15). Visibility into the
+  // deliverability health surface — every hard-bounced or spam-
+  // complained address that's been suppressed by the Postmark
+  // webhook handler. Admin can manually unsuppress if a recipient
+  // confirms their mailbox is fixed (e.g., 'we typed the wrong
+  // address; here's the right one').
+  app.get('/api/admin/email-suppressions', isAdmin, async (req: any, res) => {
+    try {
+      const result = await pool.query(`
+        SELECT id, email, reason, source, suppressed_at, unsuppressed_at, unsuppressed_reason
+        FROM email_suppressions
+        ORDER BY suppressed_at DESC
+        LIMIT 500
+      `);
+      void writeAudit(req, 'admin_email_suppressions_viewed', 'email_suppressions').catch(() => null);
+      return res.json(result.rows);
+    } catch (err) {
+      console.error('Error fetching email suppressions:', err);
+      return res.status(500).json({ error: 'Failed to fetch suppressions' });
+    }
+  });
+
+  app.post('/api/admin/email-suppressions/:id/unsuppress', isAdmin, async (req: any, res) => {
+    try {
+      const id = String(req.params.id || '').trim();
+      if (!id) return res.status(400).json({ error: 'Missing id' });
+      const reason = String(req.body?.reason || '').trim().slice(0, 500) || 'admin-manual';
+      const result = await pool.query(
+        `UPDATE email_suppressions
+            SET unsuppressed_at = NOW(), unsuppressed_reason = $1
+          WHERE id = $2
+            AND unsuppressed_at IS NULL
+          RETURNING email, reason`,
+        [reason, id],
+      );
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Suppression not found or already unsuppressed' });
+      }
+      void writeAudit(req, 'admin_email_unsuppressed', 'email_suppressions', id, { email: result.rows[0].email, reason: result.rows[0].reason }).catch(() => null);
+      return res.json({ ok: true, email: result.rows[0].email });
+    } catch (err) {
+      console.error('Error unsuppressing email:', err);
+      return res.status(500).json({ error: 'Failed to unsuppress' });
+    }
+  });
+
   app.get('/api/admin/config/investments', isAdmin, async (req: any, res) => {
     try {
       const cfg = await loadInvestmentConfig();
