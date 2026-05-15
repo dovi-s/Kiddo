@@ -11,7 +11,15 @@ import { users, type User } from "@shared/models/auth";
 // Imports for account-deletion helpers below. `funds` for blocked-state
 // checks; `subscriptions` + `fundMemberships` for Stripe cancellation;
 // `activities` for the audit-log entry.
-import { funds, fundMemberships, subscriptions, activities, fundCollaborators } from "@shared/schema";
+import {
+  funds,
+  fundMemberships,
+  subscriptions,
+  activities,
+  fundCollaborators,
+  parentContributions,
+  bankAccounts,
+} from "@shared/schema";
 import {
   getConfiguredSuperAdminEmails,
   getDefaultSuperAdminEmails,
@@ -1323,6 +1331,99 @@ async function performAccountDeletion(userId: string, reason: string | null): Pr
     }
   } catch (stripeErr: any) {
     console.warn("[account-delete] Stripe cleanup failed (non-fatal):", stripeErr?.message);
+  }
+
+  // 1b. Cancel every active or paused parent_contribution for this
+  //     user. The recurringContributionWorker would otherwise keep
+  //     firing off-session card charges against a deleted user's
+  //     card-on-file. Setting status='cancelled' is the right shape:
+  //     the row stays for audit + historical totalContributed
+  //     reporting, and the worker's status='active' filter stops
+  //     touching it. Per-row update so a single failure doesn't
+  //     abort the rest of the deletion.
+  try {
+    const liveContribs = await db
+      .select({ id: parentContributions.id })
+      .from(parentContributions)
+      .where(
+        and(
+          eq(parentContributions.userId, userId),
+          sql`${parentContributions.status} <> 'cancelled'`,
+        ),
+      );
+    for (const c of liveContribs) {
+      try {
+        await db
+          .update(parentContributions)
+          .set({
+            status: "cancelled",
+            pauseReason: "account_deleted",
+            updatedAt: new Date(),
+          })
+          .where(eq(parentContributions.id, c.id));
+      } catch (cErr: any) {
+        console.warn(`[account-delete] Could not cancel parent_contribution ${c.id}:`, cErr?.message);
+      }
+    }
+  } catch (contribErr: any) {
+    console.warn("[account-delete] parent_contributions cleanup failed (non-fatal):", contribErr?.message);
+  }
+
+  // 1c. Delete this user's linked bank accounts. The modal copy
+  //     ("Your linked bank accounts" gets deleted) used to lie about
+  //     this. Bank rows held the parent's account/routing tokens —
+  //     dead PII at a soft-deleted userId is worse than the rows
+  //     being gone. The bank itself stays linked at the parent's
+  //     bank; we just lose our reference. Plaid Item revocation
+  //     happens in the 30-day scrub worker (Ring C).
+  try {
+    await db.delete(bankAccounts).where(eq(bankAccounts.userId, userId));
+  } catch (bankErr: any) {
+    console.warn("[account-delete] bank_accounts cleanup failed (non-fatal):", bankErr?.message);
+  }
+
+  // 1d. Revoke pending outbound co-parent invitations. Pending
+  //     invite tokens are bearer capabilities — if a recipient
+  //     accepts AFTER deletion, they'd join a fund owned by a
+  //     soft-deleted user with no clear path to act on it. Status
+  //     'declined' tombstones the row (we keep it for audit + so
+  //     the recipient sees an explanatory message if they tap the
+  //     link). userId IS NULL filter scopes to PENDING (accepted
+  //     invites carry the invitee's userId).
+  try {
+    const ownedFundIds = (
+      await db.select({ id: funds.id }).from(funds).where(eq(funds.userId, userId))
+    ).map((r) => r.id);
+    if (ownedFundIds.length > 0) {
+      for (const fundId of ownedFundIds) {
+        try {
+          await db
+            .update(fundCollaborators)
+            .set({ status: "declined" })
+            .where(
+              and(
+                eq(fundCollaborators.fundId, fundId),
+                eq(fundCollaborators.status, "pending"),
+              ),
+            );
+        } catch (inviteErr: any) {
+          console.warn(`[account-delete] Could not revoke pending invites on fund ${fundId}:`, inviteErr?.message);
+        }
+      }
+    }
+  } catch (invitesErr: any) {
+    console.warn("[account-delete] pending-invite revocation failed (non-fatal):", invitesErr?.message);
+  }
+
+  // 1e. Remove the deleting user from any OTHER funds where they
+  //     were a collaborator (viewer or co-admin on someone ELSE's
+  //     fund). After their account is gone, their access to those
+  //     funds is meaningless and a hard removal keeps the access
+  //     list clean for the actual primary custodian.
+  try {
+    await db.delete(fundCollaborators).where(eq(fundCollaborators.userId, userId));
+  } catch (collabErr: any) {
+    console.warn("[account-delete] cross-fund collaborator cleanup failed (non-fatal):", collabErr?.message);
   }
 
   // 2. Soft-delete the user. PII scrub deferred to 30-day worker.
