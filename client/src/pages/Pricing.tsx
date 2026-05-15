@@ -25,7 +25,8 @@ function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; 
 // Plans locked per MEMORY (2026-05-08, 2026-05-12 audit):
 //   Free:   $0 / month, 1 fund, basic features, Kid View (full experience for one fund),
 //           basic text Memory Book.
-//           Approved phrasings: "$0 per month", "$0 / per month", "Free to start", "No monthly fee".
+//           Approved phrasings: "$0 per month", "$0/month", "Free to start", "No monthly fee".
+//           "/ per month" form retired 2026-05-15 (doubled prepositions read awkwardly).
 //           Never "$0 forever" or "Always free" — Acorns-scrutiny risk with the 0.10% AUM line.
 //   Plus:   $4.99/mo or $39/yr (annual is 35% off monthly — aggressive).
 //   Family: $7.99/mo or $69/yr (annual is 28% off monthly — standard).
@@ -71,11 +72,11 @@ const plans: readonly Plan[] = [
     id: "free",
     name: "FREE",
     eyebrow: "For parents just getting started.",
-    pricing: { kind: "flat", price: "$0", period: "/ per month" },
+    pricing: { kind: "flat", price: "$0", period: "/month" },
     cta: "Start for free",
     featured: false,
     body: [
-      "1 child fund (one child's permanent investment account)",
+      "1 child fund",
       "1 active occasion at a time",
       "Shareable gift link, QR code, and gift code",
       "Text Memory Book entries (gifters can always attach photos, videos, and voice)",
@@ -91,8 +92,8 @@ const plans: readonly Plan[] = [
     eyebrow: "For the parent who shows up every month.",
     pricing: {
       kind: "billed",
-      yearly: { price: "$39", period: "/ per year", equivalent: "or $4.99 / month" },
-      monthly: { price: "$4.99", period: "/ per month", equivalent: "Save 35% with $39 / year" },
+      yearly: { price: "$39", period: "/year", equivalent: "or $4.99/month" },
+      monthly: { price: "$4.99", period: "/month", equivalent: "Save 35% with $39/year" },
     },
     cta: "Start with Kiddo+",
     featured: true,
@@ -120,8 +121,8 @@ const plans: readonly Plan[] = [
     eyebrow: "For families with two or more children.",
     pricing: {
       kind: "billed",
-      yearly: { price: "$69", period: "/ per year", equivalent: "or $7.99 / month" },
-      monthly: { price: "$7.99", period: "/ per month", equivalent: "Save 28% with $69 / year" },
+      yearly: { price: "$69", period: "/year", equivalent: "or $7.99/month" },
+      monthly: { price: "$7.99", period: "/month", equivalent: "Save 28% with $69/year" },
     },
     cta: "Cover all your children",
     featured: false,
@@ -180,7 +181,7 @@ const pricingFaqs = [
   },
   {
     question: "Is there a platform fee on gifts?",
-    answer: "No. The gift amount stays whole. $50 from grandma is $50 to the fund. The gifter pays standard payment processing through Stripe (shown in full before checkout). Kiddo's revenue comes from the optional Plus and Family plans, plus a small 0.10% annual fee on invested assets across every tier.",
+    answer: "No. The gift amount stays whole. $50 from grandma is $50 to the fund. The gifter pays standard payment processing through Stripe (shown in full before checkout). Kiddo's revenue comes from the optional Plus and Family plans and a 0.10% annual fee on invested assets that applies to every plan.",
   },
   {
     question: "What is the 0.10% annual fee?",
@@ -188,7 +189,7 @@ const pricingFaqs = [
   },
   {
     question: "Is there a free trial?",
-    answer: "Yes. New accounts get a 14-day reverse trial of Plus features automatically. Every premium feature unlocks for two weeks so you can decide before upgrading. No credit card required. After 14 days, your fund reverts to the Free plan unless you choose to upgrade.",
+    answer: "Yes. New accounts get 14 days of Plus features automatically. Every premium feature unlocks so you can decide before upgrading. No credit card required. After 14 days, your account reverts to Free unless you choose to upgrade.",
   },
   {
     question: "What is the difference between a fund and an occasion?",
@@ -228,11 +229,11 @@ export default function Pricing() {
               <span className="font-medium text-foreground">No platform fee on gifts.</span>{" "}
               The gift amount always stays whole. Kiddo charges 0.10% per year on invested assets only, the same rate on every plan.
             </p>
-            <p className="mx-auto mt-4 max-w-3xl rounded-2xl border border-primary/15 bg-primary/5 px-5 py-4 text-sm leading-relaxed text-muted-foreground">
-              <span className="font-medium text-foreground">Annual pricing is shown first on paid plans.</span>{" "}
-              Most families choose the yearly option because it lowers the re-evaluation moment to once a year and shows the clearest savings.
-            </p>
-            {/* 14-day reverse trial of Plus features fires
+            {/* Meta-explanation about why annual is shown first
+                retired 2026-05-15. The savings are visible in the
+                cards themselves; explaining the UI is how-it-works,
+                not pricing info. Tell, don't justify. */}
+            {/* 14-day Plus trial fires
                 automatically on every new account. Previously this
                 lived only in the FAQ ("Is there a free trial?"
                 question), buried where most visitors never scroll.
@@ -243,8 +244,8 @@ export default function Pricing() {
                 (locked principle: marketing-feel chrome stays
                 Apple-Settings register). */}
             <p className="mx-auto mt-4 max-w-3xl rounded-2xl border border-border bg-card px-5 py-4 text-sm leading-relaxed text-muted-foreground">
-              <span className="font-medium text-foreground">Every new account gets a 14-day Plus trial.</span>{" "}
-              Every premium feature unlocks for two weeks so you can try before deciding. No credit card. Your fund stays either way.
+              <span className="font-medium text-foreground">Every new account gets 14 days of Plus, free.</span>{" "}
+              Every premium feature unlocks so you can try before deciding. No credit card. Your fund stays either way.
             </p>
           </motion.div>
         </div>
@@ -387,6 +388,17 @@ export default function Pricing() {
             <p className="mx-auto mt-4 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
               For context, that is roughly the cost of a single coffee per year per $10,000 invested.
             </p>
+            {/* Explicit revenue-source transparency. Before the
+                alignment closing beat, name exactly what Kiddo earns
+                from and what it doesn't. Pulled from the scattered
+                statements across the page (no platform fee on gifts,
+                AUM on invested assets, etc.) into one consolidated
+                line so a parent skimming the fee section can see the
+                full money model in one breath. Added 2026-05-15 per
+                the post-pricing-page audit. */}
+            <p className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
+              Kiddo earns from Plus and Family subscriptions and the 0.10% annual fee on invested assets. We don't take a cut of gifts. We don't sell your data.
+            </p>
             {/* Alignment frame. The AUM fee is small but the deeper
                 story is WHY the model is structured this way: Kiddo
                 only earns more if the kid's fund grows. That puts
@@ -435,7 +447,7 @@ export default function Pricing() {
               <div>
                 <h2 className="font-heading text-2xl font-bold text-foreground">Fee transparency</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Kiddo does not mark up payment processing. Standard Stripe rates apply on every gift.
+                  Kiddo does not mark up payment processing. Standard Stripe rates apply (about 2.9% + $0.30 on cards, shown in full before checkout).
                 </p>
               </div>
               <button
