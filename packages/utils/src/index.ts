@@ -96,14 +96,34 @@ export function formatCurrencyWhole(value: number) {
 }
 
 
+/**
+ * Project a contribution series year by year. Returns an array of
+ * {age, totalGifted, projectedValue} points suitable for charting.
+ *
+ * Updated 2026-05-15 (projection-math audit): added optional
+ * `aumFeeRate` parameter that nets a fee out of the assumed return
+ * before compounding. Kiddo's parent-facing charts pass 0.001 (the
+ * 0.10% AUM fee) so the chart matches what the parent actually
+ * keeps. Non-Kiddo comparisons (savings-account scenarios in
+ * GetStarted) pass 0 to leave the rate untouched.
+ *
+ * Math: annual compounding (one tick per age year). Within the
+ * contribution window (age <= contributionEndAge), the annualGift
+ * is added at the start of each year and then the year's growth
+ * applies. Past the contribution window, the annual growth keeps
+ * compounding but no more gifts accrue — matching the UTMA
+ * reality where parent contributions stop at majority age.
+ */
 export function projectContributionSeries(
   annualGift: number,
   endAge: number,
   rate: number,
   contributionEndAge = 18,
+  aumFeeRate = 0,
 ) {
   const safeEndAge = Math.max(1, Math.round(endAge));
   const safeContributionEndAge = Math.max(1, Math.round(contributionEndAge));
+  const netRate = rate - aumFeeRate;
   const points: Array<{
     age: number;
     totalGifted: number;
@@ -114,7 +134,7 @@ export function projectContributionSeries(
   let projectedValue = 0;
 
   for (let age = 1; age <= safeEndAge; age += 1) {
-    projectedValue = projectedValue * (1 + rate);
+    projectedValue = projectedValue * (1 + netRate);
     if (age <= safeContributionEndAge) {
       totalGifted += annualGift;
       projectedValue += annualGift;

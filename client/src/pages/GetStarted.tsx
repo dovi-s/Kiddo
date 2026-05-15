@@ -227,12 +227,19 @@ export default function GetStarted() {
   const diff = projection.difference;
 
   const milestoneInvested = useMemo(() => {
-    const series = projectContributionSeries(annualGift, projectionMilestone, 0.07);
+    // 0.001 = 0.10% Kiddo AUM annual fee netted out so the projection
+    // matches what the parent actually keeps. Same rule applied across
+    // every Kiddo projection surface per the 2026-05-15 audit.
+    const series = projectContributionSeries(annualGift, projectionMilestone, 0.07, 18, 0.001);
     return series[series.length - 1]?.projectedValue ?? 0;
   }, [annualGift, projectionMilestone]);
 
   const milestoneSavings = useMemo(() => {
-    const series = projectContributionSeries(annualGift, projectionMilestone, 0.005);
+    // Savings comparison stays NET-FEE-FREE — this represents an
+    // external savings account that doesn't have our 0.10% fee. The
+    // 0.5% rate is the comparison APY (intentionally generous for a
+    // mainstream non-HYSA savings account). Pass 0 for aumFeeRate.
+    const series = projectContributionSeries(annualGift, projectionMilestone, 0.005, 18, 0);
     return series[series.length - 1]?.projectedValue ?? 0;
   }, [annualGift, projectionMilestone]);
 

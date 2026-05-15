@@ -79,7 +79,13 @@ export default function Age18() {
   });
 
   const series = useMemo(
-    () => projectContributionSeries(annualGift, selectedHorizon, selectedRate.value, 18),
+    // 0.001 = Kiddo's 0.10% AUM annual fee, netted out of the assumed
+    // return so the chart matches what the parent actually keeps.
+    // Added 2026-05-15 as part of the projection-math audit; before
+    // this, the chart over-stated the projection by 0.10% per year
+    // (compounded) compared to Projection.tsx / KidView / CalculatorAt18
+    // which all correctly netted the fee.
+    () => projectContributionSeries(annualGift, selectedHorizon, selectedRate.value, 18, 0.001),
     [annualGift, selectedHorizon, selectedRate],
   );
   const finalPoint = series[series.length - 1] ?? { totalGifted: 0, projectedValue: 0 };

@@ -52,7 +52,13 @@ import { AddFundSheet } from "@/components/AddFundSheet";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { FundSettingsSheet } from "@/components/FundSettingsSheet";
 import { CreateEventSheet, type EditEventData } from "@/components/CreateEventSheet";
-import { GrowthStory } from "@/components/GrowthStory";
+// (Removed 2026-05-15: GrowthStory import. The component was never
+// rendered anywhere in Dashboard's JSX — grepped to confirm zero
+// instantiation. Its file at client/src/components/GrowthStory.tsx
+// also got deleted in the same commit. Found during the projection-
+// math audit because GrowthStory carried its own broken projection
+// math — raw 7% (not netted), hardcoded 18-year horizon. Rather than
+// fix dead code, delete it.)
 import { EventGateModal } from "@/components/EventGateModal";
 import { ThankYouManager } from "@/components/ThankYouManager";
 import { InvestCashModal, type CashContext } from "@/components/InvestCashModal";
