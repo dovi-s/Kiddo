@@ -9582,6 +9582,17 @@ export async function registerRoutes(
                     senderName: gift.senderName,
                     senderEmail: (gift as any).senderEmail || null,
                     amount: gift.amount,
+                    // netAmount + status added 2026-05-15 so the client-side
+                    // gifterRoster in MemoryBook can: (a) exclude
+                    // failed/refunded gifts from the per-gifter sum, and
+                    // (b) prefer netAmount over gross amount to match the
+                    // same arithmetic Dashboard's gifterRoster uses. Per
+                    // locked policy gifts are whole (no platform fee on
+                    // gifts), so netAmount === amount for the typical
+                    // case; the field guarantees the two surfaces agree
+                    // even on the rare uncovered-fees edge.
+                    netAmount: (gift as any).netAmount || gift.amount,
+                    status: gift.status || null,
                     message: gift.message,
                     photoUrl: normalizeHttpUrl(gift.photoUrl),
                     createdAt: gift.createdAt,

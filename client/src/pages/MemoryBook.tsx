@@ -148,6 +148,14 @@ interface MemoryEntry {
     senderName: string;
     senderEmail?: string | null;
     amount: string;
+    // netAmount + status surfaced 2026-05-15 to align the per-gifter
+    // roster sum here with Dashboard's gifterRoster: exclude failed/
+    // refunded gifts; prefer netAmount over gross amount (they're
+    // equal for typical gifts under locked "no platform fee on gifts"
+    // policy; the field exists as the safe fallback). Optional —
+    // the public memory endpoint omits these for privacy.
+    netAmount?: string | null;
+    status?: string | null;
     message: string | null;
     photoUrl: string | null;
     createdAt: string;
@@ -1979,6 +1987,14 @@ export default function MemoryBook() {
     const map = new Map<string, { name: string; giftCount: number; totalAmount: number; lastGiftDate: string; anonPeople: number; isAnon: boolean; isOwnerRow: boolean }>();
     for (const e of sortedEntries) {
       if (e.type !== "gift_message" || !e.gift?.senderName) continue;
+      // Status filter aligned with Dashboard's gifterRoster on 2026-05-15.
+      // Failed or refunded gifts shouldn't pollute the per-gifter
+      // total — the money never actually landed. Processing gifts
+      // (still settling 1-2 business days) stay in because they WILL
+      // settle and the kid's narrative shouldn't blink them out.
+      // Same set of statuses Dashboard's "Total gifts" stat uses.
+      const giftStatus = String(e.gift?.status || "").toLowerCase();
+      if (giftStatus === "failed" || giftStatus === "refunded") continue;
       const senderName = e.gift.senderName.trim();
       const isAnon = isAnonName(senderName);
       // Owner detection per gift — when a gift's senderEmail matches
@@ -1995,7 +2011,12 @@ export default function MemoryBook() {
       const isOwnerEntry = !!ownerEmailLowerForMemory && senderEmailLower === ownerEmailLowerForMemory;
       const key = isAnon ? "__anon__" : senderName.toLowerCase();
       const existing = map.get(key);
-      const amount = parseFloat(e.gift.amount || "0");
+      // Prefer netAmount (after gift-processing fees) so this surface
+      // matches what Dashboard's gifterRoster sums. Per locked policy
+      // ("NO platform fee on gifts. Gift amount stays whole.") these
+      // are usually equal, but the netAmount fallback keeps the two
+      // surfaces in lockstep on the rare edge where fees weren't covered.
+      const amount = parseFloat(e.gift.netAmount || e.gift.amount || "0");
       if (existing) {
         existing.giftCount += 1;
         existing.totalAmount += amount;

@@ -122,7 +122,16 @@ export default function FundSnapshot() {
   const gifts = useMemo(
     () =>
       (summary?.gifts || [])
-        .filter((g) => ["settled", "invested", "processing"].includes(String(g.status || "").toLowerCase()))
+        // 2026-05-15 alignment with Dashboard's gifterRoster filter:
+        // dropped "processing" from this snapshot's gift list. The
+        // snapshot is the print/PDF-export surface that parents share
+        // with advisors and family — a processing gift shown here as
+        // "received" while the Dashboard hero shows it as "settling"
+        // creates surface-to-surface drift. Use settled+invested only
+        // so the snapshot matches the Dashboard position statement.
+        // Processing gifts will appear on next snapshot fetch once
+        // they settle (1-2 business days).
+        .filter((g) => ["settled", "invested"].includes(String(g.status || "").toLowerCase()))
         .sort((a, b) => new Date(String((b as any).settledAt || b.createdAt)).getTime() - new Date(String((a as any).settledAt || a.createdAt)).getTime()),
     [summary],
   );

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Mascot } from "@/components/ui/mascot";
 import { projectFundValue } from "@shared/projection";
+import { US_STATES, getMajorityAgeForState, UTMA_DEFAULT_MAJORITY_AGE } from "@shared/utma";
 import { useCountUp } from "@/hooks/use-count-up";
 
 // Two-phase compounding projection routed through shared/projection.ts
@@ -77,10 +78,18 @@ export default function CalculatorAt18() {
   const [childAge, setChildAge] = useState<number>(2);
   const [monthly, setMonthly] = useState<number>(50);
   const [startingGift, setStartingGift] = useState<number>(0);
-  // Default to 18 — the federal default and most-common state. The note
-  // below the result tells the visitor that some states extend to 21, so
-  // the calculator stays accurate-by-default without forcing a state pick.
-  const [majorityAge] = useState<number>(18);
+  // State-aware majority age. Empty string = federal default (18) which
+  // is correct for ~40 states. Picking a state that uses 19/20/21 (CA,
+  // MS, etc.) extends the contribution window proportionally — the
+  // projection number reflects the actual time-horizon for that
+  // family's UTMA, not a federal-default approximation.
+  //
+  // Pre-2026-05-15 this was hardcoded `useState(18)` with a disclaimer
+  // that pointed users to a separate /tools/utma-by-state lookup page.
+  // Pulling the picker inline means the headline number is right by
+  // default, not just disclosed.
+  const [selectedState, setSelectedState] = useState<string>("");
+  const majorityAge = selectedState ? getMajorityAgeForState(selectedState) : UTMA_DEFAULT_MAJORITY_AGE;
 
   const yearsToMajority = Math.max(0, majorityAge - childAge);
 
@@ -241,6 +250,50 @@ export default function CalculatorAt18() {
                     <span>$5,000</span>
                   </div>
                 </div>
+
+                {/* State picker — UTMA majority age is 18 by federal
+                    default but varies by state (19/20/21 in several).
+                    Pulling this inline means the headline projection
+                    number reflects the actual contribution window for
+                    THAT family's fund, not a default approximation.
+                    Default option "—" keeps the calc at 18 for users
+                    who don't know or don't care; picking a state
+                    updates the math + the result label. Added
+                    2026-05-15 as part of the projection-math audit
+                    follow-up. */}
+                <div>
+                  <div className="mb-3 flex items-baseline justify-between">
+                    <label htmlFor="calc-state-picker" className="text-sm font-semibold text-foreground">
+                      State (for UTMA majority age)
+                    </label>
+                    <p className="font-heading text-2xl font-bold tabular-nums text-foreground">
+                      Age {majorityAge}
+                    </p>
+                  </div>
+                  <select
+                    id="calc-state-picker"
+                    value={selectedState}
+                    onChange={(e) => setSelectedState(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
+                    data-testid="select-state-majority"
+                  >
+                    <option value="">— Federal default (18) —</option>
+                    {US_STATES.map((s) => {
+                      const age = getMajorityAgeForState(s.code);
+                      return (
+                        <option key={s.code} value={s.code}>
+                          {s.name}
+                          {age !== UTMA_DEFAULT_MAJORITY_AGE ? ` · age ${age}` : ""}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    {selectedState
+                      ? `In ${US_STATES.find((s) => s.code === selectedState)?.name || "this state"}, the UTMA custodian's control transfers at age ${majorityAge}.`
+                      : "Most states use 18. A few extend custodianship to 19, 20, or 21 — pick yours for accurate math."}
+                  </p>
+                </div>
               </div>
 
               {/* Result — cream-on-evergreen card matches the locked palette
@@ -300,7 +353,7 @@ export default function CalculatorAt18() {
               <div className="mt-6 flex items-start gap-2.5 rounded-xl bg-muted/30 px-4 py-3.5 text-[12.5px] leading-relaxed text-muted-foreground">
                 <Info size={14} className="mt-0.5 flex-shrink-0" />
                 <p>
-                  Projections assume 5%, 7%, and 9% average annual market returns over the time horizon. Actual returns vary year to year and can be negative in any given year. Kiddo's 0.10% annual fee on invested assets is already netted out. The 4% savings APY is approximate (current US high-yield savings rates as of 2026; subject to change). Past performance does not guarantee future returns. This is illustrative math, not a guarantee. Some states extend custodianship from 18 to 21; check your state's rule in the{" "}
+                  Projections assume 5%, 7%, and 9% average annual market returns over the time horizon. Actual returns vary year to year and can be negative in any given year. Kiddo's 0.10% annual fee on invested assets is already netted out. The 4% savings APY is approximate (current US high-yield savings rates as of 2026; subject to change). Past performance does not guarantee future returns. This is illustrative math, not a guarantee. The state picker above sets the UTMA majority age (federal default 18; some states extend to 19, 20, or 21). For the full state-by-state table, see the{" "}
                   <Link href="/tools/utma-by-state" className="text-primary hover:underline">
                     UTMA by state
                   </Link>{" "}
