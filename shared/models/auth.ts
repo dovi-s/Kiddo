@@ -346,3 +346,42 @@ export const emailVerifications = pgTable("email_verifications", {
 
 export type EmailVerification = typeof emailVerifications.$inferSelect;
 export type InsertEmailVerification = typeof emailVerifications.$inferInsert;
+
+// Login fingerprints. One row per (userId, fingerprint) tuple seen.
+// First time a fingerprint appears for a user, we treat it as a NEW
+// device and send the new-device-sign-in alert email. Subsequent
+// logins from the same fingerprint are silent.
+//
+// Fingerprint shape: SHA-256 of (IP /24 prefix + user-agent family
+// signature). The /24 grouping avoids alerting on every Wi-Fi
+// network change (DHCP rotation, mobile cell tower hop, coffee-shop
+// IPs). The UA family signature is the browser family + major OS
+// (e.g., "Chrome|macOS") — coarse enough that a Chrome auto-update
+// doesn't fire an alert.
+//
+// Cleanup: not implemented yet. Table grows by ~1 row per user per
+// distinct device. For most users that's <10 rows lifetime. If it
+// becomes a concern, a worker can prune rows older than 365 days.
+export const loginFingerprints = pgTable("login_fingerprints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fingerprint: varchar("fingerprint", { length: 64 }).notNull(),
+  // First time we saw this fingerprint for this user. Doubles as the
+  // moment we sent the new-device alert email.
+  firstSeenAt: timestamp("first_seen_at").defaultNow().notNull(),
+  // Updated on every subsequent login with the same fingerprint.
+  // Helps the user (and admin debugging) understand which devices
+  // are still active.
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+  // Forensic context captured at first-seen time. Useful for the
+  // user's own "is this me?" review later. Trimmed conservatively
+  // to keep the row small.
+  firstSeenIp: text("first_seen_ip"),
+  firstSeenUserAgent: text("first_seen_user_agent"),
+}, (table) => [
+  uniqueIndex("login_fingerprints_user_fingerprint_unique").on(table.userId, table.fingerprint),
+  index("login_fingerprints_user_id_idx").on(table.userId),
+]);
+
+export type LoginFingerprint = typeof loginFingerprints.$inferSelect;
+export type InsertLoginFingerprint = typeof loginFingerprints.$inferInsert;

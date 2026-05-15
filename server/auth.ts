@@ -8,7 +8,7 @@ import crypto from "crypto";
 import pg from "pg";
 import path from "path";
 import type { Express, Request, RequestHandler, Response } from "express";
-import { users, passwordResets, emailVerifications, type User } from "@shared/models/auth";
+import { users, passwordResets, emailVerifications, loginFingerprints, type User } from "@shared/models/auth";
 // Imports for account-deletion helpers below. `funds` for blocked-state
 // checks; `subscriptions` + `fundMemberships` for Stripe cancellation;
 // `activities` for the audit-log entry.
@@ -50,6 +50,7 @@ import { auditLogs } from "@shared/schema";
 import { sendEmail } from "./emailDelivery";
 import { buildPasswordResetEmail } from "./templates/passwordReset";
 import { buildVerificationEmail } from "./templates/emailVerification";
+import { buildNewDeviceAlertEmail } from "./templates/newDeviceAlert";
 import { z } from "zod";
 
 const emailSchema = z
@@ -164,6 +165,112 @@ function getBaseUrlForResetLink(): string {
     process.env.APP_URL ||
     process.env.BASE_URL;
   return configured ? configured.replace(/\/+$/, "") : "https://kiddofund.com";
+}
+
+// Compute a coarse device fingerprint for the new-device-alert flow.
+// Inputs: IP /24 prefix + UA family signature (browser + major OS).
+// SHA-256 hashed for fixed-length storage + cheap comparison.
+//
+// /24 grouping intentional: avoids alerting on every Wi-Fi network
+// change, mobile cell tower hop, or coffee-shop IP rotation. The
+// UA family signature is the browser family + major OS so a Chrome
+// auto-update doesn't fire an alert either.
+//
+// The trade-off: two laptops on the same home network with the same
+// browser share a fingerprint. That's acceptable — the alert is
+// "did someone NEW sign in?" and an already-authenticated co-parent
+// on the same Wi-Fi isn't that signal.
+function computeLoginFingerprint(req: Request): { fingerprint: string; ip: string; ua: string } {
+  const rawIp = ((req.headers["x-forwarded-for"] as string | undefined) || req.ip || "")
+    .split(",")[0]
+    ?.trim() || "";
+  // /24 prefix: drop last octet of IPv4. IPv6 keeps first 4 groups.
+  let ipPrefix = rawIp;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(rawIp)) {
+    ipPrefix = rawIp.split(".").slice(0, 3).join(".") + ".0/24";
+  } else if (rawIp.includes(":")) {
+    ipPrefix = rawIp.split(":").slice(0, 4).join(":") + "::/64";
+  }
+  const ua = req.get("user-agent") || "";
+  // UA family signature: pull the obvious browser + OS tokens.
+  // Coarse on purpose; the regex below catches Chrome / Firefox /
+  // Safari / Edge family + Windows / macOS / Android / iOS family.
+  const browserMatch = /(Chrome|Firefox|Safari|Edge|Edg)\/\d+/.exec(ua);
+  const osMatch = /(Windows NT|Mac OS X|Android|iPhone OS|Linux)/.exec(ua);
+  const browser = browserMatch ? browserMatch[1] : "Other";
+  const os = osMatch ? osMatch[1] : "Other";
+  const uaSig = `${browser}|${os}`;
+  const fingerprint = crypto
+    .createHash("sha256")
+    .update(`${ipPrefix}\n${uaSig}`)
+    .digest("hex");
+  return { fingerprint, ip: rawIp, ua };
+}
+
+// Check + register the current device fingerprint. If the fingerprint
+// is new for this user, fire the new-device-alert email. Subsequent
+// logins from the same fingerprint update last_seen_at silently.
+// Fire-and-forget; failures logged but never block the login response.
+async function trackLoginDevice(userId: string, req: Request): Promise<void> {
+  try {
+    const { fingerprint, ip, ua } = computeLoginFingerprint(req);
+    const existing = await db
+      .select({ id: loginFingerprints.id })
+      .from(loginFingerprints)
+      .where(
+        and(
+          eq(loginFingerprints.userId, userId),
+          eq(loginFingerprints.fingerprint, fingerprint),
+        ),
+      )
+      .limit(1);
+    if (existing.length > 0) {
+      await db
+        .update(loginFingerprints)
+        .set({ lastSeenAt: new Date() })
+        .where(eq(loginFingerprints.id, existing[0].id));
+      return;
+    }
+    // New fingerprint: insert + alert.
+    await db.insert(loginFingerprints).values({
+      userId,
+      fingerprint,
+      firstSeenIp: ip || null,
+      firstSeenUserAgent: ua?.slice(0, 512) || null,
+    });
+    // But ONLY alert if the user has at least one OTHER fingerprint
+    // already. The first-ever login (right after register) isn't a
+    // "new device" — it's the only device. Sending an alert to a
+    // brand-new user would confuse them.
+    const otherCount = await db
+      .select({ id: loginFingerprints.id })
+      .from(loginFingerprints)
+      .where(eq(loginFingerprints.userId, userId))
+      .limit(2);
+    if (otherCount.length < 2) return; // just inserted; no prior devices.
+
+    const userRow = await db
+      .select({ email: users.email, firstName: users.firstName })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    if (userRow.length === 0 || !userRow[0].email) return;
+    // Use UA family for a friendlier device label than the full UA string.
+    const browserMatch = /(Chrome|Firefox|Safari|Edge|Edg)\/\d+/.exec(ua);
+    const osMatch = /(Windows NT|Mac OS X|Android|iPhone OS|Linux)/.exec(ua);
+    const deviceLabel = [browserMatch?.[1], osMatch?.[1]?.replace("Mac OS X", "macOS").replace("Windows NT", "Windows").replace("iPhone OS", "iOS")].filter(Boolean).join(" on ") || null;
+    const resetUrl = `${getBaseUrlForResetLink()}/login?forgot=1`;
+    await sendEmail(buildNewDeviceAlertEmail({
+      to: userRow[0].email,
+      firstName: userRow[0].firstName,
+      approxLocation: ip ? `IP starting ${ip.split(".").slice(0, 2).join(".")}.*` : null,
+      device: deviceLabel,
+      signedInAt: new Date(),
+      resetUrl,
+    }));
+  } catch (err: any) {
+    console.warn("[new-device-alert] track failed (non-fatal):", err?.message || err);
+  }
 }
 
 function describeRequestIp(req: Request): string | null {
@@ -932,6 +1039,10 @@ export function setupAuth(app: Express) {
         if (err) {
           return res.status(500).json({ message: "Failed to create session" });
         }
+        // Fire-and-forget new-device tracking. Sends an alert email
+        // when the fingerprint is novel for this user (after the
+        // first-ever login). Locked 2026-05-15.
+        void trackLoginDevice(user.id, req);
         const { passwordHash: _, kycData: _kd, ...safeUser } = user;
         return respondAfterSessionSave(req, res, () => {
           res.json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email) });
