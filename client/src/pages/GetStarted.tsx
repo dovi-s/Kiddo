@@ -604,7 +604,7 @@ export default function GetStarted() {
                 </h1>
                 <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Set up a fund once. Share one link. Anyone in your family can gift real stock in under a minute. No app, no account, nothing to download.</p>
               </AnimatedBlock>
-              <AnimatedBlock className="mt-8 grid grid-cols-3 gap-3">
+              <AnimatedBlock className="mt-8 grid grid-cols-3 gap-2 sm:gap-3">
                 {[
                   // "to set up" beats "to start" — concrete (the parent
                   // imagines the actual setup) vs. vague (start what?).
@@ -616,9 +616,15 @@ export default function GetStarted() {
                   // the page, e.g. trust microstrip + investment step).
                   { label: "No app", copy: "for gifters" },
                 ].map((item) => (
-                  <div key={item.label} className="get-started-mini-card">
-                    <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                    <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{item.copy}</p>
+                  <div key={item.label} className="get-started-mini-card flex flex-col justify-center">
+                    <p className="text-[13px] font-semibold text-foreground sm:text-sm">{item.label}</p>
+                    {/* Sentence case + no tracking — uppercase + 0.12em
+                        tracking made the copy ~3x wider than its
+                        rendered text length, forcing 3-4 line wraps
+                        on narrow viewports that crashed into the
+                        labels above. Fixed 2026-05-15 per the parent's
+                        "labels get cut off, spacing is weird" flag. */}
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{item.copy}</p>
                   </div>
                 ))}
               </AnimatedBlock>
@@ -1005,15 +1011,23 @@ export default function GetStarted() {
                 <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Share the link and the first gift can happen today. When you are ready to open the real investment account, tap Activate Investing. It takes 2 minutes.</p>
               </AnimatedBlock>
               <AnimatedBlock className="get-started-panel mt-8"><p className="text-sm font-semibold text-foreground">Your private fund link</p><div className="mt-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground break-all">{shareUrl}</div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">Text it, email it, or drop it into an invitation. The moment someone gifts through this link, the story begins.</p></AnimatedBlock>
-              <AnimatedBlock className="mt-8 grid grid-cols-3 gap-3">
+              <AnimatedBlock className="mt-8 grid grid-cols-3 gap-2 sm:gap-3">
                 {[
-                  { label: "Fund live", copy: "ready for its first gift" },
-                  { label: "Memory Book", copy: "starts with the first note" },
-                  { label: "Investing", copy: "activate when ready" },
+                  { label: "Fund live", copy: "Ready for its first gift" },
+                  { label: "Memory Book", copy: "Starts with the first note" },
+                  { label: "Investing", copy: "Activate when ready" },
                 ].map((item) => (
-                  <div key={item.label} className="get-started-mini-card">
-                    <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                    <p className="mt-1 text-[11px] uppercase tracking-[0.12em] text-muted-foreground">{item.copy}</p>
+                  <div key={item.label} className="get-started-mini-card flex flex-col justify-center">
+                    <p className="text-[13px] font-semibold leading-tight text-foreground sm:text-sm">{item.label}</p>
+                    {/* Sentence case + no tracking — see comment on the
+                        welcome-step mini-card row. The eyebrow copy here
+                        ("Starts with the first note") was the worst
+                        offender at uppercase + 0.12em tracking: rendered
+                        ~280px wide in cells with ~75px content room on a
+                        360px viewport, wrapping 4 lines and pushing the
+                        "Investing" / "Memory Book" labels into a visually
+                        cut-off feel. Fixed 2026-05-15. */}
+                    <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{item.copy}</p>
                   </div>
                 ))}
               </AnimatedBlock>

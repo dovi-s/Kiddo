@@ -839,6 +839,18 @@ function App() {
     location === "/admin" ||
     location === "/gifter" ||
     location === "/gift/success" ||
+    // /get-started is a focused onboarding journey with its own
+    // Shell chrome (back button, progress dots, logo). Rendering
+    // the DesktopSidebar alongside it produced two competing brand
+    // wordmarks on the same screen ("Kiddo Kiddo" flagged
+    // 2026-05-15) AND left the Shell content visually behind the
+    // 264px-wide fixed sidebar (the page lacks the md:ml-[264px]
+    // offset every other authenticated page uses). Hiding global
+    // nav during onboarding fixes both. Returning users adding a
+    // 2nd fund still have the Shell's own back button + browser
+    // back as escapes; the sidebar's nav links aren't urgent during
+    // the 2-5 minute flow.
+    location === "/get-started" ||
     location.startsWith("/kid/") ||
     location.startsWith("/updates/share/") ||
     location.startsWith("/updates/unsubscribe/") ||
