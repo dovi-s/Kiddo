@@ -42,6 +42,14 @@ interface HoldingDetailSheetProps {
   ownerEmail?: string | null;
   onAddMore: (ticker: string) => void;
   onSell: (holding: Holding) => void;
+  // True when the active fund is read-only for the current user
+  // (previous owner post-handoff, or a viewer). Hides every write CTA
+  // — Add more, Move to cash, Add to strategy, Adjust strategy — while
+  // keeping the holding's chart, contributor list, and gift detail
+  // visible. The holding sheet is a powerful READ surface (per-ticker
+  // chart, "Chosen with love" attribution, gift history) and stays
+  // open for read-only roles; only the parent actions disappear.
+  isReadOnly?: boolean;
   // True when this ticker is a slice of the active managed mix (VTI/BND/etc).
   // When true, per-ETF actions are replaced by strategy-level actions —
   // adding to one ETF or selling one ETF would silently break the strategy.
@@ -425,6 +433,7 @@ function HoldingDetailSheetBody({
   onAdjustStrategy,
   onNavigateToGift,
   onNavigateToGifter,
+  isReadOnly = false,
 }: HoldingDetailSheetProps & { holding: Holding }) {
   const ticker = holding.ticker;
   const name = friendlyHoldingName(ticker, holding.name);
@@ -1060,7 +1069,7 @@ function HoldingDetailSheetBody({
             adding to ONE ETF off-ratio breaks the strategy promise; selling ONE
             ETF breaks diversification AND triggers a needless taxable event.
             For managed mix the unit of action is the strategy, not the ETF. */}
-        {isManagedMix ? (
+        {isReadOnly ? null : isManagedMix ? (
           <>
             <div className="mt-5 flex gap-2.5">
               <Button

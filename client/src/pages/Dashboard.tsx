@@ -2891,9 +2891,12 @@ export default function Dashboard() {
   }, [activeFundId, heroProjectedAt65]);
 
   // Smart nudge: fire once per month on positive signals (performance, streak, milestone)
-  // Must live AFTER activeAutoInvest, totalValue, and age18Transition are declared
+  // Must live AFTER activeAutoInvest, totalValue, and age18Transition are declared.
+  // Suppress entirely for read-only roles (previous owner, viewer) — the nudge's CTA
+  // is "Adjust recurring", which is a parent-control action the role can't perform.
   useEffect(() => {
     if (!activeFundId || !hasAutoInvestAccess || !activeAutoInvest || fundHistory.length < 2) return;
+    if (isReadOnlyFund) return;
     const NUDGE_KEY = `kiddo.smartNudge.lastShown.${activeFundId}`;
     const lastShown = localStorage.getItem(NUDGE_KEY);
     const now = Date.now();
@@ -2943,7 +2946,7 @@ export default function Dashboard() {
       setSmartNudge({ scenario: "milestone", milestoneAmt: hitMilestone, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection: doubledProjection ?? undefined, monthsAtCurrentRate: monthsAtCurrent ?? undefined, monthsDoubled: monthsDoubled ?? undefined });
       localStorage.setItem(NUDGE_KEY, String(now));
     }
-  }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt]);
+  }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt, isReadOnlyFund]);
 
   const cashContext: CashContext = (() => {
     if (activeFund?.status !== "active") return "kyc_pending";
@@ -4478,20 +4481,22 @@ export default function Dashboard() {
                         </p>
                       )}
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
-                        <button
-                          onClick={() => { haptic("medium"); handleShareLink(); }}
-                          data-testid="button-empty-state-share-link"
-                          className="rounded-full"
-                          style={{
-                            padding: "10px 20px", fontSize: 13, background: "hsl(var(--kiddo-gold))",
-                            color: "white", border: "none",
-                            fontWeight: 700, cursor: "pointer",
-                            display: "inline-flex", alignItems: "center", gap: 6,
-                          }}
-                        >
-                          <Share2 size={13} color="white" />
-                          Share
-                        </button>
+                        {!isReadOnlyFund && (
+                          <button
+                            onClick={() => { haptic("medium"); handleShareLink(); }}
+                            data-testid="button-empty-state-share-link"
+                            className="rounded-full"
+                            style={{
+                              padding: "10px 20px", fontSize: 13, background: "hsl(var(--kiddo-gold))",
+                              color: "white", border: "none",
+                              fontWeight: 700, cursor: "pointer",
+                              display: "inline-flex", alignItems: "center", gap: 6,
+                            }}
+                          >
+                            <Share2 size={13} color="white" />
+                            Share
+                          </button>
+                        )}
                       </div>
                     </>
                   ) : (
@@ -4852,22 +4857,30 @@ export default function Dashboard() {
                         );
                       })()}
 
-                      {/* CTA row */}
+                      {/* CTA row. Share button hidden for read-only roles
+                          (viewers + previous owners post-handoff). For a
+                          previous owner, the gift link is the kid's now;
+                          a Share affordance pointing at their old fund
+                          would invite gifts that go to a fund they no
+                          longer control. Cleaner to hide entirely than
+                          to leave a 403-bound dead CTA. */}
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
-                        <button
-                          onClick={() => { haptic("medium"); handleShareLink(); }}
-                          data-testid="button-hero-share-link"
-                          style={{
-                            padding: "10px 20px", fontSize: 13,
-                            background: "hsl(var(--kiddo-gold))", color: "white",
-                            border: "none", borderRadius: 9999,
-                            fontWeight: 700, cursor: "pointer",
-                            display: "inline-flex", alignItems: "center", gap: 6,
-                          }}
-                        >
-                          <Share2 size={13} color="white" />
-                          Share
-                        </button>
+                        {!isReadOnlyFund && (
+                          <button
+                            onClick={() => { haptic("medium"); handleShareLink(); }}
+                            data-testid="button-hero-share-link"
+                            style={{
+                              padding: "10px 20px", fontSize: 13,
+                              background: "hsl(var(--kiddo-gold))", color: "white",
+                              border: "none", borderRadius: 9999,
+                              fontWeight: 700, cursor: "pointer",
+                              display: "inline-flex", alignItems: "center", gap: 6,
+                            }}
+                          >
+                            <Share2 size={13} color="white" />
+                            Share
+                          </button>
+                        )}
                         {(() => {
                           // Hero CTA = the long-horizon emotional anchor. Math
                           // (two-phase contribution + compound, 7% yearly average,
@@ -5410,7 +5423,7 @@ export default function Dashboard() {
               );
             })()}
 
-            {uninvestedCash > 0 && (
+            {uninvestedCash > 0 && !isReadOnlyFund && (
               <motion.section
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -5526,11 +5539,19 @@ export default function Dashboard() {
                   transition={{ duration: 0.18, delay: 0.011 }}
                 >
                   <div className="flex w-full">
-                    {/* 1. Share — the loop trigger */}
-                    <button type="button" onClick={() => { haptic("medium"); handleShareLink(); }} className={btn} data-testid="pill-share-link">
-                      <span className={tile}><Share2 size={14} className="md:hidden" strokeWidth={2} /><Share2 size={18} className="hidden md:block" strokeWidth={2} /></span>
-                      <span className={lbl}>Share link</span>
-                    </button>
+                    {/* 1. Share — the loop trigger.
+                        Hidden for read-only roles. A previous owner sharing
+                        their handed-off fund's link would route incoming
+                        gifts to a fund they no longer control; viewers
+                        sharing isn't theirs to do. Preview pills (gifter
+                        page, kid view) stay visible — those are READ
+                        affordances, not WRITE actions. */}
+                    {!isReadOnlyFund && (
+                      <button type="button" onClick={() => { haptic("medium"); handleShareLink(); }} className={btn} data-testid="pill-share-link">
+                        <span className={tile}><Share2 size={14} className="md:hidden" strokeWidth={2} /><Share2 size={18} className="hidden md:block" strokeWidth={2} /></span>
+                        <span className={lbl}>Share link</span>
+                      </button>
+                    )}
                     {/* 2. Gifter page — preview from gifter perspective.
                         Wouter <Link> for proper SPA nav. Pass props directly on
                         Link (no inner <a>) so wouter renders one clean anchor
@@ -6290,7 +6311,7 @@ export default function Dashboard() {
                                         </p>
                                       )}
                                     </button>
-                                    {isChosen && (
+                                    {isChosen && !isReadOnlyFund && (
                                       <button
                                         type="button"
                                         onClick={handleAddMore}
@@ -6340,44 +6361,46 @@ export default function Dashboard() {
                                         <p className="text-[12px] font-semibold text-muted-foreground/85">Chosen with love</p>
                                         <span className="text-[11px]">💚</span>
                                       </div>
-                                      <div className="relative flex items-center gap-1.5">
-                                        <AnimatePresence>
-                                          {investPickerOpen && (
-                                            <motion.div
-                                              key="invest-picker"
-                                              initial={{ opacity: 0, scale: 0.92, x: 6 }}
-                                              animate={{ opacity: 1, scale: 1, x: 0 }}
-                                              exit={{ opacity: 0, scale: 0.92, x: 6 }}
-                                              transition={{ duration: 0.14, ease: "easeOut" }}
-                                              className="flex items-center gap-1.5"
-                                            >
-                                              <button
-                                                type="button"
-                                                onClick={() => { haptic("selection"); setInvestPickerOpen(false); setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("pick"); setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeModalOpen(true); }}
-                                                className="rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] px-2.5 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-gold-ink))] transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.20)]"
+                                      {!isReadOnlyFund && (
+                                        <div className="relative flex items-center gap-1.5">
+                                          <AnimatePresence>
+                                            {investPickerOpen && (
+                                              <motion.div
+                                                key="invest-picker"
+                                                initial={{ opacity: 0, scale: 0.92, x: 6 }}
+                                                animate={{ opacity: 1, scale: 1, x: 0 }}
+                                                exit={{ opacity: 0, scale: 0.92, x: 6 }}
+                                                transition={{ duration: 0.14, ease: "easeOut" }}
+                                                className="flex items-center gap-1.5"
                                               >
-                                                One time
-                                              </button>
-                                              <button
-                                                type="button"
-                                                onClick={() => { haptic("selection"); setInvestPickerOpen(false); setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }}
-                                                className="rounded-full border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))] transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.15)]"
-                                              >
-                                                Recurring
-                                              </button>
-                                            </motion.div>
-                                          )}
-                                        </AnimatePresence>
-                                        <button
-                                          type="button"
-                                          onClick={() => { haptic("light"); setInvestPickerOpen(v => !v); }}
-                                          className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors ${investPickerOpen ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]"}`}
-                                          aria-label="Add investment"
-                                        >
-                                          Add an investment
-                                          <Plus size={10} className={`transition-transform ${investPickerOpen ? "rotate-45" : ""}`} />
-                                        </button>
-                                      </div>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => { haptic("selection"); setInvestPickerOpen(false); setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("pick"); setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeModalOpen(true); }}
+                                                  className="rounded-full border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] px-2.5 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-gold-ink))] transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.20)]"
+                                                >
+                                                  One time
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => { haptic("selection"); setInvestPickerOpen(false); setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }}
+                                                  className="rounded-full border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))] transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.15)]"
+                                                >
+                                                  Recurring
+                                                </button>
+                                              </motion.div>
+                                            )}
+                                          </AnimatePresence>
+                                          <button
+                                            type="button"
+                                            onClick={() => { haptic("light"); setInvestPickerOpen(v => !v); }}
+                                            className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors ${investPickerOpen ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]"}`}
+                                            aria-label="Add investment"
+                                          >
+                                            Add an investment
+                                            <Plus size={10} className={`transition-transform ${investPickerOpen ? "rotate-45" : ""}`} />
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                   {[...chosenH].sort((a, b) => parseFloat(b.currentValue || "0") - parseFloat(a.currentValue || "0")).map((h) => renderHoldingRow(h, true))}
@@ -6974,31 +6997,36 @@ export default function Dashboard() {
                             users who want a dedicated CTA; this link
                             tightens the loop for users who want to act
                             from inside this section. Same global share
-                            modal the rest of the app uses. */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            // Was dispatching `kiddo:open-share-modal` —
-                            // but Dashboard ALSO listens for that event,
-                            // and GlobalShareModal listens at App level
-                            // unconditionally. Both modals fired in
-                            // parallel, stacking. We're already inside
-                            // Dashboard scope here, so calling
-                            // handleShareLink() directly avoids the event
-                            // bus entirely and only opens the canonical
-                            // in-page modal.
-                            haptic("selection");
-                            handleShareLink();
-                          }}
-                          style={{
-                            background: "none", border: "none", padding: 0,
-                            color: "hsl(var(--kiddo-evergreen))", fontWeight: 700,
-                            cursor: "pointer", fontFamily: "inherit", fontSize: "inherit",
-                          }}
-                          data-testid="who-loves-share-link"
-                        >
-                          Share with one more →
-                        </button>
+                            modal the rest of the app uses.
+                            Hidden for read-only roles — a previous owner
+                            inviting more gifts would route them to a fund
+                            they no longer control. */}
+                        {!isReadOnlyFund && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Was dispatching `kiddo:open-share-modal` —
+                              // but Dashboard ALSO listens for that event,
+                              // and GlobalShareModal listens at App level
+                              // unconditionally. Both modals fired in
+                              // parallel, stacking. We're already inside
+                              // Dashboard scope here, so calling
+                              // handleShareLink() directly avoids the event
+                              // bus entirely and only opens the canonical
+                              // in-page modal.
+                              haptic("selection");
+                              handleShareLink();
+                            }}
+                            style={{
+                              background: "none", border: "none", padding: 0,
+                              color: "hsl(var(--kiddo-evergreen))", fontWeight: 700,
+                              cursor: "pointer", fontFamily: "inherit", fontSize: "inherit",
+                            }}
+                            data-testid="who-loves-share-link"
+                          >
+                            Share with one more →
+                          </button>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -7137,8 +7165,17 @@ export default function Dashboard() {
                 );
               })()}
 
-              {/* ── Auto-invest deck (v2) ── */}
-              {(() => {
+              {/* ── Auto-invest deck (v2) ──
+                  Hidden for read-only roles (previous owner, viewer).
+                  This is a parent-control surface — setting up recurring
+                  investments, pausing schedules, and editing tickers all
+                  require write access on the fund's owner relationship.
+                  A previous owner sees their old schedules listed in the
+                  per-fund history rows (Activity / DetailHistoryModal),
+                  which is the correct READ surface for what they put in
+                  before handoff. The deck itself is a WRITE/SET-UP surface
+                  and has no read-only mode to fall back to. */}
+              {!isReadOnlyFund && (() => {
                 // Filter out cancelled schedules AND any schedule whose ticker
                 // has been retired from the picker (LEGACY_PICK_META members
                 // like Z/Zillow). The schedule rows still exist server-side so
@@ -7614,7 +7651,26 @@ export default function Dashboard() {
                     )}
                 </div>
                 <div className="mt-auto pt-4">
-                  {lastOwnGift ? (
+                  {isReadOnlyFund ? (
+                    // Read-only role (previous owner, viewer): show the
+                    // last-investment chrome above unchanged, but the
+                    // action stack (Invest more, Repeat last gift, Add
+                    // custom amount, Contribute now from schedule, View
+                    // all investments) is all write or write-adjacent.
+                    // View-all still routes via `openDetailScope` which
+                    // is a per-fund read endpoint — keep that as the
+                    // single read affordance so a previous owner can
+                    // browse their own historical contributions on the
+                    // handed-off fund. Everything else is hidden.
+                    <button
+                      type="button"
+                      className="w-full text-center text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors py-1"
+                      onClick={() => { openDetailScope({ kind: "contributions" }); }}
+                      data-testid="button-one-time-view-all-readonly"
+                    >
+                      View past investments →
+                    </button>
+                  ) : lastOwnGift ? (
                     <div className="space-y-2">
                       {/* Hierarchy: solid evergreen primary = invest in the fund (managed
                           mix, age-appropriate), outlined evergreen secondary = repeat the
@@ -7754,14 +7810,16 @@ export default function Dashboard() {
                     ? `${activeFund.recipientFirstName}'s Occasions and Goals`
                     : "Occasions and Goals"}
                 </span>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); haptic("selection"); if (isFamily || isStarter) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
-                  className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)] transition-colors"
-                  aria-label="New occasion or goal"
-                >
-                  <Plus size={13} />
-                </button>
+                {!isReadOnlyFund && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); haptic("selection"); if (isFamily || isStarter) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)] transition-colors"
+                    aria-label="New occasion or goal"
+                  >
+                    <Plus size={13} />
+                  </button>
+                )}
               </div>
 
               {/* ── Horizontal tile row ── */}
@@ -8155,8 +8213,12 @@ export default function Dashboard() {
                       {/* Archived tiles */}
                       {visibleArchived.map(e => renderTile(e, true))}
 
-                      {/* Suggested tiles */}
-                      {visibleSuggestions.map(sug => {
+                      {/* Suggested tiles. Hidden for read-only roles —
+                          tapping a suggestion opens the create-event sheet,
+                          which is a parent-control surface. Active and
+                          archived tiles above still render so the previous
+                          owner can browse the kid's occasion history. */}
+                      {!isReadOnlyFund && visibleSuggestions.map(sug => {
                         const isSavingsGoal = sug.prefill.eventCategory === "savings_goal";
                         const theme = getEventCoverTheme({
                           suggestionKey: sug.key,
@@ -8265,21 +8327,25 @@ export default function Dashboard() {
                         </button>
                       )}
 
-                      {/* Create tile - always last */}
-                      <button
-                        type="button"
-                        onClick={() => { haptic("selection"); if (isFamily || isStarter) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
-                        style={{
-                          width: 72, minWidth: 72, height: 148, flexShrink: 0,
-                          borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)",
-                          background: "rgba(26,23,16,0.025)", cursor: "pointer",
-                          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                          gap: 6, color: "rgba(26,23,16,0.4)",
-                        }}
-                      >
-                        <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
-                        <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>New</span>
-                      </button>
+                      {/* Create tile - always last. Hidden for read-only
+                          roles (previous owner, viewer) — they can't create
+                          new occasions on a fund they don't control. */}
+                      {!isReadOnlyFund && (
+                        <button
+                          type="button"
+                          onClick={() => { haptic("selection"); if (isFamily || isStarter) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
+                          style={{
+                            width: 72, minWidth: 72, height: 148, flexShrink: 0,
+                            borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)",
+                            background: "rgba(26,23,16,0.025)", cursor: "pointer",
+                            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                            gap: 6, color: "rgba(26,23,16,0.4)",
+                          }}
+                        >
+                          <span style={{ fontSize: 22, lineHeight: 1 }}>+</span>
+                          <span style={{ fontSize: 9.5, fontWeight: 600, lineHeight: 1.3, textAlign: "center" }}>New</span>
+                        </button>
+                      )}
                     </div>
 
                     {/* ── "All in the same fund" clarity note ── */}
@@ -8652,8 +8718,14 @@ export default function Dashboard() {
                                   </div>
                                 )}
 
-                                {/* Occasion code - active occasions only */}
-                                {!isArch && dashboardSummary?.eventGiftCodes?.[ev.id] && (() => {
+                                {/* Occasion code - active occasions only.
+                                    Hidden for read-only roles — the code
+                                    is a gift-routing affordance (anyone
+                                    with the code can route a gift to the
+                                    occasion), so it's a Share-equivalent.
+                                    Previous owners post-handoff shouldn't
+                                    be circulating this. */}
+                                {!isArch && !isReadOnlyFund && dashboardSummary?.eventGiftCodes?.[ev.id] && (() => {
                                   const evCode = dashboardSummary.eventGiftCodes![ev.id].code;
                                   return (
                                     <button
@@ -8686,8 +8758,10 @@ export default function Dashboard() {
                                   );
                                 })()}
 
-                                {/* Share button - active only */}
-                                {!isArch && evUrl && (
+                                {/* Share button - active only. Hidden for
+                                    read-only roles per the same logic as
+                                    the fund-level share buttons. */}
+                                {!isArch && !isReadOnlyFund && evUrl && (
                                   <button
                                     type="button"
                                     onClick={() => { haptic("medium"); const thisPage: SharePage = sharePages.find(p => p.url === evUrl) ?? { label: ev.name, url: evUrl }; const rest = sharePages.filter(p => p.url !== evUrl); setEventShareTarget([thisPage, ...rest]); }}
@@ -8704,8 +8778,10 @@ export default function Dashboard() {
                                   </button>
                                 )}
 
-                                {/* Archived: "Create from this" CTA */}
-                                {isArch && (
+                                {/* Archived: "Create from this" CTA.
+                                    Read-only roles can't create new
+                                    occasions; hide. */}
+                                {isArch && !isReadOnlyFund && (
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -8724,19 +8800,26 @@ export default function Dashboard() {
                                   </button>
                                 )}
 
-                                {/* Edit + Preview row */}
+                                {/* Edit + Preview row.
+                                    Edit hidden for read-only roles — the
+                                    underlying create-event sheet does a
+                                    PATCH, which the server rejects for
+                                    previous owners. Preview link is a
+                                    pure read affordance, stays. */}
                                 <div style={{ display: "flex", gap: 8 }}>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      haptic("selection");
-                                      setEditEventTarget({ id: ev.id, name: ev.name, slug: (ev as any).slug, eventType: ev.eventType, eventDate: ev.eventDate, goalAmount: ev.goalAmount, description: (ev as any).description, imageUrl: (ev as any).imageUrl, imageFocalX: (ev as any).imageFocalX, imageFocalY: (ev as any).imageFocalY });
-                                      setCreateEventSheetOpen(true);
-                                    }}
-                                    style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "1px solid rgba(26,23,16,0.12)", background: "transparent", fontSize: 12, fontWeight: 600, color: "rgba(26,23,16,0.55)", cursor: "pointer" }}
-                                  >
-                                    Edit
-                                  </button>
+                                  {!isReadOnlyFund && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        haptic("selection");
+                                        setEditEventTarget({ id: ev.id, name: ev.name, slug: (ev as any).slug, eventType: ev.eventType, eventDate: ev.eventDate, goalAmount: ev.goalAmount, description: (ev as any).description, imageUrl: (ev as any).imageUrl, imageFocalX: (ev as any).imageFocalX, imageFocalY: (ev as any).imageFocalY });
+                                        setCreateEventSheetOpen(true);
+                                      }}
+                                      style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "1px solid rgba(26,23,16,0.12)", background: "transparent", fontSize: 12, fontWeight: 600, color: "rgba(26,23,16,0.55)", cursor: "pointer" }}
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
                                   {evUrl && !isArch && (
                                     <a
                                       href={evUrl}
@@ -8748,7 +8831,7 @@ export default function Dashboard() {
                                       Preview
                                     </a>
                                   )}
-                                  {isArch && (
+                                  {isArch && !isReadOnlyFund && (
                                     <button
                                       type="button"
                                       onClick={async () => {
@@ -8804,8 +8887,9 @@ export default function Dashboard() {
                                   )}
                                 </div>
 
-                                {/* Archive - active only */}
-                                {!isArch && (
+                                {/* Archive - active only. Write action;
+                                    hidden for read-only roles. */}
+                                {!isArch && !isReadOnlyFund && (
                                   <button
                                     type="button"
                                     onClick={async () => {
@@ -10337,16 +10421,18 @@ export default function Dashboard() {
                   })}
                 </div>
                 <div style={{ height: 1, background: "rgba(26,23,16,0.07)" }} />
-                <div className="px-5 py-4">
-                  <Button
-                    className="w-full kiddo-gold-button rounded-full"
-                    onClick={() => { setSelectedGifter(null); handleShareLink(); }}
-                    data-testid="button-anon-modal-share-gift-link"
-                  >
-                    <Share2 size={14} className="mr-2" />
-                    Share {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} gift link
-                  </Button>
-                </div>
+                {!isReadOnlyFund && (
+                  <div className="px-5 py-4">
+                    <Button
+                      className="w-full kiddo-gold-button rounded-full"
+                      onClick={() => { setSelectedGifter(null); handleShareLink(); }}
+                      data-testid="button-anon-modal-share-gift-link"
+                    >
+                      <Share2 size={14} className="mr-2" />
+                      Share {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} gift link
+                    </Button>
+                  </div>
+                )}
               </>
             );
           })() : (() => {
@@ -10993,14 +11079,16 @@ export default function Dashboard() {
                       See {selectedGifter.name.split(" ")[0]}'s story in Memory Book →
                     </button>
                   )}
-                  <Button
-                    className="w-full kiddo-gold-button rounded-full"
-                    onClick={() => { setSelectedGifter(null); handleShareLink(); }}
-                    data-testid="button-gifter-modal-share-gift-link"
-                  >
-                    <Share2 size={14} className="mr-2" />
-                    Share {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} gift link
-                  </Button>
+                  {!isReadOnlyFund && (
+                    <Button
+                      className="w-full kiddo-gold-button rounded-full"
+                      onClick={() => { setSelectedGifter(null); handleShareLink(); }}
+                      data-testid="button-gifter-modal-share-gift-link"
+                    >
+                      <Share2 size={14} className="mr-2" />
+                      Share {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} gift link
+                    </Button>
+                  )}
                 </div>
               </>
             );
@@ -11110,6 +11198,7 @@ export default function Dashboard() {
           giftAllocations={giftAllocations}
           thankYousByGiftId={dashboardThankYouByGiftId}
           ownerEmail={user?.email || null}
+          isReadOnly={isReadOnlyFund}
           isManagedMix={selectedHolding ? managedStrategyTickerSet.has(String(selectedHolding.ticker || "").toUpperCase()) : false}
           strategyLabel={strategyLabelFor((activeFund as any)?.investmentStrategy, activeFund?.recipientFirstName)}
           onAddToStrategy={() => {
