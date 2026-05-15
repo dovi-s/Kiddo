@@ -1155,15 +1155,18 @@ const GIFTER_STOCK_OPTIONS = [
 
 // Managed-mix custom allocations are ETFs only. Individual stocks live in
 // the gifter pick list ("Chosen with Love"), never in the managed mix.
+// Colors match the strategy-card palette in STRATEGIES above (VTI, VXUS,
+// BND, VGT) and extend the palette for the additional optional tickers
+// so the stacked-mix visualization stays consistent across the screen.
 const CUSTOM_ALLOCATION_OPTIONS = [
-  { ticker: "VTI",  name: "Total Market Stocks" },
-  { ticker: "VXUS", name: "International Stocks" },
-  { ticker: "BND",  name: "Bonds" },
-  { ticker: "VGT",  name: "Tech ETF" },
-  { ticker: "VUG",  name: "Growth ETF" },
-  { ticker: "VYM",  name: "Dividend ETF" },
-  { ticker: "SCHD", name: "Dividend Growth" },
-  { ticker: "QQQ",  name: "Nasdaq 100" },
+  { ticker: "VTI",  name: "Total Market Stocks", color: "#4F46E5" },
+  { ticker: "VXUS", name: "International Stocks", color: "#0EA5E9" },
+  { ticker: "BND",  name: "Bonds",                color: "#10B981" },
+  { ticker: "VGT",  name: "Tech ETF",             color: "#F59E0B" },
+  { ticker: "VUG",  name: "Growth ETF",           color: "#A855F7" },
+  { ticker: "VYM",  name: "Dividend ETF",         color: "#EC4899" },
+  { ticker: "SCHD", name: "Dividend Growth",      color: "#14B8A6" },
+  { ticker: "QQQ",  name: "Nasdaq 100",           color: "#EF4444" },
 ] as const;
 
 const DEFAULT_CUSTOM_ALLOCATION_ROWS = [
@@ -1436,7 +1439,13 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
   const totalCustom = customRows.reduce((sum, row) => sum + (Number.isFinite(row.weight) ? row.weight : 0), 0);
   const customTickerSet = new Set(customRows.map((row) => row.ticker).filter(Boolean));
   const customHasDuplicates = customTickerSet.size !== customRows.filter((row) => row.ticker).length;
-  const customValid = totalCustom > 0 && !customHasDuplicates && customRows.every((row) => row.ticker);
+  // Strict 100% enforcement. Previously: save allowed any total > 0 and
+  // the server silently normalized — that was a foot-gun. A parent
+  // entering 50+30+20+10 = 110 expects the entered numbers to be
+  // preserved; the server's normalize-to-100 turned them into
+  // 45.4/27.3/18.2/9.1, which is not what they typed. Now the save is
+  // disabled until total is exactly 100, with clear hints inline.
+  const customValid = totalCustom === 100 && !customHasDuplicates && customRows.every((row) => row.ticker);
 
   useEffect(() => {
     let canceled = false;
@@ -1731,6 +1740,67 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
             Pick the ETFs and weights for {fund?.recipientFirstName ? `${fund.recipientFirstName}'s` : "your child's"} managed mix.
             Up to {MAX_CUSTOM_HOLDINGS} holdings. Want a specific stock like Apple or Disney instead? That goes in <span className="font-semibold">Chosen with Love</span>.
           </p>
+
+          {/* Stacked-mix visualization. Same shape as the live-fund
+              allocation pie / strategy-card mini-bars, kept consistent
+              across the screen. Each segment is a holding, colored by
+              the CUSTOM_ALLOCATION_OPTIONS color map, width
+              proportional to its weight. Holdings at 0% don't render
+              (they're not in the mix yet). The bar is the single
+              best at-a-glance signal for whether the mix totals 100%:
+              if it's full, you're at 100; if it's short, the empty
+              space tells you exactly how much is missing. Numbers
+              alone (50+25+15+10=?) require mental math; the bar
+              doesn't. */}
+          {(() => {
+            const segments: Array<{ ticker: string; weight: number; color: string }> = [];
+            for (const row of customRows) {
+              const opt = CUSTOM_ALLOCATION_OPTIONS.find((o) => o.ticker === row.ticker);
+              if (opt && row.weight > 0) {
+                segments.push({ ticker: row.ticker, weight: row.weight, color: opt.color });
+              }
+            }
+            const renderedTotal = Math.min(100, totalCustom);
+            return (
+              <div className="space-y-1.5">
+                <div
+                  className="relative h-6 w-full overflow-hidden rounded-full border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream))]"
+                  role="img"
+                  aria-label={`Mix total ${totalCustom}%`}
+                  data-testid="custom-mix-stacked-bar"
+                >
+                  <div className="absolute inset-0 flex">
+                    {segments.map((seg, i) => (
+                      <div
+                        key={`${seg.ticker}-${i}`}
+                        title={`${seg.ticker} · ${seg.weight}%`}
+                        style={{
+                          width: `${(seg.weight / 100) * 100}%`,
+                          background: seg.color,
+                        }}
+                      />
+                    ))}
+                    {/* Fill the remainder when total < 100. Visible empty
+                        space communicates "this much is missing." */}
+                    {renderedTotal < 100 && (
+                      <div
+                        style={{ width: `${100 - renderedTotal}%` }}
+                        className="bg-transparent"
+                      />
+                    )}
+                  </div>
+                  {/* Overflow indicator: when total > 100, show a thin
+                      red stripe at the right edge as a visual warning.
+                      Real fix is the save-button gate + the total
+                      hint below, but a glance-level signal helps. */}
+                  {totalCustom > 100 && (
+                    <div className="absolute inset-y-0 right-0 w-1 bg-red-500" aria-hidden />
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="space-y-2">
             {customRows.map((row, index) => {
               const currentOption = CUSTOM_ALLOCATION_OPTIONS.find((option) => option.ticker === row.ticker);
@@ -1747,7 +1817,39 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                         type="button"
                         onClick={() => {
                           haptic("selection");
-                          setCustomRows((prev) => prev.filter((_, rowIndex) => rowIndex !== index));
+                          // Auto-redistribute on remove: hand the removed
+                          // weight back to the remaining holdings,
+                          // proportional to their existing weights. So
+                          // removing BND (15%) from 50/25/15/10 returns
+                          // to the largest first, keeping the mix at
+                          // 100% without forcing the parent to manually
+                          // re-balance. Edge case: if all remaining are
+                          // 0, distribute evenly. Always rounded to
+                          // whole percents; any rounding leftover goes
+                          // to the largest remaining holding so the
+                          // total stays exactly 100.
+                          setCustomRows((prev) => {
+                            const removed = prev[index];
+                            const remaining = prev.filter((_, i) => i !== index);
+                            if (remaining.length === 0) return remaining;
+                            const removedWeight = Number.isFinite(removed?.weight) ? removed.weight : 0;
+                            if (removedWeight <= 0) return remaining;
+                            const remainingTotal = remaining.reduce((s, r) => s + (Number.isFinite(r.weight) ? r.weight : 0), 0);
+                            const adjusted = remaining.map((r) => {
+                              const share = remainingTotal > 0
+                                ? (r.weight / remainingTotal) * removedWeight
+                                : removedWeight / remaining.length;
+                              return { ...r, weight: r.weight + Math.round(share) };
+                            });
+                            // Reconcile rounding so total is exactly 100.
+                            const adjustedTotal = adjusted.reduce((s, r) => s + r.weight, 0);
+                            const delta = (prev.reduce((s, r) => s + r.weight, 0)) - adjustedTotal;
+                            if (delta !== 0 && adjusted.length > 0) {
+                              const largestIdx = adjusted.reduce((mi, r, i) => r.weight > adjusted[mi].weight ? i : mi, 0);
+                              adjusted[largestIdx] = { ...adjusted[largestIdx], weight: Math.max(0, adjusted[largestIdx].weight + delta) };
+                            }
+                            return adjusted;
+                          });
                         }}
                         className="rounded-md border border-border px-2 py-0.5 text-[11px] text-muted-foreground hover:text-foreground"
                         data-testid={`button-remove-custom-holding-${index}`}
@@ -1810,26 +1912,119 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
               );
             })}
           </div>
-          {customRows.length < MAX_CUSTOM_HOLDINGS && remainingCustomOptions.length > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => {
-                const nextOption = remainingCustomOptions[0];
-                if (!nextOption) return;
-                haptic("selection");
-                setCustomRows((prev) => [...prev, { ticker: nextOption.ticker, weight: 0 }]);
-              }}
-              data-testid="button-add-custom-holding"
-            >
-              Add another holding
-            </Button>
-          )}
-          <p className={`text-xs ${customValid ? "text-muted-foreground" : "text-red-600"}`}>
-            Total: {totalCustom.toFixed(0)}%.
-            {customHasDuplicates ? " Each holding must be unique." : " We normalize these weights automatically when saved."}
-          </p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            {customRows.length < MAX_CUSTOM_HOLDINGS && remainingCustomOptions.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  const nextOption = remainingCustomOptions[0];
+                  if (!nextOption) return;
+                  haptic("selection");
+                  // Auto-adjust on add. Previous behavior: append at 0%
+                  // weight. That made adding a holding meaningless — the
+                  // parent had to manually re-do math (subtract from
+                  // existing holdings, give to the new one, ensure
+                  // total stays 100). Now: take from the largest
+                  // existing holding, give to the new one. Default
+                  // take = 10% (or the gap to 100% if the mix is
+                  // currently below 100%, whichever is smaller). The
+                  // largest holding's input visibly updates so the
+                  // parent can see exactly what was moved.
+                  //
+                  // Logic:
+                  //   - If current total < 100: new holding gets the
+                  //     gap, capped at 25% (so a single add doesn't
+                  //     dominate). Existing holdings unchanged.
+                  //   - If current total == 100: take 10% from the
+                  //     largest (clamped to half its current value
+                  //     so the largest doesn't drop to 0). The new
+                  //     holding gets that amount.
+                  //   - If current total > 100: degenerate state;
+                  //     append at 0% and let the parent rebalance
+                  //     manually. The save button is already
+                  //     disabled in this case so the visual hint
+                  //     directs them to fix the total before
+                  //     adding more.
+                  setCustomRows((prev) => {
+                    const total = prev.reduce((s, r) => s + (Number.isFinite(r.weight) ? r.weight : 0), 0);
+                    if (total < 100) {
+                      const gap = 100 - total;
+                      const newWeight = Math.min(gap, 25);
+                      return [...prev, { ticker: nextOption.ticker, weight: newWeight }];
+                    }
+                    if (total === 100 && prev.length > 0) {
+                      const largestIdx = prev.reduce((mi, r, i) => r.weight > prev[mi].weight ? i : mi, 0);
+                      const largestWeight = prev[largestIdx].weight;
+                      const take = Math.min(10, Math.max(1, Math.floor(largestWeight / 2)));
+                      const next = prev.map((r, i) =>
+                        i === largestIdx ? { ...r, weight: r.weight - take } : r,
+                      );
+                      return [...next, { ticker: nextOption.ticker, weight: take }];
+                    }
+                    return [...prev, { ticker: nextOption.ticker, weight: 0 }];
+                  });
+                }}
+                data-testid="button-add-custom-holding"
+              >
+                Add another holding
+              </Button>
+            )}
+            {/* Escape hatch when the mix is messy. Splits 100% evenly
+                across all current holdings, rounded to whole percents
+                (rounding leftover goes to the first holding). Quick
+                "I gave up dialing this in" rescue without forcing the
+                parent to delete and re-add everything. */}
+            {customRows.length > 1 && totalCustom !== 100 && (
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  haptic("selection");
+                  setCustomRows((prev) => {
+                    if (prev.length === 0) return prev;
+                    const base = Math.floor(100 / prev.length);
+                    const leftover = 100 - (base * prev.length);
+                    return prev.map((r, i) => ({ ...r, weight: base + (i === 0 ? leftover : 0) }));
+                  });
+                }}
+                data-testid="button-balance-evenly"
+              >
+                Balance evenly
+              </Button>
+            )}
+          </div>
+
+          {/* Total line. Concrete + color-coded. Replaces the previous
+              "we normalize these weights automatically when saved" hint,
+              which was misleading — parents typing 50+30+20+10=110
+              expected those numbers preserved, but the server quietly
+              normalized to 45.5/27.3/18.2/9.1. Now the save button is
+              disabled until the total is exactly 100, with explicit
+              guidance on how to get there. */}
+          <div
+            className={`flex items-center justify-between rounded-xl px-3 py-2 text-xs ${
+              customHasDuplicates
+                ? "border border-red-200 bg-red-50 text-red-700"
+                : totalCustom === 100
+                  ? "border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] text-[hsl(var(--kiddo-evergreen))]"
+                  : "border border-amber-200 bg-amber-50 text-amber-900"
+            }`}
+            data-testid="custom-mix-total"
+          >
+            <span className="font-semibold tabular-nums">Total: {totalCustom.toFixed(0)}%</span>
+            <span>
+              {customHasDuplicates
+                ? "Each holding must be unique"
+                : totalCustom === 100
+                  ? "Ready to save"
+                  : totalCustom < 100
+                    ? `Need ${(100 - totalCustom).toFixed(0)}% more to save`
+                    : `Over by ${(totalCustom - 100).toFixed(0)}% — reduce somewhere`}
+            </span>
+          </div>
         </div>
       )}
 
