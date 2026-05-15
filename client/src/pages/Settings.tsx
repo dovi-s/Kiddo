@@ -18,6 +18,7 @@ import { SuccessorCustodianCard } from "@/components/SuccessorCustodianCard";
 import { ChildIdentityCard } from "@/components/ChildIdentityCard";
 import { FundDetailsCard } from "@/components/FundDetailsCard";
 import { InvitationsToYouCard } from "@/components/InvitationsToYouCard";
+import { CloseFundCard } from "@/components/CloseFundCard";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -4219,41 +4220,15 @@ const [editFundName, setEditFundName] = useState("");
               </div>
             </SectionCard>
 
-            {/* ── Close this fund ── */}
-            {/* Relocated 2026-05-14 from the membership tab to here per
-                the WHO/HOW information-architecture principle: close-
-                this-fund is a per-fund action (it changes one fund's
-                state, not the user's identity or billing), so it
-                belongs in a fund-scoped tab, not in membership which
-                is account-scoped. Placed at the bottom of the child
-                tab per the standard UX convention that destructive
-                actions live at the bottom (keeps them out of
-                accidental-tap reach but findable when the parent
-                goes looking). The close action itself is unchanged.
-                Designed against project_cancellation_dark_pattern_
-                avoidance.md AND project_close_fund_design_lens.md
-                (locked memory). The close action is reversible.
-                Memory Book + audit logs stay intact. Cash stays in
-                the fund (separate withdrawal flow). Recurring
-                investments cancel. No guilt copy. */}
-            {primaryFund && !fundIsClosed && (
-              <SectionCard className="border-border/60">
-                <div className="p-5">
-                  <h2 className="text-base font-bold text-foreground">Close this fund</h2>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Stop accepting gifts to {primaryFund.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "this"} fund. The Memory Book and history stay intact, and you can reopen anytime.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4 rounded-xl"
-                    onClick={() => { haptic("light"); setCloseFundOpen(true); }}
-                    data-testid="button-open-close-fund"
-                  >
-                    Close fund
-                  </Button>
-                </div>
-              </SectionCard>
+            {/* Close this fund. Extracted to CloseFundCard on 2026-05-14
+                as Phase 2 sheet-extraction chunk 5. The dialog itself
+                still lives in Settings (wider surface with its own
+                submission state); the card just opens it. */}
+            {primaryFund && (
+              <CloseFundCard
+                fund={primaryFund as any}
+                onOpenCloseDialog={() => setCloseFundOpen(true)}
+              />
             )}
           </div>
         )}
