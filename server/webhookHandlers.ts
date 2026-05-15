@@ -22,6 +22,13 @@ import { publishToUser } from './realtime';
 export class WebhookHandlers {
   private static readonly INVESTMENT_CONFIG_PATH = path.join(process.cwd(), '.local', 'investment-config.json');
   private static readonly LARGE_GIFT_HOLD_THRESHOLD = 1000;
+  // Heads-up email threshold. Independent from the HOLD threshold
+  // above. Any gift at or above this amount triggers a one-off
+  // alert email to the parent so they can verify it was expected.
+  // Locked 2026-05-15 per the email-strategy review's Tier 1 #7.
+  // Skipped for parent-self-contributions (those go through the
+  // parent's own UI; no need to alert them about their own gift).
+  private static readonly LARGE_GIFT_ALERT_THRESHOLD = 500;
 
   private static readonly DEFAULT_AUTO_STRATEGIES: Record<string, { label: string; allocations: Record<string, number> }> = {
     growth: {
@@ -145,6 +152,49 @@ export class WebhookHandlers {
     await this.ensureFundPendingCoversPendingGifts(gift.fundId);
     await this.reconcileFundFromGifts(gift.fundId);
     await this.investGiftImmediatelyIfNeeded(gift.id);
+
+    // Large-gift verification heads-up. Fires when a non-parent
+    // contribution at or above the alert threshold lands. Best-
+    // effort: any failure logs but never blocks the rest of the
+    // webhook pipeline. Locked 2026-05-15 per the Tier 1 email
+    // strategy.
+    try {
+      const giftAmountForAlert = parseFloat(gift.amount || "0");
+      const isParent = String(metadata?.isParentContribution || "").toLowerCase() === "true";
+      if (!isParent && Number.isFinite(giftAmountForAlert) && giftAmountForAlert >= this.LARGE_GIFT_ALERT_THRESHOLD) {
+        const [{ buildLargeGiftAlertEmail }, { sendEmail }, { db }, { users }, { eq }] = await Promise.all([
+          import("./templates/largeGiftAlert"),
+          import("./emailDelivery"),
+          import("./db"),
+          import("@shared/schema"),
+          import("drizzle-orm"),
+        ]);
+        const parentRows = await db
+          .select({ email: users.email, firstName: users.firstName })
+          .from(users)
+          .where(eq(users.id, fund.userId))
+          .limit(1);
+        const parentEmail = parentRows[0]?.email;
+        if (parentEmail) {
+          const baseUrl =
+            process.env.APP_BASE_URL ||
+            process.env.PUBLIC_APP_URL ||
+            "https://kiddofund.com";
+          const dashboardUrl = `${baseUrl.replace(/\/+$/, "")}/dashboard?fund=${encodeURIComponent(fund.id)}`;
+          await sendEmail(buildLargeGiftAlertEmail({
+            to: parentEmail,
+            parentFirstName: parentRows[0]?.firstName ?? null,
+            childFirstName: fund.recipientFirstName || "your child",
+            gifterName: gift.senderName || null,
+            amountUsd: giftAmountForAlert,
+            arrivedAt: gift.createdAt ? new Date(gift.createdAt) : new Date(),
+            dashboardUrl,
+          }));
+        }
+      }
+    } catch (alertErr) {
+      console.warn("[Webhook] large-gift alert failed (non-fatal):", alertErr);
+    }
 
     // Update the gifter-notification subscriber record's per-gifter counts
     // when the sender is opted in. The fund's aggregate contributorCount
