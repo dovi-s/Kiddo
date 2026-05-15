@@ -1534,7 +1534,29 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
         if (selected === "custom") {
           setInitialCustomRows(customRows);
         }
-        toast({ title: "Strategy updated", description: `Your fund now uses the ${STRATEGIES.find(s => s.key === selected)?.label} strategy.` });
+        // Toast copy mirrors the pre-save framing in the gold ribbon
+        // above the Save button:
+        //   • When invested > 0 (parent has real holdings): existing
+        //     holdings stay; only NEW gifts follow the new mix. Say
+        //     so explicitly. A parent who just saved Conservative
+        //     and didn't read the ribbon should still understand
+        //     from the toast alone that their existing $1k doesn't
+        //     rebalance.
+        //   • When invested == 0 (brand-new fund): no money to
+        //     misallocate; the simpler "now using X" framing is
+        //     accurate.
+        const strategyLabel = STRATEGIES.find((s) => s.key === selected)?.label || selected;
+        if (investedValue > 0) {
+          toast({
+            title: "Strategy updated",
+            description: `New gifts and recurring investments now follow the ${strategyLabel}. Existing holdings stay as they are.`,
+          });
+        } else {
+          toast({
+            title: "Strategy updated",
+            description: `Your fund now uses the ${strategyLabel}.`,
+          });
+        }
         onSuccess();
       } else {
         toast({ title: "Could not update strategy", description: data.error || "Please try again", variant: "destructive" });
