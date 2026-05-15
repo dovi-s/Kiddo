@@ -43,6 +43,7 @@ import {
 import { URL } from "url";
 import { getUserIdForOAuthIdentity, linkOAuthIdentity } from "./oauthIdentityStore";
 import { registerPasskeyRoutes } from "./passkeyAuth";
+import { mintRestoreToken, verifyRestoreToken } from "./accountRestoreToken";
 import { z } from "zod";
 
 const emailSchema = z
@@ -1091,18 +1092,122 @@ export function setupAuth(app: Express) {
         return res.status(409).json({ blocked: true, reason: "active_funds_with_balance", funds: blockedFunds });
       }
       const reason = String(req.body?.reason || "").trim().slice(0, 500) || null;
-      await performAccountDeletion(userId, reason);
+      const deletedAt = await performAccountDeletion(userId, reason);
+      // Mint a restore token bound to this specific deletion event.
+      // The token's `did` claim must match users.deletedAt for the
+      // restore endpoint to honor it; if the user restores then
+      // re-deletes, this token is invalidated by the deletedAt drift.
+      let restoreToken: string | null = null;
+      try {
+        restoreToken = mintRestoreToken(userId, deletedAt);
+      } catch (tokenErr: any) {
+        // Non-fatal: deletion proceeds regardless. The user can still
+        // email support to restore. Surfaces in logs for ops follow-up.
+        console.warn("[account-delete] Could not mint restore token (non-fatal):", tokenErr?.message);
+      }
       // Invalidate session immediately so the next request doesn't
       // re-authenticate against a now-deleted user.
       req.logout(() => {
         req.session.destroy(() => {
           res.clearCookie("connect.sid");
-          res.json({ message: "Account deleted", graceperiod_days: 30 });
+          res.json({
+            message: "Account deleted",
+            graceperiod_days: 30,
+            // restoreToken is returned to the SAME client that just
+            // deleted (one-time visibility). The confirmation email
+            // wired in Ring A5 will also deliver the token via a
+            // signed URL so the user has a durable copy. We don't
+            // expose this through any other channel.
+            restoreToken,
+          });
         });
       });
     } catch (err: any) {
       console.error("[account-delete] error:", err);
       return res.status(500).json({ error: err?.message || "Could not delete account. Try emailing support@kiddofund.com." });
+    }
+  });
+
+  // Restore a soft-deleted account during the 30-day grace period.
+  // Bearer-token endpoint — no session required (the user is locked
+  // out by definition). Token validates against the user's CURRENT
+  // deletedAt so a stale token from an earlier deletion event can't
+  // resurrect a newer one. On success: clear deletedAt, write a
+  // 'restored' activity row, return JSON so the client can route
+  // the user to /login.
+  //
+  // GET (not POST) so the magic link in the email is a one-tap
+  // browser hit. Idempotent: if the user is already restored, we
+  // return ok with already_restored=true (instead of erroring) so
+  // a user clicking the link twice doesn't see scary copy.
+  app.get("/api/account/restore", async (req, res) => {
+    try {
+      const tokenRaw = req.query?.token;
+      const token = typeof tokenRaw === "string" ? tokenRaw : "";
+      if (!token) {
+        return res.status(400).json({ error: "Missing token", reason: "missing" });
+      }
+      const verified = verifyRestoreToken(token);
+      if (!verified.ok) {
+        // Map the cryptographic reason to a user-readable string the
+        // client can show without leaking forensic detail.
+        const reason = verified.reason;
+        const message =
+          reason === "expired"
+            ? "This restore link has expired. The 30-day grace period is over."
+            : reason === "bad_signature" || reason === "malformed" || reason === "version"
+              ? "This restore link is invalid. If you didn't request it, you can ignore this message."
+              : "Restore link could not be verified.";
+        return res.status(400).json({ error: message, reason });
+      }
+      const rows = await db
+        .select({ id: users.id, deletedAt: users.deletedAt, email: users.email })
+        .from(users)
+        .where(eq(users.id, verified.userId))
+        .limit(1);
+      const user = rows[0];
+      if (!user) {
+        return res.status(404).json({ error: "Account not found.", reason: "no_user" });
+      }
+      // Idempotent: if the account is already restored, just confirm
+      // it. No error — the user might be clicking the same link twice.
+      if (!user.deletedAt) {
+        return res.json({ ok: true, already_restored: true, email: user.email });
+      }
+      // Token's `did` claim must match the user's current deletedAt.
+      // If they restored then re-deleted, the old token is now stale.
+      if (user.deletedAt.getTime() !== verified.deletedAtMs) {
+        return res.status(400).json({
+          error: "This restore link is for a previous deletion and is no longer valid.",
+          reason: "stale_event",
+        });
+      }
+      // Clear deletedAt + deletionReason. Restore activity row writes
+      // for audit traceability (paired with the 'account_deleted'
+      // row that fired on delete).
+      await db
+        .update(users)
+        .set({
+          deletedAt: null,
+          deletionReason: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+      try {
+        await db.insert(activities).values({
+          userId: user.id,
+          type: "account_restored",
+          title: "Account restored",
+          description: "User restored account via emailed restore link during 30-day grace period",
+          metadata: { ip: req.ip || null, userAgent: req.get("user-agent") || null } as any,
+        } as any);
+      } catch (auditErr: any) {
+        console.warn("[account-restore] Could not write audit entry (non-fatal):", auditErr?.message);
+      }
+      return res.json({ ok: true, already_restored: false, email: user.email });
+    } catch (err: any) {
+      console.error("[account-restore] error:", err);
+      return res.status(500).json({ error: "Could not restore account. Try emailing support@kiddofund.com." });
     }
   });
 
@@ -1280,23 +1385,32 @@ async function getFundsBlockingAccountDeletion(userId: string): Promise<BlockedF
  * Performs the account deletion transaction. Called AFTER block-state
  * is re-verified server-side and email-confirmation matches.
  *
+ * Returns the stamped deletedAt timestamp so the caller can mint a
+ * restore token bound to that exact deletion event (see
+ * accountRestoreToken.ts — the token's `did` claim must match
+ * users.deletedAt for the restore endpoint to honor it).
+ *
  * Steps:
- *   1. Cancel active Stripe subscriptions (at_period_end so user keeps
- *      features through already-paid period; no refund).
- *   2. Soft-delete the user: set deletedAt = NOW, store reason.
- *   3. Write activity-log entry for audit.
+ *   1.  Cancel active Stripe subscriptions (at_period_end so user keeps
+ *       features through already-paid period; no refund).
+ *   1b. Cancel every active/paused parent_contribution for this user
+ *       (status='cancelled', pauseReason='account_deleted').
+ *   1c. Delete linked bank_accounts rows for this user.
+ *   1d. Revoke pending outbound co-parent invitations (status='declined').
+ *   1e. Hard-delete this user's collaborator rows on OTHER funds.
+ *   2.  Soft-delete the user: set deletedAt = NOW, store reason.
+ *   3.  Write activity-log entry for audit.
  *
- * What this does NOT do (deferred to a 30-day delayed worker per spec):
+ * What this does NOT do (deferred to the 30-day PII scrub worker):
  *   - PII anonymization (firstName/lastName/preferredName/profileImageUrl scrub)
- *   - Email field anonymization (so user can email support during grace period)
+ *   - Email field anonymization (kept during grace period so the user
+ *     can be matched on restore + emailed support@ if needed)
+ *   - Stripe Customer object deletion
+ *   - Plaid /item/remove
  *   - DriveWealth-side account closure (separate compliance flow)
- *   - Memory-Book gifter-attribution anonymization (final 30-day scrub only)
- *
- * Co-parent inheritance: V1 ships the user-side flow; co-parent
- * promotion is a follow-up worker. Admin can manually re-assign primary
- * custodianship via existing admin endpoints if needed.
+ *   - Memory-Book authorship anonymization (final 30-day scrub only)
  */
-async function performAccountDeletion(userId: string, reason: string | null): Promise<void> {
+async function performAccountDeletion(userId: string, reason: string | null): Promise<Date> {
   // 1. Cancel active Stripe subscriptions at period end. Errors here
   //    don't fail the whole deletion — Stripe-side cleanup can be
   //    completed manually if the API call fails.
@@ -1427,12 +1541,18 @@ async function performAccountDeletion(userId: string, reason: string | null): Pr
   }
 
   // 2. Soft-delete the user. PII scrub deferred to 30-day worker.
+  //    deletedAt computed ONCE so the restore-token mint below uses
+  //    the exact same epoch ms as the row — the token validation
+  //    requires deletedAt to match. Without this lock-step, network
+  //    latency between Date.now() calls could cause a ms drift that
+  //    makes the freshly-minted token fail validation.
+  const deletedAt = new Date();
   await db
     .update(users)
     .set({
-      deletedAt: new Date(),
+      deletedAt,
       deletionReason: reason,
-      updatedAt: new Date(),
+      updatedAt: deletedAt,
     })
     .where(eq(users.id, userId));
 
@@ -1448,4 +1568,6 @@ async function performAccountDeletion(userId: string, reason: string | null): Pr
   } catch (auditErr: any) {
     console.warn("[account-delete] Could not write audit entry (non-fatal):", auditErr?.message);
   }
+
+  return deletedAt;
 }
