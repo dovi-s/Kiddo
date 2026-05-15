@@ -7216,13 +7216,21 @@ export async function registerRoutes(
       //   2. Stayed in custom but tweaked the mix: custom_allocations_changed
       //
       // Both skipped when nothing actually changed (silent on no-op saves).
+      // Ring E (2026-05-15): labelOf now maps the legacy "auto_invest"
+      // value (older funds carried this as their default) to "Growth Mix"
+      // since the GET handler already normalizes auto_invest → growth on
+      // read. Without this, a fund's first strategy change after the
+      // normalization update fires an activity row like "auto_invest →
+      // Growth Mix" — confusing to the parent who never saw "auto_invest"
+      // anywhere in the UI.
+      const labelOf = (k: string) =>
+        k === "growth" || k === "auto_invest" ? "Growth Mix"
+          : k === "balanced" ? "Steady & Balanced"
+            : k === "conservative" ? "Conservative Mix"
+              : k === "custom" ? "Custom ETF Mix"
+                : k;
+
       try {
-        const labelOf = (k: string) =>
-          k === "growth" ? "Growth Mix"
-            : k === "balanced" ? "Steady & Balanced"
-              : k === "conservative" ? "Conservative Mix"
-                : k === "custom" ? "Custom ETF Mix"
-                  : k;
         if (previousStrategy !== strategy) {
           await storage.createActivity({
             userId,
@@ -7256,6 +7264,39 @@ export async function registerRoutes(
         // Non-fatal — the strategy change still committed; the ledger entry
         // is the audit-trail nicety, not the operation itself.
         console.error("[activity] strategy/allocations write failed:", err);
+      }
+
+      // Audit log row. Mirrors the dual-write pattern from close-fund
+      // and account-delete: activities table = user-facing history feed;
+      // audit_logs table = compliance trail with full forensic context
+      // (IP / UA / fund ID / metadata payload). Strategy change is a real
+      // financial-decision change and warrants the audit row.
+      try {
+        const strategyChanged = previousStrategy !== strategy;
+        const customMixChanged =
+          previousStrategy === "custom" && strategy === "custom" &&
+          JSON.stringify(priorCustomAllocations || {}) !== JSON.stringify(nextCustomAllocations || {});
+        if (strategyChanged || customMixChanged) {
+          await db.insert(auditLogs).values({
+            userId,
+            action: strategyChanged ? "fund_strategy_changed" : "custom_allocations_changed",
+            resourceType: "fund",
+            resourceId: fund.id,
+            metadata: JSON.stringify({
+              previousStrategy,
+              newStrategy: strategy,
+              previousAllocations: priorCustomAllocations || null,
+              newAllocations: nextCustomAllocations || null,
+              previousLabel: labelOf(previousStrategy),
+              newLabel: labelOf(strategy),
+            }),
+            ipAddress: req.ip || (req.socket as any)?.remoteAddress || null,
+            userAgent: req.get("user-agent") || null,
+          });
+        }
+      } catch (err) {
+        // Non-fatal — same logic as the activity write.
+        console.warn("[audit] strategy/allocations audit write failed:", err);
       }
 
       res.json({ ...updated, customAllocations: nextCustomAllocations });
