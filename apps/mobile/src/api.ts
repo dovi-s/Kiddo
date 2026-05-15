@@ -84,14 +84,22 @@ export interface ApiFund {
   recipientFirstName: string | null;
   recipientBirthdate: string | null;
   createdAt: string;
-  // accessRole tags this fund row as owned vs collaborated. Web
-  // dashboard branches on this for the shared-fund pill and to hide
-  // write CTAs in viewer mode. Mobile follows the same pattern:
-  // collaborator-listed funds appear in the dashboard, fund-detail
-  // hides invest/recurring/settings affordances when viewer-only.
-  // Older server responses omit this field; consumers should default
-  // to 'owner' rather than locking the surface.
-  accessRole?: 'owner' | 'co-admin' | 'viewer';
+  // accessRole tags this fund row as owned vs collaborated vs
+  // transferred. Web dashboard + mobile detail branch on this:
+  //  - 'owner' / 'co-admin': full write access
+  //  - 'viewer': collaborator, read-only
+  //  - 'previous_owner': post-handoff parent. Fund transferred to
+  //    the kid at majority; parent sees it in their list with a
+  //    "Transferred to {kid}" pill but write CTAs are hidden.
+  //    Per FUND_STATES_SPEC.md item 4 and the 2026-05-14
+  //    funds.previousOwnerId foundation. Older server responses
+  //    omit this field; consumers should default to 'owner' rather
+  //    than locking the surface.
+  accessRole?: 'owner' | 'co-admin' | 'viewer' | 'previous_owner';
+  // Stamped at the moment the kid claimed the fund at majority.
+  // Only present (non-null) on funds where accessRole='previous_owner'.
+  // Surfaced as the "Transferred on {date}" pill on parent surfaces.
+  transferredAt?: string | null;
 }
 
 export interface ApiHolding {

@@ -47,7 +47,10 @@ type OverviewFund = {
   balance: string;
   pendingBalance: string;
   cashBalance?: string | null;
-  accessRole: "owner" | "co-admin" | "viewer";
+  accessRole: "owner" | "co-admin" | "viewer" | "previous_owner";
+  // Set only on transferred funds (accessRole='previous_owner').
+  // Drives the "Transferred · {date}" pill rendering. ISO date string.
+  transferredAt?: string | null;
 };
 
 type OverviewRecurringItem = {
@@ -445,6 +448,14 @@ export default function FundsOverview() {
               const age = ageLabel(f.recipientBirthdate);
               const displayName = f.recipientFirstName || f.name;
               const isShared = f.accessRole !== "owner";
+              const isTransferred = f.accessRole === "previous_owner";
+              // Format "Transferred on Apr 14, 2027" for the pill on
+              // post-handoff funds. The locale-formatted date is
+              // calmer than ISO and matches the rest of the app's
+              // date rendering register.
+              const transferredLabel = isTransferred && f.transferredAt
+                ? `Transferred · ${new Date(f.transferredAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+                : null;
               return (
                 <motion.button
                   key={f.id}
@@ -453,7 +464,7 @@ export default function FundsOverview() {
                   initial={{ opacity: 0, x: -4 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.35, ease: "easeOut", delay: 0.18 + i * 0.08 }}
-                  className="w-full flex items-center justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4 text-left hover:border-[hsl(var(--kiddo-border))]/80 transition-colors"
+                  className={`w-full flex items-center justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4 text-left hover:border-[hsl(var(--kiddo-border))]/80 transition-colors ${isTransferred ? "opacity-70" : ""}`}
                   data-testid={`overview-fund-${f.id}`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -491,8 +502,14 @@ export default function FundsOverview() {
                           the per-kid Dashboard. See
                           project_funds_overview_rules.md. */}
                       <p className="text-[11px] text-muted-foreground">
-                        {isShared ? "Shared with you · " : ""}
-                        {balance > 0 ? "Open fund" : "Share to start"}
+                        {transferredLabel
+                          ? transferredLabel
+                          : (
+                            <>
+                              {isShared ? "Shared with you · " : ""}
+                              {balance > 0 ? "Open fund" : "Share to start"}
+                            </>
+                          )}
                       </p>
                     </div>
                   </div>

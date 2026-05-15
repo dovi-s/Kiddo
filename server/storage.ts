@@ -24,6 +24,13 @@ export interface IStorage {
   getFund(id: string): Promise<Fund | undefined>;
   getFundBySlug(slug: string): Promise<Fund | undefined>;
   getFundsByUser(userId: string): Promise<Fund[]>;
+  // Funds the user PREVIOUSLY owned (i.e. transferred to a kid at
+  // majority). Distinct from getFundsByUser, which only returns
+  // CURRENT ownership. The parent's fund list endpoint merges both
+  // so transferred funds stay visible in the parent's view (read-
+  // only) after the handoff — without this query the fund just
+  // disappears from their list. See FUND_STATES_SPEC.md item 4.
+  getPreviouslyOwnedFundsByUser(userId: string): Promise<Fund[]>;
   createFund(fund: InsertFund): Promise<Fund>;
   updateFund(id: string, fund: Partial<InsertFund>): Promise<Fund | undefined>;
   deleteFund(id: string): Promise<void>;
@@ -147,6 +154,18 @@ export class DatabaseStorage implements IStorage {
 
   async getFundsByUser(userId: string): Promise<Fund[]> {
     return db.select().from(funds).where(eq(funds.userId, userId)).orderBy(desc(funds.createdAt));
+  }
+
+  async getPreviouslyOwnedFundsByUser(userId: string): Promise<Fund[]> {
+    // Sort by transferredAt descending so the most-recently-transferred
+    // fund appears first. Parents typically care most about the latest
+    // handoff (they were just managing it last week); older transfers
+    // sink to the bottom.
+    return db
+      .select()
+      .from(funds)
+      .where(eq(funds.previousOwnerId, userId))
+      .orderBy(desc(funds.transferredAt));
   }
 
   async createFund(fund: InsertFund): Promise<Fund> {

@@ -61,6 +61,16 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       const userId = (req.user as any).id;
       const userEmail = String((req.user as any).email || "").trim().toLowerCase();
       let funds = await storage.getFundsByUser(userId);
+      // Merge in transferred funds (where the user is the previous
+      // custodian and the kid has claimed). Per FUND_STATES_SPEC.md
+      // item 4: post-handoff, the fund stays in the parent's list
+      // but renders read-only with a "Transferred" pill. Without this
+      // merge the fund disappears entirely from the parent's view
+      // once fund.userId flips to the kid. The append is at the END
+      // of the active list (after the dedupe-on-email merge below)
+      // so active funds stay top-of-list and transferred ones sit
+      // beneath them.
+      const previouslyOwned = await storage.getPreviouslyOwnedFundsByUser(userId);
 
       if (userEmail) {
         try {
@@ -96,6 +106,16 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
         }
       }
 
+      // Append previously-owned funds AFTER the email-merge step so
+      // active funds always sort to the top of the list. Filter out
+      // any that already appear in `funds` (rare — would happen if
+      // the kid was somehow re-assigned back to the parent's
+      // userId after transfer, but defensive). Transferred funds
+      // skip the ensureFundSlugAndPermanentEvent / captureFundSnapshot
+      // dance since they're no longer the parent's to mutate.
+      const activeIds = new Set(funds.map((f: any) => String(f?.id || "")));
+      const transferredOnly = previouslyOwned.filter((f: any) => !activeIds.has(String(f?.id || "")));
+
       const ensuredFunds: any[] = [];
       for (const fund of funds) {
         try {
@@ -106,6 +126,13 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
           console.error("Failed to ensure fund setup:", fund.id, err);
           ensuredFunds.push(fund);
         }
+      }
+      // Tag transferred-only funds so client surfaces can identify
+      // them without re-checking previous_owner_id every render. The
+      // accessRole='previous_owner' tag mirrors the per-fund auth
+      // middleware shape (which also branches on this).
+      for (const fund of transferredOnly) {
+        ensuredFunds.push({ ...(fund as any), accessRole: 'previous_owner' as const });
       }
 
       try {

@@ -2038,6 +2038,18 @@ export async function registerRoutes(
         req.collaboratorRow = collab;
         return next();
       }
+      // Previous custodian (parent before the kid claimed at majority).
+      // Allow read-only access so the parent can still see the fund
+      // they used to manage — gifts they recorded, Memory Book entries
+      // they wrote, the projection at majority that came true. Writes
+      // are blocked by requireFundMutator (which only passes 'owner'
+      // and 'co-admin'). Per FUND_STATES_SPEC.md item 4 and the
+      // 2026-05-14 funds.previousOwnerId foundation.
+      if ((fund as any).previousOwnerId === userId) {
+        req.ownedFund = fund;
+        req.fundAccessRole = 'previous_owner';
+        return next();
+      }
       return res.status(403).json({ error: "Forbidden" });
     } catch (error) {
       console.error("Error asserting fund ownership:", error);
