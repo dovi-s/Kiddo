@@ -20,9 +20,9 @@
 // the parent flows.
 
 import { useRef, useState, useEffect } from "react";
-import { Link } from "wouter";
 import { Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { haptic } from "@/lib/haptics";
 import { getPronouns } from "@/lib/pronouns";
 
@@ -102,6 +102,11 @@ export function MemoryMediaPicker({
   const [recording, setRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // Plus-gate wall state — only used when requiresPlus is true,
+  // but declared unconditionally to keep hook ordering stable
+  // across renders. React requires the same hook call count
+  // every render regardless of which branch the JSX takes.
+  const [wallOpen, setWallOpen] = useState(false);
 
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
@@ -231,10 +236,22 @@ export function MemoryMediaPicker({
   // Plus-gate UI. When the parent's fund is on Free AND this picker is
   // mounted in a PARENT-authored context (NoteEditorSheet, Dashboard
   // composers), swap the photo/video/voice trio for a single Kiddo+
-  // upgrade callout. The CTA routes to Settings membership tab so the
-  // upgrade happens in-app, not on the public Pricing page. Voice gets
-  // named explicitly in the body copy because per the design lens it's
-  // the moat — "your voice from when she was 3, sealed for her 18th."
+  // upgrade callout. Voice gets named explicitly in the body copy
+  // because per the design lens it's the moat — "your voice from when
+  // she was 3, sealed for her 18th."
+  //
+  // The callout stays as the at-a-glance discovery signal ("there's
+  // a media option here you could unlock"). Tap on Upgrade now opens
+  // the canonical FeatureWallModal pattern, which tracks dismissals
+  // via dismissedFeatureWalls so a repeat encounter shows softer
+  // "Maybe later" copy. Routes to /account?tab=plan with auto-
+  // trigger Stripe checkout — same upgradePath shape every other
+  // FeatureWallModal touchpoint uses.
+  //
+  // The wall is rendered inside this `if (requiresPlus)` branch so
+  // its state lives next to the callout's state. The hook ordering
+  // is unchanged: useState calls above this branch fire on every
+  // render regardless; the wall's own state is only set here.
   if (requiresPlus) {
     return (
       <div className={className}>
@@ -255,30 +272,27 @@ export function MemoryMediaPicker({
                 {fundPronouns.subject.charAt(0).toUpperCase() + fundPronouns.subject.slice(1)} hearing your voice on {fundPronouns.possAdj} {majorityOrdinal} birthday is the kind of artifact nothing else gives {fundPronouns.object}. Text entries stay free; media unlocks with Kiddo+ ($4.99/month).
               </p>
               <div className="mt-3">
-                {/* Deep-link to Account "Plan & billing" tab with auto-
-                    trigger params. Updated 2026-05-14 to point at
-                    /account (the primary home of plan management per
-                    the WHO/HOW IA principle Phase 1b) instead of
-                    /settings?tab=membership. Account has its own
-                    auto-trigger useEffect that fires Stripe checkout
-                    when ?upgrade=starter&fundId=X is present. The
-                    Settings deep-link handler also still works as a
-                    backward-compatibility safety net. See
-                    feedback_ia_who_vs_how_principle.md. */}
-                <Link href={`/account?tab=plan&upgrade=starter&fundId=${fundId}`}>
-                  <Button
-                    size="sm"
-                    className="rounded-xl"
-                    onClick={() => haptic("selection")}
-                    data-testid="memory-media-picker-upgrade-cta"
-                  >
-                    Upgrade to Kiddo+
-                  </Button>
-                </Link>
+                <Button
+                  size="sm"
+                  className="rounded-xl"
+                  onClick={() => { haptic("selection"); setWallOpen(true); }}
+                  data-testid="memory-media-picker-upgrade-cta"
+                >
+                  Upgrade to Kiddo+
+                </Button>
               </div>
             </div>
           </div>
         </div>
+        <FeatureWallModal
+          open={wallOpen}
+          onClose={() => setWallOpen(false)}
+          featureId="parent_memory_media"
+          requiredTier="plus"
+          title={`Photos, videos, and voice notes for ${childName || `${fundPronouns.possAdj} fund`}.`}
+          body={`Attach photo, video, or voice to your own Memory Book entries. ${fundPronouns.subject.charAt(0).toUpperCase() + fundPronouns.subject.slice(1)} hearing your voice from years ago on ${fundPronouns.possAdj} ${majorityOrdinal} birthday is the artifact nothing else gives ${fundPronouns.object}. Gifter-attached media stays free on every plan; this unlocks YOUR media on entries you write.`}
+          upgradePath={`/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fundId)}`}
+        />
       </div>
     );
   }
