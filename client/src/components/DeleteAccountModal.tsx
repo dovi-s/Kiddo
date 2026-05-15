@@ -147,11 +147,21 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <DialogContent className="max-w-md" aria-describedby={undefined}>
+      {/* Scroll-shell pattern: outer DialogContent constrains height to
+          90dvh and clips overflow; each step's inner div owns its own
+          padding + scrolls vertically. Same shape Account.tsx:1430
+          uses. Without this, the review-step's three info cards
+          overflow the viewport on shorter screens and there's no way
+          to reach the Continue / Cancel buttons. Reported 2026-05-15
+          with a screenshot showing exactly this state. */}
+      <DialogContent
+        className="max-w-md w-[95vw] max-h-[90dvh] p-0 gap-0 overflow-hidden rounded-2xl flex flex-col"
+        aria-describedby={undefined}
+      >
         <DialogTitle className="sr-only">Delete account</DialogTitle>
 
         {step === "review" && (
-          <div className="space-y-4">
+          <div className="p-6 space-y-4 overflow-y-auto">
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100">
                 <AlertTriangle size={18} className="text-amber-700" />
@@ -159,7 +169,7 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
               <div className="min-w-0 flex-1">
                 <h2 className="font-heading text-lg font-semibold text-foreground">Delete your account?</h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                  This removes you from Kiddo. Some things stay — read this carefully.
+                  This removes you from Kiddo. Some things stay. Read this carefully.
                 </p>
               </div>
             </div>
@@ -168,9 +178,9 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What gets deleted</p>
               <ul className="space-y-1.5 text-sm text-foreground">
                 <li>· Your login, name, profile photo</li>
-                <li>· Your active Plus or Family subscription (cancels immediately)</li>
+                <li>· Your active Plus or Family subscription (cancels at period end)</li>
                 <li>· Your linked bank accounts</li>
-                <li>· Your session — you'll be logged out</li>
+                <li>· Your session. You'll be logged out everywhere.</li>
               </ul>
             </div>
 
@@ -193,7 +203,7 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
             </div>
 
             <p className="text-xs text-muted-foreground leading-relaxed">
-              If you change your mind within 30 days, email support@kiddofund.com and we can reverse the deletion. After 30 days your personal info is permanently scrubbed.
+              You'll get a confirmation email with a one-tap link to restore your account. The link works for 30 days. After that your personal info is permanently scrubbed and restoration is no longer possible.
             </p>
 
             <div className="flex flex-col gap-2 pt-1">
@@ -213,7 +223,7 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
         )}
 
         {step === "blocked" && blockedInfo && (
-          <div className="space-y-4">
+          <div className="p-6 space-y-4 overflow-y-auto">
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100">
                 <AlertTriangle size={18} className="text-amber-700" />
@@ -221,7 +231,7 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
               <div className="min-w-0 flex-1">
                 <h2 className="font-heading text-lg font-semibold text-foreground">A few things first</h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                  You're still the custodian on {blockedInfo.funds.length === 1 ? "a fund" : `${blockedInfo.funds.length} funds`} that hold money. UTMA law says that money belongs to the kid, not to your account — so the money has to land somewhere safe before your account can close.
+                  You're still the custodian on {blockedInfo.funds.length === 1 ? "a fund" : `${blockedInfo.funds.length} funds`} that hold money. UTMA law says that money belongs to the kid, not to your account, so the money has to land somewhere safe before your account can close.
                 </p>
               </div>
             </div>
@@ -302,11 +312,11 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
         )}
 
         {step === "confirm" && (
-          <div className="space-y-4">
+          <div className="p-6 space-y-4 overflow-y-auto">
             <div>
               <h2 className="font-heading text-lg font-semibold text-foreground">Confirm deletion</h2>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                Type your email to confirm. This cannot be undone except by emailing support within 30 days.
+                Type your email to confirm. Within 30 days, the restore link in your confirmation email brings your account back. After that, the deletion is final.
               </p>
             </div>
 
@@ -366,21 +376,21 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
         )}
 
         {step === "submitting" && (
-          <div className="flex flex-col items-center justify-center gap-4 py-10">
+          <div className="p-6 flex flex-col items-center justify-center gap-4 py-10">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
             <p className="text-sm text-muted-foreground">Deleting your account…</p>
           </div>
         )}
 
         {step === "done" && (
-          <div className="flex flex-col items-center justify-center gap-4 py-10 text-center">
+          <div className="p-6 flex flex-col items-center justify-center gap-4 py-10 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.10)]">
               <CheckCircle2 size={28} className="text-[hsl(var(--kiddo-evergreen))]" />
             </div>
             <div>
               <h2 className="font-heading text-lg font-semibold text-foreground">Account deleted</h2>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed max-w-xs">
-                Logging you out. Email support@kiddofund.com within 30 days if you change your mind.
+                Logging you out. Check your email. The restore link works for 30 days if you change your mind.
               </p>
             </div>
           </div>
