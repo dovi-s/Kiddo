@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { pool } from './db';
 import { storage } from './storage';
 import { sendEmail } from './emailDelivery';
+import { renderKiddoEmail } from './templates/baseTemplate';
 import { getUncachableStripeClient } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 
@@ -308,19 +309,33 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
       );
     } else {
       const dashboardUrl = `${getBaseUrl()}/dashboard`;
+      const greeting = `Hi${parentFirstName ? ` ${parentFirstName}` : ''},`;
+      const introBody = [
+        greeting,
+        '',
+        `Your scheduled $${amount.toFixed(2)} for ${childName} is ready. We couldn't run it automatically this time.`,
+        '',
+        'Head to your dashboard to add it now.',
+      ].join('\n');
+      const { html } = renderKiddoEmail({
+        heading: `Time to add to ${childName}'s fund`,
+        intro: introBody,
+        cta: { text: 'Open Dashboard', url: dashboardUrl },
+      });
       await sendEmail({
         to: parentEmail,
         subject: `Time to add to ${childName}'s fund`,
         text: [
-          `Hi${parentFirstName ? ` ${parentFirstName}` : ''},`,
+          greeting,
           '',
           `Your scheduled $${amount.toFixed(2)} for ${childName} is ready. We couldn't run it automatically this time.`,
           '',
           'Head to your dashboard to add it now:',
           dashboardUrl,
           '',
-          'The Kiddo team',
+          '— The Kiddo team',
         ].join('\n'),
+        html,
         tags: ['parent_contribution_reminder'],
         metadata: {
           contributionId: row.id as string,
@@ -415,22 +430,36 @@ async function processGifterRecurring(log: LogFn): Promise<void> {
       const nextChargeDate = advanceDate(row.next_charge_date as Date | string | null, row.frequency as string);
       await storage.updateRecurringGift(row.id as string, { nextChargeDate });
 
+      const reminderIntro = [
+        `Hi ${senderName},`,
+        '',
+        `You asked us to remind you when it was time to gift ${childName} again.`,
+        `Last time you set $${Number.isFinite(amount) ? amount.toFixed(2) : '?'} as your suggested amount. It's totally up to you.`,
+        '',
+        `Not the right time? Ignore this email. We won't charge anything.`,
+      ].join('\n');
+      const { html: reminderHtml } = renderKiddoEmail({
+        heading: `Time to gift ${childName} again`,
+        intro: reminderIntro,
+        cta: { text: `Send a gift`, url: giftUrl },
+      });
       await sendEmail({
         to: senderEmail,
-        subject: `Time to gift ${childName} again 🌱`,
+        subject: `Time to gift ${childName} again`,
         text: [
           `Hi ${senderName},`,
           '',
           `You asked us to remind you when it was time to gift ${childName} again.`,
-          `Last time you set $${Number.isFinite(amount) ? amount.toFixed(2) : '?'} as your suggested amount, but it's totally up to you.`,
+          `Last time you set $${Number.isFinite(amount) ? amount.toFixed(2) : '?'} as your suggested amount. It's totally up to you.`,
           '',
           `One tap to gift:`,
           giftUrl,
           '',
-          `Not the right time? You can ignore this. We won't charge anything. Or unsubscribe at the bottom of this email to stop the reminders.`,
+          `Not the right time? Ignore this email. We won't charge anything.`,
           '',
-          'The Kiddo team',
+          '— The Kiddo team',
         ].join('\n'),
+        html: reminderHtml,
         tags: ['gift_reminder'],
         metadata: {
           recurringGiftId: row.id as string,

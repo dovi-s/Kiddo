@@ -3,6 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
+import { renderKiddoEmail } from "./templates/baseTemplate";
 import { queueMobilePush } from "./mobilePushWorker";
 
 const PARENT_LIFECYCLE_STATE_PATH = path.join(process.cwd(), ".local", "parent-lifecycle-state.json");
@@ -735,10 +736,16 @@ async function processQueue(log: (message: string, source?: string) => void) {
     const rendered = renderQueuedEmail(parsed);
     if (!rendered) continue;
 
+    // Minimum-frame branded HTML wrap. See note in gifterNotificationWorker.
+    const { html: brandedHtml } = renderKiddoEmail({
+      heading: rendered.subject,
+      intro: rendered.text,
+    });
     const delivery = await sendEmail({
       to: rendered.to,
       subject: rendered.subject,
       text: rendered.text,
+      html: brandedHtml,
       tags: ["parent_lifecycle", String(parsed.type || "unknown")],
       metadata: {
         queueId: id,

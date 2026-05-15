@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
+import { renderKiddoEmail } from "./templates/baseTemplate";
 import { getMarketQuote } from "./marketQuotes";
 import { MONEY_CROSS_COPY } from "@shared/milestones";
 
@@ -2132,10 +2133,20 @@ async function processQueuedNotifications(log: (message: string, source?: string
     const rendered = renderQueuedEmail(parsed);
     if (!rendered) continue;
 
+    // Wrap the rendered plain-text body in the branded HTML shell.
+    // Per-event-type custom HTML is a follow-up; this minimum-frame
+    // pass ensures every gifter email immediately gets the cream +
+    // evergreen brand even if the body styling is just paragraph
+    // text. Locked 2026-05-15.
+    const { html: brandedHtml } = renderKiddoEmail({
+      heading: rendered.subject,
+      intro: rendered.text,
+    });
     const delivery = await sendEmail({
       to: rendered.to,
       subject: rendered.subject,
       text: rendered.text,
+      html: brandedHtml,
       tags: ["gifter_notifications", String(parsed.type || "unknown")],
       metadata: {
         queueId: id,

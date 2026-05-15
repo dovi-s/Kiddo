@@ -39,6 +39,7 @@ import { db, pool } from "./db";
 import { sql, eq } from "drizzle-orm";
 import { storage } from "./storage";
 import { sendEmail } from "./emailDelivery";
+import { renderKiddoEmail } from "./templates/baseTemplate";
 import {
   getAgeTransitionRecord,
   patchAgeTransitionRecord,
@@ -291,23 +292,30 @@ async function sendT30Email(row: DueRow, log: LogFn): Promise<void> {
   const planUrl = `${baseUrl}/age-18-plan`;
   const managerUrl = `${baseUrl}/age-transition/${row.id}/manage`;
   const dashboardUrl = `${baseUrl}/dashboard?fund=${encodeURIComponent(row.id)}`;
+  const t30Text = [
+    parentGreeting(row),
+    "",
+    `${childName}'s ${majorityAge}th birthday is one month away. That's the day legal control of the fund transfers to them under your state's UTMA law. Nothing automatically sells. The investments stay exactly where they are. What changes is who decides.`,
+    "",
+    "Three things to do this month:",
+    `  1. Add ${childName}'s email AND send them a verification link so the at-${majorityAge} invite reaches the right inbox: ${managerUrl}`,
+    `  2. Share Kid View with ${childName} so the fund isn't a complete surprise when they take it over: ${dashboardUrl}`,
+    `  3. Walk through the prep checklist (money conversation, tax position, successor custodian): ${planUrl}`,
+    "",
+    `When the day arrives, ${childName} gets an email with a private link to claim the fund into their own Kiddo account.`,
+    "",
+    "— The Kiddo team",
+  ].join("\n");
+  const { html: t30Html } = renderKiddoEmail({
+    heading: `${childName} turns ${majorityAge} in a month`,
+    intro: t30Text,
+    cta: { text: "Open age-transition manager", url: managerUrl },
+  });
   await sendEmail({
     to: row.parent_email,
     subject: `${childName} turns ${majorityAge} in a month`,
-    text: [
-      parentGreeting(row),
-      "",
-      `${childName}'s ${majorityAge}th birthday is one month away. That's the day legal control of the fund transfers to them under your state's UTMA law. Nothing automatically sells. The investments stay exactly where they are. What changes is who decides.`,
-      "",
-      "Three things to do this month:",
-      `  1. Add ${childName}'s email AND send them a verification link so the at-18 invite reaches the right inbox: ${managerUrl}`,
-      `  2. Share Kid View with ${childName} so the fund isn't a complete surprise when they take it over. The kid-friendly view of the fund (with their gifts, holdings, and stock explainers) lives behind a private link + PIN you can share now from your dashboard: ${dashboardUrl}`,
-      `  3. Walk through the prep checklist (money conversation, tax position, successor custodian): ${planUrl}`,
-      "",
-      `When the day arrives, ${childName} gets an email with a private link to claim the fund into their own Kiddo account. They create their own login (no shared passwords). The Memory Book travels with them.`,
-      "",
-      "The Kiddo team",
-    ].join("\n"),
+    text: t30Text,
+    html: t30Html,
     tags: ["age_transition", "t_minus_30"],
     metadata: { fundId: row.id, milestone: "t_minus_30" },
   }).catch((err) => {
@@ -323,20 +331,27 @@ async function sendT1Email(row: DueRow, log: LogFn): Promise<void> {
   const majorityAge = safeMajorityAge(row);
   const baseUrl = getAppBaseUrl();
   const managerUrl = `${baseUrl}/age-transition/${row.id}/manage`;
+  const t1Text = [
+    parentGreeting(row),
+    "",
+    `Tomorrow is ${childName}'s ${majorityAge}th birthday. The fund transfers to them under state UTMA law.`,
+    "",
+    `If ${childName}'s email is on file, we'll send them the claim link automatically tomorrow morning. If it isn't yet, this is the moment to add it.`,
+    "",
+    "Nothing sells. The investments stay where they are. Only legal control changes.",
+    "",
+    "— The Kiddo team",
+  ].join("\n");
+  const { html: t1Html } = renderKiddoEmail({
+    heading: `${childName} turns ${majorityAge} tomorrow`,
+    intro: t1Text,
+    cta: { text: "Open age-transition manager", url: managerUrl },
+  });
   await sendEmail({
     to: row.parent_email,
     subject: `${childName} turns ${majorityAge} tomorrow`,
-    text: [
-      parentGreeting(row),
-      "",
-      `Tomorrow is ${childName}'s ${majorityAge}th birthday. The fund transfers to them under state UTMA law.`,
-      "",
-      `If ${childName}'s email is on file, we'll send them the claim link automatically tomorrow morning. If it isn't yet, this is the moment to add it: ${managerUrl}`,
-      "",
-      "Nothing sells. The investments stay where they are. Only legal control changes.",
-      "",
-      "The Kiddo team",
-    ].join("\n"),
+    text: t1Text,
+    html: t1Html,
     tags: ["age_transition", "t_minus_1"],
     metadata: { fundId: row.id, milestone: "t_minus_1" },
   }).catch((err) => {
@@ -357,6 +372,20 @@ async function sendKidInviteEmail(
   const childName = safeChildName(row);
   const baseUrl = getAppBaseUrl();
   const inviteLink = `${baseUrl}/transition/${inviteToken}`;
+  const kidIntroBody = [
+    `Hi ${childName},`,
+    "",
+    "Today's the day. Your family has built something for you, and now it's yours.",
+    "",
+    "Open your invite to claim the fund into your own Kiddo account. Everything they built (gifts, notes, photos, the whole Memory Book) comes with you.",
+    "",
+    "Nothing has been sold. The investments stay exactly where they are. What changes is who decides, and from today, that's you.",
+  ].join("\n");
+  const { html: kidHtml } = renderKiddoEmail({
+    heading: "Today's the day",
+    intro: kidIntroBody,
+    cta: { text: "Claim your fund", url: inviteLink },
+  });
   await sendEmail({
     to: childEmail,
     subject: `${childName}'s Kiddo fund is ready to claim`,
@@ -371,8 +400,9 @@ async function sendKidInviteEmail(
       "",
       "Nothing has been sold. The investments stay exactly where they are. What changes is who decides, and from today, that's you.",
       "",
-      "The Kiddo team",
+      "— The Kiddo team",
     ].join("\n"),
+    html: kidHtml,
     tags: ["age_transition", "invite", "auto"],
     metadata: { fundId: row.id, childEmail, milestone: "today_kid_invite" },
   }).catch((err) => {
@@ -452,10 +482,16 @@ async function sendTodayParentEmail(
         ? "today_parent_unverified"
         : "today_parent_missing";
 
+  const { html: parentHtml } = renderKiddoEmail({
+    heading: subject,
+    intro: body,
+    cta: { text: "Open age-transition manager", url: managerUrl },
+  });
   await sendEmail({
     to: row.parent_email,
     subject,
     text: body,
+    html: parentHtml,
     tags: ["age_transition", tagSuffix],
     metadata: { fundId: row.id, variant, milestone: "today_parent" },
   }).catch((err) => {

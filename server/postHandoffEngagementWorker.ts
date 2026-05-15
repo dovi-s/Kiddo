@@ -28,6 +28,7 @@ import { db } from "./db";
 import { funds, users } from "@shared/schema";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 import { sendEmail } from "./emailDelivery";
+import { renderKiddoEmail } from "./templates/baseTemplate";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "post-handoff-engagement";
@@ -178,10 +179,15 @@ async function sendQuarterlySummary(c: EngagementCandidate, now: Date, log: LogF
     .join("\n");
 
   try {
+    const { html: brandedHtml } = renderKiddoEmail({
+      heading: subject,
+      intro: body,
+    });
     await sendEmail({
       to: c.email,
       subject,
       text: body,
+      html: brandedHtml,
     } as any);
     await db.update(users)
       .set({ lastQuarterlySummaryAt: now })
