@@ -20,6 +20,7 @@ import { FundDetailsCard } from "@/components/FundDetailsCard";
 import { InvitationsToYouCard } from "@/components/InvitationsToYouCard";
 import { CloseFundCard } from "@/components/CloseFundCard";
 import { LegalDocumentsCard } from "@/components/LegalDocumentsCard";
+import { CoParentAccessCard } from "@/components/CoParentAccessCard";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -2405,13 +2406,8 @@ const [editFundName, setEditFundName] = useState("");
   const [selectedSettingsFundId, setSelectedSettingsFundId] = useState<string>(() => getActiveFundId() || "");
   const [settingsFundMenuOpen, setSettingsFundMenuOpen] = useState(false);
   const settingsFundMenuRef = useRef<HTMLDivElement | null>(null);
-  // Co-parent invite FeatureWallModal — fires when a free user
-  // taps Invite. The invite section's Plus-gate explainer card
-  // (rendered below the section header) is kept on purpose; the
-  // wall fires only as a deliberate tap-driven interaction so
-  // free users who just want to read the explainer don't get a
-  // modal in their face on every Settings load.
-  const [coParentWallOpen, setCoParentWallOpen] = useState(false);
+  // (coParentWallOpen state moved into CoParentAccessCard on
+  // 2026-05-14 — Phase 2 sheet-extraction chunk 7.)
   const [parentLifecycleSettings, setParentLifecycleSettings] = useState<{
     activationNudges: boolean;
     milestoneEmails: boolean;
@@ -2502,16 +2498,12 @@ const [editFundName, setEditFundName] = useState("");
   // 2026-05-14 — Phase 2 sheet-extraction chunk 4. The card was
   // the only consumer in Settings, so the query moved with it.)
 
-  const { data: collaborators = [] } = useQuery<any[]>({
-    queryKey: ["/api/funds", primaryFund?.id, "collaborators"],
-    queryFn: async () => {
-      const res = await fetch(`/api/funds/${primaryFund.id}/collaborators`, { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-    enabled: !!primaryFund,
-    staleTime: 60_000,
-  });
+  // (collaborators query moved into CoParentAccessCard on
+  // 2026-05-14 — Phase 2 sheet-extraction chunk 7. The only
+  // remaining Settings.tsx consumer was the co-parent card; the
+  // CollaboratorInviteModal still gets fresh data via the same
+  // query key after invite mutations because they share the
+  // query cache.)
 
   const { data: kidViewSettings, refetch: refetchKidViewSettings } = useQuery<any>({
     queryKey: ["/api/funds", primaryFund?.id, "kid-view-settings"],
@@ -3531,24 +3523,8 @@ const [editFundName, setEditFundName] = useState("");
     }
   };
 
-  const handleDeleteCollaborator = async (fundId: string, collabId: string) => {
-    haptic("medium");
-    try {
-      const res = await fetch(`/api/funds/${fundId}/collaborators/${collabId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (res.ok) {
-        queryClient.invalidateQueries({ queryKey: ["/api/funds", fundId, "collaborators"] });
-        toast({ title: "Collaborator removed" });
-      } else {
-        const data = await res.json();
-        toast({ title: "Could not remove", description: data.error || "Please try again", variant: "destructive" });
-      }
-    } catch {
-      toast({ title: "Could not remove", description: "Please try again", variant: "destructive" });
-    }
-  };
+  // (handleDeleteCollaborator moved into CoParentAccessCard on
+  // 2026-05-14 — Phase 2 sheet-extraction chunk 7.)
 
   const openEditFundDialog = (fund: any) => {
     setEditingFund(fund);
@@ -3986,202 +3962,22 @@ const [editFundName, setEditFundName] = useState("");
                 card disappears, no empty state. */}
             <InvitationsToYouCard />
 
-            {/* Co-parent access */}
-            {(() => {
-              // Plus, Family, and Legacy all unlock co-parent invites. The
-              // pricing rationale (per memory): Plus is feature-gated per
-              // fund, Family is Plus across multiple funds. Co-parent
-              // access is a per-fund feature, so Plus is the natural floor.
-              const canInvite = userPlan === "starter" || userPlan === "family" || userPlan === "legacy";
-              const childName = primaryFund?.recipientFirstName;
-              const ownerName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.email || "You";
-              const ownerInitial = (user?.firstName || user?.email || "U").slice(0, 1).toUpperCase();
-
-              const VIEWER_PERMS  = ["View balance", "View activity", "See Memory Book"];
-              const ADMIN_PERMS   = ["View balance", "View activity", "See Memory Book", "Create events", "Edit settings"];
-              const DENIED_VIEWER = ["Create events", "Edit settings"];
-
-              return (
-                <SectionCard>
-                  <div className="p-5">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3 mb-5">
-                      <div>
-                        <h2 className="text-base font-bold text-foreground">Co-parent access</h2>
-                        <p className="mt-0.5 text-sm text-muted-foreground">
-                          Share {childName ? `${childName}'s` : "this"} fund with a partner or guardian.
-                        </p>
-                      </div>
-                      <Button
-                        size="sm"
-                        className="shrink-0 rounded-xl gap-1.5"
-                        onClick={() => {
-                          haptic("light");
-                          // Free users: open the FeatureWallModal so the
-                          // tap lands on a clear "this is Plus" moment
-                          // with one-tap upgrade. Was previously a hard
-                          // `disabled={!canInvite}` which left the free
-                          // user with a dead button and no path forward
-                          // (the gray Plus-gate explainer below was the
-                          // only signal — easy to miss above the fold).
-                          // Plus/Family/Legacy: open the real invite
-                          // modal as before.
-                          if (canInvite) {
-                            setCollabModalOpen(true);
-                          } else {
-                            setCoParentWallOpen(true);
-                          }
-                        }}
-                        data-testid="button-invite-coparent"
-                      >
-                        <UserPlus size={13} />
-                        Invite
-                      </Button>
-                    </div>
-
-                    {/* How it works - shown only when no collaborators yet */}
-                    {collaborators.length === 0 && (
-                      <div className="mb-5 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-gradient-to-br from-[hsl(var(--kiddo-evergreen)/0.05)] to-[hsl(var(--kiddo-cream-dark)/0.4)] p-4">
-                        <p className="kiddo-section-label mb-3">How co-parent access works</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[
-                            { emoji: "🔑", title: "You stay in control", body: "You are the legal custodian. They have no legal claim." },
-                            { emoji: "👁", title: "Choose their role", body: "Viewer or Co-Admin. You decide what they can see and do." },
-                            { emoji: "🚫", title: "Revoke anytime", body: "Remove access instantly. Their session ends immediately." },
-                          ].map((item) => (
-                            <div key={item.title} className="rounded-xl bg-card p-3">
-                              <p className="text-lg mb-1.5">{item.emoji}</p>
-                              <p className="text-[11.5px] font-bold text-foreground mb-0.5">{item.title}</p>
-                              <p className="text-[11px] text-muted-foreground leading-relaxed">{item.body}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Access list */}
-                    {collaborators.length > 0 && (
-                      <div className="mb-5">
-                        <p className="kiddo-section-label mb-3">Access list</p>
-                        <div className="space-y-3">
-                          {collaborators.map((collab: any) => {
-                            const isAdmin = collab.role === "co-admin";
-                            const granted = isAdmin ? ADMIN_PERMS : VIEWER_PERMS;
-                            const denied = isAdmin ? [] : DENIED_VIEWER;
-                            const invitedDate = collab.invitedAt
-                              ? new Date(collab.invitedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-                              : null;
-                            return (
-                              <div key={collab.id} className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4">
-                                <div className="flex items-start gap-3">
-                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-cream-dark))] border border-[hsl(var(--kiddo-border))] text-sm font-bold text-foreground">
-                                    {(collab.email || "?").slice(0, 1).toUpperCase()}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                                      <p className="text-sm font-bold text-foreground truncate">{collab.email}</p>
-                                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.05em] ${
-                                        collab.status === "accepted"
-                                          ? "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]"
-                                          : "bg-[hsl(var(--kiddo-gold)/0.12)] text-[hsl(var(--kiddo-gold-ink))]"
-                                      }`}>
-                                        {collab.status === "accepted" ? "active" : "pending"}
-                                      </span>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                      {collab.status === "accepted"
-                                        ? `${isAdmin ? "Co-Admin" : "Viewer"} · Accepted`
-                                        : invitedDate
-                                          ? `Invited ${invitedDate} · Awaiting acceptance`
-                                          : "Awaiting acceptance"}
-                                    </p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteCollaborator(primaryFund!.id, collab.id)}
-                                    className="shrink-0 rounded-full border border-[hsl(var(--kiddo-border))] px-3 py-1 text-[11px] font-bold text-muted-foreground hover:border-destructive/40 hover:text-destructive transition-colors"
-                                    data-testid={`button-revoke-collab-${collab.id}`}
-                                  >
-                                    Revoke
-                                  </button>
-                                </div>
-                                <div className="mt-3 flex flex-wrap gap-1.5">
-                                  {granted.map((p) => (
-                                    <span key={p} className="rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-2.5 py-0.5 text-[10.5px] font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                                      ✓ {p}
-                                    </span>
-                                  ))}
-                                  {denied.map((p) => (
-                                    <span key={p} className="rounded-full bg-muted/60 px-2.5 py-0.5 text-[10.5px] font-semibold text-muted-foreground/60">
-                                      ✗ {p}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Your access */}
-                    <div className={collaborators.length > 0 ? "" : "mt-1"}>
-                      <p className="kiddo-section-label mb-3">Your access</p>
-                      <div className="flex items-center gap-3 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">
-                          {user?.profileImageUrl
-                            ? <img src={user.profileImageUrl} alt="" className="h-full w-full rounded-full object-cover" />
-                            : ownerInitial}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-foreground">{ownerName}</p>
-                          <p className="text-xs text-muted-foreground">Primary custodian · Full control</p>
-                        </div>
-                        <span className="shrink-0 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2.5 py-1 text-[10px] font-bold text-[hsl(var(--kiddo-evergreen))]">
-                          Primary
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Plan gate. Free users see the feature explainer
-                        cards above (kept on purpose — it teaches what
-                        co-parent access actually does, which the
-                        previous "Upgrade to share fund access" copy
-                        glossed over). The CTA was also softened from
-                        "See plans" to a direct primary upgrade button
-                        because the explainer above already does the
-                        education job; the gate's job is just to close
-                        the loop with one tap. */}
-                    {!canInvite && (
-                      <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-                        <p className="text-sm font-semibold text-foreground">Invite a co-parent with Kiddo+</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          $4.99/month or $39/year. A partner or guardian sees the fund's growth, the Memory Book, and recent gifts. Their notes show up on the kid's timeline alongside yours.
-                        </p>
-                        <Button
-                          size="sm"
-                          className="mt-3 rounded-xl"
-                          onClick={() => {
-                            haptic("selection");
-                            // Route to Account "Plan & billing" tab per
-                            // the WHO/HOW IA Phase 1c. Includes the
-                            // current fund id so the Plus upgrade
-                            // auto-trigger fires for THIS fund directly.
-                            const fundId = primaryFund?.id;
-                            navigate(fundId
-                              ? `/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fundId)}`
-                              : "/account?tab=plan");
-                          }}
-                          data-testid="button-coparent-upgrade"
-                        >
-                          Upgrade to Kiddo+
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </SectionCard>
-              );
-            })()}
+            {/* Co-parent access. Extracted to CoParentAccessCard on
+                2026-05-14 as Phase 2 sheet-extraction chunk 7. Owns
+                its own collaborators query, delete handler, and the
+                FeatureWallModal that fires when a free user taps
+                Invite. Settings keeps the CollaboratorInviteModal
+                because that modal is a shared wider surface; we
+                pass setCollabModalOpen as the onOpenInviteModal
+                callback. */}
+            {primaryFund && (
+              <CoParentAccessCard
+                fund={primaryFund as any}
+                user={user as any}
+                userPlan={userPlan}
+                onOpenInviteModal={() => setCollabModalOpen(true)}
+              />
+            )}
 
             {/* Fund details. Extracted to FundDetailsCard on 2026-05-14
                 as Phase 2 sheet-extraction chunk 3. Pure display + one
@@ -5514,18 +5310,9 @@ const [editFundName, setEditFundName] = useState("");
         />
       )}
 
-      {/* Co-parent invite wall — fires when a free user taps Invite
-          on the Co-parent access card. fundId routed through so the
-          Plus upgrade fires on the right fund (Plus is per-fund). */}
-      <FeatureWallModal
-        open={coParentWallOpen}
-        onClose={() => setCoParentWallOpen(false)}
-        featureId="co_parent_access"
-        requiredTier="plus"
-        title="Co-parent access is a Kiddo+ feature."
-        body={`Invite a partner or guardian to see ${primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "your child's"} fund. They get viewer or co-admin access; their notes land in the Memory Book alongside yours; you can revoke anytime. You stay the legal custodian — they have no legal claim.`}
-        upgradePath={primaryFund?.id ? `/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(primaryFund.id)}` : "/account?tab=plan"}
-      />
+      {/* Co-parent invite wall — moved into CoParentAccessCard on
+          2026-05-14 (Phase 2 chunk 7) so its state lives next to
+          its trigger. */}
     </div>
   );
 }
