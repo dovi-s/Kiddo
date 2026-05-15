@@ -29,8 +29,9 @@ import {
   CreditCard, Shield, Eye, EyeOff, Check,
   ChevronRight, ChevronDown, Star, Lock, Crown, ArrowUpRight, Wallet, Plus, Loader2,
   Building2, Trash2, TrendingDown, ArrowDownToLine, X, PieChart, Users, UserPlus, Pencil, Share2, ExternalLink, Camera,
-  Calendar as CalendarIcon,
+  Calendar as CalendarIcon, Mail,
 } from "lucide-react";
+import { EMAIL_PREFERENCE_CATEGORIES } from "@shared/emailPreferences";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -77,6 +78,93 @@ function getFundTotalValue(fund: { balance?: string; pendingBalance?: string; ca
     parseFloat(fund?.balance || "0") +
     parseFloat(fund?.pendingBalance || "0") +
     parseFloat(fund?.cashBalance || "0")
+  );
+}
+
+// Email preference center card. Renders a toggle row per category
+// from shared/emailPreferences.ts. Reads + writes via /api/me/email-
+// preferences. Optimistic updates: the toggle flips immediately on
+// click and reverts only if the PATCH fails.
+//
+// Required / transactional emails (password reset, verification,
+// new-device alert, large-gift alert, age-transition emails, gift
+// receipts) are NOT listed here — they're security/legal and
+// always send.
+function EmailPreferenceCenterCard() {
+  const [prefs, setPrefs] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/me/email-preferences", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        const raw = (data?.preferences || {}) as Record<string, boolean>;
+        setPrefs(raw);
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const isEnabled = (key: string): boolean => prefs[key] !== false;
+
+  const togglePreference = async (key: string, nextEnabled: boolean) => {
+    const prior = prefs[key];
+    // Optimistic update.
+    setPrefs((p) => ({ ...p, [key]: nextEnabled }));
+    setSaving(key);
+    try {
+      const res = await fetch("/api/me/email-preferences", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: { [key]: nextEnabled } }),
+      });
+      if (!res.ok) throw new Error("save failed");
+    } catch {
+      // Revert.
+      setPrefs((p) => ({ ...p, [key]: prior as any }));
+      toast({ title: "Could not save preference", description: "Try again.", variant: "destructive" });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <SectionCard>
+      <div className="p-5">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] text-[hsl(var(--kiddo-evergreen))]">
+            <Mail size={16} />
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-foreground">Email preferences</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Pick which optional emails you want from Kiddo. Security and account emails (password reset, verification, new-device alerts, gift receipts) always send.
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 space-y-3">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading preferences…</p>
+          ) : (
+            EMAIL_PREFERENCE_CATEGORIES.map((cat) => (
+              <NotificationSwitchRow
+                key={cat.key}
+                title={cat.label}
+                body={cat.description}
+                checked={isEnabled(cat.key)}
+                onCheckedChange={(next) => void togglePreference(cat.key, next)}
+                disabled={saving === cat.key}
+                testId={`row-email-pref-${cat.key}`}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -4238,6 +4326,8 @@ const [editFundName, setEditFundName] = useState("");
 
         {settingsTab === "notifications" && (
           <div className="space-y-4" data-testid="settings-notifications-panel">
+            <EmailPreferenceCenterCard />
+
             <SectionCard>
               <div className="p-5">
                 <div className="flex items-start gap-3">
