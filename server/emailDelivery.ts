@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
+import { isEmailSuppressed } from "./postmarkWebhook";
 
 export type EmailMessage = {
   to: string;
@@ -13,7 +14,7 @@ export type EmailMessage = {
 
 export type EmailDeliveryResult = {
   delivered: boolean;
-  mode: "postmark" | "sendgrid" | "outbox_fallback" | "dedupe_skipped";
+  mode: "postmark" | "sendgrid" | "outbox_fallback" | "dedupe_skipped" | "suppressed";
   providerId?: string | null;
 };
 
@@ -167,6 +168,17 @@ async function sendWithSendGrid(message: EmailMessage): Promise<EmailDeliveryRes
 }
 
 export async function sendEmail(message: EmailMessage): Promise<EmailDeliveryResult> {
+  // Suppression pre-flight. Hard-bounce + spam-complaint addresses
+  // are stored in the email_suppressions table by the ESP webhook
+  // handler (server/postmarkWebhook.ts). Sending to a suppressed
+  // address would compound sender-reputation damage and re-trigger
+  // the same bounce. Silent skip — the caller's worker layer is
+  // responsible for not re-queueing if delivered=false matters.
+  // Locked 2026-05-15 as part of the deliverability-hygiene branch.
+  if (await isEmailSuppressed(message.to)) {
+    return { delivered: false, mode: "suppressed", providerId: null };
+  }
+
   // Dedupe safety net. Check before doing any provider work. If we
   // would re-send the exact same payload to the exact same recipient
   // within the TTL window, skip. Each per-worker layer already has its

@@ -44,6 +44,7 @@ import {
 import { URL } from "url";
 import { getUserIdForOAuthIdentity, linkOAuthIdentity } from "./oauthIdentityStore";
 import { registerPasskeyRoutes } from "./passkeyAuth";
+import { registerPostmarkWebhook } from "./postmarkWebhook";
 import { mintRestoreToken, verifyRestoreToken } from "./accountRestoreToken";
 import { auditLogs } from "@shared/schema";
 import { sendEmail } from "./emailDelivery";
@@ -1084,6 +1085,14 @@ export function setupAuth(app: Express) {
 
   // Register WebAuthn / passkey routes. Per FACE_ID_SPEC.md.
   registerPasskeyRoutes(app, { isAuthenticated });
+
+  // Postmark bounce/complaint webhook. Writes to email_suppressions;
+  // sendEmail() reads from it before every send. Protected by HTTP
+  // basic auth (POSTMARK_WEBHOOK_USER / POSTMARK_WEBHOOK_PASS env
+  // vars). Configured on Postmark's side at Server > Settings >
+  // Webhooks. Returns 404 (not 401) on auth failure to avoid
+  // confirming the endpoint exists to probing scanners.
+  registerPostmarkWebhook(app);
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {

@@ -257,3 +257,51 @@ export const passwordResets = pgTable("password_resets", {
 
 export type PasswordReset = typeof passwordResets.$inferSelect;
 export type InsertPasswordReset = typeof passwordResets.$inferInsert;
+
+// Email suppression list. Written by ESP webhook handlers
+// (Postmark / SendGrid) when an address hard-bounces or files a
+// spam complaint. Read by sendEmail() before every send — addresses
+// in this table are silently skipped to protect sender reputation.
+//
+// Reasons:
+//   - hard_bounce: address doesn't exist or domain is unroutable.
+//     Continuing to send guarantees more bounces and crater the
+//     domain's reputation; gmail / outlook / fastmail all flag it
+//     fast.
+//   - spam_complaint: recipient clicked the spam button in their
+//     mail client. Sending more would compound the complaint rate;
+//     ESPs auto-throttle senders over thresholds.
+//   - manual: support added the entry by hand (e.g., user
+//     emailed asking to be removed but we can't tie it to a
+//     specific gifter row).
+//
+// source records which ESP webhook fired the suppression so we can
+// audit + reconcile across ESPs if we later add SendGrid alongside
+// Postmark. payload stores the raw event for forensic context (small
+// — ~1-2KB per row).
+//
+// The email column is normalized lowercase + trimmed at insert time;
+// reads also lowercase the lookup. Unique on (email, reason) so
+// re-firing the same bounce doesn't create duplicate rows but a
+// separate spam_complaint after a hard_bounce can still be recorded.
+export const emailSuppressions = pgTable("email_suppressions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email", { length: 254 }).notNull(),
+  reason: varchar("reason", { length: 32 }).notNull(),
+  source: varchar("source", { length: 32 }).notNull(),
+  payload: jsonb("payload"),
+  suppressedAt: timestamp("suppressed_at").defaultNow().notNull(),
+  // Optional unsuppress-at for support overrides ("we verified the
+  // gifter's mailbox is fixed; the previous bounce was a typo").
+  // NULL means the suppression is current. A non-null value in the
+  // past means the suppression has expired and reads should ignore.
+  unsuppressedAt: timestamp("unsuppressed_at"),
+  unsuppressedReason: text("unsuppressed_reason"),
+}, (table) => [
+  uniqueIndex("email_suppressions_email_reason_unique").on(table.email, table.reason),
+  index("email_suppressions_email_idx").on(table.email),
+  index("email_suppressions_suppressed_at_idx").on(table.suppressedAt),
+]);
+
+export type EmailSuppression = typeof emailSuppressions.$inferSelect;
+export type InsertEmailSuppression = typeof emailSuppressions.$inferInsert;
