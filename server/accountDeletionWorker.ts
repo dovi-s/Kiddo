@@ -49,11 +49,20 @@
 //     entries authored by THIS user without a schema change (add
 //     author_user_id column). Deferred to a future Ring C3.
 //
-//   • Plaid /item/remove. We don't currently store a plaid_item_id
-//     column anywhere in the schema; bank_accounts deletion in
-//     Phase 1 already removes our reference to the linked account.
-//     When/if Plaid Item IDs land in the schema, this worker should
-//     call /item/remove on each one.
+//   • Plaid /item/remove. bank_accounts.providerItemId DOES exist
+//     (populated by the /api/plaid/exchange-public-token route), but
+//     Plaid's /item/remove endpoint requires the access_token, NOT
+//     the item_id. The token-exchange handler explicitly comments
+//     "Store the access token in a secure token vault before enabling
+//     live ACH pulls" — it captures item_id then drops the access
+//     token. Without a token vault in place, this worker can't
+//     authenticate the /item/remove call. When the token vault lands
+//     (separate infra decision), update Phase 1 (server/auth.ts
+//     performAccountDeletion) to call /item/remove for each plaid-
+//     source bank_account BEFORE the row delete. Doing it in Phase 1
+//     instead of here gives immediate Plaid revocation on deletion
+//     instead of a 30-day-delayed call. Plaid's own retention sweeps
+//     dormant Items at ~90 days, so the current gap is bounded.
 //
 //   • DriveWealth account closure. Separate compliance flow that
 //     requires manual operations team involvement; this worker
