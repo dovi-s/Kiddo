@@ -225,11 +225,25 @@ async function loadDueFunds(): Promise<{
         AND u.email IS NOT NULL
     )
     SELECT * FROM (
+      -- T-30 widened to a 3-day window (28-30 days out, inclusive).
+      -- 2026-05-15 fix: previously an exact date match against
+      -- CURRENT_DATE plus 30 days. Any worker downtime on T-30 day
+      -- permanently lost the prep email. The fundState.t30SentAt
+      -- timestamp inside processT30 ensures we only send once even
+      -- if the worker ticks multiple times within the window. So
+      -- widening the SQL is purely a backfill safety net: a missed
+      -- T-30 day fires on T-29 or T-28 instead of never. Worst-case
+      -- the email arrives 2 days late vs missing entirely.
       SELECT id, user_id, recipient_first_name, recipient_birthdate, majority_age,
              fund_name, parent_email, parent_first_name, 't30'::text AS milestone
       FROM eligible
-      WHERE majority_date = CURRENT_DATE + INTERVAL '30 days'
+      WHERE majority_date >= CURRENT_DATE + INTERVAL '28 days'
+        AND majority_date <= CURRENT_DATE + INTERVAL '30 days'
       UNION ALL
+      -- T-1 stays tight at 1 day out. If the worker misses T-1, T-0
+      -- (the day-of) lookback below still catches the kid invite, so
+      -- the failure mode is "T-1 parent heads-up was skipped" not
+      -- "no email at all."
       SELECT id, user_id, recipient_first_name, recipient_birthdate, majority_age,
              fund_name, parent_email, parent_first_name, 't1'::text AS milestone
       FROM eligible

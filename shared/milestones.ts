@@ -78,16 +78,36 @@ export function formatMilestone(value: number): string {
 // (client) and the server-side milestone engine use this so a $250 → $1100
 // jump correctly reports the highest crossed threshold (or, in the server
 // engine's case, fires for both $500 AND $1,000 by iterating the array).
+//
+// 2026-05-15 fix: was previously `if (prev <= 0) return null` — this gate
+// skipped FIRST-GIFT crossings entirely. A brand-new fund receiving its
+// first $250 gift had prev = 0, so the client celebration card never
+// rendered even though the gift legitimately crossed the $100 threshold.
+// The server engine (fireMoneyCrossMilestones, server/milestones.ts)
+// uses `prev < t && current >= t` unconditionally and correctly fires
+// the activity + Memory Book row for the first-gift case. The client
+// card was the only surface skipping it — bad asymmetry. Now both
+// surfaces agree: any crossing fires, including from prev = 0.
+//
+// Negative prev is still excluded (would imply a broken state read).
+// Treat undefined / NaN inputs as no-crossing.
 export function getMilestoneCrossed(prev: number, current: number): number | null {
   if (!Number.isFinite(prev) || !Number.isFinite(current)) return null;
-  if (prev <= 0) return null;
+  if (prev < 0) return null;
+  // Round both sides to cents to match how the server engine sees them.
+  // The fund's balance fields are decimal strings (e.g., "499.999...") and
+  // float arithmetic on raw parseFloat values can put prev or current 1e-9
+  // off from the integer milestone — enough to misfire above or below.
+  // Cents-rounding matches what the user reads on screen.
+  const prevC = Math.round(prev * 100) / 100;
+  const currC = Math.round(current * 100) / 100;
   // Walk highest-to-lowest so the most-impressive crossed threshold is what
   // shows on the card (no point celebrating $500 when the same gift crossed
   // $1,000). The server engine iterates ascending and writes one row per
   // crossed threshold — different concern, different traversal.
   for (let i = MONEY_CROSS_THRESHOLDS.length - 1; i >= 0; i -= 1) {
     const m = MONEY_CROSS_THRESHOLDS[i];
-    if (prev < m && current >= m) return m;
+    if (prevC < m && currC >= m) return m;
   }
   return null;
 }

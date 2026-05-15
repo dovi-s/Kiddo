@@ -295,24 +295,37 @@ async function processRow(row: StalledRow, log: LogFn): Promise<void> {
   // T+90 trusted-contact escalation. Check this FIRST so we don't
   // double-fire a T+30 then T+90 in the same tick on a long-stalled
   // fund. Each step is idempotent via the stamped timestamp.
+  //
+  // 2026-05-15 fix: previously stamped t90 unconditionally — even on
+  // sendEmail throw. A trusted contact with a real email address who
+  // happened to be unreachable during a Postmark / SendGrid outage
+  // got marked "processed" with no retry mechanism. The kid stayed
+  // stalled, the parent had no visibility, and the trusted contact
+  // never received the email.
+  //
+  // New behavior distinguishes the two failure modes:
+  //   • emailTrustedContact returns false → permanent state (no
+  //     contact on file). Stamp t90 so the worker doesn't re-check
+  //     every 12 hours forever. Log a notice for ops follow-up.
+  //   • emailTrustedContact throws → transient ESP failure. Do NOT
+  //     stamp t90. Next 12-hour tick will retry.
   if (ageMs >= T90_MS && !row.stalledHandoffT90At) {
-    let sent = false;
     try {
-      sent = await emailTrustedContact(row, log);
+      const sent = await emailTrustedContact(row, log);
+      // Successful call — either email landed (sent=true) or there's
+      // no trusted contact to email (sent=false). Both are permanent
+      // states; stamp so we don't re-check.
+      await stampSentAt(row.fundId, "t90", log);
+      if (!sent && !row.trustedContactEmail) {
+        log(
+          `fund ${row.fundId} reached T+90 with no trusted contact on file; consider surfacing action item`,
+          WORKER_SOURCE,
+        );
+      }
     } catch (err: any) {
-      log(`T+90 trusted contact email failed for fund ${row.fundId}: ${String(err?.message || err)}`, WORKER_SOURCE);
-    }
-    // Stamp regardless of whether trusted contact existed. If there
-    // was no trusted contact, the email didn't fire, but we still
-    // mark the step as "processed" so the worker doesn't re-check
-    // every 12 hours forever. The parent's action-item surface
-    // (handled by deriveActionItemsForUser in server/actionItems.ts
-    // via a future stalled_handoff_no_contact type) is the long-term
-    // visibility instead.
-    await stampSentAt(row.fundId, "t90", log);
-    if (!sent && !row.trustedContactEmail) {
+      // Transient failure. Don't stamp — next tick retries.
       log(
-        `fund ${row.fundId} reached T+90 with no trusted contact on file; consider surfacing action item`,
+        `T+90 trusted contact email failed for fund ${row.fundId} (will retry next tick): ${String(err?.message || err)}`,
         WORKER_SOURCE,
       );
     }

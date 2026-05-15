@@ -126,7 +126,17 @@ export async function fireMoneyCrossMilestones(
   newTotal: number,
 ): Promise<void> {
   if (!Number.isFinite(prevTotal) || !Number.isFinite(newTotal)) return;
-  if (newTotal <= prevTotal) return;
+  // Round both sides to cents BEFORE comparing thresholds. Fund balances
+  // are stored as decimal strings and parseFloat into JS numbers — a
+  // sequence of $0.01 gift settles can leave prevTotal at e.g.
+  // 99.99999999999 instead of exactly 100. The threshold check would
+  // then incorrectly fire $100 because prevTotal (99.9999...) < 100 AND
+  // newTotal (100.00000001 after the next gift) >= 100. Cents-rounding
+  // matches what the user reads on screen and matches the locked
+  // shared/milestones.ts getMilestoneCrossed implementation.
+  const prevTotalC = Math.round(prevTotal * 100) / 100;
+  const newTotalC = Math.round(newTotal * 100) / 100;
+  if (newTotalC <= prevTotalC) return;
   const childName = await fundDisplayName(fundId);
   // Track the highest threshold actually crossed in this update so we can
   // notify gifters about the most-impressive crossing without spamming them
@@ -135,7 +145,7 @@ export async function fireMoneyCrossMilestones(
   // about $50k, not three).
   let highestCrossed = 0;
   for (const t of MONEY_CROSS_THRESHOLDS) {
-    if (prevTotal < t && newTotal >= t) {
+    if (prevTotalC < t && newTotalC >= t) {
       const key = `t:${t}`;
       if (await hasMilestone(fundId, "milestone_money_cross", key)) continue;
       const copy = MONEY_CROSS_COPY[t];
@@ -400,6 +410,23 @@ export async function fireFirstPhotoMilestone(fundId: string, userId: string): P
 }
 
 export async function fireFirstKidPickApprovedMilestone(fundId: string, userId: string): Promise<void> {
+  // Idempotent gate. Previously fireFirstMilestone's generic dedup key
+  // ("k:first_kid_pick_approved") was the only guard — and hasMilestone's
+  // LIKE-on-JSON dedup works fine for that, BUT a race condition can fire
+  // both branches inside the same transaction window before either
+  // hasMilestone sees the other's write. Belt-and-suspenders: also check
+  // for any prior milestone_first_kid_pick_approved activity row for this
+  // fund regardless of metadata key, so a double-tap on /approve never
+  // double-stamps.
+  const priorMilestone = await db
+    .select({ id: activities.id })
+    .from(activities)
+    .where(and(
+      eq(activities.fundId, fundId),
+      eq(activities.type, "milestone_first_kid_pick_approved"),
+    ))
+    .limit(1);
+  if (priorMilestone.length > 0) return;
   const childName = await fundDisplayName(fundId);
   await fireFirstMilestone(
     fundId, userId, "first_kid_pick_approved",

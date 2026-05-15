@@ -149,6 +149,7 @@ import {
 } from "@shared/monetization";
 import { calculateDashboardMoneyMath } from "@shared/dashboard-money-math";
 import { sumMonthlyEquivalent, toMonthlyEquivalent } from "@shared/recurring-math";
+import { MONEY_CROSS_THRESHOLDS } from "@shared/milestones";
 import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
 import { getCulturalSuggestions, TRADITION_LABELS, TRADITION_ICONS, type CulturalBackground, type CulturalTradition } from "@/lib/cultural-calendar";
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
@@ -1403,6 +1404,11 @@ export default function Dashboard() {
     currentProjection?: number;
     doubledProjection?: number;
     milestoneAmt?: number;
+    // The NEXT milestone above the one just crossed. Used in the
+    // "at your current pace, the next $X arrives in N months" copy
+    // so the number we promise matches the threshold we're projecting
+    // toward, not the one we just hit. Added 2026-05-15 timing audit.
+    nextMilestoneAmt?: number;
     monthsAtCurrentRate?: number;
     monthsDoubled?: number;
   } | null>(null);
@@ -2998,14 +3004,63 @@ export default function Dashboard() {
       return;
     }
 
-    // Scenario 3: milestone hit ($500, $1K, $5K, $10K) — never show when fund is down
-    const MILESTONES = [500, 1000, 5000, 10000];
+    // Scenario 3: milestone hit — never show when fund is down.
+    //
+    // Two bug fixes here (2026-05-15 timing audit):
+    //
+    //  1. THRESHOLDS aligned with the server. The local list was a
+    //     subset [500, 1K, 5K, 10K] of the server's canonical
+    //     MONEY_CROSS_THRESHOLDS [100, 500, 1K, 2.5K, 5K, 10K, 25K, ...].
+    //     A fund crossing $100, $2,500, $25K+ fired an activity row
+    //     on the server but no client celebration nudge — the parent
+    //     felt the milestone silently happen. Now sourced from
+    //     shared/milestones.ts so both surfaces are in lockstep.
+    //
+    //  2. monthsToNext math was lying. The old code computed
+    //     `ceil(hitMilestone / monthlyAmt)` — months for contributions
+    //     ALONE to accumulate ANOTHER chunk equal to the current
+    //     milestone. So a fund just crossed $500 with $50/month said
+    //     "the next $500 in 10 months" but ignored: existing balance,
+    //     compound growth, and the actual next threshold ($1,000 from
+    //     this list, not another $500). The honest computation
+    //     simulates month-by-month: starting from current balance,
+    //     applies 7% net-of-fee monthly growth plus monthly
+    //     contribution, counts months until next threshold is hit.
+    //     Capped at 120 months — anything past 10 years is too far
+    //     out to read as "at your current pace."
     const prevValue = parseFloat(fundHistory[1]?.totalValue || "0");
-    const hitMilestone = MILESTONES.find(m => totalValue >= m && prevValue < m);
+    const hitMilestone = MONEY_CROSS_THRESHOLDS.find(
+      (m) => totalValue >= m && prevValue < m,
+    );
     if (hitMilestone && monthlyAmt > 0 && currentProjection && oneYearReturn >= 0) {
-      const monthsAtCurrent = monthlyAmt > 0 ? Math.ceil(hitMilestone / monthlyAmt) : null;
-      const monthsDoubled = monthlyAmt > 0 ? Math.ceil(hitMilestone / (monthlyAmt * 2)) : null;
-      setSmartNudge({ scenario: "milestone", milestoneAmt: hitMilestone, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection: doubledProjection ?? undefined, monthsAtCurrentRate: monthsAtCurrent ?? undefined, monthsDoubled: monthsDoubled ?? undefined });
+      const nextMilestone = MONEY_CROSS_THRESHOLDS.find((m) => m > hitMilestone) ?? null;
+      // Month-by-month simulation. Uses the locked Kiddo projection
+      // rule: 7% historical average annual return, 0.10% AUM fee
+      // netted, monthly compounding. Same math the rest of the app
+      // uses via shared/projection.ts.
+      const monthsToReach = (target: number, monthly: number): number | null => {
+        if (!target || target <= totalValue) return 0;
+        const monthlyRate = (0.07 - 0.001) / 12; // 7% gross minus 0.10% AUM fee
+        let balance = totalValue;
+        for (let m = 1; m <= 120; m += 1) {
+          balance = balance * (1 + monthlyRate) + monthly;
+          if (balance >= target) return m;
+        }
+        return null; // beyond 10 years; don't claim an estimate
+      };
+      const monthsAtCurrent = nextMilestone ? monthsToReach(nextMilestone, monthlyAmt) : null;
+      const monthsDoubled = nextMilestone ? monthsToReach(nextMilestone, monthlyAmt * 2) : null;
+      setSmartNudge({
+        scenario: "milestone",
+        milestoneAmt: hitMilestone,
+        nextMilestoneAmt: nextMilestone ?? undefined,
+        currentMonthlyAmt: monthlyAmt,
+        doubledAmt: monthlyAmt * 2,
+        currentProjection,
+        doubledProjection: doubledProjection ?? undefined,
+        monthsAtCurrentRate: monthsAtCurrent ?? undefined,
+        monthsDoubled: monthsDoubled ?? undefined,
+      });
       localStorage.setItem(NUDGE_KEY, String(now));
     }
   }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt, isReadOnlyFund]);
@@ -12994,12 +13049,27 @@ export default function Dashboard() {
                     <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
                       {child} just crossed {fmtAmt(smartNudge.milestoneAmt)}.
                     </h2>
-                    {smartNudge.monthsAtCurrentRate && smartNudge.monthsDoubled && smartNudge.milestoneAmt && (
+                    {/* Honest projection. Rewritten 2026-05-15:
+                        OLD copy said "the next $500 arrives in N months"
+                        with math = milestoneAmt / monthlyAmt — wrong on
+                        three counts: (1) ignored the current balance,
+                        (2) ignored 7% growth, (3) "the next $500" meant
+                        "another chunk" not "the next milestone."
+                        NEW: nextMilestoneAmt is the literal next
+                        threshold (e.g., $1K after $500), and the months
+                        come from a month-by-month simulation that
+                        starts at current balance, applies 7% net-of-fee
+                        growth, and adds monthly contributions until
+                        the next threshold is reached. nextMilestoneAmt
+                        is undefined if the fund is at the highest
+                        threshold ($100K), in which case we skip the
+                        projection line entirely. */}
+                    {smartNudge.nextMilestoneAmt && smartNudge.monthsAtCurrentRate && (
                       <p className="mt-2 text-sm text-foreground/80 leading-relaxed">
-                        Your monthly investments built this. At your current pace, the next {fmtAmt(smartNudge.milestoneAmt)} arrives in about {smartNudge.monthsAtCurrentRate} months.
-                        {smartNudge.doubledAmt && (
+                        At your current pace ({fmtAmt(smartNudge.currentMonthlyAmt || 0)}/mo plus 7% historical-average growth), you'd cross {fmtAmt(smartNudge.nextMilestoneAmt)} in about {smartNudge.monthsAtCurrentRate} {smartNudge.monthsAtCurrentRate === 1 ? "month" : "months"}.
+                        {smartNudge.doubledAmt && smartNudge.monthsDoubled && (
                           <>
-                            {" "}Bumping the recurring to {fmtAmt(smartNudge.doubledAmt)}/mo would bring that in about {smartNudge.monthsDoubled} months.
+                            {" "}At {fmtAmt(smartNudge.doubledAmt)}/mo, in about {smartNudge.monthsDoubled} {smartNudge.monthsDoubled === 1 ? "month" : "months"}.
                           </>
                         )}
                       </p>
