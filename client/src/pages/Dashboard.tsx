@@ -50,6 +50,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { AddFundSheet } from "@/components/AddFundSheet";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
+import { FundSettingsSheet } from "@/components/FundSettingsSheet";
 import { CreateEventSheet, type EditEventData } from "@/components/CreateEventSheet";
 import { GrowthStory } from "@/components/GrowthStory";
 import { EventGateModal } from "@/components/EventGateModal";
@@ -1068,6 +1069,13 @@ export default function Dashboard() {
   // only to discover they can't finish it. Dismissal tracked via
   // dismissedFeatureWalls so a repeat encounter shows softer copy.
   const [secondFundWallOpen, setSecondFundWallOpen] = useState(false);
+  // FundSettingsSheet — Phase 2 chunk 10 capstone. Opens the
+  // Child tab as a Dashboard-context sheet so the parent never
+  // leaves Dashboard for the most-common per-fund-settings
+  // visits. Hand-off to /settings?tab=child for the three modal
+  // actions (Edit fund, Invite co-parent, Close fund) that
+  // still live as Dialogs in Settings.
+  const [fundSettingsSheetOpen, setFundSettingsSheetOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   // Re-render trigger when the user snoozes the SSN nudge. Just an
   // incrementing number — the banner condition reads `isSsnSnoozed(fundId)`
@@ -9363,7 +9371,7 @@ export default function Dashboard() {
             {!isReadOnlyFund && activeFund?.id && (
               <button
                 type="button"
-                onClick={() => { haptic("selection"); setLocation("/settings?tab=child"); }}
+                onClick={() => { haptic("selection"); setFundSettingsSheetOpen(true); }}
                 className="w-full rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4 text-left transition-colors hover:bg-muted/20"
                 data-testid="dashboard-manage-fund-link"
               >
@@ -9541,6 +9549,16 @@ export default function Dashboard() {
             : "Add unlimited child funds with Kiddo Family. One price for every kid, one dashboard across all of them, recurring investments and co-parent access on every fund. Cancel anytime."
         }
         upgradePath="/account?tab=plan&upgrade=family"
+      />
+
+      {/* Fund Settings sheet — Phase 2 chunk 10 capstone. Opens
+          the Child tab content as a Dashboard-context sheet.
+          Read-affordances work in-sheet; write actions hand off
+          to /settings?tab=child. */}
+      <FundSettingsSheet
+        open={fundSettingsSheetOpen}
+        onClose={() => setFundSettingsSheetOpen(false)}
+        fund={(activeFund ?? null) as any}
       />
 
       {sharePages.length > 0 && (
