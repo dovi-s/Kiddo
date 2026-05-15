@@ -41,8 +41,13 @@ export const pool = new Pool({
   connectionTimeoutMillis: 5_000,
 });
 
-// Prevent process crashes on background connection errors (e.g., intercepted TLS resets).
+// Prevent process crashes on background connection errors (e.g.,
+// intercepted TLS resets, pool idle timeouts, transient Supabase
+// pooler drops). Downgraded to console.warn 2026-05-14 — these are
+// normal background events, not alertable errors. The handler's
+// primary job is to swallow the unhandled 'error' event so Node
+// doesn't exit. Same pattern as the session pool handler in auth.ts.
 pool.on("error", (error) => {
-  console.error("Postgres pool error:", error);
+  console.warn("Postgres pool error (transient, suppressed to prevent process crash):", error?.message ?? error);
 });
 export const db = drizzle(pool, { schema });

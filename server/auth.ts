@@ -485,7 +485,15 @@ export function setupAuth(app: Express) {
       max: 5,
     });
     sessionPool.on("error", (error) => {
-      console.error("Session pool error (suppressed to prevent process crash):", error);
+      // Downgraded to console.warn 2026-05-14 — transient Supabase
+      // connection drops are normal background noise (TLS resets,
+      // pool idle-timeout, brief network blips). The handler's job
+      // is to swallow the unhandled 'error' event so Node doesn't
+      // exit; the logging here is informational, not an alert.
+      // console.error makes managed-host log aggregators (Datadog,
+      // Sentry default rules) page on it, which is wrong for
+      // background-pool reconnect chatter.
+      console.warn("Session pool error (transient, suppressed to prevent process crash):", error?.message ?? error);
     });
     sessionStore = new pgStore({
       conString: sessionConString,
@@ -739,20 +747,23 @@ export function setupAuth(app: Express) {
 
       // Atomic ownership transfer. After this row update, every fund-scoped
       // permission check (`fund.userId !== req.user.id`) flips for the kid.
+      // transferredAt is set in the same UPDATE so the legal-transfer
+      // moment is preserved (distinct from updatedAt which churns on
+      // every fund-row write). Enables future post-handoff read-only
+      // treatment per FUND_STATES_SPEC.md item 4.
       //
-      // NOTE: a `transferredAt: transferTime` write was added here on
-      // 2026-05-14 alongside the schema change adding the `transferred_at`
-      // column. Both reverted in the same recovery commit because the
-      // migration (migrations/0016_fund_transferred_at.sql) wasn't
-      // applied to the user's DB, and Drizzle's SELECTs against the
-      // funds table started failing with column-does-not-exist 500s.
-      // Once `npm run db:push` (or db:migrate) is run to apply
-      // migration 0016, restoring this write and the schema
-      // declaration is safe. See schema.ts transferred_at note.
+      // Restored 2026-05-14 after the schema-DB-drift recovery. The
+      // original add (commit e2fd175) broke 500s on every fund query;
+      // recovery commit b8e16e9 reverted both schema and auth.ts;
+      // this commit restores them AFTER db:push has applied the
+      // column to the DB. The discipline is locked at
+      // feedback_schema_migration_sync_discipline.md — schema and
+      // DB stay in sync.
       const previousOwnerId = fund.userId;
+      const transferTime = new Date();
       await dbModule
         .update(fundsTable)
-        .set({ userId: user.id, updatedAt: new Date() })
+        .set({ userId: user.id, transferredAt: transferTime, updatedAt: transferTime })
         .where(eq(fundsTable.id, fund.id));
 
       // Activity log so the parent + admin can see the transition happened.

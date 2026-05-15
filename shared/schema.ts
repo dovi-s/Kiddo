@@ -58,18 +58,19 @@ export const funds = pgTable("funds", {
   successorCustodianRelation: text("successor_custodian_relation"),
   successorCustodianAddedAt: timestamp("successor_custodian_added_at"),
   age18NotifiedAt: timestamp("age_18_notified_at"),
-  // NOTE: a `transferredAt` column was added to this schema on
-  // 2026-05-14 (commit e2fd175) without the migration being applied
-  // to the user's DB. That caused every funds-table query to 500
-  // because Drizzle generated SELECTs referencing a column the DB
-  // didn't have. Reverted the schema declaration in commit
-  // following the rapid-fire mistake. The migration file
-  // (migrations/0016_fund_transferred_at.sql) is intentionally
-  // kept — it documents the intended addition and can be applied
-  // via `npm run db:push` or `npm run db:migrate`. Once applied,
-  // restoring `transferredAt: timestamp("transferred_at")` here
-  // and the matching `transferredAt: transferTime` write in
-  // server/auth.ts is safe.
+  // Stamped when the kid claims the fund at majority (the
+  // /api/auth/claim flow atomically reassigns fund.userId AND sets
+  // this timestamp). Distinct from updated_at; transferred_at is the
+  // canonical "this fund has crossed majority" signal. NULL for
+  // funds that haven't crossed majority yet; never cleared once set.
+  // Enables future post-handoff read-only treatment per
+  // FUND_STATES_SPEC.md item 4. Restored 2026-05-14 after the
+  // schema-DB-drift recovery — the original add (commit e2fd175)
+  // landed without applying the migration, broke every funds query.
+  // This time the foundation is restored AFTER `npm run db:push`
+  // has been run, so the schema and DB are in sync. Discipline
+  // locked in feedback_schema_migration_sync_discipline.md.
+  transferredAt: timestamp("transferred_at"),
   // Set the first time the kid (new owner post-handoff) finishes the
   // Age18Welcome.tsx walkthrough at /welcome-at-18. Null until then;
   // once stamped the walkthrough never re-fires. Dashboard.tsx checks
