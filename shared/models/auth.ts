@@ -110,6 +110,15 @@ export const users = pgTable("users", {
   // funds.dismissedNudges (also a JSONB key-value map of dismissal
   // timestamps). NULL on accounts that have never seen a wall.
   dismissedFeatureWalls: jsonb("dismissed_feature_walls"),
+  // Email verification timestamp. Set when the user clicks the link
+  // in the post-signup verification email. NULL on accounts that
+  // registered before this flow shipped (2026-05-15) — those are
+  // grandfathered as verified to avoid a punitive prompt for
+  // existing users; new accounts must verify. Loop through new
+  // user.emailVerifiedAt for the "verify your email" banner
+  // condition on Dashboard. The verification token itself lives in
+  // the separate email_verifications table.
+  emailVerifiedAt: timestamp("email_verified_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -305,3 +314,35 @@ export const emailSuppressions = pgTable("email_suppressions", {
 
 export type EmailSuppression = typeof emailSuppressions.$inferSelect;
 export type InsertEmailSuppression = typeof emailSuppressions.$inferInsert;
+
+// Email verification tokens. Same shape as password_resets — single-
+// use 32-byte token stored as SHA-256 hash, 7-day TTL (longer than
+// password reset because users often delay clicking through; a
+// password reset is "I want in NOW," a verify-email is "I'll get
+// to it"). On verification success, users.emailVerifiedAt is
+// stamped and the row is marked used.
+//
+// Re-issuing verification (parent didn't get the first email, etc.)
+// creates a new row; the original stays valid until used or
+// expired. Cleanup is the periodic purge of expired+used rows
+// (not implemented yet — table will stay small for the
+// foreseeable future).
+export const emailVerifications = pgTable("email_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // The email being verified. Stored alongside user_id so a future
+  // email-change flow can verify a NEW address before swapping it
+  // onto the user row.
+  email: varchar("email", { length: 254 }).notNull(),
+  tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("email_verifications_token_hash_unique").on(table.tokenHash),
+  index("email_verifications_user_id_idx").on(table.userId),
+  index("email_verifications_expires_at_idx").on(table.expiresAt),
+]);
+
+export type EmailVerification = typeof emailVerifications.$inferSelect;
+export type InsertEmailVerification = typeof emailVerifications.$inferInsert;

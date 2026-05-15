@@ -8,7 +8,7 @@ import crypto from "crypto";
 import pg from "pg";
 import path from "path";
 import type { Express, Request, RequestHandler, Response } from "express";
-import { users, passwordResets, type User } from "@shared/models/auth";
+import { users, passwordResets, emailVerifications, type User } from "@shared/models/auth";
 // Imports for account-deletion helpers below. `funds` for blocked-state
 // checks; `subscriptions` + `fundMemberships` for Stripe cancellation;
 // `activities` for the audit-log entry.
@@ -49,6 +49,7 @@ import { mintRestoreToken, verifyRestoreToken } from "./accountRestoreToken";
 import { auditLogs } from "@shared/schema";
 import { sendEmail } from "./emailDelivery";
 import { buildPasswordResetEmail } from "./templates/passwordReset";
+import { buildVerificationEmail } from "./templates/emailVerification";
 import { z } from "zod";
 
 const emailSchema = z
@@ -115,9 +116,45 @@ const resetPasswordSchema = z.object({
 // unused link expires before opportunistic abuse.
 const PASSWORD_RESET_TOKEN_BYTES = 32;
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+// Email-verification tokens use the same 32-byte shape but a longer
+// 7-day TTL since "I'll get to it later" is the typical signup flow.
+const EMAIL_VERIFICATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 function hashResetToken(rawToken: string): string {
   return crypto.createHash("sha256").update(rawToken, "utf8").digest("hex");
+}
+
+// Generate + store + send a verification email for a given user.
+// Returns true if the email was queued successfully. Logs but does
+// not throw on send failure so signup / resend flows don't 500 on
+// transient ESP issues. Idempotent insertion: re-issuing creates
+// a new row, leaving prior unused tokens valid until they expire.
+async function issueVerificationEmail(opts: {
+  userId: string;
+  email: string;
+  firstName?: string | null;
+}): Promise<boolean> {
+  try {
+    const rawToken = crypto.randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString("hex");
+    const tokenHash = hashResetToken(rawToken);
+    const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
+    await db.insert(emailVerifications).values({
+      userId: opts.userId,
+      email: opts.email.toLowerCase(),
+      tokenHash,
+      expiresAt,
+    });
+    const verifyUrl = `${getBaseUrlForResetLink()}/verify-email?token=${encodeURIComponent(rawToken)}`;
+    await sendEmail(buildVerificationEmail({
+      to: opts.email,
+      verifyUrl,
+      firstName: opts.firstName ?? null,
+    }));
+    return true;
+  } catch (err: any) {
+    console.error("[email-verification] issue failed:", err?.message || err);
+    return false;
+  }
 }
 
 function getBaseUrlForResetLink(): string {
@@ -666,6 +703,12 @@ export function setupAuth(app: Express) {
       } catch (subErr) {
         console.error("Failed to create free subscription:", subErr);
       }
+
+      // Fire-and-forget verification email. Don't block the register
+      // response on the email round-trip; the parent gets logged in
+      // immediately and sees the verify-email banner on Dashboard.
+      // Failures are logged inside issueVerificationEmail.
+      void issueVerificationEmail({ userId: user.id, email, firstName: firstName ?? null });
 
       req.login(user, (err) => {
         if (err) {
@@ -1447,6 +1490,101 @@ export function setupAuth(app: Express) {
     } catch (err: any) {
       console.error("[reset-password] error:", err);
       return res.status(500).json({ message: "Something went wrong. Try again or write to support." });
+    }
+  });
+
+  // Verify email. Consumes the token from the post-signup
+  // verification email. Stamps users.email_verified_at and marks the
+  // token row as used. Same anti-enumeration shape as reset-password:
+  // every failure mode returns the same generic error so a caller
+  // can't probe whether the token was valid-but-used vs expired vs
+  // never-existed.
+  app.post("/api/auth/verify-email", async (req, res) => {
+    const tokenRaw = String(req.body?.token || "").trim();
+    if (tokenRaw.length < 32 || tokenRaw.length > 256) {
+      return res.status(400).json({ message: "Invalid or expired verification link." });
+    }
+    const tokenHash = hashResetToken(tokenRaw);
+    try {
+      const rows = await db
+        .select({
+          id: emailVerifications.id,
+          userId: emailVerifications.userId,
+          email: emailVerifications.email,
+        })
+        .from(emailVerifications)
+        .where(
+          and(
+            eq(emailVerifications.tokenHash, tokenHash),
+            isNull(emailVerifications.usedAt),
+            gt(emailVerifications.expiresAt, new Date()),
+          ),
+        )
+        .limit(1);
+      if (rows.length === 0) {
+        return res.status(400).json({ message: "Invalid or expired verification link." });
+      }
+      const verifyRow = rows[0];
+      await db
+        .update(users)
+        .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
+        .where(eq(users.id, verifyRow.userId));
+      await db
+        .update(emailVerifications)
+        .set({ usedAt: new Date() })
+        .where(eq(emailVerifications.id, verifyRow.id));
+      try {
+        await db.insert(activities).values({
+          userId: verifyRow.userId,
+          type: "email_verified",
+          title: "Email verified",
+          description: `Verified ${verifyRow.email}`,
+          metadata: { ip: req.ip || null, userAgent: req.get("user-agent") || null } as any,
+        } as any);
+      } catch (auditErr: any) {
+        console.warn("[verify-email] Could not write audit entry (non-fatal):", auditErr?.message);
+      }
+      return res.status(200).json({ ok: true, email: verifyRow.email });
+    } catch (err: any) {
+      console.error("[verify-email] error:", err);
+      return res.status(500).json({ message: "Something went wrong. Try again." });
+    }
+  });
+
+  // Resend verification email. Auth-required (the user is already
+  // logged in but unverified) — anti-enumeration doesn't apply here
+  // since the caller has already proven they hold the account
+  // session. Rate-limited implicitly by the sendEmail dedupe cache
+  // (same payload to same address within 12 hours = silent skip).
+  app.post("/api/auth/resend-verification", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const userRows = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          emailVerifiedAt: users.emailVerifiedAt,
+        })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (userRows.length === 0) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+      const u = userRows[0];
+      if (u.emailVerifiedAt) {
+        return res.status(200).json({ ok: true, alreadyVerified: true });
+      }
+      if (!u.email) {
+        return res.status(400).json({ error: "Account has no email on file." });
+      }
+      await issueVerificationEmail({ userId: u.id, email: u.email, firstName: u.firstName });
+      return res.status(200).json({ ok: true });
+    } catch (err: any) {
+      console.error("[resend-verification] error:", err);
+      return res.status(500).json({ error: "Something went wrong. Try again." });
     }
   });
 }
