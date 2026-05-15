@@ -14,6 +14,7 @@ import { AddFundSheet } from "@/components/AddFundSheet";
 import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
 import { PlanBenefitsCard } from "@/components/PlanBenefitsCard";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
+import { SuccessorCustodianCard } from "@/components/SuccessorCustodianCard";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -2818,11 +2819,9 @@ const [editFundName, setEditFundName] = useState("");
   // Successor custodian editor (Settings → Child tab). Pre-populated from
   // the fund record on expand; edits go through PATCH /api/funds/:id which
   // already writes the appropriate successor_custodian_* activity entry.
-  const [successorEditOpen, setSuccessorEditOpen] = useState(false);
-  const [successorName, setSuccessorName] = useState("");
-  const [successorEmail, setSuccessorEmail] = useState("");
-  const [successorRelation, setSuccessorRelation] = useState("");
-  const [savingSuccessor, setSavingSuccessor] = useState(false);
+  // (Successor-custodian state moved into SuccessorCustodianCard on
+  // 2026-05-14 — Phase 2 sheet-extraction chunk 1. See that file
+  // for the editor/save/remove implementation.)
   // Personalized cancellation impact — fetched only when the cancel modal is open so we
   // don't pay for the calculation on every Settings load.
   const { data: cancellationImpact } = useQuery<{
@@ -4381,201 +4380,12 @@ const [editFundName, setEditFundName] = useState("");
               </div>
             </SectionCard>
 
-            {/* Successor custodian — UTMA's "what happens if you die before
-                the kid turns 18" slot. Schema, PATCH endpoint, and activity
-                logging all already exist (the AddFundSheet flow at fund
-                creation populates these). Was missing the Settings-side
-                edit surface — a parent whose chosen successor moves away,
-                divorces, or dies needed a way to update. This is that. */}
-            {primaryFund && (() => {
-              const currentName = String((primaryFund as any).successorCustodianName || "").trim();
-              const currentEmail = String((primaryFund as any).successorCustodianEmail || "").trim();
-              const currentRelation = String((primaryFund as any).successorCustodianRelation || "").trim();
-              const childFirst = primaryFund.recipientFirstName || "your child";
-              // State-specific majority age for "before {child} turns {N}" copy.
-              const primaryMajorityAge = Number((primaryFund as any)?.majorityAge) || 18;
-
-              const openEditor = () => {
-                haptic("light");
-                setSuccessorName(currentName);
-                setSuccessorEmail(currentEmail);
-                setSuccessorRelation(currentRelation);
-                setSuccessorEditOpen(true);
-              };
-
-              const handleSave = async () => {
-                if (!primaryFund?.id) return;
-                const trimmedName = successorName.trim();
-                if (!trimmedName) {
-                  toast({ title: "Name required", description: "Add a name for the successor custodian.", variant: "destructive" });
-                  return;
-                }
-                setSavingSuccessor(true);
-                try {
-                  const res = await fetch(`/api/funds/${primaryFund.id}`, {
-                    method: "PATCH",
-                    credentials: "include",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      successorCustodianName: trimmedName,
-                      successorCustodianEmail: successorEmail.trim() || null,
-                      successorCustodianRelation: successorRelation.trim() || null,
-                      // Stamp the added-at on a NEW designation; preserve the original
-                      // stamp on edits so the legal trail tracks first-set, not most-recent-edit.
-                      ...(currentName ? {} : { successorCustodianAddedAt: new Date().toISOString() }),
-                    }),
-                  });
-                  if (!res.ok) throw new Error("save failed");
-                  haptic("success");
-                  toast({ title: currentName ? "Successor updated" : "Successor saved", description: `${trimmedName} will step in if anything happens to you.` });
-                  setSuccessorEditOpen(false);
-                  await queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
-                } catch {
-                  haptic("error");
-                  toast({ title: "Couldn't save", description: "Try again in a moment.", variant: "destructive" });
-                } finally {
-                  setSavingSuccessor(false);
-                }
-              };
-
-              const handleRemove = async () => {
-                if (!primaryFund?.id) return;
-                setSavingSuccessor(true);
-                try {
-                  const res = await fetch(`/api/funds/${primaryFund.id}`, {
-                    method: "PATCH",
-                    credentials: "include",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      successorCustodianName: null,
-                      successorCustodianEmail: null,
-                      successorCustodianRelation: null,
-                    }),
-                  });
-                  if (!res.ok) throw new Error("remove failed");
-                  haptic("success");
-                  toast({ title: "Successor removed" });
-                  setSuccessorEditOpen(false);
-                  await queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
-                } catch {
-                  haptic("error");
-                  toast({ title: "Couldn't remove", description: "Try again in a moment.", variant: "destructive" });
-                } finally {
-                  setSavingSuccessor(false);
-                }
-              };
-
-              return (
-                <SectionCard>
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-foreground">Successor custodian</p>
-                        {currentName ? (
-                          <>
-                            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                              {currentName} will step in if anything happens to you before {childFirst} turns {primaryMajorityAge}.
-                            </p>
-                            {(currentEmail || currentRelation) && (
-                              <p className="mt-0.5 text-xs text-muted-foreground/70">
-                                {[currentRelation, currentEmail].filter(Boolean).join(" · ")}
-                              </p>
-                            )}
-                          </>
-                        ) : (
-                          <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                            Name someone to manage {childFirst}'s fund if anything happens to you before {childFirst} turns {primaryMajorityAge}.
-                          </p>
-                        )}
-                      </div>
-                      {!successorEditOpen && (
-                        <button
-                          type="button"
-                          onClick={openEditor}
-                          className="shrink-0 rounded-lg border border-[hsl(var(--kiddo-border))] px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted/40"
-                          data-testid="button-edit-successor"
-                        >
-                          {currentName ? "Edit" : "Add"}
-                        </button>
-                      )}
-                    </div>
-
-                    {successorEditOpen && (
-                      <div className="mt-4 space-y-3 rounded-xl bg-muted/30 p-4">
-                        <div>
-                          <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Name</label>
-                          <input
-                            type="text"
-                            value={successorName}
-                            onChange={(e) => setSuccessorName(e.target.value)}
-                            placeholder="Full name"
-                            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                            data-testid="input-successor-name"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Email <span className="font-normal normal-case text-muted-foreground/60">(optional)</span></label>
-                          <input
-                            type="email"
-                            value={successorEmail}
-                            onChange={(e) => setSuccessorEmail(e.target.value)}
-                            placeholder="name@example.com"
-                            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                            data-testid="input-successor-email"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Relationship <span className="font-normal normal-case text-muted-foreground/60">(optional)</span></label>
-                          <input
-                            type="text"
-                            value={successorRelation}
-                            onChange={(e) => setSuccessorRelation(e.target.value)}
-                            placeholder="e.g. Sibling, parent, godparent"
-                            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                            data-testid="input-successor-relation"
-                          />
-                        </div>
-                        <p className="text-[11px] leading-relaxed text-muted-foreground/70">
-                          This designation lives in your account record. It does not replace your will. Update your will to formally name this person as successor custodian under your state's UTMA statute.
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 pt-1">
-                          <Button
-                            size="sm"
-                            className="rounded-full"
-                            onClick={handleSave}
-                            disabled={savingSuccessor || !successorName.trim()}
-                            data-testid="button-save-successor"
-                          >
-                            {savingSuccessor ? "Saving..." : currentName ? "Update" : "Save"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="rounded-full"
-                            onClick={() => setSuccessorEditOpen(false)}
-                            disabled={savingSuccessor}
-                          >
-                            Cancel
-                          </Button>
-                          {currentName && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="ml-auto rounded-full text-muted-foreground hover:text-red-600"
-                              onClick={handleRemove}
-                              disabled={savingSuccessor}
-                              data-testid="button-remove-successor"
-                            >
-                              Remove
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </SectionCard>
-              );
-            })()}
+            {/* Successor custodian. Extracted to SuccessorCustodianCard
+                on 2026-05-14 as Phase 2 sheet-extraction chunk 1. The
+                component owns its own state and PATCH logic; Settings
+                just passes the fund through. Same component will mount
+                inside the future FundSettingsSheet without duplication. */}
+            {primaryFund && <SuccessorCustodianCard fund={primaryFund as any} />}
 
             {/* Legal + documents */}
             <SectionCard>
