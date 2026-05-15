@@ -2398,6 +2398,13 @@ const [editFundName, setEditFundName] = useState("");
   const [selectedSettingsFundId, setSelectedSettingsFundId] = useState<string>(() => getActiveFundId() || "");
   const [settingsFundMenuOpen, setSettingsFundMenuOpen] = useState(false);
   const settingsFundMenuRef = useRef<HTMLDivElement | null>(null);
+  // Co-parent invite FeatureWallModal — fires when a free user
+  // taps Invite. The invite section's Plus-gate explainer card
+  // (rendered below the section header) is kept on purpose; the
+  // wall fires only as a deliberate tap-driven interaction so
+  // free users who just want to read the explainer don't get a
+  // modal in their face on every Settings load.
+  const [coParentWallOpen, setCoParentWallOpen] = useState(false);
   const [parentLifecycleSettings, setParentLifecycleSettings] = useState<{
     activationNudges: boolean;
     milestoneEmails: boolean;
@@ -4148,8 +4155,23 @@ const [editFundName, setEditFundName] = useState("");
                       <Button
                         size="sm"
                         className="shrink-0 rounded-xl gap-1.5"
-                        onClick={() => { setCollabModalOpen(true); haptic("light"); }}
-                        disabled={!canInvite}
+                        onClick={() => {
+                          haptic("light");
+                          // Free users: open the FeatureWallModal so the
+                          // tap lands on a clear "this is Plus" moment
+                          // with one-tap upgrade. Was previously a hard
+                          // `disabled={!canInvite}` which left the free
+                          // user with a dead button and no path forward
+                          // (the gray Plus-gate explainer below was the
+                          // only signal — easy to miss above the fold).
+                          // Plus/Family/Legacy: open the real invite
+                          // modal as before.
+                          if (canInvite) {
+                            setCollabModalOpen(true);
+                          } else {
+                            setCoParentWallOpen(true);
+                          }
+                        }}
                         data-testid="button-invite-coparent"
                       >
                         <UserPlus size={13} />
@@ -5907,6 +5929,19 @@ const [editFundName, setEditFundName] = useState("");
           giftCode={shareSummary?.giftCode ?? undefined}
         />
       )}
+
+      {/* Co-parent invite wall — fires when a free user taps Invite
+          on the Co-parent access card. fundId routed through so the
+          Plus upgrade fires on the right fund (Plus is per-fund). */}
+      <FeatureWallModal
+        open={coParentWallOpen}
+        onClose={() => setCoParentWallOpen(false)}
+        featureId="co_parent_access"
+        requiredTier="plus"
+        title="Co-parent access is a Kiddo+ feature."
+        body={`Invite a partner or guardian to see ${primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "your child's"} fund. They get viewer or co-admin access; their notes land in the Memory Book alongside yours; you can revoke anytime. You stay the legal custodian — they have no legal claim.`}
+        upgradePath={primaryFund?.id ? `/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(primaryFund.id)}` : "/account?tab=plan"}
+      />
     </div>
   );
 }

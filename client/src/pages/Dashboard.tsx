@@ -49,6 +49,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { AddFundSheet } from "@/components/AddFundSheet";
+import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { CreateEventSheet, type EditEventData } from "@/components/CreateEventSheet";
 import { GrowthStory } from "@/components/GrowthStory";
 import { EventGateModal } from "@/components/EventGateModal";
@@ -1059,6 +1060,14 @@ export default function Dashboard() {
   const [copiedGiftCode, setCopiedGiftCode] = useState(false);
   const [copiedKidLink, setCopiedKidLink] = useState(false);
   const [addFundOpen, setAddFundOpen] = useState(false);
+  // Second-fund FeatureWallModal — fires when a free or Plus
+  // user (single-fund plans) tries to add another fund. The
+  // AddFundSheet has its own in-flow "upgrade-family" step as a
+  // defensive fallback (kept), but the modal here intercepts at
+  // the trigger so the parent doesn't enter a multi-step flow
+  // only to discover they can't finish it. Dismissal tracked via
+  // dismissedFeatureWalls so a repeat encounter shows softer copy.
+  const [secondFundWallOpen, setSecondFundWallOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   // Re-render trigger when the user snoozes the SSN nudge. Just an
   // incrementing number — the banner condition reads `isSsnSnoozed(fundId)`
@@ -1104,12 +1113,39 @@ export default function Dashboard() {
     setLetterDeleteConfirm(false);
   }, [selectedFundId]);
 
+  // Refs hold the latest funds + plan so the global ADD_FUND_EVENT
+  // listener (bound once below) can read current values at fire time
+  // without re-binding on every render. The actual sync from
+  // funds/effectivePlan into these refs happens further down in the
+  // function body, after those values are declared — separating
+  // listener-binding from value-reading avoids TDZ ordering issues
+  // (funds is declared ~350 lines after this useEffect runs).
+  const fundsRef = useRef<Fund[] | null>(null);
+  const effectivePlanRef = useRef<string>("free");
   useEffect(() => {
     const handleActiveFundChange = (event: globalThis.Event) => {
       const id = String((event as globalThis.CustomEvent<{ id?: string }>).detail?.id || getActiveFundId() || "");
       setSelectedFundId((current) => (current === id ? current : id));
     };
-    const handleAddFund = () => setAddFundOpen(true);
+    // The ADD_FUND_EVENT (kiddo:add-fund) is the canonical signal
+    // for "user just tapped Add Fund somewhere in the app." Gate
+    // here, not at every fire site, so the limit-aware branch
+    // applies uniformly: AppHeader, sidebar, account page, etc.
+    // all route through this single handler.
+    const handleAddFund = () => {
+      const latestFunds = fundsRef.current ?? [];
+      const latestPlan = effectivePlanRef.current;
+      const ownedChildFunds = latestFunds.filter(
+        (f) => (f as any).fundType !== "personal" && (f as any).accessRole !== "previous_owner",
+      );
+      const atLimit =
+        latestPlan !== "family" && latestPlan !== "legacy" && ownedChildFunds.length >= 1;
+      if (atLimit) {
+        setSecondFundWallOpen(true);
+        return;
+      }
+      setAddFundOpen(true);
+    };
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handleActiveFundChange);
     window.addEventListener(ADD_FUND_EVENT, handleAddFund as EventListener);
     return () => {
@@ -1453,6 +1489,16 @@ export default function Dashboard() {
     if (!fundsSuccess) return;
     writeLocalCache(LOCAL_CACHE_KEYS.funds, funds);
   }, [funds, fundsSuccess]);
+
+  // Mirror latest funds + plan into refs so the ADD_FUND_EVENT
+  // handler (bound once above) reads current snapshots at fire
+  // time without re-binding on every render.
+  useEffect(() => {
+    fundsRef.current = funds;
+  }, [funds]);
+  useEffect(() => {
+    effectivePlanRef.current = effectivePlan;
+  }, [effectivePlan]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated && !fundsLoading && funds.length === 0) {
@@ -9475,6 +9521,26 @@ export default function Dashboard() {
         onSuccess={(newFundId) => {
           if (newFundId) selectFund(newFundId);
         }}
+      />
+
+      {/* Second-fund wall — intercepts Add Fund taps for free/Plus
+          users at the single-fund limit. AddFundSheet has its own
+          upgrade-family in-flow step as a defensive fallback, but
+          this modal stops the parent before they enter a multi-step
+          flow they can't complete. dismissedFeatureWalls tracks the
+          encounter so a repeat shows softer copy. */}
+      <FeatureWallModal
+        open={secondFundWallOpen}
+        onClose={() => setSecondFundWallOpen(false)}
+        featureId="second_fund"
+        requiredTier="family"
+        title="Kiddo Family covers every child."
+        body={
+          effectivePlan === "starter"
+            ? "Kiddo+ covers one child's fund. Kiddo Family unlocks unlimited child funds — one price for every kid in your household, one dashboard across all of them, recurring investments and co-parent access on every fund."
+            : "Add unlimited child funds with Kiddo Family. One price for every kid, one dashboard across all of them, recurring investments and co-parent access on every fund. Cancel anytime."
+        }
+        upgradePath="/account?tab=plan&upgrade=family"
       />
 
       {sharePages.length > 0 && (
