@@ -1237,7 +1237,9 @@ export default function Dashboard() {
   // parent can either keep the at-a-glance focus or expand to scan the
   // full community when they want.
   const [avatarsExpanded, setAvatarsExpanded] = useState<boolean>(false);
-  const [inviteSheetOpen, setInviteSheetOpen] = useState(false);
+  // (Removed 2026-05-15: inviteSheetOpen state. The orphan InviteSheet
+  // block it gated was never opened from anywhere in the app. See the
+  // comment block below where the JSX used to live.)
   const [letterInlineOpen, setLetterInlineOpen] = useState(false);
   const [letterDraft, setLetterDraft] = useState("");
   const [letterSaving, setLetterSaving] = useState(false);
@@ -11354,112 +11356,16 @@ export default function Dashboard() {
       />
 
 
-      {/* Invite more people sheet */}
-      {inviteSheetOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-          <div
-            style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.32)" }}
-            onClick={() => setInviteSheetOpen(false)}
-          />
-          <div style={{
-            position: "relative", background: "white",
-            borderRadius: "24px 24px 0 0",
-            maxHeight: "82dvh", overflowY: "auto",
-            paddingBottom: "env(safe-area-inset-bottom,0)",
-          }}>
-            <div style={{ display: "flex", justifyContent: "center", paddingTop: 12, paddingBottom: 4 }}>
-              <div style={{ width: 36, height: 4, borderRadius: 9999, background: "rgba(26,23,16,0.14)" }} />
-            </div>
-            <div style={{ padding: "12px 24px 36px" }}>
-              <h2 style={{ fontSize: 20, fontWeight: 800, color: "rgb(26,23,16)", lineHeight: 1.25, marginBottom: 8 }}>
-                Invite someone to love {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} future. 🌱
-              </h2>
-              <p style={{ fontSize: 14, color: "rgb(100,92,86)", lineHeight: 1.6, marginBottom: 22 }}>
-                Share {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} gift link with someone new. Anyone can gift. No account needed.
-              </p>
-
-              {/* Main share button */}
-              <button
-                type="button"
-                onClick={() => { haptic("medium"); setInviteSheetOpen(false); handleShareLink(); }}
-                style={{
-                  width: "100%", padding: "14px 18px",
-                  background: "hsl(var(--kiddo-evergreen))", borderRadius: 16, border: "none", cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                  marginBottom: 10,
-                }}
-              >
-                <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
-                  <path d="M7 11V3M4 6l3-3 3 3" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>
-                  Share
-                </span>
-              </button>
-
-              {/* Copy link */}
-              {(activeFund as any)?.slug && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const url = `${window.location.origin}/${(activeFund as any).slug}`;
-                    try {
-                      await navigator.clipboard.writeText(url);
-                      haptic("success");
-                      toast({ title: "Link copied", variant: "saved" });
-                    } catch {
-                      toast({ title: "Link", description: url });
-                    }
-                  }}
-                  style={{
-                    width: "100%", padding: "12px 18px",
-                    background: "rgba(26,61,43,0.07)", borderRadius: 16,
-                    border: "1px solid rgba(26,61,43,0.15)", cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                    marginBottom: 22,
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <rect x="2" y="4" width="9" height="11" rx="2" stroke="rgb(26,61,43)" strokeWidth="1.4"/>
-                    <path d="M5 4V3a2 2 0 012-2h5a2 2 0 012 2v9a2 2 0 01-2 2h-1" stroke="rgb(26,61,43)" strokeWidth="1.4" strokeLinecap="round"/>
-                  </svg>
-                  <span style={{ color: "hsl(var(--kiddo-evergreen))", fontSize: 13.5, fontWeight: 600 }}>Copy link</span>
-                </button>
-              )}
-
-              {/* Specific occasions */}
-              {sharePages.filter(p => !p.isPermanent).length > 0 && (
-                <>
-                  <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", color: "rgb(140,130,122)", textTransform: "uppercase", marginBottom: 10 }}>
-                    Or share a specific occasion
-                  </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {sharePages.filter(p => !p.isPermanent).map(page => (
-                      <button
-                        key={page.url}
-                        type="button"
-                        onClick={() => { haptic("selection"); setInviteSheetOpen(false); const rest = sharePages.filter(p => p.url !== page.url); setEventShareTarget([page, ...rest]); }}
-                        style={{
-                          display: "flex", alignItems: "center", justifyContent: "space-between",
-                          padding: "12px 16px",
-                          background: "rgba(26,23,16,0.03)", borderRadius: 14,
-                          border: "1px solid rgba(26,23,16,0.08)", cursor: "pointer",
-                          textAlign: "left",
-                        }}
-                      >
-                        <span style={{ fontSize: 13.5, fontWeight: 600, color: "rgb(26,23,16)" }}>{page.label}</span>
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                          <path d="M7 11V3M4 6l3-3 3 3" stroke="rgb(100,92,86)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* (Removed 2026-05-15: an "Invite more people sheet" used to
+          live here, conditionally rendered on inviteSheetOpen. The
+          sheet had complete UI — share button, copy-link button,
+          per-occasion buttons — but `setInviteSheetOpen(true)` had
+          ZERO call sites anywhere in the codebase. Found during the
+          transferred-fund write-CTA gating sweep on the same day.
+          The canonical Share surface is the global ShareModal opened
+          via handleShareLink(); this sheet was a parallel design
+          that never got wired up. Deletion preserves no behavior
+          change — nothing could open it. ~105 lines removed.) */}
 
       <CreateEventSheet
         open={createEventSheetOpen}
