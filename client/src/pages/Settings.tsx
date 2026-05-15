@@ -21,6 +21,7 @@ import { InvitationsToYouCard } from "@/components/InvitationsToYouCard";
 import { CloseFundCard } from "@/components/CloseFundCard";
 import { LegalDocumentsCard } from "@/components/LegalDocumentsCard";
 import { CoParentAccessCard } from "@/components/CoParentAccessCard";
+import { KidsViewCard } from "@/components/KidsViewCard";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -2505,16 +2506,8 @@ const [editFundName, setEditFundName] = useState("");
   // query key after invite mutations because they share the
   // query cache.)
 
-  const { data: kidViewSettings, refetch: refetchKidViewSettings } = useQuery<any>({
-    queryKey: ["/api/funds", primaryFund?.id, "kid-view-settings"],
-    queryFn: async () => {
-      const res = await fetch(`/api/funds/${primaryFund.id}/kid-view-settings`, { credentials: "include" });
-      if (!res.ok) return null;
-      return res.json();
-    },
-    enabled: !!primaryFund && settingsTab === "child",
-    staleTime: 30_000,
-  });
+  // (kidViewSettings query moved into KidsViewCard on 2026-05-14
+  // — Phase 2 sheet-extraction chunk 8.)
 
   // Close-fund + reopen state. Modal-driven, optional reason captured
   // for the audit trail (never required to close — anti-dark-pattern).
@@ -2637,66 +2630,10 @@ const [editFundName, setEditFundName] = useState("");
     return pages;
   }, [primaryFund?.slug, primaryFund?.recipientFirstName, primaryFund?.name, shareSummary?.giftCode?.code, shareSummary?.eventGiftCodes, shareSummary?.events]);
 
-  const [copyingKidLink, setCopyingKidLink] = useState(false);
-  const [showPinManager, setShowPinManager] = useState(false);
-
-  useEffect(() => {
-    if (kidViewSettings && !kidViewSettings.hasPin) {
-      setShowPinManager(true);
-    }
-  }, [kidViewSettings]);
-  const [newPin, setNewPin] = useState("");
-  const [newPinHint, setNewPinHint] = useState("");
-  const [savingPin, setSavingPin] = useState(false);
-
-  const handleSavePin = async () => {
-    if (!primaryFund?.id) return;
-    if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
-      toast({ title: "PIN must be exactly 4 digits", variant: "destructive" });
-      return;
-    }
-    setSavingPin(true);
-    try {
-      const res = await fetch(`/api/funds/${primaryFund.id}/kid-view-settings`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ enabled: true, pin: newPin, pinHint: newPinHint }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Could not save PIN.");
-      haptic("success");
-      toast({ title: "PIN saved", description: "Kid's View is active with the new PIN." });
-      setNewPin("");
-      setNewPinHint("");
-      setShowPinManager(false);
-      void refetchKidViewSettings();
-    } catch (err: any) {
-      haptic("error");
-      toast({ title: "Could not save PIN", description: err.message || "Please try again.", variant: "destructive" });
-    } finally {
-      setSavingPin(false);
-    }
-  };
-
-  const handleCopyKidViewLink = async () => {
-    if (!primaryFund?.id) return;
-    setCopyingKidLink(true);
-    try {
-      const res = await fetch(`/api/funds/${primaryFund.id}/kid-view-link`, { method: "POST", credentials: "include" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Kid View is not set up yet.");
-      await navigator.clipboard.writeText(data.shareLink);
-      haptic("success");
-      toast({ title: "Kid View link copied!", description: "Share this link and PIN with your child." });
-      void refetchKidViewSettings();
-    } catch (err: any) {
-      haptic("error");
-      toast({ title: "Could not copy link", description: err.message || "Please try again.", variant: "destructive" });
-    } finally {
-      setCopyingKidLink(false);
-    }
-  };
+  // (Kid View state + handlers — copyingKidLink, showPinManager,
+  // newPin, newPinHint, savingPin, the auto-open useEffect,
+  // handleSavePin, handleCopyKidViewLink — all moved into
+  // KidsViewCard on 2026-05-14 — Phase 2 sheet-extraction chunk 8.)
 
   const { data: subscription } = useSubscription();
   // Gifter notifications query follows the global active fund via the
@@ -3851,110 +3788,18 @@ const [editFundName, setEditFundName] = useState("");
               />
             )}
 
-            {/* Kid's View */}
-            <SectionCard>
-              <div className="p-4 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">
-                    {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s View` : "Kid's View"}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {kidViewSettings?.enabled && kidViewSettings?.hasPin
-                      ? "Active · PIN protected"
-                      : "Not set up yet"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {kidViewSettings?.enabled && kidViewSettings?.hasPin ? (
-                    <>
-                      <button
-                        type="button"
-                        disabled={copyingKidLink}
-                        onClick={handleCopyKidViewLink}
-                        className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:opacity-75 transition-opacity px-3 py-1.5 rounded-lg border border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.06)]"
-                      >
-                        {copyingKidLink ? "Copying..." : "Copy link"}
-                      </button>
-                      {kidViewSettings?.shareLink && (
-                        <>
-                          <a
-                            href={`mailto:?subject=${encodeURIComponent(`${primaryFund?.recipientFirstName || "Your child"}'s Kiddo fund`)}&body=${encodeURIComponent(`Here's your fund link: ${kidViewSettings.shareLink}\n\nYou'll need the PIN to get in.`)}`}
-                            className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border"
-                          >
-                            Email
-                          </a>
-                          <a
-                            href={kidViewSettings.shareLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border"
-                          >
-                            Open
-                          </a>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => { setShowPinManager((v) => !v); setNewPin(""); setNewPinHint(""); haptic("selection"); }}
-                        className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border"
-                      >
-                        {showPinManager ? "Cancel" : "Edit PIN"}
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => { setShowPinManager(true); haptic("selection"); }}
-                      className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Set up →
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {showPinManager && (
-                <div className="border-t border-[hsl(var(--kiddo-border))] px-4 py-4 space-y-3">
-                  {kidViewSettings?.enabled && kidViewSettings?.hasPin && kidViewSettings?.pinHint && (
-                    <p className="text-xs text-muted-foreground">
-                      Current hint: <span className="font-semibold text-foreground">{kidViewSettings.pinHint}</span>
-                    </p>
-                  )}
-                  <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1.5">
-                      {kidViewSettings?.hasPin ? "New PIN (4 digits)" : "Set a PIN (4 digits)"}
-                    </label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={4}
-                      value={newPin}
-                      onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                      placeholder="e.g. 1234"
-                      className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm font-mono tracking-widest"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-foreground mb-1.5">Hint (optional)</label>
-                    <input
-                      type="text"
-                      value={newPinHint}
-                      onChange={(e) => setNewPinHint(e.target.value.slice(0, 60))}
-                      placeholder="e.g. your birthday month and day"
-                      className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"
-                    />
-                  </div>
-                  <Button
-                    className="w-full rounded-xl"
-                    disabled={savingPin || newPin.length !== 4}
-                    onClick={handleSavePin}
-                  >
-                    {savingPin ? "Saving..." : kidViewSettings?.hasPin ? "Update PIN" : "Enable Kid's View"}
-                  </Button>
-                </div>
-              )}
-            </SectionCard>
+            {/* Kid's View. Extracted to KidsViewCard on 2026-05-14 as
+                Phase 2 sheet-extraction chunk 8. The dense state
+                machine (PIN editor + auto-open effect + share-link
+                copy) all moves into the new component. The card
+                gates its own query on settingsTab via the enabled
+                prop. */}
+            {primaryFund && (
+              <KidsViewCard
+                fund={primaryFund as any}
+                enabled={settingsTab === "child"}
+              />
+            )}
 
             {/* Invitations TO this user. Extracted to InvitationsToYouCard
                 on 2026-05-14 as Phase 2 sheet-extraction chunk 4. Renders
