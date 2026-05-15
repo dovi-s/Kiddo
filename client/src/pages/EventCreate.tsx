@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useLocation, useSearch } from "wouter";
+import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { CalendarIcon, Gift, PartyPopper, Baby, TreeDeciduous, GraduationCap, Heart, ArrowRight, ArrowLeft, Plus, TrendingUp, X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Home, Car, Briefcase, Plane, Shield, Star, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -91,6 +92,13 @@ export default function EventCreate() {
   const [imageUploading, setImageUploading] = useState(false);
   const imagePreviewRef = useRef<HTMLDivElement>(null);
   const [selectedTheme, setSelectedTheme] = useState("classic");
+  // Controls the FeatureWallModal that gates premium occasion themes
+  // for free users. Per IN_APP_UPGRADE_FEATURE_WALL_SPEC.md the gated
+  // feature gets a calm, named, single-CTA modal — not a bare
+  // redirect to /account?tab=plan. Modal renders below alongside
+  // the main EventCreate JSX (outside the AnimatePresence step so
+  // it sits over whichever step is active).
+  const [themeUpgradeWallOpen, setThemeUpgradeWallOpen] = useState(false);
   const [fundId, setFundId] = useState(preselectedFundId);
   const [goalAmount, setGoalAmount] = useState("");
   const queryClient = useQueryClient();
@@ -1186,7 +1194,16 @@ export default function EventCreate() {
                       selectedTheme={selectedTheme}
                       onSelectTheme={(themeId) => { haptic("selection"); setSelectedTheme(themeId); }}
                       hasEventPass={hasPremiumEventAccess}
-                      onUpgrade={() => setLocation("/account?tab=plan")}
+                      // Replaced 2026-05-14: was a bare setLocation to
+                      // /account?tab=plan with zero explainer. Now opens
+                      // the FeatureWallModal which names the feature,
+                      // shows the price, and offers a single primary CTA.
+                      // First-time encounter shows the rich body; repeat
+                      // encounters skip the body per the spec's calmer
+                      // second-touch pattern. The variant logic is
+                      // internal to the component and reads from
+                      // users.dismissedFeatureWalls.
+                      onUpgrade={() => setThemeUpgradeWallOpen(true)}
                     />
                     <div className="mt-6 flex justify-between">
                       <Button variant="outline" onClick={goBack} className="gap-2" data-testid="button-back-step-3">
@@ -1334,6 +1351,23 @@ export default function EventCreate() {
           </div>
         )}
       </main>
+
+      {/* Premium-themes upgrade wall. Opens when a free user taps the
+          theme selector's "Upgrade to unlock" affordance or a locked
+          theme tile. Per IN_APP_UPGRADE_FEATURE_WALL_SPEC.md and the
+          locked WHO/HOW IA: primary CTA goes to /account?tab=plan
+          with the upgrade auto-trigger; secondary "See all Plus
+          features" goes to /pricing. Dismissal is recorded so the
+          parent's second encounter shows the softer repeat-copy. */}
+      <FeatureWallModal
+        open={themeUpgradeWallOpen}
+        onClose={() => setThemeUpgradeWallOpen(false)}
+        featureId="premium_occasion_themes"
+        requiredTier="plus"
+        title="Custom occasion themes are a Kiddo+ feature."
+        body="Choose from premium themes that make every birthday, graduation, or milestone feel like its own moment. Plus also unlocks recurring investments and your own photos / videos / voice in the Memory Book."
+        upgradePath="/account?tab=plan"
+      />
     </div>
   );
 }

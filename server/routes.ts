@@ -10134,6 +10134,36 @@ export async function registerRoutes(
     }
   });
 
+  // FeatureWallModal dismissal tracking. Records the timestamp at
+  // which the user dismissed the wall for `featureId` so subsequent
+  // encounters can render the softer repeat-copy variant instead of
+  // the full first-time explainer. Per IN_APP_UPGRADE_FEATURE_WALL_
+  // SPEC.md. The stored shape is { [featureId]: ISO timestamp };
+  // same pattern as funds.dismissed_nudges.
+  app.post('/api/user/feature-walls/:featureId/dismiss', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const featureId = String(req.params.featureId || "").trim();
+      if (!featureId) return res.status(400).json({ error: 'featureId is required' });
+      if (featureId.length > 64 || !/^[a-z0-9_]+$/.test(featureId)) {
+        return res.status(400).json({ error: 'featureId must be lowercase a-z0-9_ and at most 64 chars' });
+      }
+      const [current] = await db
+        .select({ dismissedFeatureWalls: users.dismissedFeatureWalls })
+        .from(users)
+        .where(eq(users.id, userId));
+      const existing = (current?.dismissedFeatureWalls as Record<string, string> | null) || {};
+      const next = { ...existing, [featureId]: new Date().toISOString() };
+      await db.update(users)
+        .set({ dismissedFeatureWalls: next, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+      res.json({ ok: true, dismissedFeatureWalls: next });
+    } catch (error) {
+      console.error('Error recording feature-wall dismissal:', error);
+      res.status(500).json({ error: 'Failed to record dismissal' });
+    }
+  });
+
   app.get('/api/referral', isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;

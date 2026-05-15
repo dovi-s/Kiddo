@@ -93,6 +93,14 @@ export const users = pgTable("users", {
   trustedContactPhone: varchar("trusted_contact_phone", { length: 32 }),
   trustedContactRelation: varchar("trusted_contact_relation", { length: 50 }),
   trustedContactUpdatedAt: timestamp("trusted_contact_updated_at"),
+  // Tracks per-feature dismissals of the contextual upgrade-wall
+  // (FeatureWallModal). Shape: { [featureId]: ISO timestamp of last
+  // dismissal }. Read by the modal to decide between the rich
+  // first-time explainer and the softer repeat-encounter copy.
+  // Per IN_APP_UPGRADE_FEATURE_WALL_SPEC.md. Similar shape to
+  // funds.dismissedNudges (also a JSONB key-value map of dismissal
+  // timestamps). NULL on accounts that have never seen a wall.
+  dismissedFeatureWalls: jsonb("dismissed_feature_walls"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

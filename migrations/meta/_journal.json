@@ -127,6 +127,13 @@
       "when": 1777000000000,
       "tag": "0017_funds_previous_owner_id",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1777100000000,
+      "tag": "0018_users_dismissed_feature_walls",
+      "breakpoints": true
     }
   ]
 }
