@@ -9,7 +9,7 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import bcrypt from "bcryptjs";
-import { sql, eq, and, desc, inArray, isNotNull } from "drizzle-orm";
+import { sql, eq, and, desc, inArray, isNotNull, gte } from "drizzle-orm";
 import { db, pool } from "./db";
 import { isAuthenticated, isAdmin } from "./auth";
 import { getConfiguredSuperAdminEmails, isEmailInAdminSet } from "@shared/adminAccess";
@@ -11334,8 +11334,13 @@ export async function registerRoutes(
         .from(funds)
         .where(eq(funds.userId, userId));
       const fundIds = userFunds.map((f) => f.id);
+      // customMixActive: true if ANY owned fund uses the Custom strategy.
+      // Bug fix 2026-05-15: prior version flagged true on anything that
+      // wasn't "auto_invest" or "default" — so growth/balanced/conservative
+      // all incorrectly counted as "Custom mix used." Strict equality on
+      // "custom" is the actual semantic the card needs.
       const customMixActive = userFunds.some(
-        (f) => f.strategy && f.strategy !== "auto_invest" && f.strategy !== "default",
+        (f) => String(f.strategy || "").toLowerCase() === "custom",
       );
 
       if (fundIds.length === 0) {
@@ -11372,29 +11377,46 @@ export async function registerRoutes(
         return sum + amt;
       }, 0);
 
-      // Parent-authored Memory Book entries this year. We surface the
-      // count, not the entries themselves — the card isn't a feed,
-      // just a value indicator. Year boundary is the user's clock side,
-      // which is fine for this surface (calm reference data, not a
-      // ledger).
+      // Parent-authored Memory Book entries this year.
+      //
+      // Bug fix 2026-05-15: the prior version referenced a non-existent
+      // memory_entries.author_role column ("WHERE author_role = 'parent'"),
+      // throwing PG error 42703 on every call and crashing the endpoint
+      // with a 500. The schema has authorName + authorPhotoUrl as
+      // denormalized strings but no role enum; the new authorUserId
+      // column (migration 0021, today) is the right anchor.
+      //
+      // New semantic: entries where author_user_id = this user. Captures
+      // the "I personally wrote a Memory Book entry" signal cleanly.
+      // Documented limitation: entries pre-dating migration 0021 have
+      // NULL author_user_id and don't count. Acceptable since the
+      // "this year" filter naturally minimizes the historical-attribution
+      // gap; old entries from earlier in 2026 will be missed once and
+      // every entry from today forward carries the column.
       const yearStart = new Date(new Date().getUTCFullYear(), 0, 1);
-      const parentMemoryRows = await db.execute(sql`
-        SELECT COUNT(*)::int AS n
-        FROM memory_entries
-        WHERE fund_id IN (${sql.join(fundIds, sql`,`)})
-          AND author_role = 'parent'
-          AND created_at >= ${yearStart.toISOString()}
-      `);
-      const parentMemoryEntriesThisYear = Number((parentMemoryRows.rows as any[])?.[0]?.n || 0);
+      const parentMemoryRows = await db.select({ id: memoryEntries.id })
+        .from(memoryEntries)
+        .where(and(
+          eq(memoryEntries.authorUserId, userId),
+          gte(memoryEntries.createdAt, yearStart),
+        ));
+      const parentMemoryEntriesThisYear = parentMemoryRows.length;
 
       // Co-parents invited (any status — pending counts because the
       // card answers "have you tried this Plus feature" not "is the
       // co-parent active right now").
+      //
+      // Bug fix 2026-05-15: prior version filtered role='co_parent', a
+      // string that doesn't exist in the role enum (actual values are
+      // "co-admin" and "viewer" per the fund_collaborators schema). So
+      // coParentInvitedCount silently returned 0 for every user with
+      // co-parents. Now uses 'co-admin', the role parents invite when
+      // adding a co-parent in Settings.
       const coParents = await db.select({ id: fundCollaborators.id })
         .from(fundCollaborators)
         .where(and(
           inArray(fundCollaborators.fundId, fundIds),
-          eq(fundCollaborators.role, "co_parent"),
+          eq(fundCollaborators.role, "co-admin"),
         ));
       const coParentInvitedCount = coParents.length;
 
