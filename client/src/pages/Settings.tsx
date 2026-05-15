@@ -4986,7 +4986,7 @@ const [editFundName, setEditFundName] = useState("");
           <DialogTitle className="sr-only">Cancel plan</DialogTitle>
 
           {cancelStep === "warn" ? (
-            <div className="p-6 space-y-5 overflow-y-auto">
+            <div className="flex-1 min-h-0 p-6 space-y-5 overflow-y-auto">
               {/* Hero. Reassurance first — the parent's first thought
                   opening this dialog is 'is my kid's money safe?' Answer
                   that before anything else. Then frame the billing
@@ -5099,7 +5099,7 @@ const [editFundName, setEditFundName] = useState("");
               </div>
             </div>
           ) : (
-            <div className="p-6 space-y-5 overflow-y-auto">
+            <div className="flex-1 min-h-0 p-6 space-y-5 overflow-y-auto">
               <div className="space-y-1">
                 <h2 className="font-heading text-xl font-semibold text-foreground">Cancel {userPlan === "starter" ? "Kiddo+" : "Kiddo Family"}?</h2>
                 <p className="text-sm text-muted-foreground leading-relaxed">

@@ -1430,7 +1430,7 @@ export default function Account() {
           <DialogContent className="max-w-md w-[95vw] max-h-[90dvh] p-0 gap-0 overflow-hidden rounded-2xl flex flex-col" aria-describedby={undefined}>
             <DialogTitle className="sr-only">Cancel plan</DialogTitle>
             {cancelStep === "warn" ? (
-              <div className="p-6 space-y-5 overflow-y-auto">
+              <div className="flex-1 min-h-0 p-6 space-y-5 overflow-y-auto">
                 <div className="space-y-2">
                   <h2 className="font-heading text-xl font-semibold text-foreground">
                     Your fund stays safe.
@@ -1472,7 +1472,7 @@ export default function Account() {
                 </div>
               </div>
             ) : (
-              <div className="p-6 space-y-5 overflow-y-auto">
+              <div className="flex-1 min-h-0 p-6 space-y-5 overflow-y-auto">
                 <div className="space-y-1">
                   <h2 className="font-heading text-xl font-semibold text-foreground">Cancel {planLabel}?</h2>
                   <p className="text-sm text-muted-foreground leading-relaxed">

@@ -161,7 +161,15 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
         <DialogTitle className="sr-only">Delete account</DialogTitle>
 
         {step === "review" && (
-          <div className="p-6 space-y-4 overflow-y-auto">
+          // flex-1 min-h-0 is load-bearing: without min-h-0, the flex
+          // child's default min-height:auto keeps it at content size, so
+          // overflow-y-auto never triggers and the parent's
+          // overflow-hidden just clips the bottom of the modal. With
+          // min-h-0 the child can shrink to fit the parent's max-h
+          // (90dvh) and the scrollbar appears as expected. Same fix
+          // applied to every step branch below; their content can
+          // independently overflow if the viewport is short.
+          <div className="flex-1 min-h-0 p-6 space-y-4 overflow-y-auto">
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100">
                 <AlertTriangle size={18} className="text-amber-700" />
@@ -223,7 +231,7 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
         )}
 
         {step === "blocked" && blockedInfo && (
-          <div className="p-6 space-y-4 overflow-y-auto">
+          <div className="flex-1 min-h-0 p-6 space-y-4 overflow-y-auto">
             <div className="flex items-start gap-3">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100">
                 <AlertTriangle size={18} className="text-amber-700" />
@@ -312,7 +320,7 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
         )}
 
         {step === "confirm" && (
-          <div className="p-6 space-y-4 overflow-y-auto">
+          <div className="flex-1 min-h-0 p-6 space-y-4 overflow-y-auto">
             <div>
               <h2 className="font-heading text-lg font-semibold text-foreground">Confirm deletion</h2>
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
@@ -376,14 +384,14 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
         )}
 
         {step === "submitting" && (
-          <div className="p-6 flex flex-col items-center justify-center gap-4 py-10">
+          <div className="flex-1 min-h-0 p-6 flex flex-col items-center justify-center gap-4 py-10">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
             <p className="text-sm text-muted-foreground">Deleting your account…</p>
           </div>
         )}
 
         {step === "done" && (
-          <div className="p-6 flex flex-col items-center justify-center gap-4 py-10 text-center">
+          <div className="flex-1 min-h-0 p-6 flex flex-col items-center justify-center gap-4 py-10 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.10)]">
               <CheckCircle2 size={28} className="text-[hsl(var(--kiddo-evergreen))]" />
             </div>
