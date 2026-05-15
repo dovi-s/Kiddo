@@ -70,7 +70,7 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
         <View style={styles.card}>
           {/* Logo / wordmark */}
           <View style={styles.logoRow}>
-            <Text style={styles.logoText}>Kora</Text>
+            <Text style={styles.logoText}>Kiddo</Text>
             <Text style={styles.logoSub}>Investment gifting</Text>
           </View>
 

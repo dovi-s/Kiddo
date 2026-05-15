@@ -120,7 +120,7 @@ export default function Demo() {
           <div className="mx-auto max-w-3xl text-center">
             <Mascot size="lg" className="mx-auto mb-6 drop-shadow-lg" context="demo" />
             <h1 className="font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
-              See Kora through the <GradientText>Dunphys</GradientText>.
+              See Kiddo through the <GradientText>Dunphys</GradientText>.
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-muted-foreground">
               A paper-trading-style demo. Real screens, illustrative dollars. Pick any account below to log in. No card needed.
@@ -205,7 +205,7 @@ export default function Demo() {
           </section>
 
           <p className="mx-auto mt-10 max-w-3xl text-center text-[11px] leading-relaxed text-muted-foreground">
-            The Dunphy family is a cultural reference used for demonstration purposes. Kora is not affiliated with or endorsed by 20th Century Studios, The Walt Disney Company, or the creators of Modern Family.
+            The Dunphy family is a cultural reference used for demonstration purposes. Kiddo is not affiliated with or endorsed by 20th Century Studios, The Walt Disney Company, or the creators of Modern Family.
           </p>
 
           <div className="mt-12 text-center">

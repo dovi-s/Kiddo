@@ -86,7 +86,7 @@ export function USOnlyOffRamp({
       <div className={`rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.06)] ${compact ? "p-4" : "p-5"}`}>
         <p className="text-sm font-semibold text-foreground">You're on the list.</p>
         <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-          We'll email you if Kora becomes available in your country. No concrete date today.
+          We'll email you if Kiddo becomes available in your country. No concrete date today.
         </p>
       </div>
     );
@@ -94,7 +94,7 @@ export function USOnlyOffRamp({
 
   return (
     <div className={`rounded-2xl border border-border bg-card ${compact ? "p-4" : "p-5"}`} data-testid="us-only-offramp">
-      <p className="text-sm font-semibold text-foreground">Kora is US-only at launch.</p>
+      <p className="text-sm font-semibold text-foreground">Kiddo is US-only at launch.</p>
       <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
         Our investment accounts use the US UTMA structure and our brokerage partner serves US residents.
         If you'd like a note when we open to other countries, leave your email.
@@ -135,7 +135,7 @@ export function USOnlyOffRamp({
           className="w-full rounded-full h-10 text-sm font-semibold"
           data-testid="button-offramp-submit"
         >
-          {submitting ? "Saving…" : "Notify me when Kora launches in my country"}
+          {submitting ? "Saving…" : "Notify me when Kiddo launches in my country"}
         </Button>
       </form>
     </div>
