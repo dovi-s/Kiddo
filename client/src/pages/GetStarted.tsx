@@ -17,6 +17,7 @@ import { StockLogo } from "@/components/ui/stock-logo";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { haptic } from "@/lib/haptics";
 import { extractUtmMetadata, isUserReferralCode } from "@/lib/acquisition";
+import { capFirst } from "@/lib/format-name";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { USOnlyOffRamp } from "@/components/USOnlyOffRamp";
 import { GiftIntentBanner } from "@/components/GiftIntentBanner";
@@ -244,24 +245,11 @@ export default function GetStarted() {
   }, [annualGift, projectionMilestone]);
 
   const milestoneDiff = milestoneInvested - milestoneSavings;
-  // Display-capitalize the name regardless of how the parent typed it.
-  // Some parents type lowercase ("lauren") on mobile auto-fill; the
-  // stored name keeps their casing (no mutation), but every surface
-  // rendering the kid's name in a sentence should display-capitalize
-  // for warmth. Locked 2026-05-15 per the projection-step audit
-  // ("Here is what starting today looks like for lauren" → "...for
-  // Lauren"). Single-word names: capitalize first letter. Hyphenated
-  // or multi-word: capitalize each segment. Keep the original casing
-  // of the rest of each segment in case the parent intentionally
-  // typed "McAdams" or "DeAngelo".
-  const displayChildName = (() => {
-    const trimmed = name.trim();
-    if (!trimmed) return "";
-    return trimmed
-      .split(/(\s|-)/)
-      .map((seg) => (seg.length > 0 && /^[a-z]/.test(seg) ? seg.charAt(0).toUpperCase() + seg.slice(1) : seg))
-      .join("");
-  })();
+  // Display-capitalize the parent-typed name (handles lowercase
+  // mobile auto-fill, multi-segment "mary anne" / "mary-anne",
+  // preserves intentional mid-word casing like "McAdams"). Helper
+  // moved to client/src/lib/format-name.ts on 2026-05-15.
+  const displayChildName = capFirst(name);
   const displayName = displayChildName || (accountType === "child" ? "your child" : "you");
   const shareUrl = created ? `${window.location.origin}/${created.slug}` : "";
   const onboardingFlow = useMemo(() => getOnboardingFlow(accountType), [accountType]);
@@ -1018,17 +1006,14 @@ export default function GetStarted() {
           // when present; fall back to stripping "'s Fund" / " Fund"
           // suffix from name for legacy rows.
           //
-          // Display-capitalize (added 2026-05-15) so a parent who
-          // mobile-auto-fills "lauren" lowercase sees "Lauren's fund
-          // is live." Keeps original casing of mid-word characters in
-          // case the parent intentionally typed "McAdams" / "DeAngelo".
-          const capitalizeFirst = (s: string) => s
-            .split(/(\s|-)/)
-            .map((seg) => (seg.length > 0 && /^[a-z]/.test(seg) ? seg.charAt(0).toUpperCase() + seg.slice(1) : seg))
-            .join("");
-          const firstName = capitalizeFirst(created.recipientFirstName.trim());
+          // Display-capitalize (added 2026-05-15, helper moved to
+          // client/src/lib/format-name.ts) so a parent who mobile-
+          // auto-fills "lauren" lowercase sees "Lauren's fund is
+          // live." capFirst preserves intentional mid-word casing
+          // ("McAdams" / "DeAngelo").
+          const firstName = capFirst(created.recipientFirstName);
           const childDisplayName = firstName
-            || capitalizeFirst(String(created.name || "")
+            || capFirst(String(created.name || "")
                 .replace(/\s*'s\s+Fund\s*$/i, "")
                 .replace(/\s+Fund\s*$/i, "")
                 .trim())

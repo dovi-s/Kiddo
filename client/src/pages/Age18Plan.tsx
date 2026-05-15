@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { getAge18Transition, formatAgeTransitionDate } from "@/lib/age-transition";
 import { getPronouns } from "@/lib/pronouns";
+import { capFirst } from "@/lib/format-name";
 import { haptic } from "@/lib/haptics";
 import { useCountUp } from "@/hooks/use-count-up";
 
@@ -378,9 +379,10 @@ export default function Age18Plan() {
   // sentences like "she reads it on her 18th birthday" silently break
   // for any fund with pronoun="they".
   const reads = fundPronouns.singular ? "reads" : "read";
-  // Capitalize-first pronoun, for sentence starts ("She reads..." /
-  // "They read..." / "Hers forever." / "Theirs forever.").
-  const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  // capFirst imported from shared format-name helper. Used here for
+  // pronouns ("She reads..." / "They read..." / "Hers forever." /
+  // "Theirs forever."). Pronouns are single-segment so the shared
+  // helper's multi-segment branch is a non-op; behavior unchanged.
   const eighteenthDate = age18Transition ? formatAgeTransitionDate(age18Transition.eighteenthBirthday) : "";
   const parentName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
   const noteWordCount = parentLetter?.content

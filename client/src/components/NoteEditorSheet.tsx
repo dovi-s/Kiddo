@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "./MemoryMediaPicker";
 import { getPronouns, type Pronouns } from "@/lib/pronouns";
+import { capFirst } from "@/lib/format-name";
 
 // Prompts factory — parameterized on fund pronouns so "What you hope she
 // does with it" becomes "What you hope they do with it" for they/them
@@ -91,7 +92,7 @@ export function NoteEditorSheet({
     if (lastOne === 3) return `${n}rd`;
     return `${n}th`;
   })();
-  const capFirst = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  // capFirst imported from shared format-name helper.
   const reads = fundPronouns.singular ? "reads" : "read";
   const [mode, setMode] = useState<"writing" | "preview">("writing");
   const [text, setText] = useState("");

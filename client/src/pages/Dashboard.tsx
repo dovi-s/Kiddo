@@ -48,6 +48,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
+import { capFirst } from "@/lib/format-name";
 import { AddFundSheet } from "@/components/AddFundSheet";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { CreateEventSheet, type EditEventData } from "@/components/CreateEventSheet";
@@ -890,10 +891,10 @@ function getGiftExecutionLabel(executionModel?: string | null, selectedTicker?: 
   return "Invested";
 }
 
-function capFirst(s?: string | null): string {
-  if (!s) return "";
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+// capFirst moved to client/src/lib/format-name.ts on 2026-05-15.
+// Smart multi-segment version (handles "mary anne" / "mary-anne") +
+// preserves intentional mid-word casing (McAdams, DeAngelo). The
+// local helper used to live here as a single-letter cap.
 
 // Prefer the explicit isAnonymous flag from the gift row when
 // available. Fall back to the legacy string-matching pattern for
