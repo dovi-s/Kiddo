@@ -119,12 +119,19 @@ export default function GiveAGift() {
               <div className="rounded-2xl border border-border bg-card p-5 text-left space-y-3 max-w-md mx-auto">
                 <p className="text-sm font-semibold text-foreground">What happens next</p>
                 <ol className="space-y-2 text-sm text-foreground/70 leading-relaxed list-decimal pl-5">
-                  <li>They set up {completed.kidFirstName}'s fund (a few minutes, no card needed).</li>
+                  <li>They set up {completed.kidFirstName}'s fund (about 5 minutes, no card needed).</li>
                   <li>You get an email saying "ready to send your gift?"</li>
-                  <li>One click and your ${completed.amount.toFixed(2)} becomes real shares for {completed.kidFirstName}.</li>
+                  <li>One click and your ${completed.amount.toFixed(2)} becomes a real investment for {completed.kidFirstName}.</li>
                 </ol>
-                <p className="text-xs text-muted-foreground italic pt-2">
-                  No rush on their end. The note we sent is warm, not pushy.
+                {/* Lifecycle clarity. Verified server-side
+                    (server/routes.ts POST /api/gift-intents): we send
+                    ONE email to the parent, the intent stays open
+                    for 60 days, no reminder spam to the parent. If
+                    they don't act, the intent quietly expires. Telling
+                    the gifter the exact shape sets honest expectations
+                    so they don't wonder for weeks. */}
+                <p className="text-xs text-muted-foreground pt-2 leading-relaxed">
+                  We send one warm note, not a follow-up drip. The intent stays open for 60 days. If you want to nudge them yourself, your usual channels work — Kiddo's role is the welcome, yours is the relationship.
                 </p>
               </div>
               <div className="flex flex-col gap-3 max-w-xs mx-auto">
@@ -147,6 +154,17 @@ export default function GiveAGift() {
       <Nav />
       <main className="px-4 pb-20 pt-24 md:pb-28 md:pt-32">
         <div className="mx-auto max-w-2xl">
+          {/* Deflector banner. A gifter who landed here by mistake
+              (received a real gift link from a parent and ended up
+              here instead) should NOT fill out the wrong form. This
+              hint at the top routes them to the right place before
+              they invest time in the intent flow. Used to live at
+              the bottom (line ~339); moved 2026-05-15 because the
+              bottom placement means they read it only after they've
+              already started filling fields. */}
+          <div className="mx-auto mb-6 max-w-xl rounded-2xl border border-border bg-muted/30 px-4 py-3 text-center text-xs text-muted-foreground">
+            Already have a gift link from a parent? <span className="font-semibold text-foreground">Tap it instead.</span> It's the faster path — straight to checkout.
+          </div>
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -155,14 +173,14 @@ export default function GiveAGift() {
           >
             <div className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground mb-3">
               <Sprout size={14} className="text-primary" />
-              <span>For grandparents, aunts, uncles, anyone</span>
+              <span>For anyone who loves a kid</span>
             </div>
             <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight">
               Give a gift that lasts.
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted-foreground">
               Want to invest for a child but their parents don't have a Kiddo fund yet?
-              Tell us about your gift. We'll send the parents a warm note. They set up the fund. Your gift becomes real shares.
+              Tell us about your gift. We'll send the parents a warm note. They set up the fund. Your gift becomes a real investment in the kid's name.
             </p>
           </motion.div>
 
@@ -242,7 +260,7 @@ export default function GiveAGift() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">
-                Whoever sets up the fund will be the custodian. UTMA accounts have to be in a parent or guardian's name.
+                A parent or guardian sets up the fund and becomes the legal custodian. The money is your gift, but Kiddo keeps custody simple by routing every fund through the parent. They control the account until the kid is 18.
               </p>
             </section>
 
@@ -283,6 +301,15 @@ export default function GiveAGift() {
               </div>
               <p className="text-xs text-muted-foreground">
                 You won't be charged yet. We'll email you to complete the gift once the fund is set up.
+              </p>
+              {/* No-fee reassurance. Per locked policy: "NO platform
+                  fee on gifts. Gift amount stays whole. $50 from
+                  grandma = $50 to fund. Gifter pays Stripe processing
+                  only." A gifter mid-decision worrying "will Kiddo
+                  skim my $100" gets no signal without this line.
+                  Added 2026-05-15 as part of the gifter-form audit. */}
+              <p className="text-xs text-foreground/80 leading-relaxed bg-[hsl(var(--kiddo-evergreen)/0.06)] border border-[hsl(var(--kiddo-evergreen)/0.18)] rounded-xl px-3 py-2">
+                <span className="font-semibold text-[hsl(var(--kiddo-evergreen))]">Every dollar reaches the kid.</span> Kiddo doesn't take a platform fee on gifts. You cover only the standard card-processing charge.
               </p>
             </section>
 
@@ -331,13 +358,14 @@ export default function GiveAGift() {
             className="mt-10 grid gap-4 sm:grid-cols-3"
           >
             <HowItWorks icon={<Mail size={16} />} step="1" body="We email the parent saying you have a gift ready." />
-            <HowItWorks icon={<Check size={16} />} step="2" body="They set up the fund in a few minutes. No card needed." />
-            <HowItWorks icon={<Heart size={16} />} step="3" body="You complete your gift. It becomes real shares." />
+            <HowItWorks icon={<Check size={16} />} step="2" body="They set up the fund in about 5 minutes. No card needed." />
+            <HowItWorks icon={<Heart size={16} />} step="3" body="You complete your gift. It becomes a real investment for the kid." />
           </motion.section>
 
-          <p className="mt-10 text-xs text-center text-muted-foreground">
-            Already have a gift link from a parent? Open it directly in your browser, or tap it in their email.
-          </p>
+          {/* (Removed 2026-05-15: a duplicate "Already have a gift link"
+              hint used to live here too. The single banner above the
+              hero is enough — repeating it after the form reads as
+              the page second-guessing the user's choice.) */}
         </div>
       </main>
       <Footer />
