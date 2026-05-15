@@ -17,6 +17,7 @@ import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { SuccessorCustodianCard } from "@/components/SuccessorCustodianCard";
 import { ChildIdentityCard } from "@/components/ChildIdentityCard";
 import { FundDetailsCard } from "@/components/FundDetailsCard";
+import { InvitationsToYouCard } from "@/components/InvitationsToYouCard";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -2495,17 +2496,9 @@ const [editFundName, setEditFundName] = useState("");
     staleTime: 60_000,
   });
 
-  // Invitations TO this user — funds where someone else has invited
-  // them to co-parent / view. Separate from the `collaborators` query
-  // above, which is the inverse (invites the current user has SENT).
-  const { data: pendingInvitations = [] } = useQuery<any[]>({
-    queryKey: ["/api/me/invitations"],
-    queryFn: async () => {
-      const res = await fetch(`/api/me/invitations`, { credentials: "include" });
-      if (!res.ok) return [];
-      return res.json();
-    },
-  });
+  // (pendingInvitations query moved into InvitationsToYouCard on
+  // 2026-05-14 — Phase 2 sheet-extraction chunk 4. The card was
+  // the only consumer in Settings, so the query moved with it.)
 
   const { data: collaborators = [] } = useQuery<any[]>({
     queryKey: ["/api/funds", primaryFund?.id, "collaborators"],
@@ -3985,55 +3978,11 @@ const [editFundName, setEditFundName] = useState("");
               )}
             </SectionCard>
 
-            {/* Invitations sent TO this user. Renders only when there's
-                at least one pending row. Apple-Settings register — calm
-                informational card, clear "open invitation" CTA that lands
-                on the public accept page (same surface a fresh email
-                recipient would see, so the experience is uniform whether
-                they followed the email or discovered the invite here). */}
-            {pendingInvitations.length > 0 && (
-              <SectionCard>
-                <div className="p-5">
-                  <h2 className="text-base font-bold text-foreground mb-1">Invitations to you</h2>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    You've been invited to {pendingInvitations.length === 1 ? "a fund" : `${pendingInvitations.length} funds`} by other parents.
-                  </p>
-                  <div className="space-y-3">
-                    {pendingInvitations.map((inv: any) => {
-                      const childName = inv.childFirstName || "their child";
-                      const inviter = inv.inviterFirstName || "A parent";
-                      const roleLabel = inv.role === "co-admin" ? "Co-parent" : "Viewer";
-                      return (
-                        <div
-                          key={inv.token}
-                          className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4"
-                          data-testid={`row-pending-invitation-${inv.token}`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-bold text-foreground">
-                                {inviter} invited you to {childName}'s fund
-                              </p>
-                              <p className="mt-0.5 text-xs text-muted-foreground">
-                                {roleLabel} role · Pending
-                              </p>
-                            </div>
-                            <Button
-                              size="sm"
-                              className="shrink-0 rounded-xl"
-                              onClick={() => { navigate(`/invitations/${inv.token}`); haptic("selection"); }}
-                              data-testid={`button-open-invitation-${inv.token}`}
-                            >
-                              Open invitation
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </SectionCard>
-            )}
+            {/* Invitations TO this user. Extracted to InvitationsToYouCard
+                on 2026-05-14 as Phase 2 sheet-extraction chunk 4. Renders
+                nothing when there are zero pending invitations — entire
+                card disappears, no empty state. */}
+            <InvitationsToYouCard />
 
             {/* Co-parent access */}
             {(() => {
