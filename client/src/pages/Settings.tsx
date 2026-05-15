@@ -3569,6 +3569,17 @@ const [editFundName, setEditFundName] = useState("");
       queryClient.invalidateQueries({ queryKey: ["/api/funds", primaryFund.id, "holdings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/funds", primaryFund.id, "collaborators"] });
       queryClient.invalidateQueries({ queryKey: ["/api/funds", primaryFund.id, "investment-preferences"] });
+      // Added 2026-05-15 (Ring C of the managed-strategy audit). The
+      // strategy editor's onSuccess routes through here. Dashboard hero,
+      // chart, holdings, projection-at-65, and the custom-mix display
+      // all derive from these two caches; without invalidating them,
+      // a parent who saves Conservative in Settings sees Dashboard
+      // still showing the old strategy until the next 30-60s
+      // staletime window expires. The Dashboard's own quick-switch
+      // nudge has always done this — refreshAll was the missing
+      // mirror of that pattern.
+      queryClient.invalidateQueries({ queryKey: ["/api/funds", primaryFund.id, "dashboard-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/funds", primaryFund.id, "strategy"] });
     }
   };
 
