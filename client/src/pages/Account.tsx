@@ -1357,7 +1357,7 @@ export default function Account() {
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                     <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">sipc.org</a>
                     <a href="https://brokercheck.finra.org" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">FINRA BrokerCheck</a>
-                    <Link href="/security" className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">Kiddo security</Link>
+                    <Link href="/security" className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">How we protect you</Link>
                   </div>
                 </div>
               </div>

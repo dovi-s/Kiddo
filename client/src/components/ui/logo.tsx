@@ -28,9 +28,19 @@ export function Logo({ size = "md", showWordmark = true, className = "", linkTo 
 
   const logoContent = (
     <span className={`flex items-center ${s.gap} ${className}`}>
+      {/* Brand mark icon is decorative. The adjacent visible "Kiddo"
+          wordmark labels the brand for screen readers — either via
+          showWordmark={true} (rendered just below) or via a consumer
+          (DesktopSidebar, FundSnapshot) that renders its own wordmark
+          adjacent. Empty alt + aria-hidden prevents a "Kiddo Kiddo"
+          double-read. Fixed 2026-05-15 after the parent flagged the
+          duplicate on the Account → Security tab. The icon-only
+          LogoMark export below KEEPS alt="Kiddo" because that variant
+          is used without an adjacent wordmark and IS the only label. */}
       <img
         src={koraMarkImg}
-        alt="Kiddo"
+        alt=""
+        aria-hidden="true"
         className={`${s.icon} object-contain`}
       />
       {showWordmark && (

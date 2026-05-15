@@ -90,9 +90,15 @@ export function readLastAppLocation(): LastLocation | null {
 // Compose the "Back to X" label for a given snapshot.
 //
 // Special cases (locked):
-//   - pageTitle "Home" (Dashboard) → "Back to {kid}'s home" — matches
-//     the chrome's home/kid vocabulary; "Home" generic is the page
-//     title but the destination IS a specific kid's surface.
+//   - pageTitle "Home" (Dashboard) → "Back to {kid}'s fund" — matches
+//     the canonical product entity name used in the hero ("Lauren's
+//     fund is live"), the share affordance ("Share Lauren's gift
+//     link"), and every other content surface. The page-title chrome
+//     still says "Home" (it's the section label), but the Back
+//     destination IS a specific kid's fund and the warmer/clearer
+//     word is "fund." Updated 2026-05-15 from prior "home" wording
+//     per user feedback: "home" risked being misread as "house" and
+//     the rest of the app already uses "fund" consistently.
 //   - path "/funds" → "Back to your funds" — the page title is
 //     "Funds" but the dropdown trigger and the page hero both
 //     read "Your funds." Match the contextual label the user
@@ -107,10 +113,10 @@ export function formatBackLabel(
   childFirstName: string | null | undefined,
 ): string {
   if (!snap || !snap.label) {
-    return childFirstName ? `Back to ${childFirstName}'s home` : "Back to home";
+    return childFirstName ? `Back to ${childFirstName}'s fund` : "Back to your fund";
   }
   if (snap.label === "Home") {
-    return childFirstName ? `Back to ${childFirstName}'s home` : "Back to home";
+    return childFirstName ? `Back to ${childFirstName}'s fund` : "Back to your fund";
   }
   if (snap.path === "/funds") {
     return "Back to your funds";

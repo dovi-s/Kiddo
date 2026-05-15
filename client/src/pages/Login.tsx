@@ -119,9 +119,17 @@ export default function Login() {
           className="space-y-8"
         >
           <div className="text-center space-y-4">
+            {/* Decorative brand mark above the Logo wordmark below.
+                The <Logo showWordmark={true}> just below renders the
+                actual labeled brand for screen readers; this hero
+                image is illustrative only. Empty alt + aria-hidden
+                prevents the "Kiddo Kiddo Kiddo" triple-read flagged
+                in the Login chrome (1 large image + 1 Logo icon +
+                1 wordmark text). Fixed 2026-05-15. */}
             <motion.img
               src={brandMark}
-              alt="Kiddo"
+              alt=""
+              aria-hidden="true"
               data-testid="img-brand-mark-login"
               className="w-36 h-auto mx-auto drop-shadow-sm"
               initial={{ scale: 0.8, opacity: 0 }}
