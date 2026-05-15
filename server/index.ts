@@ -25,6 +25,7 @@ import { startHolidayWarmthWorker } from "./holidayWarmthWorker";
 import { startYearEndWrappedWorker } from "./yearEndWrappedWorker";
 import { startTaxSeasonPrepWorker } from "./taxSeasonPrepWorker";
 import { startGifterReturnReminderWorker } from "./gifterReturnReminderWorker";
+import { startVolatilityReassuranceWorker } from "./volatilityReassuranceWorker";
 import { registerOGMiddleware } from "./ogMiddleware";
 import { users } from "@shared/schema";
 import { getConfiguredSuperAdminEmails, getDefaultSuperAdminEmails } from "@shared/adminAccess";
@@ -643,6 +644,7 @@ app.use((req, res, next) => {
   startYearEndWrappedWorker(log);
   startTaxSeasonPrepWorker(log);
   startGifterReturnReminderWorker(log);
+  startVolatilityReassuranceWorker(log);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
