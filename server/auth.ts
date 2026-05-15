@@ -1565,14 +1565,175 @@ async function performAccountDeletion(
     console.warn("[account-delete] bank_accounts cleanup failed (non-fatal):", bankErr?.message);
   }
 
-  // 1d. Revoke pending outbound co-parent invitations. Pending
-  //     invite tokens are bearer capabilities — if a recipient
-  //     accepts AFTER deletion, they'd join a fund owned by a
-  //     soft-deleted user with no clear path to act on it. Status
-  //     'declined' tombstones the row (we keep it for audit + so
-  //     the recipient sees an explanatory message if they tap the
-  //     link). userId IS NULL filter scopes to PENDING (accepted
-  //     invites carry the invitee's userId).
+  // 1c.5 Co-parent inheritance. For each fund still owned by the
+  //      deleting user, find the FIRST accepted co-admin and transfer
+  //      primary custodianship to them. This is the "they take over
+  //      as primary custodian" promise from the modal copy made real.
+  //
+  //      Decision points (locked 2026-05-14):
+  //        - Only accepted co-admins inherit (matches Ring A1's
+  //          unblock gate; viewers don't unblock and don't inherit).
+  //        - First by acceptedAt asc (then invitedAt asc as tiebreak).
+  //          Stable, predictable, and "first to accept gets it" is
+  //          the most defensible heuristic — they're the most-
+  //          established co-parent on the fund.
+  //        - On inheritance, the new owner's collaborator row is
+  //          DELETED — they're now primary, not a collaborator.
+  //        - An 'account_inherited' activity row + an audit_logs row
+  //          land on the new owner's history so they have a paper
+  //          trail of the custody transfer.
+  //        - Email the new owner explaining what happened. Non-fatal.
+  //        - Restoration via the 30-day magic link does NOT undo
+  //          inheritance — by design. Deleting an account is a
+  //          deliberate, accountable choice; co-parent inheritance
+  //          is the explicit consequence. Reversing it requires
+  //          support-team coordination.
+  try {
+    const ownedFundsForInherit = await db
+      .select({ id: funds.id, recipientFirstName: funds.recipientFirstName, name: funds.name })
+      .from(funds)
+      .where(eq(funds.userId, userId));
+    for (const f of ownedFundsForInherit) {
+      try {
+        const inheritors = await db
+          .select({
+            id: fundCollaborators.id,
+            userId: fundCollaborators.userId,
+            email: fundCollaborators.email,
+            acceptedAt: fundCollaborators.acceptedAt,
+            invitedAt: fundCollaborators.invitedAt,
+          })
+          .from(fundCollaborators)
+          .where(
+            and(
+              eq(fundCollaborators.fundId, f.id),
+              eq(fundCollaborators.role, "co-admin"),
+              eq(fundCollaborators.status, "accepted"),
+            ),
+          );
+        if (inheritors.length === 0) continue;
+        // Sort by acceptedAt asc; nulls sort last; invitedAt as tiebreak.
+        // Done in JS rather than SQL so the logic is greppable here.
+        const ranked = [...inheritors].sort((a, b) => {
+          const aAcc = a.acceptedAt?.getTime() ?? Number.POSITIVE_INFINITY;
+          const bAcc = b.acceptedAt?.getTime() ?? Number.POSITIVE_INFINITY;
+          if (aAcc !== bAcc) return aAcc - bAcc;
+          const aInv = a.invitedAt?.getTime() ?? Number.POSITIVE_INFINITY;
+          const bInv = b.invitedAt?.getTime() ?? Number.POSITIVE_INFINITY;
+          return aInv - bInv;
+        });
+        const winner = ranked[0];
+        if (!winner.userId) {
+          // Defense: accepted status without userId shouldn't happen
+          // (the accept handler sets userId on acceptance), but if
+          // we ever get a malformed row, skip inheritance for this
+          // fund rather than transfer to a null userId.
+          console.warn(`[account-delete] Inherit skip: fund ${f.id} co-admin row ${winner.id} has null userId`);
+          continue;
+        }
+        const newOwnerId = winner.userId;
+        await db
+          .update(funds)
+          .set({ userId: newOwnerId, updatedAt: new Date() })
+          .where(eq(funds.id, f.id));
+        // Remove the inheriting collaborator's row — they are now
+        // primary, not a collaborator. Other collaborators on this
+        // fund (viewers, additional co-admins) stay as-is and
+        // continue to have access under the new primary.
+        try {
+          await db.delete(fundCollaborators).where(eq(fundCollaborators.id, winner.id));
+        } catch (collabRemoveErr: any) {
+          console.warn(`[account-delete] Could not remove inheriting collaborator row ${winner.id}:`, collabRemoveErr?.message);
+        }
+        // Activity row on the NEW owner's history. Audit row keyed to
+        // the fund + new owner so the trail survives in compliance.
+        const childLabel = f.recipientFirstName ? `${f.recipientFirstName}'s` : (f.name || "the");
+        try {
+          await db.insert(activities).values({
+            userId: newOwnerId,
+            fundId: f.id,
+            type: "fund_inherited",
+            title: `You're now the primary custodian of ${childLabel} fund`,
+            description: "The previous custodian deleted their account. You inherited primary custodianship per the co-parent inheritance flow.",
+            metadata: { previousUserId: userId } as any,
+          } as any);
+        } catch (actErr: any) {
+          console.warn(`[account-delete] Could not write inheritance activity for fund ${f.id}:`, actErr?.message);
+        }
+        try {
+          await db.insert(auditLogs).values({
+            userId: newOwnerId,
+            action: "fund_inherited",
+            resourceType: "fund",
+            resourceId: f.id,
+            metadata: JSON.stringify({
+              previousUserId: userId,
+              inheritedAt: new Date().toISOString(),
+              triggeredBy: "account_deletion",
+            }),
+            ipAddress: auditMeta.ip,
+            userAgent: auditMeta.userAgent,
+          });
+        } catch (auditErr: any) {
+          console.warn(`[account-delete] Could not write inheritance audit for fund ${f.id}:`, auditErr?.message);
+        }
+        // Email the new owner. Non-fatal. We look up their email
+        // because the collaborator row carries the email it was
+        // invited with, which may differ from the user record's
+        // current email — prefer the user record as the source of
+        // truth (they may have changed email since the invite).
+        try {
+          const ownerRows = await db
+            .select({ email: users.email, firstName: users.firstName })
+            .from(users)
+            .where(eq(users.id, newOwnerId))
+            .limit(1);
+          const ownerEmail = ownerRows[0]?.email || winner.email;
+          if (ownerEmail) {
+            const greeting = ownerRows[0]?.firstName ? `Hi ${ownerRows[0].firstName},` : "Hi,";
+            await sendEmail({
+              to: ownerEmail,
+              subject: `You're now the primary custodian of ${childLabel} fund`,
+              text: [
+                greeting,
+                ``,
+                `The previous primary custodian deleted their Kiddo account. Because you were the accepted co-parent (Co-Admin role) on ${childLabel} fund, you've been promoted to primary custodian.`,
+                ``,
+                `Nothing on the fund itself changes — the Memory Book, the holdings, and the kid's gift link all stay. You now own the settings and the responsibility.`,
+                ``,
+                `Next time you log in you'll see ${childLabel} fund with full primary controls.`,
+                ``,
+                `Questions? Reply to this email or write to support@kiddofund.com.`,
+                ``,
+                `— The Kiddo team`,
+              ].join("\n"),
+              tags: ["fund_inherited"],
+              metadata: { fundId: f.id, previousUserId: userId, newOwnerId },
+            });
+          }
+        } catch (mailErr: any) {
+          console.warn(`[account-delete] Could not email new owner for fund ${f.id}:`, mailErr?.message);
+        }
+      } catch (perFundErr: any) {
+        // Per-fund failure shouldn't take down the entire deletion.
+        // The fund stays owned by the deleting user; admin tools can
+        // sort out the inheritance manually.
+        console.warn(`[account-delete] Inheritance failed for fund ${f.id}:`, perFundErr?.message);
+      }
+    }
+  } catch (inheritErr: any) {
+    console.warn("[account-delete] Co-parent inheritance pass failed (non-fatal):", inheritErr?.message);
+  }
+
+  // 1d. Revoke pending outbound co-parent invitations on funds the
+  //     deleting user STILL owns (i.e. those that didn't get
+  //     inherited above). Pending invite tokens are bearer
+  //     capabilities — if a recipient accepts AFTER deletion, they'd
+  //     join a fund owned by a soft-deleted user with no clear path
+  //     to act on it. Status 'declined' tombstones the row (we keep
+  //     it for audit + so the recipient sees an explanatory message
+  //     if they tap the link). Inherited funds are skipped because
+  //     their new primary owns the invite list now.
   try {
     const ownedFundIds = (
       await db.select({ id: funds.id }).from(funds).where(eq(funds.userId, userId))
