@@ -44,6 +44,8 @@ import { URL } from "url";
 import { getUserIdForOAuthIdentity, linkOAuthIdentity } from "./oauthIdentityStore";
 import { registerPasskeyRoutes } from "./passkeyAuth";
 import { mintRestoreToken, verifyRestoreToken } from "./accountRestoreToken";
+import { auditLogs } from "@shared/schema";
+import { sendEmail } from "./emailDelivery";
 import { z } from "zod";
 
 const emailSchema = z
@@ -1092,7 +1094,11 @@ export function setupAuth(app: Express) {
         return res.status(409).json({ blocked: true, reason: "active_funds_with_balance", funds: blockedFunds });
       }
       const reason = String(req.body?.reason || "").trim().slice(0, 500) || null;
-      const deletedAt = await performAccountDeletion(userId, reason);
+      const deletedAt = await performAccountDeletion(userId, reason, {
+        ip: req.ip || (req.socket as any)?.remoteAddress || null,
+        userAgent: req.get("user-agent") || null,
+        confirmedEmail,
+      });
       // Mint a restore token bound to this specific deletion event.
       // The token's `did` claim must match users.deletedAt for the
       // restore endpoint to honor it; if the user restores then
@@ -1104,6 +1110,48 @@ export function setupAuth(app: Express) {
         // Non-fatal: deletion proceeds regardless. The user can still
         // email support to restore. Surfaces in logs for ops follow-up.
         console.warn("[account-delete] Could not mint restore token (non-fatal):", tokenErr?.message);
+      }
+      // Send the confirmation + restore email. Non-fatal — if email
+      // fails the user is still deleted; they can fall back to
+      // support@kiddofund.com. The restoreToken in the JSON response
+      // also gives the client a one-time visibility window in case
+      // the user wants to reconsider immediately.
+      if (restoreToken && userEmail) {
+        try {
+          const baseUrl = getBaseUrl(req);
+          const restoreUrl = `${baseUrl}/api/account/restore?token=${encodeURIComponent(restoreToken)}`;
+          const supportEmail = "support@kiddofund.com";
+          await sendEmail({
+            to: userEmail,
+            subject: "Your Kiddo account has been deleted",
+            text: [
+              `Your Kiddo account has been deleted.`,
+              ``,
+              `What stays:`,
+              `  • The Memory Book for any kid's fund you set up. It belongs to the kid.`,
+              `  • Tax records and transaction history (legal requirement).`,
+              `  • Any fund that was inherited by a co-parent stays in their care.`,
+              ``,
+              `What's gone:`,
+              `  • Your login, name, profile photo.`,
+              `  • Your linked bank accounts.`,
+              `  • Your recurring investments and active subscriptions (canceling at period end).`,
+              ``,
+              `Changed your mind? You have 30 days to undo this:`,
+              `${restoreUrl}`,
+              ``,
+              `After 30 days your personal info is permanently scrubbed and restoration is no longer possible.`,
+              ``,
+              `Questions? Reply to this email or write to ${supportEmail}.`,
+              ``,
+              `— The Kiddo team`,
+            ].join("\n"),
+            tags: ["account_deleted"],
+            metadata: { userId },
+          });
+        } catch (mailErr: any) {
+          console.warn("[account-delete] Could not send confirmation email (non-fatal):", mailErr?.message);
+        }
       }
       // Invalidate session immediately so the next request doesn't
       // re-authenticate against a now-deleted user.
@@ -1239,15 +1287,26 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
     if (!resolvedUser) {
       return res.status(401).json({ message: "Unauthorized" });
     }
-    // Soft-deleted users can't re-authenticate. Per
-    // project_account_deletion_spec.md: deletion sets users.deletedAt = NOW
-    // and destroys the session. This check is the belt-and-suspenders: if a
-    // session somehow persists past the destroy() call, or if a stale session
-    // resolves to a soft-deleted user, we still reject it here. The 30-day
-    // grace period for "undo deletion" is handled via support email channel,
-    // not via re-auth.
+    // Soft-deleted users can't re-authenticate. Deletion sets
+    // users.deletedAt = NOW and destroys the calling session; this
+    // check is the belt-and-suspenders for (a) other devices' sessions
+    // that hit the API after deletion, (b) any session that somehow
+    // persists past destroy(). The bare "Unauthorized" used to leave
+    // the locked-out user wondering what happened; now we surface the
+    // specific state + restoration path so they can actually act.
+    //
+    // The reason="account_deleted" discriminator lets the client
+    // (Account.tsx, login page) render a deletion-aware UI without
+    // having to guess from the 401. Keeping the HTTP code at 401 so
+    // existing not-logged-in flows still treat this as "not signed in"
+    // — the discriminator is what differentiates routing.
     if ((resolvedUser as any).deletedAt) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        message:
+          "Your Kiddo account is being deleted. The 30-day grace period is active — check the email we sent for a restore link, or write to support@kiddofund.com.",
+        reason: "account_deleted",
+        deletedAt: (resolvedUser as any).deletedAt,
+      });
     }
     (req as any).user = resolvedUser;
     next();
@@ -1410,7 +1469,17 @@ async function getFundsBlockingAccountDeletion(userId: string): Promise<BlockedF
  *   - DriveWealth-side account closure (separate compliance flow)
  *   - Memory-Book authorship anonymization (final 30-day scrub only)
  */
-async function performAccountDeletion(userId: string, reason: string | null): Promise<Date> {
+type AccountDeletionAuditMeta = {
+  ip: string | null;
+  userAgent: string | null;
+  confirmedEmail: string | null;
+};
+
+async function performAccountDeletion(
+  userId: string,
+  reason: string | null,
+  auditMeta: AccountDeletionAuditMeta = { ip: null, userAgent: null, confirmedEmail: null },
+): Promise<Date> {
   // 1. Cancel active Stripe subscriptions at period end. Errors here
   //    don't fail the whole deletion — Stripe-side cleanup can be
   //    completed manually if the API call fails.
@@ -1556,7 +1625,15 @@ async function performAccountDeletion(userId: string, reason: string | null): Pr
     })
     .where(eq(users.id, userId));
 
-  // 3. Audit-log entry. Preserved indefinitely for traceability.
+  // 3. Audit-log entries. Two writes, two destinations:
+  //
+  //    activities  — user-facing history feed (preserved alongside
+  //                  account history; visible to admin tooling).
+  //    audit_logs  — compliance trail with full forensic context
+  //                  (IP, user-agent, confirmed email). Preserved
+  //                  indefinitely. For a destructive irreversible-
+  //                  after-30-days action, the forensic record is
+  //                  worth the extra row.
   try {
     await db.insert(activities).values({
       userId,
@@ -1566,7 +1643,24 @@ async function performAccountDeletion(userId: string, reason: string | null): Pr
       metadata: { reason: reason ?? null } as any,
     } as any);
   } catch (auditErr: any) {
-    console.warn("[account-delete] Could not write audit entry (non-fatal):", auditErr?.message);
+    console.warn("[account-delete] Could not write activity row (non-fatal):", auditErr?.message);
+  }
+  try {
+    await db.insert(auditLogs).values({
+      userId,
+      action: "account_deleted",
+      resourceType: "user",
+      resourceId: userId,
+      metadata: JSON.stringify({
+        reason: reason ?? null,
+        confirmedEmail: auditMeta.confirmedEmail,
+        deletedAt: deletedAt.toISOString(),
+      }),
+      ipAddress: auditMeta.ip,
+      userAgent: auditMeta.userAgent,
+    });
+  } catch (auditErr: any) {
+    console.warn("[account-delete] Could not write audit_logs row (non-fatal):", auditErr?.message);
   }
 
   return deletedAt;
