@@ -37,7 +37,16 @@ const WORKER_SOURCE = "post-handoff-engagement";
 // owner is emailed at most once because the lastQuarterlySummaryAt
 // column gets stamped on send.
 const QUARTERLY_MONTHS = new Set([0, 3, 6, 9]); // Jan, Apr, Jul, Oct
-const WINDOW_DAYS = 3;
+// Widened from 3 to 7 days on 2026-05-15 (timing-audit follow-up).
+// The old 3-day window (15-17) meant a worker outage spanning those
+// three days permanently skipped the quarter for everyone — and
+// quarterly summaries are themselves rare-cadence emails, so a
+// missed quarter is a big chunk of the engagement loop gone. With
+// the RESEND_DEDUP_DAYS cap below (80 days), widening to a week
+// can't fire the same quarter twice; the dedup column does the
+// work. Worst-case the email arrives a few days later than ideal
+// vs missing entirely.
+const WINDOW_DAYS = 7;
 
 // Don't email a kid in the first 60 days post-handoff. They just
 // went through the welcome walkthrough; let them breathe before

@@ -304,9 +304,36 @@ export async function fireAnniversaryMilestone(
 ): Promise<void> {
   const now = new Date();
   const created = new Date(fundCreatedAt);
-  // Only fire on the exact anniversary date (UTC). Calendar-day match.
-  if (now.getUTCMonth() !== created.getUTCMonth() || now.getUTCDate() !== created.getUTCDate()) return;
-  const years = now.getUTCFullYear() - created.getUTCFullYear();
+  // Fire if today is within ±1 day of the anniversary date (UTC).
+  // Widened from exact-day match on 2026-05-15 (timing-audit follow-
+  // up): the daily worker runs every 30 minutes but a longer outage
+  // spanning the anniversary day would miss the year entirely. With
+  // hasMilestone(y:N) dedup below, a ±1-day window can't fire the
+  // same anniversary twice — the dedup column ensures one-per-year.
+  // The fund created on Feb 15 fires Feb 14, 15, or 16, whichever
+  // tick the worker first lands on; subsequent ticks within the
+  // window skip via dedup.
+  //
+  // Anniversary years calculation uses TODAY's year - createdAt's
+  // year. That stays accurate at the ±1 boundaries: a fund created
+  // 2025-02-15 fires "Year 1" anniversary on 2026-02-14, 2026-02-15,
+  // OR 2026-02-16 — all three resolve `years = 2026 - 2025 = 1`.
+  // Edge case: fund created on Dec 31 fires "Year 1" anniversary on
+  // Dec 30, 31, or Jan 1 of next year. On Jan 1, `years` would
+  // resolve to 2 (different calendar year) — handled by checking
+  // the date proximity first, then computing years against the
+  // anniversary date specifically rather than the current date.
+  const anniversaryThisYear = new Date(Date.UTC(now.getUTCFullYear(), created.getUTCMonth(), created.getUTCDate()));
+  const dayMs = 24 * 60 * 60 * 1000;
+  const distanceMs = Math.abs(now.getTime() - anniversaryThisYear.getTime());
+  // Also check next year's anniversary in case "today" is in the
+  // ±1 window of a Dec/Jan boundary creation date.
+  const anniversaryNextYear = new Date(Date.UTC(now.getUTCFullYear() + 1, created.getUTCMonth(), created.getUTCDate()));
+  const distanceMsNext = Math.abs(now.getTime() - anniversaryNextYear.getTime());
+  const closestAnniversary = distanceMsNext < distanceMs ? anniversaryNextYear : anniversaryThisYear;
+  const closestDistanceMs = Math.min(distanceMs, distanceMsNext);
+  if (closestDistanceMs > dayMs) return;
+  const years = closestAnniversary.getUTCFullYear() - created.getUTCFullYear();
   if (!ANNIVERSARY_YEARS.includes(years)) return;
   const key = `y:${years}`;
   if (await hasMilestone(fundId, "milestone_anniversary", key)) return;

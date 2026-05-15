@@ -91,6 +91,27 @@ function daysBetween(earlier: Date | string, later = new Date()) {
   return hoursBetween(earlier, later) / 24;
 }
 
+/**
+ * Calendar-day diff in APP_TIMEZONE. Counts midnight boundaries
+ * crossed, ignores time-of-day. A fund created at 11:59 PM on May 15
+ * and "now" at 12:01 AM on May 16 returns 1 — they're on different
+ * calendar days in the configured timezone.
+ *
+ * Used by the activation drip (Day 1 / 3 / 7) so the label matches
+ * user intuition: "Day N email arrives on the Nth calendar day after
+ * signup," not "N * 24 fractional hours after signup."
+ */
+function calendarDaysBetween(earlier: Date | string, later: Date | string = new Date()) {
+  const a = getDatePartsInTimeZone(earlier);
+  const b = getDatePartsInTimeZone(later);
+  // Convert both to UTC-midnight epoch values; the absolute date
+  // arithmetic is straightforward and immune to DST shifts because
+  // we're working in pure date space.
+  const aMs = Date.UTC(a.year, a.month - 1, a.day);
+  const bMs = Date.UTC(b.year, b.month - 1, b.day);
+  return Math.round((bMs - aMs) / (24 * 60 * 60 * 1000));
+}
+
 function getDatePartsInTimeZone(input: Date | string) {
   const date = input instanceof Date ? input : new Date(input);
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -496,8 +517,23 @@ async function enqueueParentLifecycleEmails(log: (message: string, source?: stri
     // flag persists across refunds, so once we've welcomed the first
     // gift, activation is permanently retired for this fund.
     if (giftCount === 0 && !fundState.firstGiftSentAt) {
-      const ageDays = daysBetween(createdAt, now);
-      if (ageDays >= 1 && !fundState.activationDay1SentAt) {
+      // 2026-05-15: switched from fractional hours/24 to calendar-day
+      // diff in APP_TIMEZONE. With the previous fractional math, a
+      // fund created at 11pm could trip "Day 1 >= 1" at midnight
+      // (1 hour later) and the user got their "Day 1" email feeling
+      // like it had been minutes since signup. The calendar-day
+      // version requires a true date boundary to have passed in the
+      // configured timezone: Day 1 fires on the day AFTER signup,
+      // Day 3 on the third day, Day 7 on the seventh.
+      //
+      // The hoursElapsed >= 18 gate is the second safety net — a
+      // fund created at 11:59 PM still wouldn't fire Day 1 at 12:01
+      // AM (only 2 minutes later); we'd wait ~18+ hours so the
+      // email arrives sometime during normal hours of the next day.
+      const calendarAge = calendarDaysBetween(createdAt, now);
+      const hoursElapsed = hoursBetween(createdAt, now);
+      const ageDays = daysBetween(createdAt, now); // retained for backward-compat below if needed
+      if (calendarAge >= 1 && hoursElapsed >= 18 && !fundState.activationDay1SentAt) {
         await appendQueueEntry({
           id: `activation_day_1:${row.fund_id}`,
           type: "activation_day_1",
@@ -516,7 +552,7 @@ async function enqueueParentLifecycleEmails(log: (message: string, source?: stri
         queued += 1;
         changed = true;
       }
-      if (ageDays >= 3 && !fundState.activationDay3SentAt) {
+      if (calendarAge >= 3 && !fundState.activationDay3SentAt) {
         await appendQueueEntry({
           id: `activation_day_3:${row.fund_id}`,
           type: "activation_day_3",
@@ -535,7 +571,7 @@ async function enqueueParentLifecycleEmails(log: (message: string, source?: stri
         queued += 1;
         changed = true;
       }
-      if (ageDays >= 7 && !fundState.activationDay7SentAt) {
+      if (calendarAge >= 7 && !fundState.activationDay7SentAt) {
         await appendQueueEntry({
           id: `activation_day_7:${row.fund_id}`,
           type: "activation_day_7",
