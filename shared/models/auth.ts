@@ -52,6 +52,15 @@ export const users = pgTable("users", {
   // project_account_deletion_spec.md for the full decision matrix.
   deletedAt: timestamp("deleted_at"),
   deletionReason: text("deletion_reason"),
+  // Set by the PII scrub worker (server/accountDeletionWorker.ts) the
+  // first time it runs against a soft-deleted user whose grace period
+  // has elapsed. After this is set, first_name / last_name /
+  // preferred_name / profile_image_url / email are anonymized in
+  // place + Stripe Customer object deleted + Plaid Items removed.
+  // The user row itself stays (legal records keyed to its id must
+  // persist) but contains no recoverable PII. NULL on accounts that
+  // are still active OR still in the 30-day grace window.
+  piiScrubbedAt: timestamp("pii_scrubbed_at"),
   // Post-handoff engagement loop. Bucket 3 of AGE_18_HANDOFF_SPEC.md.
   // Stamped each time the quarterly summary email goes out to a
   // kid-owner (i.e. a user who claimed a fund via age-transition).
