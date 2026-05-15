@@ -3029,9 +3029,22 @@ export default function Dashboard() {
     //     Capped at 120 months — anything past 10 years is too far
     //     out to read as "at your current pace."
     const prevValue = parseFloat(fundHistory[1]?.totalValue || "0");
-    const hitMilestone = MONEY_CROSS_THRESHOLDS.find(
-      (m) => totalValue >= m && prevValue < m,
-    );
+    // Skip the milestone nudge when prevValue is 0 (or missing). A
+    // brand-new fund with sparse history sets fundHistory[1] to
+    // either undefined or a snapshot from before any gifts settled,
+    // so prevValue collapses to 0. The find() below would then
+    // return the SMALLEST threshold ≤ totalValue — a fund at
+    // $1,917 would celebrate "just crossed $100" even though it
+    // crossed $100 months ago. With prevValue > 0 required, the
+    // smart-nudge only fires when we have a real previous snapshot
+    // to anchor the crossing claim to. The server-side milestone
+    // engine (server/milestones.ts fireMoneyCrossMilestones) still
+    // fires the activity row + Memory Book entry on legitimate
+    // first-gift crossings — this gate only suppresses the
+    // SECONDARY "Adjust recurring" nudge, not the celebration row.
+    const hitMilestone = prevValue > 0
+      ? MONEY_CROSS_THRESHOLDS.find((m) => totalValue >= m && prevValue < m)
+      : undefined;
     if (hitMilestone && monthlyAmt > 0 && currentProjection && oneYearReturn >= 0) {
       const nextMilestone = MONEY_CROSS_THRESHOLDS.find((m) => m > hitMilestone) ?? null;
       // Month-by-month simulation. Uses the locked Kiddo projection
@@ -3050,16 +3063,28 @@ export default function Dashboard() {
       };
       const monthsAtCurrent = nextMilestone ? monthsToReach(nextMilestone, monthlyAmt) : null;
       const monthsDoubled = nextMilestone ? monthsToReach(nextMilestone, monthlyAmt * 2) : null;
+      // Skip the entire nudge if monthsToReach returned 0 (fund is
+      // already past the next milestone too — stale celebration
+      // attempt). Also skip if no next milestone exists (fund is at
+      // the top $100K threshold — no projection to show). Without
+      // these guards we'd show an empty/awkward modal and trigger
+      // the React-renders-0-as-text bug that motivated this fix.
+      if (!nextMilestone || !monthsAtCurrent || monthsAtCurrent <= 0) {
+        return;
+      }
       setSmartNudge({
         scenario: "milestone",
         milestoneAmt: hitMilestone,
-        nextMilestoneAmt: nextMilestone ?? undefined,
+        nextMilestoneAmt: nextMilestone,
         currentMonthlyAmt: monthlyAmt,
         doubledAmt: monthlyAmt * 2,
         currentProjection,
         doubledProjection: doubledProjection ?? undefined,
-        monthsAtCurrentRate: monthsAtCurrent ?? undefined,
-        monthsDoubled: monthsDoubled ?? undefined,
+        monthsAtCurrentRate: monthsAtCurrent,
+        // Only carry the doubled-pace months if it's a real positive
+        // estimate. 0 (already past) or null (>10 years out) suppress
+        // the "At $X/mo, in N months" trailing copy.
+        monthsDoubled: monthsDoubled && monthsDoubled > 0 ? monthsDoubled : undefined,
       });
       localStorage.setItem(NUDGE_KEY, String(now));
     }
@@ -13010,7 +13035,7 @@ export default function Dashboard() {
                     <p className="mt-2 text-sm text-foreground/80 leading-relaxed">
                       That's ahead of the 7% historical average. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
                       {child} is projected to have about {fmt(smartNudge.currentProjection)} at {majorityAge}.
-                      {smartNudge.doubledProjection && smartNudge.doubledAmt && (
+                      {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
                         <>
                           {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to about {fmt(smartNudge.doubledProjection)}.
                         </>
@@ -13031,7 +13056,7 @@ export default function Dashboard() {
                     <p className="mt-2 text-sm text-foreground/80 leading-relaxed">
                       Compounding lives here. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
                       {child} projects to about {fmt(smartNudge.currentProjection)} at {majorityAge}.
-                      {smartNudge.doubledProjection && smartNudge.doubledAmt && (
+                      {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
                         <>
                           {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to about {fmt(smartNudge.doubledProjection)}.
                         </>
@@ -13064,10 +13089,22 @@ export default function Dashboard() {
                         is undefined if the fund is at the highest
                         threshold ($100K), in which case we skip the
                         projection line entirely. */}
-                    {smartNudge.nextMilestoneAmt && smartNudge.monthsAtCurrentRate && (
+                    {/* Classic React gotcha: {x && <element>} renders
+                        the literal "0" in the DOM if x === 0 (number),
+                        because && returns its left operand when falsy
+                        and React happily renders numbers as text.
+                        Explicit `> 0` guards instead. Reported with a
+                        screenshot 2026-05-15 — Emma's $1,917 fund
+                        showed a stray "0" in the milestone modal
+                        because monthsAtCurrentRate was 0 (fund already
+                        past the next milestone, projection didn't
+                        apply). The trigger-side gate now suppresses
+                        this scenario entirely, but the defensive
+                        boolean checks below remove the footgun. */}
+                    {(smartNudge.nextMilestoneAmt ?? 0) > 0 && (smartNudge.monthsAtCurrentRate ?? 0) > 0 && (
                       <p className="mt-2 text-sm text-foreground/80 leading-relaxed">
                         At your current pace ({fmtAmt(smartNudge.currentMonthlyAmt || 0)}/mo plus 7% historical-average growth), you'd cross {fmtAmt(smartNudge.nextMilestoneAmt)} in about {smartNudge.monthsAtCurrentRate} {smartNudge.monthsAtCurrentRate === 1 ? "month" : "months"}.
-                        {smartNudge.doubledAmt && smartNudge.monthsDoubled && (
+                        {(smartNudge.doubledAmt ?? 0) > 0 && (smartNudge.monthsDoubled ?? 0) > 0 && (
                           <>
                             {" "}At {fmtAmt(smartNudge.doubledAmt)}/mo, in about {smartNudge.monthsDoubled} {smartNudge.monthsDoubled === 1 ? "month" : "months"}.
                           </>
