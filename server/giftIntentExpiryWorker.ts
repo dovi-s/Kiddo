@@ -38,6 +38,7 @@ import { db, pool } from "./db";
 import { sql, eq, and, lte, gte, isNull } from "drizzle-orm";
 import { giftIntents } from "@shared/schema";
 import { sendEmail } from "./emailDelivery";
+import { renderKiddoEmail } from "./templates/baseTemplate";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "gift-intent-expiry-worker";
@@ -102,25 +103,51 @@ async function sendGifterHeadsUp(
     day: "numeric",
     year: "numeric",
   });
+  const firstName = intent.gifterName
+    ? intent.gifterName.split(" ")[0] || intent.gifterName
+    : null;
+  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+  const intro = [
+    greeting,
+    ``,
+    `Quick heads up: your ${fmtMoney(intent.amount)} gift for ${intent.kidFirstName} is still waiting for ${intent.recipientEmail} to set up the fund.`,
+    ``,
+    `The intent expires ${daysLeftCopy} (on ${expiresDateStr}). After that, the gift won't go through and you'd need to start fresh.`,
+    ``,
+    `If you want to follow up directly, you can text or call ${intent.recipientEmail} the old-fashioned way. Kiddo's role is the warm welcome; yours is the relationship. We won't send the parent another email from our side.`,
+    ``,
+    `If they do set up ${intent.kidFirstName}'s fund before the deadline, you'll get an email with a one-click link to complete the gift.`,
+  ].join("\n");
+
+  const { html } = renderKiddoEmail({
+    heading: `Your gift for ${intent.kidFirstName} is waiting`,
+    intro,
+    cta: { text: "Start a fresh intent", url: giveAGiftUrl },
+    postscript: "Different parent email, different amount, or different child? Tap above to start fresh.",
+  });
+
+  const text = [
+    greeting,
+    ``,
+    `Quick heads up: your ${fmtMoney(intent.amount)} gift for ${intent.kidFirstName} is still waiting for ${intent.recipientEmail} to set up the fund.`,
+    ``,
+    `The intent expires ${daysLeftCopy} (on ${expiresDateStr}). After that, the gift won't go through and you'd need to start fresh.`,
+    ``,
+    `If you want to follow up directly, you can text or call ${intent.recipientEmail} the old-fashioned way. Kiddo's role is the warm welcome; yours is the relationship. We won't send the parent another email from our side.`,
+    ``,
+    `If they do set up ${intent.kidFirstName}'s fund before the deadline, you'll get an email with a one-click link to complete the gift.`,
+    ``,
+    `To start a fresh intent: ${giveAGiftUrl}`,
+    ``,
+    `— The Kiddo team`,
+  ].join("\n");
+
   try {
     await sendEmail({
       to: intent.gifterEmail,
       subject: `Heads up about your gift for ${intent.kidFirstName}`,
-      text: [
-        intent.gifterName ? `Hi ${intent.gifterName.split(" ")[0] || intent.gifterName},` : "Hi,",
-        "",
-        `Quick heads up: your ${fmtMoney(intent.amount)} gift for ${intent.kidFirstName} is still waiting for ${intent.recipientEmail} to set up the fund.`,
-        "",
-        `The intent expires ${daysLeftCopy} (on ${expiresDateStr}). After that, the gift won't go through and you'd need to start fresh.`,
-        "",
-        `If you want to follow up directly, you can text or call ${intent.recipientEmail} the old-fashioned way — Kiddo's role is the warm welcome, and yours is the relationship. We won't send the parent another email from our side.`,
-        "",
-        `If they do set up ${intent.kidFirstName}'s fund before the deadline, you'll get an email with a one-click link to complete the gift.`,
-        "",
-        `To start a fresh intent (different parent email, different amount, etc.): ${giveAGiftUrl}`,
-        "",
-        `— The Kiddo team`,
-      ].join("\n"),
+      text,
+      html,
       tags: ["gift-intent-gifter-headsup"],
       metadata: { intentId: intent.id },
     });

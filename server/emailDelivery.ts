@@ -10,6 +10,19 @@ export type EmailMessage = {
   html?: string;
   tags?: string[];
   metadata?: Record<string, unknown>;
+  // Optional unsubscribe URL for non-transactional emails. When set:
+  //   - The HTML body's footer should already include a visible
+  //     unsubscribe link (renderKiddoEmail's unsubscribeUrl arg).
+  //   - sendEmail() adds the RFC 8058 List-Unsubscribe header so
+  //     Gmail / Outlook / Fastmail render their native unsubscribe
+  //     button. This is now required by Gmail and Yahoo for senders
+  //     above 5k/day; cheap to set on every promotional email.
+  //   - sendEmail() also adds List-Unsubscribe-Post for one-click
+  //     unsub via POST (also part of RFC 8058).
+  // Transactional emails (password reset, verification, large-gift
+  // verification) DO NOT set this. They're not promotional and have
+  // no opt-out concept.
+  listUnsubscribeUrl?: string;
 };
 
 export type EmailDeliveryResult = {
@@ -96,6 +109,16 @@ async function sendWithPostmark(message: EmailMessage): Promise<EmailDeliveryRes
   const token = String(process.env.POSTMARK_SERVER_TOKEN || "").trim();
   if (!token) throw new Error("POSTMARK_SERVER_TOKEN missing");
 
+  // RFC 8058 one-click List-Unsubscribe. Set BOTH headers when the
+  // caller provides an unsubscribe URL; Postmark passes them through
+  // verbatim. Gmail / Outlook / Fastmail render the native unsub
+  // button when both are present.
+  const headers: Array<{ Name: string; Value: string }> = [];
+  if (message.listUnsubscribeUrl) {
+    headers.push({ Name: "List-Unsubscribe", Value: `<${message.listUnsubscribeUrl}>` });
+    headers.push({ Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" });
+  }
+
   const response = await fetch("https://api.postmarkapp.com/email", {
     method: "POST",
     headers: {
@@ -112,6 +135,7 @@ async function sendWithPostmark(message: EmailMessage): Promise<EmailDeliveryRes
       MessageStream: process.env.POSTMARK_MESSAGE_STREAM || "outbound",
       Metadata: message.metadata,
       Tag: Array.isArray(message.tags) && message.tags.length > 0 ? message.tags[0] : undefined,
+      Headers: headers.length > 0 ? headers : undefined,
     }),
   });
 
@@ -135,6 +159,14 @@ async function sendWithSendGrid(message: EmailMessage): Promise<EmailDeliveryRes
   const content = [{ type: "text/plain", value: message.text }];
   if (message.html) content.push({ type: "text/html", value: message.html });
 
+  // SendGrid headers go on the personalization OR top-level. List-
+  // Unsubscribe lives top-level so it covers the single recipient.
+  const sendgridHeaders: Record<string, string> = {};
+  if (message.listUnsubscribeUrl) {
+    sendgridHeaders["List-Unsubscribe"] = `<${message.listUnsubscribeUrl}>`;
+    sendgridHeaders["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+  }
+
   const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
     method: "POST",
     headers: {
@@ -152,6 +184,7 @@ async function sendWithSendGrid(message: EmailMessage): Promise<EmailDeliveryRes
       ],
       content,
       categories: message.tags,
+      ...(Object.keys(sendgridHeaders).length > 0 ? { headers: sendgridHeaders } : {}),
     }),
   });
 

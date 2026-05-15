@@ -37,6 +37,7 @@ import { sql, eq, and, isNotNull, isNull } from "drizzle-orm";
 import { ageTransitions, funds, users } from "@shared/schema";
 import { sendEmail } from "./emailDelivery";
 import { renderStalledHandoffEmail } from "./templates/trustedContact";
+import { renderKiddoEmail } from "./templates/baseTemplate";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "stalled-handoff-worker";
@@ -166,8 +167,22 @@ async function emailKid(
     ? `Your fund is still waiting, ${childName}`
     : `One more nudge: your fund is ready to claim`;
   const intro = step === "t7"
-    ? `A week ago we sent you a link to claim your investing fund. The link is still good. Whenever you're ready:`
-    : `Just checking back in. Your investing fund has been waiting a month. The claim link is still active and the money is still yours:`;
+    ? `A week ago we sent you a link to claim your investing fund. The link is still good. Whenever you're ready, tap below.`
+    : `Just checking back in. Your investing fund has been waiting a month. The claim link is still active and the money is still yours.`;
+  const introBody = [
+    `Hi ${childName},`,
+    ``,
+    intro,
+    ``,
+    `Nothing is at risk and nothing has changed. We're holding everything exactly as it was. Whenever you have ten minutes, the link below walks you through claiming the account.`,
+    ``,
+    `If you have any questions or the link doesn't work, just reply to this email.`,
+  ].join("\n");
+  const { html: branded } = renderKiddoEmail({
+    heading: step === "t7" ? "Your fund is still waiting" : "One more nudge",
+    intro: introBody,
+    cta: { text: "Claim your fund", url: claimUrl },
+  });
   await sendEmail({
     to: row.childEmail,
     subject,
@@ -177,12 +192,13 @@ async function emailKid(
       intro,
       claimUrl,
       "",
-      `Nothing is at risk and nothing has changed. We're holding everything exactly as it was. Whenever you have ten minutes, the link above will walk you through claiming the account.`,
+      `Nothing is at risk and nothing has changed. We're holding everything exactly as it was. Whenever you have ten minutes, the link above walks you through claiming the account.`,
       "",
       `If you have any questions or the link doesn't work, just reply to this email.`,
       "",
-      `The Kiddo team`,
+      `— The Kiddo team`,
     ].join("\n"),
+    html: branded,
     tags: [`stalled_handoff_kid_${step}`],
     metadata: { fundId: row.fundId, step },
   });
@@ -208,6 +224,21 @@ async function emailParent(
   const intro = step === "t7"
     ? `It's been a week since we emailed ${childName} the link to claim their investing fund. They haven't opened it yet.`
     : `${childName} still hasn't claimed their fund. It's been a month since the invite went out.`;
+  const baseUrl = getBaseUrl();
+  const parentIntroBody = [
+    `Hi ${parentFirst},`,
+    ``,
+    intro,
+    ``,
+    `Everything is fine on our end. The money is safe, nothing has been sold, and the claim link still works. Most kids just need a small nudge from a parent to actually do the thing.${trustedNote}`,
+    ``,
+    `If their email address is wrong or has changed, you can update it from the Age-18 Plan page on Kiddo.`,
+  ].join("\n");
+  const { html: parentBranded } = renderKiddoEmail({
+    heading: subject,
+    intro: parentIntroBody,
+    cta: { text: "Open Age-18 Plan", url: `${baseUrl}/age-18-plan` },
+  });
   await sendEmail({
     to: row.parentEmail,
     subject,
@@ -220,8 +251,9 @@ async function emailParent(
       "",
       `If their email address is wrong or has changed, you can update it from the Age-18 Plan page on Kiddo.`,
       "",
-      `The Kiddo team`,
+      `— The Kiddo team`,
     ].join("\n"),
+    html: parentBranded,
     tags: [`stalled_handoff_parent_${step}`],
     metadata: { fundId: row.fundId, step },
   });
