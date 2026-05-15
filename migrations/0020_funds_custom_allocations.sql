@@ -1,0 +1,40 @@
+-- Migration: per-fund custom ETF allocations column.
+--
+-- BACKSTORY: per-fund custom mixes were previously stored in
+-- `.local/fund-strategy-overrides.json` (server/fundStrategyConfig.ts).
+-- `.local/` is in .gitignore, which means the file is ephemeral on any
+-- container-based deploy (Render, Fly.io, Heroku, Vercel, Cloud Run).
+-- Every deploy wiped the file. Parents who set up a Custom mix saw their
+-- mix silently revert to DEFAULT_CUSTOM_ALLOCATIONS:
+--
+--   { VTI: 50%, VXUS: 25%, BND: 15%, VGT: 10% }
+--
+-- Worse, fund.investmentStrategy still said 'custom' so the UI displayed
+-- the wrong mix as if the parent had chosen it. New gifts fired through
+-- webhookHandlers.ts at the default allocations.
+--
+-- Fix: store on the funds row.
+--
+-- WHAT THIS MIGRATION DOES:
+--   - Adds funds.custom_allocations jsonb. Shape:
+--       { TICKER: weight_as_fraction }
+--     e.g. { "VTI": 0.5, "BND": 0.5 }
+--   - NULL on every existing row. The server's get path keeps the
+--     .local/ file as a one-time-read fallback: if the column is NULL
+--     AND the file has an entry for that fundId, the server copies the
+--     file value into the column on first read, then proceeds with
+--     the DB as the source of truth. Existing dev-server state migrates
+--     transparently; subsequent saves go to DB only.
+--
+-- WHAT THIS MIGRATION DOES NOT DO:
+--   - Server-side schema validation. Validation lives in
+--     normalizeCustomAllocations in server/fundStrategyConfig.ts —
+--     hardened in the same commit cycle as Ring B (server-side
+--     ~100-sum check, no-delete-on-invalid).
+--   - Constraint on tickers. Allowlist enforcement is at the validation
+--     layer in code, not as a PG check constraint — the allowlist
+--     evolves with product decisions and shouldn't require a migration
+--     to update.
+
+ALTER TABLE funds
+  ADD COLUMN IF NOT EXISTS custom_allocations JSONB;

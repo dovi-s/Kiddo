@@ -7179,11 +7179,28 @@ export async function registerRoutes(
         if (!entitlement.paid) {
           return res.status(403).json({ error: 'Custom strategy requires Kiddo+, Family, or Legacy' });
         }
+        // Ring B (2026-05-15): setFundCustomAllocations now returns a
+        // discriminated result. On validation failure it PRESERVES the
+        // existing mix (vs the prior implementation which deleted it).
+        // We map each failure reason to a specific user-readable error.
         const saved = await setFundCustomAllocations(fund.id, customAllocations || DEFAULT_CUSTOM_ALLOCATIONS);
-        if (!saved) {
-          return res.status(400).json({ error: 'Invalid custom allocation. Use up to 10 supported holdings with numeric weights totaling above 0.' });
+        if (!saved.ok) {
+          const reason = (saved as { reason: string }).reason;
+          const message =
+            reason === "too_many_tickers"
+              ? "Too many holdings. Up to 10 supported ETFs per mix."
+              : reason === "bad_sum"
+                ? "Weights must add up to 100%."
+                : reason === "no_valid_tickers"
+                  ? "Pick at least one supported ETF with a positive weight."
+                  : reason === "empty"
+                    ? "Custom allocations were empty."
+                    : "Invalid custom allocation.";
+          return res.status(400).json({ error: message, reason });
         }
       } else {
+        // Switching AWAY from custom — clear the saved mix. The result
+        // for null is always ok:true so we don't need to check it.
         await setFundCustomAllocations(fund.id, null);
       }
 

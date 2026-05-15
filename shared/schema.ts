@@ -106,6 +106,19 @@ export const funds = pgTable("funds", {
   culturalBackground: jsonb("cultural_background"),
   pronoun: text("pronoun"),
   investmentStrategy: text("investment_strategy").default("auto_invest"),
+  // Per-fund custom ETF allocations when investmentStrategy === "custom".
+  // Shape: { TICKER: weight_as_fraction } (e.g. { "VTI": 0.5, "BND": 0.5 }).
+  // Tickers restricted to CUSTOM_STRATEGY_ALLOWED_TICKERS (ETF_ALLOWLIST in
+  // server/fundStrategyConfig.ts). Weights normalize to sum to 1.0 on save.
+  // NULL when strategy != 'custom' OR when the fund has never set a custom
+  // mix (in which case reads fall through to DEFAULT_CUSTOM_ALLOCATIONS).
+  //
+  // Moved 2026-05-15 from a .gitignore'd .local/fund-strategy-overrides.json
+  // file to this column. The file storage worked in dev but was wiped on
+  // every container deploy in production, silently reverting parents'
+  // Custom mixes to the default {VTI 50%, VXUS 25%, BND 15%, VGT 10%} —
+  // worst-case fund-execution bug. See migration 0020 + commit log.
+  customAllocations: jsonb("custom_allocations"),
   isDiscoverable: boolean("is_discoverable").notNull().default(false),
   // Memory Book moderation toggle (per-fund). OFF by default — the
   // product philosophy is "no approval, parent controls" (gift link is
