@@ -10231,6 +10231,60 @@ export async function registerRoutes(
     }
   });
 
+  // Email preference center.
+  //
+  // GET returns the current per-category opt-out map (missing key =
+  // opted in; explicit false = opted out). PATCH merges incoming
+  // changes into the stored map; sanitization drops unknown keys
+  // (defense against malformed client payloads).
+  //
+  // The categories themselves are listed in shared/emailPreferences.ts
+  // (single source of truth shared with the client Settings UI).
+  // Required / transactional categories (password reset, verification,
+  // new-device, large-gift, age-transition, gift receipts) are NOT
+  // listed there and are NOT opt-outable — they're security/legal.
+  app.get('/api/me/email-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+      const rows = await db
+        .select({ emailPreferences: users.emailPreferences })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const stored = (rows[0]?.emailPreferences as any) || {};
+      return res.json({ preferences: stored });
+    } catch (err: any) {
+      console.error('[email-preferences:get] error:', err);
+      return res.status(500).json({ error: 'Could not load preferences' });
+    }
+  });
+
+  app.patch('/api/me/email-preferences', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ error: 'Not authenticated' });
+      const { sanitizeEmailPreferences } = await import('@shared/emailPreferences');
+      const sanitized = sanitizeEmailPreferences(req.body?.preferences);
+      // Merge with existing — partial updates are common from the UI
+      // (toggling a single category shouldn't clobber the others).
+      const rows = await db
+        .select({ emailPreferences: users.emailPreferences })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      const merged = { ...((rows[0]?.emailPreferences as any) || {}), ...sanitized };
+      await db
+        .update(users)
+        .set({ emailPreferences: merged as any, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+      return res.json({ ok: true, preferences: merged });
+    } catch (err: any) {
+      console.error('[email-preferences:patch] error:', err);
+      return res.status(500).json({ error: 'Could not save preferences' });
+    }
+  });
+
   // FeatureWallModal dismissal tracking. Records the timestamp at
   // which the user dismissed the wall for `featureId` so subsequent
   // encounters can render the softer repeat-copy variant instead of

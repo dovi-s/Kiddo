@@ -119,6 +119,21 @@ export const users = pgTable("users", {
   // condition on Dashboard. The verification token itself lives in
   // the separate email_verifications table.
   emailVerifiedAt: timestamp("email_verified_at"),
+  // Per-category email opt-outs. Shape:
+  //   { birthday?: false, anniversary?: false, milestones?: false,
+  //     monthlyPulse?: false, volatility?: false, motherFathersDay?: false,
+  //     taxPrep?: false, gifterReturn?: false, wrapped?: false }
+  // Missing key = opted IN (the default). false = opted OUT. true is
+  // accepted but redundant since opted-in is the default.
+  //
+  // Categories REQUIRED by law / security (password reset, email
+  // verification, new device alert, large-gift alert, age-transition
+  // emails, gift receipts, account deletion) are NOT in this map —
+  // they're transactional and always send.
+  //
+  // The Settings UI surface that writes this lives at
+  // /settings?tab=notifications → Email preferences section.
+  emailPreferences: jsonb("email_preferences"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

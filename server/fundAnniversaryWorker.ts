@@ -12,6 +12,7 @@ import path from "path";
 import { pool } from "./db";
 import { sendEmail } from "./emailDelivery";
 import { buildFundAnniversaryEmail } from "./templates/fundAnniversary";
+import { isCategoryEnabled } from "@shared/emailPreferences";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "fund-anniversary-worker";
@@ -68,6 +69,7 @@ async function tick(log: LogFn): Promise<void> {
   const today = getTodayMonthDay(now);
   let rows: Array<{
     fundId: string; parentEmail: string | null; parentFirstName: string | null;
+    parentEmailPreferences: any;
     childFirstName: string | null; fundCreatedAt: Date;
     fundBalance: string | null; fundCashBalance: string | null;
   }>;
@@ -75,6 +77,7 @@ async function tick(log: LogFn): Promise<void> {
     const result = await pool.query<Record<string, any>>(`
       SELECT
         f.id AS fund_id, u.email AS parent_email, u.first_name AS parent_first_name,
+        u.email_preferences AS parent_email_preferences,
         f.recipient_first_name AS child_first_name,
         f.created_at AS fund_created_at,
         f.balance AS fund_balance, f.cash_balance AS fund_cash_balance
@@ -92,6 +95,7 @@ async function tick(log: LogFn): Promise<void> {
       fundId: String(r.fund_id),
       parentEmail: r.parent_email ? String(r.parent_email) : null,
       parentFirstName: r.parent_first_name ? String(r.parent_first_name) : null,
+      parentEmailPreferences: r.parent_email_preferences || null,
       childFirstName: r.child_first_name ? String(r.child_first_name) : null,
       fundCreatedAt: new Date(r.fund_created_at),
       fundBalance: r.fund_balance != null ? String(r.fund_balance) : null,
@@ -108,6 +112,7 @@ async function tick(log: LogFn): Promise<void> {
   let sent = 0;
   for (const row of rows) {
     if (!row.parentEmail || !row.childFirstName) continue;
+    if (!isCategoryEnabled(row.parentEmailPreferences, "anniversary")) continue;
     const key = `${row.fundId}:${today.year}`;
     if (state.lastSentByFundYear[key]) continue;
     const fundAgeYears = diffYears(row.fundCreatedAt, now);
