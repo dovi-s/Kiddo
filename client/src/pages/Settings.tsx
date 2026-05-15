@@ -16,6 +16,7 @@ import { PlanBenefitsCard } from "@/components/PlanBenefitsCard";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { SuccessorCustodianCard } from "@/components/SuccessorCustodianCard";
 import { ChildIdentityCard } from "@/components/ChildIdentityCard";
+import { FundDetailsCard } from "@/components/FundDetailsCard";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -4231,63 +4232,16 @@ const [editFundName, setEditFundName] = useState("");
               );
             })()}
 
-            {/* Fund details */}
-            <SectionCard>
-              <div className="divide-y divide-[hsl(var(--kiddo-border))]">
-                <div className="flex items-center justify-between gap-4 p-4">
-                  <span className="text-sm text-muted-foreground">Fund name</span>
-                  <span className="text-sm font-semibold text-foreground truncate max-w-[60%] text-right">{primaryFund?.name || "-"}</span>
-                </div>
-                <div className="flex items-center justify-between gap-4 p-4">
-                  <span className="text-sm text-muted-foreground">Account type</span>
-                  <span className="text-sm font-semibold text-foreground">{primaryFund?.accountType === "personal" ? "Personal" : "UTMA"}</span>
-                </div>
-                <div className="flex items-center justify-between gap-4 p-4">
-                  <span className="text-sm text-muted-foreground">Status</span>
-                  <span className={`text-sm font-semibold ${primaryFund?.status === "active" ? "text-green-700" : "text-muted-foreground"}`}>
-                    {primaryFund?.status === "active" ? "Active" : primaryFund?.status || "-"}
-                  </span>
-                </div>
-                {/* Transfer date — when the fund's UTMA custody legally hands
-                    off to the kid. Computed from the fund's locked majorityAge
-                    + the child's birthdate via the canonical helper. Renders
-                    only for UTMA funds with a real birthdate (personal funds
-                    don't have a transfer date; missing birthdate means the
-                    date can't be computed yet). The warm "Transfers to
-                    [child]" framing turns a UTMA legal detail into a parent-
-                    visible reality without verbose explanation. The full
-                    age-18 plan UX lives elsewhere; this is the calm utility-
-                    surface acknowledgment. */}
-                {(() => {
-                  const isUtma = !primaryFund?.accountType || String(primaryFund.accountType).toUpperCase() === "UTMA";
-                  if (!isUtma) return null;
-                  const transferDate = primaryFund?.recipientBirthdate
-                    ? getMajorityDate(primaryFund.recipientBirthdate, (primaryFund as any).majorityAge ?? null)
-                    : null;
-                  if (!transferDate || isNaN(transferDate.getTime())) return null;
-                  const childName = primaryFund?.recipientFirstName?.trim();
-                  return (
-                    <div className="flex items-center justify-between gap-4 p-4" data-testid="row-fund-transfer-date">
-                      <span className="text-sm text-muted-foreground">
-                        Transfers to {childName || "your child"}
-                      </span>
-                      <span className="text-sm font-semibold text-foreground">
-                        {transferDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </span>
-                    </div>
-                  );
-                })()}
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between gap-4 p-4 text-left hover:bg-muted/30 transition-colors"
-                  onClick={() => setEditFundOpen(true)}
-                  data-testid="button-edit-fund-child-tab"
-                >
-                  <span className="text-sm text-muted-foreground">Edit fund</span>
-                  <ChevronRight size={16} className="text-muted-foreground" />
-                </button>
-              </div>
-            </SectionCard>
+            {/* Fund details. Extracted to FundDetailsCard on 2026-05-14
+                as Phase 2 sheet-extraction chunk 3. Pure display + one
+                callback for the Edit-fund modal trigger (the modal
+                stays in Settings — shared across multiple cards). */}
+            {primaryFund && (
+              <FundDetailsCard
+                fund={primaryFund as any}
+                onEditFund={() => setEditFundOpen(true)}
+              />
+            )}
 
             {/* Successor custodian. Extracted to SuccessorCustodianCard
                 on 2026-05-14 as Phase 2 sheet-extraction chunk 1. The
