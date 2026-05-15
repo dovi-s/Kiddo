@@ -134,6 +134,69 @@
       "when": 1777100000000,
       "tag": "0018_users_dismissed_feature_walls",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1777200000000,
+      "tag": "0019_users_pii_scrubbed_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1777300000000,
+      "tag": "0020_funds_custom_allocations",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1777400000000,
+      "tag": "0021_memory_entries_author_user_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1777500000000,
+      "tag": "0022_gift_intents_gifter_reminder_sent_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1777600000000,
+      "tag": "0023_password_resets",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1777700000000,
+      "tag": "0024_email_suppressions",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1777800000000,
+      "tag": "0025_email_verifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1777900000000,
+      "tag": "0026_login_fingerprints",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1778000000000,
+      "tag": "0027_email_preferences",
+      "breakpoints": true
     }
   ]
 }
