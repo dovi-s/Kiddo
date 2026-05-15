@@ -41,7 +41,17 @@ type Step = "review" | "confirm" | "blocked" | "submitting" | "done";
 
 type BlockedReason = {
   reason: "active_funds_with_balance";
-  funds: Array<{ id: string; recipientFirstName: string | null; balance: number }>;
+  funds: Array<{
+    id: string;
+    recipientFirstName: string | null;
+    // Total funds at risk (invested + cash + pending). Sub-totals
+    // surface in the UI so the parent knows what action each slice
+    // needs (liquidate invested, withdraw cash, wait/refund pending).
+    balance: number;
+    investedBalance: number;
+    cashBalance: number;
+    pendingBalance: number;
+  }>;
 };
 
 export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: DeleteAccountModalProps) {
@@ -173,7 +183,7 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
                 </li>
                 <li className="flex items-start gap-2">
                   <Lock size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
-                  <span>Any active fund stays. If there's a co-parent, they take over as primary custodian. If not, you'll need to close the fund first.</span>
+                  <span>Any active fund stays. If you've named an accepted co-parent (Co-Admin role), they take over as primary custodian. If not, you'll need to withdraw the money and close each fund first.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <FileText size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
@@ -211,23 +221,76 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
               <div className="min-w-0 flex-1">
                 <h2 className="font-heading text-lg font-semibold text-foreground">A few things first</h2>
                 <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-                  You have active funds that need a successor custodian or to be closed before your account can be deleted. This is a UTMA legal requirement, not a Kiddo rule.
+                  You're still the custodian on {blockedInfo.funds.length === 1 ? "a fund" : `${blockedInfo.funds.length} funds`} that hold money. UTMA law says that money belongs to the kid, not to your account — so the money has to land somewhere safe before your account can close.
                 </p>
               </div>
             </div>
 
-            <div className="space-y-2 rounded-2xl bg-muted/30 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Funds with balances</p>
-              {blockedInfo.funds.map((f) => (
-                <div key={f.id} className="flex items-center justify-between text-sm">
-                  <span className="text-foreground">{f.recipientFirstName ? `${f.recipientFirstName}'s fund` : `Fund ${f.id.slice(0, 8)}`}</span>
-                  <span className="font-semibold tabular-nums text-foreground">${f.balance.toFixed(2)}</span>
-                </div>
-              ))}
+            <div className="space-y-3 rounded-2xl bg-muted/30 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What needs handling</p>
+              {blockedInfo.funds.map((f) => {
+                // Per-slice guidance. Each slice has a different next step
+                // because each one is at a different point in the money's
+                // journey from gifter → invested-at-broker.
+                const slices: Array<{ label: string; amount: number; hint: string }> = [];
+                if (f.investedBalance > 0.01) {
+                  slices.push({
+                    label: "Invested",
+                    amount: f.investedBalance,
+                    hint: "Sell holdings, then withdraw.",
+                  });
+                }
+                if (f.cashBalance > 0.01) {
+                  slices.push({
+                    label: "Cash",
+                    amount: f.cashBalance,
+                    hint: "Withdraw to your linked bank.",
+                  });
+                }
+                if (f.pendingBalance > 0.01) {
+                  slices.push({
+                    label: "Pending gifts",
+                    amount: f.pendingBalance,
+                    hint: "Wait for settlement (1–2 business days), then withdraw.",
+                  });
+                }
+                return (
+                  <div key={f.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-semibold text-foreground">
+                        {f.recipientFirstName ? `${f.recipientFirstName}'s fund` : `Fund ${f.id.slice(0, 8)}`}
+                      </span>
+                      <span className="font-semibold tabular-nums text-foreground">${f.balance.toFixed(2)}</span>
+                    </div>
+                    {slices.length > 0 && (
+                      <ul className="space-y-1 pl-3 border-l-2 border-amber-200">
+                        {slices.map((s) => (
+                          <li key={s.label} className="text-xs text-muted-foreground leading-relaxed">
+                            <span className="font-semibold text-foreground">${s.amount.toFixed(2)} {s.label}.</span>{" "}
+                            {s.hint}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="space-y-2 rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.06)] p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">Two ways to unblock</p>
+              <ul className="space-y-1.5 text-sm text-foreground">
+                <li>
+                  <span className="font-semibold">Hand it off.</span> Invite a co-parent and grant them the Co-Admin role. Once they accept, they become primary custodian and the fund stays in their care.
+                </li>
+                <li>
+                  <span className="font-semibold">Withdraw and close.</span> Sell any holdings, wait for pending gifts to settle, withdraw the cash to your bank, then close the fund. The Memory Book stays either way.
+                </li>
+              </ul>
             </div>
 
             <p className="text-xs text-muted-foreground leading-relaxed">
-              To proceed: invite a co-parent (Family plan) so they can take over as primary custodian, OR close each fund first (returns money to the bank account you choose). For help, email support@kiddofund.com.
+              Need help walking through it? Email support@kiddofund.com.
             </p>
 
             <div className="flex flex-col gap-2 pt-1">
