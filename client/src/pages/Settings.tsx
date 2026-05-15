@@ -22,6 +22,7 @@ import { CloseFundCard } from "@/components/CloseFundCard";
 import { LegalDocumentsCard } from "@/components/LegalDocumentsCard";
 import { CoParentAccessCard } from "@/components/CoParentAccessCard";
 import { KidsViewCard } from "@/components/KidsViewCard";
+import { FundSettingsChildPanel } from "@/components/FundSettingsChildPanel";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -3773,92 +3774,22 @@ const [editFundName, setEditFundName] = useState("");
           </p>
         </div>
 
-        {settingsTab === "child" && (
-          <div className="space-y-4" data-testid="settings-child-panel">
-            {/* Child identity card. Extracted to ChildIdentityCard on
-                2026-05-14 as Phase 2 sheet-extraction chunk 2. Owns its
-                own photo-upload state + FileReader/POST plumbing; we
-                pass setEditFundOpen as a callback so the Edit-child-
-                details button still triggers the in-page modal that
-                stays in Settings. */}
-            {primaryFund && (
-              <ChildIdentityCard
-                fund={primaryFund as any}
-                onEditChild={() => setEditFundOpen(true)}
-              />
-            )}
-
-            {/* Kid's View. Extracted to KidsViewCard on 2026-05-14 as
-                Phase 2 sheet-extraction chunk 8. The dense state
-                machine (PIN editor + auto-open effect + share-link
-                copy) all moves into the new component. The card
-                gates its own query on settingsTab via the enabled
-                prop. */}
-            {primaryFund && (
-              <KidsViewCard
-                fund={primaryFund as any}
-                enabled={settingsTab === "child"}
-              />
-            )}
-
-            {/* Invitations TO this user. Extracted to InvitationsToYouCard
-                on 2026-05-14 as Phase 2 sheet-extraction chunk 4. Renders
-                nothing when there are zero pending invitations — entire
-                card disappears, no empty state. */}
-            <InvitationsToYouCard />
-
-            {/* Co-parent access. Extracted to CoParentAccessCard on
-                2026-05-14 as Phase 2 sheet-extraction chunk 7. Owns
-                its own collaborators query, delete handler, and the
-                FeatureWallModal that fires when a free user taps
-                Invite. Settings keeps the CollaboratorInviteModal
-                because that modal is a shared wider surface; we
-                pass setCollabModalOpen as the onOpenInviteModal
-                callback. */}
-            {primaryFund && (
-              <CoParentAccessCard
-                fund={primaryFund as any}
-                user={user as any}
-                userPlan={userPlan}
-                onOpenInviteModal={() => setCollabModalOpen(true)}
-              />
-            )}
-
-            {/* Fund details. Extracted to FundDetailsCard on 2026-05-14
-                as Phase 2 sheet-extraction chunk 3. Pure display + one
-                callback for the Edit-fund modal trigger (the modal
-                stays in Settings — shared across multiple cards). */}
-            {primaryFund && (
-              <FundDetailsCard
-                fund={primaryFund as any}
-                onEditFund={() => setEditFundOpen(true)}
-              />
-            )}
-
-            {/* Successor custodian. Extracted to SuccessorCustodianCard
-                on 2026-05-14 as Phase 2 sheet-extraction chunk 1. The
-                component owns its own state and PATCH logic; Settings
-                just passes the fund through. Same component will mount
-                inside the future FundSettingsSheet without duplication. */}
-            {primaryFund && <SuccessorCustodianCard fund={primaryFund as any} />}
-
-            {/* Legal + documents. Extracted to LegalDocumentsCard on
-                2026-05-14 as Phase 2 sheet-extraction chunk 6. Owns
-                its own prefetch wiring; Settings no longer needs to
-                know about prefetchTaxDocuments for this surface. */}
-            <LegalDocumentsCard />
-
-            {/* Close this fund. Extracted to CloseFundCard on 2026-05-14
-                as Phase 2 sheet-extraction chunk 5. The dialog itself
-                still lives in Settings (wider surface with its own
-                submission state); the card just opens it. */}
-            {primaryFund && (
-              <CloseFundCard
-                fund={primaryFund as any}
-                onOpenCloseDialog={() => setCloseFundOpen(true)}
-              />
-            )}
-          </div>
+        {settingsTab === "child" && primaryFund && (
+          // The full Child-tab body now lives in FundSettingsChildPanel
+          // (chunk 9). Same composition, same eight cards, same order.
+          // The panel takes callbacks for the three modals Settings
+          // still owns (Edit fund, Invite co-parent, Close fund) and
+          // composes everything else internally. FundSettingsSheet
+          // (chunk 10) will mount this same panel from Dashboard.
+          <FundSettingsChildPanel
+            fund={primaryFund as any}
+            user={user as any}
+            userPlan={userPlan}
+            kidViewQueryEnabled={settingsTab === "child"}
+            onEditFund={() => setEditFundOpen(true)}
+            onOpenInviteModal={() => setCollabModalOpen(true)}
+            onOpenCloseDialog={() => setCloseFundOpen(true)}
+          />
         )}
 
         {settingsTab === "gifts" && (
