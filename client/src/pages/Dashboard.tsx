@@ -90,6 +90,7 @@ import {
   Eye,
   Smile,
   Info,
+  Trophy,
   Loader2,
   MoreVertical,
   Pause,
@@ -13004,9 +13005,43 @@ export default function Dashboard() {
             // `childPronouns` inline at the use site.
             const fmt = (n?: number) => n != null ? `~$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "";
             const fmtAmt = (n?: number) => n != null ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "";
-
+            // Per-scenario hero anchor. Without this the modal was a
+            // wall of text with no visual signal of WHICH moment the
+            // nudge celebrates. Eyebrow + headline alone made the
+            // surface read like a conversion-funnel popup instead of
+            // a contextual milestone. Locked palette: evergreen tile
+            // (Apple-Settings-warm rather than gold celebration).
+            // Trophy for milestone, TrendingUp for outperforming,
+            // Heart for consistent-streak (the "showing up" anchor).
+            const HeroIcon = smartNudge.scenario === "milestone"
+              ? Trophy
+              : smartNudge.scenario === "outperforming"
+                ? TrendingUp
+                : Heart;
+            // Current balance line — a reinforcement number the
+            // parent can anchor to. The milestone modal previously
+            // said "Emma just crossed $100" with no other number on
+            // screen; now we also show the actual balance so the
+            // moment connects to reality. Computed at render time
+            // from the live totalValue (not the stale fundHistory
+            // value used to detect the crossing).
+            const balanceLine = totalValue > 0
+              ? `Now at ${fmtAmt(totalValue)}.`
+              : null;
             return (
               <div className="p-6 space-y-5">
+                {/* Hero icon anchor. Small evergreen-tinted tile gives
+                    the modal a visual moment without crossing into
+                    "celebration emoji" territory (locked memory: only
+                    🌱 is reserved). Per-scenario icon makes the
+                    surface scannable at a glance — Trophy for a
+                    crossed milestone, TrendingUp for outperforming,
+                    Heart for the consistent-streak anchor. */}
+                <div className="flex items-center justify-center">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]">
+                    <HeroIcon size={26} strokeWidth={1.8} />
+                  </div>
+                </div>
                 {/* Three scenarios — outperforming / consistent / milestone.
                     Rewritten 2026-05-13 from the previous comparison-table
                     register (math panel + 'Double to \$X' CTA + 🌟 emoji
@@ -13025,14 +13060,19 @@ export default function Dashboard() {
 
                 {/* Scenario 1: Outperforming */}
                 {smartNudge.scenario === "outperforming" && (
-                  <div>
+                  <div className="text-center">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">
                       {child}'s fund this year
                     </p>
                     <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
                       Up {smartNudge.returnPct}%.
                     </h2>
-                    <p className="mt-2 text-sm text-foreground/80 leading-relaxed">
+                    {balanceLine && (
+                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                        {balanceLine}
+                      </p>
+                    )}
+                    <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
                       That's ahead of the 7% historical average. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
                       {child} is projected to have about {fmt(smartNudge.currentProjection)} at {majorityAge}.
                       {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
@@ -13046,14 +13086,19 @@ export default function Dashboard() {
 
                 {/* Scenario 2: Consistent streak */}
                 {smartNudge.scenario === "consistent" && (
-                  <div>
+                  <div className="text-center">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">
                       Steady
                     </p>
                     <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
                       {smartNudge.streakMonths} months without a missed cycle.
                     </h2>
-                    <p className="mt-2 text-sm text-foreground/80 leading-relaxed">
+                    {balanceLine && (
+                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                        {balanceLine}
+                      </p>
+                    )}
+                    <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
                       Compounding lives here. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
                       {child} projects to about {fmt(smartNudge.currentProjection)} at {majorityAge}.
                       {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
@@ -13067,13 +13112,18 @@ export default function Dashboard() {
 
                 {/* Scenario 3: Milestone */}
                 {smartNudge.scenario === "milestone" && (
-                  <div>
+                  <div className="text-center">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">
                       Milestone
                     </p>
                     <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
                       {child} just crossed {fmtAmt(smartNudge.milestoneAmt)}.
                     </h2>
+                    {balanceLine && (
+                      <p className="mt-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                        {balanceLine}
+                      </p>
+                    )}
                     {/* Honest projection. Rewritten 2026-05-15:
                         OLD copy said "the next $500 arrives in N months"
                         with math = milestoneAmt / monthlyAmt — wrong on
@@ -13102,7 +13152,7 @@ export default function Dashboard() {
                         this scenario entirely, but the defensive
                         boolean checks below remove the footgun. */}
                     {(smartNudge.nextMilestoneAmt ?? 0) > 0 && (smartNudge.monthsAtCurrentRate ?? 0) > 0 && (
-                      <p className="mt-2 text-sm text-foreground/80 leading-relaxed">
+                      <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
                         At your current pace ({fmtAmt(smartNudge.currentMonthlyAmt || 0)}/mo plus 7% historical-average growth), you'd cross {fmtAmt(smartNudge.nextMilestoneAmt)} in about {smartNudge.monthsAtCurrentRate} {smartNudge.monthsAtCurrentRate === 1 ? "month" : "months"}.
                         {(smartNudge.doubledAmt ?? 0) > 0 && (smartNudge.monthsDoubled ?? 0) > 0 && (
                           <>
