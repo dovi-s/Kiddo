@@ -15,6 +15,7 @@ import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@
 import { PlanBenefitsCard } from "@/components/PlanBenefitsCard";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { SuccessorCustodianCard } from "@/components/SuccessorCustodianCard";
+import { ChildIdentityCard } from "@/components/ChildIdentityCard";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -2389,8 +2390,9 @@ export default function Settings() {
   const [collabFundId, setCollabFundId] = useState<string>("");
   const [editFundOpen, setEditFundOpen] = useState(false);
   const [editingFund, setEditingFund] = useState<any>(null);
-  const [uploadingChildPhoto, setUploadingChildPhoto] = useState(false);
-  const childPhotoInputRef = useRef<HTMLInputElement>(null);
+  // (Child-photo upload state + ref + handler moved into
+  // ChildIdentityCard on 2026-05-14 — Phase 2 sheet-extraction
+  // chunk 2.)
 const [editFundName, setEditFundName] = useState("");
   const [editRecipientName, setEditRecipientName] = useState("");
   const [editRecipientBirthdate, setEditRecipientBirthdate] = useState("");
@@ -3662,46 +3664,8 @@ const [editFundName, setEditFundName] = useState("");
 
   const isAnyFundDiscoverable = funds.some((f: any) => f.isDiscoverable);
 
-  const handleChildPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file || !primaryFund) return;
-    if (!file.type.startsWith("image/")) {
-      toast({ title: "Invalid file type", description: "Please choose an image file.", variant: "destructive" });
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast({ title: "Photo too large", description: "Please choose an image under 5MB.", variant: "destructive" });
-      return;
-    }
-    setUploadingChildPhoto(true);
-    try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const res = await fetch(`/api/funds/${primaryFund.id}/child-photo`, {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ dataUrl: reader.result }),
-        });
-        const payload = await res.json().catch(() => ({}));
-        if (res.ok) {
-          queryClient.setQueryData(["/api/funds"], (old: any[]) =>
-            (old || []).map((f: any) => f.id === primaryFund.id ? { ...f, childPhotoUrl: payload.url } : f)
-          );
-          haptic("success");
-          toast({ title: "Photo updated" });
-        } else {
-          toast({ title: "Could not update photo", description: payload?.error || "Please try a smaller image.", variant: "destructive" });
-        }
-        setUploadingChildPhoto(false);
-      };
-      reader.readAsDataURL(file);
-    } catch {
-      toast({ title: "Could not update photo", variant: "destructive" });
-      setUploadingChildPhoto(false);
-    }
-  };
+  // (handleChildPhotoUpload moved into ChildIdentityCard on
+  // 2026-05-14 — Phase 2 sheet-extraction chunk 2.)
 
   return (
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
@@ -3902,73 +3866,18 @@ const [editFundName, setEditFundName] = useState("");
 
         {settingsTab === "child" && (
           <div className="space-y-4" data-testid="settings-child-panel">
-            {/* Child identity card */}
-            <SectionCard>
-              <div className="p-5">
-                <p className="kiddo-section-label mb-4">Child</p>
-                <div className="flex items-center gap-4">
-                  <button
-                    type="button"
-                    onClick={() => childPhotoInputRef.current?.click()}
-                    disabled={uploadingChildPhoto}
-                    className="relative h-16 w-16 shrink-0 rounded-full overflow-hidden group"
-                    data-testid="button-change-child-photo"
-                  >
-                    {primaryFund?.childPhotoUrl ? (
-                      <img src={primaryFund.childPhotoUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-[hsl(var(--kiddo-evergreen))] text-2xl font-bold text-white shadow-[inset_0_-8px_16px_rgba(0,0,0,0.14)]">
-                        {(primaryFund?.recipientFirstName || "?").slice(0, 1).toUpperCase()}
-                      </div>
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                      {uploadingChildPhoto
-                        ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
-                        : <Camera size={18} className="text-white" />}
-                    </div>
-                  </button>
-                  <input ref={childPhotoInputRef} type="file" accept="image/*" onChange={handleChildPhotoUpload} className="hidden" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-base font-bold text-foreground">
-                      {primaryFund?.recipientFirstName || <span className="text-muted-foreground">No name added yet</span>}
-                    </p>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      {primaryFund?.recipientBirthdate
-                        ? new Date(primaryFund.recipientBirthdate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-                        : "No birthdate added"}
-                    </p>
-                    {/* "Growing for [child] since [Month YYYY]" — the one warm
-                        line in the Child identity card. Restrained, factual,
-                        sprout-voice. Single line, no chrome around it.
-                        Renders only when fund has a real createdAt; no fallback
-                        for funds with no creation date (shouldn't happen in
-                        practice — defensive). */}
-                    {(() => {
-                      const created = primaryFund?.createdAt ? new Date(primaryFund.createdAt) : null;
-                      if (!created || isNaN(created.getTime())) return null;
-                      const monthYear = created.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-                      const childName = primaryFund?.recipientFirstName?.trim();
-                      const line = childName
-                        ? `Growing for ${childName} since ${monthYear}`
-                        : `Growing since ${monthYear}`;
-                      return (
-                        <p className="mt-0.5 text-xs text-muted-foreground" data-testid="text-fund-growing-since">
-                          {line}
-                        </p>
-                      );
-                    })()}
-                    <button
-                      type="button"
-                      className="mt-2 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]"
-                      onClick={() => setEditFundOpen(true)}
-                      data-testid="button-edit-child-details"
-                    >
-                      Edit child details
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </SectionCard>
+            {/* Child identity card. Extracted to ChildIdentityCard on
+                2026-05-14 as Phase 2 sheet-extraction chunk 2. Owns its
+                own photo-upload state + FileReader/POST plumbing; we
+                pass setEditFundOpen as a callback so the Edit-child-
+                details button still triggers the in-page modal that
+                stays in Settings. */}
+            {primaryFund && (
+              <ChildIdentityCard
+                fund={primaryFund as any}
+                onEditChild={() => setEditFundOpen(true)}
+              />
+            )}
 
             {/* Kid's View */}
             <SectionCard>
