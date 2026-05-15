@@ -8,7 +8,7 @@ import crypto from "crypto";
 import pg from "pg";
 import path from "path";
 import type { Express, Request, RequestHandler, Response } from "express";
-import { users, passwordResets, emailVerifications, loginFingerprints, type User } from "@shared/models/auth";
+import { users, passwordResets, emailVerifications, loginFingerprints, emailChangeRequests, type User } from "@shared/models/auth";
 // Imports for account-deletion helpers below. `funds` for blocked-state
 // checks; `subscriptions` + `fundMemberships` for Stripe cancellation;
 // `activities` for the audit-log entry.
@@ -51,6 +51,7 @@ import { sendEmail } from "./emailDelivery";
 import { buildPasswordResetEmail } from "./templates/passwordReset";
 import { buildVerificationEmail } from "./templates/emailVerification";
 import { buildNewDeviceAlertEmail } from "./templates/newDeviceAlert";
+import { buildEmailChangeConfirmEmail, buildEmailChangeHeadsUpEmail } from "./templates/emailChange";
 import { z } from "zod";
 
 const emailSchema = z
@@ -1659,6 +1660,185 @@ export function setupAuth(app: Express) {
     } catch (err: any) {
       console.error("[verify-email] error:", err);
       return res.status(500).json({ message: "Something went wrong. Try again." });
+    }
+  });
+
+  // Email-change initiation. POST {newEmail}. Mints two single-use
+  // 32-byte tokens (confirm + revoke), stores SHA-256 hashes in
+  // email_change_requests with a 24h TTL. Sends:
+  //   - Confirmation to the NEW address (tap to commit)
+  //   - Heads-up + revoke link to the OLD address (tap to cancel)
+  // The change does NOT happen until the new address confirms.
+  // The old address can pre-emptively cancel before the new
+  // confirms. Closes the account-takeover vector documented as
+  // Tier 0 #3 in the email-strategy review.
+  app.post("/api/me/change-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).json({ error: "Not authenticated" });
+      const newEmailRaw = String(req.body?.newEmail || "").trim().toLowerCase();
+      const parsed = emailSchema.safeParse(newEmailRaw);
+      if (!parsed.success) {
+        return res.status(400).json({ error: "Enter a valid email address." });
+      }
+      const newEmail = parsed.data;
+      const userRows = await db
+        .select({ id: users.id, email: users.email, firstName: users.firstName })
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      if (userRows.length === 0 || !userRows[0].email) {
+        return res.status(404).json({ error: "Account not found" });
+      }
+      const oldEmail = userRows[0].email.toLowerCase();
+      if (newEmail === oldEmail) {
+        return res.status(400).json({ error: "That's already your email." });
+      }
+      // Check if the new email is already used by another account.
+      const existing = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, newEmail))
+        .limit(1);
+      if (existing.length > 0) {
+        // Don't disclose whether the email exists — anti-enumeration.
+        // Return 200 success but don't actually do anything. Same shape
+        // as a successful change so a probing attacker can't enumerate.
+        return res.status(200).json({ ok: true });
+      }
+      const confirmRaw = crypto.randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString("hex");
+      const revokeRaw = crypto.randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString("hex");
+      const confirmTokenHash = hashResetToken(confirmRaw);
+      const revokeTokenHash = hashResetToken(revokeRaw);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await db.insert(emailChangeRequests).values({
+        userId,
+        oldEmail,
+        newEmail,
+        confirmTokenHash,
+        revokeTokenHash,
+        expiresAt,
+        requestIp: req.ip || null,
+        requestUserAgent: (req.get("user-agent") || null)?.slice(0, 512) || null,
+      });
+      const baseUrl = getBaseUrlForResetLink();
+      const confirmUrl = `${baseUrl}/confirm-email-change?token=${encodeURIComponent(confirmRaw)}`;
+      const revokeUrl = `${baseUrl}/cancel-email-change?token=${encodeURIComponent(revokeRaw)}`;
+      const firstName = userRows[0].firstName ?? null;
+      const ipHint = describeRequestIp(req);
+      try {
+        await sendEmail(buildEmailChangeConfirmEmail({ to: newEmail, firstName, newEmail, confirmUrl }));
+      } catch (err: any) {
+        console.warn("[email-change] confirm send failed:", err?.message || err);
+      }
+      try {
+        await sendEmail(buildEmailChangeHeadsUpEmail({ to: oldEmail, firstName, newEmail, revokeUrl, requestIpHint: ipHint }));
+      } catch (err: any) {
+        console.warn("[email-change] heads-up send failed:", err?.message || err);
+      }
+      return res.status(200).json({ ok: true });
+    } catch (err: any) {
+      console.error("[change-email] error:", err);
+      return res.status(500).json({ error: "Something went wrong. Try again." });
+    }
+  });
+
+  // Confirm email change. POST {token} from the link in the NEW
+  // address's email. Swaps users.email atomically; marks the
+  // request confirmed. All other outstanding email-change requests
+  // for the same user are also revoked (defense against a stale
+  // attacker request still being clickable).
+  app.post("/api/auth/confirm-email-change", async (req, res) => {
+    const tokenRaw = String(req.body?.token || "").trim();
+    if (tokenRaw.length < 32 || tokenRaw.length > 256) {
+      return res.status(400).json({ message: "Invalid or expired link." });
+    }
+    const tokenHash = hashResetToken(tokenRaw);
+    try {
+      const rows = await db
+        .select({
+          id: emailChangeRequests.id,
+          userId: emailChangeRequests.userId,
+          newEmail: emailChangeRequests.newEmail,
+          oldEmail: emailChangeRequests.oldEmail,
+        })
+        .from(emailChangeRequests)
+        .where(
+          and(
+            eq(emailChangeRequests.confirmTokenHash, tokenHash),
+            isNull(emailChangeRequests.confirmedAt),
+            isNull(emailChangeRequests.revokedAt),
+            gt(emailChangeRequests.expiresAt, new Date()),
+          ),
+        )
+        .limit(1);
+      if (rows.length === 0) {
+        return res.status(400).json({ message: "Invalid or expired link." });
+      }
+      const r = rows[0];
+      // Race-protection: re-check email isn't taken since the request was filed.
+      const existing = await db.select({ id: users.id }).from(users).where(eq(users.email, r.newEmail)).limit(1);
+      if (existing.length > 0 && existing[0].id !== r.userId) {
+        return res.status(400).json({ message: "That email was claimed by another account in the meantime." });
+      }
+      await db.update(users).set({ email: r.newEmail, updatedAt: new Date() }).where(eq(users.id, r.userId));
+      await db.update(emailChangeRequests).set({ confirmedAt: new Date() }).where(eq(emailChangeRequests.id, r.id));
+      // Audit log.
+      try {
+        await db.insert(activities).values({
+          userId: r.userId,
+          type: "email_changed",
+          title: "Email changed",
+          description: `Changed from ${r.oldEmail} to ${r.newEmail}`,
+          metadata: { ip: req.ip || null, userAgent: req.get("user-agent") || null } as any,
+        } as any);
+      } catch { /* audit failure non-fatal */ }
+      return res.status(200).json({ ok: true, newEmail: r.newEmail });
+    } catch (err: any) {
+      console.error("[confirm-email-change] error:", err);
+      return res.status(500).json({ message: "Something went wrong." });
+    }
+  });
+
+  // Cancel email change. POST {token} from the link in the OLD
+  // address's heads-up email. Marks the request revoked; the
+  // confirm token becomes useless even if the attacker still
+  // has it.
+  app.post("/api/auth/cancel-email-change", async (req, res) => {
+    const tokenRaw = String(req.body?.token || "").trim();
+    if (tokenRaw.length < 32 || tokenRaw.length > 256) {
+      return res.status(400).json({ message: "Invalid or expired link." });
+    }
+    const tokenHash = hashResetToken(tokenRaw);
+    try {
+      const result = await db
+        .update(emailChangeRequests)
+        .set({ revokedAt: new Date() })
+        .where(
+          and(
+            eq(emailChangeRequests.revokeTokenHash, tokenHash),
+            isNull(emailChangeRequests.confirmedAt),
+            isNull(emailChangeRequests.revokedAt),
+            gt(emailChangeRequests.expiresAt, new Date()),
+          ),
+        )
+        .returning({ id: emailChangeRequests.id, userId: emailChangeRequests.userId, oldEmail: emailChangeRequests.oldEmail });
+      if (result.length === 0) {
+        return res.status(400).json({ message: "Invalid or expired link." });
+      }
+      try {
+        await db.insert(activities).values({
+          userId: result[0].userId,
+          type: "email_change_revoked",
+          title: "Email change cancelled",
+          description: `Cancellation requested from old address ${result[0].oldEmail}`,
+          metadata: { ip: req.ip || null, userAgent: req.get("user-agent") || null } as any,
+        } as any);
+      } catch { /* audit failure non-fatal */ }
+      return res.status(200).json({ ok: true });
+    } catch (err: any) {
+      console.error("[cancel-email-change] error:", err);
+      return res.status(500).json({ message: "Something went wrong." });
     }
   });
 

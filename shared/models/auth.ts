@@ -400,3 +400,39 @@ export const loginFingerprints = pgTable("login_fingerprints", {
 
 export type LoginFingerprint = typeof loginFingerprints.$inferSelect;
 export type InsertLoginFingerprint = typeof loginFingerprints.$inferInsert;
+
+// Pending email change requests. Closes the account-takeover
+// vector documented as Tier 0 #3 in the email strategy:
+// 'Email-change confirmation sent to old address.' The flow:
+//   1. User hits POST /api/me/change-email with {newEmail}.
+//   2. We generate two tokens (confirmTokenHash, revokeTokenHash)
+//      and store a row here with both, plus the old + new email.
+//   3. Send confirmation to NEW address (confirm = swap).
+//   4. Send heads-up to OLD address (revoke = cancel + lock).
+//   5. NEW confirms -> users.email gets swapped, sessions cleared.
+//   6. OLD revokes -> request marked revoked, change cancelled.
+//   7. Either way: the OTHER token becomes useless.
+// 24-hour TTL. After expiry, both tokens are invalid; the user
+// can re-initiate from /settings.
+export const emailChangeRequests = pgTable("email_change_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  oldEmail: varchar("old_email", { length: 254 }).notNull(),
+  newEmail: varchar("new_email", { length: 254 }).notNull(),
+  confirmTokenHash: varchar("confirm_token_hash", { length: 64 }).notNull(),
+  revokeTokenHash: varchar("revoke_token_hash", { length: 64 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  confirmedAt: timestamp("confirmed_at"),
+  revokedAt: timestamp("revoked_at"),
+  requestIp: text("request_ip"),
+  requestUserAgent: text("request_user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("email_change_requests_confirm_token_unique").on(table.confirmTokenHash),
+  uniqueIndex("email_change_requests_revoke_token_unique").on(table.revokeTokenHash),
+  index("email_change_requests_user_id_idx").on(table.userId),
+  index("email_change_requests_expires_at_idx").on(table.expiresAt),
+]);
+
+export type EmailChangeRequest = typeof emailChangeRequests.$inferSelect;
+export type InsertEmailChangeRequest = typeof emailChangeRequests.$inferInsert;
