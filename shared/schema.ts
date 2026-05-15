@@ -1094,8 +1094,18 @@ export const giftIntents = pgTable("gift_intents", {
   completedAt: timestamp("completed_at"),
   cancelledAt: timestamp("cancelled_at"),
   expiresAt: timestamp("expires_at"),
-  // Last reminder fired so the worker doesn't double-send.
+  // Last reminder fired so the worker doesn't double-send. Reserved
+  // for the parent-reminder cadence (7d/30d nudges) — currently
+  // unused; the spec ships a single parent nudge with no re-pings
+  // per the locked anti-spam discipline.
   lastReminderAt: timestamp("last_reminder_at"),
+  // Stamped by giftIntentExpiryWorker (server/giftIntentExpiryWorker.ts)
+  // when the gifter receives the "your gift for {kid} is still
+  // waiting" heads-up email roughly 10 days before expiresAt. Acts
+  // as the worker's idempotency anchor — one heads-up per intent,
+  // ever. Distinct from lastReminderAt (which is parent-facing) so
+  // the two cadences can evolve independently if needed.
+  gifterReminderSentAt: timestamp("gifter_reminder_sent_at"),
 }, (table) => [
   index("gift_intents_token_idx").on(table.token),
   index("gift_intents_recipient_email_idx").on(table.recipientEmail),

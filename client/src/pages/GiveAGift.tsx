@@ -123,15 +123,18 @@ export default function GiveAGift() {
                   <li>You get an email saying "ready to send your gift?"</li>
                   <li>One click and your ${completed.amount.toFixed(2)} becomes a real investment for {completed.kidFirstName}.</li>
                 </ol>
-                {/* Lifecycle clarity. Verified server-side
-                    (server/routes.ts POST /api/gift-intents): we send
-                    ONE email to the parent, the intent stays open
-                    for 60 days, no reminder spam to the parent. If
-                    they don't act, the intent quietly expires. Telling
-                    the gifter the exact shape sets honest expectations
-                    so they don't wonder for weeks. */}
+                {/* Lifecycle clarity. Verified across the stack:
+                    server/routes.ts POST /api/gift-intents sends ONE
+                    nudge to the parent (no follow-up drip). The
+                    intent stays open 60 days. server/
+                    giftIntentExpiryWorker.ts emails the gifter
+                    roughly 10 days before expiry as a heads-up if
+                    the parent hasn't acted, and flips the intent
+                    to 'expired' on tick after expiresAt passes.
+                    Copy reflects all three honestly so the gifter
+                    isn't left wondering. */}
                 <p className="text-xs text-muted-foreground pt-2 leading-relaxed">
-                  We send one warm note, not a follow-up drip. The intent stays open for 60 days. If you want to nudge them yourself, your usual channels work — Kiddo's role is the welcome, yours is the relationship.
+                  We send one warm note to the parent, not a follow-up drip. The intent stays open for 60 days. If they haven't acted with about 10 days left, we'll email you a heads-up so you can nudge them yourself — Kiddo's role is the welcome, yours is the relationship.
                 </p>
               </div>
               <div className="flex flex-col gap-3 max-w-xs mx-auto">
