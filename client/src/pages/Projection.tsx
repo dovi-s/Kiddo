@@ -10,6 +10,7 @@ import { getAge18Transition } from "@/lib/age-transition";
 import { sumMonthlyEquivalent, WEEKS_PER_MONTH, DAYS_PER_MONTH } from "@shared/recurring-math";
 import { projectFundValue } from "@shared/projection";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCountUp as useSharedCountUp } from "@/hooks/use-count-up";
@@ -299,7 +300,7 @@ export default function Projection() {
     [totalValue, pendingMonthly, rate.rate, yearsAhead, contributionYearsCap],
   );
 
-  const childName = activeFund?.recipientFirstName || "your child";
+  const childName = capFirst(activeFund?.recipientFirstName) || "your child";
   const she = activeFund?.recipientFirstName ? "she" : "they";
   const her = activeFund?.recipientFirstName ? "her" : "their";
   const possessive = `${childName}${childName.endsWith("s") ? "'" : "'s"}`;
@@ -326,7 +327,7 @@ export default function Projection() {
     // name everywhere it can (instead of "by the time she is 65") so it reads naturally.
     // Monthly tag only appears when the slider is non-zero — silence is honest at $0.
     const named = !!activeFund?.recipientFirstName;
-    const childOrPronoun = named ? activeFund!.recipientFirstName! : "they";
+    const childOrPronoun = named ? capFirst(activeFund!.recipientFirstName!) : "they";
     const verb = named ? "is" : "are";
     const childPossessive = named ? `${childOrPronoun}'s` : "their";
     const monthlyTag = monthly > 0 ? ` (with ${fmtMoney(monthly)}/mo)` : "";

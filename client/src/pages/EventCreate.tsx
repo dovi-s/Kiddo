@@ -6,6 +6,7 @@ import { CalendarIcon, Gift, PartyPopper, Baby, TreeDeciduous, GraduationCap, He
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { GradientText, EnlighteningReveal, ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
@@ -673,7 +674,7 @@ export default function EventCreate() {
                                   setEventType(type.value);
                                   if (!eventName) {
                                     const child = funds.find(f => f.id === fundId || f.id === preselectedFundId);
-                                    const childName = child?.recipientFirstName;
+                                    const childName = capFirst(child?.recipientFirstName);
                                     setEventName(childName ? `${childName}'s ${type.label} fund` : `${type.label} fund`);
                                   }
                                 }}

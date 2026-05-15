@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { GradientText, EnlighteningReveal, ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
@@ -381,7 +382,7 @@ export default function Events() {
       return;
     }
     const origin = window.location.origin;
-    const recipient = fund?.recipientFirstName || fund?.name || "your child";
+    const recipient = capFirst(fund?.recipientFirstName) || fund?.name || "your child";
     const pages: SharePage[] = [];
     // Include permanent (anytime) link for this fund
     pages.push({
@@ -411,7 +412,7 @@ export default function Events() {
     }
     haptic("light");
     const origin = window.location.origin;
-    const recipient = firstFund.recipientFirstName || firstFund.name || "your child";
+    const recipient = capFirst(firstFund.recipientFirstName) || firstFund.name || "your child";
     const fundEvents = events.filter(
       (e) => String(e.fundId) === String(firstFund.id) && !e.isPermanent && String(e.status || "active") === "active"
     );
@@ -645,12 +646,12 @@ export default function Events() {
               <MascotMoment
                 mood="guide"
                 context="events-empty"
-                title={activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s birthday is coming.` : "Birthdays. Baby showers. Holidays."}
+                title={activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s birthday is coming.` : "Birthdays. Baby showers. Holidays."}
                 description={activeFund?.recipientFirstName
-                  ? `Create an occasion and let family show up for ${activeFund.recipientFirstName}. Takes 2 minutes. Gifts start flowing immediately.`
+                  ? `Create an occasion and let family show up for ${capFirst(activeFund.recipientFirstName)}. Takes 2 minutes. Gifts start flowing immediately.`
                   : "Create a gifting occasion and give your people a reason to show up. Takes 2 minutes."}
                 primaryAction={{
-                  label: `Create ${activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "your"} first occasion`,
+                  label: `Create ${activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your"} first occasion`,
                   testId: "button-create-first-event",
                   onClick: () => {
                     haptic("medium");
@@ -700,7 +701,7 @@ export default function Events() {
             {groupedEvents.map(([groupFundId, fundEvents], groupIndex) => {
               const groupFund = fundLookup[groupFundId];
               const groupFundName = groupFund?.name || "Unknown fund";
-              const groupRecipient = groupFund?.recipientFirstName || groupFund?.name || "Recipient";
+              const groupRecipient = capFirst(groupFund?.recipientFirstName) || groupFund?.name || "Recipient";
               return (
                 <section
                   key={groupFundId}
@@ -726,7 +727,7 @@ export default function Events() {
               const lifecycle = getEventLifecycleSummary(event);
               const raised = parseFloat(event.giftVolume || "0");
               const giftCount = event.giftCount || 0;
-              const recipientName = fund?.recipientFirstName || fund?.name || "Recipient";
+              const recipientName = capFirst(fund?.recipientFirstName) || fund?.name || "Recipient";
 
               return (
                 <motion.div
@@ -851,7 +852,7 @@ export default function Events() {
                             <GoalCard
                               goalAmount={parseFloat(event.goalAmount!)}
                               currentAmount={raised}
-                              recipientName={fund?.recipientFirstName || fund?.name || "Recipient"}
+                              recipientName={capFirst(fund?.recipientFirstName) || fund?.name || "Recipient"}
                               eventTitle={event.name}
                               contributorCount={giftCount}
                             />

@@ -49,6 +49,7 @@ import { Button } from "@/components/ui/button";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -109,7 +110,7 @@ export function CoParentAccessCard({
   });
 
   const canInvite = userPlan === "starter" || userPlan === "family" || userPlan === "legacy";
-  const childName = fund?.recipientFirstName;
+  const childName = capFirst(fund?.recipientFirstName);
   const ownerName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.email || "You";
   const ownerInitial = (user?.firstName || user?.email || "U").slice(0, 1).toUpperCase();
 

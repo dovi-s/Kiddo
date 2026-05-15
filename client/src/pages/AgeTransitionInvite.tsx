@@ -8,6 +8,7 @@ import { ArrowRight, CheckCircle2, Heart, Lock, Mail, Lightbulb } from "lucide-r
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
+import { capFirst } from "@/lib/format-name";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
@@ -628,7 +629,7 @@ export default function AgeTransitionInvite() {
             </p>
             <div className="mt-5 space-y-3">
               {data.gifters.map((gifter) => {
-                const childName = data.fund.recipientFirstName || "me";
+                const childName = capFirst(data.fund.recipientFirstName) || "me";
                 const giftCount = parseFloat(gifter.totalGifted) > 0 ? formatMoney(gifter.totalGifted) : "";
                 const subject = `Thank you — your gift to ${childName}'s fund`;
                 const lines = [

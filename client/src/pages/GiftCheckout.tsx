@@ -11,6 +11,7 @@ import { RichText } from "@/components/ui/rich-text-editor";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { ThinkingOrb } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition";
 import { getPronouns } from "@/lib/pronouns";
@@ -306,7 +307,7 @@ export default function GiftCheckout() {
     return () => clearInterval(t);
   }, [eventData?.event?.eventDate]);
 
-  const recipientName = eventData?.fund?.recipientFirstName || eventData?.fund?.name || "Recipient";
+  const recipientName = capFirst(eventData?.fund?.recipientFirstName) || eventData?.fund?.name || "Recipient";
   const recipientLooksLikeFund = /\bfund\b/i.test(recipientName);
   const destinationFundLabel = recipientLooksLikeFund ? recipientName : `${recipientName}'s fund`;
 
@@ -1984,7 +1985,7 @@ export default function GiftCheckout() {
                             already given" list). */}
                         <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
                           {senderName.trim()
-                            ? <>Your first name will show on {eventData?.fund?.recipientFirstName ? `${eventData.fund.recipientFirstName}'s` : "this child's"} family Memory Book and as a "who's already given" name on this gift page (so other family members see who's given). Full name stays private.</>
+                            ? <>Your first name will show on {recipientName !== "Recipient" ? `${recipientName}'s` : "this child's"} family Memory Book and as a "who's already given" name on this gift page (so other family members see who's given). Full name stays private.</>
                             : <>If you add a name, the first name will show in the family Memory Book and on the gift page as a "who's already given" name. Or tap "Gift anonymously" above.</>}
                         </p>
                       </>
@@ -1992,7 +1993,7 @@ export default function GiftCheckout() {
                       <div className="mt-2 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.30)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-3">
                         <p className="text-sm font-semibold text-foreground">Sending as anonymous.</p>
                         <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                          {eventData?.fund?.recipientFirstName ? `${eventData.fund.recipientFirstName}'s` : "The"} family will see this gift came in but won&apos;t see your name. You won&apos;t appear in the public &quot;who&apos;s already given&quot; list either.
+                          {recipientName !== "Recipient" ? `${recipientName}'s` : "The"} family will see this gift came in but won&apos;t see your name. You won&apos;t appear in the public &quot;who&apos;s already given&quot; list either.
                         </p>
                       </div>
                     )}

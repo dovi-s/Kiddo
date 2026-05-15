@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Home, BookOpen, Settings as SettingsIcon, Share2, CalendarDays } from "lucide-react";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { prefetchDashboard, prefetchMemoryBook, prefetchActivity } from "@/lib/prefetch";
 import { tapActiveNavScrollToTop } from "@/lib/scroll-to-element";
 import { useAuth } from "@/hooks/use-auth";
@@ -128,7 +129,7 @@ export function MobileNav() {
       // is misleading anywhere the user isn't actually inside that
       // kid's surface — fund context shouldn't reach into the nav
       // labels on user-scoped pages.
-      label: suppressFundChrome ? "Home" : (activeFund?.recipientFirstName || "Home"),
+      label: suppressFundChrome ? "Home" : (capFirst(activeFund?.recipientFirstName) || "Home"),
     },
     { href: memoryHref, icon: BookOpen, label: "Memory" },
     // MobileNav stays tight "Share" — five tabs across the rail can't

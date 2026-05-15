@@ -10,6 +10,7 @@ import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpe
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { EnlighteningReveal } from "@/components/ui/gemini";
@@ -1860,7 +1861,7 @@ export default function Activity() {
             }
           }
           if (completedTypes.length === 0) return null;
-          const childName = (fundCreated as any).recipientFirstName || "this fund";
+          const childName = capFirst((fundCreated as any).recipientFirstName) || "this fund";
           return (
             <EnlighteningReveal>
               <div style={{ marginBottom: 24 }}>
@@ -1949,7 +1950,7 @@ export default function Activity() {
                   const dayLabel = isNewDay && createdAt
                     ? createdAt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })
                     : null;
-                  const childLabel = item.recipientFirstName || (item.fundName ? item.fundName.replace(/'s Fund$/i, "").replace(/ Fund$/i, "") : null);
+                  const childLabel = capFirst(item.recipientFirstName) || (item.fundName ? item.fundName.replace(/'s Fund$/i, "").replace(/ Fund$/i, "") : null);
                   const meta = parseMetadata((item as any).metadata);
 
                   // Render-time fallback: if this row is a parent's own gift
@@ -2034,7 +2035,7 @@ export default function Activity() {
                               The first gift
                             </p>
                             <p style={{ fontSize: 11.5, color: "rgb(95,85,72)", lineHeight: 1.4 }}>
-                              The moment {item.recipientFirstName || "your child"}'s fund became real.
+                              The moment {capFirst(item.recipientFirstName) || "your child"}'s fund became real.
                             </p>
                           </div>
                         </div>
@@ -3105,7 +3106,7 @@ export default function Activity() {
                                   )}
                                 </div>
                                 <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3 }}>
-                                  Into {c.recipientFirstName ? `${c.recipientFirstName}'s` : "the"} fund · {c.frequency}
+                                  Into {c.recipientFirstName ? `${capFirst(c.recipientFirstName)}'s` : "the"} fund · {c.frequency}
                                 </p>
                               </div>
                             </div>
@@ -3611,7 +3612,7 @@ export default function Activity() {
                                     )}
                                   </div>
                                   <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3 }}>
-                                    Email reminder to gift {r.recipientFirstName || "the child"}
+                                    Email reminder to gift {capFirst(r.recipientFirstName) || "the child"}
                                     {next ? ` · next ${next.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}` : ""}
                                   </p>
                                 </div>

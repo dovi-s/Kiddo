@@ -1662,6 +1662,15 @@ export default function Dashboard() {
 
   const activeFundId = selectedFundId || funds[0]?.id || "";
   const activeFund = funds.find((f) => f.id === activeFundId) || funds[0];
+  // Display-capitalize the kid's first name once, use it everywhere.
+  // Single derived variable so every kid-name rendering on this page
+  // respects the parent's intent ("lauren" typed lowercase still
+  // renders as "Lauren") without inline capFirst() wrapping at every
+  // site. Locked 2026-05-15 per the projection-step audit and the
+  // broader name-display sweep that followed. Storage stays as the
+  // parent typed it; this is display-time only. Helper from
+  // client/src/lib/format-name.ts.
+  const recipientFirstNameDisplay = capFirst(activeFund?.recipientFirstName);
   // Pronouns for the active fund's kid. Single source of truth so every
   // user-visible pronoun on this page respects the fund's setting (per
   // feedback_no_marketing_teaser_quotes.md: every user-visible pronoun
@@ -2094,7 +2103,7 @@ export default function Dashboard() {
     const otherInChosen = otherTickers.filter(t => !everManagedTickerSet.has(t));
     const labelParts: string[] = [];
     if (otherInManaged.length > 0) {
-      const childFirst = activeFund?.recipientFirstName?.trim();
+      const childFirst = recipientFirstNameDisplay?.trim();
       labelParts.push(childFirst ? `${childFirst}'s mix` : "Managed mix");
     }
     labelParts.push(...otherInChosen);
@@ -2106,7 +2115,7 @@ export default function Dashboard() {
       otherTickers,
       nowInLabel,
     };
-  }, [giftAllocations, quotedAutoInvestStocks, everManagedTickerSet, activeFund?.recipientFirstName]);
+  }, [giftAllocations, quotedAutoInvestStocks, everManagedTickerSet, recipientFirstNameDisplay]);
 
   const { data: fundHistory = [] } = useQuery<FundHistoryPoint[]>({
     queryKey: ["/api/funds", activeFundId, "history"],
@@ -2165,7 +2174,7 @@ export default function Dashboard() {
   // arg lets each surface tweak the verb ("doing this" vs "adding this"
   // vs "started this") while sharing the event-aware tail.
   const noteFlowPlaceholder = useCallback((flow: "one-time" | "add-now" | "recurring-kickoff") => {
-    const childName = activeFund?.recipientFirstName || "them";
+    const childName = recipientFirstNameDisplay || "them";
     const verb = flow === "recurring-kickoff" ? "started this" : flow === "add-now" ? "adding this" : "doing this";
     const generic = flow === "recurring-kickoff"
       ? `Why I started this for ${childName}. What I hope for them. What they mean to me.`
@@ -2194,7 +2203,7 @@ export default function Dashboard() {
       return `What ${eventName} means to you. What you hope for ${childName}...`;
     }
     return generic;
-  }, [contextEvent, activeFund?.recipientFirstName]);
+  }, [contextEvent, recipientFirstNameDisplay]);
 
   const { data: fundTransactions = [] } = useQuery<DashboardTransaction[]>({
     queryKey: ["/api/funds", activeFundId, "transactions"],
@@ -2212,7 +2221,7 @@ export default function Dashboard() {
     if (!activeFund?.slug) return [];
     const origin = window.location.origin;
     const pages: SharePage[] = [{
-      label: `${activeFund.recipientFirstName || activeFund.name}'s gift link`,
+      label: `${recipientFirstNameDisplay || activeFund.name}'s gift link`,
       description: "Always-on gift link",
       url: `${origin}/${activeFund.slug}`,
       giftCode: giftCodeData?.code,
@@ -2232,7 +2241,7 @@ export default function Dashboard() {
       });
     }
     return pages;
-  }, [activeFund?.name, activeFund?.recipientFirstName, activeFund?.slug, events, giftCodeData?.code, dashboardSummary?.eventGiftCodes]);
+  }, [activeFund?.name, recipientFirstNameDisplay, activeFund?.slug, events, giftCodeData?.code, dashboardSummary?.eventGiftCodes]);
 
   useEffect(() => {
     if (!activeFundId) return;
@@ -3958,7 +3967,7 @@ export default function Dashboard() {
       // BEFORE the technical detail, since "did my kid's money disappear?" is the
       // parent's first thought.
       toast({
-        title: activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund is safe` : "Your fund is safe",
+        title: recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund is safe` : "Your fund is safe",
         description: error instanceof Error ? error.message : "We couldn't add that just now. Try again in a moment.",
         variant: "destructive",
       });
@@ -4020,7 +4029,7 @@ export default function Dashboard() {
       window.location.href = data.url;
     } catch (error) {
       toast({
-        title: activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund is safe` : "Your fund is safe",
+        title: recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund is safe` : "Your fund is safe",
         description: error instanceof Error ? error.message : "We couldn't start checkout just now. Try again in a moment.",
         variant: "destructive",
       });
@@ -4260,7 +4269,7 @@ export default function Dashboard() {
                   Handoff in {age18Transition.daysUntil18 === 1 ? "1 day" : `${age18Transition.daysUntil18} days`}
                 </p>
                 <p className="mt-1 text-sm font-semibold text-foreground">
-                  {capFirst(activeFund?.recipientFirstName) || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)}.
+                  {recipientFirstNameDisplay || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)}.
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   Walk through what's about to change and what to prep.
@@ -4374,7 +4383,7 @@ export default function Dashboard() {
         <KidAt18WelcomeBanner
           kidClaimedAt={(dashboardSummary as any)?.kidClaimedAt as string | null | undefined}
           fundId={activeFundId}
-          childFirstName={activeFund?.recipientFirstName}
+          childFirstName={recipientFirstNameDisplay}
         />
 
         {/* Closed-fund banner — calm, action-bearing. Renders when the
@@ -4391,7 +4400,7 @@ export default function Dashboard() {
           >
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-foreground">
-                {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "This"} fund is closed
+                {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "This"} fund is closed
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 The gift link is paused. Memory Book and history are preserved. Reopen any time from Settings.
@@ -4486,7 +4495,7 @@ export default function Dashboard() {
                           breakpoint where the sidebar takes over. */}
                       {(() => {
                         const childPhotoUrl = (activeFund as any)?.childPhotoUrl as string | null | undefined;
-                        const childInitial = (activeFund?.recipientFirstName || activeFund?.name || "").trim().slice(0, 1).toUpperCase() || "•";
+                        const childInitial = (recipientFirstNameDisplay || activeFund?.name || "").trim().slice(0, 1).toUpperCase() || "•";
                         if (childPhotoUrl) {
                           return (
                             <div
@@ -4527,7 +4536,7 @@ export default function Dashboard() {
                         );
                       })()}
                       <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" as const }} data-testid="text-fund-hero-label">
-                        {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s Fund` : activeFund?.name || "Your fund"}
+                        {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s Fund` : activeFund?.name || "Your fund"}
                         {" · "}{activeFund?.accountType || "UTMA"}
                         {" · "}{activeFund?.status === "active" ? "Active" : "Draft"}
                       </div>
@@ -4567,7 +4576,7 @@ export default function Dashboard() {
                         <div className="animate-pulse rounded-2xl" style={{ width: "100%", height: 88, background: "rgba(255,255,255,0.05)" }} />
                       </div>
                       <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", marginTop: 4 }}>
-                        Loading {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your"} fund…
+                        Loading {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "your"} fund…
                       </p>
                     </>
                   ) : totalValue === 0 && gifts.length === 0 ? (
@@ -4579,7 +4588,7 @@ export default function Dashboard() {
                         Every great fund starts here.
                       </p>
                       <p style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", lineHeight: 1.55, marginBottom: 22 }}>
-                        Share {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your child's"} gift link to start receiving investments for their future.
+                        Share {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "your child's"} gift link to start receiving investments for their future.
                       </p>
                       {/* Acknowledge any scheduled recurring investment.
                           Without this, the empty state reads as "nothing
@@ -4613,7 +4622,7 @@ export default function Dashboard() {
                       })()}
                       {age18Transition && (
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 14, marginBottom: 18 }}>
-                          {capFirst(activeFund?.recipientFirstName) || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)} · {age18Transition.countdownLabel}
+                          {recipientFirstNameDisplay || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)} · {age18Transition.countdownLabel}
                         </p>
                       )}
                       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
@@ -4694,7 +4703,7 @@ export default function Dashboard() {
                           data-testid="badge-shared-fund"
                         >
                           {isPreviousOwner
-                            ? `📦 Transferred to ${activeFund?.recipientFirstName || "them"} · view only`
+                            ? `📦 Transferred to ${recipientFirstNameDisplay || "them"} · view only`
                             : `🤝 Shared with you${isViewerOnly ? " · view-only" : ""}`}
                         </div>
                       )}
@@ -4774,7 +4783,7 @@ export default function Dashboard() {
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
                         {invested === 0 && rawTotalValue === 0 && (
                           <span style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", fontWeight: 500 }}>
-                            Growing for {activeFund?.recipientFirstName || "them"}
+                            Growing for {recipientFirstNameDisplay || "them"}
                           </span>
                         )}
                         {cash > 0 && (
@@ -4911,8 +4920,8 @@ export default function Dashboard() {
                                 const giftStatus = String((g as any)?.status || "").toLowerCase();
                                 const giftExec = String((g as any)?.executionModel || "").toLowerCase();
                                 const isSettled = ["invested", "settled", "completed"].includes(giftStatus);
-                                const childPossessive = activeFund?.recipientFirstName
-                                  ? `${activeFund.recipientFirstName}'s`
+                                const childPossessive = recipientFirstNameDisplay
+                                  ? `${recipientFirstNameDisplay}'s`
                                   : "the";
                                 const destinationName = holdingName
                                   ? holdingName
@@ -4926,7 +4935,7 @@ export default function Dashboard() {
                                       {heroGiftIdx === 0 ? "Latest gift" : "Recent gift"}
                                     </p>
                                     <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(255,255,255,0.88)", lineHeight: 1.35 }}>
-                                      {displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added {formatCurrency(amt)} to {activeFund?.recipientFirstName || "the fund"}'s future.
+                                      {displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added {formatCurrency(amt)} to {recipientFirstNameDisplay || "the fund"}'s future.
                                     </p>
                                     {/* Status pills (✓ Thanked / ⏳ Awaiting thanks / ✨ From you /
                                         🌱 Settling / No thanks yet) intentionally dropped from the
@@ -5053,7 +5062,7 @@ export default function Dashboard() {
                                 alignItems: "center",
                                 gap: 6,
                               }}
-                              title={`See ${activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "their"} full potential on the projection page`}
+                              title={`See ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "their"} full potential on the projection page`}
                             >
                               <span style={{ fontWeight: 800, letterSpacing: "0.01em" }}>{formatted}</span>
                               <span style={{ opacity: 0.78, fontSize: 11.5, fontWeight: 600 }}>at 65</span>
@@ -5085,7 +5094,7 @@ export default function Dashboard() {
                 <SsnCollectionNudge
                   key={activeFund.id}
                   fundId={String(activeFund.id)}
-                  childFirst={activeFund.recipientFirstName || "your child"}
+                  childFirst={recipientFirstNameDisplay || "your child"}
                   hasMultipleFunds={funds.length > 1}
                   onCollected={async (updatedFund: any) => {
                     if (!updatedFund || !updatedFund.id) return;
@@ -5228,9 +5237,9 @@ export default function Dashboard() {
                 || !!nextScheduled;
               if (!hasAnything) return null;
 
-              const childFirst = activeFund?.recipientFirstName || "Your child";
-              const childPossess = activeFund?.recipientFirstName
-                ? `${activeFund.recipientFirstName}'s`
+              const childFirst = recipientFirstNameDisplay || "Your child";
+              const childPossess = recipientFirstNameDisplay
+                ? `${recipientFirstNameDisplay}'s`
                 : "Their";
               const fmtRow = (n: number, signed = false) => {
                 const sign = signed && n > 0 ? "+" : signed && n < 0 ? "−" : "";
@@ -5594,7 +5603,7 @@ export default function Dashboard() {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {cashContext === "kyc_pending" && "Choose how much to invest now, or leave it in cash."}
                           {cashContext === "held_as_cash" && "You can invest some, all, or none of it today."}
-                          {cashContext === "gifts_settled" && `${activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "The"} cash is ready. You choose the amount.`}
+                          {cashContext === "gifts_settled" && `${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} cash is ready. You choose the amount.`}
                         </p>
                       </div>
                     </div>
@@ -5628,7 +5637,7 @@ export default function Dashboard() {
                 Mobile renders compact icon+micro-label pills; desktop bumps tile/label
                 sizes via md: classes so the same component breathes on a wider canvas. */}
             {activeFund && (() => {
-              const childFirst = (activeFund.recipientFirstName || "").trim() || "Kid";
+              const childFirst = (recipientFirstNameDisplay || "").trim() || "Kid";
               const fundSlug = (activeFund as any).slug;
               const activeOccasion = pickActiveOccasion(events);
               // Compute a tight "label" for the occasion button.
@@ -5771,7 +5780,7 @@ export default function Dashboard() {
               <div className="kiddo-card overflow-hidden p-0">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[hsl(var(--kiddo-border)/0.65)] px-4 pt-3">
                   <h3 className="text-sm font-bold text-muted-foreground">
-                    {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s growth` : "Fund growth"}
+                    {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Fund growth"}
                   </h3>
                   <div className="flex flex-wrap items-center gap-1">
                     {(["1W", "1M", "YTD", "1Y", "5Y", "ALL"] as const).map((r) => (
@@ -5830,8 +5839,8 @@ export default function Dashboard() {
                 {(trendMode === "gifts" || trendMode === "single" || trendMode === "waiting") && (
                   <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
                     {trendMode === "gifts" && "Estimated from gift activity while snapshots accumulate."}
-                    {trendMode === "single" && `${activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "The"} story starts here. The line fills in as gifts arrive.`}
-                    {trendMode === "waiting" && `${activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s first gift starts this line.` : "The first gift starts this line."} Share the link.`}
+                    {trendMode === "single" && `${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} story starts here. The line fills in as gifts arrive.`}
+                    {trendMode === "waiting" && `${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s first gift starts this line.` : "The first gift starts this line."} Share the link.`}
                   </p>
                 )}
                 {gifts.length > 0 && (
@@ -6009,7 +6018,7 @@ export default function Dashboard() {
                 { key: "strategy_band_14_15", minAge: 14, maxAge: 16, recommendKey: "conservative",
                   toneline: "With under five years to go, capital preservation matters more than growth." },
                 { key: "strategy_band_16_17", minAge: 16, maxAge: 18, recommendKey: "conservative",
-                  toneline: `${activeFund?.recipientFirstName || "They"} is almost 18. Conservative protects what's been built.` },
+                  toneline: `${recipientFirstNameDisplay || "They"} is almost 18. Conservative protects what's been built.` },
               ];
               const activeBand = bands.find(b => ageYears >= b.minAge && ageYears < b.maxAge);
               if (!activeBand) return null;
@@ -6022,7 +6031,7 @@ export default function Dashboard() {
               if (nudgeOptimisticallyDismissed.has(activeBand.key)) return null;
 
               const recommendedLabel = activeBand.recommendKey === "balanced" ? "Balanced Mix" : "Conservative Mix";
-              const childFirst = capFirst(activeFund?.recipientFirstName) || "Your child";
+              const childFirst = recipientFirstNameDisplay || "Your child";
               const isSwitchingThis = nudgeSwitchLoading === activeBand.key;
 
               const handleDismiss = async () => {
@@ -6148,7 +6157,7 @@ export default function Dashboard() {
             >
               <div className="flex items-center justify-between">
                 <p className="kiddo-section-label" data-testid="text-holdings-title">
-                  {activeFund?.recipientFirstName ? `What ${capFirst(activeFund.recipientFirstName)} owns` : "What the fund owns"}
+                  {recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "What the fund owns"}
                 </p>
               </div>
               {holdingsLoading ? (
@@ -6158,7 +6167,7 @@ export default function Dashboard() {
                 </div>
               ) : holdings.length === 0 ? (
                 <div className="kiddo-card p-6 text-center">
-                  <p className="text-sm font-bold text-foreground">{activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s investments will appear here after the first gift.` : "Investments will appear here after the first gift."}</p>
+                  <p className="text-sm font-bold text-foreground">{recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s investments will appear here after the first gift.` : "Investments will appear here after the first gift."}</p>
                   <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">
                     Every gift gets invested automatically. 🌱
                   </p>
@@ -6329,7 +6338,7 @@ export default function Dashboard() {
                 };
 
                 // Tooltip messages per segment
-                const childFirst = activeFund?.recipientFirstName || "them";
+                const childFirst = recipientFirstNameDisplay || "them";
                 const segTooltip: Record<string, string> = {
                   principal: `${formatCurrency(principal)} gifted by people who love ${childFirst}.`,
                   growth: growth > 0.5 ? `${formatCurrency(growth)} in growth so far. Building quietly.` : `No growth yet. Every gift is a seed. 🌱`,
@@ -6355,8 +6364,8 @@ export default function Dashboard() {
                         DriveWealth/SIPC trust signal made visible per
                         project_brokerage_as_trust_feature.md. */}
                       {(() => {
-                          const childPoss = activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund` : "the fund";
-                          const childFirst = activeFund?.recipientFirstName || "them";
+                          const childPoss = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund";
+                          const childFirst = recipientFirstNameDisplay || "them";
                           const hasBothSections = chosenH.length > 0 && managedH.length > 0;
                           const canCustomize = effectivePlan === "starter" || effectivePlan === "family";
 
@@ -6621,7 +6630,7 @@ export default function Dashboard() {
                                         // Sentence-case the warm form so
                                         // "Emma's mix" reads as a header
                                         // even when the kid name is missing.
-                                        const raw = mixIdentityFor(activeFund?.recipientFirstName);
+                                        const raw = mixIdentityFor(recipientFirstNameDisplay);
                                         return raw.charAt(0).toUpperCase() + raw.slice(1);
                                       })()}
                                       <span className="ml-1.5 font-normal text-muted-foreground/70">
@@ -6682,7 +6691,7 @@ export default function Dashboard() {
               const anonEntry = gifterRoster.find(g => g.name === "Anonymous");
               const totalGifted = gifterRoster.reduce((s, g) => s + g.totalNetAmount, 0);
               const fmtWhole = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
-              const childName = activeFund?.recipientFirstName;
+              const childName = recipientFirstNameDisplay;
               return (
                 <motion.section
                   initial={{ opacity: 0, y: 8 }}
@@ -7183,8 +7192,8 @@ export default function Dashboard() {
                   belongs to them. "Story" is intentional: these contributions get
                   stamped into the Memory Book as love letters, not just transactions. */}
               <p className="kiddo-section-label" data-testid="text-your-part-title">
-                {activeFund?.recipientFirstName
-                  ? `Your part of ${capFirst(activeFund.recipientFirstName)}${activeFund.recipientFirstName.endsWith("s") ? "'" : "'s"} story`
+                {recipientFirstNameDisplay
+                  ? `Your part of ${recipientFirstNameDisplay}${recipientFirstNameDisplay.endsWith("s") ? "'" : "'s"} story`
                   : "Your part of their story"}
               </p>
 
@@ -7377,8 +7386,8 @@ export default function Dashboard() {
                   // Possessive form — "Emma's" when name exists, otherwise the
                   // fund's pronoun setting (her / his / their). Was hardcoded
                   // "their"; now respects getPronouns.
-                  const childPossessive = activeFund?.recipientFirstName
-                    ? `${activeFund.recipientFirstName}'s`
+                  const childPossessive = recipientFirstNameDisplay
+                    ? `${recipientFirstNameDisplay}'s`
                     : childPronouns.possAdj;
                   const yearsRoundedDown = Math.floor(yearsLeft);
                   const showProjection = yearsLeft > 0.5 && projectedAddedValue >= 1 && yearsRoundedDown >= 1;
@@ -7394,8 +7403,8 @@ export default function Dashboard() {
                           )}
                           <p className="text-sm text-foreground">
                             {hasAutoInvestAccess
-                              ? `Set a monthly amount and ${activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund` : "the fund"} grows on autopilot.`
-                              : `Set $25/month and ${activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund` : "the fund"} grows every month. No gifter needed.`}
+                              ? `Set a monthly amount and ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund"} grows on autopilot.`
+                              : `Set $25/month and ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund"} grows every month. No gifter needed.`}
                           </p>
                           {/* Honest projection — only for free users (the
                               upgrade-pitch path). Shows the tool benefit
@@ -7533,7 +7542,7 @@ export default function Dashboard() {
                             // own identity.
                             const targetLabel = pickMeta
                               ? pickMeta.name
-                              : capFirst(mixIdentityFor(activeFund?.recipientFirstName));
+                              : capFirst(mixIdentityFor(recipientFirstNameDisplay));
                             // 4-second glow ring when this row matches the
                             // ticker that the duplicate-recurring nudge just
                             // pointed at. Gives the parent immediate visual
@@ -7833,7 +7842,7 @@ export default function Dashboard() {
                         }}
                         data-testid="button-one-time-add-to-mix-v2"
                       >
-                        Invest {formatMoneyFriendly(lastOwnGift.amount)} in {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "this"} fund →
+                        Invest {formatMoneyFriendly(lastOwnGift.amount)} in {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund →
                       </Button>
                       {lastOwnGift.ticker && (() => {
                         // Mirror the same fallback chain used in the metadata line above
@@ -7942,8 +7951,8 @@ export default function Dashboard() {
               {/* ── Section header ── */}
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:2 }}>
                 <span className="kiddo-section-label">
-                  {activeFund?.recipientFirstName
-                    ? `${activeFund.recipientFirstName}'s Occasions and Goals`
+                  {recipientFirstNameDisplay
+                    ? `${recipientFirstNameDisplay}'s Occasions and Goals`
                     : "Occasions and Goals"}
                 </span>
                 {!isReadOnlyFund && (
@@ -7975,7 +7984,7 @@ export default function Dashboard() {
                 const childBirthdate = childBirthdateRaw ? new Date(childBirthdateRaw) : null;
                 const nowMs = Date.now();
                 const childAgeNow = childBirthdate ? Math.floor((nowMs - childBirthdate.getTime()) / (365.25 * 86400000)) : null;
-                const childFirstSug = (activeFund?.recipientFirstName || "").trim() || "your child";
+                const childFirstSug = (recipientFirstNameDisplay || "").trim() || "your child";
                 const ord = (n: number) => n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
 
                 type SugTile = { key: string; emoji: string; name: string; sub: string; countdown: string; prefill: { name: string; eventType?: string; eventDate?: string; goalAmount?: string; eventCategory?: string } };
@@ -8262,7 +8271,7 @@ export default function Dashboard() {
                 };
 
                 const visibleArchived = showArchivedTilesV2 ? archivedEvents : [];
-                const childFirst = activeFund?.recipientFirstName || "your child";
+                const childFirst = recipientFirstNameDisplay || "your child";
                 const openCreate = () => { haptic("selection"); if (isFamily || isStarter) setCreateEventSheetOpen(true); else setEventGateOpen(true); };
 
                 if (activeEvents.length === 0 && archivedEvents.length === 0) {
@@ -8676,7 +8685,7 @@ export default function Dashboard() {
                                   <div>
                                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                                       <span style={{ fontSize: 11, fontWeight: 600, color: "rgba(26,23,16,0.5)" }}>
-                                        {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund` : "Fund"} toward this goal
+                                        {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "Fund"} toward this goal
                                       </span>
                                       <span style={{ fontSize: 11, fontWeight: 700, color: goalReached ? "hsl(143,47%,32%)" : "rgb(26,23,16)" }}>
                                         {fmtC(fundTowardGoal)} <span style={{ fontWeight: 400, color: "rgba(26,23,16,0.4)" }}>of {fmtC(goal)}</span>
@@ -8765,7 +8774,7 @@ export default function Dashboard() {
                                     return `~${months} ${months === 1 ? "month" : "months"}`;
                                   })();
                                   const arrivalLabel = goalDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-                                  const childFirst = activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the";
+                                  const childFirst = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the";
                                   const monthlyDisplay = M > 0 ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(M)) : null;
                                   return (
                                     <div style={{ borderRadius: 10, background: "rgba(26,67,50,0.05)", border: "1px solid rgba(26,67,50,0.15)", padding: "10px 12px" }}>
@@ -9102,8 +9111,8 @@ export default function Dashboard() {
               className="space-y-3"
             >
               <p className="kiddo-section-label" style={{ textTransform: "none", fontSize: "0.82rem", letterSpacing: "0.01em" }}>
-                {activeFund?.recipientFirstName
-                  ? `The day it all becomes ${activeFund.recipientFirstName}'s.`
+                {recipientFirstNameDisplay
+                  ? `The day it all becomes ${recipientFirstNameDisplay}'s.`
                   : "The day it all becomes theirs."}
               </p>
               <div style={{
@@ -9121,14 +9130,14 @@ export default function Dashboard() {
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
                     <div>
                       <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", color: "rgba(255,255,255,0.45)", textTransform: "uppercase", marginBottom: 4 }}>
-                        {capFirst(activeFund?.recipientFirstName) || "Your child"} turns {majorityAge}
+                        {recipientFirstNameDisplay || "Your child"} turns {majorityAge}
                       </p>
                       <p style={{ fontSize: 22, fontWeight: 800, color: "white", letterSpacing: "-0.02em", lineHeight: 1.1 }}>
                         {age18Transition ? formatAgeTransitionDate(age18Transition.eighteenthBirthday) : "Add a birthdate"}
                       </p>
                       {age18Transition && totalValue === 0 && (
                         <p style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", marginTop: 6 }}>
-                          🌱 {age18Transition.countdownLabel} until {capFirst(activeFund?.recipientFirstName) || capFirst(childPronouns.subject)} turn{activeFund?.recipientFirstName || childPronouns.singular ? "s" : ""} {age18Transition.majorityAge}.
+                          🌱 {age18Transition.countdownLabel} until {recipientFirstNameDisplay || capFirst(childPronouns.subject)} turn{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} {age18Transition.majorityAge}.
                         </p>
                       )}
                       {totalValue > 0 && age18Transition && (() => {
@@ -9190,8 +9199,8 @@ export default function Dashboard() {
                         // pronoun (Em turns 18, not Em turn 18). Pronoun fallback
                         // uses childPronouns.singular for proper verb form
                         // (she/he = singular, they = plural).
-                        const childSubject = activeFund?.recipientFirstName || childPronouns.subject;
-                        const childIsSingular = !!activeFund?.recipientFirstName || childPronouns.singular;
+                        const childSubject = recipientFirstNameDisplay || childPronouns.subject;
+                        const childIsSingular = !!recipientFirstNameDisplay || childPronouns.singular;
                         const beyondAge = age18Transition.majorityAge + 12;
                         return (
                           <>
@@ -9238,7 +9247,7 @@ export default function Dashboard() {
                     >
                       <div style={{ padding: "18px 20px 20px" }}>
                         <p style={{ fontSize: 13, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 2 }}>
-                          Write something for {activeFund?.recipientFirstName || childPronouns.object}
+                          Write something for {recipientFirstNameDisplay || childPronouns.object}
                         </p>
                         <p style={{ fontSize: 11.5, color: "rgba(26,23,16,0.45)", marginBottom: 12, lineHeight: 1.5 }}>
                           {/* Pronoun-aware: "She reads" / "He reads" / "They read"
@@ -9329,7 +9338,7 @@ export default function Dashboard() {
                               {letterSaving
                                 ? "Clearing…"
                                 : letterDeleteConfirm
-                                  ? `Yes, clear ${activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "this"} letter`
+                                  ? `Yes, clear ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} letter`
                                   : "Clear this letter"}
                             </button>
                             {letterDeleteConfirm && (
@@ -9380,7 +9389,7 @@ export default function Dashboard() {
                           return (
                             <>
                               <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 2 }}>
-                                {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "The"} letter is ready
+                                {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} letter is ready
                               </p>
                               <p style={{ fontSize: 12, color: "rgba(26,23,16,0.45)" }}>
                                 {wordCount} {wordCount === 1 ? "word" : "words"} &middot; tap to edit
@@ -9390,13 +9399,13 @@ export default function Dashboard() {
                         })() : (
                           <>
                             <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 3 }}>
-                              Write something for {activeFund?.recipientFirstName || childPronouns.object}
+                              Write something for {recipientFirstNameDisplay || childPronouns.object}
                             </p>
                             <p style={{ fontSize: 12, color: "rgba(26,23,16,0.45)", lineHeight: 1.5 }}>
                               {/* Pronoun-aware reads-it line; name takes singular verb;
                                   pronoun form uses childPronouns.singular for agreement. */}
-                              {activeFund?.recipientFirstName
-                                ? `${activeFund.recipientFirstName} reads it`
+                              {recipientFirstNameDisplay
+                                ? `${recipientFirstNameDisplay} reads it`
                                 : `${capFirst(childPronouns.subject)} read${childPronouns.singular ? "s" : ""} it`} on {childPronouns.possAdj} {majorityOrdinal} birthday.
                             </p>
                           </>
@@ -9428,8 +9437,8 @@ export default function Dashboard() {
                     {/* Pronoun-aware "{name|pronoun} turn(s) 18" + "{name|pronoun}
                         see(s) first" — names take singular verb regardless,
                         pronouns use childPronouns.singular. */}
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "rgb(26,23,16)" }}>What happens when {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName} turns` : `${childPronouns.subject} turn${childPronouns.singular ? "s" : ""}`} 18?</p>
-                    <p style={{ fontSize: 11.5, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>How the fund transfers, what {activeFund?.recipientFirstName || childPronouns.subject} see{activeFund?.recipientFirstName || childPronouns.singular ? "s" : ""} first.</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "rgb(26,23,16)" }}>What happens when {recipientFirstNameDisplay ? `${recipientFirstNameDisplay} turns` : `${childPronouns.subject} turn${childPronouns.singular ? "s" : ""}`} 18?</p>
+                    <p style={{ fontSize: 11.5, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>How the fund transfers, what {recipientFirstNameDisplay || childPronouns.subject} see{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} first.</p>
                   </div>
                   <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
                     <path d="M7 4l6 6-6 6" stroke="rgba(26,23,16,0.3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -9467,7 +9476,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">How we calculate growth ⓘ</p>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "The fund's"} growth shows the change in invested value since the first gift.
+                  {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The fund's"} growth shows the change in invested value since the first gift.
                 </p>
               </div>
               <div className="rounded-xl bg-muted/30 p-4 space-y-2">
@@ -9520,7 +9529,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">How we calculate projections ⓘ</p>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "The"} projected value at {age18Transition?.majorityAge ?? 18} is based on:
+                  {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} projected value at {age18Transition?.majorityAge ?? 18} is based on:
                 </p>
               </div>
               <div className="rounded-xl bg-muted/30 p-4 space-y-1.5">
@@ -9535,7 +9544,7 @@ export default function Dashboard() {
                   const monthlyLabel = activeMonthly > 0
                     ? `$${Math.round(activeMonthly).toLocaleString()}/month from active recurring schedules`
                     : null;
-                  const childFirst = activeFund?.recipientFirstName;
+                  const childFirst = recipientFirstNameDisplay;
                   const majorityAge = age18Transition?.majorityAge ?? 18;
                   // The eighteenthBirthday field on age18Transition is actually the
                   // majority date — most states it equals the 18th birthday, but PA/MS
@@ -9607,7 +9616,7 @@ export default function Dashboard() {
           open={shareModalOpen}
           onClose={() => setShareModalOpen(false)}
           pages={sharePages}
-          recipientName={activeFund?.recipientFirstName || activeFund?.name || "your child"}
+          recipientName={recipientFirstNameDisplay || activeFund?.name || "your child"}
           giftCode={giftCodeData ?? undefined}
           snapshotHref={activeFund?.id ? `/fund/${activeFund.id}/snapshot` : undefined}
         />
@@ -9618,7 +9627,7 @@ export default function Dashboard() {
           open={!!eventShareTarget}
           onClose={() => setEventShareTarget(null)}
           pages={eventShareTarget}
-          recipientName={activeFund?.recipientFirstName || activeFund?.name || "your child"}
+          recipientName={recipientFirstNameDisplay || activeFund?.name || "your child"}
           giftCode={giftCodeData ?? undefined}
         />
       )}
@@ -9651,7 +9660,7 @@ export default function Dashboard() {
                     How much?
                   </h2>
                   <p className="mt-1.5 text-sm text-muted-foreground">
-                    Goes straight into {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} fund and invests immediately.
+                    Goes straight into {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} fund and invests immediately.
                   </p>
                 </div>
 
@@ -9661,7 +9670,7 @@ export default function Dashboard() {
                       {formatCurrency(uninvestedCash)} already in the fund
                     </p>
                     <p className="text-[11px] text-amber-700 mt-0.5">
-                      There's uninvested cash in {activeFund?.recipientFirstName || "the fund"}. This gift is in addition to that.
+                      There's uninvested cash in {recipientFirstNameDisplay || "the fund"}. This gift is in addition to that.
                     </p>
                   </div>
                 )}
@@ -9740,7 +9749,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         <StockLogo ticker={oneTimeTicker} size={20} />
                         <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
-                          {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "The"} {companyName} position
+                          {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} {companyName} position
                         </p>
                       </div>
                       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
@@ -10065,7 +10074,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         <StockLogo ticker={oneTimeTicker} size={20} />
                         <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
-                          {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "The"} {companyName} position
+                          {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} {companyName} position
                         </p>
                       </div>
                       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
@@ -10098,7 +10107,7 @@ export default function Dashboard() {
                         ? `${quotedAutoInvestStocks.find(s => s.symbol === oneTimeTicker)?.name ?? oneTimeTicker} (${oneTimeTicker})`
                         : oneTimeExecutionModel === "cash"
                           ? "Cash (invest later)"
-                          : capFirst(mixIdentityFor(activeFund?.recipientFirstName))}
+                          : capFirst(mixIdentityFor(recipientFirstNameDisplay))}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -10203,8 +10212,8 @@ export default function Dashboard() {
                   </p>
                   <p className="text-xs text-muted-foreground -mt-1">
                     {/* Pronoun-aware reads-on-18 helper. */}
-                    {activeFund?.recipientFirstName
-                      ? `${activeFund.recipientFirstName} reads it on ${childPronouns.possAdj} ${majorityOrdinal} birthday.`
+                    {recipientFirstNameDisplay
+                      ? `${recipientFirstNameDisplay} reads it on ${childPronouns.possAdj} ${majorityOrdinal} birthday.`
                       : `${capFirst(childPronouns.subject)}'ll read it when ${childPronouns.subject} ${childPronouns.singular ? "is" : "are"} 18.`} Optional, but it matters.
                   </p>
                   {oneTimeNoteSaved ? (
@@ -10231,7 +10240,7 @@ export default function Dashboard() {
                           fundId={activeFundId}
                           value={oneTimeMedia}
                           onChange={setOneTimeMedia}
-                          childName={activeFund?.recipientFirstName}
+                          childName={recipientFirstNameDisplay}
                           pronoun={(activeFund as any)?.pronoun}
                           majorityAge={(activeFund as any)?.majorityAge}
                           requiresPlus={!hasAutoInvestAccess}
@@ -10258,7 +10267,7 @@ export default function Dashboard() {
                     {startingOneTime ? (
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
-                      <>Invest {formatCurrency(parseFloat(oneTimeAmount || "0"))}{activeFund?.recipientFirstName ? ` in ${activeFund.recipientFirstName}` : ""}</>
+                      <>Invest {formatCurrency(parseFloat(oneTimeAmount || "0"))}{recipientFirstNameDisplay ? ` in ${recipientFirstNameDisplay}` : ""}</>
                     )}
                   </Button>
                 </div>
@@ -10414,7 +10423,7 @@ export default function Dashboard() {
                     const gHoldingName = gTicker
                       ? friendlyHoldingName(gTicker, holdings.find(h => h.ticker === gTicker)?.name)
                       : null;
-                    const childMixLabel = activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s mix` : "Recurring mix";
+                    const childMixLabel = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s mix` : "Recurring mix";
                     const investLabel = gTicker ? gTicker.toUpperCase() : childMixLabel;
                     const sharesAcquired = (g as any).sharesAcquired ? parseFloat(String((g as any).sharesAcquired)) : null;
                     const giftDate = new Date(String(g.createdAt || Date.now()));
@@ -10533,7 +10542,7 @@ export default function Dashboard() {
                         })()}
                         {isPending && (
                           <p style={{ marginTop: 6, fontSize: 11.5, color: "rgba(26,23,16,0.4)", lineHeight: 1.5 }}>
-                            On its way to {activeFund?.recipientFirstName || "the fund"}. Settles in 1–2 business days.
+                            On its way to {recipientFirstNameDisplay || "the fund"}. Settles in 1–2 business days.
                           </p>
                         )}
                         {g.message && (
@@ -10554,7 +10563,7 @@ export default function Dashboard() {
                       data-testid="button-anon-modal-share-gift-link"
                     >
                       <Share2 size={14} className="mr-2" />
-                      Share {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} gift link
+                      Share {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} gift link
                     </Button>
                   </div>
                 )}
@@ -10817,8 +10826,8 @@ export default function Dashboard() {
                     // "Family mix" was internal language. Show the child's mix instead so
                     // the row reads warmly ("Emma's mix"). Falls back to "Recurring mix"
                     // when there's no name on file (avoids the locked "auto-invest" word).
-                    const childMixLabel = activeFund?.recipientFirstName
-                      ? `${activeFund.recipientFirstName}'s mix`
+                    const childMixLabel = recipientFirstNameDisplay
+                      ? `${recipientFirstNameDisplay}'s mix`
                       : "Recurring mix";
                     const investLabel = gTicker
                       ? gTicker.toUpperCase()
@@ -11129,7 +11138,7 @@ export default function Dashboard() {
 
                         {isPending && (
                           <p style={{ marginTop: 6, fontSize: 11.5, color: "rgba(26,23,16,0.4)", lineHeight: 1.5 }}>
-                            On its way to {activeFund?.recipientFirstName || "the fund"}. Settles in 1–2 business days.
+                            On its way to {recipientFirstNameDisplay || "the fund"}. Settles in 1–2 business days.
                           </p>
                         )}
                         {/* Suppress the legacy "Auto-invest contribution
@@ -11211,7 +11220,7 @@ export default function Dashboard() {
                       data-testid="button-gifter-modal-share-gift-link"
                     >
                       <Share2 size={14} className="mr-2" />
-                      Share {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} gift link
+                      Share {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} gift link
                     </Button>
                   )}
                 </div>
@@ -11233,7 +11242,7 @@ export default function Dashboard() {
           <div className="p-6 space-y-5">
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                Adding to {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund` : "the fund"}
+                Adding to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund"}
               </p>
               <h2 className="font-heading text-2xl font-semibold text-foreground">
                 {formatCurrency(parseFloat(addFromScheduleSheet?.amount || "0"))}
@@ -11247,8 +11256,8 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground -mt-1">
                 {/* Pronoun-aware reads-on-18 helper. Mirrors the same line
                     in the one-time-amount sheet — same copy, same pattern. */}
-                {activeFund?.recipientFirstName
-                  ? `${activeFund.recipientFirstName} reads it on ${childPronouns.possAdj} ${majorityOrdinal} birthday.`
+                {recipientFirstNameDisplay
+                  ? `${recipientFirstNameDisplay} reads it on ${childPronouns.possAdj} ${majorityOrdinal} birthday.`
                   : `${capFirst(childPronouns.subject)}'ll read it when ${childPronouns.subject} ${childPronouns.singular ? "is" : "are"} 18.`}{" "}
                 Optional, but it matters.
               </p>
@@ -11269,7 +11278,7 @@ export default function Dashboard() {
                   fundId={activeFundId}
                   value={addFromScheduleMedia}
                   onChange={setAddFromScheduleMedia}
-                  childName={activeFund?.recipientFirstName}
+                  childName={recipientFirstNameDisplay}
                   pronoun={(activeFund as any)?.pronoun}
                   majorityAge={(activeFund as any)?.majorityAge}
                   requiresPlus={!hasAutoInvestAccess}
@@ -11305,7 +11314,7 @@ export default function Dashboard() {
                 {contributingNow ? (
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <>Add {formatCurrency(parseFloat(addFromScheduleSheet?.amount || "0"))}{activeFund?.recipientFirstName ? ` to ${activeFund.recipientFirstName}` : ""}</>
+                  <>Add {formatCurrency(parseFloat(addFromScheduleSheet?.amount || "0"))}{recipientFirstNameDisplay ? ` to ${recipientFirstNameDisplay}` : ""}</>
                 )}
               </Button>
             </div>
@@ -11317,7 +11326,7 @@ export default function Dashboard() {
         <HoldingDetailSheet
           holding={selectedHolding}
           onClose={() => setSelectedHolding(null)}
-          recipientName={activeFund?.recipientFirstName || undefined}
+          recipientName={recipientFirstNameDisplay || undefined}
           totalPortfolioValue={totalValue}
           gifts={gifts}
           giftAllocations={giftAllocations}
@@ -11325,7 +11334,7 @@ export default function Dashboard() {
           ownerEmail={user?.email || null}
           isReadOnly={isReadOnlyFund}
           isManagedMix={selectedHolding ? managedStrategyTickerSet.has(String(selectedHolding.ticker || "").toUpperCase()) : false}
-          strategyLabel={strategyLabelFor((activeFund as any)?.investmentStrategy, activeFund?.recipientFirstName)}
+          strategyLabel={strategyLabelFor((activeFund as any)?.investmentStrategy, recipientFirstNameDisplay)}
           onAddToStrategy={() => {
             // Managed-mix add: spread across all strategy ETFs per ratio.
             // executionModel "auto" tells the contribute pipeline to honor
@@ -11410,7 +11419,7 @@ export default function Dashboard() {
         open={createEventSheetOpen}
         onClose={() => { setCreateEventSheetOpen(false); setEditEventTarget(null); }}
         fundId={activeFundId}
-        fundName={activeFund?.recipientFirstName || activeFund?.name}
+        fundName={recipientFirstNameDisplay || activeFund?.name}
         fundSlug={(activeFund as any)?.slug}
         childPhotoUrl={(activeFund as any)?.childPhotoUrl || undefined}
         investPrefs={dashboardSummary?.investmentPreferences || undefined}
@@ -11462,7 +11471,7 @@ export default function Dashboard() {
             onClose={() => setInvestCashOpen(false)}
             onSuccess={invalidateActiveFundFreshness}
             cashAmount={uninvestedCash}
-            childName={activeFund.recipientFirstName || activeFund.name || "your child"}
+            childName={recipientFirstNameDisplay || activeFund.name || "your child"}
             fundId={String(activeFundId)}
             cashContext={cashContext}
             initialTicker={investCashInitialTicker || undefined}
@@ -11495,7 +11504,7 @@ export default function Dashboard() {
             </motion.div>
             <div>
               <h2 className="font-heading text-xl font-semibold text-foreground">
-                {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund is growing.` : "Your gift is on its way."}
+                {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund is growing.` : "Your gift is on its way."}
               </h2>
               {/* Was: "Lands as soon as your bank clears it." That copy
                   was ACH-specific — flat-out wrong for the card / Apple
@@ -11504,8 +11513,8 @@ export default function Dashboard() {
                   Universal payment-method-agnostic phrasing keeps it
                   honest regardless of how the user paid. */}
               <p className="text-sm text-muted-foreground mt-2">
-                {activeFund?.recipientFirstName
-                  ? `It'll show up in ${activeFund.recipientFirstName}'s fund any moment now.`
+                {recipientFirstNameDisplay
+                  ? `It'll show up in ${recipientFirstNameDisplay}'s fund any moment now.`
                   : "It'll show up in the fund any moment now."}
               </p>
               <p className="text-[11px] text-[hsl(var(--kiddo-evergreen))]/75 mt-3 font-medium">
@@ -11555,7 +11564,7 @@ export default function Dashboard() {
         <DialogContent className="max-w-md w-[95vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Upgrade to Kiddo+</DialogTitle>
           {(() => {
-            const child = capFirst(activeFund?.recipientFirstName) || "your child";
+            const child = recipientFirstNameDisplay || "your child";
             const monthly = 25;
             const yearsLeft = age18Transition?.daysUntil18 ? age18Transition.daysUntil18 / 365.25 : null;
             // Same 7% real-return assumption used everywhere (Age18Plan,
@@ -11734,7 +11743,7 @@ export default function Dashboard() {
                   <h2 className="font-heading text-xl font-semibold text-foreground">
                     {isEditing
                       ? "Edit your recurring investment"
-                      : activeFund?.recipientFirstName ? `Grow ${activeFund.recipientFirstName}'s fund automatically` : "Grow automatically"}
+                      : recipientFirstNameDisplay ? `Grow ${recipientFirstNameDisplay}'s fund automatically` : "Grow automatically"}
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
                     {isEditing
@@ -11816,8 +11825,8 @@ export default function Dashboard() {
                     : null;
                   const fv = fvOf(monthly);
                   const fmt0 = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n));
-                  const childPossessive = activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "their";
-                  const childFirst = activeFund?.recipientFirstName || "them";
+                  const childPossessive = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "their";
+                  const childFirst = recipientFirstNameDisplay || "them";
                   const showProjection = fv !== null && fv > amt * 1.5; // skip if barely above the principal — no story to tell
 
                   // Edit-mode delta: when amount or frequency differs from the existing
@@ -11867,7 +11876,7 @@ export default function Dashboard() {
                           <p className="text-sm text-green-800">
                             {formatCurrency(amt)}/{freqWord(autoInvestFrequency)} ·{" "}
                             {formatCurrency(amt * periodsPerYear)}/yr
-                            {activeFund?.recipientFirstName ? ` into ${activeFund.recipientFirstName}'s fund` : ""}
+                            {recipientFirstNameDisplay ? ` into ${recipientFirstNameDisplay}'s fund` : ""}
                           </p>
                           {showProjection && (
                             <p className="text-xs text-green-800/85 leading-relaxed">
@@ -12101,7 +12110,7 @@ export default function Dashboard() {
                     Where should we pull from?
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Recurring investments run from your connected bank account. Lower fees. More reliable. Better for {activeFund?.recipientFirstName || "them"}.
+                    Recurring investments run from your connected bank account. Lower fees. More reliable. Better for {recipientFirstNameDisplay || "them"}.
                   </p>
                 </div>
 
@@ -12196,7 +12205,7 @@ export default function Dashboard() {
                     One last thing.
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Once invested, this money belongs to {activeFund?.recipientFirstName || "them"}. That's the whole point.
+                    Once invested, this money belongs to {recipientFirstNameDisplay || "them"}. That's the whole point.
                   </p>
                 </div>
 
@@ -12210,7 +12219,7 @@ export default function Dashboard() {
                       const bank = bankAccounts.find((b: any) => b.id === autoInvestSelectedBankId) || bankAccounts[0];
                       return bank ? ` from ${bank.bankName} ···· ${bank.accountLast4}` : "";
                     })()}
-                    {activeFund?.recipientFirstName ? ` into ${activeFund.recipientFirstName}'s fund` : ""}
+                    {recipientFirstNameDisplay ? ` into ${recipientFirstNameDisplay}'s fund` : ""}
                     {autoInvestExecutionModel === "pick" && autoInvestTicker
                       ? `, going into ${quotedAutoInvestStocks.find(s => s.symbol === autoInvestTicker)?.name ?? autoInvestTicker}`
                       : ""}. Cancel or change anytime from your dashboard.
@@ -12235,7 +12244,7 @@ export default function Dashboard() {
                     ) : (
                       <Repeat size={15} className="mr-1.5" />
                     )}
-                    {savingAutoInvest ? "Setting up..." : activeFund?.recipientFirstName ? `Start growing ${activeFund.recipientFirstName}'s fund` : "Start investing"}
+                    {savingAutoInvest ? "Setting up..." : recipientFirstNameDisplay ? `Start growing ${recipientFirstNameDisplay}'s fund` : "Start investing"}
                   </Button>
                 </div>
 
@@ -12252,10 +12261,10 @@ export default function Dashboard() {
               <div className="space-y-5 py-1">
                 <div>
                   <h2 className="font-heading text-xl font-semibold text-foreground leading-snug">
-                    Write something for {activeFund?.recipientFirstName || "them"}.
+                    Write something for {recipientFirstNameDisplay || "them"}.
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                    {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName} reads it` : `${capFirst(childPronouns.subject)} read${childPronouns.singular ? "s" : ""} it`} on {childPronouns.possAdj} {majorityOrdinal} birthday.
+                    {recipientFirstNameDisplay ? `${recipientFirstNameDisplay} reads it` : `${capFirst(childPronouns.subject)} read${childPronouns.singular ? "s" : ""} it`} on {childPronouns.possAdj} {majorityOrdinal} birthday.
                   </p>
                   <p className="mt-2 text-xs text-[hsl(var(--kiddo-evergreen))] leading-relaxed">
                     We'll stamp this note onto every cycle. Each ${parseFloat(autoInvestAmount || "0").toFixed(0)} you add carries this love forward.
@@ -12281,7 +12290,7 @@ export default function Dashboard() {
                     fundId={activeFundId}
                     value={autoInvestMedia}
                     onChange={setAutoInvestMedia}
-                    childName={activeFund?.recipientFirstName}
+                    childName={recipientFirstNameDisplay}
                     pronoun={(activeFund as any)?.pronoun}
                     majorityAge={(activeFund as any)?.majorityAge}
                     requiresPlus={!hasAutoInvestAccess}
@@ -12325,7 +12334,7 @@ export default function Dashboard() {
                 </motion.div>
                 <div>
                   <h2 className="font-heading text-xl font-semibold text-foreground">
-                    {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund is growing.` : "It's running."}
+                    {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund is growing.` : "It's running."}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-2">
                     {formatCurrency(parseFloat(autoInvestAmount))}/{autoInvestFrequency === "daily" ? "day" : autoInvestFrequency === "weekly" ? "week" : autoInvestFrequency === "yearly" ? "year" : "month"} is scheduled
@@ -12366,7 +12375,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-sm font-medium text-primary">Kid View</p>
                 <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                  Share {activeFund?.recipientFirstName || "your child"}&apos;s fund safely
+                  Share {recipientFirstNameDisplay || "your child"}&apos;s fund safely
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
                   This creates a private link plus a parent-set PIN. Child mode is simpler. Teen mode adds holdings and stock suggestions automatically.
@@ -12497,10 +12506,10 @@ export default function Dashboard() {
               <div className="space-y-1">
                 <p className="text-sm font-medium text-[hsl(var(--kiddo-evergreen))]">Kid View is live</p>
                 <h2 className="font-heading text-xl font-semibold text-foreground">
-                  {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s view is ready.` : "Your child's view is ready."}
+                  {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s view is ready.` : "Your child's view is ready."}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Share the link and tell {activeFund?.recipientFirstName || "them"} the PIN. They can see their fund grow in a child-friendly way.
+                  Share the link and tell {recipientFirstNameDisplay || "them"} the PIN. They can see their fund grow in a child-friendly way.
                 </p>
               </div>
               <div className="space-y-2.5">
@@ -12510,7 +12519,7 @@ export default function Dashboard() {
                     onClick={() => { haptic("medium"); window.open(kidViewSettings.shareLink, "_blank", "noopener"); }}
                   >
                     <Smile size={15} className="mr-2" />
-                    Open {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "the"} View
+                    Open {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} View
                   </Button>
                 )}
                 <Button
@@ -12592,7 +12601,7 @@ export default function Dashboard() {
           holding is part of the active managed strategy. Nudges toward "Customize mix". */}
       {managedSellWarning && (() => {
         const ticker = String(managedSellWarning.ticker || "").toUpperCase();
-        const childName = activeFund?.recipientFirstName || "your child";
+        const childName = recipientFirstNameDisplay || "your child";
         return (
           <div
             className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40"
@@ -12699,7 +12708,7 @@ export default function Dashboard() {
               <div className="px-6 pt-6 pb-3 shrink-0">
                 <h3 className="font-heading text-lg font-semibold mb-1">Move {sellingHolding.ticker} to cash</h3>
                 <p className="text-sm text-muted-foreground">
-                  The cash stays inside {activeFund?.recipientFirstName || "your child"}'s fund after settlement.
+                  The cash stays inside {recipientFirstNameDisplay || "your child"}'s fund after settlement.
                 </p>
               </div>
 
@@ -12852,7 +12861,7 @@ export default function Dashboard() {
               <div className="p-6 space-y-5">
                 <div className="space-y-1">
                   <p className="text-sm text-[hsl(var(--kiddo-gold-ink))] font-medium">Kiddo+</p>
-                  <h2 className="font-heading text-xl font-semibold text-foreground">Unlock recurring investments for {activeFund.recipientFirstName || activeFund.name}</h2>
+                  <h2 className="font-heading text-xl font-semibold text-foreground">Unlock recurring investments for {recipientFirstNameDisplay || activeFund.name}</h2>
                   <p className="text-sm text-muted-foreground">
                     Add recurring investments, photo and video Memory Book entries, custom fund mix, and co-parent access for this fund.
                   </p>
@@ -12918,7 +12927,7 @@ export default function Dashboard() {
           <GiftReceivedToast
             giverName={recentGiftForToast.senderName}
             amount={parseFloat(recentGiftForToast.amount)}
-            recipientName={activeFund?.recipientFirstName || activeFund?.name || "your child"}
+            recipientName={recipientFirstNameDisplay || activeFund?.name || "your child"}
             onViewActivity={() => {
               const id = String(recentGiftForToast.id || "");
               markGiftToastDismissed(id);
@@ -12949,7 +12958,7 @@ export default function Dashboard() {
         <DialogContent className="max-w-sm w-[92vw] rounded-2xl p-0 overflow-hidden" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Smart nudge</DialogTitle>
           {smartNudge && (() => {
-            const child = capFirst(activeFund?.recipientFirstName) || "The fund";
+            const child = recipientFirstNameDisplay || "The fund";
             // `her` pronoun + `delta` / `monthIncrease` were used by the
             // previous comparison-table-shaped variants. Removed 2026-05-13
             // with the rewrite — the new prose variants don't reference
@@ -13178,7 +13187,7 @@ export default function Dashboard() {
               : null;
             const targetLabel = sheetPickMeta
               ? sheetPickMeta.name
-              : strategyLabelFor((activeFund as any)?.investmentStrategy, activeFund?.recipientFirstName);
+              : strategyLabelFor((activeFund as any)?.investmentStrategy, recipientFirstNameDisplay);
 
             if (listActionConfirmCancel) {
               // Loss-aversion diff: cancelling a recurring schedule is silent —
@@ -13197,7 +13206,7 @@ export default function Dashboard() {
               const cancelFv = cancelMonthsTo18 && cancelMonthsTo18 > 0
                 ? cancelMonthly * ((Math.pow(1 + cancelR, cancelMonthsTo18) - 1) / cancelR)
                 : null;
-              const cancelChildFirst = activeFund?.recipientFirstName || "them";
+              const cancelChildFirst = recipientFirstNameDisplay || "them";
               const cancelFmt0 = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n));
               const cancelShowProjection = cancelFv !== null && cancelFv > cancelAmt * 1.5;
               return (
@@ -13618,7 +13627,7 @@ export default function Dashboard() {
             open
             onClose={closeDetailScope}
             title="Your investments"
-            subtitle={activeFund?.recipientFirstName ? `Every dollar you've added to ${activeFund.recipientFirstName}'s fund.` : "Every dollar you've added to this fund."}
+            subtitle={recipientFirstNameDisplay ? `Every dollar you've added to ${recipientFirstNameDisplay}'s fund.` : "Every dollar you've added to this fund."}
             summaryStats={stats}
             subToggle={{
               options: [

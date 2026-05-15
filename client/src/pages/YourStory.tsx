@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowLeft, BookOpen, Gift, Users } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { capFirst } from "@/lib/format-name";
 
 type YourStoryYear = {
   year: number;
@@ -89,7 +90,7 @@ export default function YourStory() {
     enabled: !!fundId,
   });
 
-  const childFirst = data?.fund.recipientFirstName?.trim() || "";
+  const childFirst = capFirst(data?.fund.recipientFirstName) || "";
   const ownerName = useMemo(() => childFirst || "you", [childFirst]);
 
   return (

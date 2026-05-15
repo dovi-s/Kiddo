@@ -14,6 +14,7 @@ import { Logo } from "@/components/ui/logo";
 // appropriate confirmation pattern; no particle-confetti needed.
 import { InvestmentReveal } from "@/components/ui/live-ticker";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
@@ -155,7 +156,7 @@ export default function Claim() {
     return {
       projectedValue,
       majorityAge,
-      childName: (claimedFund as any).recipientFirstName || "the kid",
+      childName: capFirst((claimedFund as any).recipientFirstName) || "the kid",
       majorityDate,
     };
   })();

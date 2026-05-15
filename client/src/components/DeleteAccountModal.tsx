@@ -28,6 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { AlertTriangle, Lock, BookOpen, FileText, CheckCircle2 } from "lucide-react";
 
 type DeleteAccountModalProps = {
@@ -276,7 +277,7 @@ export function DeleteAccountModal({ open, onClose, userEmail, onDeleted }: Dele
                   <div key={f.id} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-semibold text-foreground">
-                        {f.recipientFirstName ? `${f.recipientFirstName}'s fund` : `Fund ${f.id.slice(0, 8)}`}
+                        {f.recipientFirstName ? `${capFirst(f.recipientFirstName)}'s fund` : `Fund ${f.id.slice(0, 8)}`}
                       </span>
                       <span className="font-semibold tabular-nums text-foreground">${f.balance.toFixed(2)}</span>
                     </div>

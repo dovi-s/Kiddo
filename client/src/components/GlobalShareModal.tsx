@@ -21,6 +21,7 @@ import { useFunds, useFundEvents } from "@/hooks/use-funds";
 import { useAuth } from "@/hooks/use-auth";
 import { getActiveFundId } from "@/hooks/use-active-fund";
 import { ShareModal, type SharePage } from "@/components/ui/share-modal";
+import { capFirst } from "@/lib/format-name";
 
 export function GlobalShareModal() {
   const { isAuthenticated } = useAuth();
@@ -72,7 +73,7 @@ export function GlobalShareModal() {
     if (!activeFund?.slug) return [];
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const pages: SharePage[] = [{
-      label: `${activeFund.recipientFirstName || activeFund.name}'s gift link`,
+      label: `${capFirst(activeFund.recipientFirstName) || activeFund.name}'s gift link`,
       description: "Always-on gift link",
       url: `${origin}/${activeFund.slug}`,
       giftCode: giftCodeData?.code,
@@ -121,7 +122,7 @@ export function GlobalShareModal() {
       open={open}
       onClose={() => setOpen(false)}
       pages={sharePages}
-      recipientName={activeFund?.recipientFirstName || activeFund?.name || "your child"}
+      recipientName={capFirst(activeFund?.recipientFirstName) || activeFund?.name || "your child"}
       giftCode={giftCodeData ?? undefined}
       snapshotHref={activeFund?.id ? `/fund/${activeFund.id}/snapshot` : undefined}
     />

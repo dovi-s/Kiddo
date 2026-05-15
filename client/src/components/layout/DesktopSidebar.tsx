@@ -9,6 +9,7 @@ import { tapActiveNavScrollToTop } from "@/lib/scroll-to-element";
 import { ACTIVE_FUND_CHANGE_EVENT, ADD_FUND_EVENT, getActiveFundId, setActiveFundId } from "@/hooks/use-active-fund";
 import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav } from "@/lib/page-scope";
 import { readLastAppLocation, formatBackLabel, backTargetHref } from "@/lib/last-location";
+import { capFirst } from "@/lib/format-name";
 import { Logo } from "@/components/ui/logo";
 import { toast } from "@/hooks/use-toast";
 import type { Fund, Event } from "@shared/schema";
@@ -125,7 +126,7 @@ export function DesktopSidebar() {
   // fund's home for cold deep-links.
   const lastLocation = hideNav ? readLastAppLocation() : null;
   const backHref = backTargetHref(lastLocation, activeFund?.id ?? null);
-  const backLabel = formatBackLabel(lastLocation, activeFund?.recipientFirstName ?? null);
+  const backLabel = formatBackLabel(lastLocation, capFirst(activeFund?.recipientFirstName) || null);
 
   // Unread counts for the sidebar nav dots — same hooks the bottom-nav
   // uses, so the two surfaces stay in lockstep. Mark-as-read on either
@@ -134,7 +135,7 @@ export function DesktopSidebar() {
   const sidebarActivityUnread = useNotificationUnreadCount();
   const sidebarMemoryUnread = useMemoryUnreadCount(activeFund?.id);
 
-  const childName = activeFund?.recipientFirstName || null;
+  const childName = capFirst(activeFund?.recipientFirstName) || null;
   const fundSlug = (activeFund as any)?.slug || null;
 
   // Share the SAME query key as Dashboard (no "-sidebar" suffix) so any
@@ -250,7 +251,7 @@ export function DesktopSidebar() {
       // the chrome-scope-tier rollout — DesktopSidebar was missed.
       // Clicking still drills into the last-active fund's
       // Dashboard.
-      label: suppressFundChrome ? "Home" : (activeFund?.recipientFirstName || "Home"),
+      label: suppressFundChrome ? "Home" : (capFirst(activeFund?.recipientFirstName) || "Home"),
       isActive: location === "/dashboard" || location.startsWith("/dashboard") || location === "/age-18-plan",
     },
     {
@@ -292,7 +293,7 @@ export function DesktopSidebar() {
       label: copiedLink
         ? "Copied!"
         : activeFund.recipientFirstName
-          ? `Share ${activeFund.recipientFirstName}'s link`
+          ? `Share ${capFirst(activeFund.recipientFirstName)}'s link`
           : "Share gift link",
       onClick: handleShareLink,
       href: null,
@@ -448,7 +449,7 @@ export function DesktopSidebar() {
                 {isFundsOverview
                   ? "Your funds"
                   : activeFund.recipientFirstName
-                    ? `${activeFund.recipientFirstName}'s Fund`
+                    ? `${capFirst(activeFund.recipientFirstName)}'s Fund`
                     : activeFund.name || "Fund"}
               </div>
               <div className="text-[11.5px] text-muted-foreground mt-px tabular-nums">
@@ -523,7 +524,7 @@ export function DesktopSidebar() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-semibold text-foreground">
-                        {fund.recipientFirstName ? `${fund.recipientFirstName}'s Fund` : fund.name || "Fund"}
+                        {fund.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s Fund` : fund.name || "Fund"}
                       </p>
                       <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
                         {formatMoney(Number.isFinite(value) ? value : 0)}

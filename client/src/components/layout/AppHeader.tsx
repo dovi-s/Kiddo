@@ -7,6 +7,7 @@ import { haptic } from "@/lib/haptics";
 import { getActiveFundId, setActiveFundId, ACTIVE_FUND_CHANGE_EVENT, ADD_FUND_EVENT } from "@/hooks/use-active-fund";
 import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav } from "@/lib/page-scope";
 import { rememberAppLocation, readLastAppLocation, formatBackLabel, backTargetHref } from "@/lib/last-location";
+import { capFirst } from "@/lib/format-name";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 import { NotificationsPanel, useBellUnreadCount } from "@/components/NotificationsPanel";
@@ -158,7 +159,7 @@ export function AppHeader() {
   // covers the "I want to send this kid's gift link to someone" need.
   const headerSharePages = useMemo<SharePage[]>(() => {
     if (!activeFund || !(activeFund as any).slug) return [];
-    const childFirst = activeFund.recipientFirstName || activeFund.name || "your child";
+    const childFirst = capFirst(activeFund.recipientFirstName) || activeFund.name || "your child";
     return [
       {
         label: `${childFirst}'s gift page`,
@@ -252,7 +253,7 @@ export function AppHeader() {
   // deep-link entries.
   const lastLocation = hideNav ? readLastAppLocation() : null;
   const backHref = backTargetHref(lastLocation, activeFund?.id ?? null);
-  const backLabel = formatBackLabel(lastLocation, activeFund?.recipientFirstName ?? null);
+  const backLabel = formatBackLabel(lastLocation, capFirst(activeFund?.recipientFirstName) || null);
   const accountType = activeFund ? ((activeFund as any).accountType || "UTMA") : "";
   const statusLabel = activeFund ? ((activeFund as any).status === "active" ? "Active" : "Draft") : "";
   // Badge suppressed on any non-fund-scoped page (household /funds
@@ -357,7 +358,7 @@ export function AppHeader() {
                   {isFundsOverview
                     ? "Your funds"
                     : activeFund.recipientFirstName
-                      ? `${activeFund.recipientFirstName}'s Fund`
+                      ? `${capFirst(activeFund.recipientFirstName)}'s Fund`
                       : activeFund.name || "Fund"}
                 </span>
                 <ChevronDown size={12} className={`shrink-0 transition-transform text-muted-foreground ${fundPickerOpen ? "rotate-180" : ""}`} />
@@ -444,7 +445,7 @@ export function AppHeader() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="truncate font-semibold text-foreground">
-                        {fund.recipientFirstName ? `${fund.recipientFirstName}'s Fund` : fund.name || "Fund"}
+                        {fund.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s Fund` : fund.name || "Fund"}
                       </p>
                       <p className="text-[11px] text-muted-foreground tabular-nums">{formatCurrency(val)}</p>
                     </div>
@@ -641,7 +642,7 @@ export function AppHeader() {
                   feedback_share_vs_gift_distinction.md ("approved
                   adjustment if the generic-feel concern persists"). */}
               {activeFund.recipientFirstName
-                ? `Share ${activeFund.recipientFirstName}'s link`
+                ? `Share ${capFirst(activeFund.recipientFirstName)}'s link`
                 : "Share gift link"}
             </button>
           )}
@@ -654,7 +655,7 @@ export function AppHeader() {
           open={headerShareOpen}
           onClose={() => setHeaderShareOpen(false)}
           pages={headerSharePages}
-          recipientName={activeFund?.recipientFirstName || activeFund?.name || "your child"}
+          recipientName={capFirst(activeFund?.recipientFirstName) || activeFund?.name || "your child"}
           snapshotHref={activeFund?.id ? `/fund/${activeFund.id}/snapshot` : undefined}
         />
       )}

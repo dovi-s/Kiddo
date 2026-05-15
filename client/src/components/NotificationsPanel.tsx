@@ -13,6 +13,7 @@ import { getActiveFundId, setActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/ho
 import { useActionItems } from "@/hooks/use-action-items";
 import { ActionItemList } from "@/components/ActionItemCard";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 
 const NOTIF_LAST_READ_KEY = "kiddo.notif.lastReadAt";
 const NOTIF_READ_IDS_KEY = "kiddo.notif.readIds";
@@ -1033,7 +1034,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                       if (fundFilter === "all") return "all funds";
                       const f = funds.find((f) => f.id === fundFilter);
                       if (!f) return "this fund";
-                      const name = f.recipientFirstName || f.name || "Fund";
+                      const name = capFirst(f.recipientFirstName) || f.name || "Fund";
                       return `${name}'s fund`;
                     })();
                     // Roll action items into the summary. They're
@@ -1149,7 +1150,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                   const { bg: iconBg, border: iconBorder } = toneStyles[tone];
                   const fundIdx = activity.fundId ? (fundIndexMap.get(activity.fundId) ?? 0) : 0;
                   const pillStyle = fundPillColors[fundIdx % fundPillColors.length];
-                  const childName = (activity as FeedActivity).recipientFirstName || funds.find((f) => f.id === activity.fundId)?.recipientFirstName || null;
+                  const childName = capFirst((activity as FeedActivity).recipientFirstName) || capFirst(funds.find((f) => f.id === activity.fundId)?.recipientFirstName) || null;
                   const when = timeAgo(activity.createdAt?.toString());
                   const destination = getNotifDestination(activity);
                   const handleClick = () => {

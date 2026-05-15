@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { useToast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 
 type FundSummary = {
@@ -207,7 +208,7 @@ export default function AgeTransitionManager() {
         <section className="rounded-3xl border border-border/50 bg-card p-6 shadow-premium-sm">
           <p className="text-sm font-medium text-primary">Timeline</p>
           <h2 className="mt-2 font-heading text-2xl font-semibold text-foreground">
-            {fund?.recipientFirstName || "Your child"}'s transition window
+            {capFirst(fund?.recipientFirstName) || "Your child"}'s transition window
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
             This is more than a legal milestone. It is the moment when the child you started this for becomes the person who reads the story, sees the balance, and takes over the account.
@@ -297,7 +298,7 @@ export default function AgeTransitionManager() {
               </div>
               <p className="text-xs text-muted-foreground">
                 {transition?.childEmail
-                  ? `We send ${fund?.recipientFirstName || "them"} a one-click confirmation link. Until they click it, the at-${majorityAge} invite won't auto-send (in case the address has a typo).`
+                  ? `We send ${capFirst(fund?.recipientFirstName) || "them"} a one-click confirmation link. Until they click it, the at-${majorityAge} invite won't auto-send (in case the address has a typo).`
                   : "Add their email above first, then we can confirm it's reaching them."}
               </p>
               {transition?.childEmailVerifiedAt ? (
@@ -348,7 +349,7 @@ export default function AgeTransitionManager() {
                 <p className="text-sm font-semibold">Share Kid View</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Kid View is the kid-friendly view of the fund — their gifts, holdings, stock explainers. Shared via private link and PIN. Sharing it pre-{majorityAge} means {fund?.recipientFirstName || "they"} won't arrive at {majorityAge} cold.
+                Kid View is the kid-friendly view of the fund — their gifts, holdings, stock explainers. Shared via private link and PIN. Sharing it pre-{majorityAge} means {capFirst(fund?.recipientFirstName) || "they"} won't arrive at {majorityAge} cold.
               </p>
               <a
                 href={`/dashboard?fund=${encodeURIComponent(fundId || "")}`}

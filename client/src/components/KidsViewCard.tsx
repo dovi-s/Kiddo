@@ -32,6 +32,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -145,7 +146,7 @@ export function KidsViewCard({
       <div className="p-4 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground">
-            {fund?.recipientFirstName ? `${fund.recipientFirstName}'s View` : "Kid's View"}
+            {fund?.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s View` : "Kid's View"}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {isActive ? "Active · PIN protected" : "Not set up yet"}
@@ -165,7 +166,7 @@ export function KidsViewCard({
               {kidViewSettings?.shareLink && (
                 <>
                   <a
-                    href={`mailto:?subject=${encodeURIComponent(`${fund?.recipientFirstName || "Your child"}'s Kiddo fund`)}&body=${encodeURIComponent(`Here's your fund link: ${kidViewSettings.shareLink}\n\nYou'll need the PIN to get in.`)}`}
+                    href={`mailto:?subject=${encodeURIComponent(`${capFirst(fund?.recipientFirstName) || "Your child"}'s Kiddo fund`)}&body=${encodeURIComponent(`Here's your fund link: ${kidViewSettings.shareLink}\n\nYou'll need the PIN to get in.`)}`}
                     className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border"
                   >
                     Email

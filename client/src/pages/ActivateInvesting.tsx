@@ -8,6 +8,7 @@ import { useFunds } from "@/hooks/use-funds";
 import { ArrowLeft, ArrowRight, Check, Shield, ShieldCheck, Lock, TrendingUp, Wallet, User, Gift, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
+import { capFirst } from "@/lib/format-name";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { haptic } from "@/lib/haptics";
@@ -389,7 +390,7 @@ export default function ActivateInvesting() {
     });
     return candidates[0];
   })();
-  const recipientChildName = String(pendingRecipientFund?.recipientFirstName || "the child");
+  const recipientChildName = capFirst(pendingRecipientFund?.recipientFirstName) || "the child";
   const otherFundsPendingRecipient = (funds as any[])
     .filter((f) => String(f?.accountType || "").toUpperCase() === "UTMA")
     .filter((f) => !f?.recipientSsnCollectedAt)
@@ -1293,7 +1294,7 @@ export default function ActivateInvesting() {
                           Name a successor custodian <span className="font-normal text-muted-foreground">(optional)</span>
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                          The person who steps in to manage {String(pendingSuccessorFund.recipientFirstName || "this fund")}'s fund if anything happens to you. UTMA law expects a named successor — without one, a court chooses.
+                          The person who steps in to manage {capFirst(pendingSuccessorFund.recipientFirstName) || "this fund"}'s fund if anything happens to you. UTMA law expects a named successor — without one, a court chooses.
                         </p>
                       </div>
                     </div>

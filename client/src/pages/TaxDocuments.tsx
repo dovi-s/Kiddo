@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { useFunds } from "@/hooks/use-funds";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { prefetchDashboard, prefetchSettings, onIdle } from "@/lib/prefetch";
 import { useCountUp } from "@/hooks/use-count-up";
 import type { Fund, Holding } from "@shared/schema";
@@ -273,10 +274,10 @@ export default function TaxDocuments() {
 
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">
-            Tax documents{activeFund?.recipientFirstName ? ` · ${activeFund.recipientFirstName}` : ""}
+            Tax documents{activeFund?.recipientFirstName ? ` · ${capFirst(activeFund.recipientFirstName)}` : ""}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-            Cost basis, unrealized gains, and the tax forms DriveWealth issues for {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s fund` : "this fund"}.
+            Cost basis, unrealized gains, and the tax forms DriveWealth issues for {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s fund` : "this fund"}.
             {funds.length > 1 && " Switch funds from the sidebar."}
           </p>
         </div>

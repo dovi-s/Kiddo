@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, BookOpen, Briefcase, Coins, Receipt, Sparkles, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
+import { capFirst } from "@/lib/format-name";
 import { useToast } from "@/hooks/use-toast";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 
@@ -163,7 +164,7 @@ export default function Age18Welcome() {
           <ScreenShell key="s1">
             <Eyebrow icon={<Sparkles size={14} />}>This is yours now.</Eyebrow>
             <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight">
-              {fund.recipientFirstName ? `Hi, ${fund.recipientFirstName}.` : "Welcome."}
+              {fund.recipientFirstName ? `Hi, ${capFirst(fund.recipientFirstName)}.` : "Welcome."}
               <br />
               <span className="text-primary">{formatMoney(balance)}</span>{" "}
               <span className="text-2xl md:text-3xl font-semibold text-muted-foreground">is yours.</span>

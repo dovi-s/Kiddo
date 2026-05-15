@@ -12,6 +12,7 @@ import { Logo } from "@/components/ui/logo";
 import { Mascot } from "@/components/ui/mascot";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { toast } from "@/hooks/use-toast";
 import { friendlyHoldingName } from "@/lib/ticker-names";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -409,7 +410,7 @@ export default function KidView() {
     return `${window.location.origin}/${content.fund.slug}`;
   }, [content?.fund?.slug]);
 
-  const childName = meta?.childName || content?.fund?.recipientFirstName || "Your child";
+  const childName = capFirst(meta?.childName) || capFirst(content?.fund?.recipientFirstName) || "Your child";
   const isYoungerMode = languageMode === "younger";
   const headerLabel = childName
     ? `${childName}'s View`
@@ -423,7 +424,7 @@ export default function KidView() {
   // View tabs are open across siblings.
   useEffect(() => {
     if (typeof document === "undefined") return;
-    const realName = meta?.childName || content?.fund?.recipientFirstName;
+    const realName = capFirst(meta?.childName) || capFirst(content?.fund?.recipientFirstName);
     if (!realName) return;
     const possessive = `${realName}${realName.endsWith("s") ? "'" : "'s"}`;
     document.title = `${possessive} View | Kiddo`;

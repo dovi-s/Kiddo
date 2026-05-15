@@ -24,6 +24,7 @@ import { X, ChevronDown } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { MOTION_DURATION } from "@/lib/motion";
 
 // Same palette as NotificationsPanel.fundPillColors. Kept inline
@@ -119,7 +120,7 @@ function fullDate(dateStr: string): string {
 // available. Never empty, never AI-slop.
 function describeGiftInline(g: RecentGift): string {
   if (g.selectedTicker) return `Invested in ${g.selectedTicker}`;
-  const child = g.recipientFirstName?.trim();
+  const child = capFirst(g.recipientFirstName);
   return child ? `Gift to ${child}` : "Gift";
 }
 
@@ -284,7 +285,7 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                       style={{ background: style.bg, color: style.text }}
                                       data-testid={`gifter-fund-chip-${gifter.email}-${chip.fundId}`}
                                     >
-                                      {chip.recipientFirstName || "Fund"}
+                                      {capFirst(chip.recipientFirstName) || "Fund"}
                                       {showCount && (
                                         <span className="ml-1 opacity-70 tabular-nums">
                                           · {chip.giftCount}
@@ -354,7 +355,7 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                             className="inline-flex items-center rounded-full px-1.5 py-0 text-[9.5px] font-bold tracking-[0.02em]"
                                             style={{ background: style.bg, color: style.text }}
                                           >
-                                            {g.recipientFirstName || "Fund"}
+                                            {capFirst(g.recipientFirstName) || "Fund"}
                                           </span>
                                           <span className="text-[10.5px] text-muted-foreground tabular-nums">
                                             {fullDate(g.createdAt)}

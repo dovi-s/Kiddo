@@ -3,6 +3,7 @@ import { useParams, useSearch, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Printer, ArrowLeft, Settings2 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { capFirst } from "@/lib/format-name";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -235,8 +236,8 @@ export default function FundSnapshot() {
     enabled: projectionValue > 0,
   });
 
-  const childFirst = fund?.recipientFirstName || "Your child";
-  const childLast = (fund as any)?.recipientLastName || "";
+  const childFirst = capFirst(fund?.recipientFirstName) || "Your child";
+  const childLast = capFirst((fund as any)?.recipientLastName) || "";
   const displayName = showLastName && childLast ? `${childFirst} ${childLast}` : childFirst;
   const generatedAt = formatDateLong(new Date());
   const stateName = fund ? US_STATES.find((s) => s.code === (fund as any).recipientState)?.name : null;

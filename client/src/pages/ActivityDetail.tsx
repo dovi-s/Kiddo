@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Nav } from "@/components/layout/Nav";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Activity } from "@shared/schema";
 
@@ -116,7 +117,7 @@ export default function ActivityDetail() {
   const normalizedType = normalizeType(activity.type);
   const typeConfig = getTypeConfig(normalizedType);
   const TypeIcon = typeConfig.icon;
-  const fundDisplayName = activity.fundName || activity.recipientFirstName || "Fund";
+  const fundDisplayName = activity.fundName || capFirst(activity.recipientFirstName) || "Fund";
   const amountLabel = formatAmount(activity.amount as any);
   const metadataLabel =
     typeof activity.metadata === "string"

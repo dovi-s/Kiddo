@@ -51,6 +51,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Button } from "@/components/ui/button";
 import { EnlighteningReveal } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { prefetchDashboard, prefetchActivity, onIdle } from "@/lib/prefetch";
 import { scrollToTestId } from "@/lib/scroll-to-element";
 import { getDeepLinkHighlightStyle, getDeepLinkHighlightCardStyle, hasActiveDeepLink, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
@@ -2043,7 +2044,9 @@ export default function MemoryBook() {
   }, [sortedEntries, ownerEmailLowerForMemory]);
 
   const fundName = fundData?.name || "Fund";
-  const childName = fundData?.recipientFirstName || null;
+  // Display-capitalize so "lauren" typed lowercase renders as "Lauren"
+  // across every Memory Book surface that uses childName.
+  const childName = capFirst(fundData?.recipientFirstName) || null;
   // Pronouns for kid-at-18 voice. Pulls from the fund's pronoun setting so
   // "her 18th birthday" / "his 18th birthday" / "their 18th birthday" all
   // come out of the same source. Default (no setting) → they/them. Per

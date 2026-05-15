@@ -30,6 +30,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { GiftersAcrossFundsSheet } from "@/components/GiftersAcrossFundsSheet";
 import { useAuth } from "@/hooks/use-auth";
 import { setActiveFundId } from "@/hooks/use-active-fund";
+import { capFirst } from "@/lib/format-name";
 import { useCountUp } from "@/hooks/use-count-up";
 import { haptic } from "@/lib/haptics";
 import { usePageSeo } from "@/lib/seo";
@@ -446,7 +447,7 @@ export default function FundsOverview() {
                 parseFloat(String(f.pendingBalance || "0")) +
                 parseFloat(String(f.cashBalance || "0"));
               const age = ageLabel(f.recipientBirthdate);
-              const displayName = f.recipientFirstName || f.name;
+              const displayName = capFirst(f.recipientFirstName) || f.name;
               const isShared = f.accessRole !== "owner";
               const isTransferred = f.accessRole === "previous_owner";
               // Format "Transferred on Apr 14, 2027" for the pill on
@@ -600,7 +601,7 @@ export default function FundsOverview() {
             </div>
             <div className="space-y-2">
               {recurringItems.map((item) => {
-                const displayName = item.recipientFirstName || item.fundName || "Fund";
+                const displayName = capFirst(item.recipientFirstName) || item.fundName || "Fund";
                 // Format the per-row amount + frequency in the
                 // user's mental model ($50/mo, $25/wk, etc.) — NOT
                 // the monthly-equivalent. The total above already
@@ -704,7 +705,7 @@ export default function FundsOverview() {
                     <CalendarClock size={16} className="text-muted-foreground shrink-0" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">
-                        {o.recipientFirstName ? `${o.recipientFirstName} · ` : ""}{o.name}
+                        {o.recipientFirstName ? `${capFirst(o.recipientFirstName)} · ` : ""}{o.name}
                       </p>
                       <p className="text-[11px] text-muted-foreground">{fmtEventDate(o.eventDate)}</p>
                     </div>

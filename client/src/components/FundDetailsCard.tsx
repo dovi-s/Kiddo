@@ -17,6 +17,7 @@
 
 import { ChevronRight } from "lucide-react";
 import { getMajorityDate } from "@shared/utma";
+import { capFirst } from "@/lib/format-name";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -47,7 +48,7 @@ export function FundDetailsCard({
     ? getMajorityDate(fund.recipientBirthdate, fund.majorityAge ?? null)
     : null;
   const transferDateValid = transferDate && !isNaN(transferDate.getTime());
-  const childName = fund?.recipientFirstName?.trim();
+  const childName = capFirst(fund?.recipientFirstName);
 
   return (
     <SectionCard>

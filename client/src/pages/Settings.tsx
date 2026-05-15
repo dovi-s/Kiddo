@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { StockLogo } from "@/components/ui/stock-logo";
@@ -2506,6 +2507,12 @@ const [editFundName, setEditFundName] = useState("");
   });
 
   const primaryFund = (selectedSettingsFundId && funds.find((f: any) => String(f.id) === String(selectedSettingsFundId))) || funds[0];
+  // Display-capitalized kid first name. Used everywhere primaryFund's
+  // name is rendered to user-facing copy. Form/state usages (the
+  // Edit-fund modal, editingFund, editRecipientName, raw `fund?.`
+  // references inside per-fund closures) intentionally keep the raw
+  // value so saving doesn't mutate the parent's stored casing.
+  const recipientFirstNameDisplay = capFirst(primaryFund?.recipientFirstName);
 
   const { data: holdingsData = [] } = useQuery<any[]>({
     queryKey: ["/api/funds", primaryFund?.id, "holdings"],
@@ -2554,7 +2561,7 @@ const [editFundName, setEditFundName] = useState("");
       if (!res.ok) throw new Error("close failed");
       const data = await res.json().catch(() => ({}));
       haptic("success");
-      const childName = primaryFund.recipientFirstName || "this fund";
+      const childName = recipientFirstNameDisplay || "this fund";
       toast({
         title: `${childName}'s fund is closed`,
         description: data.canceledContribCount > 0
@@ -2582,7 +2589,7 @@ const [editFundName, setEditFundName] = useState("");
       });
       if (!res.ok) throw new Error("reopen failed");
       haptic("success");
-      const childName = primaryFund.recipientFirstName || "This fund";
+      const childName = recipientFirstNameDisplay || "This fund";
       toast({ title: `${childName}'s fund is back`, description: "The gift link is live again." });
       await queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
     } catch {
@@ -2633,7 +2640,7 @@ const [editFundName, setEditFundName] = useState("");
     const eventCodes = (shareSummary?.eventGiftCodes ?? {}) as Record<string, { code?: string }>;
     const events: any[] = Array.isArray(shareSummary?.events) ? shareSummary.events : [];
     const pages: SharePage[] = [{
-      label: `${primaryFund.recipientFirstName || primaryFund.name}'s gift link`,
+      label: `${recipientFirstNameDisplay || primaryFund.name}'s gift link`,
       description: "Always-on gift link",
       url: `${origin}/${primaryFund.slug}`,
       giftCode,
@@ -2651,7 +2658,7 @@ const [editFundName, setEditFundName] = useState("");
       });
     }
     return pages;
-  }, [primaryFund?.slug, primaryFund?.recipientFirstName, primaryFund?.name, shareSummary?.giftCode?.code, shareSummary?.eventGiftCodes, shareSummary?.events]);
+  }, [primaryFund?.slug, recipientFirstNameDisplay, primaryFund?.name, shareSummary?.giftCode?.code, shareSummary?.eventGiftCodes, shareSummary?.events]);
 
   // (Kid View state + handlers — copyingKidLink, showPinManager,
   // newPin, newPinHint, savingPin, the auto-open useEffect,
@@ -3744,7 +3751,7 @@ const [editFundName, setEditFundName] = useState("");
             <div className="flex items-start justify-between gap-3 p-4">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-foreground">
-                  {primaryFund.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "This"} fund is closed
+                  {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "This"} fund is closed
                 </p>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   Memory Book and history are preserved. The gift link is paused. Reopen any time.
@@ -3802,7 +3809,7 @@ const [editFundName, setEditFundName] = useState("");
             ))}
           </div>
           <p className="text-[11px] text-muted-foreground px-0.5">
-            Changes here apply to {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s fund` : "this fund"} only.{" "}
+            Changes here apply to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} only.{" "}
             <Link href="/account" className="underline underline-offset-2 hover:text-foreground">Account settings →</Link>
           </p>
         </div>
@@ -3862,7 +3869,7 @@ const [editFundName, setEditFundName] = useState("");
             <SectionCard>
               <div className="p-5">
                 <p className="kiddo-section-label mb-1">What people can do</p>
-                <p className="text-[11px] text-muted-foreground mb-4">Choose how personal gifts can be for {primaryFund?.recipientFirstName || "your child"}.</p>
+                <p className="text-[11px] text-muted-foreground mb-4">Choose how personal gifts can be for {recipientFirstNameDisplay || "your child"}.</p>
                 {primaryFund ? (
                   <div data-testid="settings-gifts-gifter-rules-editor">
                     <GifterInvestmentRulesEditor fund={primaryFund} onSuccess={refreshAll} />
@@ -3939,7 +3946,7 @@ const [editFundName, setEditFundName] = useState("");
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-heading text-base font-semibold text-amber-900">
-                        {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s fund is safe.` : "Your fund is safe."} Always.
+                        {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund is safe.` : "Your fund is safe."} Always.
                       </p>
                       <p className="mt-1 text-xs text-amber-900/80">
                         {userPlan === "starter" ? "Kiddo+" : "Kiddo Family"} ends {new Date(subscription.currentPeriodEnd).toLocaleDateString("en-US", { month: "long", day: "numeric" })}.
@@ -4328,7 +4335,7 @@ const [editFundName, setEditFundName] = useState("");
                 </div>
                 <div className="hidden">
                   {[
-                    ["Birthday reminders", `Annual reminder on ${primaryFund?.recipientFirstName || "your child"}'s birthday with a one-tap gift-back path.`],
+                    ["Birthday reminders", `Annual reminder on ${recipientFirstNameDisplay || "your child"}'s birthday with a one-tap gift-back path.`],
                     ["Memory Book sharing", "Lets you send warm parent-written updates. 0 of 4 used this year."],
                     ["Age-18 notification", `Final thank-you note when control passes at adulthood. Planning anchor: ${primaryFund?.recipientBirthdate ? new Date(primaryFund.recipientBirthdate).toLocaleDateString("en-US") : "add a birthdate first"}.`],
                   ].map(([title, body]) => (
@@ -4478,10 +4485,10 @@ const [editFundName, setEditFundName] = useState("");
             <SectionCard>
               <div className="p-5">
                 <h2 className="text-base font-bold text-foreground">
-                  Investment strategy{primaryFund?.recipientFirstName ? ` for ${primaryFund.recipientFirstName}` : ""}
+                  Investment strategy{recipientFirstNameDisplay ? ` for ${recipientFirstNameDisplay}` : ""}
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  Where {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "the fund's"} gifts go by default. Gifters can still personalize if you let them.
+                  Where {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the fund's"} gifts go by default. Gifters can still personalize if you let them.
                 </p>
                 {primaryFund ? (
                   <div className="mt-5" data-testid="settings-money-strategy-editor">
@@ -4530,7 +4537,7 @@ const [editFundName, setEditFundName] = useState("");
                     {activeRecurring.length === 0 ? (
                       <>
                         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                          Set up automatic monthly contributions from the dashboard. {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "The"} fund grows on its own rhythm.
+                          Set up automatic monthly contributions from the dashboard. {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} fund grows on its own rhythm.
                         </p>
                         <Link href="/dashboard">
                           <Button variant="outline" size="sm" className="mt-4 rounded-xl" data-testid="link-recurring-dashboard-empty">
@@ -4609,8 +4616,8 @@ const [editFundName, setEditFundName] = useState("");
               <div className="p-5">
                 <h2 className="text-base font-bold text-foreground">Taking money out</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Move cash from {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s fund` : "this fund"} to your bank.
-                  This is a deliberate action — once invested, the money belongs to {primaryFund?.recipientFirstName || "the child"},
+                  Move cash from {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} to your bank.
+                  This is a deliberate action — once invested, the money belongs to {recipientFirstNameDisplay || "the child"},
                   so withdrawals are distributions to them and may have tax implications.
                 </p>
                 <Button
@@ -4721,7 +4728,7 @@ const [editFundName, setEditFundName] = useState("");
         <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl">
           <div className="p-6">
             <DialogTitle className="font-heading text-xl font-bold text-foreground">
-              Close {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "this"} fund
+              Close {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund
             </DialogTitle>
             <DialogDescription className="mt-2 text-sm leading-relaxed text-muted-foreground">
               The public gift link stops accepting new contributions. You can reopen anytime from this same page.
@@ -4742,10 +4749,10 @@ const [editFundName, setEditFundName] = useState("");
               <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">What stays</p>
                 <ul className="mt-2 space-y-1 text-sm text-foreground">
-                  <li>· Memory Book entries (notes, photos, videos, voice memos). {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "The kid's"} keepsake.</li>
+                  <li>· Memory Book entries (notes, photos, videos, voice memos). {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The kid's"} keepsake.</li>
                   <li>· Activity history and audit trail.</li>
                   <li>· Cash and invested holdings, safe at DriveWealth. No auto-withdrawal. The 0.10% annual fee still applies to invested balance until you withdraw.</li>
-                  <li>· {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s` : "The kid's"} View. The PIN-protected view keeps working.</li>
+                  <li>· {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The kid's"} View. The PIN-protected view keeps working.</li>
                   <li>· The fund itself. Reversible from this same page, anytime.</li>
                 </ul>
               </div>
@@ -4999,7 +5006,7 @@ const [editFundName, setEditFundName] = useState("");
                   away from comparison-table register toward prose. */}
               <div className="space-y-2">
                 <h2 className="font-heading text-xl font-semibold text-foreground">
-                  {primaryFund?.recipientFirstName ? `${primaryFund.recipientFirstName}'s fund` : "Your fund"} stays safe.
+                  {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "Your fund"} stays safe.
                 </h2>
                 <p className="text-sm text-foreground/80 leading-relaxed">
                   {userPlan === "starter" ? "Kiddo+" : userPlan === "legacy" ? "Kiddo Legacy" : "Kiddo Family"} is paid through{" "}
@@ -5136,7 +5143,7 @@ const [editFundName, setEditFundName] = useState("");
           open={shareModalOpen}
           onClose={() => setShareModalOpen(false)}
           pages={sharePages}
-          recipientName={primaryFund?.recipientFirstName || primaryFund?.name || "your child"}
+          recipientName={recipientFirstNameDisplay || primaryFund?.name || "your child"}
           giftCode={shareSummary?.giftCode ?? undefined}
         />
       )}

@@ -21,6 +21,7 @@
 
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -53,7 +54,7 @@ export function CloseFundCard({
       <div className="p-5">
         <h2 className="text-base font-bold text-foreground">Close this fund</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Stop accepting gifts to {fund?.recipientFirstName ? `${fund.recipientFirstName}'s` : "this"} fund. The Memory Book and history stay intact, and you can reopen anytime.
+          Stop accepting gifts to {fund?.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s` : "this"} fund. The Memory Book and history stay intact, and you can reopen anytime.
         </p>
         <Button
           variant="outline"

@@ -18,6 +18,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Camera } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
+import { capFirst } from "@/lib/format-name";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -97,7 +98,7 @@ export function ChildIdentityCard({
     const created = fund?.createdAt ? new Date(fund.createdAt) : null;
     if (!created || isNaN(created.getTime())) return null;
     const monthYear = created.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-    const childName = fund?.recipientFirstName?.trim();
+    const childName = capFirst(fund?.recipientFirstName);
     return childName ? `Growing for ${childName} since ${monthYear}` : `Growing since ${monthYear}`;
   })();
 
@@ -129,7 +130,7 @@ export function ChildIdentityCard({
           <input ref={inputRef} type="file" accept="image/*" onChange={handleUpload} className="hidden" />
           <div className="min-w-0 flex-1">
             <p className="text-base font-bold text-foreground">
-              {fund?.recipientFirstName || <span className="text-muted-foreground">No name added yet</span>}
+              {capFirst(fund?.recipientFirstName) || <span className="text-muted-foreground">No name added yet</span>}
             </p>
             <p className="mt-0.5 text-sm text-muted-foreground">
               {fund?.recipientBirthdate
