@@ -8,31 +8,25 @@ import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Mascot } from "@/components/ui/mascot";
-import { KIDDO_AUM_FEE_RATE } from "@shared/monetization";
+import { projectFundValue } from "@shared/projection";
 import { useCountUp } from "@/hooks/use-count-up";
 
-// Two-phase compounding projection. Mirrors Projection.tsx's projectFund.
-// Nets the 0.10% AUM fee out so the headline number reflects what the kid
-// keeps. Other adult-investor calculators show gross-of-fee numbers and bury
-// the fee in fine print; this one puts the fee inside the math.
+// Two-phase compounding projection routed through shared/projection.ts
+// (the canonical fund-projection helper). Nets the 0.10% AUM fee out so
+// the headline number reflects what the kid keeps. The local wrapper
+// keeps this file's call shape unchanged for the rest of the page.
 function projectFund(
   startingBalance: number,
   monthlyContribution: number,
   annualReturnRate: number,
   yearsToMajority: number,
 ): number {
-  if (yearsToMajority <= 0) return Math.max(0, Math.round(startingBalance));
-  const netRate = annualReturnRate - KIDDO_AUM_FEE_RATE;
-  const monthlyRate = netRate / 12;
-  const months = Math.round(yearsToMajority * 12);
-
-  const lumpEnd = startingBalance * Math.pow(1 + monthlyRate, months);
-  const annuityEnd =
-    monthlyContribution > 0 && monthlyRate > 0
-      ? monthlyContribution * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate)
-      : monthlyContribution * months;
-
-  return Math.max(0, Math.round(lumpEnd + annuityEnd));
+  return projectFundValue({
+    startingValue: startingBalance,
+    monthlyContribution,
+    yearsAhead: yearsToMajority,
+    annualReturnRate,
+  });
 }
 
 // Same money in a high-yield savings account. We use 4% APY as a generous

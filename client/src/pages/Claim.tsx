@@ -19,6 +19,8 @@ import { ThinkingOrb } from "@/components/ui/gemini";
 import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
+import { projectFundValue, yearsBetween } from "@shared/projection";
+import { getMajorityDate } from "@shared/utma";
 
 interface PublicGiftData {
   id: string;
@@ -115,7 +117,48 @@ export default function Claim() {
   const giftAmount = gift ? parseFloat(gift.amount) : 0;
   const giftEstimatedPrice = giftQuote?.price || 100;
   const giftEstimatedShares = giftQuoteSymbol ? (giftValue / giftEstimatedPrice).toFixed(4) : "";
-  const projectedValue = Math.round(giftValue * 4.6);
+
+  // Post-claim projection.
+  //
+  // The OLD path used a static `giftValue * 4.6` multiplier with copy
+  // claiming "over 18 years based on historical returns." The 4.6x
+  // didn't match the locked 7%-compounded-monthly rule (1.07^18 ≈
+  // 3.38; 4.6 is closer to 8.9% annual). It also assumed the kid was
+  // 0 years old — wrong for any recipient mid-childhood. So the
+  // headline number was off in both the rate AND the horizon.
+  //
+  // Fix (2026-05-15): use the shared projectFundValue helper, which
+  // applies all four locked rules (7% net of 0.10% AUM fee, monthly
+  // compounding, two-phase contribution window, state-specific
+  // majority age). Specific dollar projection only renders when we
+  // can actually compute it honestly — i.e., the success step,
+  // where we know the destination fund's recipient birthdate +
+  // majority age. At the preview step (gifter hasn't authenticated
+  // yet, no destination known) we drop the dollar number and
+  // describe the long-term mechanic qualitatively. Better honest
+  // than precisely wrong.
+  const claimedFund = userFunds.find((f) => f.id === claimMutation.data?.fundId) || null;
+  const claimedFundProjection = (() => {
+    if (!claimedFund) return null;
+    const birthdate = (claimedFund as any).recipientBirthdate;
+    const majorityAge = Number((claimedFund as any).majorityAge) || 18;
+    if (!birthdate) return null;
+    const majorityDate = getMajorityDate(birthdate, majorityAge);
+    if (!majorityDate || isNaN(majorityDate.getTime())) return null;
+    const yearsToMajority = yearsBetween(new Date(), majorityDate);
+    if (yearsToMajority <= 0.25) return null;
+    const projectedValue = projectFundValue({
+      startingValue: giftValue,
+      monthlyContribution: 0,
+      yearsAhead: yearsToMajority,
+    });
+    return {
+      projectedValue,
+      majorityAge,
+      childName: (claimedFund as any).recipientFirstName || "the kid",
+      majorityDate,
+    };
+  })();
   const claimStepOrder: ClaimStep[] = ["preview", "auth", "destination"];
   const claimStepIndex = claimStepOrder.indexOf(step);
 
@@ -265,10 +308,10 @@ export default function Claim() {
                         <TrendingUp className="w-5 h-5 text-muted-foreground mt-0.5" />
                         <div>
                           <p className="text-sm font-medium text-foreground">
-                            Could grow to ${projectedValue.toLocaleString()}
+                            Invested, this can compound for years.
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Based on historical market performance over 18 years
+                            We'll show a specific projection after you pick the destination fund.
                           </p>
                         </div>
                       </div>
@@ -619,19 +662,35 @@ export default function Claim() {
                 </div>
               </div>
 
-              <div className="bg-muted rounded-xl p-4 max-w-sm mx-auto">
-                <div className="flex items-start gap-3">
-                  <TrendingUp className="w-5 h-5 text-muted-foreground mt-0.5" />
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-foreground">
-                      Projected to grow to ${projectedValue.toLocaleString()}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Over 18 years based on historical returns
-                    </p>
+              {claimedFundProjection ? (
+                <div className="bg-muted rounded-xl p-4 max-w-sm mx-auto">
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="w-5 h-5 text-muted-foreground mt-0.5" />
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-foreground">
+                        Projected ${claimedFundProjection.projectedValue.toLocaleString()} by {claimedFundProjection.childName}'s {claimedFundProjection.majorityAge}th birthday
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Hypothetical, 7% historical average annual return, 0.10% annual fee deducted.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="bg-muted rounded-xl p-4 max-w-sm mx-auto">
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="w-5 h-5 text-muted-foreground mt-0.5" />
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-foreground">
+                        Now invested. Watching it compound.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Add a birthdate to the fund to see a specific projection.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-4 space-y-3 max-w-sm mx-auto">
                 <Link href="/dashboard">

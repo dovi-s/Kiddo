@@ -4522,6 +4522,12 @@ export async function registerRoutes(
           projectedValue: fund.projectedValue,
           createdAt: fund.createdAt,
           eighteenthBirthday,
+          // Surface the fund's state-specific majority age (18-21) so the
+          // kid's projection card can compute a contribution window
+          // accurately. Without this the client falls back to a hardcoded
+          // 18-year horizon — wrong for CA / MS / etc. where UTMA majority
+          // is 21. Added 2026-05-15 as part of the projection-math audit.
+          majorityAge: Number((fund as any).majorityAge) || 18,
         },
         phase: ageInfo.phase,
         age: ageInfo.age,

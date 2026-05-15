@@ -8,23 +8,18 @@ import { ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { useQuery } from "@tanstack/react-query";
 import { getAge18Transition } from "@/lib/age-transition";
 import { sumMonthlyEquivalent, WEEKS_PER_MONTH, DAYS_PER_MONTH } from "@shared/recurring-math";
-import { KIDDO_AUM_FEE_RATE } from "@shared/monetization";
+import { projectFundValue } from "@shared/projection";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCountUp as useSharedCountUp } from "@/hooks/use-count-up";
 
-// Two-phase projection. Lump sum + monthly annuity, compounded monthly.
-//
-// `contributionYears` caps how long contributions actually flow. When omitted (or
-// equal to `years`), this collapses to the continuous Acorns-style projection.
-// When less than `years`, contributions stop at that point and the rest of the
-// horizon is pure compound on whatever was built.
-//
-// Why this matters for Kiddo: UTMA control transfers at 18, so a parent legally
-// stops contributing then. Modeling 47 years of post-18 contributions gives an
-// inflated number that contradicts the disclaimer right next to it. Two-phase is
-// the honest model: parent's actual rate until 18, time does the rest.
+// Thin local wrapper around shared/projection.ts so the original
+// call signature in this file keeps working. The shared helper is
+// the canonical math (locked: 7% annual compounded monthly, 0.10%
+// AUM fee netted out, two-phase contribution window, no
+// hardcoded majority age). See shared/projection.ts for the math
+// + the audit history that motivated extracting it.
 function projectFund(
   currentBalance: number,
   monthlyContribution: number,
@@ -32,31 +27,13 @@ function projectFund(
   years: number,
   contributionYears?: number,
 ): number {
-  if (years <= 0) return Math.max(0, Math.round(currentBalance));
-  // Net the 0.10% AUM fee out of the assumed return so the projected balance
-  // reflects what the parent actually keeps. Acorns and most adult-investor
-  // calculators show gross-of-fee numbers and then disclaim the fee in
-  // fine print; we'd rather the headline number already be honest.
-  const netAnnualReturnRate = annualReturnRate - KIDDO_AUM_FEE_RATE;
-  const monthlyRate = netAnnualReturnRate / 12;
-  const totalMonths = Math.round(years * 12);
-  const cappedContribYears = contributionYears !== undefined
-    ? Math.max(0, Math.min(contributionYears, years))
-    : years;
-  const contribMonths = Math.round(cappedContribYears * 12);
-  const compoundOnlyMonths = Math.max(0, totalMonths - contribMonths);
-
-  // Phase 1: lump grows for contribMonths, plus annuity of monthly contributions.
-  const phase1Lump = currentBalance * Math.pow(1 + monthlyRate, contribMonths);
-  const phase1Annuity =
-    monthlyContribution > 0 && monthlyRate > 0
-      ? monthlyContribution * ((Math.pow(1 + monthlyRate, contribMonths) - 1) / monthlyRate)
-      : monthlyContribution * contribMonths;
-  const valueAtPhase1End = phase1Lump + phase1Annuity;
-
-  // Phase 2: pure compound from end of phase 1 through the rest of the horizon.
-  const finalValue = valueAtPhase1End * Math.pow(1 + monthlyRate, compoundOnlyMonths);
-  return Math.max(0, Math.round(finalValue));
+  return projectFundValue({
+    startingValue: currentBalance,
+    monthlyContribution,
+    yearsAhead: years,
+    contributionYears,
+    annualReturnRate,
+  });
 }
 
 function fmtMoney(n: number, fractionDigits = 0): string {

@@ -16,6 +16,7 @@ import { toast } from "@/hooks/use-toast";
 import { friendlyHoldingName } from "@/lib/ticker-names";
 import { useCountUp } from "@/hooks/use-count-up";
 import { ReportContentButton } from "@/components/ReportContentButton";
+import { projectFundValue, utmaContributionYearsRemaining } from "@shared/projection";
 
 type KidViewMeta = {
   childName: string;
@@ -44,6 +45,10 @@ type KidViewContent = {
     totalContributed: string;
     totalGain: string;
     projectedValue?: string;
+    /** Fund's state-specific UTMA majority age (18-21). Added 2026-05-15
+        so KidView's projection card can compute a contribution window
+        that matches the fund's legal majority age, not a hardcoded 18. */
+    majorityAge?: number;
   };
   phase: "child" | "teen" | "adult" | "unknown";
   age: number | null;
@@ -249,12 +254,37 @@ function getCompanyExplainer(ticker: string, name: string) {
   );
 }
 
-function projectFutureValue(currentBalance: number, annualGifts: number, years: number, rate = 0.07) {
-  let total = currentBalance;
-  for (let i = 0; i < years; i += 1) {
-    total = total * (1 + rate) + annualGifts;
-  }
-  return total;
+/**
+ * Project the kid's fund value forward. Thin local wrapper around the
+ * shared projectFundValue helper so the rest of this file's call shape
+ * stays "balance, annual gifts, years."
+ *
+ * Updated 2026-05-15 (canonical-projection audit). The previous local
+ * implementation used a raw 7% annual loop without netting the 0.10%
+ * AUM fee or compounding monthly — so the kid saw a slightly inflated
+ * number that didn't match what the parent's Projection page showed
+ * for the same fund. Now both surfaces route through the same math:
+ * 7% annual compounded monthly, fee netted, two-phase contribution
+ * window respecting the fund's state-specific majority age.
+ *
+ * `contributionYears` caps the annual-gift contribution window. The
+ * kid view caller passes utmaContributionYearsRemaining(currentAge,
+ * majorityAge) for it so the gift annuity stops accruing at the fund's
+ * actual majority age (18-21 by state), then pure compound runs the
+ * rest of the projected horizon.
+ */
+function projectFutureValue(
+  currentBalance: number,
+  annualGifts: number,
+  years: number,
+  contributionYears: number,
+): number {
+  return projectFundValue({
+    startingValue: currentBalance,
+    monthlyContribution: annualGifts / 12,
+    yearsAhead: years,
+    contributionYears,
+  });
 }
 
 export default function KidView() {
@@ -302,12 +332,21 @@ export default function KidView() {
   const futureProjection = useMemo(() => {
     const balance = Number(content?.fund?.balance || 0);
     const age = Number(content?.age || 0);
-    const yearsTo18 = Math.max(18 - age, 0);
+    // State-specific majority age from the fund (added to the kid-view
+    // content endpoint 2026-05-15). Falls back to 18 if the server's
+    // response somehow lacks it — same default the underlying schema
+    // uses. The yearsTo* horizons compute against this so a CA / MS /
+    // etc. UTMA fund (majority 21) correctly shows a 3-extra-year
+    // contribution window vs the default-18 fund.
+    const majorityAge = Number(content?.fund?.majorityAge) || 18;
+    const yearsToMajority = Math.max(majorityAge - age, 0);
+    const contributionYears = utmaContributionYearsRemaining(age, majorityAge);
     return {
-      to18: projectFutureValue(balance, annualGiftEstimate, yearsTo18),
-      to25: projectFutureValue(balance, annualGiftEstimate, Math.max(25 - age, 0)),
+      majorityAge,
+      toMajority: projectFutureValue(balance, annualGiftEstimate, yearsToMajority, contributionYears),
+      to25: projectFutureValue(balance, annualGiftEstimate, Math.max(25 - age, 0), contributionYears),
     };
-  }, [annualGiftEstimate, content?.age, content?.fund?.balance]);
+  }, [annualGiftEstimate, content?.age, content?.fund?.balance, content?.fund?.majorityAge]);
 
   // Test-data hygiene: surgical client-side filter so gifts and memories
   // containing obvious test markers ("test", "tstgin", "asdf", "qqqqq",
@@ -1192,8 +1231,8 @@ export default function KidView() {
                 </label>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl bg-muted/30 p-4">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">By age 18</p>
-                    <p className="mt-1 font-heading text-2xl text-foreground">{fmtMoney(futureProjection.to18)}</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">By age {futureProjection.majorityAge}</p>
+                    <p className="mt-1 font-heading text-2xl text-foreground">{fmtMoney(futureProjection.toMajority)}</p>
                   </div>
                   <div className="rounded-2xl bg-muted/30 p-4">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">By age 25</p>
@@ -1201,7 +1240,7 @@ export default function KidView() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground/80">
-                  This is only an estimate based on 7% yearly growth. Real markets move up and down, and returns are never guaranteed.
+                  Hypothetical estimate using 7% historical average annual return, with the 0.10% Kiddo annual fee deducted. Real markets move up and down; returns are never guaranteed. Annual gifts assumed to stop at age {futureProjection.majorityAge} (when the fund legally becomes yours).
                 </p>
               </div>
             </section>
