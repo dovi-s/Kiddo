@@ -3812,8 +3812,13 @@ const [editFundName, setEditFundName] = useState("");
           // (chunk 9). Same composition, same eight cards, same order.
           // The panel takes callbacks for the three modals Settings
           // still owns (Edit fund, Invite co-parent, Close fund) and
-          // composes everything else internally. FundSettingsSheet
-          // (chunk 10) will mount this same panel from Dashboard.
+          // composes everything else internally. (The chunk 10
+          // FundSettingsSheet that previously also mounted this panel
+          // from Dashboard was removed 2026-05-15 — the Dashboard
+          // entry-point card was redundant with the canonical /settings
+          // nav entry, and the sheet's split-brain UX bounced every
+          // write action back here anyway. Settings is now the single
+          // mount point.)
           <FundSettingsChildPanel
             fund={primaryFund as any}
             user={user as any}

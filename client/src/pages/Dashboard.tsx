@@ -50,7 +50,6 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { AddFundSheet } from "@/components/AddFundSheet";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
-import { FundSettingsSheet } from "@/components/FundSettingsSheet";
 import { CreateEventSheet, type EditEventData } from "@/components/CreateEventSheet";
 // (Removed 2026-05-15: GrowthStory import. The component was never
 // rendered anywhere in Dashboard's JSX — grepped to confirm zero
@@ -1077,13 +1076,6 @@ export default function Dashboard() {
   // only to discover they can't finish it. Dismissal tracked via
   // dismissedFeatureWalls so a repeat encounter shows softer copy.
   const [secondFundWallOpen, setSecondFundWallOpen] = useState(false);
-  // FundSettingsSheet — Phase 2 chunk 10 capstone. Opens the
-  // Child tab as a Dashboard-context sheet so the parent never
-  // leaves Dashboard for the most-common per-fund-settings
-  // visits. Hand-off to /settings?tab=child for the three modal
-  // actions (Edit fund, Invite co-parent, Close fund) that
-  // still live as Dialogs in Settings.
-  const [fundSettingsSheetOpen, setFundSettingsSheetOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   // Re-render trigger when the user snoozes the SSN nudge. Just an
   // incrementing number — the banner condition reads `isSsnSnoozed(fundId)`
@@ -9445,50 +9437,19 @@ export default function Dashboard() {
               </div>
             </motion.section>
 
-            {/* Phase 2 entry point — direct route to per-fund settings.
-                Per the locked WHO/HOW IA, fund-scoped configuration
-                (kid info, strategy, gift display, close-fund) lives in
-                the Settings child tab today (Phase 2 will eventually
-                lift those into a per-fund Fund Settings sheet — that's
-                a multi-hour refactor and stays deferred). Direct entry
-                from the fund itself was previously missing: parents
-                had to navigate to the bottom-nav Settings entry, which
-                defaults to the child tab but isn't obviously "for THIS
-                fund." This link makes the path explicit + one tap.
-                Hidden for read-only roles (previous owners can't
-                mutate; the link would 403). */}
-            {!isReadOnlyFund && activeFund?.id && (
-              <button
-                type="button"
-                onClick={() => { haptic("selection"); setFundSettingsSheetOpen(true); }}
-                className="w-full rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4 text-left transition-colors hover:bg-muted/20"
-                data-testid="dashboard-manage-fund-link"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    {/* Label revised to be specific about what's behind
-                        the tap. The previous "Manage Emma's fund" was
-                        generic — parents wouldn't necessarily connect
-                        "manage" with "this is where I tweak the investment
-                        mix." Apple Settings register: name the actual
-                        things you'd do here, in the order you'd most
-                        likely come to do them. Kid info first (the
-                        most common reason — birthday, photo update),
-                        then strategy (the investment lever), then gift
-                        page (the share-loop), then closing as the
-                        rare destructive action. */}
-                    <p className="text-sm font-semibold text-foreground">
-                      {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "Fund"} settings
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      Kid info · investment strategy · gift page · close fund
-                    </p>
-                  </div>
-                  <ChevronRight size={16} className="shrink-0 text-muted-foreground" aria-hidden />
-                </div>
-              </button>
-            )}
-
+            {/* Per-fund settings entry point REMOVED 2026-05-15. The
+                "{Kid}'s settings" button card (and its slide-up
+                FundSettingsSheet) was redundant: the canonical home
+                for per-fund settings is /settings?tab=child, which
+                lives in the primary nav. The sheet variant also had
+                a split-brain UX — every WRITE action (Edit fund,
+                Invite co-parent, Close fund) routed back to the
+                /settings page anyway, so the sheet only ever showed
+                READ state in-card before bouncing the user out. Per
+                the WHO/HOW IA inversion (Account = user, Settings =
+                per-fund + HOW preferences), the right path is the
+                Settings nav entry. Removing this card finishes that
+                IA work rather than regressing it. */}
             <TrustMicroStrip />
           </>
         )}
@@ -9638,16 +9599,6 @@ export default function Dashboard() {
             : "Add unlimited child funds with Kiddo Family. One price for every kid, one dashboard across all of them, recurring investments and co-parent access on every fund. Cancel anytime."
         }
         upgradePath="/account?tab=plan&upgrade=family"
-      />
-
-      {/* Fund Settings sheet — Phase 2 chunk 10 capstone. Opens
-          the Child tab content as a Dashboard-context sheet.
-          Read-affordances work in-sheet; write actions hand off
-          to /settings?tab=child. */}
-      <FundSettingsSheet
-        open={fundSettingsSheetOpen}
-        onClose={() => setFundSettingsSheetOpen(false)}
-        fund={(activeFund ?? null) as any}
       />
 
       {sharePages.length > 0 && (

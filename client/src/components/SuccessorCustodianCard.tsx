@@ -4,9 +4,11 @@
 // Extracted from Settings.tsx's Child tab (was lines ~4384-4578) on
 // 2026-05-14 as Phase 2 chunk 1. Five useState slots that previously
 // lived in the giant Settings() function now live on this self-
-// contained component instead. Settings.tsx and any future
-// FundSettingsSheet can both mount this without re-implementing the
-// editor/save/remove plumbing.
+// contained component instead. Settings.tsx mounts this directly
+// inside the Child tab. (The chunk 10 FundSettingsSheet that
+// originally would have also mounted this from Dashboard was
+// removed 2026-05-15 — the per-fund settings entry now lives only
+// on /settings, per the WHO/HOW IA principle.)
 //
 // Schema + PATCH endpoint + activity logging all already exist (the
 // AddFundSheet flow at fund creation populates these). Was missing

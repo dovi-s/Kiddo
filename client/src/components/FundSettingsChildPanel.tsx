@@ -3,11 +3,13 @@
 //
 // Created on 2026-05-14 as Phase 2 sheet-extraction chunk 9.
 // Settings.tsx renders this directly inside the
-// `settingsTab === "child"` branch; FundSettingsSheet (chunk 10)
-// also mounts this same component to surface the Child tab as a
-// Dashboard-context sheet without re-implementing the
-// composition. One source of truth for the panel's contents and
-// ordering; two mount points.
+// `settingsTab === "child"` branch. (The chunk 10 FundSettingsSheet
+// that previously also mounted this panel from Dashboard was
+// removed 2026-05-15: the Dashboard entry-point was redundant with
+// the canonical /settings nav entry, and the sheet's split-brain
+// UX bounced every write action back to /settings anyway. Settings
+// is now the single mount point — the panel kept its multi-mount
+// shape in case a future surface re-introduces it cleanly.)
 //
 // All actual fund-mutation logic lives inside the individual
 // cards. This panel just orchestrates them and routes shared
