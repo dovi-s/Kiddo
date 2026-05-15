@@ -22,6 +22,9 @@ import { startFundAnniversaryWorker } from "./fundAnniversaryWorker";
 import { startKidMilestoneWorker } from "./kidMilestoneWorker";
 import { startMonthlyPulseWorker } from "./monthlyPulseWorker";
 import { startHolidayWarmthWorker } from "./holidayWarmthWorker";
+import { startYearEndWrappedWorker } from "./yearEndWrappedWorker";
+import { startTaxSeasonPrepWorker } from "./taxSeasonPrepWorker";
+import { startGifterReturnReminderWorker } from "./gifterReturnReminderWorker";
 import { registerOGMiddleware } from "./ogMiddleware";
 import { users } from "@shared/schema";
 import { getConfiguredSuperAdminEmails, getDefaultSuperAdminEmails } from "@shared/adminAccess";
@@ -637,6 +640,9 @@ app.use((req, res, next) => {
   startKidMilestoneWorker(log);
   startMonthlyPulseWorker(log);
   startHolidayWarmthWorker(log);
+  startYearEndWrappedWorker(log);
+  startTaxSeasonPrepWorker(log);
+  startGifterReturnReminderWorker(log);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
