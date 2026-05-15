@@ -13,6 +13,7 @@ import { StockLogo } from "@/components/ui/stock-logo";
 import { AddFundSheet } from "@/components/AddFundSheet";
 import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
 import { PlanBenefitsCard } from "@/components/PlanBenefitsCard";
+import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -1429,6 +1430,13 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
   const [customRows, setCustomRows] = useState<Array<{ ticker: string; weight: number }>>(DEFAULT_CUSTOM_ALLOCATION_ROWS);
   const [initialCustomRows, setInitialCustomRows] = useState<Array<{ ticker: string; weight: number }>>(DEFAULT_CUSTOM_ALLOCATION_ROWS);
   const [saving, setSaving] = useState(false);
+  // Drives the FeatureWallModal that opens when a free user taps
+  // the locked Custom strategy. Previously the tap was a dead
+  // button (the onClick early-returned on isLocked) so the parent
+  // got no feedback — they didn't know WHAT the lock meant or
+  // how to unlock it. Now the modal explains Plus + offers the
+  // one-tap upgrade path. Per IN_APP_UPGRADE_FEATURE_WALL_SPEC.md.
+  const [customGateWallOpen, setCustomGateWallOpen] = useState(false);
   const serializeCustomRows = (rows: Array<{ ticker: string; weight: number }>) =>
     rows
       .filter((row) => row.ticker)
@@ -1529,11 +1537,21 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
             <button
               key={strategy.key}
               onClick={() => {
-                if (isLocked) return;
+                if (isLocked) {
+                  // Tap on locked Custom now opens the FeatureWallModal
+                  // instead of silently returning. Parent gets a clear
+                  // explanation of what Custom unlocks + one-tap
+                  // upgrade. Per IN_APP_UPGRADE_FEATURE_WALL_SPEC.md
+                  // ("contextual feature walls convert at 3-8x the
+                  // rate of generic 'see pricing' links").
+                  haptic("light");
+                  setCustomGateWallOpen(true);
+                  return;
+                }
                 setSelected(strategy.key);
                 haptic("selection");
               }}
-              disabled={isLocked}
+              disabled={false}
               className={`w-full p-4 rounded-2xl border text-left transition-all ${
                 selected === strategy.key
                   ? "border-primary bg-primary/5"
@@ -2095,6 +2113,24 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
             : "Save Strategy"}
         </Button>
       )}
+
+      {/* Locked-Custom upgrade wall. Opens when a free user taps the
+          Custom strategy option (which is gated on Plus / Family /
+          Legacy). Per IN_APP_UPGRADE_FEATURE_WALL_SPEC.md the
+          interruption point is the moment of felt-need — the parent
+          just tried to use Custom and got blocked. Modal explains
+          what they're unlocking + one-tap upgrade. fundId is
+          passed in the upgradePath so the Stripe checkout fires
+          for THIS specific fund. */}
+      <FeatureWallModal
+        open={customGateWallOpen}
+        onClose={() => setCustomGateWallOpen(false)}
+        featureId="custom_fund_mix"
+        requiredTier="plus"
+        title="Custom fund mix is a Kiddo+ feature."
+        body={`Pick the ETFs and weights for ${fund?.recipientFirstName ? `${fund.recipientFirstName}'s` : "your child's"} managed mix. Choose your own blend instead of one of the three preset strategies. Plus also unlocks recurring investments, photo/video Memory Book entries, and co-parent access.`}
+        upgradePath={fund?.id ? `/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fund.id)}` : "/account?tab=plan"}
+      />
     </div>
   );
 }

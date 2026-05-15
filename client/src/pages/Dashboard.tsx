@@ -1628,11 +1628,19 @@ export default function Dashboard() {
   // 'owner' for funds without the tag (older cached responses) so the
   // dashboard never goes view-only on stale data — strict mode would
   // be the wrong failure direction here.
-  const activeFundAccessRole: 'owner' | 'co-admin' | 'viewer' =
-    ((activeFund as any)?.accessRole === 'co-admin' || (activeFund as any)?.accessRole === 'viewer')
+  const activeFundAccessRole: 'owner' | 'co-admin' | 'viewer' | 'previous_owner' =
+    ((activeFund as any)?.accessRole === 'co-admin' || (activeFund as any)?.accessRole === 'viewer' || (activeFund as any)?.accessRole === 'previous_owner')
       ? (activeFund as any).accessRole
       : 'owner';
   const isViewerOnly = activeFundAccessRole === 'viewer';
+  const isPreviousOwner = activeFundAccessRole === 'previous_owner';
+  // Read-only union: viewers AND previous owners (post-handoff parents)
+  // both lose write capabilities. Used to gate every CTA that would
+  // mutate fund state — Share / Add Gift / Recurring Investments /
+  // strategy changes / occasions / etc. The previous-owner case is
+  // post-2026-05-14 transferred-fund UX MVP (commit bc4312d). The
+  // viewer case is the existing collaborator role.
+  const isReadOnlyFund = isViewerOnly || isPreviousOwner;
   const isSharedFund = activeFundAccessRole !== 'owner';
   const cachedHeroFundValue = useMemo(
     () => (activeFundId ? readCachedFundValue(activeFundId) : null),
@@ -4544,7 +4552,9 @@ export default function Dashboard() {
                           }}
                           data-testid="badge-shared-fund"
                         >
-                          🤝 Shared with you{isViewerOnly ? " · view-only" : ""}
+                          {isPreviousOwner
+                            ? `📦 Transferred to ${activeFund?.recipientFirstName || "them"} · view only`
+                            : `🤝 Shared with you${isViewerOnly ? " · view-only" : ""}`}
                         </div>
                       )}
                       {/* Balance — uses brand serif via .font-heading instead of
@@ -4627,8 +4637,9 @@ export default function Dashboard() {
                           </span>
                         )}
                         {cash > 0 && (
-                          isViewerOnly ? (
-                            // View-only collaborators see the cash figure but
+                          isReadOnlyFund ? (
+                            // View-only collaborators AND previous owners
+                            // (post-handoff parents) see the cash figure but
                             // not a clickable invest button — the action would
                             // 403 server-side anyway, and rendering a dead CTA
                             // is worse UX than rendering an informational stat.
@@ -9206,6 +9217,39 @@ export default function Dashboard() {
                 </button>
               </div>
             </motion.section>
+
+            {/* Phase 2 entry point — direct route to per-fund settings.
+                Per the locked WHO/HOW IA, fund-scoped configuration
+                (kid info, strategy, gift display, close-fund) lives in
+                the Settings child tab today (Phase 2 will eventually
+                lift those into a per-fund Fund Settings sheet — that's
+                a multi-hour refactor and stays deferred). Direct entry
+                from the fund itself was previously missing: parents
+                had to navigate to the bottom-nav Settings entry, which
+                defaults to the child tab but isn't obviously "for THIS
+                fund." This link makes the path explicit + one tap.
+                Hidden for read-only roles (previous owners can't
+                mutate; the link would 403). */}
+            {!isReadOnlyFund && activeFund?.id && (
+              <button
+                type="button"
+                onClick={() => { haptic("selection"); setLocation("/settings?tab=child"); }}
+                className="w-full rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4 text-left transition-colors hover:bg-muted/20"
+                data-testid="dashboard-manage-fund-link"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      Manage {activeFund?.recipientFirstName ? `${activeFund.recipientFirstName}'s` : "this"} fund
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Edit name, birthday, strategy, gift page, or close the fund.
+                    </p>
+                  </div>
+                  <ChevronRight size={16} className="shrink-0 text-muted-foreground" aria-hidden />
+                </div>
+              </button>
+            )}
 
             <TrustMicroStrip />
           </>
