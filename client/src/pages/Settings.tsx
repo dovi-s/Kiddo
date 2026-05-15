@@ -19,6 +19,7 @@ import { ChildIdentityCard } from "@/components/ChildIdentityCard";
 import { FundDetailsCard } from "@/components/FundDetailsCard";
 import { InvitationsToYouCard } from "@/components/InvitationsToYouCard";
 import { CloseFundCard } from "@/components/CloseFundCard";
+import { LegalDocumentsCard } from "@/components/LegalDocumentsCard";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
@@ -4200,25 +4201,11 @@ const [editFundName, setEditFundName] = useState("");
                 inside the future FundSettingsSheet without duplication. */}
             {primaryFund && <SuccessorCustodianCard fund={primaryFund as any} />}
 
-            {/* Legal + documents */}
-            <SectionCard>
-              <div className="divide-y divide-[hsl(var(--kiddo-border))]">
-                <Link
-                  href="/tax-documents"
-                  className="flex items-center justify-between gap-4 p-4 hover:bg-muted/30 transition-colors"
-                  onMouseEnter={() => prefetchTaxDocuments(queryClient, getActiveFundId())}
-                  onTouchStart={() => prefetchTaxDocuments(queryClient, getActiveFundId())}
-                  onFocus={() => prefetchTaxDocuments(queryClient, getActiveFundId())}
-                >
-                  <span className="text-sm text-muted-foreground">Tax documents</span>
-                  <span className="text-sm font-semibold text-foreground">View</span>
-                </Link>
-                <Link href="/legal" className="flex items-center justify-between gap-4 p-4 hover:bg-muted/30 transition-colors">
-                  <span className="text-sm text-muted-foreground">Legal</span>
-                  <span className="text-sm font-semibold text-foreground">Disclosures</span>
-                </Link>
-              </div>
-            </SectionCard>
+            {/* Legal + documents. Extracted to LegalDocumentsCard on
+                2026-05-14 as Phase 2 sheet-extraction chunk 6. Owns
+                its own prefetch wiring; Settings no longer needs to
+                know about prefetchTaxDocuments for this surface. */}
+            <LegalDocumentsCard />
 
             {/* Close this fund. Extracted to CloseFundCard on 2026-05-14
                 as Phase 2 sheet-extraction chunk 5. The dialog itself
