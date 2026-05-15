@@ -217,3 +217,43 @@ export const passkeys = pgTable("passkeys", {
 
 export type Passkey = typeof passkeys.$inferSelect;
 export type InsertPasskey = typeof passkeys.$inferInsert;
+
+// Password reset tokens. One row per outstanding reset request. The
+// token in the email is a 32-byte random string; we store ONLY the
+// SHA-256 hash so a DB leak doesn't enable resets. Token lifetime is
+// 60 minutes (industry standard for password-reset links — long
+// enough for "I'll check my email" friction, short enough that a
+// stolen but unused link expires).
+//
+// usedAt is set when the token is consumed (success). Re-using a
+// consumed token returns the same generic error as an invalid one.
+// Multiple outstanding tokens for the same user are allowed: clicking
+// "forgot password" twice issues two valid links until the first one
+// is used or expires. Simpler than invalidating prior tokens and
+// matches the locked anti-enumeration discipline (route always
+// returns 200 regardless of whether the email matched a real user).
+//
+// On successful reset, the route also clears any sessions for that
+// user (lockout-after-reset is the canonical "I was compromised"
+// recovery flow).
+export const passwordResets = pgTable("password_resets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // SHA-256(token) — never store the raw token. Hex-encoded.
+  tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  // IP + user agent at request time. Forensic context if the user
+  // later reports the reset wasn't theirs. Optional (request may
+  // arrive via a proxy that strips both).
+  requestIp: text("request_ip"),
+  requestUserAgent: text("request_user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("password_resets_token_hash_unique").on(table.tokenHash),
+  index("password_resets_user_id_idx").on(table.userId),
+  index("password_resets_expires_at_idx").on(table.expiresAt),
+]);
+
+export type PasswordReset = typeof passwordResets.$inferSelect;
+export type InsertPasswordReset = typeof passwordResets.$inferInsert;

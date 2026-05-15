@@ -41,6 +41,7 @@ const GetStarted = lazy(() => import("@/pages/GetStarted"));
 const ActivateInvesting = lazy(() => import("@/pages/ActivateInvesting"));
 const GiftCheckout = lazy(() => import("@/pages/GiftCheckout"));
 const Login = lazy(() => import("@/pages/Login"));
+const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const EventCreate = lazy(() => import("@/pages/EventCreate"));
 const FAQ = lazy(() => import("@/pages/FAQ"));
 const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
@@ -741,6 +742,7 @@ function Router() {
         <Switch>
           <Route path="/"><Home /></Route>
           <Route path="/login"><Login /></Route>
+          <Route path="/reset-password"><ResetPassword /></Route>
           <Route path="/demo"><Demo /></Route>
           <Route path="/get-started"><GetStarted /></Route>
           <Route path="/onboard"><Onboard /></Route>

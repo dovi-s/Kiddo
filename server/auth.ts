@@ -4,10 +4,11 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import createMemoryStore from "memorystore";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import pg from "pg";
 import path from "path";
 import type { Express, Request, RequestHandler, Response } from "express";
-import { users, type User } from "@shared/models/auth";
+import { users, passwordResets, type User } from "@shared/models/auth";
 // Imports for account-deletion helpers below. `funds` for blocked-state
 // checks; `subscriptions` + `fundMemberships` for Stripe cancellation;
 // `activities` for the audit-log entry.
@@ -27,7 +28,7 @@ import {
   isEmailInAdminSet,
 } from "@shared/adminAccess";
 import { db } from "./db";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, gt, isNull } from "drizzle-orm";
 import { storage } from "./storage";
 import { recordEvent, eventCtxFromReq } from "./analytics";
 import {
@@ -46,6 +47,7 @@ import { registerPasskeyRoutes } from "./passkeyAuth";
 import { mintRestoreToken, verifyRestoreToken } from "./accountRestoreToken";
 import { auditLogs } from "@shared/schema";
 import { sendEmail } from "./emailDelivery";
+import { buildPasswordResetEmail } from "./templates/passwordReset";
 import { z } from "zod";
 
 const emailSchema = z
@@ -92,6 +94,54 @@ const loginSchema = z.object({
 const forgotPasswordSchema = z.object({
   email: emailSchema,
 });
+
+const resetPasswordSchema = z.object({
+  token: z
+    .string()
+    .trim()
+    .min(32, "Invalid reset link")
+    .max(256, "Invalid reset link"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must be 128 characters or fewer"),
+});
+
+// Password reset tokens are 32 raw bytes -> 64 hex chars. Long enough
+// to make brute force unrealistic, short enough to fit in a typical
+// email-friendly URL. Lifetime is 60 minutes — long enough for
+// "I'll check my email" friction, short enough that a stolen but
+// unused link expires before opportunistic abuse.
+const PASSWORD_RESET_TOKEN_BYTES = 32;
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+
+function hashResetToken(rawToken: string): string {
+  return crypto.createHash("sha256").update(rawToken, "utf8").digest("hex");
+}
+
+function getBaseUrlForResetLink(): string {
+  const configured =
+    process.env.APP_BASE_URL ||
+    process.env.PUBLIC_APP_URL ||
+    process.env.APP_URL ||
+    process.env.BASE_URL;
+  return configured ? configured.replace(/\/+$/, "") : "https://kiddofund.com";
+}
+
+function describeRequestIp(req: Request): string | null {
+  const raw = (req.headers["x-forwarded-for"] as string | undefined) || req.ip || "";
+  // x-forwarded-for can be a comma-separated chain; the FIRST entry
+  // is the original client. Strip down to that single value. Private/
+  // loopback addresses get omitted from user-facing copy (they aren't
+  // informative on the receiving end and surface as e.g. "::1" which
+  // reads as broken).
+  const first = String(raw).split(",")[0]?.trim() || "";
+  if (!first) return null;
+  if (first === "::1" || first === "127.0.0.1" || first.startsWith("10.") || first.startsWith("192.168.")) {
+    return null;
+  }
+  return first;
+}
 
 const LOGIN_ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
@@ -1259,25 +1309,136 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Forgot password. Always responds 200 to prevent email enumeration.
-  // When email delivery is wired, send a real reset link here.
+  // Forgot password.
+  //
+  // Always responds 200 regardless of whether the email matched a real
+  // user (locked anti-enumeration discipline). When it DOES match, we:
+  //   1. Generate a 32-byte random token; SHA-256 the storage form.
+  //   2. Insert a password_resets row with 60-min TTL + forensic context
+  //      (IP, user agent) for the user's own "was that me?" audit.
+  //   3. Build the email via buildPasswordResetEmail (branded HTML +
+  //      plain-text fallback) and queue it through sendEmail.
+  //
+  // Soft-deleted users get the same silent 200 response — sending a
+  // reset email to a tombstoned account would be confusing.
+  //
+  // Closed the long-standing TODO at this site on 2026-05-15.
   app.post("/api/auth/forgot-password", async (req, res) => {
     const parsed = forgotPasswordSchema.safeParse(req.body);
-    if (parsed.success) {
-      const { email } = parsed.data;
-      try {
-        const user = await db.select().from(users).where(eq(users.email, email)).limit(1);
-        if (user.length > 0) {
-          // TODO: generate reset token, store it, and send email via sendEmail()
-          // For now we log so devs can see it was triggered.
-          console.log(`[forgot-password] Reset requested for ${email} (user id: ${user[0].id})`);
-        }
-      } catch (err) {
-        console.error("[forgot-password] lookup error:", err);
-      }
+    if (!parsed.success) {
+      // Same 200 even on invalid email shape — don't give the caller
+      // a way to distinguish "valid email but no user" from "invalid
+      // email syntax." Anti-enumeration applies to all shapes.
+      return res.status(200).json({ message: "If that email exists, a reset link is on its way." });
     }
-    // Always return success to avoid email enumeration
-    res.status(200).json({ message: "If that email exists, a reset link is on its way." });
+    const { email } = parsed.data;
+    try {
+      const userRow = await db
+        .select({ id: users.id, deletedAt: users.deletedAt })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      if (userRow.length > 0 && !userRow[0].deletedAt) {
+        const rawToken = crypto.randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString("hex");
+        const tokenHash = hashResetToken(rawToken);
+        const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+        await db.insert(passwordResets).values({
+          userId: userRow[0].id,
+          tokenHash,
+          expiresAt,
+          requestIp: req.ip || null,
+          requestUserAgent: (req.get("user-agent") || null)?.slice(0, 512) || null,
+        });
+        const resetUrl = `${getBaseUrlForResetLink()}/reset-password?token=${encodeURIComponent(rawToken)}`;
+        const ipHint = describeRequestIp(req);
+        try {
+          await sendEmail(buildPasswordResetEmail({ to: email, resetUrl, ipHint }));
+        } catch (sendErr: any) {
+          // Log but don't surface to the caller — anti-enumeration. The
+          // outbox fallback inside sendEmail catches ESP failures
+          // gracefully; only catastrophic errors land here.
+          console.error("[forgot-password] send failed:", sendErr?.message || sendErr);
+        }
+      }
+    } catch (err) {
+      console.error("[forgot-password] lookup error:", err);
+    }
+    // Always return success to avoid email enumeration.
+    return res.status(200).json({ message: "If that email exists, a reset link is on its way." });
+  });
+
+  // Reset password. Consumes the token from the forgot-password email.
+  //
+  // Validates: token format, token presence in DB, token unused, token
+  // unexpired. On success: bcrypt-hashes the new password, updates the
+  // user row, marks the token as used. Other outstanding tokens for the
+  // same user stay valid until they expire — re-issuing on every reset
+  // would be aggressive without much security benefit since each token
+  // is single-use by the unique constraint on its hash.
+  //
+  // Generic error for every failure mode ("Invalid or expired reset
+  // link") so a caller can't probe whether a token was valid-but-used
+  // vs never-existed vs expired. Same anti-enumeration shape as
+  // forgot-password.
+  //
+  // Note: this does NOT auto-log-in the user. They'll go to /login
+  // and enter the new password. Matches Settings password change
+  // flow + audited recovery patterns; also gives the user a chance
+  // to verify the new password before the cookie is set.
+  app.post("/api/auth/reset-password", async (req, res) => {
+    const parsed = resetPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid or expired reset link." });
+    }
+    const { token, password } = parsed.data;
+    const tokenHash = hashResetToken(token);
+    try {
+      const rows = await db
+        .select({
+          id: passwordResets.id,
+          userId: passwordResets.userId,
+        })
+        .from(passwordResets)
+        .where(
+          and(
+            eq(passwordResets.tokenHash, tokenHash),
+            isNull(passwordResets.usedAt),
+            gt(passwordResets.expiresAt, new Date()),
+          ),
+        )
+        .limit(1);
+      if (rows.length === 0) {
+        return res.status(400).json({ message: "Invalid or expired reset link." });
+      }
+      const resetRow = rows[0];
+      const passwordHash = await bcrypt.hash(password, 10);
+      await db
+        .update(users)
+        .set({ passwordHash, updatedAt: new Date() })
+        .where(eq(users.id, resetRow.userId));
+      await db
+        .update(passwordResets)
+        .set({ usedAt: new Date() })
+        .where(eq(passwordResets.id, resetRow.id));
+      // Audit log: a successful reset is a security-relevant event.
+      // The user might later report "I didn't reset that" — this row
+      // is the trail. Non-fatal if the insert fails.
+      try {
+        await db.insert(activities).values({
+          userId: resetRow.userId,
+          type: "password_reset",
+          title: "Password reset",
+          description: "Password reset via emailed token",
+          metadata: { ip: req.ip || null, userAgent: req.get("user-agent") || null } as any,
+        } as any);
+      } catch (auditErr: any) {
+        console.warn("[reset-password] Could not write audit entry (non-fatal):", auditErr?.message);
+      }
+      return res.status(200).json({ ok: true });
+    } catch (err: any) {
+      console.error("[reset-password] error:", err);
+      return res.status(500).json({ message: "Something went wrong. Try again or write to support." });
+    }
   });
 }
 
