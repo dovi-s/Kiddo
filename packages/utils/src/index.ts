@@ -15,6 +15,13 @@ export function futureValue(amount: number, years: number, rate: number) {
 export const onboardingRates = {
   savings: 0.005,
   investing: 0.07,
+  // 0.10% AUM annual fee. Netted from the investing rate inside
+  // getProjectionSnapshot so the "Kiddo estimate" number matches
+  // what the parent actually keeps. Locked rule across every
+  // projection surface per the 2026-05-15 projection-math audit.
+  // Savings comparison is NEVER netted — it represents an external
+  // savings account that doesn't have our fee.
+  kiddoAumFee: 0.001,
 } as const;
 
 export const onboardingAnnualGiftOptions = [250, 500, 1000, 2000] as const;
@@ -80,7 +87,14 @@ export function childDobError(birthdate: string) {
 
 export function getProjectionSnapshot(annualGift: number, years: number): ProjectionSnapshot {
   const savings = Math.round(futureValue(annualGift, years, onboardingRates.savings));
-  const invested = Math.round(futureValue(annualGift, years, onboardingRates.investing));
+  // Net the 0.10% AUM fee from the investing rate so the displayed
+  // "Kiddo estimate" matches what the parent actually keeps. Without
+  // this net, the projection step displayed a gross-of-fee number
+  // (~$67,998 on $2,000/yr × 18yr at 7%) while the milestone-page
+  // projection used the corrected net number (~$67,438). Internal
+  // inconsistency fixed 2026-05-15 — both surfaces now use net.
+  const netInvestingRate = onboardingRates.investing - onboardingRates.kiddoAumFee;
+  const invested = Math.round(futureValue(annualGift, years, netInvestingRate));
 
   return {
     annualGift,

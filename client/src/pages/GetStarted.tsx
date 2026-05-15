@@ -244,7 +244,25 @@ export default function GetStarted() {
   }, [annualGift, projectionMilestone]);
 
   const milestoneDiff = milestoneInvested - milestoneSavings;
-  const displayName = name.trim() || (accountType === "child" ? "your child" : "you");
+  // Display-capitalize the name regardless of how the parent typed it.
+  // Some parents type lowercase ("lauren") on mobile auto-fill; the
+  // stored name keeps their casing (no mutation), but every surface
+  // rendering the kid's name in a sentence should display-capitalize
+  // for warmth. Locked 2026-05-15 per the projection-step audit
+  // ("Here is what starting today looks like for lauren" → "...for
+  // Lauren"). Single-word names: capitalize first letter. Hyphenated
+  // or multi-word: capitalize each segment. Keep the original casing
+  // of the rest of each segment in case the parent intentionally
+  // typed "McAdams" or "DeAngelo".
+  const displayChildName = (() => {
+    const trimmed = name.trim();
+    if (!trimmed) return "";
+    return trimmed
+      .split(/(\s|-)/)
+      .map((seg) => (seg.length > 0 && /^[a-z]/.test(seg) ? seg.charAt(0).toUpperCase() + seg.slice(1) : seg))
+      .join("");
+  })();
+  const displayName = displayChildName || (accountType === "child" ? "your child" : "you");
   const shareUrl = created ? `${window.location.origin}/${created.slug}` : "";
   const onboardingFlow = useMemo(() => getOnboardingFlow(accountType), [accountType]);
   const projectionOptions = accountType === "personal" ? [10, 20, 30, 40] : [18, 30, 40, 65];
@@ -870,14 +888,14 @@ export default function GetStarted() {
                 <ScreenLead title={accountType === "personal" ? "Here is what your gifts could become." : `Here is what starting today looks like for ${displayName}.`} />
               </AnimatedBlock>
               <AnimatedBlock className="mt-6 space-y-3">
-                <div className="flex flex-wrap gap-2">{onboardingAnnualGiftOptions.map((amount) => <button key={amount} onClick={() => { haptic("selection"); setAnnualGift(amount); }} className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${annualGift === amount ? "bg-primary text-primary-foreground shadow-premium-sm" : "bg-card text-foreground"}`} data-testid={`projection-amount-${amount}`}>${amount}/yr</button>)}</div>
+                <div className="flex flex-wrap gap-2">{onboardingAnnualGiftOptions.map((amount) => <button key={amount} onClick={() => { haptic("selection"); setAnnualGift(amount); }} className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${annualGift === amount ? "bg-primary text-primary-foreground shadow-premium-sm" : "bg-card text-foreground"}`} data-testid={`projection-amount-${amount}`}>${amount.toLocaleString()}/yr</button>)}</div>
               </AnimatedBlock>
               <AnimatedBlock className="get-started-panel relative mt-6 overflow-hidden">
                 <div className="pointer-events-none absolute inset-x-10 top-3 h-20 rounded-full bg-[hsl(var(--kora-gold))]/10 blur-3xl" />
                 <p className="text-xs text-muted-foreground mb-4">
                   {accountType === "child" && birthdate
-                    ? `If ${displayName}'s family gifts $${annualGift}/yr. By the time ${displayName} is 18:`
-                    : `If you receive $${annualGift}/yr in gifts:`}
+                    ? `If ${displayName}'s family gifts $${annualGift.toLocaleString()}/yr, by the time ${displayName} is 18:`
+                    : `If you receive $${annualGift.toLocaleString()}/yr in gifts:`}
                 </p>
                 <div className="grid gap-4">
                   <motion.div layout className="grid grid-cols-[1fr_auto] items-end gap-4 rounded-2xl border border-border/60 bg-background p-4">
@@ -908,7 +926,20 @@ export default function GetStarted() {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium text-foreground">The difference: {formatCurrencyWhole(diff)}</p>
                     </div>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">The difference? Time. And you just gave {displayName === "your child" || displayName === "you" ? "them" : displayName} that. Estimated at 7% hypothetical annual growth. Not guaranteed.</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">The difference? Time. And you just gave {displayName === "your child" || displayName === "you" ? "them" : displayName} that.</p>
+                    {/* Expanded disclaimer 2026-05-15 (projection-step audit):
+                        - 7% historical-average rate, locked across surfaces.
+                        - Net of the 0.10% AUM fee — matches what the parent
+                          actually keeps (getProjectionSnapshot now nets it).
+                        - 0.5% APY savings comparison surfaced so the reader
+                          can verify the math on the other line.
+                        - "Past performance does not guarantee future results"
+                          is the canonical regulatory phrasing used elsewhere;
+                          reads less abrupt than the prior "Not guaranteed."
+                        - UTMA majority age 18 in most states but 19-21 in a
+                          few; honest mention here even though the user's
+                          state isn't collected until address entry later. */}
+                    <p className="mt-2 text-[10px] leading-snug text-muted-foreground/85">At 7% hypothetical annual growth, net of Kiddo's 0.10% annual fee. Savings comparison assumes 0.5% APY. UTMA majority is 18 in most states; a few are 19-21. Past performance does not guarantee future results.</p>
                   </motion.div>
                 </div>
               </AnimatedBlock>
@@ -986,12 +1017,21 @@ export default function GetStarted() {
           // "Solomon's Fund's fund is live." Use recipientFirstName
           // when present; fall back to stripping "'s Fund" / " Fund"
           // suffix from name for legacy rows.
-          const firstName = created.recipientFirstName.trim();
+          //
+          // Display-capitalize (added 2026-05-15) so a parent who
+          // mobile-auto-fills "lauren" lowercase sees "Lauren's fund
+          // is live." Keeps original casing of mid-word characters in
+          // case the parent intentionally typed "McAdams" / "DeAngelo".
+          const capitalizeFirst = (s: string) => s
+            .split(/(\s|-)/)
+            .map((seg) => (seg.length > 0 && /^[a-z]/.test(seg) ? seg.charAt(0).toUpperCase() + seg.slice(1) : seg))
+            .join("");
+          const firstName = capitalizeFirst(created.recipientFirstName.trim());
           const childDisplayName = firstName
-            || String(created.name || "")
+            || capitalizeFirst(String(created.name || "")
                 .replace(/\s*'s\s+Fund\s*$/i, "")
                 .replace(/\s+Fund\s*$/i, "")
-                .trim()
+                .trim())
             || "Your child";
           return (
           <Shell key="live" direction={direction}>
