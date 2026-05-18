@@ -11420,6 +11420,8 @@ export async function registerRoutes(
           recurringMonthlyTotal: "0.00",
           parentMemoryEntriesThisYear: 0,
           coParentInvitedCount: 0,
+          coParentActiveCount: 0,
+          coParentPendingCount: 0,
           activeOccasionsCount: 0,
           customMixActive: false,
         });
@@ -11483,13 +11485,21 @@ export async function registerRoutes(
       // coParentInvitedCount silently returned 0 for every user with
       // co-parents. Now uses 'co-admin', the role parents invite when
       // adding a co-parent in Settings.
-      const coParents = await db.select({ id: fundCollaborators.id })
+      //
+      // 2026-05-18: split into active vs pending so the UI can show
+      // accurate state ("1 active" vs "1 pending" vs "1 active · 1
+      // pending"). The aggregate coParentInvitedCount is preserved
+      // for backwards compatibility with any consumer still reading
+      // the original field.
+      const coParents = await db.select({ id: fundCollaborators.id, status: fundCollaborators.status })
         .from(fundCollaborators)
         .where(and(
           inArray(fundCollaborators.fundId, fundIds),
           eq(fundCollaborators.role, "co-admin"),
         ));
-      const coParentInvitedCount = coParents.length;
+      const coParentActiveCount = coParents.filter((c) => c.status === "accepted").length;
+      const coParentPendingCount = coParents.filter((c) => c.status === "pending").length;
+      const coParentInvitedCount = coParentActiveCount + coParentPendingCount;
 
       // Active occasions across the user's funds.
       const occasions = await db.select({ id: events.id })
@@ -11505,6 +11515,8 @@ export async function registerRoutes(
         recurringMonthlyTotal: recurringMonthlyTotal.toFixed(2),
         parentMemoryEntriesThisYear,
         coParentInvitedCount,
+        coParentActiveCount,
+        coParentPendingCount,
         activeOccasionsCount,
         customMixActive,
       });

@@ -8,7 +8,7 @@
 //
 // Three sections:
 //   1. Your benefits — bullet list of features the user has access to
-//   2. This year — usage stats pulled from the server (no invented metrics)
+//   2. Right now — current-state stats pulled from the server (no invented metrics)
 //   3. Haven't tried — ONE soft nudge for an unused feature, dismissable
 //
 // Render rules:
@@ -46,7 +46,13 @@ type PlanBenefitsUsage = {
   recurringActiveCount: number;
   recurringMonthlyTotal: string;
   parentMemoryEntriesThisYear: number;
+  // coParentInvitedCount is the aggregate (active + pending). Kept
+  // for backwards compatibility with any code path still reading
+  // the original field name. Display logic uses the split counts
+  // below to render accurate state.
   coParentInvitedCount: number;
+  coParentActiveCount?: number;
+  coParentPendingCount?: number;
   activeOccasionsCount: number;
   customMixActive: boolean;
 };
@@ -192,7 +198,7 @@ export function PlanBenefitsCard({ plan }: Props) {
     return pickNudge(usage, effectivePlan, dismissed);
   }, [usage, effectivePlan, dismissed]);
 
-  // The "This year" section only renders when at least one stat is
+  // The "Right now" section only renders when at least one stat is
   // non-zero — empty stats would read as "you haven't done anything
   // with your subscription" which is hostile. Better to hide.
   const hasAnyUsage = usage && (
@@ -235,11 +241,16 @@ export function PlanBenefitsCard({ plan }: Props) {
           })}
         </ul>
 
-        {/* This year — usage stats. Only renders when there's real
-            data to show. Each stat is a calm fact, not a celebration. */}
+        {/* Right now — current-state stats. Only renders when
+            there's real data to show. Each stat is a calm fact,
+            not a celebration. Header reads as a state snapshot
+            ("what's the fund's current state?") rather than the
+            prior misleading "This year" framing — none of these
+            stats are actually year-to-date counts; they're all
+            point-in-time state. Fixed 2026-05-18. */}
         {hasAnyUsage && usage && (
           <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-1.5">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">This year</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Right now</p>
             {usage.recurringActiveCount > 0 && (
               <Stat label="Recurring investments">
                 {usage.recurringActiveCount} active, ${parseFloat(usage.recurringMonthlyTotal).toFixed(0)}/mo
@@ -250,11 +261,21 @@ export function PlanBenefitsCard({ plan }: Props) {
                 {usage.parentMemoryEntriesThisYear} this year
               </Stat>
             )}
-            {usage.coParentInvitedCount > 0 && (
-              <Stat label="Co-parents">
-                {usage.coParentInvitedCount} invited
-              </Stat>
-            )}
+            {usage.coParentInvitedCount > 0 && (() => {
+              // Prefer the split counts when present. 'invited' was
+              // a misleading label when the co-parent had already
+              // accepted — they're 'active' at that point.
+              const active = usage.coParentActiveCount ?? usage.coParentInvitedCount;
+              const pending = usage.coParentPendingCount ?? 0;
+              const display = pending > 0 && active > 0
+                ? `${active} active · ${pending} pending`
+                : pending > 0
+                  ? `${pending} pending`
+                  : `${active} active`;
+              return (
+                <Stat label="Co-parents">{display}</Stat>
+              );
+            })()}
             {usage.activeOccasionsCount > 0 && (
               <Stat label="Active occasions">
                 {usage.activeOccasionsCount}
