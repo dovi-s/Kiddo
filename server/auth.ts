@@ -598,13 +598,33 @@ async function getOrCreateOAuthUser(params: {
   const linkedUserId = await getUserIdForOAuthIdentity(params.provider, params.subject);
   if (linkedUserId) {
     const linkedUser = await getUser(linkedUserId);
-    if (linkedUser) return linkedUser;
+    if (linkedUser) {
+      // Backfill emailVerifiedAt for older OAuth-linked accounts.
+      // Google/Apple both pre-verify the email; if the column is
+      // still NULL on an OAuth-linked account, the provider's
+      // attestation counts. Stamp once. Idempotent: only updates
+      // when NULL. Locked 2026-05-18.
+      if (!linkedUser.emailVerifiedAt) {
+        try {
+          await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, linkedUser.id));
+        } catch { /* non-fatal */ }
+      }
+      return linkedUser;
+    }
   }
 
   if (params.email) {
     const existingUser = await getUserByEmail(params.email);
     if (existingUser) {
       await linkOAuthIdentity(existingUser.id, params.provider, params.subject);
+      // Linking an existing email/password user to a Google/Apple
+      // identity is the moment the email becomes provider-verified.
+      // Stamp emailVerifiedAt if not already set.
+      if (!existingUser.emailVerifiedAt) {
+        try {
+          await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, existingUser.id));
+        } catch { /* non-fatal */ }
+      }
       return existingUser;
     }
   }
@@ -620,6 +640,13 @@ async function getOrCreateOAuthUser(params: {
     firstName: params.givenName || undefined,
     lastName: params.familyName || undefined,
   });
+  // New OAuth user: provider has already verified the email.
+  // Stamp emailVerifiedAt at create time so they never see the
+  // verification banner. Skip the post-signup verification email
+  // entirely (no issueVerificationEmail call here).
+  try {
+    await db.update(users).set({ emailVerifiedAt: new Date() }).where(eq(users.id, user.id));
+  } catch { /* non-fatal */ }
   await storage.ensureSubscription(user.id).catch(() => undefined);
   await linkOAuthIdentity(user.id, params.provider, params.subject);
   return user;
