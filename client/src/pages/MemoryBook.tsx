@@ -1469,6 +1469,57 @@ export default function MemoryBook() {
     setShowModal(true);
   };
 
+  // Curated milestone library. Each preset opens the existing
+  // composer prefilled with the milestone label as a starter
+  // sentence and entryType='milestone' so the entry slots into
+  // the existing milestone filter + visual treatment. The
+  // composer already handles photo/video/audio + Plus-gating;
+  // this is purely about giving the parent a guided entry point
+  // rather than a blank "Add entry" button.
+  //
+  // Locked 2026-05-18 per the Target-vs-Walmart positioning
+  // discussion: the Memory Book at 18 is the canonical Target
+  // moat, and capturing the actual childhood milestones (not
+  // just gifts) is what makes the book worth giving. The
+  // EarlyBird teardown flagged this gap explicitly.
+  //
+  // Tone: conversational, parent-voiced. The label is a STARTER
+  // sentence the parent finishes — never a label-followed-by-
+  // colon. So "First steps." not "First steps:" — the parent
+  // continues the thought naturally.
+  const milestoneLibrary: Array<{ key: string; label: string; starter: string }> = useMemo(() => [
+    { key: "first-steps",       label: "First steps",      starter: "First steps. " },
+    { key: "first-word",        label: "First word",        starter: "First word. " },
+    { key: "first-tooth",       label: "First tooth",       starter: "First tooth came in. " },
+    { key: "lost-tooth",        label: "Lost first tooth",  starter: "Lost their first tooth. " },
+    { key: "first-day-school",  label: "First day of school", starter: "First day of school. " },
+    { key: "first-haircut",     label: "First haircut",     starter: "First haircut. " },
+    { key: "started-sport",     label: "Started a sport",   starter: "Started playing " },
+    { key: "first-sleepover",   label: "First sleepover",   starter: "First sleepover. " },
+    { key: "moved-home",        label: "Moved homes",       starter: "We moved. " },
+    { key: "new-sibling",       label: "Got a sibling",     starter: "Became a big " },
+  ], []);
+
+  const openMilestoneComposer = (starter: string) => {
+    setEditingEntry(null);
+    setEntryType("milestone");
+    setContent(starter);
+    setAuthorName(user?.firstName || "Parent");
+    setPhotoUrl("");
+    setVideoUrl("");
+    setAudioUrl("");
+    setAudioTranscript("");
+    setSaveForBirthday(false);
+    setFormError(null);
+    setUploadError(null);
+    setRetryFile(null);
+    setVisibility("public");
+    setIsFeatured(false);
+    setMilestonePromptSeed(Date.now());
+    setShowModal(true);
+    haptic("selection");
+  };
+
   const openEditModal = (entry: MemoryEntry) => {
     if (entry.type === "gift_message") return;
     setEditingEntry(entry);
@@ -2755,6 +2806,57 @@ export default function MemoryBook() {
                   </div>
                 </div>
               </EnlighteningReveal>
+            )}
+
+            {/* Milestone capture quick-action strip. Owner-only
+                (parent surface). Renders above the timeline so the
+                parent sees the curated milestone library before
+                they even hit the generic "+ Add entry" button. Each
+                chip is a tappable starter that opens the composer
+                pre-filled with the milestone label + entryType set
+                to 'milestone' so the entry slots into the existing
+                milestone filter. Photo/video/audio + Plus-gating
+                handled by the composer's existing MemoryMediaPicker
+                with requiresPlus=true.
+                Locked 2026-05-18 per the Target-vs-Walmart
+                positioning: the Memory Book at 18 is the canonical
+                Target moat, and capturing actual childhood
+                milestones (not just gifts) is what makes the book
+                worth giving. The EarlyBird teardown flagged this
+                gap explicitly. */}
+            {isOwner && (
+              <section className="kiddo-card mb-5 p-5" data-testid="memory-milestone-capture">
+                <div className="flex items-baseline justify-between gap-3 mb-1">
+                  <p className="kiddo-section-label">Capture a moment</p>
+                  <span className="text-[10.5px] uppercase tracking-wide text-muted-foreground/60">
+                    Saved for {childName || "them"} at 18
+                  </span>
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground mb-3">
+                  Tap one. Add a date, a note, a photo. {childName || "They"}'ll read it later.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {milestoneLibrary.map((m) => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      onClick={() => openMilestoneComposer(m.starter)}
+                      className="inline-flex items-center gap-1 rounded-full border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] hover:border-[hsl(var(--kiddo-evergreen)/0.35)]"
+                      data-testid={`milestone-chip-${m.key}`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => openMilestoneComposer("")}
+                    className="inline-flex items-center gap-1 rounded-full border border-dashed border-[hsl(var(--kiddo-border))] bg-card px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+                    data-testid="milestone-chip-other"
+                  >
+                    + Other moment
+                  </button>
+                </div>
+              </section>
             )}
 
             <section className="kiddo-card mb-5 overflow-hidden p-0" data-testid="memory-story-controls">
