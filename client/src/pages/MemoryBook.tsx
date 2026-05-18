@@ -527,6 +527,13 @@ export default function MemoryBook() {
   const [retryFile, setRetryFile] = useState<File | null>(null);
   const [visibility, setVisibility] = useState<"public" | "family" | "private">("public");
   const [isFeatured, setIsFeatured] = useState(false);
+  // "More options" disclosure for the composer. Holds Pin-this-memory
+  // (only real toggle inside today). The pin can also be flipped from
+  // the entry's row menu after creation, so front-loading it on the
+  // composer added a row most parents didn't touch on first capture.
+  // Default collapsed; opens automatically when editing an already-
+  // pinned entry so the existing state stays visible.
+  const [showMoreOptions, setShowMoreOptions] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
   const [sharePhotoUrl, setSharePhotoUrl] = useState("");
@@ -1279,6 +1286,7 @@ export default function MemoryBook() {
       setEntryType("milestone");
       setVisibility("public");
       setIsFeatured(false);
+      setShowMoreOptions(false);
       haptic("success");
     },
     onSettled: () => {
@@ -1364,6 +1372,7 @@ export default function MemoryBook() {
       setEntryType("milestone");
       setVisibility("public");
       setIsFeatured(false);
+      setShowMoreOptions(false);
       haptic("success");
     },
     onSettled: () => {
@@ -1465,6 +1474,7 @@ export default function MemoryBook() {
     setRetryFile(null);
     setVisibility("public");
     setIsFeatured(false);
+    setShowMoreOptions(false);
     setShowModal(true);
   };
 
@@ -1483,6 +1493,10 @@ export default function MemoryBook() {
     setRetryFile(null);
     setVisibility("public");
     setIsFeatured(true);
+    // First-parent-letter is pre-pinned, so reveal the More options
+    // row so the parent sees the pinned-state and can toggle it off
+    // if they don't want it pinned. Defaults to true for this entry.
+    setShowMoreOptions(true);
     setMilestonePromptSeed(Date.now());
     setShowModal(true);
   };
@@ -1539,6 +1553,7 @@ export default function MemoryBook() {
     // Locked 2026-05-18 per the milestone-composer polish pass.
     setVisibility("family");
     setIsFeatured(false);
+    setShowMoreOptions(false);
     setMilestonePromptSeed(Date.now());
     setShowModal(true);
     haptic("selection");
@@ -1561,6 +1576,10 @@ export default function MemoryBook() {
     setRetryFile(null);
     setVisibility(entry.visibility || "public");
     setIsFeatured(Boolean(entry.isFeatured));
+    // Reveal More options on edit when the entry is already pinned —
+    // the user is opening a row they previously pinned and needs the
+    // toggle visible in case they want to unpin.
+    setShowMoreOptions(Boolean(entry.isFeatured));
     setShowModal(true);
   };
 
@@ -2379,7 +2398,7 @@ export default function MemoryBook() {
           >
             {/* Decorative orbs - matching Dashboard */}
             <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: 9999, background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
-            <div style={{ position: "absolute", bottom: -70, left: -20, width: 240, height: 240, borderRadius: 9999, background: "rgba(184,121,26,0.08)", pointerEvents: "none" }} />
+            <div style={{ position: "absolute", bottom: -70, left: -20, width: 240, height: 240, borderRadius: 9999, background: "hsl(var(--kiddo-gold) / 0.08)", pointerEvents: "none" }} />
 
             <div style={{ position: "relative", zIndex: 1 }}>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.48)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }} data-testid="text-fund-name">
@@ -2457,7 +2476,7 @@ export default function MemoryBook() {
                   onClick={() => { haptic("selection"); openAddModal(); }}
                   style={{
                     padding: "9px 16px", fontSize: 13, fontWeight: 700,
-                    background: "rgb(184,121,26)", color: "white",
+                    background: "hsl(var(--kiddo-gold))", color: "white",
                     border: "none", borderRadius: 12,
                     cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
                   }}
@@ -2578,10 +2597,17 @@ export default function MemoryBook() {
 
               <section className="kiddo-card p-5">
                 <p className="kiddo-section-label mb-4">What will appear</p>
+                {/* Item list mirrors the filter row above the timeline
+                    (All / Gifts / Milestones / Photos / Notes). If a
+                    filter exists, an empty-state row for it should too
+                    — otherwise the parent sees the filter chip with no
+                    explanation of what it filters. Photos was the
+                    missing one before 2026-05-18. */}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
                     { icon: Gift, title: "Every gift", body: "Who gave, how much, and when." },
                     { icon: MessageCircle, title: "Every note", body: "The message behind the money." },
+                    { icon: Camera, title: "Photos & videos", body: "Captured moments and short clips." },
                     { icon: Star, title: "Growth milestones", body: "$100, $500, $1,000, and the moments after." },
                     { icon: Calendar, title: "Birthdays", body: "Annual snapshots of the fund's journey." },
                   ].map((item) => {
@@ -5207,20 +5233,39 @@ export default function MemoryBook() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() => setIsFeatured((v) => !v)}
-                      className={`w-full rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
-                        isFeatured ? "border-amber-400 bg-amber-50 text-amber-900" : "border-border bg-background text-foreground"
-                      }`}
-                      data-testid="button-memory-featured"
-                    >
-                      <span className="inline-flex items-center gap-1.5"><Pin size={14} /> {isFeatured ? "Pinned" : "Pin this memory"}</span>
-                    </button>
+                {/* "More options" disclosure — collapsed by default to
+                    keep the composer at 5 visible sections (Type / What
+                    happened / Your name / Visibility+Save-for-18 /
+                    media). Pin lives inside because it's editable from
+                    the entry's row menu after creation, so most parents
+                    won't reach for it on first capture. If a pinned
+                    entry is opened for editing, the disclosure expands
+                    automatically so the active state isn't hidden. */}
+                {showMoreOptions || isFeatured ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => setIsFeatured((v) => !v)}
+                        className={`w-full rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
+                          isFeatured ? "border-amber-400 bg-amber-50 text-amber-900" : "border-border bg-background text-foreground"
+                        }`}
+                        data-testid="button-memory-featured"
+                      >
+                        <span className="inline-flex items-center gap-1.5"><Pin size={14} /> {isFeatured ? "Pinned" : "Pin this memory"}</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowMoreOptions(true)}
+                    className="text-xs text-muted-foreground hover:text-foreground underline"
+                    data-testid="button-toggle-more-options"
+                  >
+                    More options
+                  </button>
+                )}
 
                 {(entryType === "photo" || entryType === "milestone") && (
                   <div>
@@ -5951,7 +5996,7 @@ export default function MemoryBook() {
                         border: "1px solid hsl(var(--kiddo-gold)/0.28)",
                         borderRadius: 24,
                         padding: "44px 28px 36px",
-                        boxShadow: "0 12px 40px rgba(184,121,26,0.10), 0 2px 6px rgba(26,23,16,0.06)",
+                        boxShadow: "0 12px 40px hsl(var(--kiddo-gold) / 0.10), 0 2px 6px rgba(26,23,16,0.06)",
                         textAlign: "center" as const,
                       }} data-testid="book-page-closing">
                         <div style={{ fontSize: 48, lineHeight: 1, marginBottom: 16 }} aria-hidden>🌱</div>
@@ -6339,7 +6384,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
           border: "1px solid hsl(var(--kiddo-gold)/0.35)",
           borderRadius: 24,
           padding: "40px 28px 32px",
-          boxShadow: "0 12px 40px rgba(184,121,26,0.12), 0 2px 6px rgba(26,23,16,0.06)",
+          boxShadow: "0 12px 40px hsl(var(--kiddo-gold) / 0.12), 0 2px 6px rgba(26,23,16,0.06)",
           textAlign: "center" as const,
         }}
         data-testid={`book-page-milestone-${entry.id}`}
