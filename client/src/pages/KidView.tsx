@@ -17,6 +17,7 @@ import { toast } from "@/hooks/use-toast";
 import { friendlyHoldingName } from "@/lib/ticker-names";
 import { useCountUp } from "@/hooks/use-count-up";
 import { ReportContentButton } from "@/components/ReportContentButton";
+import { CommunityCompoundingChart } from "@/components/CommunityCompoundingChart";
 import { projectFundValue, utmaContributionYearsRemaining } from "@shared/projection";
 
 type KidViewMeta = {
@@ -980,6 +981,22 @@ export default function KidView() {
         )}
 
         <div className="space-y-4">
+          {/* Community compounding chart. Each gifter renders as a
+              distinct band on a stacked area chart; the bands grow
+              over time as gifts arrive. The visual self-portrait of
+              the community building this kid's fund — the single
+              most-powerful asset Kiddo carries against the round-up
+              competitors. Hidden when there's only one gifter with
+              one gift (the chart needs at least one stacking + one
+              progression to read as 'compounding'). Locked
+              2026-05-18 per the Target-vs-Walmart positioning. */}
+          {(content as any)?.community && (
+            <CommunityCompoundingChart
+              data={(content as any).community}
+              childFirstName={(content as any)?.fund?.recipientFirstName}
+            />
+          )}
+
           {/* Gifters */}
           <div className="rounded-[24px] border border-border/60 bg-white p-5">
             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">{giftsHeading}</p>

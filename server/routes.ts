@@ -4456,6 +4456,106 @@ export async function registerRoutes(
         .filter((g: any) => ["processing", "invested", "settled", "host_hold"].includes(String(g.status || "").toLowerCase()))
         .reduce((sum: number, g: any) => sum + parseFloat(g.netAmount || g.amount || "0"), 0);
 
+      // Community compounding chart data. The single most-powerful
+      // visualization Kiddo can render: each gifter's cumulative
+      // contribution stacked over time. "Mom + Grandma + Uncle Mike
+      // + Godfather James" growing together = the loop made literal.
+      // EarlyBird had this exact chart on their marketing site;
+      // Acorns absorbed them and buried it. Kiddo's opening.
+      //
+      // Data shape: events sorted by date, each carrying (at, label,
+      // amount). Top 6 gifters by total are distinct series; rest
+      // bucket into "Others" so the legend stays scannable.
+      // Anonymous gifts bucket into a single
+      // "Someone who loves {kid}" band. Parent self-contributions
+      // (recurring + one-time) keep the parent name attribution per
+      // the locked "relationship is the point, cadence is metadata"
+      // principle — they're the same trusted face showing up
+      // monthly, not a faceless "auto-invest" stream.
+      //
+      // Locked 2026-05-18 per the Target-vs-Walmart positioning
+      // discussion. The chart is the visual self-portrait of the
+      // audience Kiddo serves: kids surrounded by a community of
+      // people who care, building something real over time.
+      const COMMUNITY_TOP_N = 6;
+      const communityEligibleGifts = fundGifts.filter((g: any) => {
+        const s = String(g.status || "").toLowerCase();
+        if (!["processing", "invested", "settled", "host_hold"].includes(s)) return false;
+        // Suppress the auto-invest boilerplate-row dupes from the
+        // chart aggregation — same regex used elsewhere.
+        const msg = String(g.message || "").trim();
+        if (/^auto-invest contribution to /i.test(msg)) {
+          // Still counted in the aggregation (it's a real gift), but
+          // we want the *attribution* to stay clean. Don't drop.
+        }
+        return true;
+      });
+      // Aggregate by sender_email (consistent identity); display
+      // label is the most-recent non-empty sender_name. Anonymous
+      // gifts collapse into a single bucket.
+      const anonLabel = `Someone who loves ${fund.recipientFirstName || "this kid"}`;
+      type GifterAgg = { email: string; label: string; totalUsd: number; events: Array<{ at: string; amount: number }> };
+      const aggByEmail = new Map<string, GifterAgg>();
+      for (const g of communityEligibleGifts) {
+        const isAnon = Boolean((g as any).isAnonymous);
+        const rawEmail = String((g as any).senderEmail || "").trim().toLowerCase();
+        const groupKey = isAnon ? "__anon__" : (rawEmail || `__unnamed_${g.id}__`);
+        const rawName = String((g as any).senderName || "").trim();
+        const displayLabel = isAnon ? anonLabel : (rawName || "A gifter");
+        const amount = parseFloat(String((g as any).netAmount || g.amount || "0")) || 0;
+        if (amount <= 0) continue;
+        const at = g.createdAt ? new Date(g.createdAt as any).toISOString() : new Date().toISOString();
+        let entry = aggByEmail.get(groupKey);
+        if (!entry) {
+          entry = { email: groupKey, label: displayLabel, totalUsd: 0, events: [] };
+          aggByEmail.set(groupKey, entry);
+        } else if (!isAnon && rawName && entry.label === "A gifter") {
+          // Backfill display label if a later gift carried a name
+          // and earlier didn't.
+          entry.label = rawName;
+        }
+        entry.totalUsd += amount;
+        entry.events.push({ at, amount });
+      }
+      // Sort gifters by total contribution descending, take top N
+      // as distinct series. The rest bucket into "Others" so the
+      // chart stays scannable.
+      const allGifters = Array.from(aggByEmail.values()).sort((a, b) => b.totalUsd - a.totalUsd);
+      const topGifters = allGifters.slice(0, COMMUNITY_TOP_N);
+      const restGifters = allGifters.slice(COMMUNITY_TOP_N);
+      const seriesList: Array<{ label: string; totalUsd: number; events: Array<{ at: string; amount: number }> }> = topGifters.map((g) => ({
+        label: g.label,
+        totalUsd: Number(g.totalUsd.toFixed(2)),
+        events: g.events,
+      }));
+      if (restGifters.length > 0) {
+        const othersTotal = restGifters.reduce((s, g) => s + g.totalUsd, 0);
+        const othersEvents = restGifters.flatMap((g) => g.events);
+        seriesList.push({
+          label: restGifters.length === 1 ? "1 other" : `${restGifters.length} others`,
+          totalUsd: Number(othersTotal.toFixed(2)),
+          events: othersEvents,
+        });
+      }
+      // Build the per-series cumulative path. For each series, sort
+      // events ASC by date, then emit a running cumulative total.
+      // The client uses this to render a step-stacked area chart.
+      const communitySeries = seriesList.map((s) => {
+        const sorted = [...s.events].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+        let running = 0;
+        const points = sorted.map((e) => {
+          running += e.amount;
+          return { at: e.at, cumulative: Number(running.toFixed(2)) };
+        });
+        return { label: s.label, totalUsd: s.totalUsd, points };
+      });
+      // Final response shape consumed by the client chart.
+      const community = {
+        fundStartedAt: fund.createdAt ? new Date(fund.createdAt as any).toISOString() : null,
+        totalContributors: allGifters.length,
+        series: communitySeries,
+      };
+
       // Visibility filter on memory entries:
       //   'kid_now'    → always visible to kid (default; gifter notes,
       //                  most parent notes, milestones, photos)
@@ -4629,6 +4729,9 @@ export async function registerRoutes(
             giftVolume: e.giftVolume,
             description: e.description,
           })),
+        // Community compounding chart data — see computation block
+        // above. The kid sees their community building over time.
+        community,
       });
     } catch (error) {
       console.error("Error fetching kid view content:", error);
