@@ -33,6 +33,202 @@ function SectionCard({ children, className = "" }: { children: React.ReactNode; 
   );
 }
 
+// Email row with inline change-email form. Triggers POST to
+// /api/me/change-email which sends a confirmation pair (confirm
+// link to NEW address; cancel link to OLD address). Closes Tier 0
+// #3 of the email-strategy review: 'Email-change confirmation
+// sent to old address.' Without this UI, the backend endpoint
+// shipped on 2026-05-15 was theoretical.
+function EmailRow({ currentEmail }: { currentEmail: string | null }) {
+  const [editing, setEditing] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async () => {
+    setError(null);
+    const trimmed = newEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+    if (trimmed === (currentEmail || "").toLowerCase()) {
+      setError("That's already your email.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/me/change-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ newEmail: trimmed }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body?.error || "Could not request the change. Try again.");
+        return;
+      }
+      setSubmitted(true);
+      haptic("success");
+    } catch (err: any) {
+      setError(err?.message || "Could not request the change. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.06)] p-4">
+        <p className="text-sm font-semibold text-foreground">Check both inboxes.</p>
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+          We sent a confirmation link to {newEmail.trim().toLowerCase()} and a cancel link to {currentEmail}. The change happens once the new address confirms. Either inbox can cancel for the next 24 hours.
+        </p>
+      </div>
+    );
+  }
+
+  if (!editing) {
+    return (
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground mb-1">Email</p>
+          <p className="text-sm font-semibold text-foreground truncate" data-testid="text-profile-email">{currentEmail || "—"}</p>
+        </div>
+        {currentEmail && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0 text-[hsl(var(--kiddo-evergreen))] hover:text-[hsl(var(--kiddo-evergreen))]"
+            onClick={() => { setEditing(true); haptic("light"); }}
+            data-testid="button-change-email"
+          >
+            Change
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2.5">
+      <p className="text-xs text-muted-foreground">New email</p>
+      <input
+        type="email"
+        autoComplete="email"
+        value={newEmail}
+        onChange={(e) => setNewEmail(e.target.value)}
+        placeholder="you@example.com"
+        className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        data-testid="input-new-email"
+      />
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        We send a confirmation link to the new address and a heads-up to {currentEmail}. The change only happens once the new address confirms.
+      </p>
+      {error && <p className="text-xs text-red-700" data-testid="text-change-email-error">{error}</p>}
+      <div className="flex gap-2">
+        <Button
+          size="sm"
+          className="rounded-xl"
+          disabled={submitting || !newEmail.trim()}
+          onClick={handleSubmit}
+          data-testid="button-submit-change-email"
+        >
+          {submitting ? "Sending…" : "Send confirmation"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-xl"
+          onClick={() => { setEditing(false); setNewEmail(""); setError(null); }}
+          data-testid="button-cancel-change-email"
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Email verification status row. Reads users.emailVerifiedAt via
+// /api/auth/user (already loaded in Account context). For
+// unverified accounts, surfaces a 'Resend verification' button
+// that POSTs to /api/auth/resend-verification. Grandfathered
+// accounts (signed up before 2026-05-15) have emailVerifiedAt
+// NULL but aren't surfaced here because the createdAt check
+// applied server-side at issue time means they never get
+// nagged. Display gate is a heuristic: if the user is missing
+// emailVerifiedAt AND was created after the cutoff, show the
+// row.
+function EmailVerificationStatusRow() {
+  const { user } = useAuth();
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const verifiedAt = (user as any)?.emailVerifiedAt;
+  const createdAt = (user as any)?.createdAt;
+  // Grandfathering: accounts created before 2026-05-15 are
+  // treated as verified for display purposes. Newer accounts that
+  // haven't verified see the row.
+  const CUTOFF = new Date("2026-05-15T00:00:00Z").getTime();
+  const isPostCutoff = createdAt ? new Date(createdAt).getTime() > CUTOFF : false;
+  const isUnverified = !verifiedAt && isPostCutoff;
+  if (!isUnverified) return null;
+
+  const handleResend = async () => {
+    setError(null);
+    setResending(true);
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body?.error || "Could not send.");
+        return;
+      }
+      setResent(true);
+      haptic("success");
+    } catch (err: any) {
+      setError(err?.message || "Could not send.");
+    } finally {
+      setResending(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-amber-900">Email not verified</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-amber-800">
+            {resent
+              ? "Verification email sent. Check your inbox."
+              : "Open the verification email we sent at signup, or send a fresh one."}
+          </p>
+          {error && <p className="mt-1 text-xs text-red-700">{error}</p>}
+        </div>
+        {!resent && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0 text-amber-900 hover:text-amber-900"
+            disabled={resending}
+            onClick={handleResend}
+            data-testid="button-resend-verification"
+          >
+            {resending ? "Sending…" : "Resend"}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Account() {
   const [, navigate] = useLocation();
   const { user, logout } = useAuth();
@@ -751,11 +947,24 @@ export default function Account() {
                   )}
                 </div>
 
-                {/* Email row */}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Email</p>
-                  <p className="text-sm font-semibold text-foreground" data-testid="text-profile-email">{user?.email}</p>
-                </div>
+                {/* Email row. Read-only display + 'Change email'
+                    trigger. The change flow goes through the
+                    confirmation pair (to the OLD address with a
+                    cancel link; to the NEW address with a confirm
+                    link), per Tier 0 #3 of the email strategy.
+                    The form inline-expands so we don't lose the
+                    Account context to a modal. */}
+                <EmailRow currentEmail={user?.email ?? null} />
+
+                {/* Verification status surface. If the user signed up
+                    pre-2026-05-15 they're grandfathered with
+                    emailVerifiedAt = NULL but treated as verified
+                    (no banner, no resend). For new accounts that
+                    haven't yet verified, this row carries a 'Resend
+                    verification' affordance so they can re-trigger
+                    the post-signup email. Locked 2026-05-18. */}
+                <EmailVerificationStatusRow />
+
 
                 {/* Preferred name */}
                 <div>
