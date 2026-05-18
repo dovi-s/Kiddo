@@ -166,7 +166,7 @@ export default function GiveAGift() {
               bottom placement means they read it only after they've
               already started filling fields. */}
           <div className="mx-auto mb-6 max-w-xl rounded-2xl border border-border bg-muted/30 px-4 py-3 text-center text-xs text-muted-foreground">
-            Already have a gift link from a parent? <span className="font-semibold text-foreground">Tap it instead.</span> It's the faster path — straight to checkout.
+            Already have a gift link from a parent? <span className="font-semibold text-foreground">Tap it instead.</span> It's the faster path. Straight to checkout.
           </div>
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -174,9 +174,17 @@ export default function GiveAGift() {
             transition={{ duration: 0.4 }}
             className="text-center mb-10"
           >
+            {/* Eyebrow rewrite 2026-05-18. Prior copy "For anyone
+                who loves a kid" tried to capture audience by
+                emotional descriptor and landed as predatory ('who's
+                loving a kid that isn't theirs'). Replaced with a
+                concrete role list that self-selects without
+                emotional overreach: if you're one of these, you're
+                in the right place. Same audience, cleaner read,
+                Apple-Settings register. */}
             <div className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground mb-3">
               <Sprout size={14} className="text-primary" />
-              <span>For anyone who loves a kid</span>
+              <span>Aunt, grandparent, godparent, friend</span>
             </div>
             <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight">
               Give a gift that lasts.
