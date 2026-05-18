@@ -258,12 +258,13 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-baseline gap-2">
+                              <div className="flex items-baseline gap-2 flex-wrap">
                                 <p className="text-sm font-semibold text-foreground truncate">
                                   {gifter.displayName}
                                 </p>
                                 <span className="text-[11px] text-muted-foreground tabular-nums">
                                   {gifter.giftCount === 1 ? "1 gift" : `${gifter.giftCount} gifts`}
+                                  {gifter.totalAmount > 0 ? ` · ${formatMoney(gifter.totalAmount)}` : ""}
                                 </span>
                               </div>
                               <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
@@ -333,16 +334,16 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                     gifter.fundsGivenTo.find((f) => f.fundId === g.fundId)
                                       ?.fundColorIndex ?? 0,
                                   );
-                                  // Descriptor under the chip row. When the
-                                  // gifter wrote a real message we show it
-                                  // (clamped to 2 lines). When they didn't,
-                                  // surface ticker context if it exists
-                                  // (Invested in AAPL) or a calm "Gift to
-                                  // Emma" fallback. The row never reads
-                                  // barren.
-                                  const inlineDescriptor = g.message?.trim()
-                                    ? { kind: "message" as const, text: g.message.trim() }
-                                    : { kind: "fallback" as const, text: describeGiftInline(g) };
+                                  // Show the kid chip on the inner row ONLY
+                                  // when this gifter gave across multiple
+                                  // funds. For single-fund gifters the chip
+                                  // is already at the outer-row level
+                                  // (fundsGivenTo loop); duplicating it on
+                                  // every inner row reads as noise. Locked
+                                  // 2026-05-18 per the gifter-sheet polish
+                                  // audit.
+                                  const showInnerKidChip = gifter.fundsGivenTo.length > 1;
+                                  const hasMessage = !!g.message?.trim();
                                   return (
                                     <div
                                       key={g.id}
@@ -350,26 +351,52 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                       data-testid={`gifter-recent-gift-${g.id}`}
                                     >
                                       <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2">
-                                          <span
-                                            className="inline-flex items-center rounded-full px-1.5 py-0 text-[9.5px] font-bold tracking-[0.02em]"
-                                            style={{ background: style.bg, color: style.text }}
-                                          >
-                                            {capFirst(g.recipientFirstName) || "Fund"}
-                                          </span>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          {showInnerKidChip && (
+                                            <span
+                                              className="inline-flex items-center rounded-full px-1.5 py-0 text-[9.5px] font-bold tracking-[0.02em]"
+                                              style={{ background: style.bg, color: style.text }}
+                                            >
+                                              {capFirst(g.recipientFirstName) || "Fund"}
+                                            </span>
+                                          )}
+                                          {/* Ticker chip ALWAYS renders when
+                                              present, regardless of whether
+                                              a message exists. Prior code
+                                              showed ticker OR message, never
+                                              both — left the parent guessing
+                                              what was actually bought when
+                                              the gifter wrote a note. */}
+                                          {g.selectedTicker && (
+                                            <span
+                                              className="inline-flex items-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-1.5 py-0 text-[9.5px] font-bold tracking-[0.04em] text-[hsl(var(--kiddo-evergreen))]"
+                                              data-testid={`gifter-recent-gift-ticker-${g.id}`}
+                                            >
+                                              {g.selectedTicker}
+                                            </span>
+                                          )}
                                           <span className="text-[10.5px] text-muted-foreground tabular-nums">
                                             {fullDate(g.createdAt)}
                                           </span>
                                         </div>
-                                        <p
-                                          className={`mt-1 text-[12px] leading-snug ${
-                                            inlineDescriptor.kind === "message"
-                                              ? "text-muted-foreground line-clamp-2"
-                                              : "text-muted-foreground/75 italic"
-                                          }`}
-                                        >
-                                          {inlineDescriptor.text}
-                                        </p>
+                                        {/* Descriptor line. When the gifter
+                                            wrote a message, show it in
+                                            quotes (their voice, surfaced).
+                                            Otherwise fall back to a calm
+                                            descriptor — but only if there's
+                                            no ticker chip already shown
+                                            (otherwise the line reads "Gift
+                                            to Emma" right after the AAPL
+                                            chip, which is redundant). */}
+                                        {hasMessage ? (
+                                          <p className="mt-1 text-[12px] leading-snug text-muted-foreground line-clamp-2">
+                                            &ldquo;{g.message!.trim()}&rdquo;
+                                          </p>
+                                        ) : !g.selectedTicker ? (
+                                          <p className="mt-1 text-[12px] leading-snug text-muted-foreground/75 italic">
+                                            {describeGiftInline(g)}
+                                          </p>
+                                        ) : null}
                                       </div>
                                       <p className="shrink-0 text-sm font-semibold text-foreground tabular-nums">
                                         {formatMoney(g.amount)}
