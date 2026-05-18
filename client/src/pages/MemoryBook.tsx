@@ -450,6 +450,24 @@ export default function MemoryBook() {
   const [videoUrl, setVideoUrl] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [audioTranscript, setAudioTranscript] = useState("");
+  // 'Or paste a URL' escape-hatch toggles. The composer's primary
+  // photo + video paths are the Upload buttons; the URL paste
+  // fields were always-visible escape hatches that doubled the
+  // visual density. Hidden behind compact disclosures so the dev-y
+  // 'Paste an image URL' field doesn't dominate the form by
+  // default. Auto-opens when there's already a URL value (edit
+  // flow) so the parent sees what's there. Locked 2026-05-18 per
+  // the milestone-composer polish pass.
+  const [showPhotoUrlInput, setShowPhotoUrlInput] = useState(false);
+  const [showVideoUrlInput, setShowVideoUrlInput] = useState(false);
+  // Auto-open the URL inputs when the entry already has a value
+  // (e.g. editing an old entry that was created via URL paste).
+  useEffect(() => {
+    if (photoUrl) setShowPhotoUrlInput(true);
+  }, [photoUrl]);
+  useEffect(() => {
+    if (videoUrl) setShowVideoUrlInput(true);
+  }, [videoUrl]);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [recordingAudio, setRecordingAudio] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -1513,7 +1531,13 @@ export default function MemoryBook() {
     setFormError(null);
     setUploadError(null);
     setRetryFile(null);
-    setVisibility("public");
+    // Default milestone visibility to 'family' — parents shouldn't
+    // accidentally publish "Emma's first day of kindergarten" on
+    // the gift page that strangers can land on. Family-only is the
+    // safer default for parent-authored childhood moments; the
+    // parent can flip to public if they want gifters to see it.
+    // Locked 2026-05-18 per the milestone-composer polish pass.
+    setVisibility("family");
     setIsFeatured(false);
     setMilestonePromptSeed(Date.now());
     setShowModal(true);
@@ -5095,16 +5119,25 @@ export default function MemoryBook() {
 
                 <div>
                   <label className="text-sm font-normal text-foreground mb-2 block">
-                    {entryType === "milestone" ? "Title" : entryType === "photo" ? "Caption" : "Note"}
+                    {entryType === "milestone" ? "What happened" : entryType === "photo" ? "Caption" : "Note"}
                   </label>
-                  {/* Char limit scales with entry type: Title/Caption are one-liners
-                      (120 chars discourages title-as-paragraph behavior, which fights
-                      the Memory Book inversion in feedback_memory_book_inversion.md).
-                      Note is paragraph-length context (600 chars). The counter +
-                      maxLength below both pull from the same `contentMaxLength`
-                      constant so they can't drift. */}
+                  {/* Char limits per type:
+                       - photo Caption: 120 (one-liner; discourages
+                         paragraph-as-caption fighting the Memory
+                         Book inversion in feedback_memory_book_inversion.md).
+                       - milestone "What happened": 280. A real
+                         milestone note ("First day of kindergarten.
+                         She walked in holding the lunchbox we picked
+                         out, didn't look back. I cried in the car.")
+                         is ~150 chars; 120 was too tight and forced
+                         truncation that defeated the whole capture
+                         flow. Locked 2026-05-18 per the milestone
+                         composer polish pass.
+                       - note paragraph context: 600. Unchanged.
+                      The counter + maxLength below both pull from
+                      the same `contentMaxLength` constant. */}
                   {(() => {
-                    const contentMaxLength = entryType === "note" ? 600 : 120;
+                    const contentMaxLength = entryType === "note" ? 600 : entryType === "milestone" ? 280 : 120;
                     return (
                       <>
                         <textarea
@@ -5192,7 +5225,7 @@ export default function MemoryBook() {
                 {(entryType === "photo" || entryType === "milestone") && (
                   <div>
                     <label className="text-sm font-normal text-foreground mb-2 block">Photo (optional)</label>
-                    <div className="flex gap-2 mb-2">
+                    <div className="flex gap-2 mb-2 flex-wrap">
                       <Button
                         type="button"
                         variant="outline"
@@ -5223,21 +5256,33 @@ export default function MemoryBook() {
                           Retry Upload
                         </Button>
                       )}
+                      {!showPhotoUrlInput && (
+                        <button
+                          type="button"
+                          onClick={() => setShowPhotoUrlInput(true)}
+                          className="text-xs text-muted-foreground hover:text-foreground underline self-center"
+                          data-testid="button-toggle-photo-url"
+                        >
+                          Or paste a URL
+                        </button>
+                      )}
                     </div>
-                    <input
-                      type="url"
-                      value={photoUrl}
-                      onChange={(e) => setPhotoUrl(e.target.value)}
-                      placeholder="Paste an image URL"
-                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                      data-testid="input-photo-url"
-                    />
+                    {showPhotoUrlInput && (
+                      <input
+                        type="url"
+                        value={photoUrl}
+                        onChange={(e) => setPhotoUrl(e.target.value)}
+                        placeholder="Paste an image URL"
+                        className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                        data-testid="input-photo-url"
+                      />
+                    )}
                   </div>
                 )}
 
                 <div>
                   <label className="text-sm font-normal text-foreground mb-2 block">Video link (optional)</label>
-                  <div className="flex gap-2 mb-2">
+                  <div className="flex gap-2 mb-2 flex-wrap">
                     <Button
                       type="button"
                       variant="outline"
@@ -5256,20 +5301,32 @@ export default function MemoryBook() {
                       className="hidden"
                       data-testid="input-upload-memory-video"
                     />
+                    {!showVideoUrlInput && (
+                      <button
+                        type="button"
+                        onClick={() => setShowVideoUrlInput(true)}
+                        className="text-xs text-muted-foreground hover:text-foreground underline self-center"
+                        data-testid="button-toggle-video-url"
+                      >
+                        Or paste a URL
+                      </button>
+                    )}
                   </div>
                   {/* Helper text below was dropped 2026-05-12 — the
                       placeholder ("YouTube, Vimeo, or Loom URL") already
                       carries the same information, and the duplicate
                       sentence added visual noise on a form that already
                       has 8+ fields. Less chrome, same comprehension. */}
-                  <input
-                    type="url"
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                    placeholder="YouTube, Vimeo, or Loom URL"
-                    className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                    data-testid="input-video-url"
-                  />
+                  {showVideoUrlInput && (
+                    <input
+                      type="url"
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      placeholder="YouTube, Vimeo, or Loom URL"
+                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                      data-testid="input-video-url"
+                    />
+                  )}
                 </div>
 
                 {/* Voice note — record live in-app or upload an existing file.
