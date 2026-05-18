@@ -25,11 +25,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowRight, CalendarClock, ChevronRight, Gift, Heart } from "lucide-react";
+import { ArrowRight, CalendarClock, ChevronRight, Gift, Heart, Plus } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { GiftersAcrossFundsSheet } from "@/components/GiftersAcrossFundsSheet";
 import { useAuth } from "@/hooks/use-auth";
-import { setActiveFundId } from "@/hooks/use-active-fund";
+import { ADD_FUND_EVENT, setActiveFundId } from "@/hooks/use-active-fund";
 import { capFirst } from "@/lib/format-name";
 import { useCountUp } from "@/hooks/use-count-up";
 import { haptic } from "@/lib/haptics";
@@ -52,6 +52,10 @@ type OverviewFund = {
   // Set only on transferred funds (accessRole='previous_owner').
   // Drives the "Transferred · {date}" pill rendering. ISO date string.
   transferredAt?: string | null;
+  // 30-day balance delta in USD. Null for funds without enough
+  // history (newly-created accounts). Drives the subtle "+$12 this
+  // month" line under each per-fund row.
+  delta30dUsd?: number | null;
 };
 
 type OverviewRecurringItem = {
@@ -110,7 +114,65 @@ type OverviewResponse = {
     items: OverviewRecurringItem[];
   };
   uniqueGifterCount?: number;
+  // Up to 30 daily points of the household's aggregate balance.
+  // Drives the household sparkline at the hero. Shape only — the
+  // sparkline shows direction not percentage, respecting the locked
+  // 'no aggregate return %' rule.
+  aggregateHistory?: Array<{ date: string; total: number }>;
 };
+
+// Tiny SVG sparkline. No library — handrolled so it stays inline
+// with the rest of the page's no-chart-dependencies posture. Renders
+// shape only; no axes, no labels, no percentage. Accepts a list of
+// {date, total} points; returns null when there's not enough data
+// for a meaningful curve (< 2 points).
+function HouseholdSparkline({ history }: { history: Array<{ date: string; total: number }> }) {
+  if (!history || history.length < 2) return null;
+  const width = 280;
+  const height = 36;
+  const padding = 1; // 1px breathing room so endpoints don't clip on stroke
+  const totals = history.map((h) => h.total);
+  const min = Math.min(...totals);
+  const max = Math.max(...totals);
+  // Flat-line case: render a centered horizontal line rather than
+  // dividing by zero on max-min.
+  const range = max - min;
+  const points = history.map((h, i) => {
+    const x = padding + (i / (history.length - 1)) * (width - padding * 2);
+    const y = range === 0
+      ? height / 2
+      : padding + (1 - (h.total - min) / range) * (height - padding * 2);
+    return { x, y };
+  });
+  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const fillPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},${height} L${points[0].x.toFixed(1)},${height} Z`;
+  return (
+    <svg
+      width="100%"
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      className="mt-3 opacity-90"
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id="household-sparkline-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.20)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        </linearGradient>
+      </defs>
+      <path d={fillPath} fill="url(#household-sparkline-fill)" />
+      <path
+        d={linePath}
+        fill="none"
+        stroke="rgba(255,255,255,0.85)"
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 function fmtCurrency(value: string | number | null | undefined, opts?: { whole?: boolean }) {
   const n = typeof value === "number" ? value : parseFloat(String(value ?? "0"));
@@ -275,6 +337,17 @@ export default function FundsOverview() {
   const recurring = data?.recurring;
   const recurringItems = recurring?.items ?? [];
   const uniqueGifterCount = data?.uniqueGifterCount ?? 0;
+  const aggregateHistory = data?.aggregateHistory ?? [];
+
+  // Fires the global add-fund event after navigating to /dashboard
+  // (where AddFundSheet is mounted). Same pattern as the sidebar /
+  // AppHeader add-fund affordances. Locked 2026-05-18 to close the
+  // 'parent can't add another kid from /funds' gap.
+  const handleAddFund = () => {
+    haptic("selection");
+    setLocation("/dashboard");
+    window.setTimeout(() => window.dispatchEvent(new CustomEvent(ADD_FUND_EVENT)), 0);
+  };
 
   // Count-up on the recurring monthly total — matches the vocabulary
   // used for aggregateBalance above. Currency settles in from 95%,
@@ -431,6 +504,15 @@ export default function FundsOverview() {
           <p className="text-sm opacity-70">
             across {funds.length} fund{funds.length === 1 ? "" : "s"}
           </p>
+          {/* Household sparkline. Shape only — direction, not
+              percentage. Respects the locked 'no aggregate return %'
+              rule (combining returns across different time horizons
+              would be mathematical fiction). 30 daily points; renders
+              nothing when there are fewer than 2 snapshots in the
+              window (brand-new accounts skip the visual entirely
+              rather than show a flat line that reads as 'no growth').
+              Added 2026-05-18. */}
+          <HouseholdSparkline history={aggregateHistory} />
         </motion.section>
 
         {/* Per-fund list. Each card routes to the kid's Dashboard via
@@ -515,13 +597,46 @@ export default function FundsOverview() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <p className="text-sm font-semibold text-foreground tabular-nums">{fmtCurrency(balance)}</p>
+                    <div className="flex flex-col items-end">
+                      <p className="text-sm font-semibold text-foreground tabular-nums">{fmtCurrency(balance)}</p>
+                      {/* 30-day delta. Subtle at-a-glance growth read.
+                          Skips for transferred funds (their numbers
+                          aren't moving) + funds without prior snapshot
+                          (delta30dUsd === null). Threshold: hide when
+                          |delta| < $1 to avoid noise like '+$0.04'.
+                          Locked 2026-05-18. */}
+                      {!isTransferred && typeof f.delta30dUsd === "number" && Math.abs(f.delta30dUsd) >= 1 && (
+                        <p
+                          className={`text-[10px] tabular-nums leading-tight mt-0.5 ${f.delta30dUsd >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-[hsl(var(--kora-gold))]"}`}
+                          data-testid={`overview-fund-delta-${f.id}`}
+                        >
+                          {f.delta30dUsd >= 0 ? "+" : "−"}{fmtCurrency(Math.abs(f.delta30dUsd), { whole: true })}
+                          <span className="text-muted-foreground"> · 30d</span>
+                        </p>
+                      )}
+                    </div>
                     <ArrowRight size={14} className="text-muted-foreground" />
                   </div>
                 </motion.button>
               );
             })}
           </div>
+
+          {/* Add-fund CTA. Closes the gap where a Family-tier parent
+              landing on /funds with intent to add a 4th kid had no
+              direct affordance — they'd have to bounce to Dashboard
+              or the sidebar dropdown. Dispatches ADD_FUND_EVENT after
+              navigating to /dashboard (where AddFundSheet is mounted).
+              Same mechanism the sidebar + AppHeader use. */}
+          <button
+            type="button"
+            onClick={handleAddFund}
+            className="mt-3 w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[hsl(var(--kiddo-border))] bg-card p-3 text-sm font-medium text-muted-foreground hover:border-[hsl(var(--kiddo-evergreen))]/40 hover:text-foreground transition-colors"
+            data-testid="overview-add-fund"
+          >
+            <Plus size={14} />
+            Add another child fund
+          </button>
         </section>
 
         {/* This-month rollup. The actual reason a Family-plan parent

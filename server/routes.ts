@@ -18549,6 +18549,56 @@ export async function registerRoutes(
         console.warn("[funds-overview] contrib stats query failed:", (err as any)?.message || err);
       }
 
+      // Aggregate sparkline history. 30 daily points of the
+      // household's combined fund value. Each point = SUM of every
+      // fund's daily snapshot for that calendar day. Sparkline shows
+      // SHAPE not percentage — the locked rule bans aggregate return %,
+      // but a visual trend curve is fine (it carries direction, not a
+      // return number). Empty arrays render as flat lines client-side;
+      // funds without snapshots simply don't contribute to the sum.
+      let aggregateHistory: Array<{ date: string; total: number }> = [];
+      try {
+        const histRes = await db.execute(sql`
+          SELECT
+            DATE_TRUNC('day', snapshot_date) AS day,
+            SUM(CAST(total_value AS numeric))::numeric AS total
+          FROM fund_snapshots
+          WHERE fund_id IN (${fundIdsSql})
+            AND snapshot_date >= NOW() - INTERVAL '30 days'
+          GROUP BY DATE_TRUNC('day', snapshot_date)
+          ORDER BY day ASC
+          LIMIT 31
+        `);
+        aggregateHistory = ((histRes.rows as any[]) || []).map((r) => ({
+          date: new Date(r.day).toISOString().slice(0, 10),
+          total: Number(parseFloat(String(r.total || '0')).toFixed(2)),
+        }));
+      } catch (err) {
+        console.warn("[funds-overview] aggregate history skipped:", (err as any)?.message || err);
+      }
+
+      // Per-fund 30-day balance deltas. For each fund, pull the
+      // closest snapshot at or before 30 days ago, compare to the
+      // latest snapshot. Renders as "+$X this month" subtitle on each
+      // per-fund card. Falls back to null when there's no prior
+      // snapshot (new funds), and the client skips the delta line.
+      let priorSnapshots = new Map<string, number>();
+      try {
+        const priorRes = await db.execute(sql`
+          SELECT DISTINCT ON (fund_id)
+            fund_id, total_value
+          FROM fund_snapshots
+          WHERE fund_id IN (${fundIdsSql})
+            AND snapshot_date <= NOW() - INTERVAL '30 days'
+          ORDER BY fund_id, snapshot_date DESC
+        `);
+        for (const r of ((priorRes.rows as any[]) || [])) {
+          priorSnapshots.set(String(r.fund_id), parseFloat(String(r.total_value || '0')));
+        }
+      } catch (err) {
+        console.warn("[funds-overview] per-fund delta skipped:", (err as any)?.message || err);
+      }
+
       // Upcoming occasions across all funds (next 90 days).
       // 5-row cap to keep the surface calm — this is a glance, not a
       // calendar app.
@@ -18693,25 +18743,45 @@ export async function registerRoutes(
         enabled: true,
         aggregateBalance: aggregateBalance.toFixed(2),
         fundCount: activeFunds.length,
-        funds: activeFunds.map(f => ({
-          id: f.id,
-          name: f.name,
-          slug: f.slug,
-          recipientFirstName: f.recipientFirstName,
-          recipientBirthdate: f.recipientBirthdate,
-          // childPhotoUrl powers the per-fund avatar on the client.
-          // Without it the cards fall back to the first-letter
-          // monogram even for funds where the parent uploaded a kid
-          // photo — visually flatter than every other surface in the
-          // app (Dashboard, sidebar switcher, header switcher all
-          // show the photo). Null-safe because most funds don't set
-          // a photo and that's the empty-state path.
-          childPhotoUrl: (f as any).childPhotoUrl ?? null,
-          balance: f.balance,
-          pendingBalance: f.pendingBalance,
-          cashBalance: (f as any).cashBalance,
-          accessRole: (f as any).accessRole || 'owner',
-        })),
+        funds: activeFunds.map(f => {
+          const currentTotal =
+            parseFloat(String(f.balance || '0'))
+            + parseFloat(String(f.pendingBalance || '0'))
+            + parseFloat(String((f as any).cashBalance || '0'));
+          const priorTotal = priorSnapshots.get(String(f.id));
+          // 30-day delta. Null when there's no prior snapshot
+          // (newly-created funds skip the delta line client-side).
+          const delta30dUsd = typeof priorTotal === 'number' && Number.isFinite(priorTotal)
+            ? currentTotal - priorTotal
+            : null;
+          return {
+            id: f.id,
+            name: f.name,
+            slug: f.slug,
+            recipientFirstName: f.recipientFirstName,
+            recipientBirthdate: f.recipientBirthdate,
+            // childPhotoUrl powers the per-fund avatar on the client.
+            // Without it the cards fall back to the first-letter
+            // monogram even for funds where the parent uploaded a kid
+            // photo — visually flatter than every other surface in the
+            // app (Dashboard, sidebar switcher, header switcher all
+            // show the photo). Null-safe because most funds don't set
+            // a photo and that's the empty-state path.
+            childPhotoUrl: (f as any).childPhotoUrl ?? null,
+            balance: f.balance,
+            pendingBalance: f.pendingBalance,
+            cashBalance: (f as any).cashBalance,
+            accessRole: (f as any).accessRole || 'owner',
+            // 30-day delta in USD. The client renders "+$12 this
+            // month" subtitle on each card when present. Null for
+            // funds without enough history (new accounts).
+            delta30dUsd: delta30dUsd != null ? Number(delta30dUsd.toFixed(2)) : null,
+          };
+        }),
+        // Aggregate household sparkline data. 30 daily points (or
+        // fewer if the household is younger). Client renders a small
+        // SVG path at the hero — shape only, no percentage axis.
+        aggregateHistory,
         thisMonth: {
           giftCount: Number(giftStats.gift_count || 0),
           giftTotal: String(giftStats.gift_total || '0'),
