@@ -21,7 +21,19 @@ const STATE_PATH = path.join(process.cwd(), ".local", "fund-investment-preferenc
 const DEFAULTS: Omit<FundInvestmentPreferences, "managedStrategy" | "updatedAt"> = {
   defaultMode: "managed",
   defaultTicker: "DIS",
-  allowGifterStockPick: false,
+  // Stock-pick default flipped to true 2026-05-18. The Cam-Disney
+  // 'love mark' Memory Book moment depends on a gifter being able
+  // to pick a specific stock (grandma chooses Disney for her
+  // granddaughter; the personal fingerprint is the unique-voice
+  // differentiator nobody else in the space has). Parents who want
+  // strict adherence to the family default can flip this off in
+  // one tap from Settings.
+  allowGifterStockPick: true,
+  // Cash-sending default stays false: 'Cash gifts disappear, Kiddo
+  // gifts last' is the locked brand promise. Defaulting cash ON
+  // would contradict the product's reason to exist. Parents with
+  // edge-case needs (saving for an almost-grown kid who wants
+  // withdrawable cash) can opt in deliberately.
   allowGifterCashGift: false,
   autoInvestEnabled: true,
 };
