@@ -4118,8 +4118,12 @@ const [editFundName, setEditFundName] = useState("");
               const ctaLabel = (cardPlan: "starter" | "family" | "legacy") => {
                 if (cardPlan === userPlan) return "Current plan";
                 const cardRank = planRank(cardPlan);
-                if (cardRank > currentRank) return `Upgrade to ${cardPlan === "starter" ? "Plus" : cardPlan === "family" ? "Family" : "Legacy"}`;
-                return `Switch to ${cardPlan === "starter" ? "Plus" : cardPlan === "family" ? "Family" : "Legacy"}`;
+                const planLabel = cardPlan === "starter" ? "Plus" : cardPlan === "family" ? "Family" : "Legacy";
+                if (cardRank > currentRank) return `Upgrade to ${planLabel}`;
+                // 'Switch to' -> 'Downgrade to' for lower-tier cards.
+                // See parallel comment in Account.tsx ctaLabel for the
+                // Apple-Settings register reasoning.
+                return `Downgrade to ${planLabel}`;
               };
               // For lower-tier cards, surface a calm "Included in {currentPlan}"
               // line so the parent isn't confused why we're showing them

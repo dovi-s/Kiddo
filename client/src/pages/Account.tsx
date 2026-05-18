@@ -1173,8 +1173,14 @@ export default function Account() {
               const ctaLabel = (cardPlan: "starter" | "family" | "legacy") => {
                 if (cardPlan === userPlan) return "Current plan";
                 const cardRank = planRank(cardPlan);
-                if (cardRank > currentRank) return `Upgrade to ${cardPlan === "starter" ? "Plus" : cardPlan === "family" ? "Family" : "Legacy"}`;
-                return `Switch to ${cardPlan === "starter" ? "Plus" : cardPlan === "family" ? "Family" : "Legacy"}`;
+                const planLabel = cardPlan === "starter" ? "Plus" : cardPlan === "family" ? "Family" : "Legacy";
+                if (cardRank > currentRank) return `Upgrade to ${planLabel}`;
+                // Lower-rank card from a higher-rank current plan is a
+                // DOWNGRADE. 'Switch to' was neutral and hid the
+                // direction; honest matches the Apple-Settings
+                // register (iOS App Store subscription management
+                // also uses 'Downgrade'). Locked 2026-05-18.
+                return `Downgrade to ${planLabel}`;
               };
               const includedHint = (cardPlan: "starter" | "family" | "legacy") => {
                 if (cardPlan === userPlan) return "";
