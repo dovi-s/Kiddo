@@ -213,7 +213,15 @@ async function getLifecycleRows(): Promise<LifecycleRow[]> {
         SELECT
           fund_id,
           COUNT(*) FILTER (WHERE status NOT IN ('failed', 'refunded', 'canceled'))::int AS gift_count,
-          COALESCE(SUM(CAST(amount AS numeric)) FILTER (WHERE status NOT IN ('failed', 'refunded', 'canceled')), 0)::text AS total_gifted,
+          -- Keep total_gifted NUMERIC inside the subquery so the
+          -- outer COALESCE(g.total_gifted, 0) can match types
+          -- (numeric + integer is valid; text + integer is not).
+          -- The outer projection casts to text alongside the other
+          -- two columns. Fixed 2026-05-18 — prior ::text cast in
+          -- this position broke parent_lifecycle_worker on every
+          -- tick with 'COALESCE types text and integer cannot be
+          -- matched'.
+          COALESCE(SUM(CAST(amount AS numeric)) FILTER (WHERE status NOT IN ('failed', 'refunded', 'canceled')), 0) AS total_gifted,
           COUNT(DISTINCT COALESCE(NULLIF(LOWER(TRIM(sender_email)), ''), LOWER(TRIM(sender_name)))) FILTER (WHERE status NOT IN ('failed', 'refunded', 'canceled'))::int AS contributor_count
         FROM gifts
         GROUP BY fund_id
