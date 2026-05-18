@@ -814,16 +814,37 @@ export default function Activity() {
   // notification emails / shareable links land directly inside a specific
   // detail view without forcing the parent to navigate twice. URL gets
   // cleaned on close so back-then-forward doesn't reopen.
+  //
+  // Unmount cleanup added 2026-05-18: if the parent navigates AWAY
+  // from Activity with the modal still open, drop the ?detail param
+  // so a future return to Activity doesn't auto-re-open the modal.
+  // The deep-link semantic is preserved (email click → modal opens)
+  // but the navigation-away semantic ("I'm done with this view") is
+  // now respected. Without this, the parent's reflex of bouncing
+  // out and back into Activity surfaced a stale modal state and
+  // read as a bug ('this modal was already there?').
   useEffect(() => {
     const params = new URLSearchParams(searchString);
     const raw = params.get("detail");
-    if (!raw) return;
-    if (raw === "contributions") {
-      setDetailScope({ kind: "contributions" });
-      return;
+    if (raw) {
+      if (raw === "contributions") {
+        setDetailScope({ kind: "contributions" });
+      } else {
+        const m = raw.match(/^schedule:(.+)$/);
+        if (m && m[1]) setDetailScope({ kind: "schedule", scheduleId: m[1] });
+      }
     }
-    const m = raw.match(/^schedule:(.+)$/);
-    if (m && m[1]) setDetailScope({ kind: "schedule", scheduleId: m[1] });
+    return () => {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has("detail")) {
+          url.searchParams.delete("detail");
+          window.history.replaceState({}, "", url.toString());
+        }
+      } catch {
+        // best-effort
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const closeDetailScope = () => {
