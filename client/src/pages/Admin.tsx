@@ -1045,7 +1045,7 @@ function LoopTouchpointModal({
   );
 }
 
-type Tab = "overview" | "growth" | "funnels" | "access-review" | "users" | "funds" | "assets" | "config" | "gifters" | "gifts" | "transactions" | "audit" | "moderation" | "ops" | "loops" | "integrations";
+type Tab = "overview" | "growth" | "funnels" | "access-review" | "users" | "funds" | "assets" | "config" | "gifters" | "gifts" | "transactions" | "audit" | "moderation" | "ops" | "loops" | "integrations" | "deliverability";
 
 const FALLBACK_SUPER_ADMINS = getDefaultSuperAdminEmails();
 
@@ -1147,6 +1147,7 @@ export default function Admin() {
     { id: "moderation", label: "Moderation", icon: Shield },
     { id: "ops", label: "Ops", icon: RefreshCw },
     { id: "integrations", label: "Integrations", icon: Activity },
+    { id: "deliverability", label: "Deliverability", icon: Activity },
     { id: "audit", label: "Audit", icon: Shield },
     { id: "config", label: "Config", icon: Shield },
   ];
@@ -1209,7 +1210,160 @@ export default function Admin() {
         {activeTab === "ops" && <OpsTab />}
         {activeTab === "loops" && <LoopsTab />}
         {activeTab === "integrations" && <IntegrationsTab />}
+        {activeTab === "deliverability" && <DeliverabilityTab />}
       </main>
+    </div>
+  );
+}
+
+// DeliverabilityTab — admin visibility into the email_suppressions
+// table. Hard-bounced + spam-complained addresses written by the
+// Postmark webhook handler. Admin can manually unsuppress when a
+// recipient confirms the mailbox is valid again.
+// Hooks /api/admin/email-suppressions (GET) +
+// /api/admin/email-suppressions/:id/unsuppress (POST).
+function DeliverabilityTab() {
+  const [rows, setRows] = useState<Array<{
+    id: string;
+    email: string;
+    reason: string;
+    source: string;
+    suppressed_at: string;
+    unsuppressed_at: string | null;
+    unsuppressed_reason: string | null;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [unsuppressing, setUnsuppressing] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/email-suppressions", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load");
+      const data = await res.json();
+      setRows(Array.isArray(data) ? data : []);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { void load(); }, []);
+
+  const handleUnsuppress = async (id: string) => {
+    const reason = window.prompt("Reason for unsuppressing? (e.g., 'gifter confirmed address is now valid')");
+    if (!reason) return;
+    setUnsuppressing(id);
+    try {
+      const res = await fetch(`/api/admin/email-suppressions/${id}/unsuppress`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || "Failed to unsuppress");
+      }
+      await load();
+    } catch (err: any) {
+      alert(err?.message || "Failed to unsuppress");
+    } finally {
+      setUnsuppressing(null);
+    }
+  };
+
+  const activeRows = rows.filter((r) => !r.unsuppressed_at);
+  const cleared = rows.filter((r) => r.unsuppressed_at);
+
+  return (
+    <div className="space-y-6 py-6">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">Email deliverability</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Addresses suppressed by the Postmark bounce/complaint webhook. Subsequent emails to these addresses are silently skipped by sendEmail() to protect sender reputation. Unsuppress manually when a recipient confirms the address is valid again.
+        </p>
+      </div>
+
+      {error && <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      ) : (
+        <>
+          <section>
+            <h3 className="text-sm font-semibold text-foreground mb-3">Active suppressions ({activeRows.length})</h3>
+            {activeRows.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No active suppressions. Inbox reputation is healthy.</p>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Email</th>
+                      <th className="px-3 py-2 font-medium">Reason</th>
+                      <th className="px-3 py-2 font-medium">Source</th>
+                      <th className="px-3 py-2 font-medium">When</th>
+                      <th className="px-3 py-2 font-medium"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeRows.map((r) => (
+                      <tr key={r.id} className="border-t border-border" data-testid={`suppression-row-${r.id}`}>
+                        <td className="px-3 py-2 font-mono text-xs">{r.email}</td>
+                        <td className="px-3 py-2"><span className="rounded-full bg-red-100 text-red-800 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">{r.reason}</span></td>
+                        <td className="px-3 py-2 text-muted-foreground">{r.source}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{new Date(r.suppressed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+                        <td className="px-3 py-2 text-right">
+                          <button
+                            type="button"
+                            onClick={() => void handleUnsuppress(r.id)}
+                            disabled={unsuppressing === r.id}
+                            className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline disabled:opacity-50"
+                            data-testid={`button-unsuppress-${r.id}`}
+                          >
+                            {unsuppressing === r.id ? "Unsuppressing…" : "Unsuppress"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          {cleared.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold text-foreground mb-3">Manually cleared ({cleared.length})</h3>
+              <div className="overflow-x-auto rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/40 text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Email</th>
+                      <th className="px-3 py-2 font-medium">Original reason</th>
+                      <th className="px-3 py-2 font-medium">Cleared</th>
+                      <th className="px-3 py-2 font-medium">Note</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cleared.map((r) => (
+                      <tr key={r.id} className="border-t border-border">
+                        <td className="px-3 py-2 font-mono text-xs">{r.email}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{r.reason}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{r.unsuppressed_at ? new Date(r.unsuppressed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{r.unsuppressed_reason || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </>
+      )}
     </div>
   );
 }
