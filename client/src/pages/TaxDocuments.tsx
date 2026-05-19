@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, FileText, Info } from "lucide-react";
+import { AlertTriangle, Download, FileText, Info, ShieldCheck } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useFunds } from "@/hooks/use-funds";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
@@ -8,7 +8,35 @@ import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
 import { prefetchDashboard, prefetchSettings, onIdle } from "@/lib/prefetch";
 import { useCountUp } from "@/hooks/use-count-up";
+import { toast } from "@/hooks/use-toast";
 import type { Fund, Holding } from "@shared/schema";
+
+// CSV-quoting helper. Wraps any cell containing a comma, double-quote,
+// or newline in quotes, and escapes embedded quotes by doubling them.
+// Identical to the Activity export pattern. Locked 2026-05-19 per the
+// Five Towns CPA-readability audit — exports here go to CPAs preparing
+// the kid's Schedule D and need to round-trip cleanly into Excel / TurboTax.
+function csvCell(raw: unknown): string {
+  const s = raw == null ? "" : String(raw);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+function downloadCsvFile(filename: string, rows: string[][]): void {
+  const body = rows.map((r) => r.map(csvCell).join(",")).join("\n");
+  // BOM prefix so Excel opens UTF-8 numeric/currency columns correctly
+  // on Windows. Without this, "$1,234.56" sometimes lands in the wrong
+  // column on European Excel locales — CPAs working in non-US offices
+  // hit this exact bug otherwise.
+  const blob = new Blob(["﻿" + body], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 // Honest tax documents page. Two truths drive the design:
 //   1. DriveWealth is scaffolded, not wired — there are no real 1099-DIV /
@@ -397,7 +425,49 @@ export default function TaxDocuments() {
             bottom. The "fund" column only renders when filter === "all" so
             single-fund views aren't cluttered with a redundant column. */}
         <section>
-          <p className="kiddo-section-label mb-2">Cost basis &amp; unrealized gains</p>
+          <div className="mb-2 flex items-baseline justify-between gap-3">
+            <p className="kiddo-section-label">Cost basis &amp; unrealized gains</p>
+            {basisRows.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  haptic("selection");
+                  const childFirst = activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}` : "fund";
+                  const stamp = new Date().toISOString().slice(0, 10);
+                  const headers = ["Ticker", "Position", "Shares", "Cost basis (USD)", "Current value (USD)", "Unrealized gain (USD)", "Unrealized gain (%)"];
+                  const rows: string[][] = [
+                    headers,
+                    ...basisRows.map((r) => [
+                      r.ticker,
+                      r.name,
+                      r.shares >= 1 ? r.shares.toFixed(2) : r.shares.toFixed(4),
+                      r.costBasis.toFixed(2),
+                      r.currentValue.toFixed(2),
+                      r.gain.toFixed(2),
+                      r.gainPct.toFixed(2),
+                    ]),
+                    [
+                      "TOTAL",
+                      "",
+                      "",
+                      totals.cost.toFixed(2),
+                      totals.value.toFixed(2),
+                      totals.gain.toFixed(2),
+                      totals.cost > 0 ? ((totals.gain / totals.cost) * 100).toFixed(2) : "",
+                    ],
+                  ];
+                  downloadCsvFile(`kiddo-cost-basis-${childFirst}-${stamp}.csv`, rows);
+                  toast({ title: "CSV downloaded", description: "Open in Excel or share with your CPA." });
+                }}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline underline-offset-2"
+                data-testid="button-export-cost-basis-csv"
+                aria-label="Download cost basis CSV"
+              >
+                <Download size={12} />
+                CSV
+              </button>
+            )}
+          </div>
           {holdingsLoading ? (
             <div className="kiddo-card p-5 text-sm text-muted-foreground">Loading positions…</div>
           ) : basisRows.length === 0 ? (
@@ -484,7 +554,46 @@ export default function TaxDocuments() {
             See project_realized_gain_architecture for the data flow. */}
         {realizedSales.length > 0 && realizedTotals && (
           <section>
-            <p className="kiddo-section-label mb-2">Realized sales · {yearFilter}</p>
+            <div className="mb-2 flex items-baseline justify-between gap-3">
+              <p className="kiddo-section-label">Realized sales · {yearFilter}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  haptic("selection");
+                  const childFirst = activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}` : "fund";
+                  const headers = ["Date", "Ticker", "Description", "Proceeds (USD)", "Cost basis (USD)", "Realized gain (USD)", "Holding period"];
+                  const rows: string[][] = [
+                    headers,
+                    ...realizedSales.map((s) => [
+                      s.completedAt ? new Date(s.completedAt).toLocaleDateString("en-US") : "",
+                      s.ticker || "",
+                      s.description || "",
+                      s.proceeds.toFixed(2),
+                      s.costBasisSold == null ? "" : s.costBasisSold.toFixed(2),
+                      s.realizedGain == null ? "" : s.realizedGain.toFixed(2),
+                      s.holdingPeriod === "short_term" ? "Short-term" : s.holdingPeriod === "long_term" ? "Long-term" : "",
+                    ]),
+                    [
+                      `TOTAL ${yearFilter}`,
+                      "",
+                      "",
+                      realizedProceeds.toFixed(2),
+                      "",
+                      realizedTotalGain.toFixed(2),
+                      `Short-term: ${realizedShortTerm.toFixed(2)} · Long-term: ${realizedLongTerm.toFixed(2)}`,
+                    ],
+                  ];
+                  downloadCsvFile(`kiddo-realized-sales-${childFirst}-${yearFilter}.csv`, rows);
+                  toast({ title: "CSV downloaded", description: "Open in Excel or share with your CPA." });
+                }}
+                className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline underline-offset-2"
+                data-testid="button-export-realized-csv"
+                aria-label="Download realized sales CSV"
+              >
+                <Download size={12} />
+                CSV
+              </button>
+            </div>
             <div className="kiddo-card overflow-hidden">
               {/* Year totals across the top — short-term + long-term
                   split is the load-bearing piece since the tax rate
@@ -670,9 +779,65 @@ export default function TaxDocuments() {
           </div>
         </section>
 
-        <p className="text-[11px] text-muted-foreground/70 text-center pt-2">
-          Investments held by DriveWealth, LLC, Member FINRA/SIPC. Tax forms are issued by DriveWealth.
-        </p>
+        {/* Custody & protection context block — answers "where is my
+            money, who is DriveWealth, what is SIPC" before the
+            sophisticated parent has to Google it themselves. Sized as
+            a real section, not a footnote, because for a $50k+ UTMA
+            this is the load-bearing trust question. Per the locked
+            Five Towns persona audit 2026-05-19: a parent considering
+            using Kiddo as primary custody (not just gifts) needs
+            this. ShieldCheck icon + evergreen border so it reads as
+            "this is reassurance, not a warning". */}
+        <section>
+          <p className="kiddo-section-label mb-2">Custody &amp; protection</p>
+          <div className="kiddo-card p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.10)] flex items-center justify-center flex-shrink-0">
+                <ShieldCheck size={18} className="text-[hsl(var(--kiddo-evergreen))]" />
+              </div>
+              <div className="min-w-0 space-y-3">
+                <div>
+                  <p className="text-sm font-bold text-foreground">DriveWealth, LLC · Member FINRA / SIPC</p>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                    {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "Your child's"} UTMA holds positions at DriveWealth, LLC — a US broker-dealer registered with the SEC, regulated by FINRA, and a member of SIPC. DriveWealth provides custody for the assets; Kiddo provides the front-end, the gifting flow, and the Memory Book. Same custody pattern Wealthfront, Acorns Early, and many other consumer investing apps use.
+                  </p>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2.5">
+                  <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">SIPC protection</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+                      Up to $500,000 per account (including $250,000 for cash) against brokerage failure. Not protection against market losses.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Segregated accounts</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+                      Customer assets are held separately from DriveWealth's own funds under SEC Rule 15c3-3. The shares are {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "the child's"}, not the broker's.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Account type</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+                      UTMA custodial account under your state's Uniform Transfers to Minors Act. Custodian (you) controls until {activeFund?.recipientFirstName || "the child"} reaches majority age in your state.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Fees</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
+                      0.10% annual management fee on invested assets only — not on cash or pending gifts. Accrued daily, deducted quarterly. No trading commissions, no account fees.
+                    </p>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+                  Tax forms (1099-DIV, 1099-B) are issued by DriveWealth each January for the prior tax year. The cost basis shown above is computed by Kiddo from settled gift and contribution amounts; DriveWealth issues the authoritative figures on the 1099-B. Verify your CPA reconciles both before filing.
+                </p>
+                <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                  More on SIPC at <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">sipc.org</a>. More on DriveWealth at <a href="https://drivewealth.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">drivewealth.com</a>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

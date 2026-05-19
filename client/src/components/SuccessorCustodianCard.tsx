@@ -48,6 +48,7 @@ type SuccessorFundShape = {
   successorCustodianName?: string | null;
   successorCustodianEmail?: string | null;
   successorCustodianRelation?: string | null;
+  successorCustodianAddedAt?: string | null;
 };
 
 export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
@@ -59,6 +60,16 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
   const childFirst = fund.recipientFirstName || "your child";
   // State-specific majority age for "before {child} turns {N}" copy.
   const primaryMajorityAge = Number(fund.majorityAge) || 18;
+  // First-set date for the persistent legal-trail line shown after a
+  // successor is named. Preserved across edits (server contract: only
+  // stamps on first set, not on subsequent updates) so the date the
+  // user sees here matches the date their will should reference.
+  const addedAt = fund.successorCustodianAddedAt
+    ? new Date(fund.successorCustodianAddedAt)
+    : null;
+  const addedAtLabel = addedAt && Number.isFinite(addedAt.getTime())
+    ? addedAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+    : null;
 
   const [editOpen, setEditOpen] = useState(false);
   const [name, setName] = useState("");
@@ -153,6 +164,11 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
                     {[currentRelation, currentEmail].filter(Boolean).join(" · ")}
                   </p>
                 )}
+                {addedAtLabel && (
+                  <p className="mt-0.5 text-[11px] text-muted-foreground/60">
+                    Designated {addedAtLabel}
+                  </p>
+                )}
               </>
             ) : (
               <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
@@ -171,6 +187,23 @@ export function SuccessorCustodianCard({ fund }: { fund: SuccessorFundShape }) {
             </button>
           )}
         </div>
+
+        {/* Persistent two-layer reminder when a successor is named. The
+            app-side designation does NOT have legal weight on its own —
+            state UTMA statutes require the successor to be named in the
+            custodian's will too. Without this nudge, a sophisticated
+            parent (who understands estate planning) sees the app row and
+            assumes it's sufficient; an unsophisticated parent doesn't
+            know to ask. Surfaced persistently in the read-only view (the
+            edit form already carries the same disclaimer at the bottom).
+            Locked 2026-05-19 per the Five Towns audit. */}
+        {currentName && !editOpen && (
+          <div className="mt-3 rounded-xl border border-[hsl(var(--kiddo-gold)/0.32)] bg-[hsl(var(--kiddo-gold)/0.05)] p-3">
+            <p className="text-[11.5px] leading-relaxed text-foreground">
+              <span className="font-semibold">Two layers matter.</span> This designation tells Kiddo + support who steps in. Your will needs to formally name {currentName} as successor custodian under your state's UTMA statute too. Both layers, not one.
+            </p>
+          </div>
+        )}
 
         {editOpen && (
           <div className="mt-4 space-y-3 rounded-xl bg-muted/30 p-4">
