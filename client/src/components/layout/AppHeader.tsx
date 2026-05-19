@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Check, ChevronDown, Plus, RefreshCw, Share2, User } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { getActiveFundId, setActiveFundId, ACTIVE_FUND_CHANGE_EVENT, ADD_FUND_EVENT } from "@/hooks/use-active-fund";
-import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav } from "@/lib/page-scope";
+import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav, isFundSubPage } from "@/lib/page-scope";
 import { rememberAppLocation, readLastAppLocation, formatBackLabel, backTargetHref } from "@/lib/last-location";
 import { capFirst } from "@/lib/format-name";
 import { useAuth } from "@/hooks/use-auth";
@@ -107,6 +107,14 @@ export function AppHeader() {
   // arrow so mobile users still have a clear exit. Active fund's
   // recipient first name in the back-target when known.
   const hideNav = shouldHidePrimaryNav(location);
+  // Fund sub-pages (Age18Plan, Projection, Tax Documents) also show
+  // the mobile Back arrow. Tier-1 fund-scoped but conceptually a
+  // sub-screen of Dashboard — without a Back arrow, mobile users
+  // had no in-page exit (the bottom-nav Home tab was marked active
+  // but only scrolled-to-top instead of popping). See isFundSubPage
+  // doc-block in page-scope.ts. Locked 2026-05-18.
+  const isSubPage = isFundSubPage(location);
+  const showBackArrow = hideNav || isSubPage;
   const handleRefresh = useCallback(() => {
     haptic("selection");
     setRefreshing(true);
@@ -247,11 +255,11 @@ export function AppHeader() {
     });
   }, [location, pageTitle]);
 
-  // On /account, read the prior location to build the Back target.
-  // Falls back to the active fund's Dashboard ("Back to {Kid}'s
-  // home") if no prior location was recorded — covers cold
-  // deep-link entries.
-  const lastLocation = hideNav ? readLastAppLocation() : null;
+  // On /account OR a fund sub-page, read the prior location to build
+  // the Back target. Falls back to the active fund's Dashboard
+  // ("Back to {Kid}'s fund") if no prior location was recorded —
+  // covers cold deep-link entries.
+  const lastLocation = showBackArrow ? readLastAppLocation() : null;
   const backHref = backTargetHref(lastLocation, activeFund?.id ?? null);
   const backLabel = formatBackLabel(lastLocation, capFirst(activeFund?.recipientFirstName) || null);
   const accountType = activeFund ? ((activeFund as any).accountType || "UTMA") : "";
@@ -290,7 +298,9 @@ export function AppHeader() {
       >
         {/* Left: page title + fund context */}
         <div ref={fundPickerRef} className="relative flex min-w-0 flex-1 items-center gap-2">
-          {/* Back arrow on pages that hide the primary nav (/account).
+          {/* Back arrow on pages that hide the primary nav (/account)
+              AND on fund sub-pages (/age-18-plan, /projection,
+              /tax-documents).
               MOBILE ONLY (md:hidden) — desktop has the more prominent
               sidebar Back button, and showing both would be two back
               affordances pointing at the same destination on the
@@ -301,7 +311,7 @@ export function AppHeader() {
               Target + aria-label are context-aware: if the user came
               from Memory Book, this returns to Memory Book. See
               client/src/lib/last-location.ts. */}
-          {hideNav && (
+          {showBackArrow && (
             <button
               type="button"
               onClick={() => {

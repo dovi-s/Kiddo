@@ -92,3 +92,34 @@ const NAV_HIDDEN_PATHS = new Set<string>(["/account", "/funds"]);
 export function shouldHidePrimaryNav(pathname: string): boolean {
   return NAV_HIDDEN_PATHS.has(pathname);
 }
+
+// Fund sub-pages — drill-ins from Dashboard that are Tier-1 fund-scoped
+// (active fund still drives the page) but conceptually feel like
+// "sub-screens of Dashboard." They get two pieces of extra chrome on
+// mobile so users always have a clean exit:
+//
+//   1. A back arrow in the AppHeader (iOS-Settings convention) using
+//      the lastLocation snapshot for a context-aware destination.
+//   2. The MobileNav Home tab is marked active when the user is on
+//      one of these pages (so "you're in the Home section's stack"
+//      reads correctly in the tab bar), AND tapping the active Home
+//      tab pops-to-root (navigates to /dashboard) instead of the
+//      default scroll-to-top behavior. This matches the iOS pattern
+//      where tapping the active tab pops the stack to root.
+//
+// Without these two, /age-18-plan was a one-way street from Dashboard
+// on mobile — no in-page back affordance, and tapping the Home tab
+// just scrolled the long Age18Plan page to top (because the tab was
+// already marked active). User feedback 2026-05-18: "this page needs
+// a back button top left, and tapping Emma should go home."
+//
+// Add new fund sub-pages here as they ship. /age-18-plan and
+// /tax-documents are exact-match; /projection takes a fundId param
+// so it uses prefix-match.
+const FUND_SUB_PAGES_EXACT = new Set<string>(["/age-18-plan", "/tax-documents"]);
+const FUND_SUB_PAGES_PREFIX = ["/projection/"];
+
+export function isFundSubPage(pathname: string): boolean {
+  if (FUND_SUB_PAGES_EXACT.has(pathname)) return true;
+  return FUND_SUB_PAGES_PREFIX.some((p) => pathname.startsWith(p));
+}

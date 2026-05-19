@@ -17,7 +17,7 @@
 //      pasted URL), browser back goes OUTSIDE the app. Our fallback
 //      stays inside the app on the active fund's home.
 
-import { shouldHidePrimaryNav } from "./page-scope";
+import { shouldHidePrimaryNav, isFundSubPage } from "./page-scope";
 
 const STORAGE_KEY = "kora:last-app-location";
 
@@ -51,6 +51,13 @@ export type LastLocation = {
 function shouldSkipSave(path: string): boolean {
   if (shouldHidePrimaryNav(path)) return true;
   if (path === "/settings" || path.startsWith("/settings/")) return true;
+  // Fund sub-pages (Age18Plan, Projection, Tax Documents) skip saving
+  // so the back arrow on those pages reads the SOURCE page (typically
+  // Dashboard or Settings), not the sub-page itself. Otherwise a user
+  // arriving at /age-18-plan from /dashboard would save Age18Plan and
+  // then read it back as the back target — Back would loop to itself.
+  // Same pattern as nav-hidden paths above. Locked 2026-05-18.
+  if (isFundSubPage(path)) return true;
   return false;
 }
 

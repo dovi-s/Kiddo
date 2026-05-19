@@ -393,10 +393,15 @@ export default function Age18Plan() {
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
       <AppHeader />
       <div className="kiddo-canvas px-4 py-6 space-y-0 max-w-lg">
-        {/* In-content "← Home" link removed 2026-05-11. Age18Plan is
-            Tier-1 fund-scoped per page-scope.ts; AppHeader +
-            DesktopSidebar + MobileNav already provide global nav.
-            Apple-Settings register has no in-page back chrome. */}
+        {/* No in-content back link — the AppHeader Back arrow (mobile)
+            + DesktopSidebar Back button (desktop) handle nav on this
+            page now. Age18Plan is registered as a fund-sub-page in
+            page-scope.ts (isFundSubPage), which triggers (a) the
+            mobile AppHeader Back arrow, (b) the MobileNav Home-tap
+            pop-to-root behavior, and (c) skipped lastLocation save so
+            Back resolves to the SOURCE page (typically Dashboard).
+            Locked 2026-05-18 per user feedback "needs a back button
+            top left." */}
 
         {/* Page title */}
         <div className="mb-6">

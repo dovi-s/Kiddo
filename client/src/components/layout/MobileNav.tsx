@@ -10,7 +10,7 @@ import { tapActiveNavScrollToTop } from "@/lib/scroll-to-element";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "@/hooks/use-toast";
 import { ACTIVE_FUND_CHANGE_EVENT, getActiveFundId } from "@/hooks/use-active-fund";
-import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav } from "@/lib/page-scope";
+import { isHouseholdScopedPath, isUserScopedPath, shouldSuppressFundChrome, shouldHidePrimaryNav, isFundSubPage } from "@/lib/page-scope";
 import type { Fund } from "@shared/schema";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { useNotificationUnreadCount } from "@/components/NotificationsPanel";
@@ -183,7 +183,7 @@ export function MobileNav() {
         {items.map((item) => {
           const isShare = item.href === "__share__";
           const isActive =
-            (item.href === "/dashboard" && (location === "/dashboard" || location.startsWith("/dashboard") || location === "/age-18-plan")) ||
+            (item.href === "/dashboard" && (location === "/dashboard" || location.startsWith("/dashboard") || isFundSubPage(location))) ||
             (item.href === "/activity" && (location.startsWith("/activity") || location.startsWith("/event/"))) ||
             (item.href.startsWith("/memory") && location.startsWith("/memory")) ||
             (item.href === "/settings" && location.startsWith("/settings"));
@@ -219,6 +219,16 @@ export function MobileNav() {
                   if (isActive) {
                     e.preventDefault();
                     haptic("selection");
+                    // Pop-to-root: if the Home tab is logically active but
+                    // the user is on a fund sub-page (Age18Plan, Projection,
+                    // Tax Documents), tap navigates to /dashboard instead
+                    // of just scrolling. Matches the iOS pattern where
+                    // tapping the active tab pops the navigation stack to
+                    // its root, not just scroll-to-top. Locked 2026-05-18.
+                    if (item.href === "/dashboard" && isFundSubPage(location)) {
+                      setLocation("/dashboard");
+                      return;
+                    }
                     tapActiveNavScrollToTop(true, item.href, setLocation);
                     return;
                   }
