@@ -1035,7 +1035,7 @@ export default function GetStarted() {
                 <h1 className="mt-8 font-heading text-[2.4rem] font-semibold leading-tight text-foreground">{accountType === "personal" ? `${created.name} is live.` : `${childDisplayName}'s fund is live.`}</h1>
                 <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Share the link and the first gift can happen today. When you are ready to open the real investment account, tap Activate Investing. It takes 2 minutes.</p>
               </AnimatedBlock>
-              <AnimatedBlock className="get-started-panel mt-8"><p className="text-sm font-semibold text-foreground">Your private fund link</p><div className="mt-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground break-all">{shareUrl}</div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">Text it, email it, or drop it into an invitation. The moment someone gifts through this link, the story begins.</p></AnimatedBlock>
+              <AnimatedBlock className="get-started-panel mt-8"><p className="text-sm font-semibold text-foreground">Your private fund link</p><div className="mt-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground break-all">{shareUrl}</div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">Text it, email it, or drop it into an invitation. Anyone with the link can gift; no account needed on their side.</p></AnimatedBlock>
               <AnimatedBlock className="mt-8 grid grid-cols-3 gap-2 sm:gap-3">
                 {[
                   { label: "Fund live", copy: "Ready for its first gift" },
@@ -1107,8 +1107,8 @@ export default function GetStarted() {
                     <Button variant="outline" onClick={() => { void trackOnboardingSignal("cta_click", "onboarding_activate_investing", { fundId: created.id }); setLocation(`/activate?fundId=${encodeURIComponent(created.id)}`); }} className="h-12 w-full rounded-2xl text-base" data-testid="button-activate-investing">Activate investing</Button>
                     {showSkipWarning ? (
                       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-3">
-                        <p className="text-sm font-semibold text-amber-900">Before you go. Send yourself the link first.</p>
-                        <p className="text-sm text-amber-800">You worked too hard to lose the moment.</p>
+                        <p className="text-sm font-semibold text-amber-900">Send the link to yourself first</p>
+                        <p className="text-sm text-amber-800">So it's saved and ready when you want to share it.</p>
                         <div className="flex flex-col gap-2">
                           <Button variant="outline" className="w-full rounded-2xl" onClick={async () => { try { await navigator.clipboard.writeText(shareUrl); } catch {} void trackOnboardingSignal("cta_click", "onboarding_send_self_link", { fundId: created.id }); setLocation("/dashboard"); }} data-testid="button-send-self-link">Send to myself</Button>
                           <button onClick={() => { void trackOnboardingSignal("cta_click", "onboarding_skip_to_dashboard", { fundId: created.id }); setLocation("/dashboard"); }} className="w-full py-2 text-sm font-medium text-muted-foreground" data-testid="button-go-dashboard-later">I will do this later</button>

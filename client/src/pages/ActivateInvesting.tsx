@@ -601,8 +601,8 @@ export default function ActivateInvesting() {
                     <TrendingUp size={20} className="text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground text-sm">This is the moment the fund becomes real</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Once verified, gifts can move straight into real stocks without extra steps</p>
+                    <p className="font-medium text-foreground text-sm">Verification unlocks investing</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Once verified, gifts settle into real stocks without extra steps.</p>
                   </div>
                 </div>
                 <div className="bg-card rounded-2xl border border-border/50 p-4 flex items-start gap-3 shadow-sm" data-testid="card-benefit-real-stocks">

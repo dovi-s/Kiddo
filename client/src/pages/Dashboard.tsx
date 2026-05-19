@@ -4564,8 +4564,8 @@ export default function Dashboard() {
                   {/* Fund-switch skeleton: when dashboard-summary is loading AND
                       the funds-list balance says this fund has real data, render
                       a brief skeleton instead of flashing stale numbers from the
-                      previous fund or a wrong "every great fund starts here"
-                      empty state. Brand-new funds (balance==0) skip this and
+                      previous fund or a wrong "Ready for the first gift" empty
+                      state. Brand-new funds (balance==0) skip this and
                       land directly on the empty hero — that's the correct state
                       for them and the optimistic create flow. */}
                   {dashboardSummaryLoading && !dashboardSummary && getFundTotalValue(activeFund) > 0 ? (
@@ -4585,10 +4585,10 @@ export default function Dashboard() {
                         $0.00
                       </div>
                       <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.7)", marginBottom: 4 }}>
-                        Every great fund starts here.
+                        Ready for the first gift.
                       </p>
                       <p style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", lineHeight: 1.55, marginBottom: 22 }}>
-                        Share {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "your child's"} gift link to start receiving investments for their future.
+                        Share {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "your child's"} gift link to get started.
                       </p>
                       {/* Acknowledge any scheduled recurring investment.
                           Without this, the empty state reads as "nothing
