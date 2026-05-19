@@ -2949,18 +2949,23 @@ export default function MemoryBook() {
                 <p className="text-xs leading-relaxed text-muted-foreground mb-3">
                   Tap one. Add a date, a note, a photo. {childName || "They"}'ll read it later.
                 </p>
-                {/* Press feedback (active:scale-[0.97]) added 2026-05-18
-                    — chips previously had hover states but no tactile
-                    response on tap. Now there's a brief squeeze on press
-                    so the parent knows the tap registered before the
-                    composer sheet slides up. Mirrors iOS tap feedback. */}
-                <div className="flex flex-wrap gap-2">
+                {/* Single-row horizontal scroll (was flex-wrap) —
+                    locked 2026-05-19 per the chip-row layout audit.
+                    10+ milestone-prompt chips wrapping into 3 rows of
+                    unequal visual weight read as cluttered. One
+                    scrollable row reads as Apple-keyboard-QuickType
+                    suggestion bar: swipe through to pick. Each chip
+                    gets shrink-0 so flex doesn't compress them.
+                    Press feedback (active:scale-[0.97]) preserved
+                    from 2026-05-18 polish — chips still squeeze on
+                    tap before the composer sheet slides up. */}
+                <div className="kiddo-h-scroll gap-2 -mx-1 px-1">
                   {milestoneLibrary.map((m) => (
                     <button
                       key={m.key}
                       type="button"
                       onClick={() => openMilestoneComposer(m.starter)}
-                      className="inline-flex items-center gap-1 rounded-full border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-1.5 text-[12px] font-medium text-foreground transition-[colors,transform] duration-150 hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] hover:border-[hsl(var(--kiddo-evergreen)/0.35)] active:scale-[0.97]"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-1.5 text-[12px] font-medium text-foreground transition-[colors,transform] duration-150 hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] hover:border-[hsl(var(--kiddo-evergreen)/0.35)] active:scale-[0.97]"
                       data-testid={`milestone-chip-${m.key}`}
                     >
                       {m.label}
@@ -2969,7 +2974,7 @@ export default function MemoryBook() {
                   <button
                     type="button"
                     onClick={() => openMilestoneComposer("")}
-                    className="inline-flex items-center gap-1 rounded-full border border-dashed border-[hsl(var(--kiddo-border))] bg-card px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-[colors,transform] duration-150 hover:border-foreground/40 hover:text-foreground active:scale-[0.97]"
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full border border-dashed border-[hsl(var(--kiddo-border))] bg-card px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-[colors,transform] duration-150 hover:border-foreground/40 hover:text-foreground active:scale-[0.97]"
                     data-testid="milestone-chip-other"
                   >
                     + Other moment

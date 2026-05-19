@@ -145,9 +145,9 @@ export default function Profile() {
         {profileNeedsCompletion && (
           <SectionCard className="border-primary/20 bg-primary/5">
             <div className="p-5">
-              <p className="text-sm font-semibold text-foreground">Make your child&apos;s fund feel personal</p>
+              <p className="text-sm font-semibold text-foreground">Complete your profile</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Add your {profileNeedsName && profileNeedsPhoto ? "name and photo" : profileNeedsName ? "name" : "photo"} so the Memory Book shows who started this story.
+                Add your {profileNeedsName && profileNeedsPhoto ? "name and photo" : profileNeedsName ? "name" : "photo"} so it appears in your child&apos;s Memory Book.
               </p>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
                 {profileNeedsName && <span className="rounded-full bg-background px-3 py-1 border border-border/50">Add your name</span>}

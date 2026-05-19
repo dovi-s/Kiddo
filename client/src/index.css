@@ -535,6 +535,26 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   }
 }
 
+/* Horizontal scrolling chip row — single-row, swipeable, scrollbar
+   hidden. Replaces flex-wrap for chip lists where a wrapped second
+   row breaks visual rhythm (top-holdings inside an ETF, milestone-
+   prompt chips, similar). The swipe gesture reads naturally on
+   touch surfaces and the keyboard-arrow / wheel scroll works on
+   desktop. Scrollbar visually hidden across all engines; iOS gets
+   native momentum via -webkit-overflow-scrolling. Locked 2026-05-19
+   per the chip-row layout audit. Callers add `shrink-0` to each
+   child so flex doesn't compress them down to fit. */
+.kiddo-h-scroll {
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE / old Edge */
+}
+.kiddo-h-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kiddo-gifter-avatar-pulse::after { animation: none; opacity: 0; }
   .kiddo-gifter-avatar:hover > div:first-child > div:first-child {

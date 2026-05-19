@@ -774,11 +774,18 @@ function HoldingDetailSheetBody({
                   As of {etfData.asOf}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              {/* Single-row horizontal scroll — locked 2026-05-19 per
+                  the chip-row layout audit. Was flex-wrap, which broke
+                  the top-10 holdings list into 2-3 rows of unequal
+                  visual weight. One scrollable row reads as a clean
+                  "top by weight, scroll for the rest" — top holding
+                  on the left, weight tapers as the user swipes. Each
+                  chip gets shrink-0 so flex doesn't compress them. */}
+              <div className="kiddo-h-scroll gap-1.5 -mx-1 px-1">
                 {etfData.topHoldings.map((h) => (
                   <div
                     key={h.ticker}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-cream)/0.4)] pl-1 pr-2 py-0.5"
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-cream)/0.4)] pl-1 pr-2 py-0.5"
                     title={`${h.name} · ${h.weight.toFixed(2)}%`}
                   >
                     {/* Bond fund "tickers" (USGOV, FNMA, etc.) aren't real
