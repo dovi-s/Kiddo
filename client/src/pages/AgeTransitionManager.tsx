@@ -211,7 +211,7 @@ export default function AgeTransitionManager() {
             {capFirst(fund?.recipientFirstName) || "Your child"}'s transition window
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            This is more than a legal milestone. It is the moment when the child you started this for becomes the person who reads the story, sees the balance, and takes over the account.
+            Two dates that matter: {capFirst(fund?.recipientFirstName) || "your child"}'s 17th birthday (Kid View unlocks the full fund detail) and the {majorityOrdinal} birthday (legal control transfers under your state's UTMA law). Use this page to prepare both.
           </p>
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-border/50 bg-background p-4">
