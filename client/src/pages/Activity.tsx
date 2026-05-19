@@ -349,23 +349,88 @@ function extractTicker(meta: Record<string, unknown>, title?: string | null): st
   return m ? m[1].toUpperCase() : null;
 }
 
-// Display-time rewrite of legacy "Auto-invest *" activity titles.
+// Display-time rewrite of legacy "Auto-invest *" / "Auto-invested *"
+// activity titles.
 //
-// Activity rows written before the server-side rename (server/routes.ts
-// 12009 + 12120 now emit "Recurring investment *") still carry the old
-// "Auto-invest" verb. The locked-copy rule
+// The server emits the locked-copy versions for new rows:
+//   • Schedule events:    server/routes.ts:12009, 12120
+//     "Recurring investment started/updated/cancelled"
+//   • Cash-sweep events:  server/routes.ts:7185-7195
+//     "Cash invested across N positions" (plural)
+//     "Invested cash in {Name}" (singular)
+// But rows written before those renames still carry the old verb in
+// their title column. The locked-copy rule
 // (feedback_no_contribute_word.md + the Recurring Investments naming
-// note in MEMORY.md) bans "auto-invest" from user-facing surfaces.
-// Rewriting at read time handles legacy data without a destructive
-// migration. New rows match a no-op pass-through.
+// note in MEMORY.md) bans "auto-invest" / "auto-invested" from user-
+// facing surfaces. Rewriting at read time handles legacy data without
+// a destructive migration. New rows pass through unchanged.
 //
-// Used by both the row renderer (effectiveTitle) and the CSV export
-// (handleExportCsv) so the same legacy row reads identically whether
-// the parent is scanning the feed or reconciling a download.
+// Three legacy patterns covered, in priority order:
+//   1. Schedule-state events: "Auto-invest started" etc.
+//      → "Recurring investment started" etc.
+//   2. Cash sweep, multi-position: "Auto-invested across 4 positions"
+//      → "Cash invested across 4 positions"
+//   3. Cash sweep, single-position: "Auto-invested in Apple"
+//      → "Invested cash in Apple"
+//
+// Used by every surface that renders item.title:
+//   • Row renderer (effectiveTitle)
+//   • CSV export (handleExportCsv)
+//   • Issue-report email subject + body
+//   • Pending list
+// so a legacy row reads identically whether the parent is scanning
+// the feed or reconciling a download.
 function rewriteLegacyAutoInvestTitle(t: string | null | undefined): string {
   if (!t) return "Fund update";
-  const m = t.match(/^Auto-invest (started|updated|cancelled|turned on|turned off|resumed)$/i);
-  return m ? `Recurring investment ${m[1].toLowerCase()}` : t;
+  // Schedule state changes (started/updated/cancelled/turned on/off/resumed).
+  const schedule = t.match(/^Auto-invest (started|updated|cancelled|turned on|turned off|resumed)$/i);
+  if (schedule) return `Recurring investment ${schedule[1].toLowerCase()}`;
+  // Cash sweep, multi-position. Preserve the trailing position count.
+  const multi = t.match(/^Auto-invested across (\d+) positions?$/i);
+  if (multi) return `Cash invested across ${multi[1]} position${multi[1] === "1" ? "" : "s"}`;
+  // Cash sweep, single-position. Preserve the asset name verbatim
+  // (could be a ticker like "AAPL" or a brand name like "Apple").
+  const single = t.match(/^Auto-invested in (.+)$/i);
+  if (single) return `Invested cash in ${single[1]}`;
+  return t;
+}
+
+// Legacy description rewrite. Fixes two display-time bugs:
+//
+//   1. Singular/plural bug: legacy rows wrote `across 1 positions.`
+//      (always plural). Modern emitter uses conditional pluralization
+//      (server/routes.ts:7191) but pre-rename rows still carry the
+//      buggy "1 positions" form in the description column.
+//   2. Trailing-zero share counts: legacy rows wrote `0.5000 shares`
+//      using toFixed(4) unconditionally. Trimming trailing zeros
+//      down to at most 1 decimal makes simple half-shares read as
+//      "0.5 shares" instead of "0.5000 shares" — easier for parents
+//      who don't need 4-decimal precision for whole halves. The
+//      replacer handles singular/plural by counting the final value:
+//      "0.5000 shares" → "0.5 shares" (fractional → plural),
+//      "1.0000 shares" → "1 share" (whole-1 → singular),
+//      "2.0000 shares" → "2 shares" (whole-N → plural),
+//      "0.4823 shares" → "0.4823 shares" (no change; full precision
+//        is load-bearing for awkward fractions).
+//
+// Both fixes apply to descriptions written before the polish landed.
+// New rows pass through unchanged.
+function rewriteLegacyDescription(d: string | null | undefined): string | null {
+  if (!d) return d ?? null;
+  let out = d;
+  // Singular/plural for position count.
+  out = out.replace(/\bacross 1 positions\b/g, "across 1 position");
+  // Trailing-zero trim + singular/plural reconciliation for share counts.
+  out = out.replace(/(\d+)\.(\d{1,4})\s+shares?\b/g, (_match, whole: string, frac: string) => {
+    const trimmed = frac.replace(/0+$/, "");
+    if (trimmed === "") {
+      // Whole number: singular only when exactly 1.
+      return whole === "1" ? `${whole} share` : `${whole} shares`;
+    }
+    // Genuine fraction: finance convention is always plural.
+    return `${whole}.${trimmed} shares`;
+  });
+  return out;
 }
 
 function parseSafeDate(value: unknown): Date | null {
@@ -1067,7 +1132,7 @@ export default function Activity() {
         dateStr,
         item.type || "",
         rewriteLegacyAutoInvestTitle(item.title),
-        item.description || "",
+        rewriteLegacyDescription(item.description) || "",
         item.amount != null ? String(item.amount) : "",
         ticker,
         sender,
@@ -1973,10 +2038,21 @@ export default function Activity() {
                   // "May 5"; prior-year rows append "May 5, 2024" so the
                   // ledger reads accurately when scrolling through a fund's
                   // long history. Old mockup pattern.
+                  //
+                  // Timezone: LOCAL (no timeZone arg) — was UTC, which
+                  // caused a header/footer mismatch for evening events
+                  // in non-UTC timezones. A US-Eastern parent who did a
+                  // strategy change at 10pm Thursday May 14 saw the
+                  // group header "Thursday, May 14" (local-time
+                  // toDateString) but the row's footer date "May 15"
+                  // (UTC). Both day-grouping (line 2054) and dayLabel
+                  // (line 2056) use local time, so the footer must too.
+                  // Locked 2026-05-18 per the date-mismatch audit.
+                  const now = new Date();
                   const dateShort = createdAt
-                    ? createdAt.getUTCFullYear() === new Date().getUTCFullYear()
-                      ? createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
-                      : createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+                    ? createdAt.getFullYear() === now.getFullYear()
+                      ? createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                      : createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                     : null;
                   // Day-level subheader. Renders above the row when this
                   // item's day differs from the previous item's day. Lets
@@ -2038,7 +2114,7 @@ export default function Activity() {
                     : rewriteLegacyAutoInvestTitle(item.title);
                   const effectiveDescription = overrideToParentContrib
                     ? (ticker ? `Investing into ${ticker}` : "Investing across the diversified mix")
-                    : (item.description || null);
+                    : rewriteLegacyDescription(item.description);
                   // Hoisted kid-suggestion state so the Approve/Decline bar
                   // renders OUTSIDE the expanded panel (always visible on
                   // suggestion rows), not buried behind a tap. Same fields
@@ -2942,7 +3018,7 @@ export default function Activity() {
                                     (their box renders the reason styled). */}
                                 {!giftMessage && !hasMultipleTickers && !isScheduleChange && !reasonHuman && !isKidSuggestion && item.description && item.description.length > 120 && (
                                   <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.70)", lineHeight: 1.55, whiteSpace: "pre-wrap" as const }}>
-                                    {item.description}
+                                    {rewriteLegacyDescription(item.description)}
                                   </p>
                                 )}
 
@@ -2952,7 +3028,7 @@ export default function Activity() {
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" as const }}>
                                   <p style={{ fontSize: 11, color: "rgb(160,150,140)" }}>
                                     {createdAt
-                                      ? `${createdAt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })} at ${createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "UTC" })}`
+                                      ? `${createdAt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} at ${createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
                                       : "Date unavailable"}
                                   </p>
                                   {chips.length > 0 && (
@@ -3100,7 +3176,7 @@ export default function Activity() {
                                 </div>
                                 {item.description && (
                                   <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3, lineHeight: 1.45 }}>
-                                    {item.description}
+                                    {rewriteLegacyDescription(item.description)}
                                   </p>
                                 )}
                                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
