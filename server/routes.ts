@@ -4056,6 +4056,37 @@ export async function registerRoutes(
           const subscriber = email
             ? notificationStore.subscribersByFund?.[fund.id]?.[email] || null
             : null;
+
+          // 30-day balance sparkline — added 2026-05-19 as the gifter-side
+          // Read-Only Fund Tracking enrichment from the Five Towns roadmap.
+          // Pulls snapshots from the last 30 days for this fund so the
+          // Gifter Dashboard card can render a small SVG sparkline showing
+          // recent fund trajectory. Same data source as the parent
+          // Dashboard's trend chart — exposed to gifters because total
+          // balance is ALREADY exposed (currentFundValue above); adding
+          // 30-day history is the same domain, not a step-change in
+          // privacy. No PII (no gifter names, no per-position breakdown);
+          // just the total fund value over time.
+          const thirtyDaysAgoIso = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          let valueHistory30d: Array<{ at: string; totalValue: number }> = [];
+          try {
+            const snapRes = await db.execute(sql`
+              SELECT snapshot_date, total_value
+              FROM fund_snapshots
+              WHERE fund_id = ${fund.id}
+                AND snapshot_date >= ${thirtyDaysAgoIso}
+              ORDER BY snapshot_date ASC
+            `);
+            valueHistory30d = ((snapRes.rows as any[]) || []).map((r) => ({
+              at: new Date(r.snapshot_date).toISOString(),
+              totalValue: Number(r.total_value || 0),
+            }));
+          } catch (err) {
+            // Non-fatal — sparkline gracefully renders nothing if data
+            // missing. Card still shows currentFundValue.
+            console.warn("[gifter-dashboard] sparkline fetch failed:", err);
+          }
+
           return {
             fundId: fund.id,
             childName: fund.recipientFirstName || fund.name,
@@ -4080,6 +4111,7 @@ export async function registerRoutes(
             recentMemoryAuthor: recentMemory?.authorName ? String(recentMemory.authorName) : null,
             recentMemoryAt: recentMemory?.createdAt ? new Date(recentMemory.createdAt).toISOString() : null,
             updatesEnabled: Boolean(subscriber && !subscriber.unsubscribed),
+            valueHistory30d,
           };
         });
 

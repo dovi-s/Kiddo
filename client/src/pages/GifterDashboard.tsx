@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
 import { buildTrackedGetStartedHref } from "@/lib/acquisition";
 import { useCountUp } from "@/hooks/use-count-up";
+import { GifterFundSparkline } from "@/components/GifterFundSparkline";
 
 type GifterFundRow = {
   fundId: string;
@@ -34,6 +35,12 @@ type GifterFundRow = {
   recentMemoryAuthor: string | null;
   recentMemoryAt: string | null;
   updatesEnabled: boolean;
+  // 30-day fund-value history for the inline sparkline. Server-
+  // populated; sparse weeks are fine — the sparkline interpolates
+  // linearly between snapshots. Empty array when no snapshots
+  // exist (brand-new fund). Locked 2026-05-19 per the gifter
+  // read-only fund tracking enrichment.
+  valueHistory30d?: Array<{ at: string; totalValue: number }>;
 };
 
 type GifterDashboardData = {
@@ -392,8 +399,22 @@ export default function GifterDashboard() {
 
                       <div className="mt-4 grid grid-cols-2 gap-3">
                         <div className="rounded-2xl bg-muted/40 p-3">
-                          <p className="text-xs text-muted-foreground">Fund value now</p>
-                          <p className="mt-1 font-medium text-foreground">{fmtMoney(fund.currentFundValue)}</p>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-xs text-muted-foreground">Fund value now</p>
+                              <p className="mt-1 font-medium text-foreground tabular-nums">{fmtMoney(fund.currentFundValue)}</p>
+                            </div>
+                            {/* 30-day sparkline — landing 2026-05-19 as the
+                                gifter read-only enrichment from the Five
+                                Towns roadmap. Renders only when we have
+                                2+ snapshot points so brand-new funds don't
+                                show a misleading flat line. Same data
+                                domain as currentFundValue (total fund
+                                value, no per-position or per-gifter PII). */}
+                            {(fund.valueHistory30d ?? []).length >= 2 && (
+                              <GifterFundSparkline points={fund.valueHistory30d ?? []} className="mt-0.5 shrink-0" />
+                            )}
+                          </div>
                         </div>
                         <div className="rounded-2xl bg-muted/40 p-3">
                           <p className="text-xs text-muted-foreground">Status</p>
