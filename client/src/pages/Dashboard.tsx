@@ -5014,6 +5014,7 @@ export default function Dashboard() {
                           <button
                             onClick={() => { haptic("medium"); handleShareLink(); }}
                             data-testid="button-hero-share-link"
+                            className="kiddo-press"
                             style={{
                               padding: "10px 20px", fontSize: 13,
                               background: "hsl(var(--kiddo-gold))", color: "white",

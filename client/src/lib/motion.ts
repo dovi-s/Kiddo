@@ -51,3 +51,48 @@ export const MOTION = {
   /** Modal/drawer open. */
   modal: { duration: MOTION_DURATION.normal, ease: MOTION_EASE.outExpo },
 } as const;
+
+// ─── Motion audit additions (2026-05-18) ───────────────────────────
+//
+// The original module above (MOTION_DURATION + MOTION_EASE + MOTION)
+// was the route-level token set. The additions below cover patterns
+// the audit found in heavy-motion pages (MemoryBook, Dashboard
+// modals, lightbox, sheet animations) that weren't expressible with
+// the existing presets:
+//
+//   • A stronger decel curve for "thing arrives confidently and
+//     settles" — Apple's [0.32, 0.72, 0, 1] sheet/lightbox curve.
+//     Different shape from outExpo: less overshoot at the start,
+//     stronger settle at the end.
+//   • Two springs (sheet + tactile) replacing ad-hoc oversprung
+//     configs like `damping: 25, stiffness: 300` that gave bottom
+//     sheets a faint bounce-back.
+//   • A small set of duration aliases (DUR_FAST etc.) for the
+//     MemoryBook-class surfaces. These map onto MOTION_DURATION
+//     above but read more naturally inline.
+//
+// Going forward: route transitions and general UI use MOTION /
+// MOTION_DURATION. Heavy modal/lightbox/sheet motion uses these
+// additions. Both live in the same module so a future tuning pass
+// can move everything together.
+
+/** Apple's strong-decel sheet/lightbox/modal entry curve. */
+export const EASE_DECEL = [0.32, 0.72, 0, 1] as const;
+
+/** Gentler decel for small layouts (height shifts, list reflow). */
+export const EASE_STANDARD = [0.4, 0, 0.2, 1] as const;
+
+/** Alias of MOTION_EASE.outExpo for hero/reveal contexts. */
+export const EASE_REVEAL = MOTION_EASE.outExpo;
+
+/** Bottom-sheet / modal slide-up. Tight, no bounce. */
+export const SPRING_SHEET = { type: "spring" as const, damping: 38, stiffness: 400 };
+
+/** Chip/button press-release. Snappier, no overshoot. */
+export const SPRING_TACTILE = { type: "spring" as const, damping: 30, stiffness: 500 };
+
+/** Inline duration aliases used by motion-heavy surfaces. */
+export const DUR_FAST = 0.16;
+export const DUR_NORMAL = 0.22;
+export const DUR_SLOW = 0.32;
+export const DUR_REVEAL = 0.5;

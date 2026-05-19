@@ -469,6 +469,27 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   70% { opacity: 0; transform: scale(1.18); }
   100% { opacity: 0; transform: scale(1.18); }
 }
+/* Tactile press feedback — opt-in utility for tap surfaces. Adds a
+   brief scale dip on :active so the user knows the tap registered
+   before whatever the button does (modal slide-up, navigation,
+   toast). Works alongside inline-styled buttons that can't use
+   Tailwind's `active:scale-[0.97]` (e.g., Dashboard's hero share
+   button, which uses inline-style for the gold pill). Respects
+   prefers-reduced-motion. Locked 2026-05-18 per motion audit. */
+.kiddo-press {
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.kiddo-press:active {
+  transform: scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .kiddo-press,
+  .kiddo-press:active {
+    transition: none;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kiddo-gifter-avatar-pulse::after { animation: none; opacity: 0; }
   .kiddo-gifter-avatar:hover > div:first-child > div:first-child {

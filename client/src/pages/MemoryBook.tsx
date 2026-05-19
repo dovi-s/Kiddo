@@ -44,7 +44,15 @@ function StaticWaveform({ size = "sm" }: { size?: "sm" | "md" | "lg" }) {
   );
 }
 import { useLocation, useParams, useSearch } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import {
+  DUR_FAST,
+  DUR_NORMAL,
+  DUR_SLOW,
+  EASE_DECEL,
+  EASE_STANDARD,
+  SPRING_SHEET,
+} from "@/lib/motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -403,6 +411,14 @@ export default function MemoryBook() {
   const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { data: subscription } = useSubscription();
+  // Honor OS reduced-motion. When set, the heavy slides + zooms in
+  // this page become quiet opacity fades. Modal sheets stop sliding
+  // 100px from below; the book-page swap stops translating 96px
+  // sideways; lightbox stops scaling. Pure opacity remains because
+  // it doesn't induce motion sickness.
+  // Locked 2026-05-18 per motion audit (Memory Book is the most
+  // motion-heavy page in the app and was missing this entirely).
+  const prefersReducedMotion = useReducedMotion();
 
   // Idle-time prefetch of next-likely pages so taps from Memory Book →
   // Dashboard / Activity render from cache instead of triggering a fetch.
@@ -2444,6 +2460,7 @@ export default function MemoryBook() {
                 <button
                   type="button"
                   onClick={() => { haptic("selection"); setShareOpen(true); }}
+                  className="kiddo-press"
                   style={{
                     padding: "9px 16px", fontSize: 13, fontWeight: 600,
                     background: "rgba(255,255,255,0.10)", color: "white",
@@ -2474,6 +2491,7 @@ export default function MemoryBook() {
                 <button
                   type="button"
                   onClick={() => { haptic("selection"); openAddModal(); }}
+                  className="kiddo-press"
                   style={{
                     padding: "9px 16px", fontSize: 13, fontWeight: 700,
                     background: "hsl(var(--kiddo-gold))", color: "white",
@@ -2510,6 +2528,13 @@ export default function MemoryBook() {
           </div>
         ) : null}
 
+        {/* Skeleton ↔ content crossfade. AnimatePresence with mode="wait"
+            so the skeleton fully fades out before the real timeline
+            fades in — prevents the half-frame flash where both are
+            absent. DUR_FAST on both sides keeps the swap neutral
+            (neither side feels privileged). Locked 2026-05-18 per
+            motion audit. */}
+        <AnimatePresence mode="wait">
         {isLoading ? (
           // Skeleton placeholder — was a centered spinner + "Loading
           // memories..." text. Now renders 3 entry-shaped cards with a
@@ -2518,7 +2543,17 @@ export default function MemoryBook() {
           // preview the post-load shape, not a "wait" abstraction. The
           // shimmer uses a slow opacity pulse (1.6s) so it feels like
           // breath, not a frantic loading state.
-          <div className="space-y-4" role="status" aria-label="Loading memories" data-testid="memory-loading-skeleton">
+          <motion.div
+            key="memory-skeleton"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: DUR_FAST }}
+            className="space-y-4"
+            role="status"
+            aria-label="Loading memories"
+            data-testid="memory-loading-skeleton"
+          >
             {[0, 1, 2].map((i) => (
               <motion.div
                 key={i}
@@ -2553,8 +2588,15 @@ export default function MemoryBook() {
                 </div>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : sortedEntries.length === 0 ? (
+          <motion.div
+            key="memory-empty"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: DUR_FAST }}
+          >
           <EnlighteningReveal delay={0.1}>
             <div className="space-y-7">
               <div className="kiddo-card p-8 text-left md:p-10" data-testid="memory-empty-state">
@@ -2628,8 +2670,17 @@ export default function MemoryBook() {
               </section>
             </div>
           </EnlighteningReveal>
+          </motion.div>
         ) : (
-          <div className="relative" data-testid="timeline-container">
+          <motion.div
+            key="memory-content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: DUR_FAST }}
+            className="relative"
+            data-testid="timeline-container"
+          >
             {/* Event Chapters — section header gates on the SAME filter
                 used by the rail below so an empty filtered result hides
                 the whole section (header included) instead of showing a
@@ -2885,13 +2936,18 @@ export default function MemoryBook() {
                 <p className="text-xs leading-relaxed text-muted-foreground mb-3">
                   Tap one. Add a date, a note, a photo. {childName || "They"}'ll read it later.
                 </p>
+                {/* Press feedback (active:scale-[0.97]) added 2026-05-18
+                    — chips previously had hover states but no tactile
+                    response on tap. Now there's a brief squeeze on press
+                    so the parent knows the tap registered before the
+                    composer sheet slides up. Mirrors iOS tap feedback. */}
                 <div className="flex flex-wrap gap-2">
                   {milestoneLibrary.map((m) => (
                     <button
                       key={m.key}
                       type="button"
                       onClick={() => openMilestoneComposer(m.starter)}
-                      className="inline-flex items-center gap-1 rounded-full border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] hover:border-[hsl(var(--kiddo-evergreen)/0.35)]"
+                      className="inline-flex items-center gap-1 rounded-full border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-1.5 text-[12px] font-medium text-foreground transition-[colors,transform] duration-150 hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] hover:border-[hsl(var(--kiddo-evergreen)/0.35)] active:scale-[0.97]"
                       data-testid={`milestone-chip-${m.key}`}
                     >
                       {m.label}
@@ -2900,7 +2956,7 @@ export default function MemoryBook() {
                   <button
                     type="button"
                     onClick={() => openMilestoneComposer("")}
-                    className="inline-flex items-center gap-1 rounded-full border border-dashed border-[hsl(var(--kiddo-border))] bg-card px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-colors hover:border-foreground/40 hover:text-foreground"
+                    className="inline-flex items-center gap-1 rounded-full border border-dashed border-[hsl(var(--kiddo-border))] bg-card px-3 py-1.5 text-[12px] font-medium text-muted-foreground transition-[colors,transform] duration-150 hover:border-foreground/40 hover:text-foreground active:scale-[0.97]"
                     data-testid="milestone-chip-other"
                   >
                     + Other moment
@@ -3040,7 +3096,7 @@ export default function MemoryBook() {
                           setFeaturedOnly(false);
                           setVisibleCount(10);
                         }}
-                        className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                        className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-[colors,transform] duration-150 active:scale-[0.97] ${
                           isAll
                             ? "bg-[hsl(var(--kiddo-evergreen))] text-white"
                             : "bg-[hsl(var(--kiddo-cream))] text-muted-foreground hover:bg-muted"
@@ -3059,7 +3115,7 @@ export default function MemoryBook() {
                           }
                           setVisibleCount(10);
                         }}
-                        className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors inline-flex items-center gap-1.5 ${
+                        className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-[colors,transform] duration-150 active:scale-[0.97] inline-flex items-center gap-1.5 ${
                           isPinned
                             ? "bg-amber-500 text-white"
                             : "bg-[hsl(var(--kiddo-cream))] text-muted-foreground hover:bg-muted"
@@ -3079,7 +3135,7 @@ export default function MemoryBook() {
                           }
                           setVisibleCount(10);
                         }}
-                        className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                        className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-[colors,transform] duration-150 active:scale-[0.97] ${
                           isAwaiting
                             ? "bg-[hsl(var(--kiddo-gold))] text-[hsl(var(--kiddo-ink))]"
                             : "bg-[hsl(var(--kiddo-cream))] text-muted-foreground hover:bg-muted"
@@ -3554,8 +3610,18 @@ export default function MemoryBook() {
                   {/* No highlight on this outer wrapper — it holds the
                       timeline-gutter padding (sm:pl-12), and washing that in
                       gold would highlight the gutter + dot too. The highlight
-                      goes on the inner card (motion.div below). */}
-                  <div
+                      goes on the inner card (motion.div below).
+
+                      layout prop (2026-05-18 motion audit) makes the entry
+                      animate to its new Y when the filter chip changes
+                      (e.g. "All" → "Pinned" removes intermediate rows,
+                      remaining rows now slide up to fill the gap instead
+                      of jump-cutting). DUR_FAST so the reflow doesn't
+                      drag. Reduced-motion bails entirely via the layout
+                      prop being false. */}
+                  <motion.div
+                    layout={prefersReducedMotion ? false : "position"}
+                    transition={{ duration: DUR_FAST, ease: EASE_DECEL }}
                     className="relative pl-0 sm:pl-12 pb-6 md:pb-8"
                     data-testid={`memory-entry-${entry.id}`}
                   >
@@ -3609,7 +3675,7 @@ export default function MemoryBook() {
                       // alive" feel on desktop without disturbing the
                       // mobile read.
                       whileHover={{ y: -2, boxShadow: "0 2px 6px rgba(26,23,16,0.07), 0 18px 42px rgba(26,23,16,0.10)" }}
-                      transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
+                      transition={{ duration: DUR_FAST, ease: EASE_DECEL }}
                     >
                       <div className="flex flex-col gap-3 border-b border-border/50 bg-[hsl(var(--kiddo-cream)/0.42)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex flex-wrap items-center gap-1.5">
@@ -4778,7 +4844,7 @@ export default function MemoryBook() {
                         </div>
                       )}
                     </motion.div>
-                  </div>
+                  </motion.div>
                 </EnlighteningReveal>
               );
             })}
@@ -4796,8 +4862,9 @@ export default function MemoryBook() {
                 </Button>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </main>
 
       <AnimatePresence>
@@ -4811,10 +4878,10 @@ export default function MemoryBook() {
           >
             <motion.div
               className="w-full md:max-w-lg bg-card rounded-t-3xl md:rounded-3xl p-6 max-h-[90vh] overflow-y-auto"
-              initial={{ y: 24, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 24, opacity: 0 }}
-              transition={{ duration: 0.24 }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { y: 24, opacity: 0 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { y: 24, opacity: 0 }}
+              transition={{ duration: DUR_NORMAL, ease: EASE_DECEL }}
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-start justify-between gap-3">
@@ -5086,10 +5153,10 @@ export default function MemoryBook() {
             />
             <motion.div
               className="relative w-full max-w-md bg-card rounded-t-3xl sm:rounded-2xl border border-border/50 shadow-premium-lg overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[88vh]"
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { y: 100, opacity: 0 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { y: 0, opacity: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { y: 100, opacity: 0 }}
+              transition={prefersReducedMotion ? { duration: DUR_FAST } : SPRING_SHEET}
             >
               {/* Sticky header — stays visible while body scrolls so the
                   close button is always reachable. flex-shrink-0 prevents
@@ -5490,7 +5557,7 @@ export default function MemoryBook() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: DUR_FAST }}
             role="dialog"
             aria-modal="true"
             aria-label="Full-size media"
@@ -5522,10 +5589,10 @@ export default function MemoryBook() {
               <X size={18} />
             </button>
             <motion.div
-              initial={{ scale: 0.94, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.94, opacity: 0 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0 }}
+              transition={{ duration: DUR_NORMAL, ease: EASE_DECEL }}
               onClick={(e) => e.stopPropagation()}
               style={{
                 maxWidth: "min(96vw, 1100px)",
@@ -5644,7 +5711,7 @@ export default function MemoryBook() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: DUR_SLOW, ease: EASE_STANDARD }}
               role="dialog"
               aria-modal="true"
               aria-label={`${childName ? `${childName}'s` : ""} Memory Book, book view`}
@@ -5716,13 +5783,18 @@ export default function MemoryBook() {
                   version of the page turn — the 3D physics version
                   waits until it can land perfectly. */}
               <div style={{ position: "relative", flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: "12px 20px 8px" }}>
-                <AnimatePresence mode="wait">
+                {/* Book-page swap. popLayout (not "wait") so the new
+                    page slides in while the old slides out — feels
+                    like a real book turn, not a swap. Reduced-motion
+                    bails out of the x-translate so the page just
+                    crossfades. */}
+                <AnimatePresence mode="popLayout">
                   <motion.div
                     key={safeIndex}
-                    initial={{ x: bookSlideDirection >= 0 ? 96 : -96, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    exit={{ x: bookSlideDirection >= 0 ? -96 : 96, opacity: 0 }}
-                    transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+                    initial={prefersReducedMotion ? { opacity: 0 } : { x: bookSlideDirection >= 0 ? 96 : -96, opacity: 0 }}
+                    animate={prefersReducedMotion ? { opacity: 1 } : { x: 0, opacity: 1 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { x: bookSlideDirection >= 0 ? -96 : 96, opacity: 0 }}
+                    transition={{ duration: DUR_SLOW, ease: EASE_DECEL }}
                     drag="x"
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={0.32}
@@ -6183,7 +6255,7 @@ export default function MemoryBook() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: DUR_NORMAL }}
             role="dialog"
             aria-modal="true"
             aria-label="Sealed letter editor"
@@ -6197,10 +6269,10 @@ export default function MemoryBook() {
             onClick={() => !sealedSaving && setSealedEditorOpen(false)}
           >
             <motion.div
-              initial={{ scale: 0.96, opacity: 0, y: 8 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.97, opacity: 0, y: 4 }}
-              transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0, y: 8 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1, y: 0 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { scale: 0.97, opacity: 0, y: 4 }}
+              transition={{ duration: DUR_NORMAL, ease: EASE_DECEL }}
               onClick={(e) => e.stopPropagation()}
               style={{
                 background: "linear-gradient(160deg, #fff 0%, hsl(var(--kiddo-cream)/0.65) 100%)",
