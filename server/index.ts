@@ -23,6 +23,7 @@ import { startKidMilestoneWorker } from "./kidMilestoneWorker";
 import { startMonthlyPulseWorker } from "./monthlyPulseWorker";
 import { startHolidayWarmthWorker } from "./holidayWarmthWorker";
 import { startYearEndWrappedWorker } from "./yearEndWrappedWorker";
+import { startGifterYearEndWorker } from "./gifterYearEndWorker";
 import { startTaxSeasonPrepWorker } from "./taxSeasonPrepWorker";
 import { startGifterReturnReminderWorker } from "./gifterReturnReminderWorker";
 import { startVolatilityReassuranceWorker } from "./volatilityReassuranceWorker";
@@ -642,6 +643,7 @@ app.use((req, res, next) => {
   startMonthlyPulseWorker(log);
   startHolidayWarmthWorker(log);
   startYearEndWrappedWorker(log);
+  startGifterYearEndWorker(log);
   startTaxSeasonPrepWorker(log);
   startGifterReturnReminderWorker(log);
   startVolatilityReassuranceWorker(log);

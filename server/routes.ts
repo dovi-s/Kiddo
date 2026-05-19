@@ -4106,6 +4106,135 @@ export async function registerRoutes(
     }
   });
 
+  // Gifter contribution history CSV download. Used by sophisticated
+  // gifters (grandparents giving across multiple grandkids,
+  // professionals tracking Form 709 gift-tax compliance) to pull a
+  // year-by-year record of every gift they've made, CPA-readable.
+  // Locked 2026-05-19 per the Five Towns gifter polish — see
+  // project_five_towns_roadmap P5.
+  //
+  // Authenticated as a gifter account (registered users with a saved
+  // email). The endpoint scopes by sender_email matching the
+  // authenticated user's email — gifts made anonymously without a
+  // saved email aren't recoverable for export because there's no
+  // identity linkage to claim them.
+  //
+  // Output: BOM-prefixed UTF-8 CSV with Content-Disposition. Same
+  // Excel-locale-safe encoding the parent Tax Documents exports use.
+  // Optional ?year=YYYY filter scopes to a single calendar year for
+  // Form 709 annual-exclusion reconciliation; absence returns all
+  // history.
+  app.get('/api/gifter-account/gifts.csv', isAuthenticated, async (req: any, res) => {
+    try {
+      const email = String((req.user as any).email || "").trim().toLowerCase();
+      if (!email) {
+        res.status(400).send("No email on account");
+        return;
+      }
+      const yearParam = typeof req.query.year === "string" && /^\d{4}$/.test(req.query.year)
+        ? String(req.query.year)
+        : null;
+
+      // Pull every gift this email has sent, with the fund's child
+      // first-name so the CSV is human-readable (not just UUIDs).
+      // Sender-email match is case-insensitive (gifts may have been
+      // captured under different capitalizations across sessions).
+      const yearStart = yearParam ? `${yearParam}-01-01` : null;
+      const yearEnd = yearParam ? `${yearParam}-12-31 23:59:59` : null;
+      const giftRows = (await db.execute(sql`
+        SELECT
+          g.id,
+          g.amount,
+          g.message,
+          g.selected_ticker AS "selectedTicker",
+          g.status,
+          g.created_at AS "createdAt",
+          g.settled_at AS "settledAt",
+          f.recipient_first_name AS "childFirstName",
+          f.recipient_last_name AS "childLastName",
+          f.name AS "fundName",
+          ev.name AS "eventName"
+        FROM gifts g
+        LEFT JOIN funds f ON f.id = g.fund_id
+        LEFT JOIN events ev ON ev.id = g.event_id
+        WHERE LOWER(COALESCE(g.sender_email, '')) = ${email}
+          AND g.status NOT IN ('failed', 'canceled')
+          ${yearStart && yearEnd ? sql`AND g.created_at >= ${yearStart} AND g.created_at <= ${yearEnd}` : sql``}
+        ORDER BY g.created_at ASC
+      `)).rows as any[];
+
+      // CSV-quoting helper. Matches the pattern in Activity export +
+      // Tax Documents export — wraps cells containing comma / quote /
+      // newline in double quotes, doubles embedded quotes.
+      const csvCell = (raw: unknown): string => {
+        const s = raw == null ? "" : String(raw);
+        if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+        return s;
+      };
+
+      const headers = [
+        "Gift date",
+        "Settled date",
+        "Recipient",
+        "Fund",
+        "Occasion",
+        "Amount (USD)",
+        "Ticker",
+        "Status",
+        "Note",
+        "Gift ID",
+      ];
+      const rows: string[][] = [headers];
+      let totalAmount = 0;
+      for (const g of giftRows) {
+        const created = g.createdAt ? new Date(g.createdAt) : null;
+        const settled = g.settledAt ? new Date(g.settledAt) : null;
+        const childFull = [g.childFirstName, g.childLastName].filter(Boolean).join(" ").trim();
+        const amount = Number(g.amount || 0);
+        totalAmount += amount;
+        rows.push([
+          created && Number.isFinite(created.getTime()) ? created.toISOString().slice(0, 10) : "",
+          settled && Number.isFinite(settled.getTime()) ? settled.toISOString().slice(0, 10) : "",
+          childFull || g.childFirstName || "",
+          g.fundName || "",
+          g.eventName || "",
+          amount.toFixed(2),
+          g.selectedTicker || "",
+          g.status || "",
+          g.message ? String(g.message).slice(0, 500) : "",
+          String(g.id || ""),
+        ]);
+      }
+      // Footer total row — anchors the file so the gifter doesn't
+      // have to sum the column themselves. Useful for Form 709
+      // annual-exclusion reconciliation when filtered to a single year.
+      rows.push([
+        yearParam ? `TOTAL ${yearParam}` : "TOTAL (all years)",
+        "",
+        "",
+        "",
+        "",
+        totalAmount.toFixed(2),
+        "",
+        "",
+        "",
+        "",
+      ]);
+
+      const body = rows.map((r) => r.map(csvCell).join(",")).join("\n");
+      // BOM prefix for Excel UTF-8 locale safety (same as Tax Documents).
+      const filename = yearParam
+        ? `kiddo-my-gifts-${yearParam}.csv`
+        : `kiddo-my-gifts-all-years.csv`;
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send("﻿" + body);
+    } catch (error) {
+      console.error("Error generating gifter CSV:", error);
+      res.status(500).send("Failed to generate CSV");
+    }
+  });
+
   app.get('/api/inbox', isAuthenticated, async (req: any, res) => {
     try {
       const userId = String((req.user as any).id || "");

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 // BookOpen replaces Sparkles 2026-05-12 for "Latest Memory Book moment" —
 // Sparkles banned per feedback_no_ai_slop.md. BookOpen is the locked Memory
 // Book semantic icon per feedback_iconography_consistency.md.
-import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, TrendingUp, BellRing } from "lucide-react";
+import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
@@ -331,6 +331,31 @@ export default function GifterDashboard() {
                   >{Math.round(animatedFollowingUpdatesCount)}</p>
                 </div>
               </div>
+
+              {/* Download your gift history — CSV export. For
+                  sophisticated gifters tracking Form 709 annual-exclusion
+                  compliance, family-office bookkeeping, or CPA hand-off
+                  at year-end. Authenticated server endpoint scopes to
+                  this gifter's email. Locked 2026-05-19 per the
+                  Five Towns roadmap P5. */}
+              {totalGifts > 0 && (
+                <div className="mt-4 flex items-center justify-between rounded-2xl border border-border/60 bg-background p-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Download your gift history</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">CSV with every gift, date, amount, recipient, and occasion. For your CPA or your records.</p>
+                  </div>
+                  <a
+                    href="/api/gifter-account/gifts.csv"
+                    download
+                    onClick={() => haptic("selection")}
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-3 py-1.5 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.12)]"
+                    data-testid="button-download-gifter-csv"
+                    aria-label="Download gift history CSV"
+                  >
+                    Download CSV
+                  </a>
+                </div>
+              )}
             </div>
 
             <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
@@ -418,10 +443,19 @@ export default function GifterDashboard() {
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </Button>
                         </Link>
-                        <Button variant="outline" disabled>
-                          <TrendingUp className="mr-2 h-4 w-4" />
-                          Read-only tracking
-                        </Button>
+                        {/* Disabled "Read-only tracking" button REMOVED
+                            2026-05-19 per the Five Towns gifter audit.
+                            The card itself IS the read-only tracking view:
+                            it surfaces current fund value, holdings count,
+                            active events, last gift date, next milestone
+                            progress, and latest Memory Book preview. A
+                            separate "tracking" destination would either
+                            duplicate the card or expose PII the parent's
+                            privacy settings haven't authorized. Promising
+                            a feature via a disabled button is worse than
+                            not promising it. If a dedicated detail view
+                            ships later (per-holding allocation, balance
+                            chart, etc.) this is the slot for its CTA. */}
                       </div>
                     </div>
                   ))}

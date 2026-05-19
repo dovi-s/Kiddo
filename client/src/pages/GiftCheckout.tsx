@@ -929,6 +929,36 @@ export default function GiftCheckout() {
   const provenanceName = recipientLooksLikeFund ? "this child's" : `${recipientName}'s`;
   const giftProvenance = `Invested in ${provenanceName} future with Kiddo.`;
   const checkoutTrustLine = "DriveWealth, LLC is a registered broker-dealer, Member FINRA/SIPC. Securities protected up to $500,000 against brokerage failure. Not a protection against market losses. sipc.org";
+  // Trust-line JSX variant with inline anchor links. Used in the
+  // payment-step trust card + order-summary "Where the money goes"
+  // card. Sophisticated gifters (Five Towns persona) verify custody
+  // gravitas by opening the broker's site directly — making the
+  // links clickable closes that loop without forcing them to type
+  // the URL. Both anchors open in a new tab so the gifter doesn't
+  // lose checkout state. Locked 2026-05-19 per the gifter trust-signal
+  // audit. The string variant above stays for any non-JSX surface
+  // (logs, copy reference, etc).
+  const checkoutTrustLineJsx = (
+    <>
+      <a
+        href="https://drivewealth.com"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-semibold text-[hsl(var(--kiddo-evergreen))] underline underline-offset-2 hover:text-[hsl(var(--kiddo-evergreen-deep))]"
+      >
+        DriveWealth, LLC
+      </a>
+      {" is a registered broker-dealer, Member FINRA/SIPC. Securities protected up to $500,000 against brokerage failure. Not a protection against market losses. "}
+      <a
+        href="https://www.sipc.org"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-semibold text-[hsl(var(--kiddo-evergreen))] underline underline-offset-2 hover:text-[hsl(var(--kiddo-evergreen-deep))]"
+      >
+        sipc.org
+      </a>
+    </>
+  );
   const checkoutPreviewStock =
     effectiveExecutionModel === "pick"
       ? (stockPicks.find((stock) => stock.symbol === effectiveSelectedTicker) || previewStock)
@@ -1579,7 +1609,7 @@ export default function GiftCheckout() {
                     </div>
                   )}
 
-                  <p className="kiddo-card hidden px-4 py-3 text-xs leading-relaxed text-muted-foreground md:block">{checkoutTrustLine}</p>
+                  <p className="kiddo-card hidden px-4 py-3 text-xs leading-relaxed text-muted-foreground md:block">{checkoutTrustLineJsx}</p>
 
                   <footer className="pb-8 pt-2 text-center space-y-3">
                     <TrustMicroStrip />
@@ -1636,6 +1666,21 @@ export default function GiftCheckout() {
                   <div className="mt-3">
                     <input inputMode="decimal" value={customAmount} onChange={(e) => setCustomAmount(e.target.value.replace(/[^\d.]/g, ""))} placeholder="50" className="h-14 w-full rounded-2xl border border-border bg-background px-4 text-lg font-medium outline-none focus:border-[hsl(var(--kiddo-evergreen))]" data-testid="input-custom-amount" />
                     <p className="mt-2 text-xs text-muted-foreground">Minimum gift is $5.</p>
+                    {/* Large-gift reassurance — locked 2026-05-19 per the
+                        Five Towns gifter persona audit. Conservative gifters
+                        (grandparents giving $1k-5k for bar mitzvah / sweet 16)
+                        sometimes self-cap below their intention assuming a
+                        hidden limit. There's no upper limit; gifts ≥$1000
+                        carry a brief processing window for fraud review
+                        but otherwise settle the same way. Threshold gated
+                        at $500 so common-gift flows don't see legal copy. */}
+                    {Number.isFinite(activeAmount) && activeAmount >= 500 && (
+                      <div className="mt-3 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-3">
+                        <p className="text-[12px] leading-relaxed text-foreground">
+                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. Assets are held by DriveWealth, LLC (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2055,7 +2100,7 @@ export default function GiftCheckout() {
                   <div className="mt-4 border-t border-border pt-4"><div className="flex items-center justify-between gap-3"><span className="text-foreground font-semibold">You pay</span><span className="text-lg font-bold text-foreground" data-testid="text-total-charge">${totalCharge.toFixed(2)}</span></div></div>
                   <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.15)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-3">
                     <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))]">Where the money goes</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{checkoutTrustLine}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{checkoutTrustLineJsx}</p>
                   </div>
 
                   {totalKoraFee === 0 && (
