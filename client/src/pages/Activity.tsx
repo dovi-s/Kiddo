@@ -349,6 +349,25 @@ function extractTicker(meta: Record<string, unknown>, title?: string | null): st
   return m ? m[1].toUpperCase() : null;
 }
 
+// Display-time rewrite of legacy "Auto-invest *" activity titles.
+//
+// Activity rows written before the server-side rename (server/routes.ts
+// 12009 + 12120 now emit "Recurring investment *") still carry the old
+// "Auto-invest" verb. The locked-copy rule
+// (feedback_no_contribute_word.md + the Recurring Investments naming
+// note in MEMORY.md) bans "auto-invest" from user-facing surfaces.
+// Rewriting at read time handles legacy data without a destructive
+// migration. New rows match a no-op pass-through.
+//
+// Used by both the row renderer (effectiveTitle) and the CSV export
+// (handleExportCsv) so the same legacy row reads identically whether
+// the parent is scanning the feed or reconciling a download.
+function rewriteLegacyAutoInvestTitle(t: string | null | undefined): string {
+  if (!t) return "Fund update";
+  const m = t.match(/^Auto-invest (started|updated|cancelled|turned on|turned off|resumed)$/i);
+  return m ? `Recurring investment ${m[1].toLowerCase()}` : t;
+}
+
 function parseSafeDate(value: unknown): Date | null {
   if (!value) return null;
   const d = new Date(value as string | number | Date);
@@ -1047,7 +1066,7 @@ export default function Activity() {
       return [
         dateStr,
         item.type || "",
-        item.title || "",
+        rewriteLegacyAutoInvestTitle(item.title),
         item.description || "",
         item.amount != null ? String(item.amount) : "",
         ticker,
@@ -2010,9 +2029,13 @@ export default function Activity() {
                   // The "Auto-invest contribution to Emma's Fund" boilerplate
                   // message gets dropped in the override path because it's
                   // less meaningful than "Investing into AAPL."
+                  //
+                  // See rewriteLegacyAutoInvestTitle (top of file) for
+                  // why this exists. Legacy rows that pre-date the
+                  // server-side rename get rewritten at display time.
                   const effectiveTitle = overrideToParentContrib
                     ? `You added $${(amtNum != null ? amtNum : 0).toFixed(2)}`
-                    : (item.title || "Fund update");
+                    : rewriteLegacyAutoInvestTitle(item.title);
                   const effectiveDescription = overrideToParentContrib
                     ? (ticker ? `Investing into ${ticker}` : "Investing across the diversified mix")
                     : (item.description || null);
@@ -2529,13 +2552,13 @@ export default function Activity() {
                           if (reportableTypes.includes(normalizedType)) {
                             const dateLabel = createdAt ? createdAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) : "(date unavailable)";
                             const amtLabel = amtNum != null ? `$${amtNum.toFixed(2)}` : "(amount unavailable)";
-                            const subject = `Issue with transaction · ${item.title || normalizedType} · ${amtLabel}`;
+                            const subject = `Issue with transaction · ${rewriteLegacyAutoInvestTitle(item.title) || normalizedType} · ${amtLabel}`;
                             const body = [
                               `Hi Kiddo team,`,
                               ``,
                               `I have a question about this transaction:`,
                               ``,
-                              `Type: ${item.title || normalizedType}`,
+                              `Type: ${rewriteLegacyAutoInvestTitle(item.title) || normalizedType}`,
                               `Amount: ${amtLabel}`,
                               `Date: ${dateLabel}`,
                               `Activity ID: ${item.id || "(unknown)"}`,
@@ -3067,7 +3090,7 @@ export default function Activity() {
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                                   <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.3, flex: 1, minWidth: 0 }}>
-                                    {item.title || "Settling"}
+                                    {rewriteLegacyAutoInvestTitle(item.title) || "Settling"}
                                   </p>
                                   {amtNum != null && (
                                     <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "rgb(26,23,16)" }}>
