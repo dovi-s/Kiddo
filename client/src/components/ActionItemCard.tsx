@@ -212,24 +212,66 @@ function CategoryIcon({ category }: { category: ActionItem["category"] }) {
 
 // Convenience list-renderer — Activity and Dashboard both want
 // "render the array, with a heading, suppressed when empty."
+//
+// `maxVisible` caps the number of cards rendered before rolling into
+// a "+ N more in your inbox" overflow row. Locked 2026-05-19 per the
+// Activity action-items audit — an unbounded list of "verify identity
+// + set up successor + thank gifter + 5 more" reads as todo-list spam
+// on a feed surface. Hard cap of 2 by default; consumer can override
+// (NotificationsPanel renders the full list inside its dedicated
+// inbox so it passes a higher cap).
 type ListProps = {
   items: ActionItem[];
   heading?: string;
   compact?: boolean;
   emptyState?: React.ReactNode;
+  maxVisible?: number;
+  overflowHref?: string;
 };
 
-export function ActionItemList({ items, heading = "Needs your attention", compact = false, emptyState = null }: ListProps) {
+export function ActionItemList({
+  items,
+  heading = "Needs your attention",
+  compact = false,
+  emptyState = null,
+  maxVisible,
+  overflowHref,
+}: ListProps) {
   if (items.length === 0) return <>{emptyState}</>;
+  const cap = typeof maxVisible === "number" && maxVisible > 0 ? maxVisible : items.length;
+  const visible = items.slice(0, cap);
+  const overflow = items.length - visible.length;
   return (
     <section className="space-y-2" data-testid="action-item-list">
       {heading && (
         <p className="kiddo-section-label">{heading}</p>
       )}
       <div className="space-y-2">
-        {items.map((item) => (
+        {visible.map((item) => (
           <ActionItemCard key={item.id} item={item} compact={compact} />
         ))}
+        {overflow > 0 && (
+          <a
+            href={overflowHref ?? "#"}
+            onClick={(e) => {
+              // Default behavior: open the notifications panel (which
+              // hosts the full inbox). Consumers that want a different
+              // destination can pass overflowHref. Without a custom
+              // target, fire the global open-notifications event the
+              // bell already listens to.
+              if (!overflowHref) {
+                e.preventDefault();
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("kiddo:open-notifications"));
+                }
+              }
+            }}
+            className="block rounded-2xl border border-dashed border-[hsl(var(--kiddo-border))] bg-card/40 px-4 py-2.5 text-center text-xs font-semibold text-muted-foreground hover:bg-muted/40"
+            data-testid="action-item-overflow"
+          >
+            {overflow} more {overflow === 1 ? "item" : "items"} in your inbox →
+          </a>
+        )}
       </div>
     </section>
   );

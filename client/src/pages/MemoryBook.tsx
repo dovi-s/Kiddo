@@ -2421,28 +2421,23 @@ export default function MemoryBook() {
                 not from decorative shapes. Don't add them back. */}
 
             <div style={{ position: "relative", zIndex: 1 }}>
+              {/* Hero stripped 2026-05-19 per the Memory Book register
+                  audit. Was: eyebrow + slogan h2 ("Every gift has a
+                  story.") + descriptive paragraph + balance + community
+                  line + 🌱 emoji. The slogan + paragraph + emoji were
+                  Hallmark-register — marketing-page copywriting bleeding
+                  into a product surface — which made sophisticated users
+                  hesitant to share the page. Now matches Dashboard's
+                  Apple-Settings register: eyebrow names the surface,
+                  balance IS the cinematic anchor, community line is
+                  honest count signal. The emotion lives in the data,
+                  not in declarations above it. Same locked principle
+                  the Dashboard hero proved out: don't try, just be
+                  the number. */}
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.48)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }} data-testid="text-fund-name">
                 {childName ? `${childName}'s` : "Fund"} Memory Book
               </div>
 
-              <h2
-                className="font-heading"
-                style={{ fontSize: 32, fontWeight: 700, color: "white", lineHeight: 1.2, marginBottom: 8 }}
-                data-testid="text-memory-heading"
-              >
-                Every gift has a story.
-              </h2>
-              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.58)", lineHeight: 1.65, marginBottom: 22, maxWidth: 460 }}>
-                The people, notes, photos, and milestones behind {childName ? `${childName}'s` : "the"} fund. Not just numbers.
-              </p>
-
-              {/* Hero number + community line — replaces the prior 3-tile
-                  stat grid. The fund value is the cinematic anchor (matches
-                  Dashboard's hero balance gravity); the community line
-                  carries the count signal as supporting prose. Less
-                  data-dashboard, more emotional anchor — closes the
-                  visual-polish gap with Dashboard. The 3-tile grid was
-                  honest but small; nothing celebrated. */}
               <div style={{ marginBottom: 22 }} data-testid="memory-hero-number">
                 <p className="font-heading" style={{ fontSize: 44, fontWeight: 700, color: "white", lineHeight: 1, letterSpacing: "-0.01em", marginBottom: 8, fontVariantNumeric: "tabular-nums" }}>
                   {formatMoney(displayMemoryFundValue)}
@@ -2454,7 +2449,12 @@ export default function MemoryBook() {
                     if (peopleN === 0 && giftsN === 0) return `Built one moment at a time.`;
                     const peopleLabel = peopleN === 1 ? "1 person" : `${peopleN} people`;
                     const giftsLabel = giftsN === 1 ? "1 gift" : `${giftsN} gifts`;
-                    return `Built by ${peopleLabel} · ${giftsLabel} · ${childName ? `for ${childName}` : "for the future"} 🌱`;
+                    // Sprout emoji removed 2026-05-19 — was wallpaper
+                    // weight on a daily-view surface. Earned only at
+                    // genuine celebration moments (milestone crossings,
+                    // closing book page). The eyebrow already names
+                    // {child}; trailing "for {child}" was redundant.
+                    return `Built by ${peopleLabel} · ${giftsLabel}`;
                   })()}
                 </p>
               </div>
@@ -2607,14 +2607,23 @@ export default function MemoryBook() {
                 <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.10)]">
                   <BookOpen size={24} className="text-[hsl(var(--kiddo-evergreen))]" />
                 </div>
-                <p className="kiddo-section-label">Story starts here</p>
-                <h3 className="mt-2 font-heading text-2xl font-bold leading-tight text-foreground">
-                  {childName ? `The first gift starts ${childName}'s story.` : "The first gift starts the story."}
+                {/* Empty state retoned 2026-05-19 per the Memory Book
+                    register audit. Was: "Story starts here" eyebrow +
+                    slogan h3 ("The first gift starts {child}'s story")
+                    + descriptive sentence with "Every person who gives
+                    to {child} leaves a memory here..." Hallmark-register
+                    that wore its heart on its sleeve. Replaced with
+                    product-register: literal heading, concrete prose,
+                    no "story starts" framing. The emotion comes when
+                    the first real gift lands, not from the empty state
+                    declaring there will be one. */}
+                <h3 className="font-heading text-xl font-bold leading-tight text-foreground">
+                  {childName ? `Nothing here yet.` : "Nothing here yet."}
                 </h3>
-                <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
+                <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
                   {childName
-                    ? `Every person who gives to ${childName} leaves a memory here: their name, their note, and the gift they sent.`
-                    : "Every person who gives leaves a memory here: their name, their note, and the gift they sent."}
+                    ? `Gifts and notes for ${childName} land here as they arrive. Share the gift link to start.`
+                    : `Gifts and notes land here as they arrive. Share the gift link to start.`}
                 </p>
                 <div className="mt-6 flex flex-col gap-2 sm:flex-row">
                   <Button
@@ -3270,22 +3279,25 @@ export default function MemoryBook() {
                         Timeline
                       </button>
                     </div>
-                    {/* Book view — opens a full-screen reading experience.
-                        One entry per page, swipe / arrow / dot navigation,
-                        cover page first. Distinct from Story/Timeline (those
-                        are inline list modes); this is the ceremony surface,
-                        modal by intent. Visually grouped with the segmented
-                        control on the same row but kept as a standalone
-                        button (different action type — state toggle vs
-                        modal opener) with the gold accent that signals
-                        "ceremony" across the rest of the product. */}
+                    {/* Book view entry — quietened 2026-05-19 per the
+                        Memory Book register audit. Was a prominent gold
+                        accent pill ("Read") that put the page-flip
+                        reading experience front-and-center. The user
+                        flagged Book View as feeling potentially
+                        gimmicky; surfacing it as primary chrome made
+                        every visitor wonder "what's this?" on cold
+                        load. Now a small muted text link — still
+                        discoverable, no longer demanding attention.
+                        Power users who want the ceremony surface find
+                        it; everyone else reads the timeline without
+                        the side-eye. */}
                     <button
                       onClick={() => { haptic("medium"); setBookPageIndex(0); setBookSlideDirection(0); setBookOpen(true); }}
-                      className="h-11 rounded-2xl border border-[hsl(var(--kiddo-gold)/0.45)] bg-[hsl(var(--kiddo-gold)/0.10)] px-3 text-sm font-semibold text-[hsl(var(--kiddo-gold-ink))] hover:bg-[hsl(var(--kiddo-gold)/0.16)] transition-colors inline-flex items-center gap-1.5"
+                      className="h-11 inline-flex items-center gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                       data-testid="button-open-book-view"
                     >
-                      <BookOpen size={14} />
-                      Read
+                      <BookOpen size={12} />
+                      Open as book
                     </button>
                   </div>
                 </div>
@@ -3385,7 +3397,7 @@ export default function MemoryBook() {
                   return {
                     icon: "🎁",
                     title: childName ? `No gifts in ${childName}'s book yet.` : "No gifts yet.",
-                    subtitle: "Share the gift link and the first one starts the story.",
+                    subtitle: "Share the gift link to get the first one in.",
                     tone: "neutral",
                   };
                 }
@@ -4324,12 +4336,12 @@ export default function MemoryBook() {
                                       <span className="text-foreground">Now worth ${currentValue.toFixed(2)}</span>
                                       {showGainPill && gainDollars !== null && (
                                         <span className={isUp ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-500"}>
-                                          ({isUp ? "+" : "−"}${Math.abs(gainDollars).toFixed(2)}{isUp ? " 🌱" : ""})
+                                          ({isUp ? "+" : "−"}${Math.abs(gainDollars).toFixed(2)})
                                         </span>
                                       )}
                                     </span>
                                   ) : isFreshGift ? (
-                                    <span className="text-[10px] font-medium text-[hsl(var(--kiddo-evergreen)/0.62)] italic">Just landed 🌱</span>
+                                    <span className="text-[10px] font-medium text-[hsl(var(--kiddo-evergreen)/0.62)] italic">Just landed</span>
                                   ) : null}
                                 </div>
                               </div>
@@ -6535,7 +6547,7 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
           }}
           data-testid={`book-note-empty-${entry.id}`}
         >
-          This gift arrived without a note. But it arrived with love. 🌱
+          This gift arrived without a note.
         </p>
       )}
 
@@ -6589,9 +6601,9 @@ function BookPage({ entry, childName, getEmbedVideoUrl, ownerEmail, ownerProfile
           <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.55 }}>
             {ticker
               ? <>$
-{giftAmt.toFixed(2)} invested in <strong style={{ color: "rgb(26,23,16)" }}>{ticker}</strong> · for {childName || "the future"} 🌱</>
+{giftAmt.toFixed(2)} invested in <strong style={{ color: "rgb(26,23,16)" }}>{ticker}</strong>{childName ? ` · for ${childName}` : ""}</>
               : <>$
-{giftAmt.toFixed(2)} added to {childName ? `${childName}'s` : "the"} fund · still growing 🌱</>}
+{giftAmt.toFixed(2)} added to {childName ? `${childName}'s` : "the"} fund</>}
           </p>
         </div>
       )}

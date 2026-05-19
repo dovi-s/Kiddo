@@ -5840,8 +5840,8 @@ export default function Dashboard() {
                 {(trendMode === "gifts" || trendMode === "single" || trendMode === "waiting") && (
                   <p className="px-4 pb-4 text-center text-xs text-muted-foreground">
                     {trendMode === "gifts" && "Estimated from gift activity while snapshots accumulate."}
-                    {trendMode === "single" && `${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} story starts here. The line fills in as gifts arrive.`}
-                    {trendMode === "waiting" && `${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s first gift starts this line.` : "The first gift starts this line."} Share the link.`}
+                    {trendMode === "single" && `Line fills in as more gifts arrive.`}
+                    {trendMode === "waiting" && `Share the gift link to get the first one in.`}
                   </p>
                 )}
                 {gifts.length > 0 && (

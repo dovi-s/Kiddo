@@ -63,6 +63,17 @@ export function AppHeader() {
   const [location, setLocation] = useLocation();
   const { isAuthenticated, user } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
+  // Listen for the global open-notifications event. The ActionItemList
+  // overflow row ("3 more items in your inbox →") dispatches this when
+  // a parent taps the overflow link on a capped Action Items section
+  // (Activity, Dashboard). Wiring the listener here means the bell
+  // panel opens regardless of which page the overflow was on. Locked
+  // 2026-05-19 per the action-items pruning pass.
+  useEffect(() => {
+    const handler = () => setNotifOpen(true);
+    window.addEventListener("kiddo:open-notifications", handler);
+    return () => window.removeEventListener("kiddo:open-notifications", handler);
+  }, []);
   const [fundPickerOpen, setFundPickerOpen] = useState(false);
   // Local share modal — opens for non-Dashboard pages where the in-page
   // (richer) Dashboard modal isn't mounted to listen for the event. Without

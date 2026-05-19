@@ -20,7 +20,7 @@
 // the parent flows.
 
 import { useRef, useState, useEffect } from "react";
-import { Lock, Sparkles } from "lucide-react";
+import { Camera, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { haptic } from "@/lib/haptics";
@@ -259,26 +259,40 @@ export function MemoryMediaPicker({
           className="rounded-2xl border border-primary/20 bg-primary/5 p-4"
           data-testid="memory-media-picker-plus-gate"
         >
+          {/* Gate retoned 2026-05-19 per the Plus-gate softness audit.
+              Was: Sparkles icon (banned per feedback_no_ai_slop.md
+              despite being shipped here) + heavy emotional sales pitch
+              ("hearing your voice on her 18th birthday is the kind of
+              artifact nothing else gives her") + "Upgrade to" CTA.
+              That register interrupts a mid-task emotional flow with
+              a sales moment. Now softer + invitational: Camera icon
+              matches the actual feature (media), short product-grade
+              line names the gate, "Learn more" button opens the
+              dedicated FeatureWallModal where the full pitch + plan
+              comparison lives. The heavy emotional copy stays in the
+              modal — it earns its weight there because the parent
+              explicitly asked to learn more. */}
           <div className="flex items-start gap-3">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <Sparkles size={16} className="text-primary" strokeWidth={1.8} />
+              <Camera size={16} className="text-primary" strokeWidth={1.8} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                 <Lock size={11} className="opacity-60" />
-                <span>Add photos, videos, and voice memos with Kiddo+</span>
+                <span>Photos, videos, and voice with Kiddo+</span>
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {fundPronouns.subject.charAt(0).toUpperCase() + fundPronouns.subject.slice(1)} hearing your voice on {fundPronouns.possAdj} {majorityOrdinal} birthday is the kind of artifact nothing else gives {fundPronouns.object}. Text entries stay free; media unlocks with Kiddo+ ($4.99/month).
+                Text entries are free on every plan. Media on your own entries unlocks with Kiddo+.
               </p>
               <div className="mt-3">
                 <Button
                   size="sm"
+                  variant="outline"
                   className="rounded-xl"
                   onClick={() => { haptic("selection"); setWallOpen(true); }}
                   data-testid="memory-media-picker-upgrade-cta"
                 >
-                  Upgrade to Kiddo+
+                  Learn more
                 </Button>
               </div>
             </div>

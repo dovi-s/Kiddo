@@ -290,7 +290,7 @@ export default function YourStory() {
             )}
 
             <p className="pt-4 text-center font-serif italic text-foreground/85">
-              That's {ownerName === "you" ? "the whole story" : `${ownerName}'s story`} so far. 🌱
+              That's {ownerName === "you" ? "the whole story" : `${ownerName}'s story`} so far.
             </p>
           </>
         )}

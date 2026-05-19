@@ -610,10 +610,14 @@ export default function Age18Plan() {
                 hardcoded pronoun). Bullets below describe what the
                 Memory Book IS without the "believed in her future"
                 love-mark phrasing the kid-at-18 lens flags. */}
+            {/* Bullet copy retoned 2026-05-19 — was three "Every X."
+                lines reading as marketing-page register inside a
+                product surface. Now states what the Memory Book
+                contains without the slogan rhythm. */}
             <div className="space-y-2 mb-4">
               {[
-                "Every gift. Every note. Every photo.",
-                "Every gifter, and what they wrote.",
+                "Gifts, notes, photos, and milestones, kept in one place.",
+                "Names and messages from everyone who gave.",
                 `Searchable, shareable, ${hers} forever.`,
               ].map((line, i) => (
                 <div key={i} className="flex items-start gap-2.5">
@@ -802,27 +806,31 @@ export default function Age18Plan() {
           </p>
         </div>
 
-        {/* Physical book + Kiddo Card - coming soon */}
-        <div className="space-y-3 mb-5 opacity-50">
-          <div className="kiddo-card p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">The physical book</p>
-              <span className="text-[9px] font-bold uppercase tracking-wide bg-muted text-muted-foreground rounded-full px-2 py-0.5">Coming soon</span>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              A hardcover Memory Book, printed and mailed to your door on {childName !== "your child" ? `${activeFund?.recipientFirstName}'s` : her} {majorityOrdinal} birthday. Every gift. Every photo. Your note on page one.
-            </p>
-          </div>
-          <div className="kiddo-card p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">The Kiddo Card</p>
-              <span className="text-[9px] font-bold uppercase tracking-wide bg-muted text-muted-foreground rounded-full px-2 py-0.5">Coming soon</span>
-            </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              When {childName} turns {majorityAge}, {she} {fundPronouns.singular ? "gets" : "get"} a Kiddo Card linked to {her} fund. {capFirst(hers)} to use. Still compounding. Still {hers}.
-            </p>
-          </div>
-        </div>
+        {/* "Coming soon" Physical Book + Kiddo Card cards REMOVED
+            2026-05-19 per the marketing-copy-in-product audit. The
+            physical book printed-and-mailed-at-18 and the Kiddo Card
+            at-18 are real product ideas, but until either ships in
+            code, surfacing them on a parent-facing product page
+            creates a "when?" question with no answer.
+
+            The persona this product is now built for (sophisticated
+            parent who could run a Schwab UTMA themselves) reads
+            "Coming soon" as either (a) "they're stalling" or (b)
+            "they don't actually ship things." Both readings cost
+            trust.
+
+            When either feature actually ships: bring its card back
+            here as a REAL CTA ("Order Emma's printed book →") not
+            a teaser. The kid-at-18 narrative on this page doesn't
+            need vapor footnotes to land — the countdown, the
+            preparation checklist, and the sealed note already
+            carry the emotional weight.
+
+            Move the "physical book at 18" pitch to marketing pages
+            (Home, About, Age18) only. Marketing-page register can
+            sell aspiration; product-page register cannot. Per
+            project_five_towns_persona_and_heirloom_positioning.md
+            (the "no feature theater" rule). */}
 
         {/* Closing quote */}
         {age18Transition && eighteenthDate && (

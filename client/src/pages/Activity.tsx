@@ -1509,7 +1509,14 @@ export default function Activity() {
             card has a Fix CTA + Remind tomorrow snooze. */}
         {actionItems.length > 0 && (
           <div className="mb-5">
-            <ActionItemList items={actionItems} heading="Needs your attention" />
+            {/* maxVisible=2 added 2026-05-19 — Activity is a feed, not
+                a todo list. An unbounded "verify identity + set up
+                successor + thank gifter + 5 more" stack at the top of
+                the feed reads as nag spam. Cap at the 2 most urgent
+                items; everything else rolls into "N more in your
+                inbox" linking to the notifications panel where the
+                full list lives. */}
+            <ActionItemList items={actionItems} heading="Needs your attention" maxVisible={2} />
           </div>
         )}
 
@@ -1917,7 +1924,7 @@ export default function Activity() {
               <p style={{ fontSize: 13.5, color: "rgb(140,130,122)", lineHeight: 1.6, marginBottom: search || filter !== "all" ? 0 : 20 }}>
                 {search || filter !== "all"
                   ? "Try a different filter or search term."
-                  : "The first gift starts this feed. Share the link and let family show up."}
+                  : "Gifts, contributions, and fund updates show up here. Share the gift link to get started."}
               </p>
               {!search && filter === "all" && (
                 <Button onClick={() => { haptic("selection"); navigate("/dashboard"); }} data-testid="button-activity-empty-go-dashboard">
