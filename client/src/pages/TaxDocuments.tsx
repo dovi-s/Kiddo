@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Download, FileText, Info, ShieldCheck } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useFunds } from "@/hooks/use-funds";
+import { useAuth } from "@/hooks/use-auth";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
@@ -69,6 +70,7 @@ const KIDDIE_TAX_2025 = {
 export default function TaxDocuments() {
   const queryClient = useQueryClient();
   const { data: funds = [] } = useFunds();
+  const { user } = useAuth();
   // Active fund is held in component state so the page reacts to fund
   // switches via the AppHeader. Was reading getActiveFundId() inline on
   // every render — that pulls fresh from localStorage but doesn't trigger
@@ -292,7 +294,7 @@ export default function TaxDocuments() {
   }, [currentYear]);
 
   return (
-    <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
+    <div className="kiddo-app-page kiddo-print-friendly md:ml-[264px] pb-24 md:pb-8">
       <AppHeader />
       <div className="kiddo-canvas px-4 py-6 max-w-3xl space-y-5">
         {/* In-content "Back to settings" link removed 2026-05-11.
@@ -778,6 +780,97 @@ export default function TaxDocuments() {
             </p>
           </div>
         </section>
+
+        {/* Account particulars — the "this is officially constituted
+            as follows" view. A sophisticated parent's CPA or estate
+            attorney lands here at year-end and needs the legal frame
+            in one glance: who is the custodian, who is the
+            beneficiary, what's the governing state, when was the
+            account opened, what's the irrevocability acknowledgment
+            timestamp. Pulled from the existing schema columns; no
+            new server contract. Locked 2026-05-19 per the Five Towns
+            audit — these are the same facts a Schwab statement
+            header carries on page 1. */}
+        {activeFund && (
+          <section>
+            <p className="kiddo-section-label mb-2">Account particulars</p>
+            <div className="kiddo-card p-5">
+              <div className="grid sm:grid-cols-2 gap-3">
+                {(() => {
+                  const items: Array<{ label: string; value: string | null }> = [];
+                  // Custodian — parent's full name when available.
+                  const custodianName = [user?.firstName, (user as any)?.lastName].filter(Boolean).join(" ").trim();
+                  items.push({
+                    label: "Custodian",
+                    value: custodianName || (user as any)?.email || null,
+                  });
+                  // Beneficiary — kid's full name + birthdate when known.
+                  const kidFirst = (activeFund as any).recipientFirstName || "";
+                  const kidLast = (activeFund as any).recipientLastName || "";
+                  const beneficiaryName = [capFirst(kidFirst), capFirst(kidLast)].filter(Boolean).join(" ").trim();
+                  items.push({
+                    label: "Beneficiary",
+                    value: beneficiaryName || null,
+                  });
+                  // Beneficiary birthdate (UTMA majority math anchors on this).
+                  const dob = (activeFund as any).recipientBirthdate;
+                  const dobDate = dob ? new Date(dob) : null;
+                  items.push({
+                    label: "Beneficiary date of birth",
+                    value: dobDate && Number.isFinite(dobDate.getTime())
+                      ? dobDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                      : null,
+                  });
+                  items.push({ label: "Account type", value: "UTMA (Uniform Transfers to Minors Act)" });
+                  // State + majority age — governs which UTMA statute
+                  // applies. State stored as 2-letter code; surfaced
+                  // verbatim because parents recognize codes.
+                  const state = (activeFund as any).recipientState || null;
+                  items.push({
+                    label: "Governing state",
+                    value: state ? `${String(state).toUpperCase()} (UTMA statute)` : null,
+                  });
+                  const ma = Number((activeFund as any).majorityAge) || 18;
+                  items.push({
+                    label: "Age of majority",
+                    value: `${ma} (per state UTMA law)`,
+                  });
+                  // Fund open date.
+                  const opened = (activeFund as any).createdAt;
+                  const openedDate = opened ? new Date(opened) : null;
+                  items.push({
+                    label: "Account opened",
+                    value: openedDate && Number.isFinite(openedDate.getTime())
+                      ? openedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                      : null,
+                  });
+                  // UTMA irrevocability acknowledgment — legal moment
+                  // when the parent accepted that the gift cannot be
+                  // reclaimed. Important paper-trail item.
+                  const acked = (activeFund as any).utmaAcknowledgedAt;
+                  const ackedDate = acked ? new Date(acked) : null;
+                  items.push({
+                    label: "UTMA irrevocability acknowledged",
+                    value: ackedDate && Number.isFinite(ackedDate.getTime())
+                      ? ackedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                      : null,
+                  });
+                  return items.map((row) => (
+                    <div key={row.label} className="min-w-0">
+                      <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">{row.label}</p>
+                      <p className="mt-0.5 text-sm font-semibold text-foreground break-words" data-testid={`particular-${row.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>
+                        {row.value ?? <span className="font-normal italic text-muted-foreground/70">Not set</span>}
+                      </p>
+                    </div>
+                  ));
+                })()}
+              </div>
+              <p className="mt-4 text-[11px] text-muted-foreground/70 leading-relaxed">
+                These details come from your account setup. The custodian, beneficiary, state, and majority age all govern how UTMA tax rules apply to {activeFund.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "this"} fund. Update them in Settings → Child if anything changes (a move to a new state, a legal-name change, etc.).
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Custody & protection context block — answers "where is my
             money, who is DriveWealth, what is SIPC" before the

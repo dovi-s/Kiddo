@@ -469,6 +469,51 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   70% { opacity: 0; transform: scale(1.18); }
   100% { opacity: 0; transform: scale(1.18); }
 }
+/* Print stylesheet — sophisticated parents (or their CPAs) Cmd/Ctrl+P
+   the Tax Documents page at year-end to attach to the kid's tax
+   records. The screen-side chrome (AppHeader, MobileNav, sidebar)
+   would print as orphan boxes on the page. This stylesheet:
+     • Hides chrome (header, sidebar, bottom-nav) so paper reads
+       like a financial statement, not a phone screenshot.
+     • Drops decorative animations (count-up timers, etc.) so the
+       printed numbers are final values.
+     • Tightens vertical rhythm so a year's worth of data fits in
+       fewer pages.
+     • Preserves cost-basis + realized-sales tables intact — those
+       are the load-bearing artifacts.
+   Locked 2026-05-19 per the Five Towns audit. Targets only the
+   .kiddo-print-friendly class so it doesn't accidentally apply to
+   marketing pages or other print contexts. */
+@media print {
+  .kiddo-print-friendly nav,
+  .kiddo-print-friendly [data-testid="app-header"],
+  .kiddo-print-friendly .mobile-nav-shell {
+    display: none !important;
+  }
+  .kiddo-print-friendly {
+    margin-left: 0 !important;
+    padding-bottom: 0 !important;
+    background: white !important;
+  }
+  .kiddo-print-friendly .kiddo-canvas {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .kiddo-print-friendly .kiddo-card {
+    box-shadow: none !important;
+    border-color: #d4d4d4 !important;
+    break-inside: avoid;
+  }
+  .kiddo-print-friendly button[data-testid^="button-export"],
+  .kiddo-print-friendly button[data-testid^="button-tax-year"] {
+    display: none !important;
+  }
+  .kiddo-print-friendly section {
+    break-inside: avoid-page;
+  }
+}
+
 /* Tactile press feedback — opt-in utility for tap surfaces. Adds a
    brief scale dip on :active so the user knows the tap registered
    before whatever the button does (modal slide-up, navigation,
