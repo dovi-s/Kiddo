@@ -4320,6 +4320,24 @@ export default function MemoryBook() {
                               : null;
                             const isFreshGift = ageDays !== null && ageDays < 7;
                             const showGainPill = !isFreshGift && gainDollars !== null && Math.abs(gainDollars) > 0.01;
+                            // Value differs from cost basis by more than a
+                            // cent. When false, the "Now worth $X" line is
+                            // pure duplication of the gift amount at the
+                            // top of the row — hide it entirely. This
+                            // unifies the visual shape of "fresh + flat"
+                            // and "aged + flat" rows (both just show
+                            // "Invested in AAPL" with no redundant value
+                            // restatement). Locked 2026-05-19 per the
+                            // gain-pill inconsistency audit: user flagged
+                            // that some rows show "Now worth $X (+$Y)"
+                            // and others show "Now worth $X" with no
+                            // gain pill, looking like two different
+                            // states even when they're both "no movement."
+                            // The cost basis at the top of the row IS the
+                            // value when they match — no need to restate
+                            // it underneath. Canva-mode: less chrome
+                            // when chrome adds no signal.
+                            const valueDiffersFromCost = currentValue !== null && giftAmt > 0 && Math.abs(currentValue - giftAmt) > 0.01;
                             return (
                               <div className="mt-3 rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-2 text-[11px] text-[hsl(var(--kiddo-evergreen)/0.85)]">
                                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -4336,7 +4354,7 @@ export default function MemoryBook() {
                                          layer hasn't surfaced a value yet.
                                       3. No value, not fresh → silent.
                                          Better than wrong. */}
-                                  {currentValue !== null ? (
+                                  {currentValue !== null && valueDiffersFromCost ? (
                                     <span className="text-[10.5px] font-semibold flex items-center gap-1.5">
                                       <span className="text-foreground">Now worth ${currentValue.toFixed(2)}</span>
                                       {showGainPill && gainDollars !== null && (
@@ -4345,7 +4363,7 @@ export default function MemoryBook() {
                                         </span>
                                       )}
                                     </span>
-                                  ) : isFreshGift ? (
+                                  ) : currentValue === null && isFreshGift ? (
                                     <span className="text-[10px] font-medium text-[hsl(var(--kiddo-evergreen)/0.62)] italic">Just landed</span>
                                   ) : null}
                                 </div>
