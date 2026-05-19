@@ -480,6 +480,17 @@ export class StripeService {
     return await stripe.paymentIntents.retrieve(paymentIntentId);
   }
 
+  // Used by the gift-receipt enrichment path (server/routes.ts) to
+  // surface payment-method brand + last4 in the receipt email. Same
+  // call recurringContributionWorker uses inline; promoted to a
+  // service method here so the routes module doesn't have to import
+  // the stripe client directly. Locked 2026-05-19 per the gifter
+  // receipt-grade polish.
+  async getPaymentMethod(paymentMethodId: string): Promise<Stripe.PaymentMethod> {
+    const stripe = await getUncachableStripeClient();
+    return await stripe.paymentMethods.retrieve(paymentMethodId);
+  }
+
   async createRefund(paymentIntentId: string, amount?: number, reason?: string): Promise<Stripe.Refund> {
     const stripe = await getUncachableStripeClient();
     return await stripe.refunds.create({

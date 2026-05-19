@@ -3599,6 +3599,56 @@ export async function registerRoutes(
           if (ev?.name) eventName = ev.name;
         } catch {}
       }
+
+      // Receipt-grade enrichment (2026-05-19 — gifter polish for the
+      // sophisticated-gifter persona). Pull the Stripe charge details
+      // so the receipt email can carry a real CPA-readable reference
+      // block (charge date, payment method, total charged), not just
+      // warm prose. All fields are nullable — if any lookup fails the
+      // receipt downgrades gracefully to the prior warm-prose version
+      // without the structured block.
+      let paymentMethodBrand: string | null = null;
+      let paymentMethodLast4: string | null = null;
+      let totalChargedCents: number | null = null;
+      let chargedAtIso: string | null = null;
+      let receiptReference: string | null = null;
+      try {
+        if (paymentIntentId && typeof paymentIntentId === "string") {
+          // Short reference for the receipt header — last 8 chars of
+          // the Stripe payment_intent ID, uppercased. Unique enough
+          // for the user to reference in support without exposing the
+          // full PI ID. Matches the pattern Stripe's own receipts use.
+          receiptReference = paymentIntentId.slice(-8).toUpperCase();
+        }
+        if (session?.created) {
+          chargedAtIso = new Date(session.created * 1000).toISOString();
+        }
+        if (typeof session?.amount_total === "number") {
+          totalChargedCents = session.amount_total;
+        }
+        // Payment-method lookup: card brand + last4. Same pattern the
+        // recurringContributionWorker uses (line 138-147). One extra
+        // Stripe call per receipt is negligible.
+        const piRaw = (session as any)?.payment_intent;
+        const piObj = typeof piRaw === "object" && piRaw !== null ? piRaw : null;
+        const pmField = piObj?.payment_method;
+        const pmId = typeof pmField === "string"
+          ? pmField
+          : (pmField && typeof pmField === "object" && typeof (pmField as any).id === "string")
+            ? (pmField as any).id
+            : null;
+        if (pmId) {
+          const pm: any = await stripeService.getPaymentMethod(pmId).catch(() => null);
+          if (pm?.card?.brand) paymentMethodBrand = String(pm.card.brand);
+          if (pm?.card?.last4) paymentMethodLast4 = String(pm.card.last4);
+          if (!pm?.card && pm?.type === "us_bank_account") {
+            paymentMethodBrand = "ACH bank transfer";
+          }
+        }
+      } catch (err) {
+        console.warn("[gift-receipt] Stripe enrichment failed (non-fatal):", err);
+      }
+
       await appendGifterNotificationQueue({
         id: `gift_receipt_followup:${sessionId}`,
         type: "gift_receipt_followup",
@@ -3613,6 +3663,13 @@ export async function registerRoutes(
         giftUrl: fund.slug ? `${baseUrl}/${fund.slug}` : `${baseUrl}/gift/${fund.id}`,
         startFundUrl: `${baseUrl}/get-started?${sourceParams.toString()}`,
         eventName,
+        // Receipt-grade enrichment fields. All nullable; renderer
+        // gracefully degrades to warm-prose-only when missing.
+        receiptReference,
+        chargedAtIso,
+        paymentMethodBrand,
+        paymentMethodLast4,
+        totalChargedCents,
       });
       void runGifterNotificationWorker();
 

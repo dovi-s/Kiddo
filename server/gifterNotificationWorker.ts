@@ -123,6 +123,12 @@ type RenderedEmail = {
   to: string;
   subject: string;
   text: string;
+  // Optional structured key/value rows the email base renders as a
+  // small bordered table inside the card. Used by gift_receipt_followup
+  // for receipt-grade formatting (reference, charge date, payment
+  // method, amount, total charged). Other render functions can opt in
+  // as needed. Locked 2026-05-19 per the gifter-receipt-grade upgrade.
+  details?: Array<{ label: string; value: string }>;
 };
 
 type FundReminderRow = {
@@ -700,7 +706,6 @@ function renderOptInConfirmation(entry: QueueEntry): RenderedEmail | null {
 function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
   const to = String(entry.email || "").trim().toLowerCase();
   const childName = String(entry.childName || "their child").trim();
-  const fundName = String(entry.fundName || childName || "their fund").trim();
   const amount = Number(entry.amount || 0);
   const ticker = String(entry.ticker || "").trim().toUpperCase();
   const startFundUrl = String(entry.startFundUrl || "").trim();
@@ -710,13 +715,13 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
 
   const occasionLabel = eventName ? `'s ${eventName}` : "";
   const subject = eventName
-    ? `Your gift for ${childName}'s ${eventName} is on its way`
-    : `Your gift to ${childName} is on its way`;
+    ? `Receipt: your gift for ${childName}'s ${eventName}`
+    : `Receipt: your gift to ${childName}`;
 
   const giftLine = amount > 0
     ? ticker
       ? `Your $${amount.toFixed(2)} gift is being invested in ${ticker} for ${childName}${occasionLabel}. It will sit there and grow.`
-      : `Your $${amount.toFixed(2)} gift for ${childName}${occasionLabel} is confirmed and headed into their investment fund.`
+      : `Your $${amount.toFixed(2)} gift for ${childName}${occasionLabel} is confirmed and headed into ${childName}'s UTMA investment fund.`
     : `Your gift for ${childName}${occasionLabel} is confirmed.`;
 
   // Honest disclosure of where the gifter's name shows up. Previously the
@@ -730,6 +735,70 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
     ? "You sent this anonymously, so no name appears on the Memory Book or the gift page."
     : `Your first name (${namedSender.split(/\s+/)[0]}) appears in ${childName}'s family Memory Book and as a "who's already given" name on their gift page. Full name stays private. Reply to this email if you'd like it changed.`;
 
+  // ─── Receipt-grade details block ────────────────────────────────
+  // Locked 2026-05-19 per the gifter-receipt audit. The prior email
+  // was a warm thank-you; sophisticated gifters (grandparents giving
+  // $1k+, professionals tracking gift-tax compliance via Form 709)
+  // need a structured "for your records" block alongside the prose.
+  // All fields are nullable upstream — when Stripe enrichment fails
+  // the block simply renders fewer rows or skips entirely.
+  const details: Array<{ label: string; value: string }> = [];
+  const receiptReference = entry.receiptReference ? String(entry.receiptReference).trim() : "";
+  const chargedAtIso = entry.chargedAtIso ? String(entry.chargedAtIso).trim() : "";
+  const pmBrand = entry.paymentMethodBrand ? String(entry.paymentMethodBrand).trim() : "";
+  const pmLast4 = entry.paymentMethodLast4 ? String(entry.paymentMethodLast4).trim() : "";
+  const totalChargedCents = typeof entry.totalChargedCents === "number" ? (entry.totalChargedCents as number) : null;
+  const chargedAtDate = chargedAtIso ? new Date(chargedAtIso) : null;
+  const chargedAtLabel = chargedAtDate && Number.isFinite(chargedAtDate.getTime())
+    ? chargedAtDate.toLocaleString("en-US", { month: "long", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" })
+    : null;
+  if (receiptReference) details.push({ label: "Receipt reference", value: receiptReference });
+  if (chargedAtLabel) details.push({ label: "Charged", value: chargedAtLabel });
+  if (pmBrand) {
+    const pmDisplay = pmLast4
+      ? `${pmBrand.charAt(0).toUpperCase() + pmBrand.slice(1)} ····${pmLast4}`
+      : pmBrand.charAt(0).toUpperCase() + pmBrand.slice(1);
+    details.push({ label: "Payment method", value: pmDisplay });
+  }
+  if (amount > 0) details.push({ label: "Gift amount", value: `$${amount.toFixed(2)}` });
+  if (typeof totalChargedCents === "number") {
+    const total = totalChargedCents / 100;
+    const fees = total - amount;
+    if (fees > 0.005) {
+      details.push({ label: "Processing fee", value: `$${fees.toFixed(2)}` });
+    }
+    details.push({ label: "Total charged", value: `$${total.toFixed(2)}` });
+  }
+  details.push({ label: "Recipient", value: `${childName}'s UTMA · custody at DriveWealth, LLC` });
+
+  // Plain-text version of the receipt block — fixed-width alignment
+  // for monospace viewers (some CPAs forward these to their inbox as
+  // text-only). Two-column with right-padded labels, dotted lines
+  // between rows.
+  const textReceiptBlock = details.length > 0
+    ? [
+        "",
+        "Receipt details",
+        "----------------------------------------",
+        ...details.map((r) => `${r.label.padEnd(22, " ")}${r.value}`),
+        "----------------------------------------",
+      ].join("\n")
+    : "";
+
+  // Tax-implications briefing — locked 2026-05-19 per the Five Towns
+  // gifter polish. A wealthy gifter giving $5k+ needs to know:
+  //   (a) THEY have no tax liability on this gift
+  //   (b) The parent files the 1099s issued by DriveWealth
+  //   (c) Kiddie-tax rules apply at the recipient level above the
+  //       inflation-adjusted threshold (currently $2,700/yr for 2025)
+  //   (d) Form 709 may apply if THIS gifter's total annual gifts to
+  //       this recipient exceed the IRS annual exclusion (currently
+  //       $18,000 for 2024, rising with inflation)
+  // Kept brief; the gifter's CPA fills in the rest.
+  const taxLine = amount >= 500
+    ? `Tax note: gifts to a UTMA are not deductible to the gifter and create no tax liability for you. ${childName}'s parent receives the annual 1099-DIV / 1099-B from DriveWealth. If your total gifts to ${childName} across the calendar year exceed the IRS annual gift-tax exclusion (\$18,000 for 2024, adjusted yearly), you may need to file Form 709. Your CPA can confirm.`
+    : "";
+
   return {
     to,
     subject,
@@ -738,10 +807,13 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
       "",
       giftLine,
       buildGiftProvenanceLine(childName),
+      textReceiptBlock,
       "",
       "Your note goes into their Memory Book. They will read it someday alongside the story of this gift.",
       "",
       visibilityLine,
+      "",
+      taxLine,
       "",
       giftUrl ? `Gift again any time: ${giftUrl}` : "",
       "",
@@ -749,10 +821,17 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
       "The whole family can send lasting gifts in under a minute. No app. No account for gifters.",
       `Start a fund: ${startFundUrl}`,
       "",
+      "Kora Inc. is a technology company, not a broker-dealer.",
+      "Securities offered through DriveWealth, LLC (FINRA/SIPC).",
+      "Keep this email for your records.",
+      "",
       "The Kiddo team",
     ]
       .filter(Boolean)
       .join("\n"),
+    // The HTML wrapper picks this up and renders a bordered key/value
+    // table inside the email card.
+    details,
   };
 }
 
@@ -2141,6 +2220,7 @@ async function processQueuedNotifications(log: (message: string, source?: string
     const { html: brandedHtml } = renderKiddoEmail({
       heading: rendered.subject,
       intro: rendered.text,
+      details: rendered.details,
     });
     const delivery = await sendEmail({
       to: rendered.to,

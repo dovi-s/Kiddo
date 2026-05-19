@@ -71,12 +71,37 @@ export type KiddoEmailInput = {
   cta?: { text: string; url: string };
   postscript?: string;
   unsubscribeUrl?: string;
+  // Optional structured details block. Renders as a small bordered
+  // key/value table inside the card, BELOW intro and ABOVE cta.
+  // Useful for transactional confirmations that need a "for your
+  // records" structured block (receipt, tax notice, account change
+  // summary) without breaking the warm prose intro above it.
+  // Locked 2026-05-19 per the gifter-receipt-grade upgrade.
+  details?: Array<{ label: string; value: string }>;
 };
 
 export function renderKiddoEmail(input: KiddoEmailInput): { html: string } {
-  const { heading, intro, cta, postscript, unsubscribeUrl } = input;
+  const { heading, intro, cta, postscript, unsubscribeUrl, details } = input;
   const supportEmail = process.env.SUPPORT_EMAIL || "support@kiddofund.com";
   const baseUrl = (process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL || "https://kiddofund.com").replace(/\/+$/, "");
+
+  // Structured details table (receipt-grade or transaction-summary
+  // block). Each row is a label / value pair; the table is bordered
+  // and uses tabular-num font feature for amount columns. Renders
+  // inline-style only — Outlook + Gmail Promotions tab safe.
+  const detailsBlock = Array.isArray(details) && details.length > 0
+    ? `
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 6px 0 18px 0; border: 1px solid rgba(26,23,16,0.10); border-radius: 12px; background-color: #FAF8F4;">
+        ${details
+          .map((row, i) => `
+            <tr>
+              <td style="padding: 11px 14px; font-family: ${FONT_STACK}; font-size: 12px; color: rgba(26,23,16,0.55); ${i < details.length - 1 ? "border-bottom: 1px solid rgba(26,23,16,0.06);" : ""} width: 40%;">${esc(row.label)}</td>
+              <td style="padding: 11px 14px; font-family: ${FONT_STACK}; font-size: 13px; font-weight: 600; color: #1A1710; ${i < details.length - 1 ? "border-bottom: 1px solid rgba(26,23,16,0.06);" : ""} text-align: right; font-variant-numeric: tabular-nums;">${esc(row.value)}</td>
+            </tr>
+          `)
+          .join("")}
+      </table>`
+    : "";
 
   const ctaBlock = cta
     ? `
@@ -126,6 +151,7 @@ export function renderKiddoEmail(input: KiddoEmailInput): { html: string } {
         <tr><td style="background-color: #FFFFFF; border: 1px solid rgba(26,23,16,0.10); border-radius: 20px; padding: 32px 28px;">
           <h1 style="margin: 0 0 18px 0; font-family: Georgia, 'Times New Roman', serif; font-size: 22px; line-height: 1.3; font-weight: 600; color: #1A1710;">${esc(heading)}</h1>
           ${formatIntro(intro)}
+          ${detailsBlock}
           <table role="presentation" cellpadding="0" cellspacing="0" border="0">${ctaBlock}</table>
           ${postscriptBlock}
         </td></tr>
