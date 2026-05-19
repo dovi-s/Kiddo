@@ -2230,22 +2230,38 @@ export default function Activity() {
                                 );
                               }
                               return ticker ? (
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                <span
+                                  style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
+                                  title={ticker}
+                                  aria-label={ticker}
+                                  data-testid={`activity-ticker-${ticker}`}
+                                >
                                   {/* Real brand mark for single-ticker rows.
                                       Skipped on multi-ticker rows above (the
                                       "+N more" affordance carries that
                                       shape; multiple logos would crowd the
-                                      dense Activity feed). Same StockLogo
-                                      pattern used on the holdings card,
-                                      contribution modal, and gifter sheet. */}
-                                  <StockLogo ticker={ticker} size={14} />
-                                  <span style={{
-                                    fontSize: 9.5, fontWeight: 800, borderRadius: 6, padding: "2px 7px",
-                                    background: "rgb(26,61,43)", color: "white",
-                                    letterSpacing: "0.04em",
-                                  }}>
-                                    {ticker}
-                                  </span>
+                                      dense Activity feed).
+
+                                      The redundant green ticker pill that
+                                      used to render beside this logo was
+                                      removed 2026-05-18 — StockLogo already
+                                      falls back to ticker text inside the
+                                      circle when the brand image fails
+                                      (stock-logo.tsx lines 23-44), so the
+                                      chip duplicated the same information.
+                                      The "Invested AAPL AAPL" double-display
+                                      the user flagged was the chip beside
+                                      the logo. Logo carries brand-when-known
+                                      and ticker-when-unknown. The wrapper's
+                                      title + aria-label preserve the ticker
+                                      for hover/screen-readers.
+
+                                      Logo size bumped 14 → 16 to compensate
+                                      for the missing chip's row presence —
+                                      stays compact, but the brand mark now
+                                      reads at a glance instead of hiding
+                                      next to the status pill. */}
+                                  <StockLogo ticker={ticker} size={16} />
                                 </span>
                               ) : null;
                             })()}
