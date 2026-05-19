@@ -395,13 +395,21 @@ ${shareUrl}`;
           <span>Back</span>
         </button>
 
-        {/* Title */}
+        {/* Title — sprout emoji removed 2026-05-19. Same wallpaper
+            audit as Memory Book hero: emoji at the end of a financial-
+            product page title reads as marketing-rhythm rather than
+            product-grade. The projected number IS the cinematic
+            anchor; no decoration above it.
+
+            "Feel the future" subhead retoned to product-register —
+            the slider's purpose is to explore projections, not perform
+            emotion. */}
         <div>
           <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
-            {possessive} Potential <span aria-hidden>🌱</span>
+            {possessive} Potential
           </h1>
           <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
-            Drag the age slider to feel the future. The number updates as you move.
+            Drag the age slider to explore projected values. The number updates as you move.
           </p>
         </div>
 
@@ -601,7 +609,7 @@ ${shareUrl}`;
             <div className="flex items-baseline justify-between">
               <p className="text-sm text-white/80">Market added</p>
               <p className="text-sm font-bold tabular-nums text-[hsl(143,55%,72%)]">
-                +{fmtMoney(marketAdded)} 🌱
+                +{fmtMoney(marketAdded)}
               </p>
             </div>
           </div>
@@ -734,7 +742,7 @@ ${shareUrl}`;
             <div>
               <p className="text-sm font-medium text-primary">Recurring investment</p>
               <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
-                {monthly > 0 ? "Change the monthly amount" : "Add a monthly amount"} <span aria-hidden>🌱</span>
+                {monthly > 0 ? "Change the monthly amount" : "Add a monthly amount"}
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Pick an amount, watch the at-{targetAge} number move.
