@@ -26,6 +26,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
 import { MOTION_DURATION } from "@/lib/motion";
+import { GiftSourceChip } from "@/components/GiftSourceChip";
 
 // Same palette as NotificationsPanel.fundPillColors. Kept inline
 // rather than exported because (a) it's tiny, (b) keeping it local
@@ -54,6 +55,13 @@ type RecentGift = {
   selectedTicker: string | null;
   createdAt: string;
   isAnonymous: boolean;
+  // Source-of-origin: when populated, this gift came via a specific
+  // occasion page (/emma/birthday-2026) and the row renders a chip
+  // with the event name. When null/absent, the gift came via the
+  // implicit-default main gift page (/emma) and no chip renders.
+  // Locked 2026-05-19 per the gift-source-chip pattern.
+  eventId?: string | null;
+  eventName?: string | null;
 };
 
 type GifterRow = {
@@ -378,6 +386,14 @@ export function GiftersAcrossFundsSheet({ open, onClose }: GiftersAcrossFundsShe
                                           <span className="text-[10.5px] text-muted-foreground tabular-nums">
                                             {fullDate(g.createdAt)}
                                           </span>
+                                          {/* Source-of-origin chip. Renders only
+                                              when this gift came via a specific
+                                              occasion page; absence means main
+                                              gift page (the implicit default,
+                                              not labeled to keep the row clean).
+                                              Locked 2026-05-19 per the gift-
+                                              source-chip pattern. */}
+                                          <GiftSourceChip eventName={g.eventName} />
                                         </div>
                                         {/* Descriptor line. When the gifter
                                             wrote a message, show it in

@@ -19045,6 +19045,7 @@ export async function registerRoutes(
           message,
           selected_ticker AS "selectedTicker",
           parent_contribution_id AS "parentContributionId",
+          event_id AS "eventId",
           created_at AS "createdAt"
         FROM gifts
         WHERE fund_id IN (${fundIdsSql})
@@ -19054,6 +19055,34 @@ export async function registerRoutes(
         ORDER BY created_at DESC
       `);
       const gifts = (giftsResult.rows as any[]) || [];
+
+      // Event-name lookup. Surfaces "where did this gift come from" on
+      // each recent-gift row: an event-linked gift came via a specific
+      // occasion page (/emma/birthday-2026), unlinked gifts came via
+      // the main gift page (/emma). The client renders the event name
+      // as a small chip only when present — absence-of-chip implies
+      // the default main-page path, so we don't crowd common rows with
+      // "via main gift page" labels. Locked 2026-05-19 per the gift-
+      // source-chip pattern.
+      const eventIdSet = new Set<string>();
+      for (const g of gifts) {
+        if (g.eventId && typeof g.eventId === "string") eventIdSet.add(g.eventId);
+      }
+      const eventNameMap = new Map<string, string>();
+      if (eventIdSet.size > 0) {
+        const eventIdsSql = sql.join(
+          Array.from(eventIdSet).map((id) => sql`${id}`),
+          sql`, `,
+        );
+        const evRes = await db.execute(sql`
+          SELECT id, name FROM events WHERE id IN (${eventIdsSql})
+        `);
+        for (const row of (evRes.rows as any[]) || []) {
+          if (row?.id && typeof row.name === "string") {
+            eventNameMap.set(String(row.id), String(row.name));
+          }
+        }
+      }
 
       // Legacy boilerplate-message guard. Some pre-parentContributionId
       // recurring rows lack the column but carry the canonical
@@ -19078,6 +19107,12 @@ export async function registerRoutes(
         selectedTicker: string | null;
         createdAt: string;
         isAnonymous: boolean;
+        // Event linkage — populated only when the gift came in via a
+        // specific occasion page (eventId set + event still resolvable).
+        // null for the implicit-default main-gift-page path. The client
+        // renders an event chip only when this is non-null.
+        eventId: string | null;
+        eventName: string | null;
       };
       type GifterRow = {
         email: string;
@@ -19147,6 +19182,8 @@ export async function registerRoutes(
         }
 
         if (entry.recentGifts.length < RECENT_GIFTS_PER_GIFTER) {
+          const evId = gift.eventId && typeof gift.eventId === "string" ? gift.eventId : null;
+          const evName = evId ? eventNameMap.get(evId) ?? null : null;
           entry.recentGifts.push({
             id: String(gift.id),
             fundId: meta.fundId,
@@ -19158,6 +19195,12 @@ export async function registerRoutes(
               : null,
             createdAt: String(gift.createdAt),
             isAnonymous: Boolean(gift.isAnonymous),
+            eventId: evId,
+            // eventName is null when the event was deleted (eventId
+            // present but no longer in events table) — client treats
+            // that the same as "no event linkage" so the chip simply
+            // doesn't render.
+            eventName: evName,
           });
         }
       }
