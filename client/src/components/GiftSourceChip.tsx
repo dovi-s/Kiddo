@@ -18,14 +18,16 @@
 //     event names (e.g. "Grandpa's 80th + Emma's 7th joint celebration")
 //     get truncated visually but preserved on hover/screen-reader.
 //
-// Consumers (one today, sweep planned for later):
+// Consumers (post-sweep 2026-05-19):
 //   - GiftersAcrossFundsSheet recent-gift rows  ✓ live
-//   - Memory Book gift entries                  ☐ next sweep
-//   - Activity feed gift-received rows          ☐ next sweep
-//   - HoldingDetailSheet contributor rows       ☐ next sweep
-//
-// The sweep is deliberately deferred — land the chip pattern in the
-// sheet first, iterate styling there if needed, then roll out cleanly.
+//   - Activity feed gift-received rows          ✓ live (meta row after date)
+//   - Memory Book gift entries                  — pre-existing treatment
+//     (gold pill + evergreen calendar tag at the entry-detail level).
+//     Different surface, different register; not unified intentionally.
+//   - HoldingDetailSheet contributor rows       — evaluated, skipped
+//     (rows are aggregated per-sender across multiple gifts; showing a
+//     single event chip when the underlying gifts span multiple sources
+//     would be misleading. Could revisit at a per-gift drill-in.)
 
 import { Calendar } from "lucide-react";
 

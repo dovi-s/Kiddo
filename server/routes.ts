@@ -8041,6 +8041,45 @@ export async function registerRoutes(
       const activities = fundIdFilter
         ? all.filter((a) => a.fundId === fundIdFilter).slice(0, limit)
         : all.slice(0, limit);
+
+      // Event-name batch lookup. Activities for event-linked gifts carry
+      // metadata.eventId; the client GiftSourceChip renders the event
+      // name on those rows so a parent scanning the feed sees "this
+      // was a birthday gift" vs "this was via the main gift page."
+      // Single batched query rather than per-activity lookup — typical
+      // parent has a handful of distinct events even across years, so
+      // this stays bounded. Locked 2026-05-19 per the gift-source-chip
+      // sweep.
+      const activityEventIds = new Set<string>();
+      for (const a of activities) {
+        if (!a.metadata) continue;
+        try {
+          const meta = JSON.parse(a.metadata as string);
+          if (meta?.eventId && typeof meta.eventId === "string") {
+            activityEventIds.add(meta.eventId);
+          }
+        } catch { /* malformed metadata - skip */ }
+      }
+      const activityEventNameMap = new Map<string, string>();
+      if (activityEventIds.size > 0) {
+        try {
+          const idsSql = sql.join(
+            Array.from(activityEventIds).map((id) => sql`${id}`),
+            sql`, `,
+          );
+          const evRes = await db.execute(sql`
+            SELECT id, name FROM events WHERE id IN (${idsSql})
+          `);
+          for (const row of (evRes.rows as any[]) || []) {
+            if (row?.id && typeof row.name === "string") {
+              activityEventNameMap.set(String(row.id), String(row.name));
+            }
+          }
+        } catch (err) {
+          console.warn('[Activities] Event-name enrichment failed', err);
+        }
+      }
+
       const enriched = await Promise.all(
         activities.map(async (activity) => {
           let fund = null;
@@ -8053,6 +8092,7 @@ export async function registerRoutes(
           // numbers (~50-200 per page) keep this well under any latency cap.
           let resolvedSenderEmail: string | null = null;
           let resolvedIsParentContribution: boolean | null = null;
+          let resolvedEventName: string | null = null;
 
           if (activity.fundId) {
             try {
@@ -8072,6 +8112,11 @@ export async function registerRoutes(
               // override this below via giftStatus from the linked gift row.
               if (typeof meta?.status === "string") {
                 giftStatus = meta.status;
+              }
+              // Event-name enrichment for the gift-source chip. The
+              // lookup map was prepopulated in the pre-pass above.
+              if (meta?.eventId && typeof meta.eventId === "string") {
+                resolvedEventName = activityEventNameMap.get(meta.eventId) ?? null;
               }
               if (meta?.giftId) {
                 const gift = await storage.getGift(meta.giftId);
@@ -8112,6 +8157,11 @@ export async function registerRoutes(
             status: giftStatus,
             senderEmail: resolvedSenderEmail,
             isParentContribution: resolvedIsParentContribution,
+            // Event-name surfaced for the gift-source chip. Null when
+            // the activity has no eventId in metadata, or the linked
+            // event was deleted (client treats both cases identically:
+            // chip simply doesn't render). Locked 2026-05-19.
+            eventName: resolvedEventName,
           };
         })
       );

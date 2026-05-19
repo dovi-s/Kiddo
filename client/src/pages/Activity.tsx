@@ -27,6 +27,7 @@ import { getDeepLinkHighlightStyle } from "@/lib/deep-link-highlight";
 import { MOTION } from "@/lib/motion";
 import { KiddoSkeleton } from "@/components/ui/skeleton";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { GiftSourceChip } from "@/components/GiftSourceChip";
 import { ActionItemList } from "@/components/ActionItemCard";
 import { useActionItems } from "@/hooks/use-action-items";
 import type { Activity as ActivityType } from "@shared/schema";
@@ -41,7 +42,16 @@ type ActivityTab = "history" | "pending" | "scheduled";
 const PENDING_UPCOMING_DAYS = 3;
 
 type FilterType = "all" | "gifts" | "auto" | "growth" | "milestones";
-type FeedActivity = ActivityType & { fundName?: string | null; recipientFirstName?: string | null; status?: string | null };
+type FeedActivity = ActivityType & {
+  fundName?: string | null;
+  recipientFirstName?: string | null;
+  status?: string | null;
+  // Server-enriched (2026-05-19). Populated when the activity's
+  // metadata carries an eventId AND the linked event still resolves.
+  // Drives the gift-source chip in the meta row; null/undefined means
+  // the implicit-default main-gift-page path (no chip).
+  eventName?: string | null;
+};
 
 // Internal `value` keys stay (URL deep-links + analytics depend on them).
 // Only user-facing labels flip. Taxonomy is parent-mental-model based:
@@ -2374,6 +2384,13 @@ export default function Activity() {
                             )}
                             <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>{config.label}</span>
                             {dateShort && <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>· {dateShort}</span>}
+                            {/* Gift-source chip: renders only when the
+                                gift came via a specific occasion page.
+                                Absence = main gift page (the implicit
+                                default, ~80% of volume). Locked
+                                2026-05-19 per the gift-source-chip
+                                sweep. */}
+                            <GiftSourceChip eventName={(item as FeedActivity).eventName} />
                           </div>
                         </div>
                       </button>
