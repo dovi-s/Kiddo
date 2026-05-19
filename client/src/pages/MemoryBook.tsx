@@ -2412,9 +2412,13 @@ export default function MemoryBook() {
             }}
             data-testid="memory-hero"
           >
-            {/* Decorative orbs - matching Dashboard */}
-            <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200, borderRadius: 9999, background: "rgba(255,255,255,0.04)", pointerEvents: "none" }} />
-            <div style={{ position: "absolute", bottom: -70, left: -20, width: 240, height: 240, borderRadius: 9999, background: "hsl(var(--kiddo-gold) / 0.08)", pointerEvents: "none" }} />
+            {/* Decorative orbs REMOVED 2026-05-19. They were vestigial
+                "Acorns-style" hero-background bubbles that didn't add
+                signal — pure visual noise on what should be a calm
+                cinematic anchor. Per the locked Mubi-register design
+                language for Memory Book, the hero earns its weight
+                from the typography + the cinematic balance number,
+                not from decorative shapes. Don't add them back. */}
 
             <div style={{ position: "relative", zIndex: 1 }}>
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.48)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }} data-testid="text-fund-name">
