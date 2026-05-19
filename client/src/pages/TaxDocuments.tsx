@@ -125,6 +125,62 @@ export default function TaxDocuments() {
     staleTime: 60_000,
   });
 
+  // Tax-year flow summary — the CPA-readable "year in numbers" block
+  // that anchors the top of this page. One glance scans every money
+  // movement for the year: deposits, withdrawals, realized gains,
+  // estimated fees, year-start vs year-end value. Endpoint computes
+  // server-side from gifts + transactions + fund_snapshots. Locked
+  // 2026-05-19 per the Five Towns parent-side roadmap P1.
+  type TaxYearSummary = {
+    year: number;
+    totalDepositsUsd: number;
+    withdrawalsUsd: number;
+    realizedGainsUsd: number;
+    avgInvestedBalanceUsd: number;
+    estimatedFeesUsd: number;
+    yearStartValue: number | null;
+    yearEndValue: number | null;
+    snapshotCount: number;
+  };
+  const { data: yearSummary } = useQuery<TaxYearSummary>({
+    queryKey: ["/api/funds", activeFund?.id, "tax-year-summary", yearFilter],
+    queryFn: async () => {
+      if (!activeFund?.id) {
+        return {
+          year: Number(yearFilter),
+          totalDepositsUsd: 0,
+          withdrawalsUsd: 0,
+          realizedGainsUsd: 0,
+          avgInvestedBalanceUsd: 0,
+          estimatedFeesUsd: 0,
+          yearStartValue: null,
+          yearEndValue: null,
+          snapshotCount: 0,
+        } as TaxYearSummary;
+      }
+      const res = await fetch(
+        `/api/funds/${activeFund.id}/tax-year-summary?year=${encodeURIComponent(yearFilter)}`,
+        { credentials: "include" },
+      );
+      if (!res.ok) {
+        return {
+          year: Number(yearFilter),
+          totalDepositsUsd: 0,
+          withdrawalsUsd: 0,
+          realizedGainsUsd: 0,
+          avgInvestedBalanceUsd: 0,
+          estimatedFeesUsd: 0,
+          yearStartValue: null,
+          yearEndValue: null,
+          snapshotCount: 0,
+        } as TaxYearSummary;
+      }
+      return res.json();
+    },
+    enabled: !!activeFund?.id,
+    staleTime: 60_000,
+  });
+
   // Realized sales for the selected tax year. The endpoint returns
   // per-sale rows (proceeds, costBasisSold, realizedGain,
   // holdingPeriod) plus year totals split by short-term vs long-term.
@@ -780,6 +836,92 @@ export default function TaxDocuments() {
             </p>
           </div>
         </section>
+
+        {/* Year-end summary — the single highest-impact CPA-readable
+            artifact on this page. One glance shows every money flow
+            for the year so the parent's CPA can reconcile against the
+            eventual DriveWealth 1099 without digging through Activity.
+            Renders only when there's at least one signal (deposits OR
+            withdrawals OR realized gains OR estimated fees) — silent
+            on a brand-new fund with no activity. Locked 2026-05-19
+            per the Five Towns parent-side roadmap P1. */}
+        {yearSummary && (
+          yearSummary.totalDepositsUsd > 0 ||
+          yearSummary.withdrawalsUsd > 0 ||
+          Math.abs(yearSummary.realizedGainsUsd) > 0.01 ||
+          yearSummary.estimatedFeesUsd > 0 ||
+          (yearSummary.yearEndValue ?? 0) > 0
+        ) && (
+          <section>
+            <p className="kiddo-section-label mb-2">{yearFilter} summary</p>
+            <div className="kiddo-card p-5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Deposits</p>
+                  <p className="mt-1 font-heading text-lg font-bold text-foreground tabular-nums">
+                    {fmt0(yearSummary.totalDepositsUsd)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">Gifts + contributions</p>
+                </div>
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Withdrawals</p>
+                  <p className="mt-1 font-heading text-lg font-bold text-foreground tabular-nums">
+                    {fmt0(yearSummary.withdrawalsUsd)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">{yearSummary.withdrawalsUsd > 0 ? "Cash out" : "None"}</p>
+                </div>
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Realized gains</p>
+                  <p className={`mt-1 font-heading text-lg font-bold tabular-nums ${yearSummary.realizedGainsUsd >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-700"}`}>
+                    {yearSummary.realizedGainsUsd >= 0 ? "+" : ""}{fmt0(yearSummary.realizedGainsUsd)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">From sales</p>
+                </div>
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Fees (est.)</p>
+                  <p className="mt-1 font-heading text-lg font-bold text-foreground tabular-nums">
+                    {fmt0(yearSummary.estimatedFeesUsd)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">0.10% AUM</p>
+                </div>
+              </div>
+              {(yearSummary.yearStartValue != null || yearSummary.yearEndValue != null) && (
+                <div className="mt-4 flex flex-wrap items-baseline justify-between gap-3 rounded-xl bg-[hsl(var(--kiddo-cream-dark)/0.4)] px-4 py-3 border-t border-[hsl(var(--kiddo-border))]">
+                  <div className="min-w-0">
+                    <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Year start → year end</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground tabular-nums">
+                      {yearSummary.yearStartValue != null ? fmt0(yearSummary.yearStartValue) : "—"}
+                      <span className="mx-2 text-muted-foreground/60">→</span>
+                      {yearSummary.yearEndValue != null ? fmt0(yearSummary.yearEndValue) : "—"}
+                    </p>
+                  </div>
+                  {yearSummary.yearStartValue != null && yearSummary.yearEndValue != null && (
+                    (() => {
+                      const delta = yearSummary.yearEndValue! - yearSummary.yearStartValue!;
+                      const pct = yearSummary.yearStartValue! > 0 ? (delta / yearSummary.yearStartValue!) * 100 : null;
+                      return (
+                        <div className="text-right">
+                          <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">Net change</p>
+                          <p className={`mt-1 text-sm font-bold tabular-nums ${delta >= 0 ? "text-[hsl(var(--kiddo-evergreen))]" : "text-red-700"}`}>
+                            {delta >= 0 ? "+" : ""}{fmt0(delta)}
+                            {pct != null && (
+                              <span className="ml-1.5 text-[11px] font-medium opacity-80">
+                                ({delta >= 0 ? "+" : ""}{pct.toFixed(1)}%)
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                      );
+                    })()
+                  )}
+                </div>
+              )}
+              <p className="mt-3 text-[11px] text-muted-foreground/80 leading-relaxed">
+                Fees are estimated from the time-weighted average invested balance (0.10% annual). Realized gains and DriveWealth-issued 1099 numbers are authoritative. Use this summary as the at-a-glance scan; reconcile against the per-sale and per-position tables below.
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Account particulars — the "this is officially constituted
             as follows" view. A sophisticated parent's CPA or estate

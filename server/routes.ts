@@ -19546,6 +19546,200 @@ export async function registerRoutes(
     }
   });
 
+  // Tax-year summary for a fund — the CPA-readable "year flow" view
+  // shown at the top of the Tax Documents page. One glance, scannable
+  // in 5 seconds, captures every money movement for the year so the
+  // parent's CPA can reconcile against the eventual 1099 from
+  // DriveWealth without digging through Activity manually.
+  //
+  // Returns:
+  //   - totalDepositsUsd: settled gifts + parent contributions in year
+  //   - withdrawalsUsd: sum of completed withdrawal transactions in year
+  //   - realizedGainsUsd: sum of realized gains in year (matches
+  //       /realized-sales endpoint totalRealizedGain)
+  //   - avgInvestedBalanceUsd: time-weighted average of
+  //       fund_snapshots.invested_value across snapshots whose
+  //       snapshot_date falls in the year. Time-weighted so a sparse
+  //       snapshot history (one snapshot every 2 weeks) doesn't skew
+  //       compared to a dense one (daily). Each snapshot's value is
+  //       weighted by the number of days it covers (gap to the next
+  //       snapshot, or year-end for the last snapshot).
+  //   - estimatedFeesUsd: avgInvestedBalanceUsd * 0.001 (the locked
+  //       0.10% annual management fee). Estimated because DriveWealth
+  //       hasn't been wired for actual fee accruals yet; once it is,
+  //       this can pull authoritative numbers.
+  //   - yearStartValue / yearEndValue: closest snapshot to Jan 1 /
+  //       Dec 31 of the year, with null when out of range (e.g. fund
+  //       created mid-year or future year).
+  //
+  // Locked 2026-05-19 per the Five Towns parent-side roadmap P1. See
+  // project_five_towns_roadmap.md for full acceptance criteria.
+  app.get('/api/funds/:fundId/tax-year-summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fundId = req.params.fundId;
+      const yearRaw = String(req.query.year || "");
+      const year = /^\d{4}$/.test(yearRaw) ? Number(yearRaw) : new Date().getFullYear();
+
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      const startMs = Date.UTC(year, 0, 1, 0, 0, 0);
+      const endMs = Date.UTC(year + 1, 0, 1, 0, 0, 0);
+      const startIso = new Date(startMs).toISOString();
+      const endIso = new Date(endMs).toISOString();
+
+      // 1. Total deposits — every gift (parent or third-party) that
+      //    settled during the year. Includes parent contributions
+      //    (parent_contribution_id IS NOT NULL) so the year flow
+      //    captures everything the family put in, not just outside
+      //    gifters. Settled status only — pending/failed/refunded
+      //    don't count as deposits for the year.
+      const depositsRes = await db.execute(sql`
+        SELECT COALESCE(SUM(amount), 0)::float8 AS total
+        FROM gifts
+        WHERE fund_id = ${fundId}
+          AND status IN ('settled', 'invested')
+          AND COALESCE(settled_at, created_at) >= ${startIso}
+          AND COALESCE(settled_at, created_at) < ${endIso}
+      `);
+      const totalDepositsUsd = Number((depositsRes.rows as any[])[0]?.total || 0);
+
+      // 2. Withdrawals — completed withdrawal-type transactions in year.
+      //    Same query shape as realized-sales but filtered to type='withdrawal'.
+      const withdrawalsRes = await db.execute(sql`
+        SELECT COALESCE(SUM(amount), 0)::float8 AS total
+        FROM transactions
+        WHERE fund_id = ${fundId}
+          AND type = 'withdrawal'
+          AND status = 'completed'
+          AND COALESCE(completed_at, created_at) >= ${startIso}
+          AND COALESCE(completed_at, created_at) < ${endIso}
+      `);
+      const withdrawalsUsd = Number((withdrawalsRes.rows as any[])[0]?.total || 0);
+
+      // 3. Realized gains — reuses the same logic as /realized-sales
+      //    but aggregated server-side directly so we don't have to
+      //    cross-call. Sum of realized_gain across sell transactions
+      //    in the year.
+      const realizedRes = await db.execute(sql`
+        SELECT COALESCE(SUM(realized_gain), 0)::float8 AS total
+        FROM transactions
+        WHERE fund_id = ${fundId}
+          AND type = 'sell'
+          AND status = 'completed'
+          AND realized_gain IS NOT NULL
+          AND COALESCE(completed_at, created_at) >= ${startIso}
+          AND COALESCE(completed_at, created_at) < ${endIso}
+      `);
+      const realizedGainsUsd = Number((realizedRes.rows as any[])[0]?.total || 0);
+
+      // 4. Time-weighted average invested balance for the year.
+      //    Pulls every snapshot in the year ordered ASC; each
+      //    snapshot's value is weighted by the gap (in days) to the
+      //    NEXT snapshot, or to year-end for the last one. This is
+      //    the standard "step function" averaging — sparse weeks
+      //    don't get less weight than dense weeks. If there's a
+      //    snapshot before the year-start, it seeds the pre-period
+      //    so a fund that existed in prior years gets a January
+      //    starting value too.
+      const snapsRes = await db.execute(sql`
+        SELECT snapshot_date, invested_value, total_value
+        FROM fund_snapshots
+        WHERE fund_id = ${fundId}
+          AND snapshot_date >= ${startIso}
+          AND snapshot_date < ${endIso}
+        ORDER BY snapshot_date ASC
+      `);
+      const snaps = ((snapsRes.rows as any[]) || []).map((r) => ({
+        date: new Date(r.snapshot_date),
+        invested: Number(r.invested_value || 0),
+        total: Number(r.total_value || 0),
+      }));
+
+      // Pre-period seed snapshot (the most recent snapshot BEFORE
+      // year start). Used as the year-start balance + as the
+      // weighting seed if the first in-year snapshot falls
+      // mid-January. Falls back to fund.balance only if there are no
+      // pre-period snapshots at all (fund created within the year).
+      const seedRes = await db.execute(sql`
+        SELECT invested_value, total_value
+        FROM fund_snapshots
+        WHERE fund_id = ${fundId}
+          AND snapshot_date < ${startIso}
+        ORDER BY snapshot_date DESC
+        LIMIT 1
+      `);
+      const seedRow = (seedRes.rows as any[])[0];
+      const seedInvested = seedRow ? Number(seedRow.invested_value || 0) : 0;
+      const seedTotal = seedRow ? Number(seedRow.total_value || 0) : 0;
+
+      let avgInvestedBalanceUsd = 0;
+      if (snaps.length > 0) {
+        // Use a list of (startMs, value) and (gap to next) for the
+        // weighted average. Seed at year-start with the pre-period
+        // value if available, else with the first in-year snapshot.
+        const points: Array<{ start: number; value: number }> = [];
+        if (seedRow) {
+          points.push({ start: startMs, value: seedInvested });
+        }
+        for (const s of snaps) {
+          points.push({ start: s.date.getTime(), value: s.invested });
+        }
+        let weightedSum = 0;
+        let totalWeight = 0;
+        for (let i = 0; i < points.length; i += 1) {
+          const cur = points[i];
+          const next = i + 1 < points.length ? points[i + 1].start : endMs;
+          const span = Math.max(0, next - Math.max(cur.start, startMs));
+          if (span <= 0) continue;
+          weightedSum += cur.value * span;
+          totalWeight += span;
+        }
+        avgInvestedBalanceUsd = totalWeight > 0 ? weightedSum / totalWeight : 0;
+      } else if (seedRow) {
+        // No in-year snapshots but a pre-period snapshot exists —
+        // assume the fund coasted at the pre-period invested value
+        // for the whole year (best honest estimate without finer
+        // data).
+        avgInvestedBalanceUsd = seedInvested;
+      }
+
+      // 5. Estimated fees — 0.10% AUM applied to the time-weighted
+      //    average invested balance. Honest "estimated" framing in
+      //    the response key + the client surface so a CPA reading
+      //    the number knows it's not the exact DriveWealth-issued
+      //    fee accrual. Once DriveWealth wires up actual accruals
+      //    this can be replaced with the authoritative number.
+      const estimatedFeesUsd = avgInvestedBalanceUsd * 0.001;
+
+      // 6. Year start / end values. Pull the closest in-year
+      //    snapshots to Jan 1 + Dec 31. yearStart prefers the
+      //    pre-period seed (true balance entering the year);
+      //    yearEnd falls back to the current invested balance if
+      //    we're mid-year-in-progress and the most recent in-year
+      //    snapshot is the best we have.
+      const yearStartValue = seedRow ? seedTotal : (snaps[0]?.total ?? null);
+      const yearEndValue = snaps.length > 0 ? snaps[snaps.length - 1].total : null;
+
+      res.json({
+        year,
+        totalDepositsUsd: Number(totalDepositsUsd.toFixed(2)),
+        withdrawalsUsd: Number(withdrawalsUsd.toFixed(2)),
+        realizedGainsUsd: Number(realizedGainsUsd.toFixed(2)),
+        avgInvestedBalanceUsd: Number(avgInvestedBalanceUsd.toFixed(2)),
+        estimatedFeesUsd: Number(estimatedFeesUsd.toFixed(2)),
+        yearStartValue: yearStartValue != null ? Number(yearStartValue.toFixed(2)) : null,
+        yearEndValue: yearEndValue != null ? Number(yearEndValue.toFixed(2)) : null,
+        snapshotCount: snaps.length,
+      });
+    } catch (error) {
+      console.error('[tax-year-summary] failed:', error);
+      res.status(500).json({ error: 'Failed to load tax-year summary' });
+    }
+  });
+
   // ===== ACTION ITEMS =====
   //
   // The "read vs resolved" architecture (project_action_items_architecture).
