@@ -633,21 +633,28 @@ export function DesktopSidebar() {
                 onFocus={() => !item.isActive && handleNavHover(item.href, activeFund?.id)}
                 // Hover + focus-visible affordance lives on the className so
                 // Tailwind's :hover / :focus-visible pseudo-classes can apply.
-                // Previously the entire button styled inline with only
-                // active/inactive forks — no hover state, no focus state. The
-                // user surfaced it: "lots of indication of what I'm hovering
-                // over... Emma / Memory Book / Activity / Settings might be
-                // missing something like this." Apple Settings macOS parity:
-                // muted-foreground rows tint to cream on hover; the active row
-                // keeps the evergreen fill. Both states get the same shift on
-                // keyboard focus, which the inline-style version couldn't
-                // express. Layout-only properties (padding / radius / border
-                // widths) stay inline; visual-state properties moved to
-                // className.
-                className={`flex w-full items-center gap-2.5 px-3 py-[9px] mb-0.5 rounded-xl text-sm border-l-[3px] border-l-solid transition-colors outline-none cursor-pointer ${
+                // Apple Settings macOS parity: muted-foreground rows tint to
+                // cream on hover; the active row keeps the evergreen fill.
+                // Both states get the same shift on keyboard focus.
+                //
+                // The 3px evergreen left-rail indicator that previously
+                // marked the active tab was removed 2026-05-20. It was a
+                // productivity-app pattern (Slack, VS Code, Discord) that
+                // drifted into the codebase outside the locked register.
+                // Apple Settings does not use left-rail indicators; it
+                // uses bg fill plus text color, period. The codebase's
+                // repeated lock to calm-Apple-Settings register argued
+                // against the rail. Removing it also dropped one of five
+                // stacked active-state cues (bg fill + text color + font
+                // weight + icon stroke were already plenty); the fifth
+                // cue was redundant. The "curved bracket" visual effect
+                // some users noticed was a side effect of rounded-xl
+                // plus border-l-3px, not an intentional design. See
+                // feedback_sidebar_left_rail_removed.md.
+                className={`flex w-full items-center gap-2.5 px-3 py-[9px] mb-0.5 rounded-xl text-sm transition-colors outline-none cursor-pointer ${
                   item.isActive
-                    ? "border-l-[rgb(26,61,43)] bg-[rgb(237,244,238)] text-[rgb(26,61,43)] font-bold"
-                    : "border-l-transparent bg-transparent text-[rgb(111,104,96)] font-medium hover:bg-[hsl(var(--kiddo-cream))] hover:text-foreground focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:text-foreground"
+                    ? "bg-[rgb(237,244,238)] text-[rgb(26,61,43)] font-bold"
+                    : "bg-transparent text-[rgb(111,104,96)] font-medium hover:bg-[hsl(var(--kiddo-cream))] hover:text-foreground focus-visible:bg-[hsl(var(--kiddo-cream))] focus-visible:text-foreground"
                 }`}
                 data-testid={`sidebar-nav-${item.label.toLowerCase().replace(" ", "-")}`}
               >
