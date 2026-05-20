@@ -402,6 +402,7 @@ interface FundEvent {
   giftVolume?: string | null;
   giftCount?: number | null;
   status?: string | null;
+  isPermanent?: boolean | null;
 }
 
 export default function MemoryBook() {
@@ -714,6 +715,7 @@ export default function MemoryBook() {
     createdAt?: string;
     recipientBirthdate?: string | null;
     majorityAge?: number;
+    childPhotoUrl?: string | null;
   }>({
     queryKey: ["fund", fundId],
     queryFn: async () => {
@@ -2850,7 +2852,48 @@ export default function MemoryBook() {
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 fontSize: 32,
                               }}>
-                                {emoji}
+                                {/* Permanent "Gift anytime" card renders the
+                                    kid's identity (photo if set, first
+                                    initial otherwise) instead of the
+                                    generic ✨ fallback. Reason: every
+                                    other card on this strip represents an
+                                    OCCASION (birthday cake, grad cap,
+                                    holiday tree). "Gift anytime" is the
+                                    only card with no occasion — the
+                                    "thing being celebrated" is just the
+                                    kid existing. So the visual = the
+                                    kid. Custom user-defined events keep
+                                    the ✨ until they pick an icon. */}
+                                {evt.isPermanent ? (
+                                  fundData?.childPhotoUrl ? (
+                                    <img
+                                      src={fundData.childPhotoUrl}
+                                      alt=""
+                                      style={{
+                                        width: 56, height: 56,
+                                        borderRadius: "50%",
+                                        objectFit: "cover",
+                                        border: "2px solid white",
+                                        boxShadow: "0 2px 8px rgba(26,23,16,0.18)",
+                                      }}
+                                    />
+                                  ) : (
+                                    <div style={{
+                                      width: 56, height: 56,
+                                      borderRadius: "50%",
+                                      background: "hsl(var(--kora-gold))",
+                                      color: "white",
+                                      display: "flex", alignItems: "center", justifyContent: "center",
+                                      fontSize: 26, fontWeight: 700,
+                                      boxShadow: "0 2px 8px rgba(184,121,26,0.28)",
+                                      letterSpacing: "-0.02em",
+                                    }}>
+                                      {(childName || "").charAt(0).toUpperCase() || "✨"}
+                                    </div>
+                                  )
+                                ) : (
+                                  emoji
+                                )}
                               </div>
                             )}
                             <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(26,23,16,0.5) 0%, transparent 55%)" }} />
