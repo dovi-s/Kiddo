@@ -50,6 +50,18 @@ import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { toast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
+import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
+
+// Per-fund collaborators cache. Same readLocalCache / writeLocalCache
+// pattern as funds / activities / events queries (see use-funds,
+// use-activities, etc.). Cache key includes the fund id so a multi-
+// kid parent's funds don't cross-contaminate. Was added 2026-05-20
+// after user-reported "this keeps holding and popping up and waiting
+// to load on refresh, it should go faster" — the query had no
+// staleTime AND no initialData, so every mount fired a fresh network
+// request and the "How it works" empty explainer flashed during the
+// load before the actual collaborator list resolved.
+const COLLABORATORS_CACHE_PREFIX = "kiddo.collaborators.v1";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -98,15 +110,36 @@ export function CoParentAccessCard({
   const [, navigate] = useLocation();
   const [wallOpen, setWallOpen] = useState(false);
 
-  const { data: collaborators = [] } = useQuery<Collaborator[]>({
+  // initialData + staleTime + cache-write trio. With initialData a
+  // returning user sees their access list instantly from localStorage
+  // while the live fetch confirms in the background. With staleTime
+  // the query does not re-fetch on every mount; navigating away and
+  // back within 5 minutes uses the in-memory cache directly.
+  // Mutations (invite, delete) invalidate the query so no genuinely-
+  // stale data is ever shown for actionable events.
+  //
+  // isFetched is what we use below to decide whether to render the
+  // "How co-parent access works" empty explainer. Before the query
+  // has settled once, data may legitimately default to [] without
+  // meaning "this user has no collaborators." Gating the explainer
+  // on isFetched avoids the flash where the explainer renders
+  // during load and then disappears when the real list comes in.
+  const { data: collaborators = [], isFetched } = useQuery<Collaborator[]>({
     queryKey: ["/api/funds", fund?.id, "collaborators"],
     queryFn: async () => {
       if (!fund?.id) return [];
       const res = await fetch(`/api/funds/${fund.id}/collaborators`, { credentials: "include" });
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      if (fund.id) {
+        writeLocalCache(`${COLLABORATORS_CACHE_PREFIX}:${fund.id}`, data);
+      }
+      return data;
     },
     enabled: !!fund?.id,
+    initialData: () => (fund?.id ? readLocalCache<Collaborator[]>(`${COLLABORATORS_CACHE_PREFIX}:${fund.id}`) : undefined),
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
   });
 
   const canInvite = userPlan === "starter" || userPlan === "family" || userPlan === "legacy";
@@ -169,8 +202,14 @@ export function CoParentAccessCard({
           </Button>
         </div>
 
-        {/* How it works — shown only when no collaborators yet */}
-        {collaborators.length === 0 && (
+        {/* How it works — shown only when the query has confirmed
+            there are zero collaborators. Gating on isFetched (rather
+            than just collaborators.length === 0) prevents the
+            explainer from flashing during the initial load when
+            data defaults to [] before the network resolves. Returning
+            users with cached data see their access list directly via
+            initialData and never hit this branch. */}
+        {isFetched && collaborators.length === 0 && (
           <div className="mb-5 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-gradient-to-br from-[hsl(var(--kiddo-evergreen)/0.05)] to-[hsl(var(--kiddo-cream-dark)/0.4)] p-4">
             <p className="kiddo-section-label mb-3">How co-parent access works</p>
             <div className="grid grid-cols-3 gap-2">
@@ -183,6 +222,26 @@ export function CoParentAccessCard({
                   <p className="text-lg mb-1.5">{item.emoji}</p>
                   <p className="text-[11.5px] font-bold text-foreground mb-0.5">{item.title}</p>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">{item.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {/* Skeleton placeholder for the very first mount on a fresh
+            session (no cached data, query not yet settled). Matches
+            the explainer's footprint so the layout does not jump
+            when the real content resolves. Only renders for first-
+            mount-cold-session; returning users skip straight to the
+            access list via cached initialData. */}
+        {!isFetched && collaborators.length === 0 && (
+          <div className="mb-5 rounded-2xl border border-[hsl(var(--kiddo-border)/0.5)] bg-muted/30 p-4 animate-pulse">
+            <div className="h-3 w-32 bg-muted rounded mb-3" />
+            <div className="grid grid-cols-3 gap-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded-xl bg-card p-3">
+                  <div className="h-5 w-5 bg-muted rounded mb-1.5" />
+                  <div className="h-3 w-full bg-muted rounded mb-1" />
+                  <div className="h-2.5 w-3/4 bg-muted rounded" />
                 </div>
               ))}
             </div>
