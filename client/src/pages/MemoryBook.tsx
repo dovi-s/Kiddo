@@ -79,6 +79,18 @@ const MEMORY_ACTIVE_STALE_MS = 5_000;
 const MEMORY_LIVE_REFRESH_MS = 15_000;
 const MEMORY_ENTRIES_CACHE_PREFIX = "kiddo.memory.entries.v1:";
 const MEMORY_FUND_CACHE_PREFIX = "kiddo.memory.fund.v1:";
+// Per-fund events cache (drives the "Emma's occasions" strip).
+// Added 2026-05-20: previously the events query had a 30s staleTime
+// and no initialData, so every Memory Book mount fired a fresh
+// network request and the occasions strip rendered empty during
+// the load. User-reported: "the emmas occasions part of the
+// memory book is loading very slowly." Same anti-pattern as the
+// CoParentAccessCard fix (commit f347fe2): the canonical caching
+// trio (initialData + writeLocalCache + longer staleTime) makes
+// returning Memory Book visits feel instant.
+const MEMORY_EVENTS_CACHE_PREFIX = "kiddo.memory.events.v1:";
+// Per-fund thank-yous cache. Same pattern; same fix; same reason.
+const MEMORY_THANK_YOUS_CACHE_PREFIX = "kiddo.memory.thank-yous.v1:";
 // Per-fund "last visited" timestamp for the Memory Book unread badge on
 // the bottom-nav. Same shape as the Activity tab's lastReadAt: when the
 // parent lands on the Memory Book page, we stamp Date.now() into this
@@ -812,27 +824,51 @@ export default function MemoryBook() {
     return map;
   }, [giftQuoteData]);
 
+  // fundEvents drives the "Emma's occasions" strip at the top of
+  // the Memory Book. Returning users see their occasion tiles
+  // instantly via initialData; the 5-minute staleTime prevents
+  // a refetch on every component mount (occasions don't change
+  // minute to minute, and any explicit mutation invalidates the
+  // query). Without this trio the strip rendered empty during
+  // load and then populated when the network resolved — visible
+  // "popping in" the user flagged 2026-05-20.
   const { data: fundEvents = [] } = useQuery<FundEvent[]>({
     queryKey: ["fund-events", fundId],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${fundId}/events`, { credentials: "include" });
       if (!res.ok) return [];
       const data = await res.json();
-      return data.filter((e: FundEvent) => !e.status || e.status !== "permanent");
+      const filtered = data.filter((e: FundEvent) => !e.status || e.status !== "permanent");
+      if (fundId) {
+        writeLocalCache(`${MEMORY_EVENTS_CACHE_PREFIX}${fundId}`, filtered);
+      }
+      return filtered;
     },
     enabled: !!fundId && isAuthenticated && !authLoading,
-    staleTime: 30000,
+    initialData: () => (fundId ? readLocalCache<FundEvent[]>(`${MEMORY_EVENTS_CACHE_PREFIX}${fundId}`) : undefined),
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
   });
 
+  // Per-fund thank-yous cache: same pattern. Thank-you state is
+  // read-heavy and rarely changes inside a single session; mutations
+  // (sending a thank-you, marking one as sent) invalidate the query
+  // explicitly so the cache stays accurate for actionable events.
   const { data: thankYouList = [], refetch: refetchThankYous } = useQuery<any[]>({
     queryKey: ["thank-yous", fundId],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${fundId}/thank-yous`, { credentials: "include" });
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      if (fundId) {
+        writeLocalCache(`${MEMORY_THANK_YOUS_CACHE_PREFIX}${fundId}`, data);
+      }
+      return data;
     },
     enabled: !!fundId && isAuthenticated && !authLoading,
-    staleTime: 30_000,
+    initialData: () => (fundId ? readLocalCache<any[]>(`${MEMORY_THANK_YOUS_CACHE_PREFIX}${fundId}`) : undefined),
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Powers the share-update confirmation step: who actually receives this
