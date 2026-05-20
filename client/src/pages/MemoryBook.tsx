@@ -2701,8 +2701,32 @@ export default function MemoryBook() {
             {fundEvents.some((e) => e.status === "active" && ((e.giftCount ?? 0) > 0 || e.imageUrl || e.description)) && (
               <div className="mb-6" data-testid="memory-event-chapters">
                 <div className="flex items-center justify-between mb-3">
+                  {/* Header renamed 2026-05-20 per the user-caught
+                      taxonomy slip: "Emma's moments" → "Emma's
+                      occasions". The 2026-05-13 occasions rename
+                      ("event" → "occasion" across user-facing
+                      surfaces) covered Pricing, Compare, FAQ,
+                      EventCreate, Events, EventGateModal, Dashboard
+                      event modal labels — but missed this Memory
+                      Book event-strip header.
+
+                      The conflation matters because the strip
+                      directly below this header is "Capture a moment"
+                      (milestone-capture chips: first steps, first
+                      word, etc.). With both headers using "moment,"
+                      the page read as "moments inside moments" —
+                      two different concepts (gifting destinations
+                      vs life events) sharing the same word.
+
+                      Now: this header is "occasions" (locked
+                      canonical product term for gifting events).
+                      "Capture a moment" stays because "moment" is
+                      the right warm word for milestone capture
+                      once it's not competing with the occasions
+                      header. Three distinct concepts, three
+                      distinct words: occasions / moments / updates. */}
                   <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
-                    {childName ? `${childName}'s moments` : "Moments"}
+                    {childName ? `${childName}'s occasions` : "Occasions"}
                   </p>
                   {eventFilter && (
                     <button
@@ -2723,7 +2747,7 @@ export default function MemoryBook() {
                 </div>
                 <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: "none" }}>
                   {fundEvents
-                    // Hide archived events from the default "moments" strip —
+                    // Hide archived events from the default "occasions" strip —
                     // they pile up over years (every birthday, every grad,
                     // every "First car" rebrand) and clutter the surface a
                     // kid actually opens to read love letters. Active events
