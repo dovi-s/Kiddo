@@ -3583,7 +3583,19 @@ export default function Dashboard() {
     const share48Key = `kora_signal_share_48h_${activeFundId}`;
     const noGift14Key = `kora_signal_no_gift_14d_${activeFundId}`;
 
-    if (hasAnyGift && !window.localStorage.getItem(firstGiftKey)) {
+    // The first-gift signal must only fire when the fund is actually
+    // experiencing its first-gift moment. localStorage alone is not a
+    // sufficient gate: a parent on a fresh device / incognito / new
+    // browser arrives with localStorage empty and the signal would
+    // otherwise fire even on a fund that has had gifts for years.
+    // Adding a gifts.length <= 2 gate makes the client check
+    // semantically correct (allows for the rare race where two gifts
+    // arrive in quick succession before the parent ever opens the
+    // dashboard). The server has an authoritative gift-count guard
+    // as well — see server/routes.ts lifecycle nudge handler. Defense
+    // in depth: client gate saves a network call, server gate is the
+    // source-of-truth.
+    if (hasAnyGift && gifts.length <= 2 && !window.localStorage.getItem(firstGiftKey)) {
       const firstGift = [...gifts]
         .map((g) => (g.createdAt ? new Date(g.createdAt).getTime() : 0))
         .filter((ts) => Number.isFinite(ts) && ts > 0)
@@ -3598,6 +3610,14 @@ export default function Dashboard() {
         gifts: gifts.length,
         hoursToFirstGift: hoursToFirstGift !== null ? Number(hoursToFirstGift.toFixed(2)) : null,
       });
+      window.localStorage.setItem(firstGiftKey, "1");
+    } else if (hasAnyGift && gifts.length > 2 && !window.localStorage.getItem(firstGiftKey)) {
+      // Fund has been receiving gifts long enough that we missed the
+      // first-gift moment for this device. Set the localStorage flag
+      // anyway so we do not keep re-evaluating this branch on every
+      // dashboard mount. The flag's job here is "do not send the
+      // signal again from this device," and we honor it by also
+      // suppressing future re-evaluations.
       window.localStorage.setItem(firstGiftKey, "1");
     }
 

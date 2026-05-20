@@ -11104,7 +11104,13 @@ export async function registerRoutes(
           description: string;
         }> = {
           first_gift_received: {
-            cooldownHours: 24 * 30,
+            // Effectively infinite cooldown. The "first gift" moment can
+            // only happen once per fund; if the activity has ever been
+            // written, it must never be written again, no matter how
+            // many fresh-device signals arrive over the years. The
+            // gift-count guard below is the primary defense; this
+            // cooldown is belt and suspenders.
+            cooldownHours: 24 * 365 * 100,
             title: "First gift just landed",
             description: "Share the link again so the next person can give too.",
           },
@@ -11135,6 +11141,43 @@ export async function registerRoutes(
           const fund = await storage.getFund(parsed.data.fundId);
           if (fund?.userId) {
             const nudgeType = `lifecycle_${parsed.data.action}`;
+
+            // Authoritative gift-count guard for the first-gift nudge.
+            //
+            // User-reported 2026-05-20: "First gift just landed" notification
+            // fired on a fund that has had many gifts for a long time. Root
+            // cause: the client triggers `first_gift_received` whenever the
+            // fund has any gifts AND localStorage lacks the dedupe flag. A
+            // parent on a fresh device / incognito / new browser arrives
+            // with localStorage empty → signal fires → server's 30-day
+            // cooldown is long since expired → notification gets written.
+            //
+            // The localStorage check was the entire dedupe. Per-device by
+            // design, so it never had a chance against multi-device users.
+            // Fix: when the signal is "first_gift_received," use the gifts
+            // table as the source of truth. If more than 2 gifts exist,
+            // the first-gift moment has long passed and the notification
+            // should not fire. Allowing up to 2 covers the race condition
+            // where two gifts arrive in quick succession before the parent
+            // ever visits the dashboard.
+            //
+            // The referralEvents row above still gets written for analytics
+            // — even a stale signal carries useful "parent revisited from
+            // a fresh device" signal. The block here only prevents the
+            // user-visible notification.
+            if (parsed.data.action === 'first_gift_received') {
+              const giftCountResult = await db.execute(sql`
+                SELECT COUNT(*)::int AS count FROM gifts WHERE fund_id = ${fund.id}
+              `);
+              const giftCount = Number((giftCountResult.rows[0] as any)?.count || 0);
+              if (giftCount > 2) {
+                // First-gift moment has long passed. Skip the activity
+                // creation. Analytics row is still recorded above.
+                res.status(201).json({ ok: true });
+                return;
+              }
+            }
+
             const existing = await db.execute(sql`
               SELECT id
               FROM activities
