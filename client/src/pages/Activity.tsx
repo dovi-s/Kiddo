@@ -222,13 +222,26 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
     return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Your gift" };
   if (t === "parent_contribution_failed")
     return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Charge failed" };
-  // Memory family — purple palette (kid-domain story)
+  // Memory family — purple palette (kid-domain story).
+  //
+  // Eyebrow labels use consistent verb form across all three Memory
+  // Book actions (added / edited / deleted). The previous catchall
+  // mapped memory_entry_added to "Memory Book" while edited/deleted
+  // used verb form, which read as inconsistent on adjacent rows in
+  // the feed ("Memory Book" next to "Memory edited" for the same
+  // entry's add-then-edit history). User-flagged 2026-05-20:
+  // "are all of the milestones and all that perfect?" — caught
+  // exactly this inconsistency. Locked verb-form convention.
   if (t === "memory_milestone_added")
     return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <Star size={16} />, label: "Milestone" };
+  if (t === "memory_entry_added")
+    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <BookOpen size={16} />, label: "Memory added" };
   if (t === "memory_entry_edited")
     return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <FileText size={16} />, label: "Memory edited" };
   if (t === "memory_entry_deleted")
     return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <XIcon size={16} />, label: "Memory deleted" };
+  // Catchall for any future memory_* type that isn't explicitly
+  // handled above. Falls back to the "Memory Book" category label.
   if (t.startsWith("memory_"))
     return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <BookOpen size={16} />, label: "Memory Book" };
   // Growth / portfolio family — blue palette (financial movement)
