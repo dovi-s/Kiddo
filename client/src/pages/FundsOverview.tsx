@@ -256,9 +256,19 @@ function buildRecurringRowSubtitle(item: OverviewRecurringItem): string {
     parts.push("Diversified mix");
   }
 
-  // 2. Schedule
+  // 2. Schedule.
+  // dateLabel from fmtRecurringNextRun is either "today", "tomorrow",
+  // or a concrete date string ("May 21"). Prefixing with "Next" reads
+  // fine for the date variant ("Next May 21") but produces awkward
+  // "Next tomorrow" / "Next today" for the relative variants. Branch
+  // on the value so warm relative-day labels stand alone (capitalized)
+  // and concrete dates keep the "Next" prefix that frames them as the
+  // upcoming run. Locked 2026-05-19 per user catch.
   const dateLabel = fmtRecurringNextRun(item.nextRunDate);
-  if (dateLabel) parts.push(`Next ${dateLabel}`);
+  if (dateLabel) {
+    const isRelative = dateLabel === "today" || dateLabel === "tomorrow";
+    parts.push(isRelative ? dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1) : `Next ${dateLabel}`);
+  }
 
   // 3. Source. "Chase 1234" — bank name + last4, no dot/mask glyphs
   // (cleaner at small font sizes and avoids unicode-rendering
