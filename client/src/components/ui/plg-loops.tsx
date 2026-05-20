@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, 
@@ -529,10 +529,30 @@ export function GiftReceivedToast({
   const displayName = (giverName || "").trim() || (childFirst ? `Someone who loves ${childFirst}` : "Someone");
   const formattedAmount = `$${Number.isFinite(amount) ? amount.toFixed(2).replace(/\.00$/, "") : "0"}`;
 
+  // Auto-dismiss after 7s. Uses a ref to capture the latest onDismiss
+  // without re-running the timer effect on every parent re-render.
+  //
+  // Previously the dep array was [onDismiss]. onDismiss is an inline
+  // arrow function in Dashboard.tsx, so its identity changes on every
+  // Dashboard render (useQuery refetch, fund switch, time tick, etc.).
+  // The effect re-ran on every identity change, clearing the timer and
+  // starting a fresh 7s one. With Dashboard re-rendering more often
+  // than every 7s in practice, the timer almost never reached zero, so
+  // the auto-dismiss never actually fired. That left the dismissal
+  // persistence broken for users who closed the tab without clicking
+  // the X or View activity button.
+  //
+  // Ref-based capture: effect runs once on mount, timer fires once at
+  // 7s, calling whatever onDismiss is current at that moment. Robust
+  // against parent re-renders. Locked 2026-05-20.
+  const onDismissRef = useRef(onDismiss);
   useEffect(() => {
-    const timer = setTimeout(onDismiss, 7000);
-    return () => clearTimeout(timer);
+    onDismissRef.current = onDismiss;
   }, [onDismiss]);
+  useEffect(() => {
+    const timer = setTimeout(() => onDismissRef.current(), 7000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <motion.div

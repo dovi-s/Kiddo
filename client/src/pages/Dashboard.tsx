@@ -2601,6 +2601,30 @@ export default function Dashboard() {
     });
     if (recent) {
       setRecentGiftForToast(recent);
+      // Persist dismissal the moment we queue the toast. The toast
+      // appearing IS the surfacing; we should not require an explicit
+      // user interaction (manual X, View activity, or the 7s auto-
+      // dismiss timer) for the dismissal to stick. Same model iOS uses
+      // for notifications on the lock screen: showing it counts.
+      //
+      // Why this matters: user-reported 2026-05-20 that they saw the
+      // gift toast yesterday and it re-appeared today as if the gift
+      // were new. Root cause was passive non-dismissal (close tab
+      // without clicking) leaving the gift id out of the dismissed
+      // set. Within the 24-hour window the toast re-fires on next
+      // session. The 7-second auto-dismiss timer was supposed to
+      // catch this but the GiftReceivedToast's [onDismiss] effect
+      // dep was re-running the timer on every parent render (inline
+      // arrow function = new identity), so the timer almost never
+      // reached zero in practice.
+      //
+      // Persisting on queue rather than on dismiss is the more
+      // defensive design. The gift is durably visible in the bell
+      // panel, Memory Book, and Activity feed regardless of whether
+      // the toast was seen, so losing the toast to passive close is
+      // acceptable. The toast is a transient nudge, not the
+      // canonical surfacing.
+      markGiftToastDismissed(String(recent.id || ""));
     }
   }, [gifts, giftToastDismissed]);
 
