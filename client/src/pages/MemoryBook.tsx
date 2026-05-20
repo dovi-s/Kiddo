@@ -4314,12 +4314,26 @@ export default function MemoryBook() {
                             // show position value (shares × current price)
                             // which is the real "what is this worth now."
                             let investLine = "";
+                            // "managed mix" → "diversified mix" 2026-05-20.
+                            // Cross-surface unification with Pricing,
+                            // Dashboard, GiftCheckout, Activity (all use
+                            // "diversified mix"). "Managed" carried an
+                            // active-management connotation that conflicts
+                            // with the locked passive-ETF discipline.
+                            // Unlike Activity's recurring-row labels
+                            // (which preserve a "family mix" branch),
+                            // Memory Book's entry investLine doesn't
+                            // distinguish family-exec from default-exec —
+                            // both end up in a diversified ETF mix and
+                            // the parent reading their Memory Book entry
+                            // is looking for "where did this gift go,"
+                            // not the technical execution-model branch.
                             if (ticker) {
                               investLine = `Invested in ${ticker}`;
                             } else if (exec === "family" || exec === "cash") {
-                              investLine = `Sent as cash · invested across the managed mix`;
+                              investLine = `Sent as cash · invested across the diversified mix`;
                             } else {
-                              investLine = `Invested across the managed mix`;
+                              investLine = `Invested across the diversified mix`;
                             }
                             // Fresh-gift detection — under 7 days old. Used
                             // to OMIT the gain pill (a "+$0 (+0.0%)" delta

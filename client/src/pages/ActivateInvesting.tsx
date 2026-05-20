@@ -1036,9 +1036,18 @@ export default function ActivateInvesting() {
             >
               <div>
                 <h1 className="font-heading text-xl font-semibold text-foreground mb-1" data-testid="text-strategy-heading">
-                  Set the managed strategy behind your fund default
+                  Set the default strategy for your fund
                 </h1>
-                <p className="text-sm text-muted-foreground">This controls where gifts go when they follow your managed default. Specific stock picks and cash gifts follow their own path.</p>
+                {/* "managed strategy" / "managed default" → "default
+                    strategy" / "default" 2026-05-20. Same cross-surface
+                    "managed mix" → "diversified mix" cleanup applied
+                    here. "Managed" carried an active-management
+                    connotation that conflicts with the locked passive-
+                    ETF discipline. "Default" is factual and matches
+                    how the rest of the product talks about the
+                    strategy router (gifts follow your default, or
+                    follow a specific stock pick, or land as cash). */}
+                <p className="text-sm text-muted-foreground">This controls where gifts go when they follow your default. Specific stock picks and cash gifts follow their own path.</p>
                 <p className="text-xs text-muted-foreground mt-1.5">Kiddo does not charge a normal platform fee on gifts. The person sending covers payment processing separately, and large gifts have no required Kiddo fee.</p>
               </div>
 

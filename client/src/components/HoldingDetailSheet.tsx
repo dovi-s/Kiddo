@@ -1097,8 +1097,14 @@ function HoldingDetailSheetBody({
                 <ArrowRight size={14} />
               </Button>
             </div>
+            {/* "the managed mix" fallback → "the diversified mix"
+                2026-05-20. Cross-surface unification per the locked
+                product-language pass. See twin notes on Activity.tsx
+                and MemoryBook.tsx for the reasoning ("managed"
+                connotes active management; "diversified" is factual
+                and matches the rest of the product's vocabulary). */}
             <p className="mt-3 text-center text-[11.5px] text-muted-foreground leading-relaxed">
-              Part of {strategyLabel || "the managed mix"}. Adding spreads across every position to keep the ratio. To sell or rebalance, switch the strategy.
+              Part of {strategyLabel || "the diversified mix"}. Adding spreads across every position to keep the ratio. To sell or rebalance, switch the strategy.
             </p>
           </>
         ) : (

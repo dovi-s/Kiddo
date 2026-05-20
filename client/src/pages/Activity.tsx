@@ -3361,7 +3361,20 @@ export default function Activity() {
                             ? `into ${ticker}`
                             : c.executionModel === "family"
                               ? "into family mix"
-                              : "into managed mix";
+                              : // "managed mix" → "diversified mix" 2026-05-20.
+                                // Cross-surface unification with Pricing /
+                                // Dashboard / GiftCheckout / FundsOverview
+                                // (which all use "diversified mix"). "Managed"
+                                // carried an active-management connotation
+                                // (active mutual-fund-style framing) that
+                                // conflicts with the locked passive-ETF
+                                // discipline. "Diversified" is factual and
+                                // matches the canonical product language.
+                                // "family mix" branch above stays — that's
+                                // a Family-plan-specific distinction (shared
+                                // strategy across kids) that carries real
+                                // load-bearing information for Family parents.
+                                "into diversified mix";
                           const isExpanded = expandedScheduledId === String(c.id);
                           const note = typeof c.note === "string" && c.note.trim() ? c.note.trim() : null;
                           const idStr = String(c.id);
@@ -3882,7 +3895,10 @@ export default function Activity() {
             ? `into ${ticker}`
             : schedule.executionModel === "family"
               ? "into family mix"
-              : "into managed mix";
+              : // See comment on the strategyLabel twin in this file
+                // (~line 3360) — "managed mix" unified to "diversified
+                // mix" 2026-05-20. Same reasoning applies here.
+                "into diversified mix";
           const isPaused = schedule.status === "paused";
           // Payment method + next-charge info now lands in the hero
           // (subtitle + stats grid) instead of a recursive Scheduled tab
