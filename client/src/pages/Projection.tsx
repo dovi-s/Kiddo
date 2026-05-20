@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useRoute } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Share2, Info } from "lucide-react";
+import { ArrowRight, Share2, Info } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useFunds } from "@/hooks/use-funds";
 import { ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
@@ -384,16 +384,15 @@ ${shareUrl}`;
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
       <AppHeader />
       <div className="kiddo-canvas px-4 py-6 space-y-6 max-w-lg">
-        {/* Back */}
-        <button
-          type="button"
-          onClick={() => { haptic("selection"); setLocation("/dashboard"); }}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors -ml-1"
-          data-testid="button-projection-back"
-        >
-          <ArrowLeft size={16} />
-          <span>Back</span>
-        </button>
+        {/* Inline Back button REMOVED 2026-05-20. The AppHeader now
+            renders a mobile Back arrow on every fund sub-page (Age18Plan,
+            Projection, Tax Documents) via the isFundSubPage() helper
+            shipped in commit a9389ab. Having an inline "Back" button
+            in the page body next to the header arrow was duplicate
+            chrome — two back affordances pointing at the same place
+            on the same screen. The header arrow is the canonical
+            mobile escape; the desktop sidebar's "Home" nav item
+            handles the same job on desktop. */}
 
         {/* Title — sprout emoji removed 2026-05-19. Same wallpaper
             audit as Memory Book hero: emoji at the end of a financial-
