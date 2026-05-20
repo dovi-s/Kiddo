@@ -566,6 +566,17 @@ export default function MemoryBook() {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareMessage, setShareMessage] = useState("");
   const [sharePhotoUrl, setSharePhotoUrl] = useState("");
+  // Photo-upload state for the share-update composer. Previously the
+  // composer had a raw text input asking for a photo URL — user-flagged
+  // 2026-05-20: "most people are not using a photo url, no?" Real parents
+  // have photos on their camera roll, not URLs handy. Replaced the URL
+  // text input with a file picker that uploads to the existing
+  // /api/funds/:fundId/memory/upload-photo endpoint and stores the
+  // returned URL in sharePhotoUrl state. The submit handler already
+  // accepts the URL, so no server-side change needed.
+  const [sharePhotoUploading, setSharePhotoUploading] = useState(false);
+  const [sharePhotoError, setSharePhotoError] = useState<string | null>(null);
+  const sharePhotoInputRef = useRef<HTMLInputElement | null>(null);
   const [lastShareUrl, setLastShareUrl] = useState("");
   // Two-step share flow: compose the message, then confirm who it goes to
   // before firing. The mutation isn't called until the parent acks the
@@ -1497,6 +1508,7 @@ export default function MemoryBook() {
       setShareStep("compose");
       setShareMessage("");
       setSharePhotoUrl("");
+      setSharePhotoError(null);
       haptic("success");
       toast({
         title: recipientCount > 0
@@ -5082,13 +5094,101 @@ export default function MemoryBook() {
                       className="min-h-[140px] w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm"
                       data-testid="textarea-memory-share-message"
                     />
-                    <input
-                      value={sharePhotoUrl}
-                      onChange={(e) => setSharePhotoUrl(e.target.value)}
-                      placeholder="Optional photo URL"
-                      className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
-                      data-testid="input-memory-share-photo-url"
-                    />
+                    {/* Photo upload (replaced the raw URL text input
+                        2026-05-20). Real parents have photos on their
+                        camera roll, not photo URLs. The picker uploads
+                        to /api/funds/:fundId/memory/upload-photo (same
+                        endpoint the MemoryMediaPicker uses) and stores
+                        the returned URL in sharePhotoUrl state. The
+                        submit handler already reads sharePhotoUrl, so
+                        no server-side change required. */}
+                    {sharePhotoUrl ? (
+                      <div className="relative rounded-2xl border border-border overflow-hidden bg-muted/30">
+                        <img
+                          src={sharePhotoUrl}
+                          alt=""
+                          className="w-full max-h-64 object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSharePhotoUrl("");
+                            setSharePhotoError(null);
+                            haptic("light");
+                          }}
+                          className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1.5 hover:bg-black/80 transition-colors"
+                          aria-label="Remove photo"
+                          data-testid="button-memory-share-photo-remove"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          ref={sharePhotoInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg,image/webp,image/heic"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setSharePhotoError(null);
+                            if (file.size > 3 * 1024 * 1024) {
+                              setSharePhotoError("Image too large. Cap is 3MB.");
+                              if (sharePhotoInputRef.current) sharePhotoInputRef.current.value = "";
+                              return;
+                            }
+                            setSharePhotoUploading(true);
+                            try {
+                              const dataUrl = await new Promise<string>((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve(String(reader.result || ""));
+                                reader.onerror = () => reject(new Error("Could not read file"));
+                                reader.readAsDataURL(file);
+                              });
+                              const res = await fetch(`/api/funds/${fundId}/memory/upload-photo`, {
+                                method: "POST",
+                                credentials: "include",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ dataUrl }),
+                              });
+                              const data = await res.json().catch(() => ({}));
+                              if (!res.ok) throw new Error(data?.error || "Upload failed");
+                              const url = data?.url || data?.photoUrl;
+                              if (!url) throw new Error("No URL returned");
+                              setSharePhotoUrl(String(url));
+                              haptic("success");
+                            } catch (err) {
+                              setSharePhotoError(err instanceof Error ? err.message : "Upload failed");
+                              haptic("error");
+                            } finally {
+                              setSharePhotoUploading(false);
+                              if (sharePhotoInputRef.current) sharePhotoInputRef.current.value = "";
+                            }
+                          }}
+                          data-testid="input-memory-share-photo-file"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            haptic("selection");
+                            sharePhotoInputRef.current?.click();
+                          }}
+                          disabled={sharePhotoUploading}
+                          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-background px-4 text-sm text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors disabled:opacity-50"
+                          data-testid="button-memory-share-photo-add"
+                        >
+                          <Camera size={16} />
+                          {sharePhotoUploading ? "Uploading..." : "Add a photo (optional)"}
+                        </button>
+                      </>
+                    )}
+                    {sharePhotoError && (
+                      <p className="text-xs text-destructive" data-testid="text-memory-share-photo-error">
+                        {sharePhotoError}
+                      </p>
+                    )}
                     {sharesRemaining === 0 ? (
                       <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 leading-relaxed">
                         <p className="font-semibold mb-1">All {SHARES_PER_YEAR_CAP} updates sent this year.</p>
