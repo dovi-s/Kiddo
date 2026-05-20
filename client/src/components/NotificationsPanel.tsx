@@ -1744,7 +1744,30 @@ export function useNotificationUnreadCount(scope: "active" | "all" = "active"): 
       // cards, mirroring the panel's de-dupe so the activity-tab dot
       // doesn't double-count a single problem.
       if (isRepresentedByActionItem(a.type)) return false;
-      if (scope === "active" && activeFundId && a.fundId && a.fundId !== activeFundId) return false;
+      // Activity-tab dot is strictly fund-scoped — the /activity page
+      // server query filters by fundId and EXCLUDES account-level rows
+      // (a.fundId === null: welcome notifications, plan signup, fund-
+      // created log, etc.). The badge here must match what the page
+      // will actually show, or tapping the dot lands on "Nothing here
+      // yet." despite the count promising N items.
+      //
+      // Account-level items still surface (and are counted) by
+      // useBellUnreadCount → bell panel, where they correctly render.
+      // The dual-export pattern below was set up precisely for this
+      // divergence (comment at the useBellUnreadCount declaration
+      // anticipates it: "Future divergence — if the bell ever wants
+      // to surface different types than the tab dot...").
+      //
+      // Previous filter `&& a.fundId && a.fundId !== activeFundId`
+      // had a leak: items with a.fundId === null skipped the filter
+      // entirely (short-circuited on `&& a.fundId`) so they counted
+      // toward the per-fund badge but were never visible on /activity.
+      // Fixed 2026-05-20 after user-reported "8 notifications, click
+      // in, see nothing." `null !== activeFundId` is true → account-
+      // level filtered. `otherFundId !== activeFundId` is true →
+      // cross-fund filtered. `activeFundId !== activeFundId` is false
+      // → matching items still count. Single condition catches both.
+      if (scope === "active" && activeFundId && a.fundId !== activeFundId) return false;
       // Explicit unreadIds win — a past row re-promoted to unread
       // via swipe stays in the count until either tapped (which
       // re-marks as read) or auto-marked-read on Activity-page
