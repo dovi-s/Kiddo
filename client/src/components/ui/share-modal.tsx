@@ -858,32 +858,62 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                   )}
 
                   {/* Quick share */}
+                  {/* Row order + label rework 2026-05-20. Previously:
+                      Share-with-message / WhatsApp / Send-a-message
+                      with all three subtitles saying "pre-written"
+                      and rows 1 and 3 reading as duplicates ("Share
+                      with message" vs "Send a message" — both have
+                      "message" + "pre-written note" — user-reported:
+                      "why are there two of the same?").
+
+                      Each row actually does something distinct:
+                        - WhatsApp: deep link to a specific named app
+                        - Messages: sms: scheme to iMessage / SMS
+                        - native share: navigator.share, OS-level
+                          picker showing ALL installed apps (the
+                          generic catch-all)
+
+                      Three changes:
+                        1. App names as labels — modern share-sheet
+                           convention (Instagram / X / iMessage's
+                           own). Drop "Send on X" verb prefix.
+                        2. Differentiating subtitles — drop the
+                           "pre-written" filler from all three
+                           (was repeated in every row). Each
+                           subtitle now carries the row's
+                           distinguishing info: WhatsApp keeps
+                           the "ready" promise, Messages
+                           clarifies platform, More apps…
+                           describes the picker's contents.
+                        3. Reorder named apps first (single-tap,
+                           recognizable), generic picker last as
+                           the catch-all exit. */}
                   <div style={{ marginBottom: 18 }}>
                     <SectionLabel>Quick share</SectionLabel>
                     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                      {canNativeShare && (
-                        <ShareRow
-                          iconBg="rgb(26,61,43)"
-                          icon={<Share2 size={16} color="white" />}
-                          label="Share with message"
-                          subtitle="Opens your apps with a pre-written note"
-                          onClick={handleNativeShare}
-                        />
-                      )}
                       <ShareRow
                         iconBg="rgb(37,211,102)"
                         icon={<WhatsAppIcon />}
-                        label="Send on WhatsApp"
-                        subtitle="Pre-written message included"
+                        label="WhatsApp"
+                        subtitle="Pre-written and ready"
                         onClick={handleWhatsApp}
                       />
                       <ShareRow
                         iconBg="rgb(50,150,250)"
                         icon={<MessageIcon />}
-                        label="Send a message"
-                        subtitle="iMessage or SMS with pre-written note"
+                        label="Messages"
+                        subtitle="iMessage or SMS"
                         onClick={handleSMS}
                       />
+                      {canNativeShare && (
+                        <ShareRow
+                          iconBg="rgb(26,61,43)"
+                          icon={<Share2 size={16} color="white" />}
+                          label="More apps…"
+                          subtitle="Telegram, Mail, and more"
+                          onClick={handleNativeShare}
+                        />
+                      )}
                     </div>
                   </div>
 
