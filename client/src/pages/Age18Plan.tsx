@@ -501,9 +501,16 @@ export default function Age18Plan() {
         <div className="kiddo-card mb-4 overflow-hidden">
           <div className="px-5 pt-5 pb-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-3">The fund</p>
-            <p className="font-serif text-sm italic text-foreground/70 leading-relaxed mb-4">
-              "Everything stays exactly where it is. Nothing gets sold. Nothing disappears. The investments keep growing."
-            </p>
+            {/* Italic pull-quote "Everything stays exactly where it is..."
+                removed 2026-05-20. Same anti-pattern as the
+                "doesn't just receive a fund / She receives a letter"
+                teaser audited out 2026-05-11 (see comments in "Your
+                note" and "Memory Book" cards below): authorial prose
+                styled as a quote with no source, marketing voice on a
+                product surface. The three ✅ bullets below already
+                say the same thing (Legal control transfers, UTMA law,
+                nothing automatic) without the serif-italic register
+                or the borrowed-authority quote marks. */}
             <div className="space-y-2.5">
               {[
                 `Legal control transfers to ${childName} on ${eighteenthDate || `the ${majorityOrdinal} birthday`}.`,
@@ -614,11 +621,22 @@ export default function Age18Plan() {
                 lines reading as marketing-page register inside a
                 product surface. Now states what the Memory Book
                 contains without the slogan rhythm. */}
+            {/* Bullet 3 "Searchable, shareable, ${hers} forever." cut
+                2026-05-20. Was the last slogan-rhythm holdout — three-
+                beat adjective triple with a possessive close, same
+                marketing-page register as the italic pull-quotes
+                removed elsewhere on this page. The two remaining
+                bullets state what the Memory Book contains; the
+                "hers/his/theirs after majorityAge" point is already
+                load-bearing on the countdown card AND the "The fund"
+                bullets, so dropping the third line here doesn't lose
+                signal — it removes a 4th repetition of the handoff
+                claim and the only marketing-voice line left in the
+                card. */}
             <div className="space-y-2 mb-4">
               {[
                 "Gifts, notes, photos, and milestones, kept in one place.",
                 "Names and messages from everyone who gave.",
-                `Searchable, shareable, ${hers} forever.`,
               ].map((line, i) => (
                 <div key={i} className="flex items-start gap-2.5">
                   <span className="text-sm shrink-0">📖</span>
@@ -832,14 +850,19 @@ export default function Age18Plan() {
             project_five_towns_persona_and_heirloom_positioning.md
             (the "no feature theater" rule). */}
 
-        {/* Closing quote */}
-        {age18Transition && eighteenthDate && (
-          <div className="rounded-2xl px-5 py-5 mb-5 text-center" style={{ background: "rgb(252,250,246)" }}>
-            <p className="font-serif text-sm italic text-foreground/60 leading-relaxed">
-              "You started this fund. You grew it. You protected it. On {eighteenthDate}, {childName} opens a book, reads your note, and sees what a head start looks like. That's the whole thing."
-            </p>
-          </div>
-        )}
+        {/* Closing italic quote ("You started this fund. You grew it.
+            You protected it. ... That's the whole thing.") removed
+            2026-05-20. Same anti-pattern as the opening pull-quote on
+            "The fund" card and the "doesn't just receive a fund / She
+            receives a letter" teaser cut 2026-05-11: authorial prose
+            styled as a quote with no source, marketing-page rhythm
+            ("You X. You Y. You Z. On DATE, NAME does THING. That's
+            the whole thing.") on a product surface. The "money
+            conversation does not start at ${majorityAge}" wisdom line
+            above is plenty of close. Per the locked discipline against
+            marketing voice in product copy + the no-AI-slop ending
+            rule (no "That's the whole thing" / "is the whole
+            thing"-style closers). */}
 
         <TrustMicroStrip />
 
