@@ -2513,6 +2513,17 @@ export default function Settings() {
   // chunk 2.)
 const [editFundName, setEditFundName] = useState("");
   const [editRecipientName, setEditRecipientName] = useState("");
+  // Recipient's last name was missing from the Edit Fund modal for
+  // months (added 2026-05-19 per the data-quality audit). Older funds
+  // created via the GetStarted onboarding path don't have a last name
+  // on file because that flow didn't ask for one; the only way to add
+  // a last name post-hoc was via direct DB edit. This input closes
+  // that gap. Required-on-save would break legacy funds; left as
+  // optional with a clear "legal record" footnote so parents who care
+  // fill it in. AddFundSheet still REQUIRES it at fund creation; this
+  // edit surface accepts blank only because the existing data may be
+  // blank.
+  const [editRecipientLastName, setEditRecipientLastName] = useState("");
   const [editRecipientBirthdate, setEditRecipientBirthdate] = useState("");
   const [editPronoun, setEditPronoun] = useState<string>("they");
   const [savingFundEdit, setSavingFundEdit] = useState(false);
@@ -3585,6 +3596,7 @@ const [editFundName, setEditFundName] = useState("");
     setEditingFund(fund);
     setEditFundName(fund?.name || "");
     setEditRecipientName(fund?.recipientFirstName || "");
+    setEditRecipientLastName(fund?.recipientLastName || "");
     setEditPronoun(fund?.pronoun || "they");
     const birth = fund?.recipientBirthdate ? new Date(fund.recipientBirthdate) : null;
     if (birth && !Number.isNaN(birth.getTime())) {
@@ -3626,6 +3638,11 @@ const [editFundName, setEditFundName] = useState("");
       const payload: Record<string, any> = { name };
       if (isUTMAFund(editingFund)) {
         payload.recipientFirstName = editRecipientName.trim();
+        // Trim + send empty string as null so a parent can also CLEAR
+        // a last name (rare but possible: typo correction, legal name
+        // change). Server PATCH treats null as "remove existing value."
+        const trimmedLast = editRecipientLastName.trim();
+        payload.recipientLastName = trimmedLast.length > 0 ? trimmedLast : null;
         payload.recipientBirthdate = editRecipientBirthdate
           ? new Date(`${editRecipientBirthdate}T00:00:00.000Z`).toISOString()
           : null;
@@ -4963,6 +4980,28 @@ const [editFundName, setEditFundName] = useState("");
                             accounts and 1099s carry whatever's saved here. */}
                         <p className="text-[11px] text-muted-foreground leading-snug">
                           Use {possessiveMid} legal first name. This appears on the brokerage account and tax documents.
+                        </p>
+                      </div>
+                      {/* Last name — added 2026-05-19 per the data-quality
+                          audit. Was a real gap: AddFundSheet requires last
+                          name at fund creation, but GetStarted onboarding
+                          didn't ask for it, and this Edit Fund modal had no
+                          field. Result: funds created via onboarding had no
+                          way to gain a last name. Now editable here. Empty
+                          string saves as null (lets parents also clear an
+                          incorrect one). */}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-foreground">Last name</label>
+                        <input
+                          type="text"
+                          value={editRecipientLastName}
+                          onChange={(e) => setEditRecipientLastName(e.target.value)}
+                          className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm"
+                          data-testid="input-edit-recipient-last-name"
+                          autoComplete="family-name"
+                        />
+                        <p className="text-[11px] text-muted-foreground leading-snug">
+                          Optional, but appears on tax documents and the brokerage account record when set.
                         </p>
                       </div>
                       <div className="space-y-2">

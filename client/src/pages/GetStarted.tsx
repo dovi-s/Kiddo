@@ -195,6 +195,17 @@ export default function GetStarted() {
   // already invested enough to make the choice meaningful.
   const [country, setCountry] = useState<"US" | "OTHER" | "">("");
   const [name, setName] = useState("");
+  // Child's last name. Added 2026-05-19 per the data-quality audit —
+  // AddFundSheet captures last name, but this onboarding path didn't
+  // ask for it, so funds created through GetStarted had no last name
+  // on file (forever, until Edit Fund gained a last-name input in
+  // the same audit). Optional here: legal-name capture for the kid's
+  // UTMA is meaningfully required only at Activate Investing (the
+  // KYC step where DriveWealth opens the actual brokerage account).
+  // Onboarding stays low-friction; the parent can fill or skip.
+  // Required at AddFundSheet (for parents adding a second kid via
+  // Dashboard) for consistency with the established pattern there.
+  const [lastName, setLastName] = useState("");
   const [birthdate, setBirthdate] = useState("");
   const [occasion, setOccasion] = useState("");
   const [gifterAudience, setGifterAudience] = useState("");
@@ -467,6 +478,13 @@ export default function GetStarted() {
         accountType: accountType === "child" ? "UTMA" : "Personal",
         status: "draft",
         recipientFirstName: trimmedName,
+        // Last name passes through only when set + we're on the child
+        // path. Server schema treats undefined as "don't set" so legacy
+        // funds and personal funds skip cleanly. Trim before send so
+        // " Smith " or " " don't pollute the column.
+        recipientLastName: accountType === "child" && lastName.trim().length > 0
+          ? lastName.trim()
+          : undefined,
         recipientRelation: accountType === "child" ? "Parent" : "self",
         recipientBirthdate: accountType === "child" ? new Date(`${birthdate}T12:00:00.000Z`) : undefined,
         investmentStrategy: "growth",
@@ -772,13 +790,40 @@ export default function GetStarted() {
                 <input
                   id="get-started-recipient"
                   name={accountType === "child" ? "recipientFirstName" : "fundName"}
-                  autoComplete="off"
+                  autoComplete={accountType === "child" ? "given-name" : "off"}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={accountType === "child" ? "Emma" : "Sarah's Fund"}
                   className="get-started-input"
                   data-testid="input-recipient-name"
                 />
+                {/* Last name — added 2026-05-19 per the data-quality audit.
+                    Only rendered on the child path (UTMA needs the kid's
+                    legal full name eventually for tax forms + brokerage
+                    KYC). Optional at onboarding for friction reasons; the
+                    parent can fill or skip and revisit via Settings →
+                    Edit Fund. Helper text frames it as legal-record-
+                    quality so a parent who cares fills it in. */}
+                {accountType === "child" && (
+                  <div className="space-y-1">
+                    <label htmlFor="get-started-recipient-last" className="sr-only">
+                      Child's last name (optional)
+                    </label>
+                    <input
+                      id="get-started-recipient-last"
+                      name="recipientLastName"
+                      autoComplete="family-name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Last name (optional)"
+                      className="get-started-input"
+                      data-testid="input-recipient-last-name"
+                    />
+                    <p className="text-[11px] text-muted-foreground/80 leading-snug pl-1">
+                      Used on tax documents and the brokerage account when set. You can add it later.
+                    </p>
+                  </div>
+                )}
                 {accountType === "child" && (
                   <div className="space-y-3">
                     <Popover>
