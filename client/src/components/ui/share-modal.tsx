@@ -905,13 +905,50 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                         subtitle="iMessage or SMS"
                         onClick={handleSMS}
                       />
-                      {canNativeShare && (
+                      {/* Third row's job: "share to whatever channel you
+                          want that isn't already a named row above." On
+                          devices that support navigator.share (iOS,
+                          Android, Edge, modern Safari/Chrome desktop) this
+                          opens the OS share sheet listing every installed
+                          app. On devices without navigator.share (Firefox
+                          on any platform, very old browsers) we swap to a
+                          prominent Copy link row, because clipboard +
+                          paste-into-your-channel is the desktop-equivalent
+                          of the share sheet.
+
+                          User-reported 2026-05-20: some devices showed
+                          three Quick share rows, others showed two,
+                          producing visible inconsistency. The original
+                          code hid the More apps… row entirely on no-
+                          native-share devices, which left Firefox /
+                          older-browser users with one fewer entry point
+                          than mobile users. The brilliance fix: both
+                          devices now see three Quick share rows; the
+                          third row's label and action vary by capability
+                          but the slot is always filled. Copy link also
+                          remains as a small button in the Physical
+                          section (alongside Print flyer / Save QR),
+                          because that grouping is "tangible deliverables"
+                          and Copy link belongs there too. Two slightly
+                          different contexts for the same action; the
+                          Quick share placement is the prominent
+                          person-to-person share, the Physical placement
+                          is the "produce a thing I can pass on" share. */}
+                      {canNativeShare ? (
                         <ShareRow
                           iconBg="rgb(26,61,43)"
                           icon={<Share2 size={16} color="white" />}
                           label="More apps…"
                           subtitle="Telegram, Mail, and more"
                           onClick={handleNativeShare}
+                        />
+                      ) : (
+                        <ShareRow
+                          iconBg="rgb(26,61,43)"
+                          icon={<Link size={16} color="white" />}
+                          label="Copy link"
+                          subtitle="Paste it anywhere"
+                          onClick={handleCopy}
                         />
                       )}
                     </div>
