@@ -356,6 +356,30 @@ Template at `server/templates/parentHandoffRecurring.ts`. Both
 templates follow the locked tone rules: no em-dashes, no marketing
 teaser quotes, no AI-slop closers, calm Apple-Settings register.
 
+**COPY-VS-UI ALIGNMENT FIX 2026-05-20 (same day):** The original
+email copy promised "set up the same contribution as a recurring
+gift, same amount, same cadence" with a CTA labeled "Set up a
+recurring gift." Auditing revealed `GiftCheckout.tsx` does NOT have
+a gifter-side recurring UI; the `recurring_gifts` schema and the
+`processGifterRecurring` worker exist but the public flow to CREATE
+a recurring schedule was never built or was removed in an earlier
+simplification pass. The email was promising functionality the UI
+cannot deliver.
+
+Same-day fix: softened the copy to "send a gift any time you want
+to show up" (matches what the gift link can actually do today),
+CTA changed to "Open ${child}'s gift link." When gifter-side
+recurring is restored in the UI per
+`memory/project_gifter_recurring_restoration.md`, this email can
+return to the stronger "same amount, same cadence" framing.
+
+The locked principle that emerges: **email and push copy must be
+cross-checked against the destination surface's actual
+functionality at ship time.** Same bug shape as the Activity-tab
+badge counting items the page does not show (commit `c7d3894`).
+Whenever notification copy makes a specific promise, the
+destination needs the matching functionality.
+
 ### Bucket 4c: Parent post-handoff welcome screen (DECIDED NOT TO SHIP)
 
 One screen, fires when the parent next logs in after the
