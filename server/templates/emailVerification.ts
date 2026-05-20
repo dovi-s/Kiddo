@@ -5,7 +5,7 @@
 // text fallback for clients that prefer text or fail to render HTML.
 //
 // Tone: welcoming but not over-celebratory. The first email from
-// Kiddo sets the register for every email that follows — warm,
+// Kiddo sets the register for every email that follows, warm,
 // minimal, Apple-Settings calm. Avoid "🎉 welcome aboard!" energy.
 
 import type { EmailMessage } from "../emailDelivery";

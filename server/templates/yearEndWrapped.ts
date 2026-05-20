@@ -1,6 +1,6 @@
 // Year-end Wrapped email (Tier 1 #8). Fires once between Dec 15-31
 // per fund. The original email-strategy notes flagged this as
-// 'your single biggest organic-share opportunity' — give the
+// 'your single biggest organic-share opportunity', give the
 // parent something they'll screenshot and post.
 //
 // Tone: reflective, numbers-forward, calm. NOT 'Spotify Wrapped'

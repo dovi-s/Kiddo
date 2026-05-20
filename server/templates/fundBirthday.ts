@@ -5,7 +5,7 @@
 // This is the unique-voice differentiator. Other apps email
 // 'birthday reminder' or 'happy birthday from your bank.' Kiddo's
 // twist: the FUND is the narrator. It's not the kid's birthday
-// being celebrated — it's the fund's relationship with the kid
+// being celebrated, it's the fund's relationship with the kid
 // being marked. Warm, slightly anthropomorphic, but never twee.
 //
 // Tone rules (locked):
@@ -33,7 +33,7 @@ export type FundBirthdayInput = {
   fundTotalUsd: number;
   // Years the fund has existed. Drives 'just turned X years old'.
   fundAgeYears: number;
-  // Link back to the fund (Dashboard or Memory Book — the
+  // Link back to the fund (Dashboard or Memory Book, the
   // caller decides which is more contextual). Used as the
   // primary CTA in the branded HTML.
   dashboardUrl: string;

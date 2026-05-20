@@ -30,8 +30,17 @@ export const MONEY_CROSS_COPY: Record<number, MoneyCrossCopy> = {
   },
   1000: {
     title: "Four figures",
-    description: (n) => `${n}'s fund crossed $1,000. Years of small gifts compound into something serious.`,
-    emotionalLine: "Years of small gifts compound into something serious.",
+    // 2026-05-20: replaced "Years of small gifts compound into something
+    // serious." That line assumed a years-of-small-gifts path that does
+    // not universally apply (a fund crossing $1,000 via one big birthday
+    // gift would read it as factually off). The new line is pattern-
+    // neutral and forward-looking ("years ahead" not "years past") so
+    // it works whether the fund got here via 50 small gifts or one
+    // generous one. Matches the value-focused framing of the adjacent
+    // $500 ("Real momentum.") and $2,500 ("The compounding is real
+    // now.") lines.
+    description: (n) => `${n}'s fund crossed $1,000. Real money now, with years of compounding ahead.`,
+    emotionalLine: "Real money now, with years of compounding ahead.",
   },
   2500: {
     title: "Fund crossed $2,500",

@@ -6,13 +6,13 @@
 //   - The token in the URL is the RAW token; the DB stores SHA-256(token).
 //     This file builds the URL; the route handler stamps the hash.
 //   - We deliberately don't disclose whether the email matched a real
-//     user — same response shape on the route for both cases. This email
+//     user, same response shape on the route for both cases. This email
 //     only fires when there IS a match; the absence of an email is the
 //     anti-enumeration signal.
 //   - The link's lifetime (60 minutes) is communicated in the body so
 //     the user knows to click promptly.
 //   - The footer omits an unsubscribe link. Transactional security
-//     emails are not promotional — RFC 8058 List-Unsubscribe and CAN-SPAM
+//     emails are not promotional, RFC 8058 List-Unsubscribe and CAN-SPAM
 //     opt-out requirements don't apply.
 //
 // API:

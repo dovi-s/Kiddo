@@ -1,5 +1,5 @@
 // Fund anniversary email. Fires on the yearly anniversary of fund
-// creation (NOT the kid's birthday — that's the separate
+// creation (NOT the kid's birthday, that's the separate
 // fundBirthday worker). Marks the moment the parent started this.
 //
 // Voice is the FUND, same anthropomorphic convention as the

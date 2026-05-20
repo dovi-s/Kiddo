@@ -4,7 +4,7 @@
 // the fund's parent (the account holder) as a security heads-up so
 // they can flag unexpected large arrivals. Most large gifts are
 // legitimate (grandparent inheritance distribution, baby-shower
-// pooled gift, etc.) — the email is informational, not alarmist.
+// pooled gift, etc.), the email is informational, not alarmist.
 //
 // Tone: matches the new-device-alert template. Factual, not "ALERT."
 // Includes the gifter's name + amount + arrival time so the parent

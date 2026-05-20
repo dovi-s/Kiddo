@@ -1,6 +1,6 @@
 // Gifter return-year reminder. Sent to a gifter who hasn't gifted
 // in 12+ months (their last gift was over a year ago). Soft prompt
-// ('the kid is older now; the fund is bigger') — no shame, no
+// ('the kid is older now; the fund is bigger'), no shame, no
 // urgency.
 
 import type { EmailMessage } from "../emailDelivery";

@@ -1,7 +1,7 @@
 // Gifter year-end giving summary email.
 //
 // Counterpart to the parent-side yearEndWrapped (which goes to fund
-// owners). This one goes to GIFTERS — the grandparent, aunt, uncle,
+// owners). This one goes to GIFTERS, the grandparent, aunt, uncle,
 // godparent, or family friend who gave across one or more kids
 // during the calendar year. Aggregates ALL of the gifter's gifts
 // across every recipient.
@@ -42,7 +42,7 @@ export type GifterYearEndSummaryInput = {
   // any overflow surfaces as a "+ N more recipients" summary row.
   perRecipient: PerRecipientSummary[];
   // CSV download URL (signed link or authenticated link to
-  // /api/gifter-account/gifts.csv?year=YYYY). Optional — if the
+  // /api/gifter-account/gifts.csv?year=YYYY). Optional, if the
   // platform decides to offer it via the dashboard only, omit here.
   csvDownloadUrl?: string | null;
   dashboardUrl: string;
@@ -78,8 +78,8 @@ export function buildGifterYearEndSummaryEmail(input: GifterYearEndSummaryInput)
 
   const greeting = gifterFirstName?.trim() ? `Hi ${gifterFirstName.trim()},` : "Hi there,";
 
-  // Recipient phrasing varies by count — "Emma" / "Emma and Alex" /
-  // "Emma, Alex, and Mila" / "the 5 kids you supported" — so the line
+  // Recipient phrasing varies by count, "Emma" / "Emma and Alex" /
+  // "Emma, Alex, and Mila" / "the 5 kids you supported", so the line
   // reads naturally instead of mechanical.
   const recipientNames = perRecipient.map((r) => r.childFirstName).filter(Boolean);
   const recipientPhrase = (() => {
@@ -109,7 +109,7 @@ export function buildGifterYearEndSummaryEmail(input: GifterYearEndSummaryInput)
     .filter(Boolean)
     .join("\n");
 
-  // Per-recipient details block — structured key/value rows via the
+  // Per-recipient details block, structured key/value rows via the
   // renderKiddoEmail details slot. Caps at MAX_RECIPIENTS_RENDERED;
   // overflow rolls into a single "+ N more recipients" summary row.
   const visibleRecipients = perRecipient.slice(0, MAX_RECIPIENTS_RENDERED);

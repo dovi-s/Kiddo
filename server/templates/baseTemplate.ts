@@ -1,4 +1,4 @@
-// renderKiddoEmail — the single canonical branded HTML wrapper for
+// renderKiddoEmail, the single canonical branded HTML wrapper for
 // every transactional email Kiddo sends.
 //
 // Created 2026-05-15. Before this helper existed, every email worker
@@ -22,7 +22,7 @@
 //     email copy too).
 //   - No marketing teaser quotes, no AI-slop sparkles, no rotating
 //     gradient backgrounds. Apple-Settings register applied to
-//     email — minimal chrome, content forward.
+//     email, minimal chrome, content forward.
 //   - Footer carries the legal entity name (Kora Inc.), the support
 //     link, and the unsubscribe URL when caller provides one.
 //
@@ -35,7 +35,7 @@
 //     unsubscribeUrl?: string;      // optional one-click List-Unsub URL
 //   }) -> { html: string }
 //
-// Use this for HTML. Plain-text body still composed by the caller —
+// Use this for HTML. Plain-text body still composed by the caller,
 // the helper deliberately doesn't try to strip HTML back to text
 // because the caller often wants different wording for the two
 // (HTML can use a button, text uses the URL).
@@ -88,7 +88,7 @@ export function renderKiddoEmail(input: KiddoEmailInput): { html: string } {
   // Structured details table (receipt-grade or transaction-summary
   // block). Each row is a label / value pair; the table is bordered
   // and uses tabular-num font feature for amount columns. Renders
-  // inline-style only — Outlook + Gmail Promotions tab safe.
+  // inline-style only, Outlook + Gmail Promotions tab safe.
   const detailsBlock = Array.isArray(details) && details.length > 0
     ? `
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin: 6px 0 18px 0; border: 1px solid rgba(26,23,16,0.10); border-radius: 12px; background-color: #FAF8F4;">

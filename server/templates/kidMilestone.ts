@@ -1,4 +1,4 @@
-// Kid-age milestone email. Fires at 5 / 10 / 13 / 16 — the
+// Kid-age milestone email. Fires at 5 / 10 / 13 / 16, the
 // childhood inflection ages most worth marking. Distinct from
 // the every-year fundBirthday worker: this is the parent-side
 // reflective email ("Emma is 10. The fund has been quietly
