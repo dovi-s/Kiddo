@@ -402,6 +402,12 @@ function rewriteLegacyAutoInvestTitle(t: string | null | undefined): string {
   // (could be a ticker like "AAPL" or a brand name like "Apple").
   const single = t.match(/^Auto-invested in (.+)$/i);
   if (single) return `Invested cash in ${single[1]}`;
+  // Memory Book naming alignment. The "added" event title was
+  // "Memory Book entry added" while the "edited" sibling was just
+  // "Memory entry edited" — looked like two different surfaces in
+  // the feed. Server now writes "Memory Book entry edited"; this
+  // rewrite normalizes legacy rows. Locked 2026-05-20.
+  if (t === "Memory entry edited") return "Memory Book entry edited";
   return t;
 }
 
@@ -440,6 +446,16 @@ function rewriteLegacyDescription(d: string | null | undefined): string | null {
     // Genuine fraction: finance convention is always plural.
     return `${whole}.${trimmed} shares`;
   });
+  // Hyphen → "to" on settlement-window phrases. Legacy sell rows
+  // wrote "1-2 business days" (hyphenated); current emitter uses
+  // "1 to 2 business days" (server/routes.ts:6420). Normalize the
+  // older format so a parent scanning the feed doesn't see two
+  // different phrasings of the same regulatory window across rows.
+  // Locked 2026-05-20 per the Activity register pass.
+  out = out.replace(/\b1-2 business days\b/g, "1 to 2 business days");
+  // Also fold the spaced-hyphen variant ("1 - 2 business days") that
+  // appeared in a handful of even-older rows.
+  out = out.replace(/\b1\s*-\s*2 business days\b/g, "1 to 2 business days");
   return out;
 }
 

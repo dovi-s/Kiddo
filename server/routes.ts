@@ -8285,8 +8285,15 @@ export async function registerRoutes(
             Array.from(activityEventIds).map((id) => sql`${id}`),
             sql`, `,
           );
+          // Critical: exclude permanent "Gift anytime" default events
+          // (see twin comment in the cross-fund gifters endpoint).
+          // Without this filter every gift gets a "Gift anytime"
+          // source chip in the Activity feed, breaking the
+          // asymmetric-labeling pattern. Locked 2026-05-20.
           const evRes = await db.execute(sql`
-            SELECT id, name FROM events WHERE id IN (${idsSql})
+            SELECT id, name FROM events
+            WHERE id IN (${idsSql})
+              AND COALESCE(is_permanent, false) = false
           `);
           for (const row of (evRes.rows as any[]) || []) {
             if (row?.id && typeof row.name === "string") {
@@ -10469,7 +10476,14 @@ export async function registerRoutes(
             userId,
             fundId: entry.fundId,
             type: "memory_entry_edited",
-            title: "Memory entry edited",
+            // Title aligned with the "added" sibling event 2026-05-20.
+            // Was "Memory entry edited" (sibling: "Memory Book entry
+            // added"). Inconsistent naming made it look like two
+            // different surfaces. Now matches: "Memory Book entry
+            // edited". Activity row footer label "Memory edited"
+            // stays the same — that's the row-meta category and
+            // legacy events still classify into it.
+            title: "Memory Book entry edited",
             description: snippet ? `"${snippet}${snippet.length >= 80 ? "…" : ""}"` : "Entry updated.",
             metadata: JSON.stringify({
               entryId: req.params.id,
@@ -19342,8 +19356,18 @@ export async function registerRoutes(
           Array.from(eventIdSet).map((id) => sql`${id}`),
           sql`, `,
         );
+        // Critical: exclude permanent "Gift anytime" default events
+        // from the lookup. Every fund has one (the main gift page
+        // attribution target) so without this filter EVERY gift gets
+        // a "Gift anytime" source chip, defeating the entire
+        // asymmetric-labeling pattern (main-page gifts should show
+        // NO chip; event-linked gifts should show their event name).
+        // Bug introduced in commit 790bab8 when the chip pattern
+        // shipped without the is_permanent guard. Locked 2026-05-20.
         const evRes = await db.execute(sql`
-          SELECT id, name FROM events WHERE id IN (${eventIdsSql})
+          SELECT id, name FROM events
+          WHERE id IN (${eventIdsSql})
+            AND COALESCE(is_permanent, false) = false
         `);
         for (const row of (evRes.rows as any[]) || []) {
           if (row?.id && typeof row.name === "string") {
