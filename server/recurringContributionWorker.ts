@@ -363,7 +363,104 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
   }
 }
 
+// Auto-pause parent_contributions whose fund has changed ownership since
+// the row was created. Fires BEFORE the regular processing loop so we
+// never attempt a charge against an account the contributor no longer
+// owns. The canonical case is the age-18 majority handoff: funds.userId
+// flips from parent to kid (per the AgeTransitionInvite "complete
+// transfer" flow), but pc.user_id stays pointing at the original
+// parent. Without this guard the worker would keep charging the
+// parent's card and depositing into the now-kid-owned account, which
+// is both legally awkward (parent is now an undisclosed gifter) and
+// product-wrong (parent's dashboard would still show "Recurring
+// investment active" for a fund they no longer manage).
+//
+// Status set to 'paused' with pause_reason 'majority_handoff' so it
+// can be distinguished from 'user' (manual pause) and 'subscription_
+// ended' (subscription cascade). Different reasons gate different
+// resume paths.
+//
+// Activity row written so the parent sees what happened on next
+// dashboard visit (best-effort; activity write failure does not block
+// the pause). The follow-up "would you like to convert this to a
+// recurring gift?" email is deferred per Bucket 4b of
+// AGE_18_HANDOFF_SPEC.md — copy needs a focused design pass.
+async function autoPauseOwnershipMismatchedContributions(log: LogFn): Promise<void> {
+  // Find active rows where the fund's owner is no longer the contributor.
+  // RETURNING gives us the rows to write activity for in the next step.
+  const flippedResult = await pool.query<Record<string, any>>(`
+    SELECT pc.id, pc.fund_id, pc.user_id, pc.amount,
+           f.recipient_first_name, f.name AS fund_name, f.user_id AS current_fund_owner_id
+    FROM parent_contributions pc
+    JOIN funds f ON f.id = pc.fund_id
+    WHERE pc.status = 'active'
+      AND f.user_id <> pc.user_id
+  `);
+
+  if (flippedResult.rows.length === 0) return;
+
+  // Bulk-pause the matching rows. Same UPDATE shape as the subscription-
+  // cascade pause in storage.ts:563 so the patterns stay parallel.
+  const idsToPause = flippedResult.rows.map((r) => String(r.id));
+  await pool.query(
+    `UPDATE parent_contributions
+       SET status = 'paused',
+           pause_reason = 'majority_handoff',
+           paused_at = NOW(),
+           updated_at = NOW()
+     WHERE id = ANY($1::varchar[])`,
+    [idsToPause],
+  );
+
+  // Write an activity row for each paused contribution so the
+  // (former) parent sees the explanation in their feed. Scoped to
+  // the original contributor's user_id so it appears on THEIR
+  // dashboard, not the kid's (the kid has their own welcome-at-18
+  // moment and should not see "Recurring investment paused" as an
+  // intro to their fund).
+  //
+  // Uses the canonical `recurring_paused` type rather than a new
+  // type so the existing client renderers (activity-helpers.tsx
+  // getTypeConfig at line 90, NotificationsPanel auto-type maps,
+  // Activity.tsx AUTO_TYPES filter) pick it up without UI taxonomy
+  // changes. The `metadata.reason = 'majority_handoff'` field is
+  // the seam for any future renderer that wants to distinguish
+  // handoff pause from manual pause.
+  for (const row of flippedResult.rows) {
+    const childName = String(row.recipient_first_name || row.fund_name || 'your child');
+    try {
+      await storage.createActivity({
+        userId: String(row.user_id),
+        fundId: String(row.fund_id),
+        type: 'recurring_paused',
+        title: 'Recurring investment paused',
+        description: `${childName} is the legal owner of the fund now, so the recurring investment from your account stopped. You can keep contributing as a gifter through the gift link if you want to.`,
+        amount: row.amount ? String(row.amount) : null,
+        metadata: JSON.stringify({
+          parentContributionId: String(row.id),
+          reason: 'majority_handoff',
+          currentFundOwnerId: String(row.current_fund_owner_id),
+        }),
+      } as any);
+    } catch (err) {
+      // Don't let activity-write failure block the pause itself.
+      console.warn('[recurring-worker] failed to record handoff-pause activity:', err);
+    }
+  }
+
+  log(
+    `auto-paused ${idsToPause.length} parent_contribution(s) due to ownership handoff`,
+    WORKER_SOURCE,
+  );
+}
+
 async function processParentContributions(log: LogFn): Promise<void> {
+  // Run the ownership-mismatch sweep FIRST so the SELECT below cannot
+  // pick up any rows that should have been paused. This is the
+  // defensive ordering: even if a single tick races with a fresh
+  // handoff, the same tick auto-pauses and then re-queries.
+  await autoPauseOwnershipMismatchedContributions(log);
+
   const result = await pool.query<Record<string, any>>(`
     SELECT
       pc.id, pc.fund_id, pc.user_id, pc.amount, pc.frequency,
@@ -380,6 +477,11 @@ async function processParentContributions(log: LogFn): Promise<void> {
     WHERE pc.status = 'active'
       AND pc.next_run_date IS NOT NULL
       AND pc.next_run_date <= NOW()
+      -- Defense in depth: even if the auto-pause sweep above missed a
+      -- row (e.g., a handoff that landed between the sweep and this
+      -- query), this clause ensures we never charge for a contribution
+      -- whose fund has flipped to a different owner.
+      AND f.user_id = pc.user_id
     ORDER BY pc.next_run_date ASC
     LIMIT 100
   `);
