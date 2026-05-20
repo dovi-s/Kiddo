@@ -28,6 +28,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
+
+// Per-user plan-benefits-usage cache. Same readLocalCache /
+// writeLocalCache pattern as funds / activities / events queries.
+// Added 2026-05-20 as part of the CoParentAccessCard pattern
+// sweep (commit f347fe2): no staleTime + no initialData meant
+// every Account/Settings mount fired a fresh network request,
+// briefly showing stale or empty usage stats before re-rendering.
+// The "Right now" section's numbers (recurring active count,
+// memory entries this year, etc.) don't change minute to minute,
+// so a 5-minute staleTime is the right tradeoff between freshness
+// and not-spamming-the-server.
+const PLAN_BENEFITS_USAGE_CACHE_KEY = "kiddo.plan-benefits-usage.v1";
 import {
   BookOpen,
   CalendarHeart,
@@ -165,13 +178,27 @@ export function PlanBenefitsCard({ plan }: Props) {
   const benefits = effectivePlan === "family" ? FAMILY_BENEFITS : PLUS_BENEFITS;
   const planLabel = plan === "starter" ? "Kiddo+" : plan === "legacy" ? "Kiddo Legacy" : "Kiddo Family";
 
+  // initialData reads from localStorage on mount so returning
+  // users see their "Right now" stats instantly. staleTime of 5
+  // minutes prevents re-fetch on every Account/Settings mount
+  // (usage stats like recurring count, memory entries this year,
+  // co-parent active count do not change minute to minute).
+  // Mutations that affect these counts (creating a recurring
+  // schedule, accepting a co-parent invite, adding a Memory Book
+  // entry, etc.) already invalidate their own queries; the cache
+  // here gets refreshed on the next natural refetch cycle.
   const { data: usage } = useQuery<PlanBenefitsUsage>({
     queryKey: ["/api/me/plan-benefits-usage"],
     queryFn: async () => {
       const res = await fetch("/api/me/plan-benefits-usage", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load usage");
-      return res.json();
+      const data = await res.json();
+      writeLocalCache(PLAN_BENEFITS_USAGE_CACHE_KEY, data);
+      return data;
     },
+    initialData: () => readLocalCache<PlanBenefitsUsage>(PLAN_BENEFITS_USAGE_CACHE_KEY),
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Local cache of dismissed nudges. Hydrated lazily; cross-tab

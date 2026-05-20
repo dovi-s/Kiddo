@@ -17,6 +17,18 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
+import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
+
+// Per-user pending-invitations cache. Same readLocalCache /
+// writeLocalCache pattern as funds / activities / events / co-
+// parent collaborators queries. Added 2026-05-20 as part of the
+// CoParentAccessCard pattern sweep (commit f347fe2 fixed the
+// same anti-pattern there): no staleTime + no initialData meant
+// every Settings/Account mount fired a fresh network request and
+// the card briefly hid before re-rendering with data. The empty-
+// state case is the "return null" early-exit here so there is no
+// flashing explainer, but the perf gap was real on slow networks.
+const INVITATIONS_CACHE_KEY = "kiddo.me-invitations.v1";
 
 function SectionCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
@@ -35,13 +47,24 @@ type PendingInvitation = {
 
 export function InvitationsToYouCard() {
   const [, navigate] = useLocation();
+  // initialData reads from localStorage so the card renders
+  // instantly on returning sessions. staleTime of 5 minutes
+  // prevents re-fetch on every Settings/Account mount; the cache
+  // is invalidated when the user accepts or declines via the
+  // /invitations/:token flow (which also writes the inverse
+  // change). For a per-user list this short, 5 minutes is fine.
   const { data: pendingInvitations = [] } = useQuery<PendingInvitation[]>({
     queryKey: ["/api/me/invitations"],
     queryFn: async () => {
       const res = await fetch(`/api/me/invitations`, { credentials: "include" });
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      writeLocalCache(INVITATIONS_CACHE_KEY, data);
+      return data;
     },
+    initialData: () => readLocalCache<PendingInvitation[]>(INVITATIONS_CACHE_KEY),
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
   });
 
   if (pendingInvitations.length === 0) return null;
