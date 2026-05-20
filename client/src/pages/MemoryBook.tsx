@@ -4080,7 +4080,7 @@ export default function MemoryBook() {
                                     </span>
                                   ) : (
                                     <span className="inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-foreground">
-                                      {childName ? `${childName}'s mix` : "Managed mix"}
+                                      {childName ? `${childName}'s mix` : "Diversified mix"}
                                     </span>
                                   )}
                                 </div>
