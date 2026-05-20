@@ -130,10 +130,28 @@ const plans: readonly Plan[] = [
     body: [
       "Everything in Kiddo+",
       "Unlimited children",
-      "Memory Book authoring for every child (photos, videos, voice)",
+      // Bullet retoned 2026-05-20 per the cross-plan clarity audit.
+      // Was: "Memory Book authoring for every child (photos, videos,
+      // voice)". The parenthetical accidentally suggested Family
+      // unlocks NEW media authoring features (when actually Plus
+      // already has photo/video/voice authoring — Family just
+      // extends that authoring across multiple children). The
+      // differential is SCOPE, not features. Now matches the
+      // locked-memory language: "Memory Book for every child" —
+      // scope-only, no feature confusion.
+      "Memory Book for every child",
       "Kid View for every child",
       "One view for every fund in your household",
-      "Unlimited occasions with premium features included",
+      // "with premium features included" suffix REMOVED 2026-05-20
+      // per the same cross-plan audit. Premium occasion features
+      // (themes, group goal progress) gate behind subscription —
+      // meaning BOTH Plus AND Family get them. Listing it only on
+      // the Family bullet created the false impression that Family
+      // adds occasion features Plus doesn't have. Plus already has
+      // the premium features; Family just lifts the count cap. The
+      // scope differential ("Unlimited" vs Plus's "3 active") is
+      // the only difference. Clean bullet, no false suggestion.
+      "Unlimited occasions",
       "0.10% annual fee on invested assets only",
     ],
   },

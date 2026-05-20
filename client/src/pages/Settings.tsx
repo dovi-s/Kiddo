@@ -4261,7 +4261,16 @@ const [editFundName, setEditFundName] = useState("");
                         parent-authored media is the Family delta).
                         Without this bullet, the Settings upgrade card
                         underrepresented the actual feature gain. */}
-                    {["Unlimited funds, every child", "Memory Book authoring for every child (photos, videos, voice)", "Unlimited occasions with premium features included", "Kid View for every child", "One view for every fund in your household"].map((item) => (
+                    {/* Bullets aligned with Pricing + Account 2026-05-20.
+                        See twin comment on Account.tsx for the
+                        clarity-audit reasoning. The drift was on
+                        the Family bullet's parenthetical ("photos,
+                        videos, voice") and the "with premium features
+                        included" suffix — both wrongly implied
+                        feature differentials where there are none.
+                        Family vs Plus is SCOPE (multi-fund), not
+                        feature additions. */}
+                    {["Unlimited funds, every child", "Memory Book for every child", "Unlimited occasions", "Kid View for every child", "One view for every fund in your household"].map((item) => (
                       <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-light))]" />{item}</p>
                     ))}
                   </div>

@@ -1263,7 +1263,20 @@ export default function Account() {
                       <p className="mt-1 text-xs text-white/45">or ${KORA_FAMILY_YEARLY}/year</p>
                       <p className="mt-4 text-sm leading-relaxed text-[hsl(var(--kiddo-cream)/0.78)]">For your family, long term. Manage everything in one place.</p>
                       <div className="mt-5 space-y-2 text-sm text-[hsl(var(--kiddo-cream)/0.84)]">
-                        {["Unlimited funds, every child", "Memory Book authoring for every child (photos, videos, voice)", "Unlimited occasions with premium features included", "Kid View for every child", "One view for every fund in your household"].map((item) => (
+                        {/* Bullet list aligned 2026-05-20 with the
+                            Pricing page cross-plan clarity audit.
+                            "Memory Book authoring for every child
+                            (photos, videos, voice)" → "Memory Book
+                            for every child" (parenthetical wrongly
+                            suggested Family adds media features; it
+                            only extends Plus's authoring across kids).
+                            "Unlimited occasions with premium features
+                            included" → "Unlimited occasions" (premium
+                            occasion features gate on subscription, so
+                            both Plus AND Family have them — the
+                            suffix made it sound like Family adds
+                            features Plus lacks). */}
+                        {["Unlimited funds, every child", "Memory Book for every child", "Unlimited occasions", "Kid View for every child", "One view for every fund in your household"].map((item) => (
                           <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-light))]" />{item}</p>
                         ))}
                       </div>
