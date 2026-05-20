@@ -75,7 +75,7 @@ export function buildLargeGiftAlertEmail(input: LargeGiftAlertInput): EmailMessa
     ``,
     `Open Dashboard: ${dashboardUrl}`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
 
   return {

@@ -64,7 +64,7 @@ export function buildMonthlyPulseEmail(input: MonthlyPulseInput): EmailMessage {
     ``,
     `Open the fund: ${dashboardUrl}`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
   return {
     to,

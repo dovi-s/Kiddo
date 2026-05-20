@@ -71,7 +71,7 @@ export function buildFundAnniversaryEmail(input: FundAnniversaryInput): EmailMes
     `Open the fund: ${dashboardUrl}`,
     memoryBookUrl ? `Add a note: ${memoryBookUrl}` : null,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].filter(Boolean).join("\n");
 
   return {

@@ -68,7 +68,7 @@ export function buildNewDeviceAlertEmail(input: NewDeviceAlertInput): EmailMessa
     `If it wasn't you, reset your password immediately:`,
     resetUrl,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].filter(Boolean).join("\n");
 
   return {

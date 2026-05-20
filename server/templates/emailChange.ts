@@ -40,7 +40,7 @@ export function buildEmailChangeConfirmEmail(input: EmailChangeConfirmInput): Em
     ``,
     `If you didn't request this, ignore this email. The change won't happen without confirmation.`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
   return {
     to,
@@ -90,7 +90,7 @@ export function buildEmailChangeHeadsUpEmail(input: EmailChangeHeadsUpInput): Em
     revokeUrl,
     requestIpHint ? `\nThe request came from ${requestIpHint}.` : null,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].filter(Boolean).join("\n");
   return {
     to,

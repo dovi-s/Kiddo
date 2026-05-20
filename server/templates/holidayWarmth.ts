@@ -55,7 +55,7 @@ export function buildHolidayWarmthEmail(input: HolidayWarmthInput): EmailMessage
     ``,
     memoryBookUrl ? `Memory Book: ${memoryBookUrl}` : `Open the fund: ${dashboardUrl}`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
   return {
     to,

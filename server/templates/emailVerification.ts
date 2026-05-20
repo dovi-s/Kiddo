@@ -45,7 +45,7 @@ export function buildVerificationEmail(input: VerificationEmailInput): EmailMess
     ``,
     `If you didn't sign up for Kiddo, ignore this email. The account stays inactive without verification and gets cleaned up automatically.`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
 
   return {

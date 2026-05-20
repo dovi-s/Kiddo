@@ -46,7 +46,7 @@ export function buildGifterReturnReminderEmail(input: GifterReturnReminderInput)
     ``,
     `Not the right time? Ignore this email.`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
   return {
     to,

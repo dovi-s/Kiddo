@@ -83,7 +83,7 @@ export function buildKidMilestoneEmail(input: KidMilestoneInput): EmailMessage {
     ``,
     `Open ${childFirstName}'s fund: ${dashboardUrl}`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
 
   return {

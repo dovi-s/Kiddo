@@ -62,7 +62,7 @@ export function buildPasswordResetEmail(input: PasswordResetEmailInput): EmailMe
     ``,
     `If you keep getting these without asking for them, write to support and we'll lock the account down.`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
 
   return {

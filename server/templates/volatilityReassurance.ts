@@ -62,7 +62,7 @@ export function buildVolatilityReassuranceEmail(input: VolatilityReassuranceInpu
     ``,
     `Open the Dashboard: ${dashboardUrl}`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
   return {
     to,

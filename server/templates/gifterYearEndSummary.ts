@@ -183,14 +183,14 @@ export function buildGifterYearEndSummaryEmail(input: GifterYearEndSummaryInput)
     `Kora Inc. is a technology company, not a broker-dealer.`,
     `Securities offered through DriveWealth, LLC (FINRA/SIPC).`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ]
     .filter(Boolean)
     .join("\n");
 
   return {
     to,
-    subject: `Your ${year} in giving — ${fmtUsd(totalGiftedUsd)} across ${recipientCount} ${recipientCount === 1 ? "kid" : "kids"}`,
+    subject: `Your ${year} in giving: ${fmtUsd(totalGiftedUsd)} across ${recipientCount} ${recipientCount === 1 ? "kid" : "kids"}`,
     text,
     html,
     tags: ["gifter-year-end-summary"],

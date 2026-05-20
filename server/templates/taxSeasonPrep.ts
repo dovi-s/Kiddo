@@ -48,7 +48,7 @@ export function buildTaxSeasonPrepEmail(input: TaxSeasonPrepInput): EmailMessage
     ``,
     `Tax Documents: ${taxDocsUrl}`,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].join("\n");
   return {
     to,

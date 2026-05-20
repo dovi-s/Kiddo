@@ -80,7 +80,7 @@ export function buildYearEndWrappedEmail(input: YearEndWrappedInput): EmailMessa
     `Open the fund: ${dashboardUrl}`,
     memoryBookUrl ? `Add a note: ${memoryBookUrl}` : null,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].filter(Boolean).join("\n");
   return {
     to,

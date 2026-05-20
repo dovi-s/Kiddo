@@ -109,7 +109,7 @@ export function buildFundBirthdayEmail(input: FundBirthdayInput): EmailMessage {
     `Open ${childFirstName}'s fund: ${dashboardUrl}`,
     memoryBookUrl ? `Add a note in the Memory Book: ${memoryBookUrl}` : null,
     ``,
-    `— The Kiddo team`,
+    `The Kiddo team`,
   ].filter(Boolean).join("\n");
 
   return {
