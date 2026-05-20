@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Check, ChevronDown, Star } from "lucide-react";
+import { ArrowRight, Check, ChevronDown } from "lucide-react";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -93,11 +93,11 @@ const plans: readonly Plan[] = [
     pricing: {
       kind: "billed",
       yearly: { price: "$39", period: "/year", equivalent: "or $4.99/month" },
-      monthly: { price: "$4.99", period: "/month", equivalent: "Save 35% with $39/year" },
+      monthly: { price: "$4.99", period: "/month", equivalent: "or $39/year" },
     },
     cta: "Start with Kiddo+",
     featured: true,
-    note: "Annual is 35% off monthly. Plus is for one child. Adding a second kid means moving to Family.",
+    note: "Plus is for one child. Move to Family when you add a second.",
     body: [
       // Single-fund constraint surfaced as the leading bullet so a
       // multi-kid parent reads the limit before scrolling the
@@ -122,11 +122,11 @@ const plans: readonly Plan[] = [
     pricing: {
       kind: "billed",
       yearly: { price: "$69", period: "/year", equivalent: "or $7.99/month" },
-      monthly: { price: "$7.99", period: "/month", equivalent: "Save 28% with $69/year" },
+      monthly: { price: "$7.99", period: "/month", equivalent: "or $69/year" },
     },
     cta: "Cover all your children",
     featured: false,
-    note: "Annual is 28% off monthly. Best value from your second child onwards.",
+    note: "Family covers two or more children, no per-kid charge.",
     body: [
       "Everything in Kiddo+",
       "Unlimited children",
@@ -279,11 +279,13 @@ export default function Pricing() {
                 data-testid="pricing-toggle-yearly"
               >
                 Annual
-                <span className={`ml-1.5 text-[10px] font-semibold uppercase tracking-wide ${
-                  billingPeriod === "yearly" ? "text-primary-foreground/85" : "text-green-700"
-                }`}>
-                  Save up to 35%
-                </span>
+                {/* "Save up to 35%" badge REMOVED 2026-05-20 per the
+                    Anthropic-15-min sales-call audit. Performance badge
+                    embedded in a navigation control. The actual annual
+                    prices visible on the cards below already show the
+                    savings; an upsell badge on the toggle was double-
+                    selling the same idea. Toggle is now a clean
+                    Annual/Monthly switch. */}
               </button>
               <button
                 type="button"
@@ -313,14 +315,16 @@ export default function Pricing() {
               return (
               <FadeIn key={plan.id} delay={index * 0.08}>
                 <div className={`relative flex h-full flex-col rounded-2xl bg-card p-8 shadow-premium-sm ${plan.featured ? "ring-2 ring-primary" : ""}`}>
-                  {plan.featured ? (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
-                        <Star className="h-3 w-3" />
-                        Most popular
-                      </span>
-                    </div>
-                  ) : null}
+                  {/* "Most popular" pill REMOVED 2026-05-20 per the
+                      Anthropic-15-min sales-call audit. Classic SaaS
+                      theater badge. The ring-2 visual emphasis on the
+                      featured plan still draws the eye; the eyebrow
+                      ("For the parent who shows up every month")
+                      already explains what Plus is for. Telling the
+                      reader which one is "popular" is performance,
+                      not information — the prospect doesn't need a
+                      sticker to make a choice they can already make
+                      from the prices + feature lists in front of them. */}
                   <div className="mb-6 text-center">
                     <h2 className="mb-2 font-heading text-xl font-semibold text-foreground">{plan.name}</h2>
                     <p className="text-sm font-medium text-foreground">{plan.eyebrow}</p>
@@ -328,7 +332,14 @@ export default function Pricing() {
                       <span className="font-heading text-4xl font-bold text-foreground">{priceDisplay.price}</span>
                       <span className="text-sm font-medium text-muted-foreground">{priceDisplay.period}</span>
                     </div>
-                    {priceDisplay.equivalent ? <p className="mt-2 text-sm font-medium text-green-700">{priceDisplay.equivalent}</p> : null}
+                    {/* Equivalent line color: muted (was text-green-700).
+                        Now that the line reads "or $39/year" symmetrically
+                        with the yearly card's "or $4.99/month" — not a
+                        savings badge — green coloring (which signals
+                        positive/saving) would over-emphasize a neutral
+                        conversion. Muted gray matches the period label
+                        treatment one line above. Locked 2026-05-20. */}
+                    {priceDisplay.equivalent ? <p className="mt-2 text-sm text-muted-foreground">{priceDisplay.equivalent}</p> : null}
                   </div>
 
                   <ul className="mb-8 flex-1 space-y-3">
