@@ -256,6 +256,149 @@ as a "we'll let you know when this is ready" placeholder.
 
 ---
 
+## Bucket 4: Parent post-handoff (added 2026-05-20)
+
+The spec above handles the kid side beautifully. The parent side
+post-handoff is under-built. This bucket fixes that.
+
+### The locked principle
+
+**Custody ends at majority. The relationship continues through
+the gift loop.** The parent does not become a stranger to the
+money. They shift roles: from holding the asset on the kid's
+behalf to celebrating with it. The platform supports that shift
+explicitly.
+
+### What needs to happen at handoff (parent side)
+
+When `funds.userId` flips parent to kid (the "complete transfer"
+moment in AgeTransitionInvite.tsx), three things should fire on
+the parent's account:
+
+1. **Auto-pause active recurring contributions to this fund.**
+   The parent's `parent_contributions` rows still point at a fund
+   they no longer own. Worker fix below.
+
+2. **Honest subscription handling.** If the parent's only managed
+   fund just flipped (and they have no other active funds), their
+   Kiddo+ or Family subscription now gates nothing. Email them an
+   honest offer to cancel. No silent autopay through a sub that
+   does nothing.
+
+3. **Parent post-handoff welcome screen.** Mirror to the kid's
+   5-screen walkthrough. One screen, not five. Explains what
+   changed and how to stay involved.
+
+### Bucket 4a: Recurring contribution auto-pause (CODE-LEVEL, shipping with this commit)
+
+`server/recurringContributionWorker.ts` — `processParentContributions`
+SQL currently filters only on `pc.status = 'active'` and the
+next-run-date window. It does not check whether the fund's owner
+is still the contributor. Result: after `funds.userId` flips at
+majority, the worker keeps charging the parent's card and crediting
+the fund (which is now legally the kid's).
+
+**Fix:** Extend the SQL to skip rows where `funds.user_id !=
+pc.user_id`. For those rows, run an auto-pause UPDATE that sets
+`status = 'paused'`, `pause_reason = 'majority_handoff'`,
+`paused_at = NOW()`, and writes a `parent_contribution_paused`
+activity row so the parent sees what happened on next dashboard
+visit.
+
+**Schema:** No migration needed. `pause_reason` is already a
+nullable text field with documented values "user" and
+"subscription_ended" (see `shared/schema.ts:811-815`). Adding
+"majority_handoff" as a third value is a string convention, not
+a schema change.
+
+**Status:** Shipping 2026-05-20 in the same commit cycle as this
+spec update.
+
+### Bucket 4b: Parent subscription honest-cancel email (DEFERRED)
+
+When `funds.userId` flips at majority AND the parent has no other
+funds where they are still the owner AND they have an active
+paid subscription, fire one email:
+
+**Subject:** "Emma is the owner now. About your Kiddo+ subscription."
+
+**Body:**
+- Acknowledge the moment ("Emma's fund is hers as of today")
+- State the change ("Your Kiddo+ subscription does not gate
+  anything for you anymore since you no longer manage any funds.")
+- Offer the honest choice: one-click cancel link, or keep active
+  for future funds
+- Explicitly say "no silent autopay through a sub that does
+  nothing for you" so the parent knows we are not Cash-App-ing
+  them
+
+**Worker:** Either extend `age18TransitionWorker.ts` to fire this
+on the T-0 ownership flip OR add a new `subscriptionRetirementCheck`
+function called from the existing complete-transfer endpoint. The
+latter is cleaner (synchronous with the actual flip).
+
+**Schema:** No new columns. Use existing
+`users.subscriptionRetirementEmailSentAt` if it does not exist,
+add it as part of the eventual ship. Until built, the column add
+is part of this spec, not a separate migration.
+
+**Status:** DEFERRED. The copy needs a focused design pass to
+land in the right register. Spec'd here so it does not get lost.
+
+### Bucket 4c: Parent post-handoff welcome screen (DEFERRED)
+
+One screen, fires when the parent next logs in after the
+ownership flip. Mirror to the kid's `/welcome-at-18` walkthrough.
+NOT five screens; the parent is a returning user who already
+understands the product. One screen, three facts.
+
+**Headline:** "Emma is the owner now."
+
+**Three bullets:**
+
+1. **Access.** You can no longer see balances, trade, or
+   withdraw on Emma's fund. The account is legally hers as of
+   today.
+
+2. **Staying involved as a gifter.** You can keep contributing
+   through the gift loop (same way grandma does). If you had a
+   recurring contribution set up, it has been paused. We will
+   email you with one-click options to convert it to a recurring
+   gift OR leave it cancelled.
+
+3. **Your subscription.** If Emma was your only fund and you
+   have a Kiddo+ sub, we will email you separately about whether
+   you want to keep it or cancel. No silent autopay.
+
+**CTA:** "Got it." Single button, no choice. Sets
+`parentHandoffWelcomeSeenAt = NOW()` on the user row.
+
+**Schema additions:**
+```ts
+// users table
+parentHandoffWelcomeSeenAt: timestamp("parent_handoff_welcome_seen_at"),
+```
+
+**Wire-up:** Dashboard.tsx on mount checks: if the user has any
+funds where `funds.previousOwnerUserId === user.id` AND
+`parentHandoffWelcomeSeenAt` is null, redirect to
+`/parent-handoff-welcome`. Mirror to the kid's `kidWelcomeCompletedAt`
+check pattern.
+
+**Status:** DEFERRED. User-facing copy, deserves focused design.
+
+### The subscription decision is LOCKED
+
+The kid never pays a Kiddo+ subscription for the fund they
+inherited. AUM (0.10%) is the alignment mechanism for the
+post-handoff relationship. See
+`memory/project_subscription_retires_at_majority.md` for the full
+reasoning. This is not a Bucket-4 design decision; it is a
+permanent product principle locked 2026-05-20. Bucket 4 IMPLEMENTS
+the implications of that lock; it does not re-litigate the lock.
+
+---
+
 ## MVP scope (shipping 2026-05-13)
 
 | Shipped | Deferred |
