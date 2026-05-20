@@ -3,6 +3,7 @@ import { pool } from './db';
 import { storage } from './storage';
 import { sendEmail } from './emailDelivery';
 import { renderKiddoEmail } from './templates/baseTemplate';
+import { buildParentHandoffRecurringEmail } from './templates/parentHandoffRecurring';
 import { getUncachableStripeClient } from './stripeClient';
 import { WebhookHandlers } from './webhookHandlers';
 
@@ -388,11 +389,19 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
 async function autoPauseOwnershipMismatchedContributions(log: LogFn): Promise<void> {
   // Find active rows where the fund's owner is no longer the contributor.
   // RETURNING gives us the rows to write activity for in the next step.
+  // Additional fields (user_email, user_first_name, fund_slug, frequency)
+  // are needed for the conversion-to-gift email we send right after the
+  // pause. The email tells the parent their recurring stopped and offers
+  // the one-click path to re-set-it-up as a recurring gift through the
+  // public gift link (same loop grandma uses).
   const flippedResult = await pool.query<Record<string, any>>(`
-    SELECT pc.id, pc.fund_id, pc.user_id, pc.amount,
-           f.recipient_first_name, f.name AS fund_name, f.user_id AS current_fund_owner_id
+    SELECT pc.id, pc.fund_id, pc.user_id, pc.amount, pc.frequency,
+           f.recipient_first_name, f.name AS fund_name, f.slug AS fund_slug,
+           f.user_id AS current_fund_owner_id,
+           u.email AS user_email, u.first_name AS user_first_name
     FROM parent_contributions pc
     JOIN funds f ON f.id = pc.fund_id
+    JOIN users u ON u.id = pc.user_id
     WHERE pc.status = 'active'
       AND f.user_id <> pc.user_id
   `);
@@ -445,6 +454,40 @@ async function autoPauseOwnershipMismatchedContributions(log: LogFn): Promise<vo
     } catch (err) {
       // Don't let activity-write failure block the pause itself.
       console.warn('[recurring-worker] failed to record handoff-pause activity:', err);
+    }
+
+    // Conversion-to-gift email. Per AGE_18_HANDOFF_SPEC.md Bucket 4b:
+    // when we auto-pause the parent's custodial recurring, offer them
+    // the one-click path to keep contributing through the gift loop.
+    // Same amount, same cadence, this time as a recurring gift via
+    // the public /{slug} URL the kid can share.
+    //
+    // Skipped when the user has no email on file (legacy seed rows,
+    // demo accounts). Best-effort — a single email failure does not
+    // block the pause, and we do not retry the email (the activity
+    // row carries the same information durably in the parent's
+    // dashboard feed).
+    const parentEmail = String(row.user_email || '').trim();
+    if (parentEmail) {
+      try {
+        const giftLinkUrl = row.fund_slug
+          ? `${getBaseUrl()}/${String(row.fund_slug)}`
+          : `${getBaseUrl()}/gift/${String(row.fund_id)}`;
+        const emailMsg = buildParentHandoffRecurringEmail({
+          to: parentEmail,
+          parentFirstName: row.user_first_name ? String(row.user_first_name) : null,
+          childFirstName: childName,
+          amountUsd: parseFloat(String(row.amount || '0')),
+          frequency: String(row.frequency || 'monthly'),
+          giftLinkUrl,
+        });
+        await sendEmail(emailMsg);
+      } catch (mailErr) {
+        console.warn(
+          '[recurring-worker] handoff-conversion email failed:',
+          mailErr,
+        );
+      }
     }
   }
 

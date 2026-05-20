@@ -14,6 +14,7 @@ import { db, pool } from "./db";
 import { isAuthenticated, isAdmin } from "./auth";
 import { getConfiguredSuperAdminEmails, isEmailInAdminSet } from "@shared/adminAccess";
 import { sendEmail } from "./emailDelivery";
+import { buildParentHandoffSubscriptionEmail } from "./templates/parentHandoffSubscription";
 import { sendOpsAlert } from "./ops";
 import { runGifterNotificationWorker, enqueueParentThankYou } from "./gifterNotificationWorker";
 import { isDemoFund, isDemoUser, demoMockCheckoutResponse } from "./demoSandbox";
@@ -5791,6 +5792,71 @@ export async function registerRoutes(
         title: "Age-18 handoff completed",
         description: `${fund.recipientFirstName || currentUser.firstName || "Your child"} now owns this fund in Kiddo.`,
       });
+
+      // Parent subscription honest-cancel email. Per
+      // AGE_18_HANDOFF_SPEC.md Bucket 4b + the locked subscription
+      // principle (project_subscription_retires_at_majority.md):
+      // when the parent's LAST managed fund flips to the kid AND they
+      // have an active paid subscription, send one honest email
+      // offering the cancel. No silent autopay through a sub that
+      // gates nothing.
+      //
+      // Conditions for sending:
+      //   (a) Parent has no other funds where they are still the
+      //       owner (this was their only managed fund). Checked AFTER
+      //       the ownership flip above so the just-transferred fund
+      //       is correctly excluded.
+      //   (b) Parent has an active paid subscription (plan in
+      //       {starter, family, legacy}, status active). Free-tier
+      //       parents have nothing to cancel; we don't email them.
+      //
+      // Single fire per handoff because this endpoint short-circuits
+      // on found.record.ownershipTransferredAt up-front. No need for
+      // an "already sent" flag.
+      //
+      // Best-effort: a failure here cannot roll back the actual
+      // ownership transfer that just succeeded. Logged loudly for ops
+      // visibility but not raised to the client response.
+      try {
+        const parentRemainingFunds = await storage.getFundsByUser(previousOwnerId);
+        if (parentRemainingFunds.length === 0) {
+          const parentSub = await storage.getSubscription(previousOwnerId);
+          const isPaidActive =
+            parentSub?.status === "active" &&
+            !!parentSub.plan &&
+            parentSub.plan !== "free";
+          if (isPaidActive) {
+            const [parent] = await db
+              .select({ email: users.email, firstName: users.firstName })
+              .from(users)
+              .where(eq(users.id, previousOwnerId))
+              .limit(1);
+            const parentEmail = String(parent?.email || "").trim();
+            if (parentEmail) {
+              const planLabel =
+                parentSub.plan === "family"
+                  ? "Kiddo Family"
+                  : parentSub.plan === "legacy"
+                  ? "Kiddo Legacy"
+                  : "Kiddo+";
+              const manageUrl = `${process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL || "https://kiddofund.com"}/settings?tab=membership`;
+              const emailMsg = buildParentHandoffSubscriptionEmail({
+                to: parentEmail,
+                parentFirstName: parent?.firstName ?? null,
+                childFirstName: fund.recipientFirstName || currentUser.firstName || "Your child",
+                planLabel,
+                manageSubscriptionUrl: manageUrl,
+              });
+              await sendEmail(emailMsg);
+            }
+          }
+        }
+      } catch (subEmailErr) {
+        console.error(
+          "[age18] Parent subscription handoff email failed (non-fatal):",
+          subEmailErr,
+        );
+      }
 
       res.json({
         success: true,

@@ -314,7 +314,7 @@ a schema change.
 **Status:** Shipping 2026-05-20 in the same commit cycle as this
 spec update.
 
-### Bucket 4b: Parent subscription honest-cancel email (DEFERRED)
+### Bucket 4b: Parent subscription honest-cancel email + recurring conversion offer (SHIPPED 2026-05-20)
 
 When `funds.userId` flips at majority AND the parent has no other
 funds where they are still the owner AND they have an active
@@ -342,10 +342,21 @@ latter is cleaner (synchronous with the actual flip).
 add it as part of the eventual ship. Until built, the column add
 is part of this spec, not a separate migration.
 
-**Status:** DEFERRED. The copy needs a focused design pass to
-land in the right register. Spec'd here so it does not get lost.
+**Status (subscription email):** SHIPPED 2026-05-20. Wired into
+`server/routes.ts` at the `/api/age-transition/:token/complete`
+endpoint. Single fire per handoff (the endpoint short-circuits on
+`ownershipTransferredAt` so the email-send block runs exactly
+once). Template at `server/templates/parentHandoffSubscription.ts`.
 
-### Bucket 4c: Parent post-handoff welcome screen (DEFERRED)
+**Status (recurring conversion offer email):** SHIPPED 2026-05-20.
+Wired into `server/recurringContributionWorker.ts` inside the
+`autoPauseOwnershipMismatchedContributions` sweep. One email per
+paused contribution, fires alongside the activity-row write.
+Template at `server/templates/parentHandoffRecurring.ts`. Both
+templates follow the locked tone rules: no em-dashes, no marketing
+teaser quotes, no AI-slop closers, calm Apple-Settings register.
+
+### Bucket 4c: Parent post-handoff welcome screen (DECIDED NOT TO SHIP)
 
 One screen, fires when the parent next logs in after the
 ownership flip. Mirror to the kid's `/welcome-at-18` walkthrough.
@@ -385,7 +396,51 @@ funds where `funds.previousOwnerUserId === user.id` AND
 `/parent-handoff-welcome`. Mirror to the kid's `kidWelcomeCompletedAt`
 check pattern.
 
-**Status:** DEFERRED. User-facing copy, deserves focused design.
+**Status:** DECIDED NOT TO SHIP 2026-05-20. Three existing surfaces
+already deliver the parent acknowledgment without adding a fourth:
+
+1. **Activity row** `age18_handoff_completed_parent` is written
+   for `previousOwnerId` at the same moment ownership transfers
+   (see `/api/age-transition/:token/complete` in `server/routes.ts`).
+   Title: "Age-18 handoff completed". Description names the
+   child. Visible on the parent's `/activity` feed.
+
+2. **Activity row** `recurring_paused` (with
+   `metadata.reason = 'majority_handoff'`) is written for each
+   recurring contribution the worker auto-pauses (see
+   `server/recurringContributionWorker.ts`). Title: "Recurring
+   investment paused". Description explains the handoff and
+   points at the gift-loop option.
+
+3. **Two email channels** carry the same information to the
+   parent's inbox: the conversion-to-gift offer (Bucket 4b) and
+   the subscription honest-cancel offer (Bucket 4b). Both fire
+   synchronously with the handoff.
+
+Adding a separate dashboard hero card or a dedicated route
+`/parent-handoff-welcome` would be a 4th surface duplicating
+information already on three. Per the locked
+calm-Apple-Settings register and "no feature theater" discipline
+from `project_canva_discipline.md`, the brilliant move is to
+recognize when the existing coverage is enough.
+
+**Edge case acknowledged:** A parent whose ONLY managed fund just
+transferred AND who does not read the email AND who lands on
+the Dashboard would see the standard "no funds" empty state.
+This is genuinely rare (single-kid parent, didn't open the
+inbox, navigated to Dashboard not Activity) and the empty state
+itself prompts toward `/funds` and `/activity`. If this turns
+out to be a real confusion in practice, the right fix is a
+small empty-state branch in `Dashboard.tsx` that checks for any
+`age18_handoff_completed_parent` activity row in the last 30
+days and surfaces a specific message ("Emma is the owner now"
+plus a link to her activity feed) instead of the generic
+"create your first fund" prompt. NOT a redirect to a separate
+welcome page; just a smarter empty state.
+
+**Trigger to re-open this decision:** the first time a real
+single-kid parent reports confusion at the post-handoff empty
+state. Until then, the existing three surfaces hold.
 
 ### The subscription decision is LOCKED
 
