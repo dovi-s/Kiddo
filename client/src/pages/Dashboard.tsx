@@ -7988,32 +7988,120 @@ export default function Dashboard() {
                 const childFirstSug = (recipientFirstNameDisplay || "").trim() || "your child";
                 const ord = (n: number) => n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
 
-                type SugTile = { key: string; emoji: string; name: string; sub: string; countdown: string; prefill: { name: string; eventType?: string; eventDate?: string; goalAmount?: string; eventCategory?: string } };
+                // SugTile gains a sortMs field so we can rank by date proximity at
+                // the end. Most imminent dated event leads. Goal events (no date)
+                // use sortMs = Infinity so they fall to the end of the visible 5
+                // but still appear if there's room. Previously the order was
+                // category-based (birthday → cultural → 13+ → holiday) which made
+                // newborn Jane see "1st Birthday May 2027 (11 months away)" ABOVE
+                // "Hanukkah Dec 2026 (6 months away)". Proximity-sort fixes that.
+                type SugTile = { key: string; emoji: string; name: string; sub: string; countdown: string; sortMs: number; prefill: { name: string; eventType?: string; eventDate?: string; goalAmount?: string; eventCategory?: string } };
                 const suggestions: SugTile[] = [];
 
-                // Birthday - always, if no active birthday event
-                if (childBirthdate && !activeEvents.some(e => e.eventType === "birthday")) {
+                // Birthday — three branches now, not one:
+                //   (1) Unborn / future-birthdate kid: suggest "Welcome [Name]"
+                //       with the birth date. The old code produced
+                //       "Jane's 0th Birthday" which is broken English and
+                //       not what the parent wants. The welcome event is the
+                //       moment that actually matters pre-birth.
+                //   (2) Newborn (under 1 year old): suggest "First Year" as
+                //       a savings goal AND the 1st birthday as the dated
+                //       event. The 1st birthday alone is too far away to
+                //       be the primary suggestion for a 2-week-old.
+                //   (3) Standard: next birthday with proper ordinal.
+                // Also fixed the today-is-the-birthday roll-forward by
+                // comparing against end-of-day on the candidate birthday
+                // rather than midnight. Without that fix, the suggestion
+                // on a kid's actual birthday said "next year" instead of
+                // showing "today."
+                if (childBirthdate) {
                   const bd = new Date(childBirthdate);
-                  const nextBday = new Date(bd.getFullYear(), bd.getMonth(), bd.getDate());
-                  nextBday.setFullYear(new Date().getFullYear());
-                  if (nextBday.getTime() <= nowMs) nextBday.setFullYear(nextBday.getFullYear() + 1);
-                  const nextAge = nextBday.getFullYear() - bd.getFullYear();
-                  const daysUntil = Math.ceil((nextBday.getTime() - nowMs) / 86400000);
-                  const countdownStr = daysUntil <= 60 ? `${daysUntil}d away` : daysUntil <= 365 ? `${Math.round(daysUntil / 30)}mo away` : `${Math.ceil(daysUntil / 365)}yr away`;
-                  suggestions.push({
-                    key: "sug-birthday", emoji: "🎂",
-                    name: `${childFirstSug}'s ${nextAge}${ord(nextAge)} Birthday`,
-                    sub: nextBday.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-                    countdown: countdownStr,
-                    prefill: { name: `${childFirstSug}'s ${nextAge}${ord(nextAge)} Birthday`, eventType: "birthday", eventDate: nextBday.toISOString().slice(0, 10), eventCategory: "gifting_occasion" },
-                  });
+                  const isUnborn = bd.getTime() > nowMs;
+                  const isNewborn = !isUnborn && childAgeNow !== null && childAgeNow < 1;
+                  const hasWelcomeOrBirthEvent = activeEvents.some(e =>
+                    String(e.name || "").toLowerCase().includes("welcome") ||
+                    String(e.name || "").toLowerCase().includes("arrival") ||
+                    e.eventType === "baby_shower",
+                  );
+
+                  if (isUnborn && !hasWelcomeOrBirthEvent) {
+                    // Pre-birth: the imminent moment is the welcome itself.
+                    const daysUntilBirth = Math.ceil((bd.getTime() - nowMs) / 86400000);
+                    const countdownStr = daysUntilBirth <= 60
+                      ? `${daysUntilBirth}d away`
+                      : daysUntilBirth <= 365
+                      ? `${Math.round(daysUntilBirth / 30)}mo away`
+                      : `${Math.ceil(daysUntilBirth / 365)}yr away`;
+                    suggestions.push({
+                      key: "sug-welcome", emoji: "👶",
+                      name: `Welcome ${childFirstSug}`,
+                      sub: bd.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                      countdown: countdownStr,
+                      sortMs: bd.getTime(),
+                      prefill: { name: `Welcome ${childFirstSug}`, eventType: "baby_shower", eventDate: bd.toISOString().slice(0, 10), eventCategory: "gifting_occasion" },
+                    });
+                  } else if (!activeEvents.some(e => e.eventType === "birthday")) {
+                    // Standard next-birthday math, with the today-is-birthday fix.
+                    const nextBday = new Date(bd.getFullYear(), bd.getMonth(), bd.getDate());
+                    nextBday.setFullYear(new Date().getFullYear());
+                    // End-of-day so today's birthday does not roll forward.
+                    // Previously: nextBday at midnight, nowMs somewhere later
+                    // in the day → "next year" instead of "today."
+                    nextBday.setHours(23, 59, 59, 999);
+                    if (nextBday.getTime() < nowMs) {
+                      nextBday.setFullYear(nextBday.getFullYear() + 1);
+                    }
+                    const nextAge = nextBday.getFullYear() - bd.getFullYear();
+                    // Guard against any residual 0/negative ordinal that could
+                    // slip through (e.g., kid born today, weird DST math). If
+                    // it does, skip the birthday tile rather than render
+                    // "0th Birthday." Welcome branch above is the right
+                    // fallback for the unborn case; for born-today we just
+                    // don't add a 1st-birthday tile a year away.
+                    if (nextAge > 0) {
+                      const daysUntil = Math.ceil((nextBday.getTime() - nowMs) / 86400000);
+                      const countdownStr = daysUntil <= 0
+                        ? "Today"
+                        : daysUntil <= 60
+                        ? `${daysUntil}d away`
+                        : daysUntil <= 365
+                        ? `${Math.round(daysUntil / 30)}mo away`
+                        : `${Math.ceil(daysUntil / 365)}yr away`;
+                      suggestions.push({
+                        key: "sug-birthday", emoji: "🎂",
+                        name: `${childFirstSug}'s ${nextAge}${ord(nextAge)} Birthday`,
+                        sub: nextBday.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                        countdown: countdownStr,
+                        sortMs: nextBday.getTime(),
+                        prefill: { name: `${childFirstSug}'s ${nextAge}${ord(nextAge)} Birthday`, eventType: "birthday", eventDate: nextBday.toISOString().slice(0, 10), eventCategory: "gifting_occasion" },
+                      });
+                    }
+                  }
+
+                  // First Year goal for newborns. Pairs with the 1st-birthday
+                  // tile above (which is 11+ months away for a freshly-born
+                  // kid). Captures the more concrete "let's build the fund
+                  // through year one" framing that parents of newborns
+                  // actually have in mind. No date — it's a goal.
+                  if (isNewborn && !activeEvents.some(e =>
+                    String(e.name || "").toLowerCase().includes("first year") ||
+                    String(e.name || "").toLowerCase().includes("year one"))) {
+                    suggestions.push({
+                      key: "sug-first-year", emoji: "🌱",
+                      name: `${childFirstSug}'s First Year`,
+                      sub: "Savings goal", countdown: "no date needed",
+                      sortMs: Number.POSITIVE_INFINITY,
+                      prefill: { name: `${childFirstSug}'s First Year`, eventType: "just_because", goalAmount: "2500", eventCategory: "savings_goal" },
+                    });
+                  }
                 }
 
                 // Cultural traditions - read early so we can interleave
                 const culturalBg = (activeFund as any)?.culturalBackground as CulturalBackground | null | undefined;
                 const traditions = culturalBg?.traditions ?? [];
 
-                // Cultural suggestions come right after birthday, before generic age-gated ones
+                // Cultural suggestions feed in. Each cultural suggestion gets a
+                // sortMs derived from its event date (or +Infinity for goals).
                 if (traditions.length > 0) {
                   const culturalSugs = getCulturalSuggestions({
                     traditions,
@@ -8024,20 +8112,55 @@ export default function Dashboard() {
                     nowMs,
                   });
                   for (const cs of culturalSugs) {
-                    if (!suggestions.some(s => s.key === cs.key)) suggestions.push(cs as SugTile);
+                    if (!suggestions.some(s => s.key === cs.key)) {
+                      const csDateStr = cs.prefill?.eventDate;
+                      const csMs = csDateStr ? new Date(csDateStr).getTime() : Number.POSITIVE_INFINITY;
+                      suggestions.push({ ...(cs as SugTile), sortMs: Number.isFinite(csMs) ? csMs : Number.POSITIVE_INFINITY });
+                    }
                   }
                 }
 
-                // Age-gated (13+)
+                // Driver's License (universal, age 14 to 16). Massive gifting
+                // moment for many families; previously absent. The 13+ block
+                // had First Car / Graduation / College but not the milestone
+                // the car money is FOR. Targets the kid's 16th birthday as
+                // the date so the goal has a concrete end-point.
+                if (childAgeNow !== null && childAgeNow >= 14 && childAgeNow <= 16 &&
+                    !activeEvents.some(e => String((e as any).name || "").toLowerCase().includes("license") || String((e as any).name || "").toLowerCase().includes("driver"))) {
+                  const sixteenthYear = childBirthdate ? childBirthdate.getFullYear() + 16 : new Date().getFullYear() + 1;
+                  const sixteenthDate = childBirthdate
+                    ? new Date(sixteenthYear, childBirthdate.getMonth(), childBirthdate.getDate())
+                    : new Date(sixteenthYear, 5, 1);
+                  const daysUntilSixteen = Math.ceil((sixteenthDate.getTime() - nowMs) / 86400000);
+                  const countdownStr = daysUntilSixteen <= 0
+                    ? "Already here"
+                    : daysUntilSixteen <= 60
+                    ? `${daysUntilSixteen}d away`
+                    : daysUntilSixteen <= 365
+                    ? `${Math.round(daysUntilSixteen / 30)}mo away`
+                    : `${Math.ceil(daysUntilSixteen / 365)}yr away`;
+                  suggestions.push({
+                    key: "sug-license", emoji: "🪪",
+                    name: `${childFirstSug}'s Driver's License`,
+                    sub: sixteenthDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                    countdown: countdownStr,
+                    sortMs: sixteenthDate.getTime(),
+                    prefill: { name: `${childFirstSug}'s Driver's License`, eventType: "just_because", eventDate: sixteenthDate.toISOString().slice(0, 10), eventCategory: "gifting_occasion" },
+                  });
+                }
+
+                // Age-gated (13+) - graduation, first car, college fund
                 if (childAgeNow !== null && childAgeNow >= 13) {
                   if (!activeEvents.some(e => e.eventType === "graduation")) {
                     const gradYear = childBirthdate ? childBirthdate.getFullYear() + 18 : new Date().getFullYear() + 4;
                     const yearsUntil = gradYear - new Date().getFullYear();
+                    const gradDateMs = new Date(gradYear, 5, 1).getTime();
                     suggestions.push({
                       key: "sug-grad", emoji: "🎓",
                       name: `${childFirstSug}'s Graduation`,
                       sub: `Class of ${gradYear}`,
-                      countdown: `${yearsUntil} yr${yearsUntil !== 1 ? "s" : ""} away`,
+                      countdown: yearsUntil <= 0 ? "This year" : `${yearsUntil} yr${yearsUntil !== 1 ? "s" : ""} away`,
+                      sortMs: gradDateMs,
                       prefill: { name: `${childFirstSug}'s Graduation`, eventType: "graduation", eventDate: `${gradYear}-06-01`, eventCategory: "gifting_occasion" },
                     });
                   }
@@ -8046,6 +8169,7 @@ export default function Dashboard() {
                       key: "sug-car", emoji: "🚗",
                       name: `${childFirstSug}'s First Car`,
                       sub: "Savings goal", countdown: "no date needed",
+                      sortMs: Number.POSITIVE_INFINITY,
                       prefill: { name: `${childFirstSug}'s First Car`, eventType: "just_because", goalAmount: "5000", eventCategory: "savings_goal" },
                     });
                   }
@@ -8054,6 +8178,7 @@ export default function Dashboard() {
                       key: "sug-college", emoji: "📚",
                       name: `${childFirstSug}'s College Fund`,
                       sub: "Savings goal", countdown: "no date needed",
+                      sortMs: Number.POSITIVE_INFINITY,
                       prefill: { name: `${childFirstSug}'s College Fund`, eventType: "just_because", goalAmount: "50000", eventCategory: "savings_goal" },
                     });
                   }
@@ -8069,9 +8194,20 @@ export default function Dashboard() {
                     name: "Holiday Gift Fund",
                     sub: `Dec 25, ${yr}`,
                     countdown: xmasDays > 0 ? `${xmasDays}d away` : "This season",
+                    sortMs: xmas.getTime(),
                     prefill: { name: `${childFirstSug}'s Holiday Fund`, eventType: "holiday", eventDate: `${yr}-12-25`, eventCategory: "gifting_occasion" },
                   });
                 }
+
+                // Sort by date proximity. Dated events (finite sortMs) lead,
+                // most imminent first. Undated goal events (sortMs Infinity)
+                // fall to the end of the list but stay visible if the cap of
+                // 5 has room. This is the brilliance fix the user asked for:
+                // a parent of newborn Jane previously saw "1st Birthday May
+                // 2027 (11 months away)" ABOVE "Hanukkah Dec 2026 (6 months
+                // away)" because category order beat proximity. Proximity-
+                // sort makes the closer-and-more-meaningful event lead.
+                suggestions.sort((a, b) => a.sortMs - b.sortMs);
 
                 const visibleSuggestions = suggestions.slice(0, 5);
 
