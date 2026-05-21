@@ -311,17 +311,31 @@ export default function CalculatorAt18() {
                 >
                   {fmtMoney(animatedProjectionMid)}
                 </p>
+                {/* Range line retoned 2026-05-21 from raw percentages
+                    ('at 5% ... at 9%') to scenario labels ('lean years
+                    ... strong years'). Per the wow-factor / honest-math
+                    audit triggered by the user's review of the Acorns
+                    Reddit community: that community's frequent
+                    'projection didn't match my outcome' complaints came
+                    from users who took the single-number projection as
+                    a forecast rather than understanding it as a
+                    mid-range scenario. Naming the bounds verbally
+                    ('lean years' / 'strong years') makes variance
+                    legible without changing the math. The headline
+                    number above stays the 7% case; this line clarifies
+                    what the other two ends of the range represent in
+                    human terms. */}
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Range: <span
+                  <span
                     className="font-semibold text-foreground tabular-nums"
                     aria-live={projectionLowAnimating ? "off" : "polite"}
                     aria-label={fmtMoney(projectionLow)}
-                  >{fmtMoney(animatedProjectionLow)}</span> at 5% to{" "}
+                  >{fmtMoney(animatedProjectionLow)}</span> in lean market years (5%) to{" "}
                   <span
                     className="font-semibold text-foreground tabular-nums"
                     aria-live={projectionHighAnimating ? "off" : "polite"}
                     aria-label={fmtMoney(projectionHigh)}
-                  >{fmtMoney(animatedProjectionHigh)}</span> at 9%, depending on market conditions over the {yearsToMajority}-year horizon.
+                  >{fmtMoney(animatedProjectionHigh)}</span> in strong market years (9%). Markets vary over a {yearsToMajority}-year horizon; the headline above is the long-term average.
                 </p>
 
                 <div className="mt-5 grid grid-cols-2 gap-3">
@@ -353,7 +367,7 @@ export default function CalculatorAt18() {
               <div className="mt-6 flex items-start gap-2.5 rounded-xl bg-muted/30 px-4 py-3.5 text-[12.5px] leading-relaxed text-muted-foreground">
                 <Info size={14} className="mt-0.5 flex-shrink-0" />
                 <p>
-                  Projections assume 5%, 7%, and 9% average annual market returns over the time horizon. Actual returns vary year to year and can be negative in any given year. Kiddo's 0.10% annual fee on invested assets is already netted out. The 4% savings APY is approximate (current US high-yield savings rates as of 2026; subject to change). Past performance does not guarantee future returns. This is illustrative math, not a guarantee. The state picker above sets the UTMA majority age (federal default 18; some states extend to 19, 20, or 21). For the full state-by-state table, see the{" "}
+                  Projections assume 5%, 7%, and 9% average annual market returns over the time horizon. The 5% lean-year bound reflects long-term historical averages; short windows (1 to 5 years) can underperform that, including negative total returns in down markets. Time and consistent contributions are what smooth the variance over a UTMA's full horizon. Kiddo's 0.10% annual fee on invested assets is already netted out. The 4% savings APY is approximate (current US high-yield savings rates as of 2026; subject to change). Past performance does not guarantee future returns. This is illustrative math, not a guarantee. The state picker above sets the UTMA majority age (federal default 18; some states extend to 19, 20, or 21). For the full state-by-state table, see the{" "}
                   <Link href="/tools/utma-by-state" className="text-primary hover:underline">
                     UTMA by state
                   </Link>{" "}
