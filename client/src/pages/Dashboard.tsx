@@ -137,7 +137,7 @@ import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanne
 import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
-import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix } from "@/lib/local-cache";
 import { projectFundValue } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
 import {
@@ -1100,21 +1100,13 @@ export default function Dashboard() {
     return () => window.clearInterval(id);
   }, []);
 
-  // Idle-time prefetch of next-likely pages. The parent on Dashboard will
-  // probably tap Memory Book / Activity within a session — pre-warm those
-  // queries during browser idle so the eventual click feels instant instead
-  // of click → spinner → render. Re-fires when activeFundId changes since
-  // Memory Book / thank-yous are fund-scoped. requestIdleCallback prevents
-  // this from competing with the dashboard's own critical fetches.
-  const fundIdForPrefetch = selectedFundId || "";
-  useEffect(() => {
-    if (!fundIdForPrefetch) return;
-    const cancel = onIdle(() => {
-      prefetchMemoryBook(queryClient, fundIdForPrefetch);
-      prefetchActivity(queryClient, 50);
-    });
-    return cancel;
-  }, [fundIdForPrefetch, queryClient]);
+  // Idle-time prefetch of next-likely pages used to live here, but
+  // depended on funds/fundsDataUpdatedAt (declared further down in
+  // the function body) for the staleness guard. Moved below the
+  // funds destructuring + activeFundId derivation so the prefetch
+  // can use the SAME validated activeFundId every fund-scoped query
+  // uses. Locked 2026-05-21 after the prefetch was identified as the
+  // 403-storm trigger that bypassed the activeFundId guard.
 
   useEffect(() => {
     setLetterInlineOpen(false);
@@ -1478,6 +1470,13 @@ export default function Dashboard() {
     refetch: refetchFunds,
     isFetching: fundsFetching,
     isSuccess: fundsSuccess,
+    // dataUpdatedAt = 0 while we're showing initialData (the cached
+    // funds list from localStorage); flips to a real timestamp the
+    // moment the network fetch resolves. Used below to gate
+    // selectedFundId validation — we can't trust the validation
+    // against a possibly-stale cache, so until the network confirms
+    // the truthful funds list we fall back to "first owned fund."
+    dataUpdatedAt: fundsDataUpdatedAt,
   } = useQuery<Fund[]>({
     queryKey: ["/api/funds"],
     queryFn: async () => {
@@ -1506,6 +1505,45 @@ export default function Dashboard() {
     if (!fundsSuccess) return;
     writeLocalCache(LOCAL_CACHE_KEYS.funds, funds);
   }, [funds, fundsSuccess]);
+
+  // Self-heal stale activeFundId. If the localStorage-cached fund ID
+  // points to a fund the current user doesn't own (post reset-dunphys
+  // reseed with fresh UUIDs, account switch in the same browser,
+  // fund closed in another tab, etc.), every fund-scoped query 403s
+  // on cold load before the page-level fallback (`funds[0]`) can
+  // settle — the stale ID gets baked into `activeFundId` at line
+  // ~1680 because the OR-fallback only kicks in when `selectedFundId`
+  // is empty, not when it's "set but wrong." Detect the mismatch
+  // once `funds` loads and swap to the first owned fund. This also
+  // clears the localStorage entry + URL `?fund=` param so the next
+  // load doesn't reproduce the storm. Locked 2026-05-21 after the
+  // reset-dunphys reseed surfaced the 403 cascade on every Dashboard
+  // query (dashboard-summary / memory / parent-contributions / etc.).
+  useEffect(() => {
+    if (fundsLoading || !fundsSuccess) return;
+    if (!selectedFundId) return;
+    if (funds.length === 0) return;
+    if (funds.some((f) => f.id === selectedFundId)) return;
+    const fallback = funds[0]?.id ?? "";
+    setSelectedFundId(fallback);
+    setActiveFundId(fallback);
+    const params = new URLSearchParams(window.location.search);
+    if (fallback) params.set("fund", fallback); else params.delete("fund");
+    const qs = params.toString();
+    window.history.replaceState({}, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+    // Also blow away the per-fund local caches keyed by the stale ID
+    // so the next page load doesn't briefly render against ghost data
+    // either. The funds-list cache itself stays valid (the funds query
+    // just refreshed it with the truthful list); only the fund-scoped
+    // caches under the obsolete UUID need eviction. Locked 2026-05-21
+    // after the second 403-storm report — the previous fix only
+    // cleared kiddo_active_fund_id; per-fund caches under the stale
+    // UUID survived and could resurface as initialData on the next
+    // mount.
+    removeLocalCachePrefix(`kora.dashboard-summary.`);
+    removeLocalCachePrefix(`kiddo.fund-balance.`);
+    removeLocalCache(`kora.activity.recent.${selectedFundId}`);
+  }, [fundsLoading, fundsSuccess, selectedFundId, funds]);
 
   // Mirror latest funds + plan into refs so the ADD_FUND_EVENT
   // handler (bound once above) reads current snapshots at fire
@@ -1677,8 +1715,47 @@ export default function Dashboard() {
     });
   }, [autoInvestQuoteData]);
 
-  const activeFundId = selectedFundId || funds[0]?.id || "";
+  // Validate selectedFundId against the loaded funds list. When it's
+  // in the list (cached or fresh), use it. When it's not, fall back
+  // to funds[0]. The previous fundsDataUpdatedAt > 0 gate was too
+  // aggressive — it forced a brief "no active fund" loading state on
+  // every cold page load even when the cached funds were valid,
+  // making the main app feel sluggish for the 99% case to defend
+  // against the rare stale-ID case.
+  //
+  // The defenses for the stale-ID case live elsewhere:
+  //   - The global 403 wrapper in main.tsx purges the offending ID
+  //     from localStorage on any /api/funds/<uuid>/... 403, so a
+  //     stale ID self-heals after one bad request rather than
+  //     requiring proactive validation.
+  //   - The self-heal effect below clears localStorage + URL when
+  //     funds loads and the selectedFundId isn't in it.
+  // Locked 2026-05-21 after the over-aggressive guard introduced a
+  // loading-state regression for the common case.
+  const selectedOwnedByUser =
+    funds.length > 0 && Boolean(selectedFundId) && funds.some((f) => f.id === selectedFundId);
+  const activeFundId = (selectedOwnedByUser ? selectedFundId : funds[0]?.id) || "";
   const activeFund = funds.find((f) => f.id === activeFundId) || funds[0];
+
+  // Idle-time prefetch of next-likely pages — relocated here from
+  // earlier in the function body 2026-05-21 so it can gate on the
+  // validated activeFundId. The parent on Dashboard will probably
+  // tap Memory Book / Activity within a session; pre-warm those
+  // queries during browser idle so the eventual click feels instant.
+  // Re-fires when activeFundId changes (Memory Book / thank-yous
+  // are fund-scoped). Critical: must NOT fire with selectedFundId
+  // directly — that bypasses the network-fresh + owned-by-user
+  // validation and was the 403-storm trigger on the second incident
+  // report.
+  useEffect(() => {
+    if (!activeFundId) return;
+    const cancel = onIdle(() => {
+      prefetchMemoryBook(queryClient, activeFundId);
+      prefetchActivity(queryClient, 50);
+    });
+    return cancel;
+  }, [activeFundId, queryClient]);
+
   // Display-capitalize the kid's first name once, use it everywhere.
   // Single derived variable so every kid-name rendering on this page
   // respects the parent's intent ("lauren" typed lowercase still
@@ -4411,7 +4488,14 @@ export default function Dashboard() {
           );
         })()}
 
-        {!authLoading && !fundsLoading && !bankLoading && setup.percent < 100 && (
+        {/* SetupProgressNudge hidden for demo accounts — the Dunphy
+            demo is showcase mode, not new-customer onboarding mode.
+            Setup tasks (link bank / activate investing / complete
+            profile) are seeded as already-done conceptually; the
+            nudge would otherwise show "4 of 5 complete" against
+            tasks that don't apply to a sandboxed account. Locked
+            2026-05-21 with the demo polish pass. */}
+        {!(user as any)?.isDemoAccount && !authLoading && !fundsLoading && !bankLoading && setup.percent < 100 && (
           <SetupProgressNudge
             title="Finish the few things behind the gift link"
             subtitle="This is the quiet setup that lets gifts move cleanly."
@@ -5205,6 +5289,7 @@ export default function Dashboard() {
                 the condition (it's a state-bump only) — React re-renders
                 when state changes regardless of whether it's read. */}
             {ssnSnoozeTick >= 0 && activeFund &&
+              !(user as any)?.isDemoAccount &&
               String((activeFund as any).accountType || "UTMA").toUpperCase() === "UTMA" &&
               !(activeFund as any).recipientSsnCollectedAt &&
               !readSsnLatched(String(activeFund.id)) &&
@@ -6132,12 +6217,17 @@ export default function Dashboard() {
               // Bands: 11–13 → Balanced, 14–15 → Conservative warning, 16–17 → Conservative final
               type BandDef = { key: string; minAge: number; maxAge: number; recommendKey: "balanced" | "conservative"; toneline: string };
               const bands: BandDef[] = [
+                // Toneline copy locked 2026-05-21 — rewritten away from
+                // the "as X gets closer, Y can lock in Z" AI rhythm
+                // (slogan structure, vague "lock in more of what's
+                // there" close). Now factual + direct: what the mix
+                // does mechanically, no warmth-words.
                 { key: "strategy_band_11_13", minAge: 11, maxAge: 14, recommendKey: "balanced",
-                  toneline: "As 18 gets closer, a steadier mix can lock in more of what's there." },
+                  toneline: "Balanced shifts about 40% from stocks into bonds. Less upside, less drawdown." },
                 { key: "strategy_band_14_15", minAge: 14, maxAge: 16, recommendKey: "conservative",
-                  toneline: "With under five years to go, capital preservation matters more than growth." },
+                  toneline: "Conservative is 70% bonds. Built for the last five years before handoff." },
                 { key: "strategy_band_16_17", minAge: 16, maxAge: 18, recommendKey: "conservative",
-                  toneline: `${recipientFirstNameDisplay || "They"} is almost 18. Conservative protects what's been built.` },
+                  toneline: "Conservative protects what's already there. You can change it back any time." },
               ];
               const activeBand = bands.find(b => ageYears >= b.minAge && ageYears < b.maxAge);
               if (!activeBand) return null;
@@ -6203,7 +6293,7 @@ export default function Dashboard() {
                     return next;
                   });
                   haptic("success");
-                  toast({ title: `${childFirst}'s mix updated 🌱`, description: `Switched to ${recommendedLabel}.` });
+                  toast({ title: `${childFirst}'s mix updated`, description: `Switched to ${recommendedLabel}.` });
                   void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
                   void queryClient.invalidateQueries({ queryKey: ["/api/funds", activeFundId, "dashboard-summary"] });
                 } catch (err) {
@@ -6219,11 +6309,19 @@ export default function Dashboard() {
                   transition={{ duration: 0.25 }}
                   className="rounded-2xl border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] p-5"
                 >
+                  {/* Eyebrow + body retoned 2026-05-21 — was
+                      "{kid} is growing up 🌱" + "around {age} years
+                      old. Want to shift to the {mix}?" which read as
+                      a parenting-app push notification rather than a
+                      product-page strategy review. Now factual:
+                      "Strategy review" eyebrow, age stated directly,
+                      mix change framed as a recommendation not a
+                      sales question. */}
                   <p className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-gold-ink))] mb-1">
-                    {childFirst} is growing up 🌱
+                    Strategy review
                   </p>
                   <p className="text-sm font-semibold text-foreground leading-snug">
-                    {childFirst} is around {Math.floor(ageYears)} years old. Want to shift to the {recommendedLabel}?
+                    {childFirst} is {Math.floor(ageYears)}. Most funds shift to the {recommendedLabel} around this age.
                   </p>
                   <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
                     {activeBand.toneline}

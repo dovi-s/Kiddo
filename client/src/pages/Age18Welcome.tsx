@@ -141,6 +141,16 @@ export default function Age18Welcome() {
   const totalGain = parseFloat(String(fund.totalGain || "0"));
   const at65Years = 65 - fund.majorityAge;
   const projectedAt65 = projectAt(balance, at65Years);
+  // Multi-gen projection — Treatment 5 of the five DUNPHY_DEMO_SPEC.md
+  // projection treatments. Anchors the heirloom-continuity narrative
+  // concretely: "your kid could inherit ~$X at their majority." 35-year
+  // horizon is the heuristic for "you have a kid at 30 and they reach
+  // 21" — close enough to the average modern-parent timing without
+  // pretending the user has a specific timeline. The number stays
+  // illustrative; the value of this card is the FRAME (this can keep
+  // running across generations), not a financial forecast.
+  const multiGenHorizonYears = 35;
+  const projectedMultiGen = projectAt(balance, multiGenHorizonYears);
 
   return (
     <div className="min-h-screen bg-background">
@@ -215,6 +225,33 @@ export default function Age18Welcome() {
                 tone="sell"
               />
             </div>
+            {/* Multi-gen / heirloom-continuity callout. The fund
+                doesn't have to end with you. If you keep it and
+                eventually pass it to your own kid, the same mechanism
+                that delivered it to you compounds for another generation.
+                Calmly framed: the value of this card is the FRAME
+                ("this can keep running across generations"), not the
+                forecast. Locked 2026-05-21 per the heirloom-positioning
+                roadmap; same locked 7% assumption + illustrative
+                disclaimer as the at-65 number above. */}
+            {balance > 0 && (
+              <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)] p-5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
+                  <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] uppercase tracking-wide">
+                    Or pass it down
+                  </p>
+                </div>
+                <p className="text-sm text-foreground/85 leading-relaxed">
+                  You don't have to be the last person this fund belongs to. Keep it invested through your own life and your own kids' childhoods, and at {multiGenHorizonYears} years from now it could be worth around{" "}
+                  <span className="font-semibold text-foreground">{formatMoney(projectedMultiGen, { decimals: 0 })}</span>{" "}
+                  — enough to start another Kiddo for the next generation.
+                </p>
+                <p className="text-[10px] text-muted-foreground/70 leading-snug">
+                  Assumes 7% yearly average. Illustrative only. Markets vary.
+                </p>
+              </div>
+            )}
             <p className="text-sm text-muted-foreground italic">
               You don't have to decide anything right now. Most people don't.
             </p>

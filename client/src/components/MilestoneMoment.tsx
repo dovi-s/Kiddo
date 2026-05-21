@@ -188,8 +188,8 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, on
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 {recipientName
-                  ? `${recipientName}'s fund just crossed ${formatMilestone(milestone)}.`
-                  : `Your fund just crossed ${formatMilestone(milestone)}.`}
+                  ? `${recipientName}'s fund crossed ${formatMilestone(milestone)}.`
+                  : `Your fund crossed ${formatMilestone(milestone)}.`}
                 {milestoneCopy?.emotionalLine ? ` ${milestoneCopy.emotionalLine}` : ""}
               </p>
               <button
@@ -199,7 +199,7 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, on
                 data-testid="button-share-milestone-moment"
               >
                 <Share2 size={15} />
-                Share this moment
+                Share
               </button>
             </div>
           </div>

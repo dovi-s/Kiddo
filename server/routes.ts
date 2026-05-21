@@ -4102,6 +4102,17 @@ export async function registerRoutes(
             nextBirthdayLabel: fund.recipientBirthdate
               ? new Date(fund.recipientBirthdate).toLocaleDateString("en-US", { month: "long", day: "numeric" })
               : null,
+            // Birthdate + majorityAge added 2026-05-21 so the gifter
+            // dashboard can compute per-gift / per-relationship projected
+            // impact ("Your $1,500 to Haley could be worth ~$X when she
+            // turns 21"). Treatment 3 of the five DUNPHY_DEMO_SPEC.md
+            // projection treatments. Same data the parent dashboard
+            // already exposes; not a privacy step-change for the gifter
+            // surface — birthdate ALREADY round-trips via nextBirthdayLabel.
+            recipientBirthdate: fund.recipientBirthdate
+              ? new Date(fund.recipientBirthdate).toISOString().slice(0, 10)
+              : null,
+            majorityAge: Number((fund as any).majorityAge) || 18,
             childPhase: ageInfo.phase,
             fundStatus: String(fund.status || "draft"),
             currentFundValue: Number(currentFundValue.toFixed(2)),

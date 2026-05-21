@@ -1173,11 +1173,19 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
             }}
           >
             <div style={{ minWidth: 0 }}>
+              {/* Copy retoned 2026-05-21 — "outside the gift loop" was
+                  internal-team jargon ("the gift loop" is how the team
+                  talks about the multi-gifter retention mechanic);
+                  a real parent has no idea what that means and reads
+                  the line as broken AI output. Em-dash also dropped
+                  (banned in product copy). Now states the actual use
+                  case factually: a printable view for people who
+                  aren't on the app. */}
               <p style={{ fontSize: 12.5, fontWeight: 600, color: "rgb(26,23,16)" }}>
-                Print a one-page snapshot
+                Print a one-page summary
               </p>
               <p style={{ fontSize: 11, color: "rgb(120,110,100)", marginTop: 1, lineHeight: 1.4 }}>
-                For sharing with a spouse, advisor, or grandparent — outside the gift loop.
+                For people who aren't on the app. A spouse, advisor, or grandparent.
               </p>
             </div>
             <a

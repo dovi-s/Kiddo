@@ -26,7 +26,8 @@ import { eq, sql, desc } from "drizzle-orm";
 import { db } from "../db";
 import { storage } from "../storage";
 import { WebhookHandlers } from "../webhookHandlers";
-import { users, transactions, fundSnapshots } from "@shared/schema";
+import { users, transactions, fundSnapshots, fundCollaborators, funds as fundsTable } from "@shared/schema";
+import { and, inArray } from "drizzle-orm";
 import { yearOfLifeForDate } from "../../shared/age18-decisions";
 
 export type KidAgePhase = {
@@ -104,6 +105,43 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
         } catch (canonicalErr) {
           console.warn("[funds] canonical fallback skipped:", (canonicalErr as any)?.message || canonicalErr);
         }
+      }
+
+      // Merge in funds the user is an ACCEPTED collaborator on
+      // (co-parent / partner access). Without this, GET /api/funds
+      // returns only owner-funds, so the co-parent's dashboard sees
+      // an empty list and gets redirected to /get-started — even
+      // though every per-fund endpoint (gated by requireOwnedFundParam)
+      // would happily grant them access. Locked 2026-05-21 after the
+      // Dunphy demo's Claire account exposed this gap end-to-end.
+      try {
+        const collaboratorRows = await db
+          .select({ fundId: fundCollaborators.fundId })
+          .from(fundCollaborators)
+          .where(and(
+            eq(fundCollaborators.userId, userId),
+            eq(fundCollaborators.status, "accepted"),
+          ));
+        const collaboratorFundIds = collaboratorRows
+          .map((row) => String(row.fundId || ""))
+          .filter(Boolean);
+        const alreadyListed = new Set(funds.map((f: any) => String(f?.id || "")));
+        const missingFundIds = collaboratorFundIds.filter((id) => !alreadyListed.has(id));
+        if (missingFundIds.length > 0) {
+          const collabFunds = await db
+            .select()
+            .from(fundsTable)
+            .where(inArray(fundsTable.id, missingFundIds));
+          // Tag with accessRole='collaborator' so client surfaces can
+          // identify them without re-querying fund_collaborators.
+          for (const fund of collabFunds) {
+            funds.push({ ...(fund as any), accessRole: "collaborator" as const });
+          }
+        }
+      } catch (collabErr) {
+        // Non-fatal — collaborator merge is additive. If it fails,
+        // owner-funds still render correctly.
+        console.warn("[funds] collaborator merge skipped:", (collabErr as any)?.message || collabErr);
       }
 
       // Append previously-owned funds AFTER the email-merge step so

@@ -30,7 +30,14 @@ import {
   fundSnapshots,
   gifterFunds,
   bankAccounts,
+  fundCollaborators,
+  thankYous,
+  recurringGifts,
+  events,
+  ageTransitions,
+  age18ReminderState,
 } from "../shared/schema";
+import { sql as drizzleSql } from "drizzle-orm";
 import { eq, inArray } from "drizzle-orm";
 import { runDunphySeed } from "./seed-dunphys";
 
@@ -73,15 +80,45 @@ async function wipeDemoState(): Promise<void> {
   //    cascade onto Stripe IDs the seed sets to null, no real harm.
   //    Keeping the row avoids a needless DELETE.
   if (demoFundIds.length > 0) {
+    // ORDER MATTERS: every table that FK-references gifts.id must
+    // be wiped BEFORE gifts; every table that FK-references funds.id
+    // must be wiped BEFORE funds. The references are:
+    //   memory_entries.gift_id  → gifts.id   (no cascade)
+    //   thank_yous.gift_id      → gifts.id   (no cascade)
+    //   transactions.gift_id    → gifts.id   (no cascade)
+    //   events.fund_id          → funds.id   (NOT NULL, no cascade)
+    //   age_transitions.fund_id → funds.id   (PK, no cascade)
+    //   age18_reminder_state.fund_id → funds.id (PK, no cascade)
+    //   plus various nullable refs (referralEvents, analyticsEvents,
+    //   notifications, etc.) — handled via raw SQL nullable update.
+    // Locked 2026-05-21 after each FK fix surfaced the next one.
+    await db.delete(memoryEntries).where(inArray(memoryEntries.fundId, demoFundIds));
+    await db.delete(thankYous).where(inArray(thankYous.fundId, demoFundIds));
+    await db.delete(transactions).where(inArray(transactions.fundId, demoFundIds));
+    await db.delete(recurringGifts).where(inArray(recurringGifts.fundId, demoFundIds));
     await db.delete(gifts).where(inArray(gifts.fundId, demoFundIds));
     await db.delete(holdings).where(inArray(holdings.fundId, demoFundIds));
-    await db.delete(memoryEntries).where(inArray(memoryEntries.fundId, demoFundIds));
     await db.delete(activities).where(inArray(activities.fundId, demoFundIds));
     await db.delete(parentContributions).where(inArray(parentContributions.fundId, demoFundIds));
-    await db.delete(transactions).where(inArray(transactions.fundId, demoFundIds));
     await db.delete(fundMemberships).where(inArray(fundMemberships.fundId, demoFundIds));
     await db.delete(fundSnapshots).where(inArray(fundSnapshots.fundId, demoFundIds));
     await db.delete(gifterFunds).where(inArray(gifterFunds.fundId, demoFundIds));
+    await db.delete(events).where(inArray(events.fundId, demoFundIds));
+    await db.delete(ageTransitions).where(inArray(ageTransitions.fundId, demoFundIds));
+    await db.delete(age18ReminderState).where(inArray(age18ReminderState.fundId, demoFundIds));
+    // Wipe co-parent collaborator rows so the seed can re-create them
+    // from a clean slate (Claire's row, anyone else added per-fund).
+    await db.delete(fundCollaborators).where(inArray(fundCollaborators.fundId, demoFundIds));
+    // Nullable refs (notifications, referral_events, analytics_events,
+    // blocked_gifters, gift_intents). The seed doesn't create rows in
+    // these tables, but defensive SET NULL handles any background-
+    // worker side-effects so the fund delete won't FK-fail.
+    const idsList = drizzleSql.join(demoFundIds.map((id) => drizzleSql`${id}`), drizzleSql`, `);
+    await db.execute(drizzleSql`UPDATE notifications     SET fund_id = NULL WHERE fund_id IN (${idsList})`);
+    await db.execute(drizzleSql`UPDATE referral_events   SET fund_id = NULL WHERE fund_id IN (${idsList})`);
+    await db.execute(drizzleSql`UPDATE analytics_events  SET fund_id = NULL WHERE fund_id IN (${idsList})`);
+    await db.execute(drizzleSql`UPDATE blocked_gifters   SET fund_id = NULL WHERE fund_id IN (${idsList})`);
+    await db.execute(drizzleSql`UPDATE gift_intents      SET fund_id = NULL WHERE fund_id IN (${idsList})`);
     console.log(`  cleared dependents for ${demoFundIds.length} fund(s)`);
   }
 

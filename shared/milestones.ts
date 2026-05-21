@@ -17,69 +17,85 @@ export type MoneyCrossCopy = {
   emotionalLine: string;
 };
 
+// Prescriptive cost-anchors dropped 2026-05-21. Earlier iterations
+// mapped each threshold to a specific real-world purchase
+// ("community college", "used car", "private college"). Reading
+// audit:
+//   - PRESCRIPTIVE — telling parents what their kid's money is FOR
+//     is patronizing and class-coded. Parents whose kid is headed to
+//     Stanford read "community college" as demeaning; parents
+//     perfectly happy with community college read "half a private
+//     college" as guilt-tripping.
+//   - INDUSTRY: Acorns / Apple Wallet / Robinhood all keep their
+//     achievement copy generic for exactly this reason. The number
+//     itself IS the celebration; the parent gives it meaning.
+//   - VARIANCE: a $5,000 milestone hits very differently for a kid
+//     entering kindergarten than for one near 18. The prescription
+//     ("a year of college") that fits the older kid is irrelevant
+//     to the younger.
+// Now the copy is just the announcement: "{Child}'s fund crossed
+// $X." No cost anchor, no implied purchase, no class-coded close.
+// emotionalLine is kept on the type for back-compat with consumers
+// that still read it (gifter notification worker, etc.) but is
+// empty everywhere — the render code already handles empty as
+// "skip the sub-line."
 export const MONEY_CROSS_COPY: Record<number, MoneyCrossCopy> = {
   100: {
     title: "First $100",
-    description: (n) => `${n}'s fund just crossed $100. The first century. Every gift from here builds on this.`,
-    emotionalLine: "The first century. Every gift from here builds on this.",
+    description: (n) => `${n}'s fund crossed $100.`,
+    emotionalLine: "",
   },
   500: {
     title: "Fund crossed $500",
-    description: (n) => `${n}'s fund hit $500. Real momentum.`,
-    emotionalLine: "Real momentum.",
+    description: (n) => `${n}'s fund crossed $500.`,
+    emotionalLine: "",
   },
   1000: {
     title: "Four figures",
-    // 2026-05-20: replaced "Years of small gifts compound into something
-    // serious." That line assumed a years-of-small-gifts path that does
-    // not universally apply (a fund crossing $1,000 via one big birthday
-    // gift would read it as factually off). The new line is pattern-
-    // neutral and forward-looking ("years ahead" not "years past") so
-    // it works whether the fund got here via 50 small gifts or one
-    // generous one. Matches the value-focused framing of the adjacent
-    // $500 ("Real momentum.") and $2,500 ("The compounding is real
-    // now.") lines.
-    description: (n) => `${n}'s fund crossed $1,000. Real money now, with years of compounding ahead.`,
-    emotionalLine: "Real money now, with years of compounding ahead.",
+    description: (n) => `${n}'s fund crossed $1,000.`,
+    emotionalLine: "",
   },
   2500: {
     title: "Fund crossed $2,500",
-    description: (n) => `${n}'s fund just hit $2,500.`,
-    emotionalLine: "The compounding is real now.",
+    description: (n) => `${n}'s fund crossed $2,500.`,
+    emotionalLine: "",
   },
   5000: {
     title: "Fund crossed $5,000",
-    description: (n) => `${n}'s fund crossed $5,000. A year of community college, paid in full.`,
-    emotionalLine: "A year of community college, paid in full.",
+    description: (n) => `${n}'s fund crossed $5,000.`,
+    emotionalLine: "",
   },
   10000: {
     title: "Five figures",
-    description: (n) => `${n}'s fund hit $10,000. This is a real number now.`,
-    emotionalLine: "This is a real number now.",
+    description: (n) => `${n}'s fund crossed $10,000.`,
+    emotionalLine: "",
   },
   25000: {
     title: "Fund crossed $25,000",
-    description: (n) => `${n}'s fund crossed $25,000. Pre-college territory.`,
-    emotionalLine: "Pre-college territory.",
+    description: (n) => `${n}'s fund crossed $25,000.`,
+    emotionalLine: "",
   },
   50000: {
-    title: "Half-college",
-    description: (n) => `${n}'s fund hit $50,000. Half of a four-year private college, in the bank.`,
-    emotionalLine: "Half of a four-year private college, in the bank.",
+    title: "Fund crossed $50,000",
+    description: (n) => `${n}'s fund crossed $50,000.`,
+    emotionalLine: "",
   },
   100000: {
     title: "Six figures",
-    description: (n) => `${n}'s fund crossed $100,000. A full state-school year, plus.`,
-    emotionalLine: "A full state-school year, plus.",
+    description: (n) => `${n}'s fund crossed $100,000.`,
+    emotionalLine: "",
   },
 };
 
-// Format a milestone amount for display ($5,000 → "$5K", $1,000,000 → "$1M").
-// Used in the in-app card's headline number + share text.
+// Format a milestone amount for display. Returns the full dollar
+// figure with commas ($5,000 not $5K) — locked 2026-05-21 to match
+// the Apple-Settings product register rather than the Robinhood-
+// brand register the previous "$5K / $1M" abbreviation belonged to.
+// Above $1M, abbreviate to keep the hero number readable (no kid's
+// UTMA realistically hits $1M+ pre-handoff, but keep the branch).
 export function formatMilestone(value: number): string {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `$${(value / 1_000).toFixed(0)}K`;
-  return `$${value}`;
+  return `$${value.toLocaleString("en-US")}`;
 }
 
 // Returns the milestone threshold that was just crossed, or null if no

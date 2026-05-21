@@ -8,6 +8,9 @@ import { Nav } from "@/components/layout/Nav";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/hooks/use-auth";
+import { useFunds } from "@/hooks/use-funds";
+import { projectFundValue, yearsBetween } from "@shared/projection";
 import type { Activity } from "@shared/schema";
 
 type ActivityWithFund = Activity & { fundName: string | null; recipientFirstName: string | null };
@@ -73,6 +76,8 @@ function getTypeConfig(type: string) {
 export default function ActivityDetail() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const { data: funds = [] } = useFunds();
 
   const { data: activity, isLoading, error } = useQuery<ActivityWithFund>({
     queryKey: ["/api/activities", id],
@@ -80,6 +85,41 @@ export default function ActivityDetail() {
     enabled: !!id,
     retry: false,
   });
+
+  // Per-gift micro-projection. Demo-gated for now (per the same
+  // 2026-05-20 strategic decision that landed the Combined slider in
+  // Age18Plan): the live product keeps its existing simpler gift
+  // detail page until we're ready to graduate this. Treatment 2 of
+  // the five projection treatments in DUNPHY_DEMO_SPEC.md.
+  const isDemoUser = Boolean((user as any)?.isDemoAccount);
+  const giftProjection = (() => {
+    if (!isDemoUser) return null;
+    if (!activity) return null;
+    if (normalizeType(activity.type) !== "gift_received") return null;
+    if (!activity.fundId || !activity.amount) return null;
+    const amount = Number(parseFloat(String(activity.amount)));
+    if (!Number.isFinite(amount) || amount <= 0) return null;
+    const fund = funds.find((f) => f.id === activity.fundId);
+    if (!fund?.recipientBirthdate) return null;
+    const majorityAge = Number((fund as any).majorityAge) || 18;
+    const majorityDate = new Date(fund.recipientBirthdate);
+    majorityDate.setFullYear(majorityDate.getFullYear() + majorityAge);
+    const yearsAhead = yearsBetween(new Date(), majorityDate);
+    if (yearsAhead < 0.5) return null; // close-to-majority — projection isn't meaningful
+    const projected = projectFundValue({
+      startingValue: amount,
+      monthlyContribution: 0,
+      yearsAhead,
+      contributionYears: 0,
+    });
+    return {
+      amount,
+      projected,
+      yearsAhead,
+      majorityAge,
+      childName: fund.recipientFirstName || "the recipient",
+    };
+  })();
 
   if (isLoading) {
     return (
@@ -226,6 +266,42 @@ export default function ActivityDetail() {
                   <p className="text-sm font-medium text-[hsl(var(--kora-gold-ink))]">Details</p>
                 </div>
                 <p className="text-foreground leading-relaxed" data-testid="text-activity-metadata">{metadataLabel}</p>
+              </motion.div>
+            )}
+
+            {/* Per-gift micro-projection (demo-gated). Anchors the gift
+                amount to its compounding future value at the recipient's
+                majority. Treatment 2 of the five projection treatments
+                in DUNPHY_DEMO_SPEC.md. Shows "this $X stays invested
+                and becomes ~$Y at age N" so the gifter sees the
+                long-tail outcome of the gift they're looking at. */}
+            {giftProjection && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.100 }}
+                className="rounded-2xl border-2 border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)] p-5"
+                data-testid="gift-micro-projection"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp size={16} className="text-[hsl(var(--kiddo-evergreen))]" />
+                  <p className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                    What this gift becomes
+                  </p>
+                </div>
+                <p className="text-2xl font-bold text-foreground font-heading tabular-nums">
+                  ~${giftProjection.projected.toLocaleString()}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                  If this ${giftProjection.amount.toLocaleString()} stays invested for the next{" "}
+                  {giftProjection.yearsAhead < 2
+                    ? `${Math.round(giftProjection.yearsAhead * 12)} months`
+                    : `${giftProjection.yearsAhead.toFixed(1)} years`}
+                  {" "}until {giftProjection.childName} turns {giftProjection.majorityAge}.
+                </p>
+                <p className="text-[10px] text-muted-foreground/60 mt-3 leading-snug">
+                  Assumes 7% yearly average minus 0.10% AUM fee. Illustrative only — markets vary.
+                </p>
               </motion.div>
             )}
 

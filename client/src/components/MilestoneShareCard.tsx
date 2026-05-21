@@ -1,4 +1,4 @@
-import { Sprout, Sparkles } from "lucide-react";
+import { Sprout } from "lucide-react";
 import { MONEY_CROSS_COPY, formatMilestone } from "@shared/milestones";
 
 // Polished, screenshot-optimized share card. Designed at a 4:5 portrait
@@ -24,8 +24,7 @@ export function MilestoneShareCard({ threshold, recipientName }: MilestoneShareC
   const copy = MONEY_CROSS_COPY[threshold];
   const childName = (recipientName && recipientName.trim()) || "this fund";
   const emotionalLine = copy?.emotionalLine || "";
-  const fullAmount = `$${threshold.toLocaleString("en-US")}`;
-  const compactAmount = formatMilestone(threshold);
+  const fullAmount = formatMilestone(threshold);
 
   return (
     <div
@@ -37,40 +36,47 @@ export function MilestoneShareCard({ threshold, recipientName }: MilestoneShareC
       }}
       data-testid="milestone-share-card"
     >
+      {/* Header — Sparkles icon dropped 2026-05-21 per the codebase
+          no-Sparkles rule (banned alongside generic celebratory
+          iconography). Brand sprout already lives in the footer; the
+          eyebrow alone carries the milestone label without doubling
+          the visual celebration. */}
       <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold)/0.18)]">
-            <Sparkles size={18} className="text-[hsl(var(--kiddo-gold))]" />
-          </div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold-ink))]">
-            Milestone
-          </p>
-        </div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-gold-ink))]">
+          Milestone
+        </p>
       </div>
 
-      <div className="space-y-3">
-        <p className="font-heading text-7xl font-bold leading-none tabular-nums text-foreground sm:text-8xl">
-          {compactAmount}
+      {/* Body retoned 2026-05-21 — formatMilestone now returns full
+          $5,000 not $5K, so the previous compactAmount/fullAmount
+          double-statement was reading as "$5K / Alex's fund just
+          crossed $5,000." (the same number twice). Now: child name
+          intro, hero number, emotional anchor. Three lines, each
+          carrying distinct info. */}
+      <div className="space-y-2">
+        <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          {childName}'s fund crossed
         </p>
-        <p className="text-base font-semibold leading-snug text-foreground">
-          {childName}'s fund just crossed {fullAmount}.
+        <p className="font-heading text-7xl font-bold leading-none tabular-nums text-foreground sm:text-8xl">
+          {fullAmount}
         </p>
         {emotionalLine && (
           <p className="text-sm leading-relaxed text-muted-foreground">{emotionalLine}</p>
         )}
       </div>
 
+      {/* Footer — "Gifts that actually last" tagline dropped
+          2026-05-21. Marketing-page copy on a product surface, same
+          register the codebase audited out elsewhere (the home-page
+          tagline lives on the home page; not on a per-event card a
+          parent shares to family). Sprout + "Powered by Kiddo" is
+          enough attribution. */}
       <div className="space-y-2 pt-2">
         <div className="h-px w-full bg-[hsl(var(--kiddo-gold)/0.30)]" />
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Sprout size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
-            <p className="text-xs font-semibold text-foreground">
-              Powered by Kiddo
-            </p>
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            Gifts that actually last
+        <div className="flex items-center gap-1.5">
+          <Sprout size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
+          <p className="text-xs font-semibold text-foreground">
+            Powered by Kiddo
           </p>
         </div>
       </div>

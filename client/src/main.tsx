@@ -53,6 +53,77 @@ if (typeof window !== "undefined") {
     };
     (window as any).__koraDevFetchPatched = true;
   }
+
+  // Global safety net for 403s on fund-scoped endpoints. Any time a
+  // request to /api/funds/<uuid>/... returns 403, the cached fund ID
+  // pointing at that UUID is definitely stale (the server says the
+  // current user doesn't own this fund). Eagerly clear the
+  // localStorage entries that could keep re-introducing the bad ID
+  // on the next page load — without this, the activeFundId guard in
+  // Dashboard only fixes the current render, not the stored state
+  // that re-seeds the bad ID next time.
+  //
+  // Pattern: wrap window.fetch a second time AFTER the dev-auth
+  // wrapper above, so both layers compose. The wrapper observes the
+  // response, doesn't transform anything else. localStorage writes
+  // are best-effort; failures fall through silently.
+  //
+  // Locked 2026-05-21 after the third 403-storm report — even with
+  // the Dashboard activeFundId guard and the prefetch fix, a stale
+  // ?fund=... URL param or a cached selectedFundId could still get
+  // re-introduced from any number of code paths. The cleanest
+  // self-heal is at the response layer.
+  const FUND_SCOPED_PATH = /^\/api\/funds\/([0-9a-f-]{8,})\//i;
+  const ACTIVE_FUND_LS_KEY = "kiddo_active_fund_id";
+  const FUNDS_LIST_LS_KEY = "kiddo.dashboard.funds.v1";
+  const cleanupAlready = (window as any).__koraStaleFundCleanupInstalled === true;
+  if (!cleanupAlready) {
+    const layeredFetch = window.fetch.bind(window);
+    window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const response = await layeredFetch(input, init);
+      try {
+        if (response.status === 403) {
+          const raw = typeof input === "string"
+            ? input
+            : input instanceof URL
+              ? input.toString()
+              : (input as Request).url;
+          const url = new URL(raw, window.location.origin);
+          const match = url.pathname.match(FUND_SCOPED_PATH);
+          if (match && match[1]) {
+            const offendingFundId = match[1].toLowerCase();
+            const cachedActiveId = (window.localStorage.getItem(ACTIVE_FUND_LS_KEY) || "").toLowerCase();
+            if (cachedActiveId && cachedActiveId === offendingFundId) {
+              window.localStorage.removeItem(ACTIVE_FUND_LS_KEY);
+            }
+            // Strip ?fund=<offending> from URL if present so a hard
+            // reload doesn't re-introduce it.
+            const currentParams = new URLSearchParams(window.location.search);
+            if ((currentParams.get("fund") || "").toLowerCase() === offendingFundId) {
+              currentParams.delete("fund");
+              const qs = currentParams.toString();
+              window.history.replaceState({}, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
+            }
+            // Drop the cached funds list — it's possibly stale and
+            // could re-validate the bad ID on next mount. The
+            // Dashboard's useQuery will refetch on next render.
+            window.localStorage.removeItem(FUNDS_LIST_LS_KEY);
+            // Drop any per-fund caches keyed by the offending UUID.
+            for (let i = window.localStorage.length - 1; i >= 0; i--) {
+              const k = window.localStorage.key(i);
+              if (k && k.toLowerCase().includes(offendingFundId)) {
+                window.localStorage.removeItem(k);
+              }
+            }
+          }
+        }
+      } catch {
+        // best-effort; never block the response
+      }
+      return response;
+    };
+    (window as any).__koraStaleFundCleanupInstalled = true;
+  }
 }
 
 class AppErrorBoundary extends React.Component<

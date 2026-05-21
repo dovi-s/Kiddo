@@ -61,6 +61,20 @@ export async function deriveActionItemsForUser(
 ): Promise<ActionItem[]> {
   const out: ActionItem[] = [];
 
+  // Demo accounts skip action-item derivation entirely. The Dunphy
+  // demo is showcase-mode — the visitor is here to see what a
+  // fully-set-up Kiddo dashboard feels like, not the new-customer
+  // onboarding state. KYC nudges, bank-link prompts, "activate
+  // investing" CTAs, and the SetupProgressNudge all live on the
+  // action-items / setup-progress derivations and are noise inside
+  // the demo. Locked 2026-05-21 after the demo dashboard surfaced
+  // four separate setup-incomplete nudges (link bank, finish setup,
+  // activate investing, etc.) on Phil's seeded Family-tier account —
+  // none of which apply to a sandboxed demo.
+  if ((user as any)?.isDemoAccount) {
+    return out;
+  }
+
   // KYC-state-driven items. KYC is user-scoped; we anchor the card
   // to the user's first fund (same anchor routes.ts uses when it
   // logs the activity). Resolved when kycStatus is "approved" or

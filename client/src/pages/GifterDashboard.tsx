@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 // BookOpen replaces Sparkles 2026-05-12 for "Latest Memory Book moment" —
 // Sparkles banned per feedback_no_ai_slop.md. BookOpen is the locked Memory
 // Book semantic icon per feedback_iconography_consistency.md.
-import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing } from "lucide-react";
+import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,6 +14,7 @@ import { buildTrackedGetStartedHref } from "@/lib/acquisition";
 import { useCountUp } from "@/hooks/use-count-up";
 import { GifterFundSparkline } from "@/components/GifterFundSparkline";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { projectFundValue, yearsBetween } from "@shared/projection";
 
 // Per-user gifter dashboard cache. Same caching trio pattern (initialData
 // + writeLocalCache + 5-minute staleTime) as the rest of the codebase
@@ -36,6 +37,12 @@ type GifterFundRow = {
   lastGiftAt: string | null;
   savedAt: string | null;
   nextBirthdayLabel: string | null;
+  // Treatment 3 attribution fields — added 2026-05-21. The server
+  // already exposes nextBirthdayLabel + currentFundValue; these two
+  // add the missing pieces (date + majority-age) so the client can
+  // compute "your gifts could be worth ~$X when {child} turns N".
+  recipientBirthdate: string | null;
+  majorityAge: number;
   childPhase: string;
   fundStatus: string;
   currentFundValue: number;
@@ -84,6 +91,33 @@ function statusLabel(value: string) {
     default:
       return "In progress";
   }
+}
+
+// "Your gift, projected forward" attribution per fund. Computes the
+// future value of the gifter's lifetime contributions to this kid at
+// the kid's UTMA majority. Returns null when there's no birthdate to
+// anchor against, no gifts yet, or the kid is already past majority
+// (no projection horizon). Treatment 3 of the five DUNPHY_DEMO_SPEC.md
+// projection treatments — the "Gloria, you sent $X and it'll be worth
+// ~$Y when Haley turns 21" moment.
+function computeGifterAttribution(fund: GifterFundRow): {
+  projected: number;
+  yearsAhead: number;
+  majorityAge: number;
+} | null {
+  if (!fund.recipientBirthdate) return null;
+  if (fund.totalGifted <= 0) return null;
+  const majorityDate = new Date(fund.recipientBirthdate);
+  majorityDate.setFullYear(majorityDate.getFullYear() + fund.majorityAge);
+  const yearsAhead = yearsBetween(new Date(), majorityDate);
+  if (yearsAhead < 0.5) return null;
+  const projected = projectFundValue({
+    startingValue: fund.totalGifted,
+    monthlyContribution: 0,
+    yearsAhead,
+    contributionYears: 0,
+  });
+  return { projected, yearsAhead, majorityAge: fund.majorityAge };
 }
 
 export default function GifterDashboard() {
@@ -401,7 +435,9 @@ export default function GifterDashboard() {
                 <p className="mt-4 text-sm text-muted-foreground">Loading your saved funds...</p>
               ) : data?.funds?.length ? (
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  {data.funds.map((fund) => (
+                  {data.funds.map((fund) => {
+                    const attribution = computeGifterAttribution(fund);
+                    return (
                     <div key={fund.fundId} className="rounded-3xl border border-border/60 bg-background p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -448,6 +484,38 @@ export default function GifterDashboard() {
                           {fund.updatesEnabled ? "You are following updates for this fund" : "You are not following updates for this fund yet"}
                         </p>
                       </div>
+
+                      {/* Gifter attribution projection — Treatment 3 of
+                          the five DUNPHY_DEMO_SPEC.md projection
+                          treatments. Anchors lifetime contributions to
+                          their projected impact at the kid's majority.
+                          Calmly worded ("could be worth ~$X") with the
+                          locked assumptions footer. Hidden when there's
+                          no birthdate / no gifts / kid already at
+                          majority — handled inside computeGifterAttribution.
+                          Lives on the live gifter dashboard, not demo-
+                          gated: a grandma seeing the long-tail impact of
+                          her $50 birthday gift is exactly the retention
+                          mechanic the gifter loop depends on. */}
+                      {attribution && (
+                        <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)] p-4">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="h-4 w-4 text-[hsl(var(--kiddo-evergreen))]" />
+                            <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] uppercase tracking-wide">
+                              Your gifts, projected forward
+                            </p>
+                          </div>
+                          <p className="mt-2 font-heading text-2xl font-bold text-foreground tabular-nums">
+                            ~{fmtMoney(attribution.projected)}
+                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground leading-snug">
+                            Your {fmtMoney(fund.totalGifted)} to {fund.childName} could be worth this when {fund.childName} turns {attribution.majorityAge}, if it stays invested.
+                          </p>
+                          <p className="mt-2 text-[10px] text-muted-foreground/60 leading-snug">
+                            Assumes 7% yearly average minus 0.10% AUM fee. Markets vary.
+                          </p>
+                        </div>
+                      )}
 
                       {fund.nextMilestoneTarget && (
                         <div className="mt-4 rounded-2xl bg-muted/30 p-4">
@@ -496,7 +564,8 @@ export default function GifterDashboard() {
                             chart, etc.) this is the slot for its CTA. */}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="mt-5 rounded-3xl border border-dashed border-border bg-muted/20 p-8 text-center">

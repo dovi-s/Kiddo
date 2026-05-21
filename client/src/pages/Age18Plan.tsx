@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Mic, Image as ImageIcon, Users, Mail } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { NoteEditorSheet } from "@/components/NoteEditorSheet";
 import { useFunds } from "@/hooks/use-funds";
 import { useAuth } from "@/hooks/use-auth";
@@ -288,30 +289,129 @@ export default function Age18Plan() {
   const animatedProjections = [animatedProj0, animatedProj1, animatedProj2, animatedProj3];
   const projectionsAnimating = [proj0Animating, proj1Animating, proj2Animating, proj3Animating];
 
-  // Parent letter query. Includes media fields so the NoteEditorSheet can
-  // pre-load any saved voice/photo/video when the parent re-opens to edit
-  // (re-recording a 5-minute message you already left would be cruel UX).
-  const { data: parentLetter } = useQuery<{
+  // ───────────────────────────────────────────────────────────────────
+  // Demo-only "What she inherits" centerpiece state.
+  //
+  // Strategic context: Kiddo's answer to Acorns' Potential slider. Same
+  // interaction (drag to see future value), but the projection isn't
+  // *just* the dollar number — it's the dollar number ALONGSIDE the
+  // emotional layer the platform has accumulated (voice memos, photos,
+  // contributors, the parent's sealed letter). Acorns can match the
+  // slider in a sprint; they cannot match the family record next to it.
+  //
+  // Per the locked decision in DUNPHY_DEMO_SPEC.md and the 2026-05-20
+  // strategic reset: ships inside the public Dunphy demo first, not
+  // into the live product yet. The user.isDemoAccount gate below keeps
+  // real customer accounts on the existing 4-row static projection
+  // until we're ready to graduate this.
+  //
+  // Slider range 0–300 step 25 covers the realistic monthly-add spread
+  // (Phil's seeded amount is $50/mo, gifts-only is $0, aspirational
+  // savers go to $200-300). Defaults to $50 — Phil's actual seeded
+  // monthly-add rate, so demo viewers see the slider already "lived
+  // in" rather than at a zero anchor.
+  const isDemoUser = Boolean((user as any)?.isDemoAccount);
+  const [sliderMonthly, setSliderMonthly] = useState<number>(50);
+  // When the slider is hidden (yearsLeft < 1), the hero number must
+  // NOT silently bake in the slider's $50 default — that'd inflate
+  // Haley's "what you inherit" number by money that doesn't exist.
+  // Force zero monthly in that branch so the hero shows the honest
+  // current-balance-compounded-over-the-remaining-runway value.
+  const sliderVisible = yearsLeft >= 1;
+  const effectiveSliderMonthly = sliderVisible ? sliderMonthly : 0;
+  const sliderProjectedValue = useMemo(
+    () => projectAt18(totalValue, yearsLeft, effectiveSliderMonthly),
+    [totalValue, yearsLeft, effectiveSliderMonthly],
+  );
+  // "What this could pay for" — illustrative real-world anchors, mapped
+  // by inheritance value bucket. Costs reflect US-typical 2026 values;
+  // college and home prices typically outpace inflation, so the
+  // disclaimer next to this line stays load-bearing. The ordering is
+  // most-modest first so the lookup picks the largest bucket that
+  // still fits the value.
+  function whatThisCouldPayFor(value: number): string {
+    if (value < 5_000) return "a semester of in-state college tuition";
+    if (value < 15_000) return "a year of in-state college, or a reliable used car";
+    if (value < 35_000) return "two years of community college, or a starter car outright";
+    if (value < 75_000) return "half of an in-state bachelor's degree";
+    if (value < 150_000) return "a full bachelor's at a state school, or a 20% down payment on a $500k home";
+    if (value < 300_000) return "graduate school, or a 20% down payment on a $750k starter home";
+    return "a debt-free education and the start of a business";
+  }
+  // Count-up on the slider projection so the number eases between
+  // slider stops rather than snapping. Short duration so the slider
+  // still feels live, not laggy.
+  const { value: animatedSliderValue } = useCountUp({
+    from: sliderProjectedValue * 0.92,
+    to: sliderProjectedValue,
+    duration: 350,
+    enabled: sliderProjectedValue > 0,
+  });
+
+  // Memory Book entries query. One fetch, two derivations:
+  //   1. `parentLetter` — feeds the "Your note" card + NoteEditorSheet
+  //      pre-load (re-recording a 5-minute message you already left
+  //      would be cruel UX).
+  //   2. `memoryStats` — feeds the demo-only "What she inherits"
+  //      centerpiece (voice / photo / note / contributor counts).
+  // Used to be two separately-keyed queries hitting the same endpoint;
+  // merged 2026-05-21 when the demo centerpiece landed and the second
+  // round-trip became pointless duplication.
+  // authorName is `string | undefined` (not `... | null`) to stay
+  // structurally assignable to NoteEditorSheet's existingEntry prop —
+  // its MemoryEntry interface declares authorName?: string without the
+  // null branch. The other media fields keep `| null` because that's
+  // what the server returns.
+  type MemoryEntry = {
     id: string;
     content: string;
     type: string;
+    authorRole?: string;
     authorName?: string;
     photoUrl?: string | null;
     videoUrl?: string | null;
     audioUrl?: string | null;
     audioTranscript?: string | null;
-  } | null>({
-    queryKey: ["memory", activeFund?.id, "parent_letter"],
+    giftId?: string | null;
+    createdAt?: string;
+  };
+  const { data: memoryEntries = [] } = useQuery<MemoryEntry[]>({
+    queryKey: ["memory", activeFund?.id],
     queryFn: async () => {
-      if (!activeFund?.id) return null;
+      if (!activeFund?.id) return [];
       const res = await fetch(`/api/funds/${activeFund.id}/memory`, { credentials: "include" });
-      if (!res.ok) return null;
+      if (!res.ok) return [];
       const entries: any[] = await res.json();
-      return entries.find((e) => e.type === "parent_letter") ?? null;
+      return entries as MemoryEntry[];
     },
     enabled: !!activeFund?.id,
     staleTime: 1000 * 60 * 5,
   });
+  const parentLetter = useMemo(
+    () => memoryEntries.find((e) => e.type === "parent_letter") ?? null,
+    [memoryEntries],
+  );
+  // Memory stats for the demo centerpiece. Counts entries by their
+  // emotional layer: voice memos (audioUrl present), photos
+  // (photoUrl present), text-only notes (no media), plus gift count.
+  // Contributors come from the fund row itself — same value the
+  // Dashboard hero uses, no double-counting.
+  const memoryStats = useMemo(() => {
+    let voice = 0;
+    let photo = 0;
+    let video = 0;
+    let notes = 0;
+    let gifts = 0;
+    for (const e of memoryEntries) {
+      if (e.audioUrl) voice += 1;
+      if (e.photoUrl) photo += 1;
+      if (e.videoUrl) video += 1;
+      if (e.type === "gift") gifts += 1;
+      if (!e.audioUrl && !e.photoUrl && !e.videoUrl && e.type !== "parent_letter") notes += 1;
+    }
+    return { voice, photo, video, notes, gifts, total: memoryEntries.length };
+  }, [memoryEntries]);
+  const contributors = Number((activeFund as any)?.contributorCount || 0);
 
   const [noteEditorOpen, setNoteEditorOpen] = useState(false);
 
@@ -493,6 +593,150 @@ export default function Age18Plan() {
                   *{KIDDO_PROJECTION_DISCLAIMER}
                 </p>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* WHAT SHE INHERITS — demo-only centerpiece (the Combined
+            Emotional + Financial Projection slider). Gated on the
+            user being signed into a demo account; real customer
+            accounts see the simpler 4-row static projection further
+            down. Per the 2026-05-20 strategic decision: this is
+            Kiddo's answer to Acorns' Potential slider, and ships in
+            the public Dunphy demo first. */}
+        {isDemoUser && totalValue > 0 && (
+          <div className="kiddo-card mb-4 overflow-hidden border-2 border-[hsl(var(--kiddo-evergreen)/0.25)]">
+            <div className="px-5 pt-5 pb-5">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">
+                What {childName} inherits at {majorityAge}
+              </p>
+              <p className="text-xs text-muted-foreground/80 leading-snug mb-4">
+                The money, the record of who showed up, and the first thing {she} {reads}.
+              </p>
+
+              {/* Hero number — slider-driven projection */}
+              <div className="rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.08)] px-5 py-5 mb-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-[hsl(var(--kiddo-evergreen))/0.85] mb-1.5">
+                  Projected value at {majorityAge}
+                </p>
+                <p className="text-4xl font-bold text-[hsl(var(--kiddo-evergreen))] font-heading leading-none tabular-nums">
+                  {formatCurrency(animatedSliderValue)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
+                  Enough for {whatThisCouldPayFor(sliderProjectedValue)}.
+                </p>
+              </div>
+
+              {/* Slider — drag to see what monthly adds become */}
+              {sliderVisible && (
+                <div className="mb-5">
+                  <div className="flex items-baseline justify-between mb-2">
+                    <p className="text-xs text-muted-foreground">
+                      If you add{" "}
+                      <span className="font-semibold text-foreground tabular-nums">
+                        {sliderMonthly === 0 ? "nothing" : `$${sliderMonthly}`}
+                      </span>
+                      {sliderMonthly > 0 ? " each month" : " on top"}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/70 tabular-nums">
+                      {yearsLeft.toFixed(1)} years to go
+                    </p>
+                  </div>
+                  <Slider
+                    value={[sliderMonthly]}
+                    onValueChange={(v) => {
+                      const next = Array.isArray(v) ? v[0] : sliderMonthly;
+                      if (next !== sliderMonthly) {
+                        setSliderMonthly(next);
+                        haptic("selection");
+                      }
+                    }}
+                    min={0}
+                    max={300}
+                    step={25}
+                    aria-label="Monthly add to fund"
+                  />
+                  <div className="flex justify-between mt-1.5 text-[10px] text-muted-foreground/60 tabular-nums">
+                    <span>$0</span>
+                    <span>$150</span>
+                    <span>$300</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Emotional layer — the part Acorns can't match in a sprint */}
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 mb-2.5">
+                And the family record so far
+              </p>
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {memoryStats.voice > 0 && (
+                  <div className="flex items-center gap-2 rounded-xl bg-muted/40 px-3 py-2.5">
+                    <Mic className="w-3.5 h-3.5 text-[hsl(var(--kiddo-evergreen))] shrink-0" />
+                    <p className="text-xs text-foreground leading-snug">
+                      <span className="font-bold tabular-nums">{memoryStats.voice}</span>{" "}
+                      <span className="text-muted-foreground">voice memo{memoryStats.voice === 1 ? "" : "s"}</span>
+                    </p>
+                  </div>
+                )}
+                {memoryStats.photo > 0 && (
+                  <div className="flex items-center gap-2 rounded-xl bg-muted/40 px-3 py-2.5">
+                    <ImageIcon className="w-3.5 h-3.5 text-[hsl(var(--kiddo-evergreen))] shrink-0" />
+                    <p className="text-xs text-foreground leading-snug">
+                      <span className="font-bold tabular-nums">{memoryStats.photo}</span>{" "}
+                      <span className="text-muted-foreground">photo{memoryStats.photo === 1 ? "" : "s"}</span>
+                    </p>
+                  </div>
+                )}
+                {contributors > 0 && (
+                  <div className="flex items-center gap-2 rounded-xl bg-muted/40 px-3 py-2.5">
+                    <Users className="w-3.5 h-3.5 text-[hsl(var(--kiddo-evergreen))] shrink-0" />
+                    <p className="text-xs text-foreground leading-snug">
+                      <span className="font-bold tabular-nums">{contributors}</span>{" "}
+                      <span className="text-muted-foreground">contributor{contributors === 1 ? "" : "s"}</span>
+                    </p>
+                  </div>
+                )}
+                {memoryStats.gifts > 0 && (
+                  <div className="flex items-center gap-2 rounded-xl bg-muted/40 px-3 py-2.5">
+                    <Mail className="w-3.5 h-3.5 text-[hsl(var(--kiddo-evergreen))] shrink-0" />
+                    <p className="text-xs text-foreground leading-snug">
+                      <span className="font-bold tabular-nums">{memoryStats.gifts}</span>{" "}
+                      <span className="text-muted-foreground">gift{memoryStats.gifts === 1 ? "" : "s"} with a note</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* First thing she'll see — the parent's sealed letter */}
+              <div className="rounded-xl border border-border bg-card/50 px-4 py-3.5">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70 mb-1.5">
+                  First thing {she} {reads} on {her} {majorityOrdinal}
+                </p>
+                {parentLetter ? (
+                  <>
+                    <p className="text-sm text-foreground leading-relaxed italic">
+                      "{parentLetter.content.length > 140
+                        ? parentLetter.content.slice(0, 140).trim() + "…"
+                        : parentLetter.content}"
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/80 mt-2">
+                      — {parentLetter.authorName || parentName || "Dad"}
+                    </p>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { haptic("medium"); setNoteEditorOpen(true); }}
+                    className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline"
+                  >
+                    Write the first thing {she} {reads} →
+                  </button>
+                )}
+              </div>
+
+              <p className="text-[10px] text-muted-foreground/55 leading-snug mt-3">
+                Projection assumes 7% yearly average. Illustrative payment examples; costs vary by region and typically rise with inflation.
+              </p>
             </div>
           </div>
         )}
@@ -741,8 +985,12 @@ export default function Age18Plan() {
           </div>
         </div>
 
-        {/* Growth projections */}
-        {totalValue > 0 && yearsLeft > 0 && (
+        {/* Growth projections — the static 4-row table. Hidden for
+            demo users, who get the Combined Emotional + Financial
+            Projection slider card up top instead (showing both would
+            be the same number twice). Live customer accounts still
+            see this until the slider graduates out of demo. */}
+        {!isDemoUser && totalValue > 0 && yearsLeft > 0 && (
           <div className="kiddo-card mb-4 overflow-hidden">
             <div className="p-5">
               <h2 className="text-base font-bold text-foreground mb-1">What the fund could look like at {majorityAge}</h2>
@@ -880,7 +1128,9 @@ export default function Age18Plan() {
         existingEntry={parentLetter ?? null}
         requiresPlus={noteEditorRequiresPlus}
         onSaved={() => {
-          void queryClient.invalidateQueries({ queryKey: ["memory", activeFund?.id, "parent_letter"] });
+          // Single key now — the memory query feeds both parentLetter
+          // and memoryStats off one fetch. Old `parent_letter` sub-key
+          // retired when the two queries merged 2026-05-21.
           void queryClient.invalidateQueries({ queryKey: ["memory", activeFund?.id] });
         }}
       />

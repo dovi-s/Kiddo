@@ -120,8 +120,32 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: loginFn,
     onSuccess: (user) => {
+      // Stamp the new user first, then drop the per-user localStorage
+      // caches that were keyed to the previous account. The localStorage
+      // entries (active fund ID, funds list cache) survive across logins
+      // unless explicitly cleared — without this, logging into account B
+      // in the same browser inherits account A's active fund ID and
+      // funds list (initialData), which then 403s every fund-scoped
+      // query because account B doesn't own account A's funds.
+      //
+      // DO NOT call queryClient.clear() here — it wipes the auth query
+      // mid-render, which Dashboard sees as "logged out, no funds" and
+      // redirects to /get-started. The per-query invalidation below is
+      // enough; TanStack Query refetches on next read.
       writeLocalCache(LOCAL_CACHE_KEYS.authUser, user);
       queryClient.setQueryData(["/api/auth/user"], user);
+      try { window.localStorage.removeItem("kiddo_active_fund_id"); } catch {}
+      removeLocalCache(LOCAL_CACHE_KEYS.funds);
+      removeLocalCache(LOCAL_CACHE_KEYS.subscription);
+      removeLocalCachePrefix("kora.dashboard-summary.");
+      removeLocalCachePrefix("kiddo.fund-balance.");
+      // Invalidate (not clear) the data queries that are scoped to the
+      // current user. Invalidation marks them stale so the next read
+      // refetches; it doesn't wipe the cached value in a way that
+      // briefly shows "no data" to currently-mounted components.
+      queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
     },
   });
 
@@ -130,6 +154,14 @@ export function useAuth() {
     onSuccess: (user) => {
       writeLocalCache(LOCAL_CACHE_KEYS.authUser, user);
       queryClient.setQueryData(["/api/auth/user"], user);
+      try { window.localStorage.removeItem("kiddo_active_fund_id"); } catch {}
+      removeLocalCache(LOCAL_CACHE_KEYS.funds);
+      removeLocalCache(LOCAL_CACHE_KEYS.subscription);
+      removeLocalCachePrefix("kora.dashboard-summary.");
+      removeLocalCachePrefix("kiddo.fund-balance.");
+      queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
     },
   });
 
