@@ -1624,14 +1624,30 @@ export default function Dashboard() {
     return () => clearTimeout(t);
   }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Bank accounts query. Caching trio added 2026-05-20 to match the
+  // Settings.tsx instance (same query key, same data, same setup-
+  // progress consumer). Both Dashboard and Settings render rows that
+  // flip label/state based on hasBank; without initialData either
+  // page mounting first would flash the empty 'no bank' state before
+  // the network resolved. Same anti-pattern as CoParentAccessCard
+  // (commit f347fe2). User-reported on the Settings instance 2026-
+  // 05-20 ('Link withdrawals to unlock full fund protection still
+  // loading briefly even though it's done'); Dashboard fixed in
+  // parallel because the same query backs the Dashboard setup-
+  // progress nudges too.
   const { data: bankAccounts = [], isLoading: bankLoading } = useQuery<any[]>({
     queryKey: ["/api/bank-accounts"],
     queryFn: async () => {
       const res = await fetch("/api/bank-accounts", { credentials: "include" });
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      writeLocalCache("kiddo.bank-accounts.v1", data);
+      return data;
     },
     enabled: isAuthenticated,
+    initialData: () => readLocalCache<any[]>("kiddo.bank-accounts.v1"),
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
   });
   const autoInvestQuoteSymbols = useMemo(() => AUTO_INVEST_STOCKS.map((stock) => stock.symbol).join(","), []);
   const { data: autoInvestQuoteData } = useQuery<MarketQuoteResponse>({

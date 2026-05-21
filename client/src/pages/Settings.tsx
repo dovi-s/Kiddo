@@ -2594,15 +2594,34 @@ const [editFundName, setEditFundName] = useState("");
     staleTime: 60_000,
   });
 
+  // Bank accounts query. initialData + writeLocalCache + bumped
+  // staleTime added 2026-05-20 because the previous setup (60s
+  // staleTime, no initialData) caused the setup-progress checklist
+  // in the right rail to briefly render 'Link withdrawals to
+  // unlock full fund protection' on every Settings mount before
+  // the network resolved and the row flipped to 'Full fund
+  // protection is in place.' Same anti-pattern as CoParentAccess
+  // (commit f347fe2), InvitationsToYouCard, PlanBenefitsCard,
+  // MemoryBook fundEvents (commit 936ede9). User-reported:
+  // 'this thing is still loading on settings page briefly even
+  // though it was already done.'
+  //
+  // The 5-minute staleTime is fine because bank account state
+  // changes only via explicit user action (linking / unlinking),
+  // both of which invalidate the query.
   const { data: bankAccounts = [], isLoading: bankAccountsLoading } = useQuery<any[]>({
     queryKey: ["/api/bank-accounts"],
     queryFn: async () => {
       const res = await fetch("/api/bank-accounts", { credentials: "include" });
       if (!res.ok) return [];
-      return res.json();
+      const data = await res.json();
+      writeLocalCache("kiddo.bank-accounts.v1", data);
+      return data;
     },
     enabled: !!user,
-    staleTime: 60_000,
+    initialData: () => readLocalCache<any[]>("kiddo.bank-accounts.v1"),
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
   });
 
   const primaryFund = (selectedSettingsFundId && funds.find((f: any) => String(f.id) === String(selectedSettingsFundId))) || funds[0];
