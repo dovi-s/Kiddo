@@ -536,6 +536,72 @@ export default function Pricing() {
         </div>
       </section>
 
+      {/* Locked refusals trust panel. Added 2026-05-20 per the
+          wow-factor analysis: the list of things Kiddo refuses to
+          charge for is itself a trust signal that competitors
+          cannot easily match without giving up their bundle
+          economics. Surfacing it on the public Pricing page makes
+          the discipline visible to prospective customers.
+
+          Content sourced from the locked pricing decisions in
+          memory/project_subscription_retires_at_majority.md and the
+          MEMORY.md fee architecture section. When new locked-refusal
+          decisions are added (e.g., never sell data, never charge
+          for X), this list should grow. Order: gift fee first
+          (highest-frequency moment), then access surfaces, then
+          the kid-at-18 promise (the deepest locked decision). */}
+      <section className="pb-20 md:pb-28">
+        <div className="mx-auto max-w-4xl px-4">
+          <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
+            <h2 className="mb-2 font-heading text-2xl font-bold text-foreground md:text-3xl">
+              What Kiddo refuses to charge for
+            </h2>
+            <p className="mb-8 text-sm leading-relaxed text-muted-foreground md:text-base">
+              Pricing decisions we have made and will not unmake. Each one is locked, with reasoning written down.
+            </p>
+            <div className="space-y-5">
+              <div>
+                <h3 className="font-heading text-base font-semibold text-foreground md:text-lg">
+                  No fee on gifts.
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  A $50 gift from grandma is $50 in the fund. The platform takes nothing. Gifter pays Stripe processing only.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-semibold text-foreground md:text-lg">
+                  Memory Book viewing is free, every plan.
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Every gift, every voice memo, every photo from every gifter, visible to free parents too. The Plus differential is parent-authored media, not what you can see.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-semibold text-foreground md:text-lg">
+                  Kid View is free, every plan.
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  The full kid experience (holdings, age-aware copy, projected value at 18, Memory Book visibility) is identical regardless of the parent's tier. The kid did not choose the plan; their experience should not be class-divided by it.
+                </p>
+              </div>
+              <div>
+                <h3 className="font-heading text-base font-semibold text-foreground md:text-lg">
+                  The kid never pays a subscription on the fund they inherit.
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  At majority, when the fund legally becomes the kid's, the parent's Kiddo+ subscription retires for that fund. The kid pays nothing to keep using their own brokerage account.
+                </p>
+              </div>
+            </div>
+            <div className="mt-8 border-t border-border/40 pt-6">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                0.10% annual AUM on invested assets is the only ongoing fee. Across every plan. No hidden charges. No data sales.
+              </p>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
       <section className="pb-20 md:pb-28">
         <div className="mx-auto max-w-4xl px-4">
           <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm md:p-12">
