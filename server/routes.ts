@@ -15,6 +15,7 @@ import { isAuthenticated, isAdmin } from "./auth";
 import { getConfiguredSuperAdminEmails, isEmailInAdminSet } from "@shared/adminAccess";
 import { sendEmail } from "./emailDelivery";
 import { buildParentHandoffSubscriptionEmail } from "./templates/parentHandoffSubscription";
+import { autoPauseOwnershipMismatchedContributions } from "./recurringContributionWorker";
 import { sendOpsAlert } from "./ops";
 import { runGifterNotificationWorker, enqueueParentThankYou } from "./gifterNotificationWorker";
 import { isDemoFund, isDemoUser, demoMockCheckoutResponse } from "./demoSandbox";
@@ -5756,6 +5757,56 @@ export async function registerRoutes(
           message: `Fund ${fund.id} ownership transferred to the now-adult kid, but the prior parent's collaborator rows did NOT auto-delete. Manual cleanup needed.`,
           context: { fundId: fund.id, previousOwnerId, newOwnerId: userId, error: String(revokeErr) },
         }).catch(() => { /* alerting failure must not block handoff */ });
+      }
+
+      // Recurring contribution auto-pause (Polish 1 from the
+      // 2026-05-20 handoff audit). Previously this fired on the
+      // recurring worker's next tick, up to 30 minutes after the
+      // handoff. The defense-in-depth SQL clause on the worker's
+      // main processing SELECT (f.user_id = pc.user_id) prevented
+      // any wrong charges during that window, but the parent
+      // received the related emails (subscription-retirement +
+      // recurring-conversion-to-gift) in two waves separated by
+      // the worker interval. Calling the same function inline
+      // here makes the handoff fully atomic from the parent's
+      // perspective: ownership flips, recurring pauses, both
+      // emails arrive together.
+      //
+      // Best-effort: a failure here cannot roll back the handoff
+      // and the worker will still catch any missed rows on its
+      // next tick. Logged but not surfaced to the client.
+      try {
+        await autoPauseOwnershipMismatchedContributions(() => undefined);
+      } catch (pauseErr) {
+        console.error('[age18] Inline recurring auto-pause failed (worker will catch on next tick):', fund.id, pauseErr);
+      }
+
+      // fund_memberships stale-row cleanup (Polish 2 from the
+      // 2026-05-20 handoff audit). If the parent had a per-fund
+      // subscription row (fund_memberships table) tied to this
+      // kid's fund, the row otherwise stays after handoff with
+      // userId=previousOwnerId, fundId=now-kid-owned-fund. The
+      // canonical subscription record is the `subscriptions` table
+      // (not fund_memberships), so the stale row caused no active
+      // user-facing harm, but it was data hygiene worth cleaning
+      // at the same atomic moment as the rest of the handoff.
+      //
+      // Scoped to the previousOwnerId so we never delete the kid's
+      // own fund_memberships (if any get created later). Best-
+      // effort with logging; non-blocking.
+      try {
+        const cleaned = await db
+          .delete(fundMemberships)
+          .where(and(
+            eq(fundMemberships.userId, previousOwnerId),
+            eq(fundMemberships.fundId, fund.id),
+          ))
+          .returning({ id: fundMemberships.id });
+        if (cleaned.length > 0) {
+          console.log(`[age18] Cleaned ${cleaned.length} stale fund_memberships row(s) for fund ${fund.id} (former parent ${previousOwnerId})`);
+        }
+      } catch (membershipErr) {
+        console.error('[age18] fund_memberships cleanup failed (manual cleanup may be needed):', fund.id, membershipErr);
       }
 
       await storage.ensureSubscription(userId);

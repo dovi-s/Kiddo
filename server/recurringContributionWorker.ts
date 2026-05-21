@@ -386,7 +386,14 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
 // the pause). The follow-up "would you like to convert this to a
 // recurring gift?" email is deferred per Bucket 4b of
 // AGE_18_HANDOFF_SPEC.md — copy needs a focused design pass.
-async function autoPauseOwnershipMismatchedContributions(log: LogFn): Promise<void> {
+// Exported so the complete-transfer endpoint in routes.ts can fire
+// this synchronously after a kid takes ownership at majority, rather
+// than waiting up to 30 minutes for the worker's next tick. Exporting
+// kept the function signature unchanged (still takes a LogFn); the
+// endpoint passes a no-op log function (or wires in its own request
+// logger) when calling. Added 2026-05-20 per the AGE_18_HANDOFF_SPEC
+// Polish 1 follow-up to make handoff fully atomic.
+export async function autoPauseOwnershipMismatchedContributions(log: LogFn): Promise<void> {
   // Find active rows where the fund's owner is no longer the contributor.
   // RETURNING gives us the rows to write activity for in the next step.
   // Additional fields (user_email, user_first_name, fund_slug, frequency)
