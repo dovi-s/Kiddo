@@ -12,7 +12,7 @@
 //
 // Cadence rationale: matches the rhythm of quarterly earnings the
 // kid will hear about in the world. The summary email reinforces
-// the calendar pattern they're already absorbing — not creating a
+// the calendar pattern they're already absorbing not creating a
 // new one.
 //
 // Guards: don't fire within 60 days of handoff (don't email a kid
@@ -40,7 +40,7 @@ const WORKER_SOURCE = "post-handoff-engagement";
 const QUARTERLY_MONTHS = new Set([0, 3, 6, 9]); // Jan, Apr, Jul, Oct
 // Widened from 3 to 7 days on 2026-05-15 (timing-audit follow-up).
 // The old 3-day window (15-17) meant a worker outage spanning those
-// three days permanently skipped the quarter for everyone — and
+// three days permanently skipped the quarter for everyone and
 // quarterly summaries are themselves rare-cadence emails, so a
 // missed quarter is a big chunk of the engagement loop gone. With
 // the RESEND_DEDUP_DAYS cap below (80 days), widening to a week
@@ -55,9 +55,21 @@ const WINDOW_DAYS = 7;
 const POST_HANDOFF_GRACE_DAYS = 60;
 
 // Re-send dedup window. If the column was stamped <80 days ago,
-// skip — handles the case where the worker fires twice on the same
+// skip handles the case where the worker fires twice on the same
 // 15th due to a server restart.
 const RESEND_DEDUP_DAYS = 80;
+
+// 30-day check-in window. Locked 2026-05-21 per Tier-2 deferred
+// item #5. Distinct from the quarterly summary: this is a ONE-time
+// "you've owned this for a month, here's how it's quietly been"
+// email, fired when the post-handoff updated_at lands inside the
+// 30-60 day window AND kidThirtyDayCheckInAt is null. Lower bound
+// keeps it out of the immediate-post-welcome week; upper bound
+// caps how late the check-in can fire if the worker missed the
+// optimal day (e.g. multi-day outage). Once it sends,
+// kidThirtyDayCheckInAt gets stamped and it never re-fires.
+const THIRTY_DAY_MIN = 30;
+const THIRTY_DAY_MAX = 60;
 
 function isInQuarterlyWindow(now = new Date()): boolean {
   const month = now.getUTCMonth();
@@ -117,7 +129,7 @@ async function findEligibleOwners(now: Date): Promise<EngagementCandidate[]> {
       ),
     );
 
-  // Apply the dedup filter in JS — Drizzle's null-aware comparison
+  // Apply the dedup filter in JS Drizzle's null-aware comparison
   // through the query builder gets verbose. Cheap: typical post-
   // launch volume is "a dozen kids per quarter" not thousands.
   return rows
@@ -159,7 +171,7 @@ async function sendQuarterlySummary(c: EngagementCandidate, now: Date, log: LogF
   const subject = `Your fund · ${quarter}`;
   // Plain-text body. emailDelivery uses the platform's template
   // pipeline if available; if not it falls back to text. Keep this
-  // calm — no exclamation points, no "Congrats!" energy. Matches
+  // calm no exclamation points, no "Congrats!" energy. Matches
   // the locked tone register across Kiddo surfaces.
   const body = [
     `Hi ${name},`,
@@ -201,18 +213,142 @@ async function sendQuarterlySummary(c: EngagementCandidate, now: Date, log: LogF
   }
 }
 
+// Find kid-owners due for the ONE-time 30-day check-in. Same
+// owner-of-personal-fund-with-self-relation predicate as the
+// quarterly summary; differs on the time window (30-60 days
+// post-handoff vs >60) and on the dedup column
+// (kidThirtyDayCheckInAt vs lastQuarterlySummaryAt).
+type ThirtyDayCandidate = EngagementCandidate & {
+  kidThirtyDayCheckInAt: Date | null;
+};
+async function findThirtyDayCheckInOwners(now: Date): Promise<ThirtyDayCandidate[]> {
+  const upperCutoff = new Date(now.getTime() - THIRTY_DAY_MIN * 86400000);
+  const lowerCutoff = new Date(now.getTime() - THIRTY_DAY_MAX * 86400000);
+  const rows = await db
+    .select({
+      userId: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      kidThirtyDayCheckInAt: users.kidThirtyDayCheckInAt,
+      lastQuarterlySummaryAt: users.lastQuarterlySummaryAt,
+      fundId: funds.id,
+      fundName: funds.name,
+      recipientFirstName: funds.recipientFirstName,
+      balance: funds.balance,
+      totalGain: funds.totalGain,
+      accountType: funds.accountType,
+      recipientRelation: funds.recipientRelation,
+      updatedAt: funds.updatedAt,
+    })
+    .from(funds)
+    .innerJoin(users, eq(funds.userId, users.id))
+    .where(
+      and(
+        sql`LOWER(${funds.accountType}) = 'personal'`,
+        sql`LOWER(${funds.recipientRelation}) = 'self'`,
+        isNotNull(users.email),
+        sql`${funds.updatedAt} <= ${upperCutoff}`,
+        sql`${funds.updatedAt} >= ${lowerCutoff}`,
+      ),
+    );
+  return rows
+    .filter((r) => !r.kidThirtyDayCheckInAt)
+    .map((r) => ({
+      userId: r.userId,
+      email: r.email,
+      firstName: r.firstName,
+      fundId: r.fundId,
+      fundName: r.fundName,
+      recipientFirstName: r.recipientFirstName,
+      balance: r.balance,
+      totalGain: r.totalGain,
+      lastQuarterlySummaryAt: r.lastQuarterlySummaryAt,
+      kidThirtyDayCheckInAt: r.kidThirtyDayCheckInAt,
+    }));
+}
+
+// Send the 30-day check-in. Calmer register than the quarterly
+// summary — the kid has only owned the fund for a month, so the
+// numbers aren't the story. The story is "we're here, you don't
+// have to do anything, here's what's still around when you want
+// it." Locked tone discipline: no exclamation points, no
+// "Congrats!" energy, no marketing close.
+async function sendThirtyDayCheckIn(c: ThirtyDayCandidate, now: Date, log: LogFn): Promise<boolean> {
+  if (!c.email) return false;
+  const balance = parseFloat(String(c.balance || "0"));
+  const name = c.firstName || c.recipientFirstName || "there";
+
+  const subject = "One month in";
+  const body = [
+    `Hi ${name},`,
+    "",
+    "It's been about a month since this fund became yours.",
+    "",
+    `Current value: ${formatMoney(balance)}`,
+    "",
+    "Most months you don't need to do anything. Compounding works whether or not you log in.",
+    "",
+    "What you can do whenever it's useful:",
+    "  - Add a one-time amount if you want.",
+    "  - Set up a recurring contribution if you have steady income.",
+    "  - Open it just to look. That's allowed too.",
+    "",
+    "Open Kiddo: https://kiddofund.com/dashboard",
+    "",
+    "The Kiddo team",
+  ]
+    .filter((line) => line !== null && line !== undefined)
+    .join("\n");
+
+  try {
+    const { html: brandedHtml } = renderKiddoEmail({
+      heading: subject,
+      intro: body,
+    });
+    await sendEmail({
+      to: c.email,
+      subject,
+      text: body,
+      html: brandedHtml,
+    } as any);
+    await db
+      .update(users)
+      .set({ kidThirtyDayCheckInAt: now })
+      .where(eq(users.id, c.userId));
+    log(`30-day check-in sent: ${c.email} (fund ${c.fundId})`, WORKER_SOURCE);
+    return true;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log(`30-day check-in failed for ${c.email}: ${message}`, WORKER_SOURCE);
+    return false;
+  }
+}
+
 let tickInFlight = false;
 async function tickEngagement(log: LogFn): Promise<void> {
   if (tickInFlight) return;
   const now = new Date();
-  if (!isInQuarterlyWindow(now)) return;
   tickInFlight = true;
   try {
-    const candidates = await findEligibleOwners(now);
-    if (candidates.length === 0) return;
-    log(`quarterly window open; ${candidates.length} eligible kid-owner(s)`, WORKER_SOURCE);
-    for (const c of candidates) {
-      await sendQuarterlySummary(c, now, log);
+    // 30-day check-in runs daily, not gated on the quarterly window.
+    // Window check is inside the candidate finder (30-60 day band).
+    const thirtyDayCandidates = await findThirtyDayCheckInOwners(now);
+    if (thirtyDayCandidates.length > 0) {
+      log(`30-day check-in: ${thirtyDayCandidates.length} eligible kid-owner(s)`, WORKER_SOURCE);
+      for (const c of thirtyDayCandidates) {
+        await sendThirtyDayCheckIn(c, now, log);
+      }
+    }
+
+    // Quarterly summary gated to the Jan/Apr/Jul/Oct 15-21 window.
+    if (isInQuarterlyWindow(now)) {
+      const candidates = await findEligibleOwners(now);
+      if (candidates.length > 0) {
+        log(`quarterly window open; ${candidates.length} eligible kid-owner(s)`, WORKER_SOURCE);
+        for (const c of candidates) {
+          await sendQuarterlySummary(c, now, log);
+        }
+      }
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

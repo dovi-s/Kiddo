@@ -69,6 +69,15 @@ export const users = pgTable("users", {
   // who haven't been emailed in the last 80 days AND whose first fund
   // was transferred >60 days ago.
   lastQuarterlySummaryAt: timestamp("last_quarterly_summary_at"),
+  // Stamped once, when the 30-day post-handoff check-in email goes
+  // out to a kid-owner. Distinct cadence from the quarterly summary:
+  // this is a ONE-time "you've owned this for a month, here's how
+  // it's been going" beat, fired ~30 days after the fund flipped to
+  // accountType=Personal (the post-handoff state). Worker checks
+  // for null + handoff age >=30 days <=60 days; sets to NOW() after
+  // a successful send so it never re-fires. Per Tier-2 deferred
+  // item #5; locked 2026-05-21.
+  kidThirtyDayCheckInAt: timestamp("kid_thirty_day_check_in_at"),
   // Self-reported "I have a job" toggle set in the Age18Welcome
   // walkthrough screen 4. Drives the future Roth IRA setup nudge
   // (deferred from MVP until DriveWealth IRA support is wired). The
