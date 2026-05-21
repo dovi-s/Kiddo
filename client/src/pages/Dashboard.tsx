@@ -4430,6 +4430,27 @@ export default function Dashboard() {
           childFirstName={recipientFirstNameDisplay}
         />
 
+        {/* Milestone celebration moment — wired 2026-05-20 (the component
+            was built, imported, and the prev/current value-tracking
+            useRef was set up months ago, but the actual render call was
+            never added; per project_share_card_rasterization_pattern.md
+            this was the deferred 'just needs wiring' item).
+            Compares prevValueRef.current against rawTotalValue on every
+            render via getMilestoneCrossed; returns null when no
+            threshold was just crossed, so it occupies zero layout
+            space outside the actual celebration window. When it fires,
+            it renders the celebration card + the rasterizable
+            MilestoneShareCard so the parent can one-tap share to
+            Instagram Stories / iMessage / wherever. The 8-particle
+            confetti restraint and the threshold-specific emotional
+            anchor (community-college, state-school-year, etc.) honor
+            the locked discipline against AI-slop celebrations. */}
+        <MilestoneMoment
+          currentValue={rawTotalValue}
+          previousValue={prevValueRef.current}
+          recipientName={recipientFirstNameDisplay}
+        />
+
         {/* Closed-fund banner — calm, action-bearing. Renders when the
             active fund is in the 'closed' state. Mirror of the Settings
             banner so a parent on the dashboard sees the closed state
