@@ -439,7 +439,14 @@ export function DesktopSidebar() {
                 // so the same metaphor reads top-to-bottom.
                 <span style={{ fontSize: 16 }}>🌱</span>
               ) : activeFund.childPhotoUrl ? (
-                <img src={activeFund.childPhotoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                <img
+                  src={activeFund.childPhotoUrl}
+                  alt=""
+                  loading="eager"
+                  decoding="async"
+                  fetchPriority="high"
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
               ) : (
                 <span className="text-white text-[14px] font-extrabold">{(activeFund.recipientFirstName || activeFund.name || "S").slice(0, 1).toUpperCase()}</span>
               )}
@@ -518,7 +525,7 @@ export function DesktopSidebar() {
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen))] text-sm font-bold text-white shadow-[inset_0_-7px_14px_rgba(0,0,0,0.14)] overflow-hidden">
                       {fund.childPhotoUrl
-                        ? <img src={fund.childPhotoUrl} alt="" className="h-full w-full object-cover" />
+                        ? <img src={fund.childPhotoUrl} alt="" loading="eager" decoding="async" fetchPriority="high" className="h-full w-full object-cover" />
                         : (fund.recipientFirstName || fund.name || "F").slice(0, 1).toUpperCase()
                       }
                     </div>

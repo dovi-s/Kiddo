@@ -115,7 +115,14 @@ export function ChildIdentityCard({
             data-testid="button-change-child-photo"
           >
             {fund?.childPhotoUrl ? (
-              <img src={fund.childPhotoUrl} alt="" className="h-full w-full object-cover" />
+              <img
+                src={fund.childPhotoUrl}
+                alt=""
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                className="h-full w-full object-cover"
+              />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-[hsl(var(--kiddo-evergreen))] text-2xl font-bold text-white shadow-[inset_0_-8px_16px_rgba(0,0,0,0.14)]">
                 {(fund?.recipientFirstName || "?").slice(0, 1).toUpperCase()}

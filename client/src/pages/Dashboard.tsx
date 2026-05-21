@@ -4590,9 +4590,28 @@ export default function Dashboard() {
                                 background: "rgba(255,255,255,0.10)",
                               }}
                             >
+                              {/* Load hints added 2026-05-20 per user
+                                  report ('the photo is taking a long
+                                  time to load'). This is the focal-
+                                  point image of the Dashboard hero,
+                                  above the fold, on the most-visited
+                                  surface. fetchPriority='high' tells
+                                  the browser to prioritize this image
+                                  over other resource fetches on the
+                                  page. decoding='async' moves the
+                                  decode off the main thread so it
+                                  does not block other rendering.
+                                  loading='eager' is explicit (default
+                                  for above-the-fold, but clearer
+                                  here). See feedback_image_load_hints
+                                  _pattern.md for the canonical
+                                  treatment of focal-point images. */}
                               <img
                                 src={childPhotoUrl}
                                 alt=""
+                                loading="eager"
+                                decoding="async"
+                                fetchPriority="high"
                                 style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                               />
                             </div>
