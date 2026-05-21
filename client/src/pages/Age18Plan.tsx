@@ -876,6 +876,7 @@ export default function Age18Plan() {
         parentName={parentName}
         pronoun={(activeFund as any)?.pronoun}
         majorityAge={majorityAge}
+        recipientBirthdate={activeFund?.recipientBirthdate ? String(activeFund.recipientBirthdate) : null}
         existingEntry={parentLetter ?? null}
         requiresPlus={noteEditorRequiresPlus}
         onSaved={() => {

@@ -51,6 +51,14 @@ interface NoteEditorSheetProps {
   pronoun?: string | null;
   /** State-specific UTMA majority age (18-21). Defaults to 18 when omitted. */
   majorityAge?: number;
+  /**
+   * Kid's birthdate as an ISO string. Used by the post-save 'sealed'
+   * celebration to compute the exact date the kid will be able to
+   * read the letter (birthdate + majorityAge years). When omitted,
+   * the celebration falls back to a generic "on their Nth birthday"
+   * framing without a specific date.
+   */
+  recipientBirthdate?: string | null;
   existingEntry?: MemoryEntry | null;
   onSaved?: () => void;
   /**
@@ -71,6 +79,7 @@ export function NoteEditorSheet({
   parentName,
   pronoun,
   majorityAge,
+  recipientBirthdate,
   requiresPlus = false,
   existingEntry,
   onSaved,
@@ -99,6 +108,14 @@ export function NoteEditorSheet({
   const [media, setMedia] = useState<MemoryMediaValue>(EMPTY_MEMORY_MEDIA);
   const [saving, setSaving] = useState(false);
   const [promptsOpen, setPromptsOpen] = useState(false);
+  // Post-save 'sealed' celebration state. When true, the sheet
+  // renders a calm wax-seal-style confirmation instead of the
+  // form. Fires ONLY on first-time letter creation (not on edits)
+  // because the emotional moment is the act of sealing, not the
+  // act of revising. Added 2026-05-21 per the wow-factor audit:
+  // the sealed letter is the single most emotionally heavy action
+  // in the product and was previously passing as a silent toast.
+  const [showSealedCelebration, setShowSealedCelebration] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -115,8 +132,28 @@ export function NoteEditorSheet({
       });
       setMode("writing");
       setPromptsOpen(false);
+      setShowSealedCelebration(false);
     }
   }, [open, existingEntry?.id]);
+
+  // Compute the exact date the kid will be able to read the letter,
+  // for the post-save celebration. birthdate + majorityAge years.
+  // Returns null when birthdate is missing; the celebration falls
+  // back to a generic "on their Nth birthday" framing in that case.
+  const readDateInfo = (() => {
+    if (!recipientBirthdate) return null;
+    const bd = new Date(recipientBirthdate);
+    if (!Number.isFinite(bd.getTime())) return null;
+    const reads = new Date(bd.getFullYear() + safeMajorityAge, bd.getMonth(), bd.getDate());
+    const now = Date.now();
+    const msUntil = reads.getTime() - now;
+    const yearsUntil = Math.floor(msUntil / (365.25 * 24 * 60 * 60 * 1000));
+    return {
+      dateLabel: reads.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+      yearsUntil,
+      alreadyReadable: msUntil <= 0,
+    };
+  })();
 
   const wordCount = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0;
   const name = childName || "them";
@@ -168,7 +205,16 @@ export function NoteEditorSheet({
       }
       haptic("success");
       onSaved?.();
-      onClose();
+      // First-time save fires the sealed celebration; edits just
+      // close cleanly. The emotional moment IS the act of sealing
+      // (committing to a letter the kid will read at majority);
+      // subsequent edits are housekeeping and a quiet close is
+      // the right register for those.
+      if (!existingEntry?.id) {
+        setShowSealedCelebration(true);
+      } else {
+        onClose();
+      }
     } catch {
       haptic("error");
     } finally {
@@ -199,7 +245,77 @@ export function NoteEditorSheet({
             style={{ maxHeight: "92dvh" }}
             onClick={(e) => e.stopPropagation()}
           >
-            {mode === "writing" ? (
+            {showSealedCelebration ? (
+              <>
+                {/* Post-save sealed-letter celebration. Renders ONLY
+                    on first-time letter creation (handleSave gates
+                    this on !existingEntry?.id). Calm-Apple-Settings
+                    register: wax-seal emoji as the anchor, the
+                    sealed-until-date as the load-bearing fact, the
+                    years-remaining as the emotional weight, a
+                    single Done button. No confetti, no marketing
+                    rhythm. The moment IS the date. */}
+                <div className="flex flex-col items-center text-center px-8 pt-12 pb-10">
+                  <motion.div
+                    initial={{ scale: 0, rotate: -8 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 220, damping: 14, delay: 0.05 }}
+                    className="text-5xl mb-5"
+                    aria-hidden
+                  >
+                    🕯️
+                  </motion.div>
+                  <motion.h2
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.35 }}
+                    className="font-heading text-2xl font-bold text-foreground mb-3"
+                  >
+                    Sealed for {capFirst(childName) || "your child"}.
+                  </motion.h2>
+                  <motion.p
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.32, duration: 0.35 }}
+                    className="text-sm text-foreground leading-relaxed max-w-xs mb-2"
+                  >
+                    {readDateInfo
+                      ? readDateInfo.alreadyReadable
+                        ? `${capFirst(childName) || "Your child"} can read this now.`
+                        : <>{capFirst(childName) || "Your child"} {reads} this on <span className="font-semibold">{readDateInfo.dateLabel}</span>, {fundPronouns.possAdj} {majorityOrdinal} birthday.</>
+                      : <>{capFirst(childName) || "Your child"} {reads} this on {fundPronouns.possAdj} {majorityOrdinal} birthday.</>
+                    }
+                  </motion.p>
+                  {readDateInfo && !readDateInfo.alreadyReadable && readDateInfo.yearsUntil > 0 && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.44, duration: 0.35 }}
+                      className="text-xs text-muted-foreground mb-7"
+                    >
+                      That&apos;s {readDateInfo.yearsUntil} {readDateInfo.yearsUntil === 1 ? "year" : "years"} from today.
+                    </motion.p>
+                  )}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.56, duration: 0.3 }}
+                    className="w-full"
+                  >
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        haptic("light");
+                        onClose();
+                      }}
+                      data-testid="button-sealed-letter-done"
+                    >
+                      Done
+                    </Button>
+                  </motion.div>
+                </div>
+              </>
+            ) : mode === "writing" ? (
               <>
                 {/* Header */}
                 <div className="flex items-start justify-between px-5 pt-5 pb-4 shrink-0">
