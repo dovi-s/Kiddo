@@ -1025,7 +1025,20 @@ export default function KidView() {
                       const giftAmount = parseFloat(gift.amount || "0");
                       const giftDate = gift.createdAt ? new Date(gift.createdAt) : null;
                       const yearsInvested = giftDate ? (Date.now() - giftDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000) : 0;
-                      const estimatedNow = giftAmount * Math.pow(1.07, Math.max(0, yearsInvested));
+                      // "What that gift would be worth today" — routes
+                      // through the canonical projectFundValue helper so the
+                      // kid sees the same fee-netted, effective-rate-
+                      // compounded numbers as every other surface. Migrated
+                      // from raw Math.pow(1.07, yearsInvested) on 2026-05-21
+                      // as part of the projection-helper consolidation
+                      // sweep. KidView already imported projectFundValue
+                      // for the at-18 projection; this single-gift loop
+                      // now uses it too.
+                      const estimatedNow = projectFundValue({
+                        startingValue: giftAmount,
+                        monthlyContribution: 0,
+                        yearsAhead: Math.max(0, yearsInvested),
+                      });
                       const estimatedGain = estimatedNow - giftAmount;
                       const initials = (gift.senderName || "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
                       const hasNote = !!(gift.message && gift.message.trim());

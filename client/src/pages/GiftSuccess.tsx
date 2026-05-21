@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { useQuery } from "@tanstack/react-query"
 import { Check, Copy, Share2, Heart, Gift, Mail, Bookmark, Smartphone } from "lucide-react"
 import { WhatsAppIcon, MessageIcon } from "@/components/ui/share-modal"
+import { projectFundValue } from "@shared/projection"
 import { Button } from "@/components/ui/button"
 import { haptic } from "@/lib/haptics"
 import { Logo } from "@/components/ui/logo"
@@ -495,8 +496,19 @@ export default function GiftSuccess() {
   const childFirstName = provenanceName && provenanceName.toLowerCase() !== "their" ? provenanceName : null
   const senderLooksGeneric = /^someone who loves /i.test(senderName) || senderName === "Someone"
   const numericAmount = Number(amount)
+  // "Your gift could grow to ~$X at age 18" — routes through the canonical
+  // projectFundValue helper so the gifter sees the same fee-netted,
+  // effective-rate-compounded number that every other surface uses.
+  // Migrated from raw Math.pow(1.07, yearsUntil18) on 2026-05-21 as part
+  // of the projection-helper consolidation sweep; previously this gifter-
+  // facing projection ran slightly higher than the parent-facing
+  // projections on Dashboard / Projection / Memory Book.
   const projectedAmount = Number.isFinite(numericAmount) && numericAmount > 0 && yearsUntil18 > 1
-    ? Math.round(numericAmount * Math.pow(1.07, yearsUntil18))
+    ? projectFundValue({
+        startingValue: numericAmount,
+        monthlyContribution: 0,
+        yearsAhead: yearsUntil18,
+      })
     : null
 
   const { data: tickerQuoteData } = useQuery<{ quotes: Array<{ symbol: string; price: number }> }>({

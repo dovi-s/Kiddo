@@ -138,6 +138,7 @@ import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { projectFundValue } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
 import {
   calculateKoraContributionFee,
@@ -3018,11 +3019,28 @@ export default function Dashboard() {
     const monthlyAmt = parseFloat(activeAutoInvest.amount || "0");
     const daysUntil18 = age18Transition?.daysUntil18 ?? null;
     const yearsLeft = daysUntil18 ? daysUntil18 / 365.25 : null;
+    // Smart-nudge projections now route through projectFundValue so the
+    // "if you doubled your recurring, your fund would be worth $X
+    // instead" math uses the same fee-netted, effective-rate-compounded
+    // assumptions as every other surface. Migrated from raw
+    // Math.pow(1.07, yearsLeft) plus an inline FV-of-annuity formula
+    // (with yearly-not-monthly compounding inside) on 2026-05-21 as
+    // part of the projection-helper consolidation sweep. Previously
+    // the smart-nudge numbers ran slightly higher than the Dashboard
+    // hero / Age 18 Plan / Calculator projections; now consistent.
     const currentProjection = yearsLeft && totalValue > 0
-      ? Math.round(totalValue * Math.pow(1.07, yearsLeft) + (monthlyAmt > 0 ? monthlyAmt * 12 * ((Math.pow(1.07, yearsLeft) - 1) / 0.07) : 0))
+      ? projectFundValue({
+          startingValue: totalValue,
+          monthlyContribution: monthlyAmt > 0 ? monthlyAmt : 0,
+          yearsAhead: yearsLeft,
+        })
       : null;
     const doubledProjection = yearsLeft && currentProjection && monthlyAmt > 0
-      ? Math.round(totalValue * Math.pow(1.07, yearsLeft) + (monthlyAmt * 2) * 12 * ((Math.pow(1.07, yearsLeft) - 1) / 0.07))
+      ? projectFundValue({
+          startingValue: totalValue,
+          monthlyContribution: monthlyAmt * 2,
+          yearsAhead: yearsLeft,
+        })
       : null;
 
     // Scenario 1: outperforming (9%+)

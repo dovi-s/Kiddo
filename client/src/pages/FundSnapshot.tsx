@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useFunds } from "@/hooks/use-funds";
 import { useCountUp } from "@/hooks/use-count-up";
 import { getMajorityAgeForState, US_STATES } from "@shared/utma";
+import { projectFundValue } from "@shared/projection";
 import type { Fund, Holding, Gift } from "@shared/schema";
 
 // ── Print-ready snapshot of a single fund ─────────────────────────────────────
@@ -194,9 +195,14 @@ export default function FundSnapshot() {
     return (oldest as any).settledAt || oldest.createdAt;
   }, [gifts]);
 
-  // Rough projection at age 18 — same model as the Projection page (7%/yr,
-  // continuing the parent's recurring contribution rate if any). Kept simple
-  // here because the snapshot is a presentation, not the analytical surface.
+  // Projection at age 18 — routes through the canonical projectFundValue
+  // helper (shared/projection.ts) so this surface gets the same fee-netted
+  // and effective-rate-compounded math as the Projection page, Calculator,
+  // Dashboard, Age 18 Plan, and Memory Book "On track for $X" lines.
+  // Migrated from raw Math.pow(1.07, yearsLeft) on 2026-05-21 as part of
+  // the projection-helper consolidation sweep — previously this surface
+  // skipped the AUM-fee netting and used raw 1.07^years, so its numbers
+  // ran ~0.1% higher than the canonical surfaces. Now consistent.
   const projectionAt18 = useMemo(() => {
     if (!fund || !showProjection) return null;
     const birthdate = (fund as any).recipientBirthdate;
@@ -207,7 +213,11 @@ export default function FundSnapshot() {
     eighteenth.setFullYear(dob.getFullYear() + 18);
     const yearsLeft = (eighteenth.getTime() - Date.now()) / (365.25 * 24 * 3600 * 1000);
     if (yearsLeft <= 0) return null;
-    const projected = balance * Math.pow(1.07, yearsLeft);
+    const projected = projectFundValue({
+      startingValue: balance,
+      monthlyContribution: 0,
+      yearsAhead: yearsLeft,
+    });
     return { value: projected, atDate: eighteenth };
   }, [fund, balance, showProjection]);
 
