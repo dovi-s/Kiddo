@@ -897,10 +897,18 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             ? `${createdNames[0]} & ${createdNames[1]}'s funds are ready.`
                             : `${createdNames.length} funds are ready.`}
                     </p>
+                    {/* Second line retoned 2026-05-21. Was 'Powered by Kiddo
+                        · gifts that actually last 🌱' — marketing-tagline
+                        rhythm on a product moment, the canonical
+                        anti-pattern this codebase has been auditing out.
+                        Replaced with an action-oriented state line that
+                        points the parent at the next step (sharing the
+                        gift link) which the Dashboard empty state will
+                        also surface when they land there in 1.4s. */}
                     <p className="text-xs text-muted-foreground mt-1.5 px-2 leading-relaxed">
                       {createdNames.length <= 1
-                        ? "Powered by Kiddo · gifts that actually last 🌱"
-                        : "Each one has its own gift link. Powered by Kiddo · gifts that actually last 🌱"}
+                        ? "Share the gift link to start the story."
+                        : "Each one has its own gift link. Share to start the story."}
                     </p>
                   </motion.div>
                 )}
