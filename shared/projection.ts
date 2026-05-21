@@ -100,7 +100,8 @@ export type ProjectFundInput = {
  * Returns a non-negative integer (cents-rounded) dollar value.
  *
  * Math (when contributionYears < yearsAhead):
- *   monthlyRate = (annualRate - feeRate) / 12     // feeRate=0 when netAumFee=false
+ *   netAnnualRate = annualRate - feeRate             // feeRate=0 when netAumFee=false
+ *   monthlyRate = (1 + netAnnualRate)^(1/12) - 1     // effective conversion
  *   contribMonths = round(contributionYears * 12)
  *   compoundOnlyMonths = round((yearsAhead - contributionYears) * 12)
  *
@@ -139,7 +140,28 @@ export function projectFundValue(input: ProjectFundInput): number {
 
   const feeRate = netAumFee ? PROJECTION_AUM_FEE_RATE : 0;
   const netAnnualRate = annualReturnRate - feeRate;
-  const monthlyRate = netAnnualRate / 12;
+  // Effective monthly rate from the effective annual rate. Previously
+  // this was `netAnnualRate / 12` (the APR-divide-by-12 convention),
+  // which produces a HIGHER effective annual yield than the input
+  // claims: 7% APR / 12 compounded monthly = 7.229% effective annual.
+  // Over the typical 19-year UTMA horizon, that mismatch over-stated
+  // projected values by 2.4% (~$560 on Emma's $50/mo example).
+  //
+  // The page text on /calculator-at-18 and every other surface that
+  // shows these numbers says "average annual market returns" or "7%
+  // yearly average." A parent reading those words expects the math to
+  // apply 7% as the actual annual return, not 7.229%. The locked
+  // honest-math discipline argues for the effective conversion:
+  //   monthlyRate = (1 + annualRate)^(1/12) - 1
+  // which makes (1 + monthlyRate)^12 = exactly (1 + annualRate).
+  //
+  // This matches the convention already used by projectSavings in
+  // client/src/pages/CalculatorAt18.tsx and gives the headline number
+  // the same conservative-honest framing as the savings comparison.
+  // Fixed 2026-05-21 per a user-flagged math audit on the calculator.
+  const monthlyRate = netAnnualRate > 0
+    ? Math.pow(1 + netAnnualRate, 1 / 12) - 1
+    : 0;
   const totalMonths = Math.round(yearsAhead * 12);
   const cappedContribYears =
     typeof contributionYears === "number" && Number.isFinite(contributionYears)
