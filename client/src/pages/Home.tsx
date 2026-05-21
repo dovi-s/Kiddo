@@ -13,6 +13,7 @@ import { Mascot } from "@/components/ui/mascot";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
+import { LockedRefusalsPanel } from "@/components/LockedRefusalsPanel";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogHeader } from "@/components/ui/dialog";
 import { haptic } from "@/lib/haptics";
 import { websiteCopy } from "@kora/content";
@@ -788,6 +789,23 @@ export default function Home() {
               <div className="mt-5 flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
                 <Link href="/security" className="transition-colors hover:text-foreground">How we protect your child&apos;s fund</Link>
               </div>
+            </FadeIn>
+          </div>
+        </section>
+
+        {/* Locked refusals — the trust-by-saying-no panel, sitting
+            between the operational-trust section above ("safe hands /
+            SIPC / encryption") and the final conversion CTA below.
+            The visitor reads: PROTECTION → CATEGORY POSITIONING →
+            ACTION. The refusals are what separates Kiddo from the
+            broader gamified-fintech category in the visitor's head
+            BEFORE they hit "Start your child's fund." Locked
+            2026-05-21; copy lives in LockedRefusalsPanel.tsx so
+            /demo and / stay in lockstep. */}
+        <section className="py-12 md:py-16">
+          <div className={SECTION_MAX}>
+            <FadeIn>
+              <LockedRefusalsPanel variant="marketing" />
             </FadeIn>
           </div>
         </section>
