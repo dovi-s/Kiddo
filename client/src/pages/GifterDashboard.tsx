@@ -13,6 +13,18 @@ import { haptic } from "@/lib/haptics";
 import { buildTrackedGetStartedHref } from "@/lib/acquisition";
 import { useCountUp } from "@/hooks/use-count-up";
 import { GifterFundSparkline } from "@/components/GifterFundSparkline";
+import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
+
+// Per-user gifter dashboard cache. Same caching trio pattern (initialData
+// + writeLocalCache + 5-minute staleTime) as the rest of the codebase
+// (funds, activities, events, co-parent collaborators, bank-accounts,
+// memory book events, etc.). Added 2026-05-20 because the previous setup
+// (no staleTime, no initialData) made every /gifter mount briefly render
+// the 'Loading your saved funds...' text before the network resolved.
+// The data is per-user and lifetime-aggregated; mutations (save fund,
+// follow updates, send gift) invalidate the query explicitly so the cache
+// stays accurate for actionable events.
+const GIFTER_DASHBOARD_CACHE_KEY = "kiddo.gifter-dashboard.v1";
 
 type GifterFundRow = {
   fundId: string;
@@ -99,9 +111,14 @@ export default function GifterDashboard() {
     queryFn: async () => {
       const res = await fetch("/api/gifter-account/dashboard", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load your saved funds");
-      return res.json();
+      const payload = await res.json();
+      writeLocalCache(GIFTER_DASHBOARD_CACHE_KEY, payload);
+      return payload;
     },
     enabled: isAuthenticated,
+    initialData: () => readLocalCache<GifterDashboardData>(GIFTER_DASHBOARD_CACHE_KEY),
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Count-up on the five summary cards. The gifter surface is
