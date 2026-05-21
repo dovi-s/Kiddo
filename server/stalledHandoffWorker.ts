@@ -328,7 +328,7 @@ async function processRow(row: StalledRow, log: LogFn): Promise<void> {
   // double-fire a T+30 then T+90 in the same tick on a long-stalled
   // fund. Each step is idempotent via the stamped timestamp.
   //
-  // 2026-05-15 fix: previously stamped t90 unconditionally — even on
+  // 2026-05-15 fix: previously stamped t90 unconditionally even on
   // sendEmail throw. A trusted contact with a real email address who
   // happened to be unreachable during a Postmark / SendGrid outage
   // got marked "processed" with no retry mechanism. The kid stayed
@@ -344,7 +344,7 @@ async function processRow(row: StalledRow, log: LogFn): Promise<void> {
   if (ageMs >= T90_MS && !row.stalledHandoffT90At) {
     try {
       const sent = await emailTrustedContact(row, log);
-      // Successful call — either email landed (sent=true) or there's
+      // Successful call either email landed (sent=true) or there's
       // no trusted contact to email (sent=false). Both are permanent
       // states; stamp so we don't re-check.
       await stampSentAt(row.fundId, "t90", log);
@@ -355,7 +355,7 @@ async function processRow(row: StalledRow, log: LogFn): Promise<void> {
         );
       }
     } catch (err: any) {
-      // Transient failure. Don't stamp — next tick retries.
+      // Transient failure. Don't stamp next tick retries.
       log(
         `T+90 trusted contact email failed for fund ${row.fundId} (will retry next tick): ${String(err?.message || err)}`,
         WORKER_SOURCE,

@@ -1,5 +1,5 @@
 // Kid-age milestone worker. Fires on the 5/10/13/16th birthday
-// only — distinct from fundBirthdayWorker which fires every year.
+// only distinct from fundBirthdayWorker which fires every year.
 // File-backed per-fund-per-milestone idempotence at
 // .local/kid-milestone-sends.json.
 //

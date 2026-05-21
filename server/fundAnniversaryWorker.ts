@@ -1,6 +1,6 @@
 // Fund anniversary worker. Fires the once-a-year fund-anniversary
 // email on the calendar anniversary of fund creation. Same shape
-// and same idempotence pattern as fundBirthdayWorker — the only
+// and same idempotence pattern as fundBirthdayWorker the only
 // difference is the trigger date (fund.created_at month+day vs
 // kid recipient_birthdate month+day).
 //

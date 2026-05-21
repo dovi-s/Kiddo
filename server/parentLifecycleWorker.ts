@@ -95,7 +95,7 @@ function daysBetween(earlier: Date | string, later = new Date()) {
 /**
  * Calendar-day diff in APP_TIMEZONE. Counts midnight boundaries
  * crossed, ignores time-of-day. A fund created at 11:59 PM on May 15
- * and "now" at 12:01 AM on May 16 returns 1 — they're on different
+ * and "now" at 12:01 AM on May 16 returns 1 they're on different
  * calendar days in the configured timezone.
  *
  * Used by the activation drip (Day 1 / 3 / 7) so the label matches
@@ -535,7 +535,7 @@ async function enqueueParentLifecycleEmails(log: (message: string, source?: stri
       // configured timezone: Day 1 fires on the day AFTER signup,
       // Day 3 on the third day, Day 7 on the seventh.
       //
-      // The hoursElapsed >= 18 gate is the second safety net — a
+      // The hoursElapsed >= 18 gate is the second safety net a
       // fund created at 11:59 PM still wouldn't fire Day 1 at 12:01
       // AM (only 2 minutes later); we'd wait ~18+ hours so the
       // email arrives sometime during normal hours of the next day.

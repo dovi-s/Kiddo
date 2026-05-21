@@ -1,4 +1,4 @@
-// Age-18 transition worker — fires the lifecycle around the kid's majority age.
+// Age-18 transition worker fires the lifecycle around the kid's majority age.
 //
 // What this worker DOES:
 //   1. T-30 reminder: emails the parent "your kid turns N in a month, here's the prep"
@@ -7,7 +7,7 @@
 //      a. If the parent has saved the kid's email in AgeTransitionManager AND
 //         no invite has been triggered yet, auto-create the invite token and
 //         email the kid the claim link (same template as the manual flow).
-//      b. Email the parent "Today's the day, here's what's left to do" — or
+//      b. Email the parent "Today's the day, here's what's left to do" or
 //         if the kid email isn't on file, "they turn N today and you haven't
 //         set up the handoff."
 //   4. Stamps funds.age_18_notified_at on T-0 to prevent the activity log
@@ -15,7 +15,7 @@
 //      JSON file so the day-of can fire even if the parent dismissed the
 //      preview emails earlier.
 //
-// Runs every 6 hours by default — birthdays are day-granular and we don't
+// Runs every 6 hours by default birthdays are day-granular and we don't
 // need real-time precision for the email cue. The 6h cadence catches the
 // kid's 18th in their local morning regardless of server TZ. Each milestone
 // has independent send-state tracking, so a worker restart in the middle of
@@ -23,16 +23,16 @@
 //
 // What this worker DOES NOT DO:
 //   - DriveWealth account ownership transfer (custodian integration not yet
-//     wired — see Integrations admin tab for status)
+//     wired see Integrations admin tab for status)
 //   - Kid-account claim flow itself (the kid clicks the link in the auto-sent
 //     email, lands on /transition/{token}, creates their own Kiddo account
-//     and accepts — that flow lives in AgeTransitionInvite.tsx)
+//     and accepts that flow lives in AgeTransitionInvite.tsx)
 //   - Visibility unlock for Memory Book entries reserved for age-18 (already
-//     handled by KidView API filter — entries with visibility='kid_at_18'
+//     handled by KidView API filter entries with visibility='kid_at_18'
 //     auto-show once getKidAgePhase returns phase='adult')
 //
 // Per-fund majority age (locked at fund creation from state UTMA law) drives
-// every milestone — PA = 21, AL/NE = 19, most states = 18. Hardcoding 18
+// every milestone PA = 21, AL/NE = 19, most states = 18. Hardcoding 18
 // would fire wrong for kids in those states.
 
 import { db, pool } from "./db";
@@ -56,7 +56,7 @@ import path from "path";
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "age18-transition-worker";
 
-// Legacy JSON state path — kept for one-time backfill on first worker
+// Legacy JSON state path kept for one-time backfill on first worker
 // pass after the migration. Safe to delete once all funds have a row
 // in the age18_reminder_state table; the worker reads from Postgres
 // going forward.
@@ -139,7 +139,7 @@ async function loadReminderState(log: LogFn): Promise<ReminderState> {
 
 async function saveReminderState(state: ReminderState, log: LogFn): Promise<void> {
   // Per-fund upsert. Only writes funds that actually have state in
-  // the in-memory map this pass — avoids no-op writes for funds the
+  // the in-memory map this pass avoids no-op writes for funds the
   // worker didn't touch. Each upsert is independent so a single bad
   // fund_id doesn't take the whole save down.
   const dateOrNull = (v: string | undefined) => (v ? new Date(v) : null);
@@ -172,7 +172,7 @@ async function saveReminderState(state: ReminderState, log: LogFn): Promise<void
   }
 }
 
-// Suppress unused-import warning for `eq` — kept for any future
+// Suppress unused-import warning for `eq` kept for any future
 // per-fund query helpers.
 void eq;
 
@@ -283,7 +283,7 @@ function parentGreeting(row: DueRow): string {
   return row.parent_first_name ? `Hi ${row.parent_first_name},` : "Hi,";
 }
 
-// T-30: parent reminder. "Your kid turns N in a month — here's the prep."
+// T-30: parent reminder. "Your kid turns N in a month here's the prep."
 async function sendT30Email(row: DueRow, log: LogFn): Promise<void> {
   if (!row.parent_email) return;
   const childName = safeChildName(row);
@@ -360,7 +360,7 @@ async function sendT1Email(row: DueRow, log: LogFn): Promise<void> {
   });
 }
 
-// Day-of kid email — auto-generated invite token, claim link in the body.
+// Day-of kid email auto-generated invite token, claim link in the body.
 // Mirrors the manual /api/funds/:fundId/age-transition/invite-link flow so
 // the email reads identically whether parent triggered it or the worker did.
 async function sendKidInviteEmail(
@@ -542,7 +542,7 @@ async function processToday(rows: DueRow[], state: ReminderState, log: LogFn): P
     const fundState = state.byFund[fundId] || (state.byFund[fundId] = {});
 
     try {
-      // Always stamp age_18_notified_at first — even if downstream emails
+      // Always stamp age_18_notified_at first even if downstream emails
       // fail, we don't want to re-fire the activity log. Better one missed
       // email than ten duplicate ones.
       await db.execute(sql`
@@ -552,7 +552,7 @@ async function processToday(rows: DueRow[], state: ReminderState, log: LogFn): P
           AND age_18_notified_at IS NULL
       `);
 
-      // Activity log entry — surfaces in admin + parent activity feed.
+      // Activity log entry surfaces in admin + parent activity feed.
       await storage
         .createActivity({
           userId: String(row.user_id),
@@ -589,7 +589,7 @@ async function processToday(rows: DueRow[], state: ReminderState, log: LogFn): P
       // so it's unit-testable. See script/test-age18-decisions.ts.
       // The variant tells us which parent email to send; the auto-send
       // gate is independent (only fires when configured AND no existing
-      // token — prevents double-send when parent manually triggered earlier).
+      // token prevents double-send when parent manually triggered earlier).
       const parentVariant = decideTodayParentVariant({ childEmail, isVerified });
       const autoSendKid = shouldAutoSendKidInvite({
         childEmail,
@@ -616,7 +616,7 @@ async function processToday(rows: DueRow[], state: ReminderState, log: LogFn): P
             .catch(() => undefined);
         } catch {
           // Email failed; the token was already written so subsequent
-          // passes don't re-generate. State stays unsent — but the parent
+          // passes don't re-generate. State stays unsent but the parent
           // email below will still go out, alerting them to take over.
         }
       }
@@ -651,7 +651,7 @@ export async function runAge18TransitionWorker(log: LogFn = () => undefined): Pr
     const t1Sent = await processT1(due.t1, state, log);
     const todayProcessed = await processToday(due.today, state, log);
 
-    // Persist state once at the end of the pass — Postgres-backed
+    // Persist state once at the end of the pass Postgres-backed
     // upserts (one per touched fund). Per-fund failures don't take the
     // whole save down; they re-attempt on the next pass with at most
     // one duplicate send per affected fund.

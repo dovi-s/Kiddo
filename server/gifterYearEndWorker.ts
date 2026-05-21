@@ -1,8 +1,8 @@
 // Gifter year-end giving summary worker.
 //
 // Counterpart to yearEndWrappedWorker (which emails parents about
-// their child's year). This one emails GIFTERS — the grandparent,
-// aunt, uncle, godparent, family friend — with a consolidated view
+// their child's year). This one emails GIFTERS the grandparent,
+// aunt, uncle, godparent, family friend with a consolidated view
 // of every gift they made across every fund in the calendar year.
 //
 // Locked 2026-05-19 per the Five Towns roadmap P4. The sophisticated
@@ -15,7 +15,7 @@
 //   - File-backed idempotence at .local/gifter-wrapped-sends.json
 //     keyed by `email:year` (lowercased email)
 //   - Single SQL roll-up to gather per-gifter aggregates for the year
-//   - Honors the gifter notification subscription state — anonymous
+//   - Honors the gifter notification subscription state anonymous
 //     gifters who didn't opt into updates are skipped
 //   - Uses the receipt-grade email template with structured details
 //
@@ -147,7 +147,7 @@ async function tick(log: LogFn): Promise<void> {
 
   // Second pass: per-recipient breakdown per gifter, for the email's
   // structured details block. One bigger query rather than per-gifter
-  // queries — easier on the DB at year-end scale.
+  // queries easier on the DB at year-end scale.
   let perRecipientRows: PerRecipientRow[] = [];
   try {
     const yearStart = `${year}-01-01`;
@@ -202,7 +202,7 @@ async function tick(log: LogFn): Promise<void> {
   for (const row of aggregates) {
     const email = String(row.sender_email || "").trim().toLowerCase();
     if (!email) continue;
-    // Skip pseudo-emails or obvious non-emails — defensive guard since
+    // Skip pseudo-emails or obvious non-emails defensive guard since
     // gifts.sender_email is free-text.
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       skippedAnonymousFallback += 1;
@@ -224,7 +224,7 @@ async function tick(log: LogFn): Promise<void> {
     // Threshold gate: only send if total gifted ≥ $25. Sending a
     // year-end summary for a single $5 gift reads as spam; the
     // sophisticated gifter persona this is for has given meaningful
-    // dollars. The lower bound is conservative — any real gifter
+    // dollars. The lower bound is conservative any real gifter
     // (grandma sending birthday $50, etc.) clears it.
     if (totalGiftedUsd < 25) continue;
 
@@ -296,7 +296,7 @@ export function startGifterYearEndWorker(log: LogFn = console.log): void {
   };
   // Initial run on boot (cheap when outside the Dec 15-31 window).
   void run();
-  // Then every hour — coarser than the parent wrapped because per-
+  // Then every hour coarser than the parent wrapped because per-
   // gifter aggregation is the heavier query of the two.
   runningTimer = setInterval(run, 60 * 60 * 1000);
 }

@@ -4,7 +4,7 @@
 //
 //   1. A gifter who submitted an intent had no way of knowing whether
 //      the parent acted. The success state used to say "no rush, the
-//      note we sent is warm" but tell them nothing about timeline —
+//      note we sent is warm" but tell them nothing about timeline
 //      the gifter could wonder for 60 days then watch the intent
 //      silently expire.
 //   2. Intents past their expiresAt sat at status='pending' forever.
@@ -28,7 +28,7 @@
 // The worker is deliberately conservative on emails. ONE heads-up
 // per intent, ever. The gifter is told the parent's email and
 // encouraged to follow up directly through their own channels
-// (text, in person, etc.) — Kiddo's role stays "warm welcome,"
+// (text, in person, etc.) Kiddo's role stays "warm welcome,"
 // not "follow-up drip." Anti-spam discipline locked.
 //
 // Cadence: daily. The 10-day lead window means worker downtime of
@@ -78,7 +78,7 @@ function fmtDaysLeft(expiresAt: Date): string {
  * Send the gifter a one-time heads-up that their intent is
  * approaching expiry. Returns true on success (email queued or
  * delivered), false on failure. Caller stamps gifterReminderSentAt
- * regardless of return value — better to miss one email than to
+ * regardless of return value better to miss one email than to
  * spam the gifter with retries from a worker tick loop.
  */
 async function sendGifterHeadsUp(
@@ -227,7 +227,7 @@ async function processHeadsUps(log: LogFn): Promise<number> {
 
 /**
  * Flip status from 'pending' to 'expired' on intents whose
- * expiresAt is in the past. Idempotent — the WHERE clause excludes
+ * expiresAt is in the past. Idempotent the WHERE clause excludes
  * already-expired rows. Returns the number of rows flipped this
  * tick (for the log).
  */

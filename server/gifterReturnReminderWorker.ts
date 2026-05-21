@@ -12,7 +12,7 @@
 // Respects the recipient (gifter) email-preferences. Gifters
 // don't have user accounts by default; we treat them as having
 // no preferences map (all categories enabled) unless we find a
-// matching user row by email — in which case we honor that
+// matching user row by email in which case we honor that
 // user's gifterReturn preference.
 
 import fs from "fs/promises";

@@ -205,7 +205,7 @@ export async function sendEmail(message: EmailMessage): Promise<EmailDeliveryRes
   // are stored in the email_suppressions table by the ESP webhook
   // handler (server/postmarkWebhook.ts). Sending to a suppressed
   // address would compound sender-reputation damage and re-trigger
-  // the same bounce. Silent skip — the caller's worker layer is
+  // the same bounce. Silent skip the caller's worker layer is
   // responsible for not re-queueing if delivered=false matters.
   // Locked 2026-05-15 as part of the deliverability-hygiene branch.
   if (await isEmailSuppressed(message.to)) {

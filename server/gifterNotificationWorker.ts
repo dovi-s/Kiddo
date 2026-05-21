@@ -39,7 +39,7 @@ type GifterNotificationSubscriber = {
   // Gifter-side fund-value milestone dedup. Stores the highest threshold the
   // gifter has been emailed about for this fund. Ratchet semantics: we only
   // email when a higher threshold crosses, never the same one twice. When a
-  // fund jumps past multiple thresholds in one event (rare but possible —
+  // fund jumps past multiple thresholds in one event (rare but possible
   // e.g. a $50k anonymous gift on a $5k fund crosses $10k, $25k, AND $50k),
   // we email about the HIGHEST crossed threshold to avoid spamming the same
   // gifter with three back-to-back emails about the same surge.
@@ -52,7 +52,7 @@ type GifterNotificationSubscriber = {
   lastDormancyCheckinAt: string | null;
   // Year-end recap dedup. Stores the calendar year the gifter most
   // recently received the December "year in giving" recap. Once per
-  // calendar year per gifter (NOT per fund — the recap aggregates
+  // calendar year per gifter (NOT per fund the recap aggregates
   // ALL funds the gifter has contributed to in that year).
   lastYearEndRecapYear: number | null;
   lastYearEndRecapSentAt: string | null;
@@ -100,7 +100,7 @@ type GifterNotificationStore = {
   // Anniversary email dedup. Key shape: `${giftId}:${yearN}` where
   // yearN is the gift's nth anniversary (1, 2, 3...). Each year's
   // anniversary fires at most once even if the worker tick runs
-  // many times in the anniversary window. Per-gift-per-year — a
+  // many times in the anniversary window. Per-gift-per-year a
   // gift two years old can have already fired its 1st anniversary
   // and still be eligible for its 2nd.
   anniversarySentByKey?: Record<string, string>;
@@ -205,7 +205,7 @@ function getAgeOnDate(birthdate: Date | string, today = new Date()) {
   return age;
 }
 
-// Renamed semantically — this returns the kid's UTMA majority date, which
+// Renamed semantically this returns the kid's UTMA majority date, which
 // is 18 in most states, 19 in AL/NE, 21 in MS/PA, etc. The fund's
 // majority_age column is the source of truth (locked at fund creation).
 function getMajorityBirthday(birthdate: Date | string, majorityAge: number = 18) {
@@ -448,11 +448,11 @@ function renderBirthdayReminder(entry: QueueEntry): RenderedEmail | null {
   const giftUrl = String(entry.giftUrl || "").trim();
   const startFundUrl = String(entry.startFundUrl || "").trim();
   if (!to || !childName || !giftUrl) return null;
-  // Lead-up framing — the email now fires 7-14 days before the birthday
+  // Lead-up framing the email now fires 7-14 days before the birthday
   // (not on the day-of), so the subject + opening line speak to that
   // window. Gives the gifter time to actually send the gift before the
   // birthday arrives. Falls back to "today" copy if daysUntil is 0
-  // (defensive — shouldn't happen with the new window but keeps the
+  // (defensive shouldn't happen with the new window but keeps the
   // render safe for legacy queue entries that pre-date the change).
   const dayLabel =
     daysUntil <= 0
@@ -470,7 +470,7 @@ function renderBirthdayReminder(entry: QueueEntry): RenderedEmail | null {
     contributionCount > 1
       ? `You have gifted ${childName} ${contributionCount} times. Every one of those gifts is still part of their fund.`
       : `You gifted ${childName} before. That gift is still part of their fund.`;
-  // "Growing-up" line — the village context. Replaces the abandoned
+  // "Growing-up" line the village context. Replaces the abandoned
   // separate Y1-Y17 series. Renders only when the aggregate values
   // are non-zero (a brand-new fund won't have either yet, in which
   // case the line falls out).
@@ -478,7 +478,7 @@ function renderBirthdayReminder(entry: QueueEntry): RenderedEmail | null {
     ? `${childName}'s fund has $${fundGifted.toFixed(2)} today, built by ${fundContributors} ${fundContributors === 1 ? "person" : "people"}.`
     : null;
   // Age-specific milestone color for the most resonant ages. Quiet
-  // additions to the email — the gifter feels like the year matters
+  // additions to the email the gifter feels like the year matters
   // without it reading as a generic age-based marketing template.
   const ageColorLine = (() => {
     if (age === 1) return `One year of compounding. Small numbers now, real ones later.`;
@@ -740,7 +740,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
   // was a warm thank-you; sophisticated gifters (grandparents giving
   // $1k+, professionals tracking gift-tax compliance via Form 709)
   // need a structured "for your records" block alongside the prose.
-  // All fields are nullable upstream — when Stripe enrichment fails
+  // All fields are nullable upstream when Stripe enrichment fails
   // the block simply renders fewer rows or skips entirely.
   const details: Array<{ label: string; value: string }> = [];
   const receiptReference = entry.receiptReference ? String(entry.receiptReference).trim() : "";
@@ -771,7 +771,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
   }
   details.push({ label: "Recipient", value: `${childName}'s UTMA · custody at DriveWealth, LLC` });
 
-  // Plain-text version of the receipt block — fixed-width alignment
+  // Plain-text version of the receipt block fixed-width alignment
   // for monospace viewers (some CPAs forward these to their inbox as
   // text-only). Two-column with right-padded labels, dotted lines
   // between rows.
@@ -785,7 +785,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
       ].join("\n")
     : "";
 
-  // Tax-implications briefing — locked 2026-05-19 per the Five Towns
+  // Tax-implications briefing locked 2026-05-19 per the Five Towns
   // gifter polish. A wealthy gifter giving $5k+ needs to know:
   //   (a) THEY have no tax liability on this gift
   //   (b) The parent files the 1099s issued by DriveWealth
@@ -839,7 +839,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
 // to crosses one of the meaningful money thresholds ($1k+; we skip $100/$500
 // because they're noisy and would email gifters multiple times in the early
 // weeks of a fund). Per-gifter ratchet dedup via lastMilestoneNotifiedThreshold
-// — never email the same threshold twice, and skip lower thresholds if the
+// never email the same threshold twice, and skip lower thresholds if the
 // fund jumped past several at once. The emotional anchor in the body comes
 // from the same shared/milestones.ts copy table the in-app celebration card
 // and the parent email use, so all three surfaces tell the same story at a
@@ -912,7 +912,7 @@ function renderGifterMilestoneCrossed(entry: QueueEntry): RenderedEmail | null {
 // sent in the dashboard. Distinct from auto-generated transactional
 // receipts because this is a HUMAN message the parent personally wrote
 // (or composed from a template) for this specific gifter. Treated as
-// transactional in terms of unsubscribe gating — a personal thank-you
+// transactional in terms of unsubscribe gating a personal thank-you
 // addressed to a specific gifter is not a marketing email even when
 // the gifter has opted out of lifecycle reminders. Per
 // project_seth_godin_kora_alignment.md: a thank-you the gifter forwarded
@@ -970,7 +970,7 @@ function renderParentThankYou(entry: QueueEntry): RenderedEmail | null {
 // Dormancy re-engagement email. Fires when a gifter has not given to a
 // fund in 6+ months AND the fund has been active in that gap (other
 // gifts received, milestones crossed). Honest framing: "Emma is N now,
-// her fund has grown to $X, you were part of building it" — not
+// her fund has grown to $X, you were part of building it" not
 // guilt-trip, not "Don't miss out", just a quiet check-in with real
 // context. Once per gifter per fund per 6-month window. Skipped when
 // the gifter is unsubscribed OR when the parent has the birthdayReminders
@@ -1064,14 +1064,14 @@ function renderDormancyCheckIn(entry: QueueEntry): RenderedEmail | null {
 // UTMA tax sits with the kid/custodian), (2) brand re-entry moment in
 // the Jan resolution window when families plan the year ahead, and
 // (3) forwardable content that lets gifters share their giving story
-// with their spouse or extended family — natural organic acquisition.
+// with their spouse or extended family natural organic acquisition.
 //
 // Per feedback_anonymous_as_explicit_flag.md: anonymous gifts ARE
 // counted in the aggregate (their email is real and the dollars are
 // real) but the recap copy avoids naming the recipient when the gift
 // was anonymous on a fund where the gifter has ONLY anonymous gifts
 // to that recipient. Mixed-history (some anon, some named) shows the
-// named child but the dollar total is the full sum — gifters who
+// named child but the dollar total is the full sum gifters who
 // gave anonymously presumably still want to know their own year-end
 // total.
 function renderYearEndRecap(entry: QueueEntry): RenderedEmail | null {
@@ -1176,7 +1176,7 @@ function renderQueuedEmail(entry: QueueEntry): RenderedEmail | null {
 // the gifter the gift IS invested and starting to grow. Without a
 // live-price call (which would add an external dependency to the
 // worker), the copy avoids fabricating numbers and stays at the
-// "your gift is invested in {ticker}" framing — honest about the
+// "your gift is invested in {ticker}" framing honest about the
 // state without inventing growth figures. The included gift link
 // lets them gift again with one tap, which is the actual loop the
 // design lens cares about.
@@ -1193,12 +1193,12 @@ function renderGiftDay7Followup(entry: QueueEntry): RenderedEmail | null {
   const unsubscribeUrl = String(entry.unsubscribeUrl || "").trim();
   if (!to || !childName || !giftUrl || amount <= 0) return null;
   const amountLabel = `$${amount.toFixed(2)}`;
-  // Growth line — uses live price snapshot taken at enqueue time.
+  // Growth line uses live price snapshot taken at enqueue time.
   // Falls back gracefully when the price service had no quote (ticker
   // missing from universe, provider failure, no shares stamped) so the
   // email never fabricates a number. Honest framing per the locked
   // "no greenwashing losses" rule: when value is BELOW gift amount we
-  // still show it — losses are time-framed, not hidden. The
+  // still show it losses are time-framed, not hidden. The
   // "growing alongside everything else they own" line carries the
   // emotional payload for funds where the live value isn't computable.
   const valueLine = (() => {
@@ -1244,7 +1244,7 @@ function renderGiftDay7Followup(entry: QueueEntry): RenderedEmail | null {
 
 // Anniversary email render. Fires on the gift's 1st, 2nd, 3rd... year
 // anniversary (capped at the kid's majority age). The emotional beat
-// is "a year ago you gave; here's what it's grown into" — same
+// is "a year ago you gave; here's what it's grown into" same
 // honest-loss / time-framed pattern as Day-7. Year 1 gets warmer copy
 // because it's the milestone-feeling first anniversary.
 function renderGiftAnniversary(entry: QueueEntry): RenderedEmail | null {
@@ -1308,20 +1308,20 @@ function renderGiftAnniversary(entry: QueueEntry): RenderedEmail | null {
   };
 }
 
-// Day-7 growth check-in. Fires roughly a week after a gifter's gift —
+// Day-7 growth check-in. Fires roughly a week after a gifter's gift
 // the highest-leverage WOM loop in the product per the design lens
 // ("the gifter who just gave is the one most likely to give again").
 // Calendar-based daily scan: any gift whose createdAt falls in the
 // 7–8 day window AND has a senderEmail AND hasn't already been
 // stamped as Day-7-sent gets enqueued. Window (not single day) is
-// the same grace pattern as the birthday lead-up — the worker may
+// the same grace pattern as the birthday lead-up the worker may
 // miss a tick during a deploy, and a one-day window would lose the
 // follow-up for affected gifts. Window also widens to 14 days as a
 // hard upper bound so backfill on first deploy doesn't enqueue
 // follow-ups for gifts that are already weeks old (those are too
 // late to feel like a follow-up).
 //
-// Scope: ALL gifts with a senderEmail, opt-in OR opt-out — same
+// Scope: ALL gifts with a senderEmail, opt-in OR opt-out same
 // precedent as the immediate gift_receipt_followup which sends
 // transactionally. Day-7 is an extension of that receipt cluster,
 // not a marketing email. Every email carries an unsubscribe link;
@@ -1381,13 +1381,13 @@ async function enqueueGiftDay7Followups(log: (message: string, source?: string) 
     // Honor unsubscribe state if the gifter is in the per-fund
     // subscriber map and has flipped to unsubscribed. Gifters who
     // never opted in for ongoing emails won't be in the map at all
-    // — they still get the Day-7 (it's transactional). The
+    // they still get the Day-7 (it's transactional). The
     // unsubscribe link in this email lets them opt out of future
     // ones if they want.
     const subscriber = store.subscribersByFund?.[row.fund_id]?.[email];
     if (subscriber?.unsubscribed) {
       // Mark as "sent" anyway so we don't re-evaluate this gift on
-      // every worker tick — once unsubscribed, always skipped.
+      // every worker tick once unsubscribed, always skipped.
       day7Sent[giftId] = new Date().toISOString();
       storeChanged = true;
       continue;
@@ -1397,7 +1397,7 @@ async function enqueueGiftDay7Followups(log: (message: string, source?: string) 
     const fundUrlFund = { id: row.fund_id, slug: row.fund_slug, name: row.fund_name } as FundReminderRow;
     const giftUrl = buildGiftUrl(baseUrl, fundUrlFund);
     const startFundUrl = buildLoopStartFundUrl(baseUrl, row.fund_id, "gift_day7_followup_email", "email");
-    // Unsubscribe URL — if the gifter has a subscriber record, use
+    // Unsubscribe URL if the gifter has a subscriber record, use
     // their token; otherwise mint one on the fly so unsubscribe still
     // works for opt-out-only gifters. The /updates/unsubscribe route
     // accepts either path.
@@ -1405,7 +1405,7 @@ async function enqueueGiftDay7Followups(log: (message: string, source?: string) 
       || crypto.createHash("sha1").update(`${row.fund_id}:${email}`).digest("hex");
     const unsubscribeUrl = buildUnsubscribeUrl(baseUrl, unsubscribeToken);
 
-    // Live price snapshot for the "now worth $X" line. Best-effort —
+    // Live price snapshot for the "now worth $X" line. Best-effort
     // getMarketQuote returns null when the ticker is missing from the
     // universe or a provider call fails. Cached upstream (5 min TTL),
     // so calling it from the worker tick is cheap. The render falls
@@ -1421,7 +1421,7 @@ async function enqueueGiftDay7Followups(log: (message: string, source?: string) 
           currentValue = Math.round(shares * quote.price * 100) / 100;
         }
       } catch {
-        // non-fatal — render uses the no-value fallback
+        // non-fatal render uses the no-value fallback
       }
     }
 
@@ -1455,7 +1455,7 @@ async function enqueueGiftDay7Followups(log: (message: string, source?: string) 
   }
 }
 
-// Anniversary email — fires on the gift's annual anniversary. Same
+// Anniversary email fires on the gift's annual anniversary. Same
 // shape as Day-7 but anchored on a yearly cadence and capped at the
 // kid turning 18 (after that the at-18 ceremony email is the
 // canonical end of the gifter relationship; layering anniversary
@@ -1467,8 +1467,8 @@ async function enqueueGiftDay7Followups(log: (message: string, source?: string) 
 // avoid backfill carpet-bombing on first deploy.
 async function enqueueGiftAnniversaryEmails(log: (message: string, source?: string) => void) {
   // Find gifts whose anniversary day-of-year matches today (within a
-  // 0-7 day grace window forward — same window-not-single-day pattern
-  // as Day-7 + birthday lead-up — to tolerate worker downtime). The
+  // 0-7 day grace window forward same window-not-single-day pattern
+  // as Day-7 + birthday lead-up to tolerate worker downtime). The
   // SQL filter computes the next anniversary date by adding (year_diff
   // + 1) years to the gift's createdAt, then keeps gifts where the
   // anniversary fell within the last 7 days.
@@ -1527,7 +1527,7 @@ async function enqueueGiftAnniversaryEmails(log: (message: string, source?: stri
     const dedupKey = `${giftId}:${yearN}`;
     if (annivSent[dedupKey]) continue;
 
-    // Cap anniversary cadence once the kid hits majority — at that
+    // Cap anniversary cadence once the kid hits majority at that
     // point the at-18 notification IS the closing ceremony for the
     // gifter relationship; layering anniversaries on top would
     // dilute it and feel like a mailing list.
@@ -1554,7 +1554,7 @@ async function enqueueGiftAnniversaryEmails(log: (message: string, source?: stri
       || crypto.createHash("sha1").update(`${row.fund_id}:${email}`).digest("hex");
     const unsubscribeUrl = buildUnsubscribeUrl(baseUrl, unsubscribeToken);
 
-    // Live price snapshot — same best-effort pattern as Day-7. The
+    // Live price snapshot same best-effort pattern as Day-7. The
     // anniversary email is where "$50 has grown to $X over a year"
     // earns the most: a real time-framed update on a gift the gifter
     // has had a year to forget about.
@@ -1618,16 +1618,16 @@ async function enqueueRecurringNotifications(log: (message: string, source?: str
     const settings = normalizeSettings(store.settingsByFund[fund.id]);
     store.settingsByFund[fund.id] = settings;
 
-    // Birthday lead-up window — fire when the kid's next birthday is
+    // Birthday lead-up window fire when the kid's next birthday is
     // 7–14 days away. The window (not a single day) is intentional: the
     // worker runs on a schedule and may miss a day during a deploy or
     // outage, so a 7-day grace tolerates a missed run without losing
-    // the reminder. The childAge cap stays at < 18 — once the kid is
+    // the reminder. The childAge cap stays at < 18 once the kid is
     // an adult, the relationship between gifter and the fund changes
     // (handoff via age18_notification handles that one separately).
     // The lastBirthdayReminderYear dedup means even if the window
     // overlaps two worker runs the gifter only gets one email per
-    // calendar year. Was: fire ON the birthday — this iteration moves
+    // calendar year. Was: fire ON the birthday this iteration moves
     // the trigger forward 7-14 days so gifts can actually arrive
     // BEFORE the day, which is the whole job of a lead-up reminder.
     if (settings.birthdayReminders) {
@@ -1644,7 +1644,7 @@ async function enqueueRecurringNotifications(log: (message: string, source?: str
           // for the "growing-up" framing line. Cheap on the worker
           // (already cached for the at-18 path). Lets the email
           // include "Emma's fund has $X today, built by Y people
-          // over Z years" — merges the previously-separate Y1-Y17
+          // over Z years" merges the previously-separate Y1-Y17
           // series into the lead-up email so each gifter gets one
           // birthday-cycle email per year, not two.
           const aggregate = await getFundGiftAggregate(fund.id);
@@ -1678,11 +1678,11 @@ async function enqueueRecurringNotifications(log: (message: string, source?: str
       }
     }
 
-    // Holiday trigger — Nov 15 through Dec 5. The gift-shopping window
+    // Holiday trigger Nov 15 through Dec 5. The gift-shopping window
     // for the season; before Nov 15 it reads as premature, after Dec 5
     // a parent's-friend gift card decision has usually been made. Once
     // per gifter per calendar year via lastHolidayReminderYear (per-
-    // fund — a gifter who's contributed to two kids' funds gets two
+    // fund a gifter who's contributed to two kids' funds gets two
     // seasonal nudges, one per relationship). Piggybacks on the
     // birthdayReminders setting for now since both are "ongoing
     // reminders" the parent has consented to send. Could split into
@@ -1776,7 +1776,7 @@ async function enqueueRecurringNotifications(log: (message: string, source?: str
 }
 
 // Dormancy re-engagement enqueue. Single highest-ROI repeat-gift
-// conversion lever per the audit — silent gifters get NO existing
+// conversion lever per the audit silent gifters get NO existing
 // touchpoint between the day-7 follow-up (or 1st-year anniversary)
 // and the birthday lead-up. For a gifter whose last gift was 6+
 // months ago AND who is NOT in a natural reminder window (birthday
@@ -1908,7 +1908,7 @@ async function enqueueDormancyCheckIns(log: (message: string, source?: string) =
 //   2. Gifter has at least one settled gift in the current year.
 //   3. lastYearEndRecapYear !== currentYear (one per year per gifter).
 //   4. Gifter is not unsubscribed from ANY fund they gifted this year
-//      (we treat the recap as per-gifter, not per-fund — if they've
+//      (we treat the recap as per-gifter, not per-fund if they've
 //      opted out of one fund's reminders but stayed on for two
 //      others, they still get the cross-fund recap because the
 //      content speaks to all three).
@@ -2018,7 +2018,7 @@ async function enqueueYearEndRecaps(log: (message: string, source?: string) => v
     // Find ANY subscriber record for this email across all funds
     // they touched. We use the first one we find as the "anchor" for
     // the dedup write. If ANY subscriber record for this email shows
-    // lastYearEndRecapYear === currentYear, skip — already sent.
+    // lastYearEndRecapYear === currentYear, skip already sent.
     let anchorFundId: string = "";
     let anchorSubscriber: GifterNotificationSubscriber | null = null;
     let alreadySentThisYear = false;
@@ -2039,7 +2039,7 @@ async function enqueueYearEndRecaps(log: (message: string, source?: string) => v
     // No subscriber record for this gifter on ANY of the funds they
     // gave to? Unusual (the gift webhook chain creates these), but
     // possible for legacy data or gifts that bypassed the opt-in
-    // flow. We still want the recap — synthesize an anonymous
+    // flow. We still want the recap synthesize an anonymous
     // anchor record so we have an unsubscribe token to include and
     // a place to write the dedup stamp.
     if (!anchorSubscriber || !anchorFundId) {
@@ -2072,7 +2072,7 @@ async function enqueueYearEndRecaps(log: (message: string, source?: string) => v
 
     await appendQueueEntry({
       type: "year_end_recap",
-      // Anchor fundId — the year-end recap isn't per-fund but the
+      // Anchor fundId the year-end recap isn't per-fund but the
       // queue entries carry one for outbox tagging consistency.
       fundId: anchorFundId,
       email,
@@ -2088,7 +2088,7 @@ async function enqueueYearEndRecaps(log: (message: string, source?: string) => v
     });
 
     // Stamp dedup on the anchor record. We do NOT stamp every fund's
-    // subscriber — the cross-fund check at the top of this loop already
+    // subscriber the cross-fund check at the top of this loop already
     // catches subsequent runs because we read lastYearEndRecapYear from
     // ANY of the gifter's subscriber records.
     store.subscribersByFund[anchorFundId][email] = {
@@ -2269,14 +2269,14 @@ let workerRunning = false;
 // flow (birthday reminders, age-18, milestones), seeding a subscriber
 // record at contributionCount 0 / totalContributed 0. They later send
 // gifts. The fund's contributorCount aggregate gets bumped, but the
-// per-subscriber counts never were — so the Settings → Notifications
+// per-subscriber counts never were so the Settings → Notifications
 // "Gifter subscribers" panel showed every subscriber as "0 gifts · $0"
 // even after they'd given hundreds of dollars. Settings has been
 // reading honest values; the writes were just missing.
 //
 // Defensive shape: silent no-op when fundId/email is missing, when
 // the subscriber doesn't exist for this fund (gifter who didn't opt
-// in), or when amount is invalid. Failures are logged but never throw —
+// in), or when amount is invalid. Failures are logged but never throw
 // the gift webhook chain shouldn't break because we couldn't update
 // a notification stat.
 export async function recordGifterGiftContribution(
@@ -2325,7 +2325,7 @@ const GIFTER_MILESTONE_FLOOR = 1000;
 // unsubscribed, milestoneNotifications setting on via the birthdayReminders
 // umbrella for now), enqueues a gifter_milestone_crossed email per gifter,
 // and ratchets each gifter's lastMilestoneNotifiedThreshold so the same
-// threshold never emails them twice. Errors are logged but not thrown — a
+// threshold never emails them twice. Errors are logged but not thrown a
 // milestone email failure shouldn't break the gift webhook chain that
 // triggered this call.
 export async function enqueueGifterMilestoneNotifications(
@@ -2337,7 +2337,7 @@ export async function enqueueGifterMilestoneNotifications(
   try {
     if (!fundId || !Number.isFinite(threshold) || threshold < GIFTER_MILESTONE_FLOOR) return;
     const copy = MONEY_CROSS_COPY[threshold];
-    if (!copy) return; // Unknown threshold — defensive, shouldn't happen.
+    if (!copy) return; // Unknown threshold defensive, shouldn't happen.
 
     // Fetch the fund row for the gift-link URL + child name.
     const fundResult = await pool.query(

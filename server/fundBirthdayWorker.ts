@@ -13,7 +13,7 @@
 // in this codebase).
 //
 // Tone + voice of the email: see server/templates/fundBirthday.ts
-// (the FUND is the narrator — "Emma's fund just finished its
+// (the FUND is the narrator "Emma's fund just finished its
 // third year"). This worker just orchestrates eligibility +
 // idempotence + send; the brand voice lives in the template.
 
@@ -100,7 +100,7 @@ async function tick(log: LogFn): Promise<void> {
   // Pull funds where the recipient's birthday month+day matches
   // today, OWNED (not transferred), with a parent email on file.
   // The EXTRACT() clauses use Postgres date-part functions to
-  // sidestep timezone subtleties — recipient_birthdate is stored
+  // sidestep timezone subtleties recipient_birthdate is stored
   // as a timestamp at noon UTC at creation; extracting month/day
   // gives a stable answer that matches what the parent typed.
   let rows: Array<{
