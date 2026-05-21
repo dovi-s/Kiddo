@@ -3,6 +3,7 @@ import { Link, useSearch } from "wouter"
 import { motion } from "framer-motion"
 import { useQuery } from "@tanstack/react-query"
 import { Check, Copy, Share2, Heart, Gift, Mail, Bookmark, Smartphone } from "lucide-react"
+import { WhatsAppIcon, MessageIcon } from "@/components/ui/share-modal"
 import { Button } from "@/components/ui/button"
 import { haptic } from "@/lib/haptics"
 import { Logo } from "@/components/ui/logo"
@@ -320,14 +321,76 @@ export default function GiftSuccess() {
     } catch { setCopied(false) }
   }
 
-  const handleReferralShare = async () => {
-    const referralUrl = `${window.location.origin}${buildTrackedGetStartedHref(searchString, {
+  // Build the canonical referral URL that all the per-channel share
+  // handlers below use. Centralized so the tracking params stay
+  // consistent across native-share, copy-link, WhatsApp, Messages,
+  // and Email paths. Each channel calls buildReferralUrl() then
+  // composes the warm-copy prefill in its own preferred format.
+  const buildReferralUrl = () =>
+    `${window.location.origin}${buildTrackedGetStartedHref(searchString, {
       ref: fundId || "gift-success",
       src: "gift_success",
       loop_touchpoint: "gift_success_cta",
       loop_channel: "web",
       gift_session_id: sessionId || undefined,
     })}`
+
+  // Warm prefill copy for the referral share. Mentions the gift that
+  // just happened (anchor moment), names the moat (voice memos), and
+  // leaves the "real money instead of toys" framing in. Length kept
+  // tight so it fits in a one-line WhatsApp / Messages preview.
+  // Per locked discipline: no em-dashes, no AI-slop closers, no
+  // marketing-teaser quotes.
+  const buildReferralCopy = () => {
+    const referralUrl = buildReferralUrl()
+    return `Just used Kiddo for a kid I love. Real investment money instead of toys, and family can leave voice memos that play on the kid's 18th birthday. Thought you'd like it for your family: ${referralUrl}`
+  }
+
+  const handleReferralShareNative = async () => {
+    const referralUrl = buildReferralUrl()
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Kiddo",
+          text: buildReferralCopy(),
+          url: referralUrl,
+        })
+        haptic("success")
+        trackGiftEvent("share", { target: "referral_native_share" })
+      } else {
+        await handleReferralShare()
+      }
+    } catch {
+      // share dismissed or unsupported, nothing to do
+    }
+  }
+
+  const handleReferralShareWhatsApp = () => {
+    haptic("selection")
+    const text = encodeURIComponent(buildReferralCopy())
+    window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer")
+    trackGiftEvent("share", { target: "referral_whatsapp" })
+  }
+
+  const handleReferralShareMessages = () => {
+    haptic("selection")
+    // sms: scheme works on iOS (iMessage) + Android (default SMS app).
+    // Body param uses the ?body= form (most reliable across iOS / Android).
+    const text = encodeURIComponent(buildReferralCopy())
+    window.open(`sms:?&body=${text}`, "_blank")
+    trackGiftEvent("share", { target: "referral_messages" })
+  }
+
+  const handleReferralShareEmail = () => {
+    haptic("selection")
+    const subject = encodeURIComponent("Worth a look: Kiddo")
+    const body = encodeURIComponent(buildReferralCopy())
+    window.open(`mailto:?subject=${subject}&body=${body}`, "_blank")
+    trackGiftEvent("share", { target: "referral_email" })
+  }
+
+  const handleReferralShare = async () => {
+    const referralUrl = buildReferralUrl()
     try {
       await navigator.clipboard.writeText(referralUrl)
       haptic("success")
@@ -1107,12 +1170,89 @@ export default function GiftSuccess() {
                 : <><Bookmark className="w-4 h-4" />Bookmark {fundName}&apos;s fund</>
               }
             </Button>
+            {/* Tiny 'Tell someone about Kiddo' link removed 2026-05-21
+                and elevated to its own card below (the
+                share-Kiddo-with-other-families surface). Single
+                copy-link affordance lives here as a quiet fallback;
+                the multi-channel surface is the primary referral
+                experience now. */}
             <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
               <button className="hover:text-foreground transition-colors flex items-center gap-1" onClick={handleReferralShare} data-testid="button-share-heart">
                 <Heart className="w-3 h-3" />
-                Tell someone about Kiddo
+                Copy a referral link
               </button>
             </div>
+          </motion.div>
+        )}
+
+        {/* Share-Kiddo-with-other-families card. Added 2026-05-21 per
+            the wow-factor / word-of-mouth audit: a satisfied gifter is
+            the strongest 'who else would love this?' moment in the
+            entire customer journey. Previously the only referral
+            affordance was a tiny 'Tell someone about Kiddo' link
+            buried at the bottom of the share card above. This card
+            elevates it to a proper multi-channel surface with WhatsApp
+            / Messages / Email / copy-link options, each pre-filling
+            warm copy that mentions the gift just sent and the
+            voice-memo moat.
+            Order matters: this card sits AFTER 'Keep [fund]'s link
+            ready' (which shares this kid's gift link with HER family)
+            and BEFORE the 'Start a fund' CTA (which is for the
+            gifter to start their own kid's fund). The three cards
+            cover three distinct viral mechanics in the right
+            psychological order. */}
+        {shareReady && (
+          <motion.div
+            className="kiddo-card w-full p-6 mb-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.85, duration: 0.5 }}
+            data-testid="card-share-kiddo-with-family"
+          >
+            <h3 className="font-heading text-lg font-semibold text-center mb-1" data-testid="text-share-kiddo-heading">
+              Know a family who&apos;d love Kiddo too?
+            </h3>
+            <p className="text-sm text-muted-foreground text-center mb-4">
+              Most Kiddo families found us through someone like you. Worth a moment to pass it along.
+            </p>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <button
+                type="button"
+                onClick={handleReferralShareWhatsApp}
+                className="flex flex-col items-center justify-center gap-1.5 rounded-2xl py-3 bg-[rgb(37,211,102)] text-white font-medium text-xs hover:opacity-90 transition-opacity"
+                data-testid="button-share-kiddo-whatsapp"
+              >
+                <WhatsAppIcon />
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={handleReferralShareMessages}
+                className="flex flex-col items-center justify-center gap-1.5 rounded-2xl py-3 bg-[rgb(50,150,250)] text-white font-medium text-xs hover:opacity-90 transition-opacity"
+                data-testid="button-share-kiddo-messages"
+              >
+                <MessageIcon />
+                Messages
+              </button>
+              <button
+                type="button"
+                onClick={handleReferralShareEmail}
+                className="flex flex-col items-center justify-center gap-1.5 rounded-2xl py-3 bg-[rgb(184,121,26)] text-white font-medium text-xs hover:opacity-90 transition-opacity"
+                data-testid="button-share-kiddo-email"
+              >
+                <Mail className="w-[17px] h-[17px]" />
+                Email
+              </button>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={handleReferralShareNative}
+              data-testid="button-share-kiddo-more"
+            >
+              <Share2 className="w-4 h-4" />
+              More apps
+            </Button>
           </motion.div>
         )}
 
