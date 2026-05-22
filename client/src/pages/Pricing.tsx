@@ -79,6 +79,7 @@ const plans: readonly Plan[] = [
       "1 child fund",
       "1 active occasion at a time",
       "Shareable gift link, QR code, and gift code",
+      "Recurring contributions (single-ticker or default-strategy)",
       "Text Memory Book entries (gifters can always attach photos, videos, and voice)",
       "Kid View. Your child sees what they own and how their fund grows",
       "SIPC-insured investments via DriveWealth",
@@ -106,11 +107,18 @@ const plans: readonly Plan[] = [
       // not surface-as-friction when they try to add a second kid.
       "One child fund. Move to Family if you add a second.",
       "Everything in Free",
-      "Recurring investments. Set a monthly amount that fires automatically",
+      // Recurring lives in Free now (per the 2026-05-21 Plus reframe —
+      // see project_plus_pricing_reframe.md). Plus's headline gates
+      // shift to the investment-decision-making layer: design the mix,
+      // switch the strategy, operate the fund. "Recurring" stays as
+      // an under-the-hood mechanism that's free for everyone; Plus is
+      // for the parent who actively DECIDES what recurring buys into.
+      "Custom fund mix. Pick your own ETFs and weights",
+      "Strategy switching with rebalancing. Move between conservative, balanced, and growth",
       "Add your own photos, videos, and voice memos to Memory Book entries",
-      "Custom fund mix. Pick your own stocks and weights",
       "Co-parent access. Invite a partner or guardian",
       "3 active occasions at a time (Free is 1)",
+      "Annual contribution summary for tax records",
       "Priority support",
       "0.10% annual fee on invested assets only",
     ],
@@ -195,7 +203,7 @@ const pricingFaqs = [
   },
   {
     question: "What happens to my fund if I downgrade?",
-    answer: "Your fund stays active and your investments stay invested. Plus features pause: adding new photos and videos to Memory Book entries, recurring investments, custom fund mix, and co-parent invites. Everything you have already added stays. Your kid's money never leaves the fund.",
+    answer: "Your fund stays active and your investments stay invested. Plus features pause: custom fund mix, strategy switching, adding new photos and videos to Memory Book entries, and co-parent invites. Recurring contributions stay (they're free across all plans). Everything you have already added stays. Your kid's money never leaves the fund.",
   },
   {
     question: "Is there a platform fee on gifts?",

@@ -1985,7 +1985,17 @@ export default function Dashboard() {
   const activeFundMembership = activeFundId ? (subscription?.starterByFund?.[activeFundId] as any) : null;
   const activeFundHasStarter = activeFundMembership?.status === "active" ||
     (activeFundMembership?.status === "canceled" && activeFundMembership?.currentPeriodEnd && new Date(activeFundMembership.currentPeriodEnd).getTime() > Date.now());
-  const hasAutoInvestAccess = isFamily || isStarter || activeFundHasStarter;
+  // Locked open 2026-05-21 per the Plus pricing reframe (see
+  // project_plus_pricing_reframe.md). Recurring contributions are
+  // free across all tiers. Plus's actual gate moved to custom-mix
+  // design (resolveAllowedFundStrategy server-side). The previous
+  // gate (`isFamily || isStarter || activeFundHasStarter`) is
+  // preserved here as a code-comment in case the reframe is
+  // reverted; the inline plan-derived flags stay valid for other
+  // downstream uses (subscription card, upgrade nudges, etc.) but
+  // recurring access is no longer one of them.
+  const hasAutoInvestAccess = true;
+  void isFamily; void isStarter; void activeFundHasStarter;
   const { data: parentLetter } = useQuery<{ id: string; content: string; type: string; authorName?: string } | null>({
     queryKey: ["memory", activeFundId, "parent_letter"],
     queryFn: async () => {

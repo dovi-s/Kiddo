@@ -154,7 +154,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
         title: "Considering Acorns Early too?",
         body: [
           "Acorns acquired EarlyBird, so many displaced families are naturally comparing Kiddo with Acorns Early next.",
-          "What Kiddo brings back from EarlyBird is the easy multi-contributor giving experience: a shareable gift link, no account needed for the gifter, full Memory Book entries (note, photo, video, voice), occasion pages with QR codes for parties, and reminder emails that bring family back when birthdays and holidays come around. Recurring contributions in Kiddo are set by the parent on Plus or Family, the same parent-side model Acorns Early uses.",
+          "What Kiddo brings back from EarlyBird is the easy multi-contributor giving experience: a shareable gift link, no account needed for the gifter, full Memory Book entries (note, photo, video, voice), occasion pages with QR codes for parties, and reminder emails that bring family back when birthdays and holidays come around. Recurring contributions are free across all plans (parents and gifters both). Plus is for the parent who wants to design the custom fund mix, switch strategy, and operate the portfolio — not for the recurring mechanism itself.",
           "If what you want is a parent savings tool inside the wider Acorns ecosystem, that is a real option. If what you want is the gifting link, occasion pages, and full-media Memory Book that EarlyBird families loved, Kiddo is the closer fit.",
         ],
       },

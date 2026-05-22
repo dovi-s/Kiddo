@@ -2194,12 +2194,18 @@ export async function registerRoutes(
 
       const plan = subscription?.plan;
       const isGlobalActive = subscription?.status === "active";
-      const hasAutoInvestAccess =
-        (isGlobalActive && (plan === "family" || plan === "starter" || plan === "legacy")) ||
-        fundMembership?.status === "active" ||
-        (fundMembership?.status === "canceled" &&
-          fundMembership?.currentPeriodEnd &&
-          new Date(String(fundMembership.currentPeriodEnd)).getTime() > Date.now());
+      // hasAutoInvestAccess used to gate whether parent_contributions
+      // were returned to the dashboard (Plus/Family-only). Locked open
+      // 2026-05-21 per the Plus pricing reframe: recurring contributions
+      // are free across all tiers, so every parent's recurring schedules
+      // should appear in their dashboard summary regardless of plan.
+      // Plus's actual gate moved to the investment-decision layer
+      // (custom mix via resolveAllowedFundStrategy), not the recurring
+      // mechanism. See project_plus_pricing_reframe.md.
+      const hasAutoInvestAccess = true;
+      // Plan-derived helpers retained for downstream uses that still
+      // need to know the subscriber's tier (not for recurring access).
+      void plan; void isGlobalActive; void fundMembership;
 
       // Run all remaining DB queries in parallel - none depend on each other
       const [snapshots, recentTransactionRows, parentContributionRows, largeGiftHoldsRaw, giftAllocationsForFund] = await timeStage("second_parallel_fetch", () =>
@@ -12378,17 +12384,27 @@ export async function registerRoutes(
         });
       }
 
-      const subscription = await storage.getSubscription(userId);
-      const plan = subscription?.plan;
-      const isGlobalActive = subscription?.status === 'active';
-      const isFamily = isGlobalActive && (plan === 'family' || plan === 'legacy');
-      const isGlobalStarter = isGlobalActive && plan === 'starter';
-      const fundMembership = await storage.getFundMembership(userId, req.params.fundId);
-      const isFundStarter = fundMembership?.status === 'active' ||
-        (fundMembership?.status === 'canceled' && fundMembership?.currentPeriodEnd && new Date(String(fundMembership.currentPeriodEnd)).getTime() > Date.now());
-      if (!isFamily && !isGlobalStarter && !isFundStarter) {
-        return res.status(403).json({ error: 'Kiddo+, Family, or Legacy required for recurring investments' });
-      }
+      // Plan gate REMOVED 2026-05-21 per the Plus pricing reframe
+      // (see project_plus_pricing_reframe.md). Recurring contributions
+      // are now free across all tiers. Plus's gate moves to the
+      // investment-decision layer (custom mix design via
+      // resolveAllowedFundStrategy), NOT to the recurring mechanism.
+      // A free parent can set up recurring; what their contributions
+      // BUY INTO is gated by the existing strategy gate (free →
+      // growth/balanced/conservative; Plus → custom mix).
+      //
+      // Original gate kept here as a code-comment audit trail in case
+      // the reframe needs to be reverted:
+      //   const subscription = await storage.getSubscription(userId);
+      //   const plan = subscription?.plan;
+      //   const isGlobalActive = subscription?.status === 'active';
+      //   const isFamily = isGlobalActive && (plan === 'family' || plan === 'legacy');
+      //   const isGlobalStarter = isGlobalActive && plan === 'starter';
+      //   const fundMembership = await storage.getFundMembership(userId, req.params.fundId);
+      //   const isFundStarter = fundMembership?.status === 'active' || ...;
+      //   if (!isFamily && !isGlobalStarter && !isFundStarter) {
+      //     return res.status(403).json({ error: 'Kiddo+...' });
+      //   }
 
       const { amount, frequency, executionModel, selectedTicker, bankAccountId, note } = req.body;
       if (!amount || !frequency) {
