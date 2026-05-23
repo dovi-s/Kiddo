@@ -49,6 +49,7 @@ const EventCreate = lazy(() => import("@/pages/EventCreate"));
 const FAQ = lazy(() => import("@/pages/FAQ"));
 const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
 const CalculatorAt18 = lazy(() => import("@/pages/CalculatorAt18"));
+const RobuxVsUtma = lazy(() => import("@/pages/RobuxVsUtma"));
 const UtmaByStateIndex = lazy(() => import("@/pages/UtmaByStateIndex"));
 const UtmaByState = lazy(() => import("@/pages/UtmaByState"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
@@ -188,6 +189,8 @@ function isMarketingRoute(path: string): boolean {
     pathname === "/contact" ||
     pathname === "/legal" ||
     pathname === "/tools/at-18-calculator" ||
+    pathname === "/tools/robux-vs-utma" ||
+    pathname === "/robux-vs-utma" ||
     pathname === "/tools/utma-by-state"
   ) {
     return true;
@@ -350,6 +353,14 @@ function getSeoForPath(path: string): SeoConfig {
     return {
       title: "UTMA Calculator: What investing for a kid becomes by 18 | Kiddo",
       description: "Honest math for parents and grandparents investing for a child. See how consistent monthly investing through a UTMA grows over the years to age 18. Kiddo's 0.10% annual fee already netted from the projection.",
+      robots: "index, follow",
+      ogType: "website",
+    };
+  }
+  if (pathname === "/tools/robux-vs-utma" || pathname === "/robux-vs-utma") {
+    return {
+      title: "Robux vs UTMA: What your kid's monthly Roblox spend could become by 18 | Kiddo",
+      description: "Real math: the same monthly dollars going into Robux versus going into a custodial UTMA investment account. Adjust monthly spend and your kid's age to see the difference at 18. Honest 7% projection minus the 0.10% AUM fee.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -769,6 +780,11 @@ function Router() {
           <Route path="/faq"><FAQ /></Route>
           <Route path="/how-it-works"><HowItWorks /></Route>
           <Route path="/tools/at-18-calculator"><CalculatorAt18 /></Route>
+          <Route path="/tools/robux-vs-utma"><RobuxVsUtma /></Route>
+          {/* /robux-vs-utma alias — satellite SEO destinations sometimes
+              get linked without the /tools/ prefix. Both paths resolve
+              to the same calculator. */}
+          <Route path="/robux-vs-utma"><RobuxVsUtma /></Route>
           <Route path="/tools/utma-by-state"><UtmaByStateIndex /></Route>
           <Route path="/tools/utma-by-state/:stateCode"><UtmaByState /></Route>
           <Route path="/pricing"><Pricing /></Route>
