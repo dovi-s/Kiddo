@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey, getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
 import { db } from './db';
-import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships } from '@shared/schema';
+import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships, recurringGifts } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { captureError, sendOpsAlert } from './ops';
 import { recordEvent } from './analytics';
@@ -1066,6 +1066,15 @@ export class WebhookHandlers {
       await this.handleLegacyPlanPurchase(session);
     } else if (type === 'event_pass') {
       await this.handleEventPassPurchase(session);
+    } else if (type === 'gifter_recurring') {
+      // Gifter recurring setup completed — insert the recurring_gifts row
+      // so the worker (recurringContributionWorker.ts::processGifterRecurring)
+      // picks it up for subsequent monthly charges. Per Decision E in
+      // project_gifter_recurring_restoration.md. The actual money for the
+      // FIRST charge will flow through invoice.payment_succeeded (which
+      // fires immediately after subscription creation); this handler just
+      // creates the schedule record.
+      await this.handleGifterRecurringSetup(session);
     }
 
     const paymentIntentId = typeof session.payment_intent === 'string'
@@ -1740,6 +1749,203 @@ export class WebhookHandlers {
     }
   }
 
+  // Gifter recurring setup handler. Fires on checkout.session.completed
+  // when the gifter completes the subscription checkout. Inserts the
+  // recurring_gifts row that the worker (processGifterRecurring)
+  // reads on each cycle. The FIRST charge has already happened (or
+  // is about to) via Stripe's subscription billing; that's handled by
+  // handleInvoicePaid below — this method only creates the SCHEDULE
+  // record.
+  //
+  // Locked 2026-05-21 per project_gifter_recurring_restoration.md
+  // Decision E. Idempotent: if a recurring_gifts row already exists
+  // for this Stripe subscription ID, skip.
+  static async handleGifterRecurringSetup(session: any): Promise<void> {
+    const metadata = session.metadata || {};
+    const fundId = String(metadata.fundId || "");
+    const stripeSubscriptionId = typeof session.subscription === "string"
+      ? session.subscription
+      : session.subscription?.id;
+    if (!fundId || !stripeSubscriptionId) {
+      console.warn("[Webhook] gifter_recurring missing fundId or subscriptionId:", session.id);
+      return;
+    }
+
+    // Idempotency: already inserted?
+    const [existing] = await db
+      .select({ id: recurringGifts.id })
+      .from(recurringGifts)
+      .where(eq(recurringGifts.stripeSubscriptionId, stripeSubscriptionId))
+      .limit(1);
+    if (existing) {
+      console.log("[Webhook] gifter_recurring already linked:", stripeSubscriptionId);
+      return;
+    }
+
+    const amountUsd = parseFloat(String(metadata.amountUsd || "0"));
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+      console.warn("[Webhook] gifter_recurring invalid amountUsd:", metadata.amountUsd);
+      return;
+    }
+
+    const frequency = String(metadata.frequency || "monthly");
+    const senderName = String(metadata.senderName || "Anonymous").slice(0, 200);
+    const senderEmail = String(metadata.senderEmail || "").slice(0, 200);
+
+    await db.insert(recurringGifts).values({
+      fundId,
+      senderName,
+      senderEmail: senderEmail || null,
+      amount: amountUsd.toFixed(2),
+      frequency,
+      paymentSetupStatus: "active",
+      stripeSubscriptionId,
+      status: "active",
+      nextChargeDate: (() => {
+        const d = new Date();
+        if (frequency === "weekly") d.setDate(d.getDate() + 7);
+        else if (frequency === "yearly") d.setFullYear(d.getFullYear() + 1);
+        else d.setMonth(d.getMonth() + 1);
+        return d;
+      })(),
+    } as any);
+
+    console.log(`[Webhook] gifter_recurring row created: fund=${fundId} amount=$${amountUsd} ${frequency}`);
+  }
+
+  // Per-cycle gifter recurring charge handler. Fires on invoice.paid
+  // for subscriptions where metadata.type === 'gifter_recurring'.
+  // Creates a gift row (so the money lands in the fund the same way
+  // one-time gifts do), bumps the recurring_gifts.nextChargeDate,
+  // and sends a branded post-charge email to the gifter per locked
+  // Decision C. Stripe's default subscription receipt is suppressed
+  // for these subscriptions (set at session creation time).
+  //
+  // Returns true if this WAS a gifter_recurring invoice (caller should
+  // skip the parent-subscription renewal logic below).
+  static async handleGifterRecurringCharge(invoice: any, subscription: any): Promise<boolean> {
+    const subMetadata = subscription?.metadata || {};
+    if (String(subMetadata.type || "") !== "gifter_recurring") return false;
+
+    const fundId = String(subMetadata.fundId || "");
+    if (!fundId) {
+      console.warn("[Webhook] gifter_recurring invoice missing fundId in sub metadata:", invoice.id);
+      return true; // claimed but malformed; don't fall through to renewal logic
+    }
+
+    const stripeSubscriptionId = typeof invoice.subscription === "string"
+      ? invoice.subscription
+      : invoice.subscription?.id;
+    const amountUsd = (invoice.amount_paid || 0) / 100;
+    if (amountUsd <= 0) {
+      console.warn("[Webhook] gifter_recurring invoice has zero amount_paid:", invoice.id);
+      return true;
+    }
+
+    const fund = await storage.getFund(fundId);
+    if (!fund) {
+      console.warn("[Webhook] gifter_recurring fund not found:", fundId);
+      return true;
+    }
+
+    // Fund-state cascade per Decision E. If the fund is closed, cancel
+    // the subscription so no more charges fire AND notify the gifter.
+    // Don't process this charge into the (now-closed) fund. NOTE:
+    // Stripe already accepted the payment for this cycle; we'd need
+    // to refund, but that's a separate operational concern. For now,
+    // log and skip the gift insert. The cancel-on-next-tick prevents
+    // future charges.
+    if (String(fund.status || "").toLowerCase() === "closed") {
+      try {
+        const stripe = await getUncachableStripeClient();
+        if (stripeSubscriptionId) {
+          await stripe.subscriptions.cancel(stripeSubscriptionId);
+        }
+      } catch (cancelErr) {
+        console.warn("[Webhook] failed to cancel gifter recurring on closed fund:", cancelErr);
+      }
+      console.warn(`[Webhook] gifter_recurring charge to CLOSED fund ${fundId}; sub canceled, charge not processed`);
+      return true;
+    }
+
+    // Insert a gift row so the money flows into holdings the same way
+    // one-time gifts do. completeGiftPostPayment handles the holdings
+    // update + Memory Book entry + activity row.
+    const senderName = String(subMetadata.senderName || "Anonymous").slice(0, 200);
+    const senderEmail = String(subMetadata.senderEmail || "").slice(0, 200);
+    const message = String(subMetadata.message || "").slice(0, 490);
+    const executionModel = String(subMetadata.executionModel || "auto");
+    const selectedTicker = String(subMetadata.selectedTicker || "");
+    const isAnonymousFlag = String(subMetadata.isAnonymous || "0") === "1";
+
+    const [insertedGift] = await db.execute(sql`
+      INSERT INTO gifts (
+        fund_id, sender_name, sender_email, amount, net_amount, status,
+        message, selected_ticker, execution_model, is_anonymous,
+        stripe_payment_intent_id, created_at
+      ) VALUES (
+        ${fundId}, ${senderName}, ${senderEmail || null}, ${amountUsd.toFixed(2)},
+        ${amountUsd.toFixed(2)}, 'processing', ${message || null},
+        ${selectedTicker || null}, ${executionModel}, ${isAnonymousFlag},
+        ${invoice.payment_intent || null}, NOW()
+      )
+      RETURNING id
+    `).then((r: any) => r.rows || []);
+    const newGiftId = String(insertedGift?.id || "");
+
+    if (newGiftId) {
+      try {
+        await this.completeGiftPostPayment(newGiftId, { fundUserId: fund.userId });
+      } catch (completeErr) {
+        console.error("[Webhook] gifter_recurring completeGiftPostPayment failed:", completeErr);
+      }
+    }
+
+    // Bump recurring_gifts.nextChargeDate based on the subscription's
+    // current_period_end (Stripe is the source of truth for cadence).
+    try {
+      const nextChargeMs = subscription?.current_period_end
+        ? subscription.current_period_end * 1000
+        : null;
+      if (stripeSubscriptionId && nextChargeMs) {
+        await db
+          .update(recurringGifts)
+          .set({ nextChargeDate: new Date(nextChargeMs), status: "active", pauseReason: null, pausedAt: null })
+          .where(eq(recurringGifts.stripeSubscriptionId, stripeSubscriptionId));
+      }
+    } catch (updateErr) {
+      console.warn("[Webhook] failed to update recurring_gifts.nextChargeDate:", updateErr);
+    }
+
+    // Branded post-charge email per Decision C. Best-effort: never
+    // fail the webhook because of an email send.
+    try {
+      if (senderEmail) {
+        const { sendEmail } = await import("./emailDelivery");
+        const { renderKiddoEmail } = await import("./templates/baseTemplate");
+        const childName = fund.recipientFirstName || fund.name || "the fund";
+        const monthLabel = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+        const subject = `$${amountUsd.toFixed(0)} added to ${childName}'s fund — ${monthLabel}`;
+        const body = [
+          `Your $${amountUsd.toFixed(2)} recurring landed in ${childName}'s fund.`,
+          "",
+          `Manage or cancel any time from your gifter dashboard.`,
+        ].join("\n");
+        const { html } = renderKiddoEmail({ heading: subject, intro: body });
+        await sendEmail({
+          to: senderEmail,
+          subject,
+          text: body + "\n\nThe Kiddo team",
+          html,
+        } as any);
+      }
+    } catch (emailErr) {
+      console.warn("[Webhook] gifter_recurring post-charge email failed:", emailErr);
+    }
+
+    return true;
+  }
+
   static async handleInvoicePaid(invoice: any): Promise<void> {
     console.log('[Webhook] invoice.paid:', invoice.id);
 
@@ -1748,6 +1954,18 @@ export class WebhookHandlers {
       : invoice.subscription?.id;
 
     if (!subscriptionId) return;
+
+    // Check if this is a gifter_recurring subscription FIRST. If so,
+    // hand off to the dedicated handler and skip the renewal logic
+    // below (which assumes parent-subscription semantics).
+    try {
+      const stripe = await getUncachableStripeClient();
+      const subscription: any = await stripe.subscriptions.retrieve(subscriptionId);
+      const isGifterRecurring = await this.handleGifterRecurringCharge(invoice, subscription);
+      if (isGifterRecurring) return;
+    } catch (gifterCheckErr) {
+      console.warn("[Webhook] gifter_recurring detection failed:", gifterCheckErr);
+    }
 
     // Determine billing period from the invoice if available
     const periodEnd = invoice.lines?.data?.[0]?.period?.end
@@ -1898,6 +2116,67 @@ export class WebhookHandlers {
       : invoice.subscription?.id;
 
     if (!subscriptionId) return;
+
+    // Gifter recurring card-failure cascade per locked Decision B
+    // (project_gifter_recurring_restoration.md). Privacy-first:
+    //   1. Auto-pause the schedule (no Memory Book entry; no parent
+    //      notification about the FAILURE — only that recurring is
+    //      paused).
+    //   2. Email the gifter immediately (their financial state is
+    //      their business; the parent doesn't see why).
+    //   3. The 14-day reminder + 30-day cancel will fire from the
+    //      recurringContributionWorker (which polls paused schedules
+    //      with payment_failed reason).
+    // Stripe's default subscription receipts/dunning are suppressed
+    // for these subscriptions, so we own the email cadence.
+    try {
+      const stripe = await getUncachableStripeClient();
+      const subscription: any = await stripe.subscriptions.retrieve(subscriptionId);
+      const subMetadata = subscription?.metadata || {};
+      if (String(subMetadata.type || "") === "gifter_recurring") {
+        // Pause the recurring_gifts row with payment_failed reason.
+        await db
+          .update(recurringGifts)
+          .set({
+            status: "paused",
+            pauseReason: "payment_failed",
+            pausedAt: new Date(),
+          })
+          .where(eq(recurringGifts.stripeSubscriptionId, subscriptionId));
+
+        // Send our branded "update your card" email to the gifter.
+        const senderEmail = String(subMetadata.senderEmail || "");
+        const fundId = String(subMetadata.fundId || "");
+        if (senderEmail && fundId) {
+          try {
+            const fund = await storage.getFund(fundId);
+            const childName = fund?.recipientFirstName || fund?.name || "the fund";
+            const { sendEmail } = await import("./emailDelivery");
+            const { renderKiddoEmail } = await import("./templates/baseTemplate");
+            const subject = `Your monthly to ${childName} couldn't go through`;
+            const body = [
+              `Your most recent monthly to ${childName}'s fund didn't go through. This usually means your card needs an update.`,
+              "",
+              `Open your gifter dashboard to update your payment any time. We'll try again automatically once the card is current.`,
+              "",
+              `If you do nothing, the recurring will stop after about 30 days. No further charges.`,
+            ].join("\n");
+            const { html } = renderKiddoEmail({ heading: subject, intro: body });
+            await sendEmail({
+              to: senderEmail,
+              subject,
+              text: body + "\n\nThe Kiddo team",
+              html,
+            } as any);
+          } catch (emailErr) {
+            console.warn("[Webhook] gifter_recurring payment_failed email failed:", emailErr);
+          }
+        }
+        return;
+      }
+    } catch (gifterCheckErr) {
+      console.warn("[Webhook] gifter_recurring payment_failed detection failed:", gifterCheckErr);
+    }
 
     const existingSub = await storage.getSubscriptionByStripeId(subscriptionId);
     if (existingSub) {

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 // BookOpen replaces Sparkles 2026-05-12 for "Latest Memory Book moment" —
 // Sparkles banned per feedback_no_ai_slop.md. BookOpen is the locked Memory
 // Book semantic icon per feedback_iconography_consistency.md.
-import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp } from "lucide-react";
+import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
@@ -154,6 +154,53 @@ export default function GifterDashboard() {
     initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,
   });
+
+  // Active + paused recurring schedules belonging to this gifter.
+  // Powers the "Your recurring gifts" section per locked Decision A
+  // (project_gifter_recurring_restoration.md).
+  type GifterRecurringRow = {
+    id: string;
+    fundId: string;
+    fundName: string;
+    fundSlug: string | null;
+    amount: number;
+    frequency: "weekly" | "monthly" | "yearly";
+    status: "active" | "paused" | "cancelled";
+    pauseReason: string | null;
+    nextChargeDate: string | null;
+    createdAt: string;
+  };
+  const { data: recurringData } = useQuery<{ schedules: GifterRecurringRow[] }>({
+    queryKey: ["/api/gifter-account/recurring"],
+    queryFn: async () => {
+      const res = await fetch("/api/gifter-account/recurring", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load recurring schedules");
+      return res.json();
+    },
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+  });
+  const recurringSchedules = recurringData?.schedules ?? [];
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const handleCancelRecurring = async (scheduleId: string) => {
+    if (!window.confirm("Cancel this recurring gift? Future charges stop; charges already made aren't affected.")) return;
+    setCancellingId(scheduleId);
+    try {
+      const res = await fetch(`/api/gifter-account/recurring/${scheduleId}/cancel`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Cancel failed");
+      haptic("success");
+      toast({ title: "Recurring cancelled", description: "No further charges will fire." });
+      queryClient.invalidateQueries({ queryKey: ["/api/gifter-account/recurring"] });
+    } catch (err) {
+      haptic("error");
+      toast({ title: "Could not cancel", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   // Count-up on the five summary cards. The gifter surface is
   // Robinhood-minimal register; count-up belongs because these are
@@ -415,6 +462,67 @@ export default function GifterDashboard() {
                 </div>
               )}
             </div>
+
+            {/* Recurring schedules — Tier-1 deferred work restored
+                2026-05-21 per project_gifter_recurring_restoration.md.
+                Shows active + paused recurring schedules belonging to
+                this gifter. Cancel button per Decision A (stable
+                cancellation home for account-bound gifters). Paused
+                schedules show the reason: "payment_failed" surfaces
+                an "Update card" CTA; "user" was a manual pause. */}
+            {recurringSchedules.length > 0 && (
+              <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
+                <h2 className="font-heading text-2xl font-semibold text-foreground">Your recurring gifts</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Active schedules charge automatically on the cadence you picked. Cancel any time.
+                </p>
+                <div className="mt-5 grid gap-3">
+                  {recurringSchedules.map((sch) => (
+                    <div
+                      key={sch.id}
+                      className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-border/60 bg-background p-4"
+                      data-testid={`recurring-row-${sch.id}`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Repeat className="h-4 w-4 text-primary" />
+                          <p className="font-semibold text-foreground">
+                            {fmtMoney(sch.amount)} {sch.frequency} to {sch.fundName}
+                          </p>
+                          {sch.status === "paused" && (
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                              Paused
+                            </span>
+                          )}
+                        </div>
+                        {sch.status === "active" && sch.nextChargeDate && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Next charge: {new Date(sch.nextChargeDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
+                        )}
+                        {sch.status === "paused" && sch.pauseReason === "payment_failed" && (
+                          <p className="mt-1 text-xs text-amber-800">
+                            Your last charge didn't go through. Update your payment to resume.
+                          </p>
+                        )}
+                        {sch.status === "paused" && sch.pauseReason === "user" && (
+                          <p className="mt-1 text-xs text-muted-foreground">Paused by you.</p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCancelRecurring(sch.id)}
+                        disabled={cancellingId === sch.id}
+                        className="text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        data-testid={`cancel-recurring-${sch.id}`}
+                      >
+                        {cancellingId === sch.id ? "Cancelling…" : "Cancel"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">

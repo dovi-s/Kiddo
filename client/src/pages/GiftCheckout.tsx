@@ -238,6 +238,16 @@ export default function GiftCheckout() {
   const [showFeeDetails, setShowFeeDetails] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  // Recurring gift state — Tier-1 deferred work, restored 2026-05-21 per
+  // project_gifter_recurring_restoration.md. Three new fields:
+  //   isRecurring         — toggle on the amount step
+  //   recurringFrequency  — "monthly" default (only frequency v1 ships)
+  //   recurringPassword   — inline account creation per locked Decision A
+  // The senderEmail field already exists; we reuse it as the account
+  // email so the gifter doesn't enter their address twice.
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<"weekly" | "monthly" | "yearly">("monthly");
+  const [recurringPassword, setRecurringPassword] = useState("");
   const viewTrackedRef = useRef(false);
   const trackedStepViewsRef = useRef<Set<GiftStep>>(new Set());
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -745,7 +755,18 @@ export default function GiftCheckout() {
         ...paymentMetadata,
         baselineEvent: "gift_payment_started",
       });
-      const res = await fetch("/api/stripe/checkout/gift", {
+      // Branch on isRecurring: one-time uses the existing
+      // /api/stripe/checkout/gift PaymentIntent flow; recurring uses
+      // the new /api/stripe/checkout/gift-recurring Subscription flow.
+      // Server endpoint contract for recurring includes the account
+      // creation fields (email + password) per locked Decision A:
+      // the gifter ends with both a Stripe subscription AND a Kiddo
+      // gifter account, so they have a stable cancellation surface
+      // in the gifter dashboard.
+      const endpoint = isRecurring
+        ? "/api/stripe/checkout/gift-recurring"
+        : "/api/stripe/checkout/gift";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -767,6 +788,11 @@ export default function GiftCheckout() {
           executionModel: effectiveExecutionModel,
           selectedTicker: effectiveExecutionModel === "pick" ? effectiveSelectedTicker : undefined,
           giftAddOn,
+          // Recurring-only fields. Server ignores when isRecurring is false
+          // (i.e., when the endpoint above is the one-time variant).
+          isRecurring,
+          recurringFrequency: isRecurring ? recurringFrequency : undefined,
+          accountPassword: isRecurring ? recurringPassword : undefined,
         }),
       });
       if (!res.ok) {
@@ -1692,7 +1718,79 @@ export default function GiftCheckout() {
                 </div>
               )}
 
-                <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!isValidAmount} onClick={() => { haptic("selection"); trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", { baselineEvent: "gift_amount_selected", amount: activeAmount, amountSource: showCustom ? "custom_confirmed" : "confirmed" }); trackGiftEvent("cta_click", "gift_amount_continue", { amount: activeAmount }); setStep("preview"); }} data-testid="button-continue-to-preview">
+              {/* Recurring gift toggle — Tier-1 deferred work, restored
+                  2026-05-21 per project_gifter_recurring_restoration.md.
+                  Inline account creation per locked Decision A: when
+                  isRecurring is true, we ALSO collect a password so the
+                  gifter ends with a Kiddo gifter account and has a
+                  stable cancellation home in the gifter dashboard.
+                  Per locked Plus pricing reframe (project_plus_pricing_reframe.md),
+                  recurring is free — no Plus prompt, no upgrade gate. */}
+              <div className="kiddo-card p-5">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => { haptic("selection"); setIsRecurring(e.target.checked); }}
+                    className="mt-1 h-4 w-4 rounded border-border accent-[hsl(var(--kiddo-evergreen))]"
+                    data-testid="checkbox-recurring-gift"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground">Make this recurring</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+                      Send the same amount every month. Cancel any time. Free — no Kiddo subscription.
+                    </p>
+                  </div>
+                </label>
+                {isRecurring && (
+                  <div className="mt-4 space-y-3 pt-4 border-t border-border/60">
+                    <div>
+                      <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">How often</label>
+                      <div className="mt-1.5 flex gap-2">
+                        {(["weekly", "monthly", "yearly"] as const).map((f) => (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => { haptic("selection"); setRecurringFrequency(f); }}
+                            className={`flex-1 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
+                              recurringFrequency === f
+                                ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen)/0.08)] text-[hsl(var(--kiddo-evergreen))]"
+                                : "border-border text-muted-foreground hover:text-foreground"
+                            }`}
+                            data-testid={`button-recurring-freq-${f}`}
+                          >
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="recurring-password">
+                        Set a password
+                      </label>
+                      <p className="text-[11px] text-muted-foreground/80 mt-0.5 mb-2 leading-relaxed">
+                        We'll create your free gifter account at the same time so you can manage or cancel any time. Uses the email you enter on the next step.
+                      </p>
+                      <input
+                        id="recurring-password"
+                        type="password"
+                        value={recurringPassword}
+                        onChange={(e) => setRecurringPassword(e.target.value)}
+                        placeholder="At least 8 characters"
+                        minLength={8}
+                        autoComplete="new-password"
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                        data-testid="input-recurring-password"
+                      />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/70 leading-snug">
+                      Recurring gifts count toward the IRS annual gift exclusion ($18,000 per recipient per year). Most family contributions are well under this.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+                <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!isValidAmount || (isRecurring && recurringPassword.length < 8)} onClick={() => { haptic("selection"); trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", { baselineEvent: "gift_amount_selected", amount: activeAmount, amountSource: showCustom ? "custom_confirmed" : "confirmed", isRecurring, recurringFrequency: isRecurring ? recurringFrequency : null }); trackGiftEvent("cta_click", "gift_amount_continue", { amount: activeAmount }); setStep("preview"); }} data-testid="button-continue-to-preview">
                 Continue
                 <ArrowRight size={16} className="ml-2" />
               </Button>

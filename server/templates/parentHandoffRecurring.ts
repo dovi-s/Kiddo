@@ -91,7 +91,7 @@ export function buildParentHandoffRecurringEmail(
     ``,
     `Your ${cadence} ${amount} contribution stopped automatically because the account is no longer custodial. We did this so you wouldn't be charged for a fund you no longer manage.`,
     ``,
-    `If you want to keep showing up, you can send a gift any time through ${childFirstName}'s gift link. ${childFirstName} sees who it's from. It still lands in the same fund.`,
+    `If you want to keep showing up, you can set up the same ${amount} ${cadence} contribution as a recurring gift through ${childFirstName}'s gift link. Same cadence, same amount, same fund — just from you as a gifter now, not as the custodian. ${childFirstName} sees who it's from. Cancel any time.`,
     ``,
     `Or do nothing. The pause stays. No further charges, no follow-ups about it.`,
   ].join("\n");
@@ -110,7 +110,7 @@ export function buildParentHandoffRecurringEmail(
     ``,
     `Your ${cadence} ${amount} contribution stopped automatically because the account is no longer custodial. We did this so you wouldn't be charged for a fund you no longer manage.`,
     ``,
-    `If you want to keep showing up, you can send a gift any time through ${childFirstName}'s gift link. ${childFirstName} sees who it's from. It still lands in the same fund.`,
+    `If you want to keep showing up, you can set up the same ${amount} ${cadence} contribution as a recurring gift through ${childFirstName}'s gift link. Same cadence, same amount, same fund — just from you as a gifter now, not as the custodian. ${childFirstName} sees who it's from. Cancel any time.`,
     ``,
     `Open ${childFirstName}'s gift link: ${giftLinkUrl}`,
     ``,

@@ -4157,6 +4157,96 @@ export async function registerRoutes(
     }
   });
 
+  // Gifter recurring schedules — list active + paused recurring_gifts
+  // rows belonging to the authenticated user (matched by sender_email).
+  // Powers the "Your recurring gifts" section on /gifter dashboard.
+  // Per locked Decision A (project_gifter_recurring_restoration.md),
+  // recurring setup REQUIRES an account so this endpoint can always
+  // identify the gifter's schedules by email match.
+  app.get('/api/gifter-account/recurring', isAuthenticated, async (req: any, res) => {
+    try {
+      const email = String((req.user as any).email || "").trim().toLowerCase();
+      if (!email) return res.json({ schedules: [] });
+      const rows = await db.execute(sql`
+        SELECT
+          rg.id,
+          rg.fund_id,
+          rg.sender_name,
+          rg.amount,
+          rg.frequency,
+          rg.status,
+          rg.pause_reason,
+          rg.next_charge_date,
+          rg.created_at,
+          rg.stripe_subscription_id,
+          f.name AS fund_name,
+          f.slug AS fund_slug,
+          f.recipient_first_name
+        FROM recurring_gifts rg
+        INNER JOIN funds f ON f.id = rg.fund_id
+        WHERE LOWER(COALESCE(rg.sender_email, '')) = ${email}
+          AND rg.status IN ('active', 'paused')
+        ORDER BY rg.created_at DESC
+      `);
+      const schedules = ((rows.rows as any[]) || []).map((r) => ({
+        id: String(r.id),
+        fundId: String(r.fund_id),
+        fundName: r.recipient_first_name || r.fund_name || "Fund",
+        fundSlug: r.fund_slug || null,
+        amount: parseFloat(String(r.amount || "0")),
+        frequency: String(r.frequency || "monthly"),
+        status: String(r.status || "active"),
+        pauseReason: r.pause_reason ? String(r.pause_reason) : null,
+        nextChargeDate: r.next_charge_date ? new Date(r.next_charge_date).toISOString() : null,
+        createdAt: new Date(r.created_at).toISOString(),
+      }));
+      res.json({ schedules });
+    } catch (err) {
+      console.error("Error fetching gifter recurring schedules:", err);
+      res.status(500).json({ error: "Failed to load recurring schedules." });
+    }
+  });
+
+  // Cancel a gifter recurring schedule. Owner-gated: the authenticated
+  // user's email must match the recurring_gifts.sender_email. Cancels
+  // the Stripe subscription too so no further charges fire.
+  app.post('/api/gifter-account/recurring/:id/cancel', isAuthenticated, async (req: any, res) => {
+    try {
+      const email = String((req.user as any).email || "").trim().toLowerCase();
+      const scheduleId = String(req.params.id || "");
+      if (!email || !scheduleId) return res.status(400).json({ error: "Missing parameters" });
+
+      const rows = await db.execute(sql`
+        SELECT id, sender_email, stripe_subscription_id, status
+        FROM recurring_gifts
+        WHERE id = ${scheduleId}
+        LIMIT 1
+      `);
+      const row = (rows.rows as any[])?.[0];
+      if (!row) return res.status(404).json({ error: "Recurring schedule not found" });
+      if (String(row.sender_email || "").trim().toLowerCase() !== email) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+      if (row.stripe_subscription_id) {
+        try {
+          const stripe = await getUncachableStripeClient();
+          await stripe.subscriptions.cancel(String(row.stripe_subscription_id));
+        } catch (cancelErr) {
+          console.warn("Stripe cancel failed (proceeding with local cancel):", cancelErr);
+        }
+      }
+      await db.execute(sql`
+        UPDATE recurring_gifts
+        SET status = 'cancelled', pause_reason = 'user', paused_at = NOW()
+        WHERE id = ${scheduleId}
+      `);
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("Error cancelling gifter recurring schedule:", err);
+      res.status(500).json({ error: "Failed to cancel recurring." });
+    }
+  });
+
   // Gifter contribution history CSV download. Used by sophisticated
   // gifters (grandparents giving across multiple grandkids,
   // professionals tracking Form 709 gift-tax compliance) to pull a
@@ -9574,6 +9664,163 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error creating gift checkout session:', error);
       res.status(500).json({ error: getCheckoutErrorMessage(error), details: getCheckoutErrorDetails(error) });
+    }
+  });
+
+  // Recurring gift checkout — Tier-1 deferred work restored 2026-05-21
+  // per project_gifter_recurring_restoration.md + Plus pricing reframe.
+  // Creates a Stripe Subscription Checkout Session. Also creates/finds
+  // a Kiddo gifter account inline per locked Decision A so the gifter
+  // has a stable cancellation home in /gifter dashboard.
+  //
+  // Distinct from /api/stripe/checkout/gift above (one-time PaymentIntent).
+  // Subscription mode means Stripe charges on the chosen cadence; the
+  // webhook handler listens for invoice.payment_succeeded with metadata
+  // .kind='gifter_recurring' and writes the Memory Book / gift / activity
+  // rows on each successful charge. On checkout.session.completed it
+  // inserts the recurring_gifts row.
+  app.post('/api/stripe/checkout/gift-recurring', async (req, res) => {
+    try {
+      const {
+        fundId, eventId, amount, senderName, senderEmail, message,
+        photoUrl, videoUrl, audioUrl, paymentMethod, executionModel,
+        selectedTicker, giftAddOn, isAnonymous, recurringFrequency,
+        accountPassword,
+      } = req.body;
+      const baseUrl = getAppBaseUrl(req);
+
+      const trimmedEmail = typeof senderEmail === "string" ? senderEmail.trim().toLowerCase() : "";
+      const trimmedSenderName = typeof senderName === "string" ? senderName.trim() : "";
+      const numericAmount = parseFloat(String(amount));
+      const validFreq = ["weekly", "monthly", "yearly"].includes(String(recurringFrequency));
+      const validPassword = typeof accountPassword === "string" && accountPassword.length >= 8;
+
+      if (!fundId || !Number.isFinite(numericAmount) || numericAmount < 5) {
+        return res.status(400).json({ error: "fundId and a valid amount (>=$5) are required" });
+      }
+      if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        return res.status(400).json({ error: "A valid email is required for recurring gifts (we use it for your account)" });
+      }
+      if (!validFreq) {
+        return res.status(400).json({ error: "recurringFrequency must be weekly, monthly, or yearly" });
+      }
+      if (!validPassword) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+
+      // Demo-fund sandbox: same pattern as one-time. Mock success.
+      if (await isDemoFund(fundId)) {
+        return res.json({
+          url: `${baseUrl}/gift/success?demo=1&fundId=${encodeURIComponent(fundId)}&amount=${encodeURIComponent(String(numericAmount))}&recurring=1`,
+          sessionId: `demo_recurring_${Date.now()}`,
+          isDemo: true,
+          message: "Demo mode. No card was charged, no subscription created.",
+        });
+      }
+
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: "Fund not found" });
+      if (String(fund.status || "").toLowerCase() === "closed") {
+        return res.status(410).json({
+          error: "fund_closed",
+          message: "This fund is no longer accepting gifts.",
+        });
+      }
+
+      const isAnonymousFlag = !!isAnonymous;
+      const recipientName = fund.recipientFirstName || fund.name || "the child";
+      const normalizedSenderName = trimmedSenderName || `Someone who loves ${recipientName}`;
+
+      // Find or create the gifter's Kiddo account. Per Decision A,
+      // recurring REQUIRES an account so the gifter has a stable
+      // cancellation home in /gifter. Created silently.
+      const [existingUser] = await db.select().from(users).where(eq(users.email, trimmedEmail)).limit(1);
+      let gifterUserId: string;
+      if (existingUser) {
+        gifterUserId = existingUser.id;
+        // Don't overwrite an existing user's password.
+      } else {
+        const passwordHash = await bcrypt.hash(accountPassword, 10);
+        const [created] = await db.insert(users).values({
+          email: trimmedEmail,
+          firstName: trimmedSenderName || null,
+          passwordHash,
+        } as any).returning();
+        gifterUserId = created.id;
+      }
+
+      const stripe = await getUncachableStripeClient();
+      const customer = await stripe.customers.create({
+        email: trimmedEmail,
+        name: normalizedSenderName,
+        metadata: {
+          gifterUserId,
+          fundId: String(fundId),
+        },
+      });
+
+      const interval: "week" | "month" | "year" =
+        recurringFrequency === "weekly" ? "week"
+        : recurringFrequency === "yearly" ? "year"
+        : "month";
+
+      const amountCents = Math.round(numericAmount * 100);
+      const price = await stripe.prices.create({
+        currency: "usd",
+        unit_amount: amountCents,
+        recurring: { interval },
+        product_data: {
+          name: `Recurring gift to ${recipientName}'s fund`,
+        },
+      });
+
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        customer: customer.id,
+        line_items: [{ price: price.id, quantity: 1 }],
+        subscription_data: {
+          metadata: {
+            type: "gifter_recurring",
+            fundId: String(fundId),
+            gifterUserId,
+            eventId: eventId ? String(eventId) : "",
+            senderName: normalizedSenderName,
+            senderEmail: trimmedEmail,
+            message: typeof message === "string" ? message.slice(0, 490) : "",
+            photoUrl: typeof photoUrl === "string" ? photoUrl.slice(0, 500) : "",
+            videoUrl: typeof videoUrl === "string" ? videoUrl.slice(0, 500) : "",
+            audioUrl: typeof audioUrl === "string" ? audioUrl.slice(0, 500) : "",
+            executionModel: executionModel || "auto",
+            selectedTicker: selectedTicker || "",
+            isAnonymous: isAnonymousFlag ? "1" : "0",
+            frequency: String(recurringFrequency),
+            amountUsd: String(numericAmount),
+          },
+        },
+        success_url:
+          `${baseUrl}/gift/success?` +
+          `fundId=${encodeURIComponent(fundId)}` +
+          `&recurring=1` +
+          `&session_id={CHECKOUT_SESSION_ID}` +
+          `&amount=${encodeURIComponent(String(numericAmount))}` +
+          `&frequency=${encodeURIComponent(String(recurringFrequency))}` +
+          `&senderName=${encodeURIComponent(normalizedSenderName)}` +
+          `&fundName=${encodeURIComponent(recipientName)}`,
+        cancel_url: `${baseUrl}/${fund.slug || fundId}?canceled=true`,
+        metadata: {
+          kind: "gifter_recurring",
+          fundId: String(fundId),
+          gifterUserId,
+        },
+      });
+
+      res.json({ url: session.url, sessionId: session.id });
+    } catch (error) {
+      console.error("Error creating recurring gift checkout session:", error);
+      res.status(500).json({
+        error: getCheckoutErrorMessage(error),
+        details: getCheckoutErrorDetails(error),
+      });
     }
   });
 
