@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react"
-import { Link, useSearch } from "wouter"
+import { Link, useSearch, useLocation } from "wouter"
 import { motion } from "framer-motion"
 import { useQuery } from "@tanstack/react-query"
 import { Check, Copy, Share2, Heart, Gift, Mail, Bookmark, Smartphone } from "lucide-react"
@@ -64,6 +64,7 @@ const EVENT_TYPE_EMOJI: Record<string, string> = {
 export default function GiftSuccess() {
   const searchString = useSearch()
   const params = new URLSearchParams(searchString)
+  const [, setLocation] = useLocation()
 
   const fundId = params.get("fundId") || ""
   const eventId = params.get("eventId") || ""
@@ -76,6 +77,23 @@ export default function GiftSuccess() {
   const executionModelParam = params.get("executionModel") || ""
   const fundNameParam = params.get("fundName") || ""
   const sessionId = params.get("session_id") || ""
+
+  // Guard against direct-URL navigation to /gift/success with no params.
+  // This page is meant to be reached ONLY via Stripe's success_url
+  // redirect (which populates fundId + amount + session_id at minimum).
+  // Without a real gift context, the page used to render a broken
+  // "$0 to nobody" state. Redirect to home instead. Locked 2026-05-23.
+  useEffect(() => {
+    if (!fundId && !sessionId && (!amountParam || amountParam === "0")) {
+      setLocation("/")
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const isOrphanedDirectNav =
+    !fundId && !sessionId && (!amountParam || amountParam === "0")
+  if (isOrphanedDirectNav) {
+    return null
+  }
 
   const [copied, setCopied] = useState(false)
   const [showRecurringNudge, setShowRecurringNudge] = useState(() => {
