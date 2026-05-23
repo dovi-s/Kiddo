@@ -78,6 +78,16 @@ export const users = pgTable("users", {
   // a successful send so it never re-fires. Per Tier-2 deferred
   // item #5; locked 2026-05-21.
   kidThirtyDayCheckInAt: timestamp("kid_thirty_day_check_in_at"),
+  // Stamped the FIRST time a parent on Kiddo+ (starter/family) attaches
+  // photo/video/voice to a parent-authored Memory Book entry. Drives a
+  // one-time "your first photo just unlocked" celebration banner on
+  // Dashboard so the Plus media upgrade gets its own moment instead of
+  // landing silently. Set once, never reset — the celebration is keyed
+  // to the row appearing within the last 7 days. Gifter-attached media
+  // never sets this column (gifter media is free across all tiers; the
+  // celebration is specifically the parent-side Plus differential
+  // moment). Per Tier-2 deferred item #2; locked 2026-05-23.
+  plusFirstMediaAt: timestamp("plus_first_media_at"),
   // Self-reported "I have a job" toggle set in the Age18Welcome
   // walkthrough screen 4. Drives the future Roth IRA setup nudge
   // (deferred from MVP until DriveWealth IRA support is wired). The

@@ -139,6 +139,10 @@ export function useAuth() {
     // Per-user, not per-gift.
     "kora:dismissed:recurring-nudge",
     "kora:dismissed:reminder-nudge",
+    // PlusFirstMediaCelebrationBanner — fires once per parent across
+    // their lifetime when they upload their first parent-authored
+    // photo/video/voice on Kiddo+. Per-user (NOT per-fund).
+    "kora:dismissed:plus-first-media-celebration",
   ];
   const PER_USER_PREFIXES_TO_CLEAR = [
     // Gentle-nudge per-key dismissals on the Dashboard — pattern is

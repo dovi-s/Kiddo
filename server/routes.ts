@@ -2410,6 +2410,33 @@ export async function registerRoutes(
         }
       }
 
+      // Plus first-media unlock celebration (Tier-2 deferred item #2,
+      // shipped 2026-05-23). When the fund owner is on Kiddo+ and the
+      // first parent-authored media entry was uploaded within the last
+      // 7 days, surface the timestamp so the Dashboard can render a
+      // one-time "your first photo just unlocked" celebration banner.
+      // Distinct from co-parent acceptance (that fires when ANOTHER
+      // person joins; this fires when the OWNER themselves crosses the
+      // first-upload threshold). Banner is dismissable via per-user
+      // localStorage flag. Only set for the fund owner (renders the
+      // banner on whichever fund they happen to be viewing when the
+      // dashboard loads in the 7-day window).
+      let plusFirstMediaAt: string | null = null;
+      try {
+        const viewerRecord = req.user as any;
+        const viewerPlan = String(viewerRecord?.plan || '').toLowerCase();
+        const isPaidPlan = viewerPlan === 'starter' || viewerPlan === 'family';
+        if (fund.userId === userId && isPaidPlan && viewerRecord?.plusFirstMediaAt) {
+          const stampedAt = new Date(viewerRecord.plusFirstMediaAt);
+          const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+          if (!Number.isNaN(stampedAt.getTime()) && stampedAt.getTime() >= sevenDaysAgo) {
+            plusFirstMediaAt = stampedAt.toISOString();
+          }
+        }
+      } catch {
+        // Best-effort; never block dashboard summary on this surface.
+      }
+
       const responsePayload = await timeStage("response_assembly", async () => ({
           fundId: fund.id,
           holdings: holdingsForFund,
@@ -2437,6 +2464,11 @@ export async function registerRoutes(
           // Null when viewer isn't the fund owner, or no co-parent
           // accepted in the last 30 days.
           coparentAcceptance,
+          // Drives the one-time Plus first-media unlock celebration banner.
+          // ISO timestamp when set, null otherwise. Null when viewer
+          // isn't fund owner, isn't on a paid plan, or hasn't uploaded
+          // any parent-authored media yet (or did so >7 days ago).
+          plusFirstMediaAt,
         }));
 
       res.setHeader("Cache-Control", "private, max-age=20, stale-while-revalidate=120");
@@ -10663,6 +10695,29 @@ export async function registerRoutes(
         visibility: parseVisibility(req.body?.visibility),
         isFeatured: Boolean(req.body?.isFeatured),
       });
+      // Plus first-media unlock — stamp users.plusFirstMediaAt the FIRST
+      // time a Kiddo+ parent attaches photo/video/voice to a parent-
+      // authored entry. Dashboard reads this column to fire the one-time
+      // "your first photo just unlocked" celebration banner. Only fires
+      // for the fund owner (not co-admins) and only when the parent is
+      // actually on a paid plan — Free parents can't reach this code
+      // path with media attached (the MemoryMediaPicker shows the
+      // upgrade wall before the upload completes). Set once, never
+      // reset. Per Tier-2 deferred item #2.
+      try {
+        const hasMedia = !!(photoUrl || videoUrl || (audioUrlRaw && audioUrlRaw.length > 0));
+        const isFundOwner = req.fundAccessRole === 'owner';
+        const userRecord = req.user as any;
+        const userPlan = String(userRecord?.plan || '').toLowerCase();
+        const isPaidPlan = userPlan === 'starter' || userPlan === 'family';
+        if (hasMedia && isFundOwner && isPaidPlan && !userRecord?.plusFirstMediaAt) {
+          await db.update(users).set({ plusFirstMediaAt: new Date() }).where(eq(users.id, userRecord.id));
+        }
+      } catch (err) {
+        // Best-effort — the celebration banner is a nice-to-have, NEVER
+        // block the actual memory entry create on this stamping failure.
+        console.warn('[plus-first-media] stamp failed:', (err as any)?.message || err);
+      }
       const normalizedMemoryType = String(entry.type || "memory").toLowerCase();
       const isMilestoneEntry = normalizedMemoryType.includes("milestone");
       const trimmedContent = String(entry.content || "").trim();

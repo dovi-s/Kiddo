@@ -135,6 +135,7 @@ import { KIDDO_AUM_FEE_RATE } from "@shared/monetization";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
 import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanner";
 import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
+import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
 import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
@@ -4569,6 +4570,16 @@ export default function Dashboard() {
           acceptance={(dashboardSummary as any)?.coparentAcceptance}
           fundId={activeFundId}
           childFirstName={recipientFirstNameDisplay}
+        />
+
+        {/* Plus first-media unlock celebration — wired 2026-05-23 per
+            Tier-2 deferred item #2. Fires once across the parent's
+            lifetime when they upload their first parent-authored
+            photo/video/voice on Kiddo+. Per-user dismiss (NOT per-fund) —
+            same parent, same celebration, even with multiple kids. */}
+        <PlusFirstMediaCelebrationBanner
+          plusFirstMediaAt={(dashboardSummary as any)?.plusFirstMediaAt}
+          fundId={activeFundId}
         />
 
         {/* Milestone celebration moment — wired 2026-05-20 (the component
