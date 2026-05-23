@@ -5490,7 +5490,13 @@ export default function Dashboard() {
                         {childPossess} fund so far <span aria-hidden>🌱</span>
                       </p>
                       <p className="text-[10px] text-muted-foreground/60">
-                        {new Date(periodStartMs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: fundAgeDays != null && fundAgeDays > 365 ? "numeric" : undefined, timeZone: "UTC" })} → today
+                        {/* Year ALWAYS shown 2026-05-23 — was conditionally
+                            hidden when fund age < 365d on the theory that
+                            the year was redundant for recent funds. In
+                            practice the reader sees "Apr 13" cold and has
+                            to guess whether that's this year or last;
+                            removing the guess is worth the four chars. */}
+                        {new Date(periodStartMs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })} → today
                       </p>
                     </div>
 
