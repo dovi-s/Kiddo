@@ -117,6 +117,52 @@ export function useAuth() {
     refetchOnWindowFocus: false,
   });
 
+  // Per-user dismissal-key cleanup. These are global (NOT fund-scoped)
+  // localStorage keys that represent "this specific user dismissed this
+  // specific nudge" — without explicit cleanup at the auth boundary they
+  // leak across user sessions on a shared browser. Example bug: user A
+  // dismisses the "set up recurring" reminder nudge on /gift/success;
+  // user B logs in on the same browser and never sees the nudge they
+  // should see. Locked 2026-05-23 per the localStorage-dedupe audit
+  // (deferred Tier-3 item #9). Sync this list when adding new
+  // per-user dismissal keys ANYWHERE in the codebase.
+  const PER_USER_KEYS_TO_CLEAR = [
+    // Notification panel — read-state of notification IDs, last-read
+    // timestamp. Per-user state; logging out as A and into B means B
+    // shouldn't inherit A's read state.
+    "kiddo.notif.lastReadAt",
+    "kiddo.notif.readIds",
+    "kiddo.notif.unreadIds",
+    // PlanBenefitsCard — set of dismissed Plus-benefit nudges. Per-user.
+    "kora:plan-benefit-nudge-dismissed",
+    // GiftSuccess "set up recurring" + "remind me later" dismissals.
+    // Per-user, not per-gift.
+    "kora:dismissed:recurring-nudge",
+    "kora:dismissed:reminder-nudge",
+  ];
+  const PER_USER_PREFIXES_TO_CLEAR = [
+    // Gentle-nudge per-key dismissals on the Dashboard — pattern is
+    // kora:dismissed:gentle-nudge:{nudgeKey}. Wipe all of them on auth
+    // change so user B doesn't inherit A's dismissals.
+    "kora:dismissed:gentle-nudge:",
+  ];
+
+  function clearPerUserDismissals() {
+    try {
+      for (const key of PER_USER_KEYS_TO_CLEAR) {
+        window.localStorage.removeItem(key);
+      }
+      for (const prefix of PER_USER_PREFIXES_TO_CLEAR) {
+        for (let i = window.localStorage.length - 1; i >= 0; i--) {
+          const k = window.localStorage.key(i);
+          if (k && k.startsWith(prefix)) window.localStorage.removeItem(k);
+        }
+      }
+    } catch {
+      // best-effort
+    }
+  }
+
   const loginMutation = useMutation({
     mutationFn: loginFn,
     onSuccess: (user) => {
@@ -139,6 +185,7 @@ export function useAuth() {
       removeLocalCache(LOCAL_CACHE_KEYS.subscription);
       removeLocalCachePrefix("kora.dashboard-summary.");
       removeLocalCachePrefix("kiddo.fund-balance.");
+      clearPerUserDismissals();
       // Invalidate (not clear) the data queries that are scoped to the
       // current user. Invalidation marks them stale so the next read
       // refetches; it doesn't wipe the cached value in a way that
@@ -159,6 +206,7 @@ export function useAuth() {
       removeLocalCache(LOCAL_CACHE_KEYS.subscription);
       removeLocalCachePrefix("kora.dashboard-summary.");
       removeLocalCachePrefix("kiddo.fund-balance.");
+      clearPerUserDismissals();
       queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
       queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
@@ -174,6 +222,8 @@ export function useAuth() {
       removeLocalCache(LOCAL_CACHE_KEYS.events);
       removeLocalCache(LOCAL_CACHE_KEYS.subscription);
       removeLocalCachePrefix(LOCAL_CACHE_KEYS.activities);
+      try { window.localStorage.removeItem("kiddo_active_fund_id"); } catch {}
+      clearPerUserDismissals();
       queryClient.setQueryData(["/api/auth/user"], null);
       queryClient.clear();
       // Always leave protected routes after logout.
