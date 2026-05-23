@@ -77,6 +77,17 @@ export default function GiftSuccess() {
   const executionModelParam = params.get("executionModel") || ""
   const fundNameParam = params.get("fundName") || ""
   const sessionId = params.get("session_id") || ""
+  // Recurring-checkout URL params — set by /api/stripe/checkout/gift-recurring
+  // on the success_url. When recurring=1 the page renders a recurring-aware
+  // headline/subheadline ("Your monthly to Emma is set up" vs the one-time
+  // "Your gift is growing"). Locked 2026-05-23 to close the gap where
+  // recurring gifters were seeing the one-time success copy.
+  const isRecurringSetup = params.get("recurring") === "1"
+  const recurringFrequencyParam = params.get("frequency") || "monthly"
+  const recurringCadenceLabel =
+    recurringFrequencyParam === "weekly" ? "weekly"
+    : recurringFrequencyParam === "yearly" ? "yearly"
+    : "monthly"
 
   // Guard against direct-URL navigation to /gift/success with no params.
   // This page is meant to be reached ONLY via Stripe's success_url
@@ -703,7 +714,11 @@ export default function GiftSuccess() {
           <span className="text-6xl select-none" style={{ filter: "drop-shadow(0 6px 16px rgba(39,74,56,0.22))" }}>🌱</span>
         </motion.div>
 
-        {/* Headline */}
+        {/* Headline — recurring vs one-time. Recurring setup gets a
+            distinct headline ("Your monthly to Emma is set up") so the
+            gifter understands they've actually established a subscription,
+            not just sent a one-time gift. The one-time copy ("Your gift
+            is growing") would mislead a recurring setup. */}
         <motion.h1
           className="font-heading text-3xl md:text-4xl font-bold text-center mb-2"
           initial={{ opacity: 0, y: 12 }}
@@ -711,7 +726,9 @@ export default function GiftSuccess() {
           transition={{ delay: 0.38, duration: 0.45 }}
           data-testid="text-success-heading"
         >
-          Your gift is growing.
+          {isRecurringSetup
+            ? `Your ${recurringCadenceLabel} is set up.`
+            : "Your gift is growing."}
         </motion.h1>
 
         {/* Subheadline */}
@@ -722,7 +739,9 @@ export default function GiftSuccess() {
           transition={{ delay: 0.52 }}
           data-testid="text-success-subheading"
         >
-          You just invested ${amount} in {childFirstName ? `${childFirstName}'s` : "their"} future.
+          {isRecurringSetup
+            ? `${childFirstName || "They"} will receive $${amount} ${recurringCadenceLabel} from you, starting today.`
+            : `You just invested $${amount} in ${childFirstName ? `${childFirstName}'s` : "their"} future.`}
         </motion.p>
 
         {/* Settling-window note. Tells the gifter the gift takes 1 to 2
@@ -740,7 +759,9 @@ export default function GiftSuccess() {
           transition={{ delay: 0.62 }}
           data-testid="text-success-settling-note"
         >
-          Settles into {childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days.
+          {isRecurringSetup
+            ? `Settles into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days. Manage or cancel any time from your gifter dashboard.`
+            : `Settles into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days.`}
         </motion.p>
 
         {/* Affirmative anonymous confirmation. Replaces what would
