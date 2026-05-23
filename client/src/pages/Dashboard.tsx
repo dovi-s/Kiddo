@@ -134,6 +134,7 @@ import { StockLogo } from "@/components/ui/stock-logo";
 import { KIDDO_AUM_FEE_RATE } from "@shared/monetization";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
 import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanner";
+import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
 import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
@@ -4554,6 +4555,18 @@ export default function Dashboard() {
             kidClaimedAt). One-time, dismissable, per-fund localStorage. */}
         <KidAt18WelcomeBanner
           kidClaimedAt={(dashboardSummary as any)?.kidClaimedAt as string | null | undefined}
+          fundId={activeFundId}
+          childFirstName={recipientFirstNameDisplay}
+        />
+
+        {/* Co-parent acceptance celebration — wired 2026-05-23 per Tier-2
+            deferred item #1. Renders only for the fund OWNER, only when
+            a co-parent collaborator accepted their invite within the
+            last 30 days (server-gated via dashboardSummary.coparentAcceptance).
+            One-time + dismissable + keyed per-fund-per-collaborator-id so
+            future co-parent additions on the same fund still celebrate. */}
+        <CoparentAcceptedBanner
+          acceptance={(dashboardSummary as any)?.coparentAcceptance}
           fundId={activeFundId}
           childFirstName={recipientFirstNameDisplay}
         />

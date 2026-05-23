@@ -2358,6 +2358,58 @@ export async function registerRoutes(
         // doesn't render. No reason to fail the entire dashboard summary.
       }
 
+      // Co-parent acceptance celebration (Tier-2 deferred item #1, shipped
+      // 2026-05-23). When the fund OWNER views the dashboard and a
+      // co-parent collaborator was added/accepted within the last 30 days,
+      // surface the acceptance so the Dashboard can render a one-time
+      // banner ("Claire accepted your invite to Emma's fund"). Renders
+      // only for the inviter (fund.userId === viewer); the accepted
+      // co-parent themselves doesn't see this — they see normal access.
+      // Banner is one-time + dismissable via per-fund-per-collab-id
+      // localStorage flag on the client side.
+      let coparentAcceptance: {
+        collaboratorId: string;
+        name: string;
+        acceptedAt: string;
+      } | null = null;
+      if (fund.userId === userId) {
+        try {
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          const acceptedRows = await db.execute(sql`
+            SELECT
+              fc.id AS collaborator_id,
+              fc.email,
+              fc.accepted_at,
+              fc.user_id,
+              u.first_name,
+              u.last_name,
+              u.preferred_name
+            FROM fund_collaborators fc
+            LEFT JOIN users u ON u.id = fc.user_id
+            WHERE fc.fund_id = ${fund.id}
+              AND fc.status = 'accepted'
+              AND fc.accepted_at IS NOT NULL
+              AND fc.accepted_at >= ${thirtyDaysAgo.toISOString()}
+            ORDER BY fc.accepted_at DESC
+            LIMIT 1
+          `);
+          const row = (acceptedRows.rows as any[])?.[0];
+          if (row) {
+            const first = String(row.first_name || row.preferred_name || "").trim();
+            const last = String(row.last_name || "").trim();
+            const fullName = [first, last].filter(Boolean).join(" ").trim();
+            const displayName = fullName || String(row.email || "Your co-parent").split("@")[0];
+            coparentAcceptance = {
+              collaboratorId: String(row.collaborator_id),
+              name: displayName,
+              acceptedAt: new Date(row.accepted_at).toISOString(),
+            };
+          }
+        } catch {
+          // Best-effort; never block dashboard summary on this surface.
+        }
+      }
+
       const responsePayload = await timeStage("response_assembly", async () => ({
           fundId: fund.id,
           holdings: holdingsForFund,
@@ -2381,6 +2433,10 @@ export async function registerRoutes(
           // the comment block above for derivation. Null for parents and
           // for kids whose claim is older than 60 days.
           kidClaimedAt,
+          // Drives the one-time co-parent acceptance celebration banner.
+          // Null when viewer isn't the fund owner, or no co-parent
+          // accepted in the last 30 days.
+          coparentAcceptance,
         }));
 
       res.setHeader("Cache-Control", "private, max-age=20, stale-while-revalidate=120");
