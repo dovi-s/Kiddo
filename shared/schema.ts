@@ -269,6 +269,13 @@ export const gifts = pgTable("gifts", {
   // Null for one-time parent gifts and all gifter-sent gifts. Used to mark a gift row
   // as "↻ Recurring" in the gifter detail modal — the badge is per-gift, not per-person.
   parentContributionId: varchar("parent_contribution_id"),
+  // Set when this gift was produced by a GIFTER recurring schedule (i.e., a
+  // Stripe subscription cycle for a recurring_gifts row). Null for one-time
+  // gifter gifts and all parent-sent gifts. Used by Memory Book entry
+  // compression (Decision D, project_gifter_recurring_restoration.md) to
+  // render recurring-cycle entries with reduced visual weight unless they
+  // carry a message / photo / video / voice attachment. Locked 2026-05-23.
+  recurringGiftId: varchar("recurring_gift_id"),
   // Explicit anonymous flag — replaces the previous string-matching
   // pattern that inferred anonymous from sender_name being 'Anonymous'
   // or 'Someone who loves Emma' fallbacks. The string-matching pattern
@@ -791,6 +798,16 @@ export const recurringGifts = pgTable("recurring_gifts", {
   pauseReason: text("pause_reason"),
   pausedAt: timestamp("paused_at"),
   nextChargeDate: timestamp("next_charge_date"),
+  // Decision B dunning timer (locked 2026-05-21 per
+  // project_gifter_recurring_restoration.md). When pause_reason =
+  // 'payment_failed', the worker polls and:
+  //   - Sends a "update your card" reminder at ~14 days after pausedAt
+  //     (stamps lastDeclineReminderAt to prevent re-sending)
+  //   - Auto-cancels the subscription at ~30 days after pausedAt
+  // Null when no reminder has fired yet for the current pause cycle.
+  // Reset to null on schedule resume so a future failure starts a
+  // fresh 14/30 day clock.
+  lastDeclineReminderAt: timestamp("last_decline_reminder_at"),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("recurring_gifts_fund_id_idx").on(table.fundId),

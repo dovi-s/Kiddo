@@ -5453,6 +5453,10 @@ export async function registerRoutes(
                     selectedTicker: rawTicker ?? inferredTicker,
                     sharesAcquired: rawShares ?? inferredShares,
                     priceAtPurchase: rawPrice,
+                    // recurringGiftId surfaces the gifter-recurring linkage to
+                    // the Memory Book client so it can compress visual weight
+                    // on monthly-cycle entries per Decision D (locked 2026-05-23).
+                    recurringGiftId: (gift as any).recurringGiftId ?? null,
                   };
                 })()
               : null,
@@ -10386,6 +10390,10 @@ export async function registerRoutes(
                     selectedTicker: rawTicker ?? inferredTicker,
                     sharesAcquired: rawShares ?? inferredShares,
                     priceAtPurchase: rawPrice,
+                    // recurringGiftId surfaces the gifter-recurring linkage to
+                    // the Memory Book client so it can compress visual weight
+                    // on monthly-cycle entries per Decision D (locked 2026-05-23).
+                    recurringGiftId: (gift as any).recurringGiftId ?? null,
                   };
                 })()
               : null,

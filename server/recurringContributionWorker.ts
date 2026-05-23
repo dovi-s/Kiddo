@@ -659,12 +659,152 @@ async function processAnniversaryMilestones(log: LogFn): Promise<void> {
   }
 }
 
+// Decision B dunning cascade for gifter recurring (locked 2026-05-21).
+// When a gifter recurring schedule pauses with pause_reason='payment_failed'
+// (set by handleInvoicePaymentFailed in webhookHandlers.ts), this function:
+//   1. At ~14 days paused → send a "update your card" reminder email and
+//      stamp last_decline_reminder_at so we don't re-send
+//   2. At ~30 days paused → cancel the Stripe subscription, set
+//      status='cancelled', send a goodbye email to the gifter
+// Privacy-first: parent sees only "paused → cancelled" status without the
+// underlying reason. The 14/30 day clock is anchored to paused_at; resuming
+// the schedule resets the clock (worker only runs this for currently-paused
+// rows).
+async function processGifterRecurringDunning(log: LogFn): Promise<void> {
+  const stripe = await getUncachableStripeClient();
+  const now = Date.now();
+  const FOURTEEN_DAYS_MS = 14 * 86400000;
+  const THIRTY_DAYS_MS = 30 * 86400000;
+  let rows: any[] = [];
+  try {
+    const result = await pool.query(`
+      SELECT
+        rg.id,
+        rg.fund_id,
+        rg.sender_name,
+        rg.sender_email,
+        rg.amount,
+        rg.frequency,
+        rg.paused_at,
+        rg.last_decline_reminder_at,
+        rg.stripe_subscription_id,
+        f.recipient_first_name,
+        f.name AS fund_name
+      FROM recurring_gifts rg
+      INNER JOIN funds f ON f.id = rg.fund_id
+      WHERE rg.status = 'paused'
+        AND rg.pause_reason = 'payment_failed'
+        AND rg.paused_at IS NOT NULL
+    `);
+    rows = result.rows || [];
+  } catch (err) {
+    log(`gifter recurring dunning scan failed: ${String(err)}`, WORKER_SOURCE);
+    return;
+  }
+
+  for (const row of rows) {
+    const pausedAtMs = row.paused_at ? new Date(row.paused_at).getTime() : 0;
+    if (!pausedAtMs) continue;
+    const ageMs = now - pausedAtMs;
+    const senderEmail = String(row.sender_email || "").trim();
+    const childName = row.recipient_first_name || row.fund_name || "the fund";
+
+    // 30-day cancel path takes precedence over 14-day reminder. Once we
+    // pass 30 days the schedule cancels regardless of whether the
+    // reminder was sent (covers edge cases where the worker missed the
+    // 14-day window due to outage).
+    if (ageMs >= THIRTY_DAYS_MS) {
+      try {
+        if (row.stripe_subscription_id) {
+          try {
+            await stripe.subscriptions.cancel(String(row.stripe_subscription_id));
+          } catch (stripeErr) {
+            log(`stripe cancel failed for paused gifter recurring ${row.id}: ${String(stripeErr)}`, WORKER_SOURCE);
+          }
+        }
+        await pool.query(
+          `UPDATE recurring_gifts
+             SET status = 'cancelled', pause_reason = 'payment_failed_cancelled'
+           WHERE id = $1`,
+          [row.id],
+        );
+        if (senderEmail) {
+          try {
+            const subject = `Your recurring to ${childName} stopped`;
+            const body = [
+              `Your recurring gift to ${childName}'s fund stopped because the card couldn't be charged for the past month.`,
+              "",
+              `Nothing further will be charged. You can set up a new recurring any time through ${childName}'s gift link.`,
+            ].join("\n");
+            const { html } = renderKiddoEmail({ heading: subject, intro: body });
+            await sendEmail({
+              to: senderEmail,
+              subject,
+              text: body + "\n\nThe Kiddo team",
+              html,
+            } as any);
+          } catch (emailErr) {
+            log(`dunning cancel email failed for ${row.id}: ${String(emailErr)}`, WORKER_SOURCE);
+          }
+        }
+        log(`gifter recurring auto-cancelled at 30d: ${row.id}`, WORKER_SOURCE);
+      } catch (err) {
+        log(`30-day cancel failed for ${row.id}: ${String(err)}`, WORKER_SOURCE);
+      }
+      continue;
+    }
+
+    // 14-day reminder path. Skip if we've already sent the reminder for
+    // this pause cycle (last_decline_reminder_at >= paused_at).
+    if (ageMs >= FOURTEEN_DAYS_MS) {
+      const reminderAtMs = row.last_decline_reminder_at
+        ? new Date(row.last_decline_reminder_at).getTime()
+        : 0;
+      if (reminderAtMs >= pausedAtMs) continue; // already reminded for this cycle
+      if (!senderEmail) {
+        // Without an email we can't send a reminder; just stamp so we
+        // don't keep retrying. The 30-day cancel will still fire.
+        await pool.query(
+          `UPDATE recurring_gifts SET last_decline_reminder_at = NOW() WHERE id = $1`,
+          [row.id],
+        );
+        continue;
+      }
+      try {
+        const subject = `Reminder: update your card to keep gifting ${childName}`;
+        const body = [
+          `Your recurring gift to ${childName}'s fund is still paused.`,
+          "",
+          `Most card issues clear up with a quick update. Open your gifter dashboard to refresh your payment any time.`,
+          "",
+          `If you do nothing, the recurring will stop automatically in about 16 more days. No further charges.`,
+        ].join("\n");
+        const { html } = renderKiddoEmail({ heading: subject, intro: body });
+        await sendEmail({
+          to: senderEmail,
+          subject,
+          text: body + "\n\nThe Kiddo team",
+          html,
+        } as any);
+        await pool.query(
+          `UPDATE recurring_gifts SET last_decline_reminder_at = NOW() WHERE id = $1`,
+          [row.id],
+        );
+        log(`gifter recurring 14d reminder sent: ${row.id}`, WORKER_SOURCE);
+      } catch (err) {
+        log(`14d reminder failed for ${row.id}: ${String(err)}`, WORKER_SOURCE);
+      }
+    }
+  }
+}
+
 export async function runRecurringContributionWorker(log: LogFn = () => undefined): Promise<void> {
   if (workerRunning) return;
   workerRunning = true;
   try {
     await processParentContributions(log);
     await processGifterRecurring(log);
+    await processGifterRecurringDunning(log);
     await processAnniversaryMilestones(log);
   } catch (err) {
     log(`recurring contribution worker failed: ${String(err)}`, WORKER_SOURCE);

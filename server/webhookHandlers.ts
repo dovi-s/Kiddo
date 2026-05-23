@@ -1870,7 +1870,9 @@ export class WebhookHandlers {
 
     // Insert a gift row so the money flows into holdings the same way
     // one-time gifts do. completeGiftPostPayment handles the holdings
-    // update + Memory Book entry + activity row.
+    // update + Memory Book entry + activity row. The recurring_gift_id
+    // foreign key tags this gift as part of a recurring cycle so the
+    // Memory Book renderer can compress visual weight per Decision D.
     const senderName = String(subMetadata.senderName || "Anonymous").slice(0, 200);
     const senderEmail = String(subMetadata.senderEmail || "").slice(0, 200);
     const message = String(subMetadata.message || "").slice(0, 490);
@@ -1878,16 +1880,34 @@ export class WebhookHandlers {
     const selectedTicker = String(subMetadata.selectedTicker || "");
     const isAnonymousFlag = String(subMetadata.isAnonymous || "0") === "1";
 
+    // Look up the recurring_gifts row by stripe_subscription_id so we can
+    // stamp the gift's recurring_gift_id foreign key. Best-effort: if the
+    // lookup fails the gift still gets created without the tag, just
+    // renders at full Memory Book weight instead of compressed.
+    let recurringGiftId: string | null = null;
+    try {
+      const rgRows = await db.execute(sql`
+        SELECT id FROM recurring_gifts
+        WHERE stripe_subscription_id = ${stripeSubscriptionId}
+        LIMIT 1
+      `);
+      const rgRow = (rgRows.rows as any[])?.[0];
+      if (rgRow?.id) recurringGiftId = String(rgRow.id);
+    } catch (rgErr) {
+      console.warn("[Webhook] recurring_gift_id lookup failed:", rgErr);
+    }
+
     const [insertedGift] = await db.execute(sql`
       INSERT INTO gifts (
         fund_id, sender_name, sender_email, amount, net_amount, status,
         message, selected_ticker, execution_model, is_anonymous,
-        stripe_payment_intent_id, created_at
+        stripe_payment_intent_id, recurring_gift_id, created_at
       ) VALUES (
         ${fundId}, ${senderName}, ${senderEmail || null}, ${amountUsd.toFixed(2)},
         ${amountUsd.toFixed(2)}, 'processing', ${message || null},
         ${selectedTicker || null}, ${executionModel}, ${isAnonymousFlag},
-        ${invoice.payment_intent || null}, NOW()
+        ${invoice.payment_intent || null}, ${recurringGiftId},
+        NOW()
       )
       RETURNING id
     `).then((r: any) => r.rows || []);

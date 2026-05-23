@@ -186,6 +186,11 @@ interface MemoryEntry {
     selectedTicker?: string | null;
     sharesAcquired?: string | null;
     priceAtPurchase?: string | null;
+    // Gifter-recurring linkage. Truthy when this gift came from a
+    // monthly subscription cycle (vs a one-time gift). Memory Book
+    // renders compressed-by-default for these per Decision D
+    // (project_gifter_recurring_restoration.md).
+    recurringGiftId?: string | null;
   } | null;
 }
 
@@ -3992,6 +3997,53 @@ export default function MemoryBook() {
                         const isTestMessage = /^(test|testing|tstgin|tstng|qqqqq|tester)\b/i.test(rawMessage);
                         const isBoilerplate = /^auto-invest contribution to /i.test(rawMessage) || isTestMessage;
                         const hasNote = !!(rawMessage && !isBoilerplate);
+
+                        // Decision D — recurring-cycle Memory Book entry
+                        // compression (locked 2026-05-23 per
+                        // project_gifter_recurring_restoration.md). Every
+                        // monthly recurring charge creates a Memory Book
+                        // entry, which would otherwise clutter the timeline
+                        // (12 entries/year per gifter). Compressed rendering
+                        // preserves the verticality of "every month grandma
+                        // showed up" while removing the per-entry visual
+                        // weight. Entries with attached content (message,
+                        // photo, video, voice) escape compression — those
+                        // months stand out within the stack as the moments
+                        // grandma said something extra.
+                        const isRecurringCycle = !!(entry.gift as any)?.recurringGiftId;
+                        const hasAttachedContent =
+                          hasNote ||
+                          !!entry.gift?.photoUrl ||
+                          !!(entry.gift as any)?.videoUrl ||
+                          !!(entry.gift as any)?.audioUrl;
+                        const isCompressedRecurring = isRecurringCycle && !hasAttachedContent;
+                        if (isCompressedRecurring) {
+                          const compressedGc = gifterColor(entry.gift.senderName || "G");
+                          const compressedSender = String(entry.gift.senderName || "").trim() || "Anonymous";
+                          return (
+                            <div
+                              className="flex items-center gap-3 py-2 px-3 rounded-lg bg-card/40 border border-border/40"
+                              data-testid={`memory-recurring-compressed-${entry.id}`}
+                            >
+                              <div
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
+                                style={{ background: compressedGc.bg, color: compressedGc.text }}
+                              >
+                                {compressedSender.slice(0, 1).toUpperCase()}
+                              </div>
+                              <div className="min-w-0 flex-1 flex items-center gap-2 text-xs">
+                                <Repeat size={11} className="shrink-0 text-muted-foreground/70" />
+                                <span className="font-medium text-foreground truncate">{titleCaseName(compressedSender)}</span>
+                                <span className="text-muted-foreground/60">·</span>
+                                <span className="text-muted-foreground tabular-nums">{displayAmount(entry.gift.amount)}</span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground/70 shrink-0 tabular-nums">
+                                {formatDate(entry.createdAt)}
+                              </p>
+                            </div>
+                          );
+                        }
+
                         // Display name override — test-pattern senders
                         // ("test", "qqqqq", "tstgin", etc.) render as
                         // "Anonymous" instead of their literal name. Real
