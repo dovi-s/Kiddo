@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 // BookOpen replaces Sparkles 2026-05-12 for "Latest Memory Book moment" —
 // Sparkles banned per feedback_no_ai_slop.md. BookOpen is the locked Memory
 // Book semantic icon per feedback_iconography_consistency.md.
-import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat } from "lucide-react";
+import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat, Crown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
@@ -202,6 +202,14 @@ export default function GifterDashboard() {
     staleTime: 5 * 60 * 1000,
   });
   const recurringSchedules = recurringData?.schedules ?? [];
+  const sponsoredSubs = data?.sponsoredSubs ?? [];
+  const founderGifts = data?.founderGifts ?? [];
+  // Active commitments — what the user has on the line RIGHT NOW.
+  // Drives the hero section's existence: if zero, show empty state;
+  // if non-zero, lead with these. Per the IA restructure 2026-05-23.
+  const hasActiveCommitments =
+    recurringSchedules.some((s) => s.status === "active") ||
+    sponsoredSubs.some((s) => s.status === "active" && new Date(s.expiresAt).getTime() > Date.now());
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const handleCancelRecurring = async (scheduleId: string) => {
     if (!window.confirm("Cancel this recurring gift? Future charges stop; charges already made aren't affected.")) return;
@@ -415,46 +423,60 @@ export default function GifterDashboard() {
                 )}
               </div>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <div className="rounded-2xl bg-muted/40 p-4">
-                  <p className="text-sm text-muted-foreground">Saved funds</p>
+              {/* Stats strip — demoted 2026-05-23 per IA restructure.
+                  Was previously 5 large cards reading as the page's
+                  primary content; user feedback "tons of crap, idek
+                  what I'm looking at" pointed at this being the
+                  signal-poor center of gravity. Now: compact inline
+                  chips under the welcome line, the HERO card below
+                  carries the actionable surface. Type sized down from
+                  text-2xl to text-lg; cards are smaller; aria-live
+                  preserved for animated counter accessibility. */}
+              <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                <div className="rounded-xl bg-muted/40 px-3 py-2.5">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Saved funds</p>
                   <p
-                    className="mt-1 font-heading text-2xl text-foreground tabular-nums"
+                    className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
                     aria-live={savedFundCountAnimating ? "off" : "polite"}
                     aria-label={String(savedFundCount)}
                   >{Math.round(animatedSavedFundCount)}</p>
                 </div>
-                <div className="rounded-2xl bg-muted/40 p-4">
-                  <p className="text-sm text-muted-foreground">Total gifted</p>
+                <div className="rounded-xl bg-muted/40 px-3 py-2.5">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total gifted</p>
                   <p
-                    className="mt-1 font-heading text-2xl text-foreground tabular-nums"
+                    className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
                     aria-live={totalGiftedAnimating ? "off" : "polite"}
                     aria-label={fmtMoney(totalGifted)}
                   >{fmtMoney(animatedTotalGifted)}</p>
                 </div>
-                <div className="rounded-2xl bg-muted/40 p-4">
-                  <p className="text-sm text-muted-foreground">Total gifts</p>
+                <div className="rounded-xl bg-muted/40 px-3 py-2.5">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total gifts</p>
                   <p
-                    className="mt-1 font-heading text-2xl text-foreground tabular-nums"
+                    className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
                     aria-live={totalGiftsAnimating ? "off" : "polite"}
                     aria-label={String(totalGifts)}
                   >{Math.round(animatedTotalGifts)}</p>
                 </div>
-                <div className="rounded-2xl bg-muted/40 p-4">
-                  <p className="text-sm text-muted-foreground">Tracked fund value</p>
+                <div className="rounded-xl bg-muted/40 px-3 py-2.5">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Tracked fund value</p>
                   <p
-                    className="mt-1 font-heading text-2xl text-foreground tabular-nums"
+                    className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
                     aria-live={trackedFundValueAnimating ? "off" : "polite"}
                     aria-label={fmtMoney(trackedFundValue)}
                   >{fmtMoney(animatedTrackedFundValue)}</p>
                 </div>
-                <div className="rounded-2xl bg-muted/40 p-4">
-                  <p className="text-sm text-muted-foreground">Following updates</p>
+                <div className="rounded-xl bg-muted/40 px-3 py-2.5">
+                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Updates following</p>
                   <p
-                    className="mt-1 font-heading text-2xl text-foreground tabular-nums"
+                    className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
                     aria-live={followingUpdatesCountAnimating ? "off" : "polite"}
                     aria-label={String(followingUpdatesCount)}
                   >{Math.round(animatedFollowingUpdatesCount)}</p>
+                  {followingUpdatesCount === 0 && totalGifts > 0 && (
+                    <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
+                      Ask a family to share their fund updates with you.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -484,21 +506,136 @@ export default function GifterDashboard() {
               )}
             </div>
 
-            {/* Recurring schedules — Tier-1 deferred work restored
-                2026-05-21 per project_gifter_recurring_restoration.md.
-                Shows active + paused recurring schedules belonging to
-                this gifter. Cancel button per Decision A (stable
-                cancellation home for account-bound gifters). Paused
-                schedules show the reason: "payment_failed" surfaces
-                an "Update card" CTA; "user" was a manual pause. */}
-            {recurringSchedules.length > 0 && (
+            {/* ─── HERO: What needs your attention ──────────────────
+                IA restructure 2026-05-23 per user feedback "says a
+                whole lot without saying anything." The 5-stat strip
+                was informationally rich but actionable-poor; nothing
+                told the gifter what to DO. This hero leads with the
+                things they're CURRENTLY ON THE HOOK FOR: active
+                recurring schedules + sponsored Plus subs nearing
+                expiry. Empty-state messaging when neither exists
+                still gives a useful frame ("nothing to manage right
+                now") rather than silently hiding.
+
+                Renders BEFORE the stat strip so it's first thing
+                visible after the welcome header. */}
+            <div
+              className={`rounded-[28px] border p-6 sm:p-8 ${hasActiveCommitments ? "border-[hsl(var(--kiddo-evergreen))]/30 bg-[hsl(var(--kiddo-evergreen))]/6" : "border-border/60 bg-card"}`}
+              data-testid="hero-active-commitments"
+            >
+              <div className="flex items-start gap-3">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${hasActiveCommitments ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "bg-muted text-muted-foreground"}`}>
+                  <Repeat size={18} strokeWidth={1.8} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-heading text-xl font-semibold text-foreground">
+                    {hasActiveCommitments ? "What's happening with your gifts" : "Nothing on your plate right now"}
+                  </h2>
+                  <p className="mt-1.5 text-sm text-muted-foreground">
+                    {hasActiveCommitments
+                      ? "Active recurring schedules and sponsorships. Cancel or change anything below."
+                      : "No active recurring gifts or sponsorships. Find a fund below to give to, or start your own."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Active recurring schedules — promoted to hero */}
+              {recurringSchedules.filter((s) => s.status === "active").length > 0 && (
+                <div className="mt-5 space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active recurring</p>
+                  {recurringSchedules
+                    .filter((s) => s.status === "active")
+                    .map((sch) => (
+                      <div
+                        key={sch.id}
+                        className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-border/60 bg-background p-4"
+                        data-testid={`hero-recurring-${sch.id}`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-foreground">
+                            {fmtMoney(sch.amount)} {sch.frequency} to {sch.fundName}
+                          </p>
+                          {sch.nextChargeDate && (
+                            <p className="mt-1 text-sm text-foreground">
+                              <span className="font-medium">Next charge:</span>{" "}
+                              {new Date(sch.nextChargeDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleCancelRecurring(sch.id)}
+                          disabled={cancellingId === sch.id}
+                          className="text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                          aria-label={`Cancel recurring gift of ${fmtMoney(sch.amount)} ${sch.frequency} to ${sch.fundName}`}
+                          data-testid={`hero-cancel-recurring-${sch.id}`}
+                        >
+                          {cancellingId === sch.id ? "Cancelling..." : "Cancel"}
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* Active sponsored Plus subs — promoted to hero. Shows
+                  ones that haven't expired yet, sorted by nearest-
+                  expiry-first so urgent renewals surface. */}
+              {sponsoredSubs.filter((s) => s.status === "active" && new Date(s.expiresAt).getTime() > Date.now()).length > 0 && (
+                <div className="mt-5 space-y-3">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active sponsorships</p>
+                  {sponsoredSubs
+                    .filter((s) => s.status === "active" && new Date(s.expiresAt).getTime() > Date.now())
+                    .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime())
+                    .map((sub) => {
+                      const expiresLabel = new Date(sub.expiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+                      const tierLabel = sub.tier === "family" ? "Kiddo Family" : "Kiddo Plus";
+                      return (
+                        <div
+                          key={sub.id}
+                          className="rounded-2xl border border-border/60 bg-background p-4"
+                          data-testid={`hero-sponsorship-${sub.id}`}
+                        >
+                          <p className="font-semibold text-foreground">
+                            {tierLabel} on {sub.childName}'s fund
+                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Expires {expiresLabel}. Your card won't be re-charged; {sub.childName}'s family decides whether to renew directly.
+                          </p>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+
+              {!hasActiveCommitments && (
+                <div className="mt-5">
+                  <Link href={startFundHref}>
+                    <Button variant="outline" size="sm" className="rounded-xl">
+                      Start a fund for someone you love
+                      <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Recurring schedules (history view) — Tier-1 deferred work
+                restored 2026-05-21 per project_gifter_recurring_restoration.md.
+                Shows PAUSED + cancelled-recently schedules. Active ones
+                are surfaced in the HERO above; this section is now the
+                history/state-management surface for non-active rows.
+                Cancel button per Decision A (stable cancellation home
+                for account-bound gifters). Paused schedules show the
+                reason: "payment_failed" surfaces an "Update card" CTA;
+                "user" was a manual pause. */}
+            {recurringSchedules.filter((s) => s.status !== "active").length > 0 && (
               <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
-                <h2 className="font-heading text-2xl font-semibold text-foreground">Your recurring gifts</h2>
+                <h2 className="font-heading text-2xl font-semibold text-foreground">Paused recurring gifts</h2>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Active schedules charge automatically on the cadence you picked. Cancel any time.
+                  Schedules that need your attention before they resume.
                 </p>
                 <div className="mt-5 grid gap-3">
-                  {recurringSchedules.map((sch) => (
+                  {recurringSchedules.filter((s) => s.status !== "active").map((sch) => (
                     <div
                       key={sch.id}
                       className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-border/60 bg-background p-4"
@@ -516,11 +653,6 @@ export default function GifterDashboard() {
                             </span>
                           )}
                         </div>
-                        {sch.status === "active" && sch.nextChargeDate && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            Next charge: {new Date(sch.nextChargeDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                          </p>
-                        )}
                         {sch.status === "paused" && sch.pauseReason === "payment_failed" && (
                           <p className="mt-1 text-xs text-amber-800">
                             Your last charge didn't go through. Update your payment to resume.
@@ -545,12 +677,133 @@ export default function GifterDashboard() {
               </div>
             )}
 
+            {/* Sponsorship history — full list (active + expired + refunded).
+                Active sponsorships are surfaced in the hero above; this is
+                the receipt/audit-trail section for everything the gifter
+                has ever sponsored. Includes expired rows so the gifter
+                can see "you gave Emma's family a year of Plus" as a
+                historical fact even after it ran out. Rendered only if
+                the gifter has at least one sponsorship row. */}
+            {sponsoredSubs.length > 0 && (
+              <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8" data-testid="section-sponsorships">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
+                    <Crown size={18} strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h2 className="font-heading text-2xl font-semibold text-foreground">Sponsorships you've given</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Years of Kiddo Plus or Family you bought for the families you care about.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {sponsoredSubs.map((sub) => {
+                    const tierLabel = sub.tier === "family" ? "Kiddo Family" : "Kiddo Plus";
+                    const activatedLabel = new Date(sub.activatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                    const expiresLabel = new Date(sub.expiresAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                    const isActive = sub.status === "active" && new Date(sub.expiresAt).getTime() > Date.now();
+                    const isExpired = !isActive && sub.status !== "refunded";
+                    return (
+                      <div
+                        key={sub.id}
+                        className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-border/60 bg-background p-4"
+                        data-testid={`sponsorship-row-${sub.id}`}
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-foreground">
+                              {tierLabel} on {sub.childName}'s fund
+                            </p>
+                            {isActive && (
+                              <span className="rounded-full bg-[hsl(var(--kiddo-evergreen))]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                                Active
+                              </span>
+                            )}
+                            {isExpired && (
+                              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Expired
+                              </span>
+                            )}
+                            {sub.status === "refunded" && (
+                              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+                                Refunded
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Activated {activatedLabel} · {isActive ? "Expires" : "Ended"} {expiresLabel}
+                          </p>
+                        </div>
+                        {sub.fundSlug && (
+                          <Link href={`/${sub.fundSlug}`}>
+                            <Button variant="ghost" size="sm" className="text-xs">
+                              View fund
+                              <ArrowRight className="ml-1 h-3 w-3" />
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Founder gifts — Founding Members slots the gifter has
+                bought as gifts. Each row shows recipient + position +
+                date. No "view" link because Founder slots redeem via
+                a code emailed at purchase; the founder-membership
+                surface is the recipient's, not the gifter's. */}
+            {founderGifts.length > 0 && (
+              <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8" data-testid="section-founder-gifts">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
+                    <Sparkles size={18} strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h2 className="font-heading text-2xl font-semibold text-foreground">Founder slots you've gifted</h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Founding Member slots you bought for people in your life. Each one carries the lifetime price lock.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-5 grid gap-3">
+                  {founderGifts.map((gift, idx) => {
+                    const giftedLabel = new Date(gift.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+                    return (
+                      <div
+                        key={`${gift.recipientEmail}-${gift.createdAt}-${idx}`}
+                        className="rounded-2xl border border-border/60 bg-background p-4"
+                        data-testid={`founder-gift-row-${idx}`}
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="font-semibold text-foreground">
+                            Founder #{gift.position} for {gift.recipientName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{giftedLabel}</p>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Sent to {gift.recipientEmail}
+                        </p>
+                        {gift.message && (
+                          <p className="mt-2 rounded-xl bg-muted/40 px-3 py-2 text-xs text-foreground italic">
+                            "{gift.message}"
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h2 className="font-heading text-2xl font-semibold text-foreground">Saved children and funds</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    This is your read-only relationship view: who you have helped, how those funds are doing now, and whether updates are still reaching you.
+                    Who you have helped, how their funds are doing, and whether their family is sharing updates with you.
                   </p>
                 </div>
                 <Link href={startFundHref}>
