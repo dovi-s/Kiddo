@@ -764,6 +764,30 @@ export default function GiftSuccess() {
             : `Settles into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days.`}
         </motion.p>
 
+        {/* Gifter dashboard CTA for recurring gifts (shipped 2026-05-23
+            after user flagged: "theres gifter dashboards? wheres it
+            at?"). The dashboard already existed at /gifter, but
+            nothing on the success page surfaced the link. Recurring
+            gifters are the cohort that NEEDS this surface most (to
+            cancel, change amount, see history); one-time gifters
+            don't usually need it post-send. So the CTA fires only
+            for isRecurringSetup. */}
+        {isRecurringSetup && (
+          <motion.div
+            className="flex justify-center mb-6"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.66, duration: 0.4 }}
+            data-testid="cta-success-gifter-dashboard"
+          >
+            <Link href="/gifter">
+              <Button variant="outline" size="sm" className="rounded-full">
+                See your gifter dashboard
+              </Button>
+            </Link>
+          </motion.div>
+        )}
+
         {/* Affirmative anonymous confirmation. Replaces what would
             otherwise read as "Someone added $50..." (placeholder name)
             with explicit acknowledgment that the gifter chose anonymous

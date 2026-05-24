@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearch } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Building2, Camera, ChevronDown, CreditCard, DollarSign, Gift, ImagePlus, Link as LinkIcon, Lock, Mic, MicOff, Shield, Smartphone, Trash2, TrendingUp, Video, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Camera, ChevronDown, CreditCard, DollarSign, Gift, ImagePlus, Link as LinkIcon, Lock, Mic, MicOff, Repeat, Shield, Smartphone, Trash2, TrendingUp, Video, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
@@ -526,7 +526,14 @@ export default function GiftCheckout() {
   const achSavings = Math.max(0, activeAmount * 0.029 + 0.3 - Math.min(5, activeAmount * 0.008));
   const hasValidExecutionChoice = executionModel !== "pick" || !!selectedStock;
   const isEmailValid = !senderEmail.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail.trim());
-  const canSubmit = isValidAmount && hasValidExecutionChoice && isEmailValid;
+  // Recurring gifts MUST have an email: the server creates a gifter
+  // account for cancellation, and the recurring worker emails the
+  // gifter on each charge. Without email the server returns 400 and
+  // the user sees a confusing post-submit error. Block the Pay button
+  // instead so the requirement is enforced at the UI level. User
+  // flagged this 2026-05-23 after hitting the 400.
+  const hasRecurringEmail = !isRecurring || (senderEmail.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail.trim()));
+  const canSubmit = isValidAmount && hasValidExecutionChoice && isEmailValid && hasRecurringEmail;
   const hasMemoryAttachment = Boolean(photoUrl.trim() || videoUrl.trim() || audioUrl.trim());
   const referralCode = fundId
     ? `gift:${fundId}${eventId ? `:${eventId}` : ""}`
@@ -2003,6 +2010,33 @@ export default function GiftCheckout() {
 
           {step === "payment" && (
             <motion.section key="payment" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} className="space-y-5">
+              {/* Recurring-mode confirmation banner. Without this, the
+                  Step 3 payment surface looked identical to one-time
+                  checkout, so a gifter who set up recurring on Step 1
+                  had no visual confirmation that the schedule was
+                  carrying through to the actual charge. User flagged
+                  this 2026-05-23 ("is it clear i set recurring and is
+                  all perfect?"). Renders only when isRecurring. */}
+              {isRecurring && (
+                <div
+                  className="kiddo-card p-4 md:p-5 border-[hsl(var(--kiddo-evergreen))]/30 bg-[hsl(var(--kiddo-evergreen))]/8"
+                  data-testid="checkout-recurring-banner"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))] text-white">
+                      <Repeat size={16} strokeWidth={1.8} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground">
+                        Recurring {recurringFrequency} gift, ${activeAmount.toFixed(2)} each time.
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+                        Today's charge is ${totalCharge.toFixed(2)} (gift plus processing). Future charges run on the same {recurringFrequency} schedule. Cancel any time from your gifter dashboard.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="kiddo-card p-5 md:p-6">
                 <p className="text-sm font-medium text-[hsl(var(--kiddo-evergreen))]">Almost there.</p>
                 <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground">The note is what they will read. The investment is what keeps growing.</h1>
@@ -2220,7 +2254,29 @@ export default function GiftCheckout() {
                       </div>
                     )}
                   </div>
-                  <div><label className="text-sm font-medium text-foreground">Email for a receipt <span className="text-muted-foreground font-normal">(optional)</span></label><input value={senderEmail} onChange={(e) => setSenderEmail(e.target.value)} placeholder="you@example.com" className="mt-2 h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-[hsl(var(--kiddo-evergreen))]" data-testid="input-sender-email" /></div>
+                  <div>
+                    <label className="text-sm font-medium text-foreground">
+                      Email {isRecurring ? (
+                        <span className="text-[hsl(var(--kiddo-evergreen))] font-semibold">(required for recurring)</span>
+                      ) : (
+                        <span className="text-muted-foreground font-normal">(optional)</span>
+                      )}
+                    </label>
+                    <input
+                      value={senderEmail}
+                      onChange={(e) => setSenderEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      type="email"
+                      required={isRecurring}
+                      className="mt-2 h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
+                      data-testid="input-sender-email"
+                    />
+                    {isRecurring && (
+                      <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                        We create a free gifter account at this email so you can manage or cancel the recurring schedule any time.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -2274,7 +2330,17 @@ export default function GiftCheckout() {
                     )}
                   </div>
 
-                  <div className="mt-4 border-t border-border pt-4"><div className="flex items-center justify-between gap-3"><span className="text-foreground font-semibold">You pay</span><span className="text-lg font-bold text-foreground" data-testid="text-total-charge">${totalCharge.toFixed(2)}</span></div></div>
+                  <div className="mt-4 border-t border-border pt-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-foreground font-semibold">{isRecurring ? "You pay today" : "You pay"}</span>
+                      <span className="text-lg font-bold text-foreground" data-testid="text-total-charge">${totalCharge.toFixed(2)}</span>
+                    </div>
+                    {isRecurring && (
+                      <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                        Then ${totalCharge.toFixed(2)} every {recurringFrequency === "weekly" ? "week" : recurringFrequency === "yearly" ? "year" : "month"}. Cancel any time from your gifter dashboard.
+                      </p>
+                    )}
+                  </div>
                   <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.15)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-3">
                     <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))]">Where the money goes</p>
                     <p className="mt-1 text-xs text-muted-foreground">{checkoutTrustLineJsx}</p>
@@ -2326,6 +2392,7 @@ export default function GiftCheckout() {
               </Button>
 
               {!isEmailValid && <p className="text-center text-xs text-red-500">Enter a valid email address or leave it blank.</p>}
+              {isRecurring && !hasRecurringEmail && <p className="text-center text-xs text-[hsl(var(--kiddo-evergreen))]" data-testid="text-recurring-email-required">Recurring gifts need an email so you can manage the schedule.</p>}
               {executionModel === "pick" && !selectedStock && <p className="text-center text-xs text-muted-foreground">Choose a company to continue.</p>}
               {payError && <p className="text-center text-sm text-red-500" data-testid="text-pay-error">{payError}</p>}
 
