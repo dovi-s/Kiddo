@@ -83,7 +83,7 @@ const plans: readonly Plan[] = [
       "Text Memory Book entries (gifters can always attach photos, videos, and voice)",
       "Kid View. Your child sees what they own and how their fund grows",
       "SIPC-insured investments via DriveWealth",
-      "0.10% annual fee on invested assets only",
+      "$1/year per $1,000 invested (only on invested assets)",
     ],
     note: "No credit card. No commitment.",
   },
@@ -120,7 +120,7 @@ const plans: readonly Plan[] = [
       "3 active occasions at a time (Free is 1)",
       "Annual contribution summary for tax records",
       "Priority support",
-      "0.10% annual fee on invested assets only",
+      "$1/year per $1,000 invested (only on invested assets)",
     ],
   },
   {
@@ -160,7 +160,7 @@ const plans: readonly Plan[] = [
       // scope differential ("Unlimited" vs Plus's "3 active") is
       // the only difference. Clean bullet, no false suggestion.
       "Unlimited occasions",
-      "0.10% annual fee on invested assets only",
+      "$1/year per $1,000 invested (only on invested assets)",
     ],
   },
 ];
@@ -207,11 +207,11 @@ const pricingFaqs = [
   },
   {
     question: "Is there a platform fee on gifts?",
-    answer: "No. The gift amount stays whole. $50 from grandma is $50 to the fund. The gifter pays standard payment processing through Stripe (shown in full before checkout). Kiddo's revenue comes from the optional Plus and Family plans and a 0.10% annual fee on invested assets that applies to every plan.",
+    answer: "No. The gift amount stays whole. $50 from grandma is $50 to the fund. The gifter pays standard payment processing through Stripe (shown in full before checkout). Kiddo's revenue comes from the optional Plus and Family plans and an annual fee of $1 per $1,000 invested (about $10/year on a $10,000 fund) that applies to every plan.",
   },
   {
-    question: "What is the 0.10% annual fee?",
-    answer: "Kiddo charges 0.10% per year on invested assets only. Cash sitting in the fund and pending gifts are not charged. The fee is prorated daily and deducted from invested balance. Small enough that even a $10,000 invested fund costs $10 per year. The same rate applies on Free, Kiddo+, and Kiddo Family.",
+    question: "What's the annual fee on invested assets?",
+    answer: "$1 per year for every $1,000 invested. About $10/year on a $10,000 fund, $100/year on a $100,000 fund. Charged only on invested assets; cash sitting in the fund and pending gifts are not charged. Prorated daily and deducted from invested balance. Same rate on Free, Kiddo+, and Kiddo Family.",
   },
   {
     question: "Is there a free trial?",
@@ -253,7 +253,7 @@ export default function Pricing() {
             </p>
             <p className="mx-auto mt-6 max-w-3xl rounded-2xl border border-border bg-card/70 px-5 py-4 text-sm leading-relaxed text-muted-foreground">
               <span className="font-medium text-foreground">No platform fee on gifts.</span>{" "}
-              The gift amount always stays whole. Kiddo charges 0.10% per year on invested assets only, the same rate on every plan.
+              The gift amount always stays whole. Kiddo's annual fee is $1 per $1,000 invested, charged only on invested assets, the same rate on every plan.
             </p>
             {/* Meta-explanation about why annual is shown first
                 retired 2026-05-15. The savings are visible in the
@@ -396,12 +396,12 @@ export default function Pricing() {
         <div className="mx-auto max-w-5xl px-4">
           <FadeIn className="rounded-2xl bg-card p-8 shadow-premium-sm">
             <div className="text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">How the 0.10% fee works</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">How the annual fee works</p>
               <h2 className="mt-3 font-heading text-2xl font-bold text-foreground md:text-3xl">
                 Small. Transparent. Same on every plan.
               </h2>
               <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                The 0.10% annual fee is charged only on invested assets. Cash sitting in the fund and pending gifts are not charged. It is prorated daily and deducted from invested balance.
+                The annual fee is $1 per $1,000 invested, charged only on invested assets. Cash sitting in the fund and pending gifts are not charged. It is prorated daily and deducted from invested balance.
               </p>
             </div>
             <div className="mt-6 overflow-hidden rounded-xl border border-border">
@@ -434,7 +434,7 @@ export default function Pricing() {
                 full money model in one breath. Added 2026-05-15 per
                 the post-pricing-page audit. */}
             <p className="mx-auto mt-5 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
-              Kiddo earns from Plus and Family subscriptions and the 0.10% annual fee on invested assets. We don't take a cut of gifts. We don't sell your data.
+              Kiddo earns from Plus and Family subscriptions and an annual fee of $1 per $1,000 invested. We don't take a cut of gifts. We don't sell your data.
             </p>
             {/* Alignment frame. The AUM fee is small but the deeper
                 story is WHY the model is structured this way: Kiddo
@@ -519,7 +519,7 @@ export default function Pricing() {
                       <li className="list-disc">PayPal: 3.49% + $0.49</li>
                     </ul>
                     <p>
-                      <span className="font-semibold text-foreground">Invested assets.</span> 0.10% per year on invested balance only. Cash and pending gifts are not charged. Prorated daily.
+                      <span className="font-semibold text-foreground">Invested assets.</span> $1 per year per $1,000 of invested balance only. Cash and pending gifts are not charged. Prorated daily.
                     </p>
                     <p>
                       Hosts can choose to absorb processing fees on behalf of their gifters in fund settings. All fees are shown in full before checkout. No surprises.
@@ -603,7 +603,7 @@ export default function Pricing() {
             </div>
             <div className="mt-8 border-t border-border/40 pt-6">
               <p className="text-sm leading-relaxed text-muted-foreground">
-                0.10% annual AUM on invested assets is the only ongoing fee. Across every plan. No hidden charges. No data sales.
+                $1 per year per $1,000 invested is the only ongoing fee. Across every plan. No hidden charges. No data sales.
               </p>
             </div>
           </FadeIn>

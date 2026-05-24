@@ -226,7 +226,7 @@ export default function RobuxVsUtma() {
               <span className="font-semibold text-foreground">A UTMA isn't a gimmick.</span> It's a custodial brokerage account in your kid's name, held by a real broker-dealer (DriveWealth, FINRA/SIPC). At majority age (18 in most states, 21 in CA), the kid gets full ownership.
             </p>
             <p className="text-xs text-muted-foreground/70">
-              Math assumes 7% average annual return minus the 0.10% AUM fee, compounded monthly. Real returns vary; markets are unpredictable. This is illustrative, not a guarantee.
+              Math assumes 7% average annual return net of Kiddo's annual fee ($1/yr per $1,000 invested), compounded monthly. Real returns vary; markets are unpredictable. This is illustrative, not a guarantee.
             </p>
           </section>
 

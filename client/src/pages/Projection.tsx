@@ -919,7 +919,7 @@ ${shareUrl}`;
               <strong className="text-foreground"> 9%</strong> is optimistic, closer to long-running US equity index returns.
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Kiddo's <strong className="text-foreground">0.10% annual fee</strong> on invested assets is already netted out of the projection above, so the number you see reflects what stays in the fund.
+              Kiddo's <strong className="text-foreground">annual fee of $1 per $1,000 invested</strong> is already netted out of the projection above, so the number you see reflects what stays in the fund.
             </p>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Past performance is not guaranteed. Investing involves risk, including possible loss of principal.

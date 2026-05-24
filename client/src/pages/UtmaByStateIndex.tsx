@@ -65,7 +65,7 @@ export default function UtmaByStateIndex() {
             Want to see what consistent investing could grow into?
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-muted-foreground">
-            The at-18 calculator runs the math for any monthly amount and time horizon, with Kiddo's 0.10% annual fee already netted out.
+            The at-18 calculator runs the math for any monthly amount and time horizon, with Kiddo's annual fee ($1/yr per $1,000 invested) already netted out.
           </p>
           <Link href="/tools/at-18-calculator">
             <Button size="lg" className="h-14 px-10 text-base" data-testid="button-utma-index-calculator">

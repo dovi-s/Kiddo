@@ -620,7 +620,7 @@ export default function GifterDashboard() {
                             Your {fmtMoney(fund.totalGifted)} to {fund.childName} could be worth this when {fund.childName} turns {attribution.majorityAge}, if it stays invested.
                           </p>
                           <p className="mt-2 text-[10px] text-muted-foreground/60 leading-snug">
-                            Assumes 7% yearly average minus 0.10% AUM fee. Markets vary.
+                            Assumes 7% yearly average net of Kiddo's annual fee ($1/yr per $1,000 invested). Markets vary.
                           </p>
                         </div>
                       )}

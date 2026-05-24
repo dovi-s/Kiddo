@@ -173,7 +173,7 @@ export default function CalculatorAt18() {
               {dynamicHeadline}
             </h1>
             <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              Honest math for parents, grandparents, and family who want to gift to a child's investment fund. Kiddo's 0.10% annual fee on invested assets is already netted out of the projection.
+              Honest math for parents, grandparents, and family who want to gift to a child's investment fund. Kiddo's annual fee (about $1/year per $1,000 invested) is already netted out of the projection.
             </p>
           </motion.div>
         </div>
@@ -367,7 +367,7 @@ export default function CalculatorAt18() {
               <div className="mt-6 flex items-start gap-2.5 rounded-xl bg-muted/30 px-4 py-3.5 text-[12.5px] leading-relaxed text-muted-foreground">
                 <Info size={14} className="mt-0.5 flex-shrink-0" />
                 <p>
-                  Projections assume 5%, 7%, and 9% average annual market returns over the time horizon. The 5% lean-year bound reflects long-term historical averages; short windows (1 to 5 years) can underperform that, including negative total returns in down markets. Time and consistent contributions are what smooth the variance over a UTMA's full horizon. Kiddo's 0.10% annual fee on invested assets is already netted out. The 4% savings APY is approximate (current US high-yield savings rates as of 2026; subject to change). Past performance does not guarantee future returns. This is illustrative math, not a guarantee. The state picker above sets the UTMA majority age (federal default 18; some states extend to 19, 20, or 21). For the full state-by-state table, see the{" "}
+                  Projections assume 5%, 7%, and 9% average annual market returns over the time horizon. The 5% lean-year bound reflects long-term historical averages; short windows (1 to 5 years) can underperform that, including negative total returns in down markets. Time and consistent contributions are what smooth the variance over a UTMA's full horizon. Kiddo's annual fee ($1/yr per $1,000 invested) is already netted out. The 4% savings APY is approximate (current US high-yield savings rates as of 2026; subject to change). Past performance does not guarantee future returns. This is illustrative math, not a guarantee. The state picker above sets the UTMA majority age (federal default 18; some states extend to 19, 20, or 21). For the full state-by-state table, see the{" "}
                   <Link href="/tools/utma-by-state" className="text-primary hover:underline">
                     UTMA by state
                   </Link>{" "}

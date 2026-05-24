@@ -118,7 +118,7 @@ export default function UtmaByState() {
             See what investing for your child could grow into.
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-muted-foreground">
-            The at-18 calculator runs the math for any monthly amount and time horizon. Kiddo's 0.10% annual fee is already netted out of the projection.
+            The at-18 calculator runs the math for any monthly amount and time horizon. Kiddo's annual fee ($1/yr per $1,000 invested) is already netted out of the projection.
           </p>
           <div className="flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/tools/at-18-calculator">

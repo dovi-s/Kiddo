@@ -444,7 +444,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     competitorLabel: "Fidelity UTMA",
     comparisonRows: [
       { label: "Monthly subscription", competitor: "$0", kora: "$0 Free. Plus $4.99/mo or $39/yr." },
-      { label: "Annual fee on invested assets", competitor: "None on the UTMA itself. ETF expense ratios apply.", kora: "0.10% per year, all plans. ETF expense ratios still apply on top." },
+      { label: "Annual fee on invested assets", competitor: "None on the UTMA itself. ETF expense ratios apply.", kora: "$1/year per $1,000 invested, all plans (about $10/yr on a $10,000 fund). ETF expense ratios still apply on top." },
       { label: "Account opening time", competitor: "About 20 to 30 minutes including KYC", kora: "About 5 minutes. KYC handled in flow." },
       { label: "Investment universe", competitor: "Full ETFs, mutual funds, individual stocks", kora: "Curated age-appropriate mixes plus custom ticker selection" },
       { label: "Shareable gifting link", competitor: "None. Brokerages don't do gifting flow.", kora: "Yes. Family opens, picks an amount, pays in under a minute." },
@@ -474,7 +474,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       {
         title: "The honest tradeoff",
         body: [
-          "Kiddo charges 0.10% annually on invested assets across all plans, on top of ETF expense ratios. Fidelity charges nothing on the UTMA wrapper. On a $10,000 invested fund that's about $10 per year of fee difference, in exchange for the gifting layer, the Memory Book, the age-band nudges, and the at-18 ramp.",
+          "Kiddo's annual fee is $1 per $1,000 invested across all plans, on top of ETF expense ratios. Fidelity charges nothing on the UTMA wrapper. On a $10,000 invested fund that's about $10 per year of fee difference, in exchange for the gifting layer, the Memory Book, the age-band nudges, and the at-18 ramp.",
           "If those features are not worth $10 per year per $10,000 to you, Fidelity is the right choice. If they are, Kiddo is.",
         ],
       },

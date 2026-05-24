@@ -972,7 +972,7 @@ export default function GetStarted() {
                         - UTMA majority age 18 in most states but 19-21 in a
                           few; honest mention here even though the user's
                           state isn't collected until address entry later. */}
-                    <p className="mt-2 text-[10px] leading-snug text-muted-foreground/85">At 7% hypothetical annual growth, net of Kiddo's 0.10% annual fee. Savings comparison assumes 0.5% APY. UTMA majority is 18 in most states; a few are 19-21. Past performance does not guarantee future results.</p>
+                    <p className="mt-2 text-[10px] leading-snug text-muted-foreground/85">At 7% hypothetical annual growth, net of Kiddo's annual fee ($1/yr per $1,000 invested). Savings comparison assumes 0.5% APY. UTMA majority is 18 in most states; a few are 19-21. Past performance does not guarantee future results.</p>
                   </motion.div>
                 </div>
               </AnimatedBlock>

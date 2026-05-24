@@ -882,7 +882,7 @@ export default function TaxDocuments() {
                   <p className="mt-1 font-heading text-lg font-bold text-foreground tabular-nums">
                     {fmt0(yearSummary.estimatedFeesUsd)}
                   </p>
-                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">0.10% AUM</p>
+                  <p className="text-[10px] text-muted-foreground/80 mt-0.5">$1/yr per $1,000 invested</p>
                 </div>
               </div>
               {(yearSummary.yearStartValue != null || yearSummary.yearEndValue != null) && (
@@ -917,7 +917,7 @@ export default function TaxDocuments() {
                 </div>
               )}
               <p className="mt-3 text-[11px] text-muted-foreground/80 leading-relaxed">
-                Fees are estimated from the time-weighted average invested balance (0.10% annual). Realized gains and DriveWealth-issued 1099 numbers are authoritative. Use this summary as the at-a-glance scan; reconcile against the per-sale and per-position tables below.
+                Fees are estimated from the time-weighted average invested balance ($1/yr per $1,000 invested, or 0.10% annual). Realized gains and DriveWealth-issued 1099 numbers are authoritative. Use this summary as the at-a-glance scan; reconcile against the per-sale and per-position tables below.
               </p>
             </div>
           </section>
@@ -1059,7 +1059,7 @@ export default function TaxDocuments() {
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Fees</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      0.10% annual management fee on invested assets only — not on cash or pending gifts. Accrued daily, deducted quarterly. No trading commissions, no account fees.
+                      Kiddo's annual management fee ($1 per $1,000 invested, about $10/yr on a $10,000 fund) applies to invested assets only, not on cash or pending gifts. Accrued daily, deducted quarterly. No trading commissions, no account fees.
                     </p>
                   </div>
                 </div>

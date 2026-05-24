@@ -300,7 +300,7 @@ export default function ActivityDetail() {
                   {" "}until {giftProjection.childName} turns {giftProjection.majorityAge}.
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 mt-3 leading-snug">
-                  Assumes 7% yearly average minus 0.10% AUM fee. Illustrative only — markets vary.
+                  Assumes 7% yearly average net of Kiddo's annual fee ($1/yr per $1,000 invested). Illustrative only — markets vary.
                 </p>
               </motion.div>
             )}

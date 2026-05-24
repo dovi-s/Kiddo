@@ -352,7 +352,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/tools/at-18-calculator") {
     return {
       title: "UTMA Calculator: What investing for a kid becomes by 18 | Kiddo",
-      description: "Honest math for parents and grandparents investing for a child. See how consistent monthly investing through a UTMA grows over the years to age 18. Kiddo's 0.10% annual fee already netted from the projection.",
+      description: "Honest math for parents and grandparents investing for a child. See how consistent monthly investing through a UTMA grows over the years to age 18. Kiddo's annual fee ($1/yr per $1,000 invested) already netted from the projection.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -360,7 +360,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/tools/robux-vs-utma" || pathname === "/robux-vs-utma") {
     return {
       title: "Robux vs UTMA: What your kid's monthly Roblox spend could become by 18 | Kiddo",
-      description: "Real math: the same monthly dollars going into Robux versus going into a custodial UTMA investment account. Adjust monthly spend and your kid's age to see the difference at 18. Honest 7% projection minus the 0.10% AUM fee.",
+      description: "Real math: the same monthly dollars going into Robux versus going into a custodial UTMA investment account. Adjust monthly spend and your kid's age to see the difference at 18. Honest 7% projection net of Kiddo's annual fee ($1/yr per $1,000 invested).",
       robots: "index, follow",
       ogType: "website",
     };

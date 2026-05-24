@@ -4890,7 +4890,7 @@ const [editFundName, setEditFundName] = useState("");
                 <ul className="mt-2 space-y-1 text-sm text-foreground">
                   <li>· Memory Book entries (notes, photos, videos, voice memos). {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The kid's"} keepsake.</li>
                   <li>· Activity history and audit trail.</li>
-                  <li>· Cash and invested holdings, safe at DriveWealth. No auto-withdrawal. The 0.10% annual fee still applies to invested balance until you withdraw.</li>
+                  <li>· Cash and invested holdings, safe at DriveWealth. No auto-withdrawal. Kiddo's annual fee ($1/yr per $1,000 invested) still applies to invested balance until you withdraw.</li>
                   <li>· {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The kid's"} View. The PIN-protected view keeps working.</li>
                   <li>· The fund itself. Reversible from this same page, anytime.</li>
                 </ul>

@@ -1310,7 +1310,7 @@ export default function KidView() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground/80">
-                  Hypothetical estimate using 7% historical average annual return, with the 0.10% Kiddo annual fee deducted. Real markets move up and down; returns are never guaranteed. Annual gifts assumed to stop at age {futureProjection.majorityAge} (when the fund legally becomes yours).
+                  Hypothetical estimate using 7% historical average annual return, net of Kiddo's annual fee ($1/yr per $1,000 invested). Real markets move up and down; returns are never guaranteed. Annual gifts assumed to stop at age {futureProjection.majorityAge} (when the fund legally becomes yours).
                 </p>
               </div>
             </section>

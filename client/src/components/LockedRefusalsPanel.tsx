@@ -48,15 +48,15 @@ const REFUSALS = [
   },
   {
     refusal: "No subscription for the kid after handoff.",
-    why: "When the kid takes legal ownership at majority, the parent paywall retires. The only post-handoff revenue is the 0.10% AUM line.",
+    why: "When the kid takes legal ownership at majority, the parent paywall retires. The only post-handoff revenue is the annual fee on invested assets ($1/yr per $1,000 invested).",
   },
   {
     refusal: "No selling kid data, no targeted ads, no growth hacking the gift flow.",
     why: "Sold kid data would have ended this product before it started.",
   },
   {
-    refusal: "No \"Always free\" claim that ignores the 0.10% AUM fee.",
-    why: "Acorns-style fine-print isn't the register we want. We say \"$0 per month\" and the AUM line is a feature, not a footnote.",
+    refusal: "No \"Always free\" claim that ignores the invested-assets fee.",
+    why: "Acorns-style fine-print isn't the register we want. We say \"$0 per month\" and the $1-per-$1,000-invested annual fee is a feature, not a footnote.",
   },
 ];
 
