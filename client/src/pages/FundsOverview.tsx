@@ -56,6 +56,13 @@ type OverviewFund = {
   // history (newly-created accounts). Drives the subtle "+$12 this
   // month" line under each per-fund row.
   delta30dUsd?: number | null;
+  // 30-day GIFT inflow in USD (excludes parent contributions).
+  // Distinct from delta30dUsd (which includes market move + every
+  // dollar in). Null when zero — client hides the line rather than
+  // showing "$0 in gifts." The Family-tier roll-up signal: comparing
+  // inflow across kids tells you whether gifting was balanced. Per
+  // Tier-2 deferred item #4, shipped 2026-05-23.
+  thisMonthGiftUsd?: number | null;
 };
 
 type OverviewRecurringItem = {
@@ -622,6 +629,22 @@ export default function FundsOverview() {
                         >
                           {f.delta30dUsd >= 0 ? "+" : "−"}{fmtCurrency(Math.abs(f.delta30dUsd), { whole: true })}
                           <span className="text-muted-foreground"> · 30d</span>
+                        </p>
+                      )}
+                      {/* Per-fund gift inflow this month. Family-tier
+                          roll-up signal: scan the cards, see which kid
+                          got more love this month. Hidden when zero
+                          (line itself would read awkwardly as "$0").
+                          Skipped on transferred funds (the gift loop
+                          is over for those — would be misleading).
+                          Distinct from delta30dUsd above which counts
+                          market moves too. Per Tier-2 deferred #4. */}
+                      {!isTransferred && typeof f.thisMonthGiftUsd === "number" && f.thisMonthGiftUsd >= 1 && (
+                        <p
+                          className="text-[10px] tabular-nums leading-tight mt-0.5 text-muted-foreground"
+                          data-testid={`overview-fund-inflow-${f.id}`}
+                        >
+                          {fmtCurrency(f.thisMonthGiftUsd, { whole: true })} in gifts
                         </p>
                       )}
                     </div>

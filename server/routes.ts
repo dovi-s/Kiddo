@@ -19540,6 +19540,34 @@ export async function registerRoutes(
         console.warn("[funds-overview] aggregate history skipped:", (err as any)?.message || err);
       }
 
+      // Per-fund this-month gift inflow. Distinct from delta30dUsd
+      // which captures TOTAL balance change (market move + gifts +
+      // contributions). This isolates GIFT INFLOW — "did people show
+      // up for this kid this month?" The Family-tier signal: scan the
+      // per-fund cards and immediately see if gifting was equitable
+      // across kids. Excludes failed/refunded/canceled/pending; only
+      // counts gifts that actually settled. Per Tier-2 deferred item
+      // #4 — the household roll-up surface gets its per-kid breakdown
+      // signal here. Falls back to 0 (renders as no line) on any
+      // fund without inflow this month.
+      let thisMonthGiftMap = new Map<string, number>();
+      try {
+        const inflowRes = await db.execute(sql`
+          SELECT fund_id, COALESCE(SUM(CAST(amount AS numeric)), 0) AS total
+          FROM gifts
+          WHERE fund_id IN (${fundIdsSql})
+            AND created_at >= ${thirtyDaysAgo.toISOString()}
+            AND status NOT IN ('failed', 'refunded', 'canceled', 'pending')
+            AND (sender_email IS NULL OR LOWER(sender_email) != LOWER(${String((req.user as any)?.email || '')}))
+          GROUP BY fund_id
+        `);
+        for (const r of ((inflowRes.rows as any[]) || [])) {
+          thisMonthGiftMap.set(String(r.fund_id), parseFloat(String(r.total || '0')));
+        }
+      } catch (err) {
+        console.warn("[funds-overview] per-fund inflow skipped:", (err as any)?.message || err);
+      }
+
       // Per-fund 30-day balance deltas. For each fund, pull the
       // closest snapshot at or before 30 days ago, compare to the
       // latest snapshot. Renders as "+$X this month" subtitle on each
@@ -19739,6 +19767,17 @@ export async function registerRoutes(
             // month" subtitle on each card when present. Null for
             // funds without enough history (new accounts).
             delta30dUsd: delta30dUsd != null ? Number(delta30dUsd.toFixed(2)) : null,
+            // 30-day gift inflow in USD. EXCLUDES the viewer's own
+            // parent contributions (those are tracked in thisMonth.
+            // contribTotal). Captures "this is what the gift loop
+            // brought in this month for this kid." Null when zero
+            // (client hides the line rather than showing "+$0").
+            // Family-tier roll-up signal — comparing inflow across
+            // kids tells the family-of-three "Emma got more love
+            // this month, Alex was quieter."
+            thisMonthGiftUsd: (thisMonthGiftMap.get(String(f.id)) || 0) > 0
+              ? Number((thisMonthGiftMap.get(String(f.id)) || 0).toFixed(2))
+              : null,
           };
         }),
         // Aggregate household sparkline data. 30 daily points (or
