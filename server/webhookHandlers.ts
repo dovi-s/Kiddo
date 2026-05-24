@@ -2042,6 +2042,25 @@ export class WebhookHandlers {
     }
 
     console.log(`[Webhook] sponsor_plus activated: fund=${fundId} tier=${tier} sponsor=${sponsorEmail} expires=${expiresAt.toISOString()}`);
+
+    // Analytics: completed sponsor-Plus purchase. Lets us measure
+    // the started→completed conversion rate of the gifter checkout
+    // flow + total sponsor-Plus revenue post-launch. Server-side
+    // fire from the webhook is the canonical confirmation point
+    // (vs. the redirect to /sponsor-success which can be missed if
+    // the gifter closes the tab).
+    try {
+      const { recordEvent } = await import("./analytics");
+      recordEvent({
+        name: "sponsor_plus_completed",
+        userId: fund.userId,
+        fundId,
+        source: "webhook",
+        props: { tier, sponsorEmail },
+      });
+    } catch (analyticsErr: any) {
+      console.warn('[Webhook] sponsor_plus analytics fire failed (non-fatal):', analyticsErr?.message || analyticsErr);
+    }
   }
 
   // Sponsor-Founder purchase handler — fires on checkout.session.completed
@@ -2122,6 +2141,19 @@ export class WebhookHandlers {
     await fs.mkdir(path.dirname(FOUNDING_PATH), { recursive: true });
     await fs.appendFile(FOUNDING_PATH, `${JSON.stringify(entry)}\n`, "utf8");
     console.log(`[Webhook] sponsor_founder activated: position=${entry.position} sponsor=${sponsorEmail} recipient=${recipientEmail}`);
+
+    // Analytics: completed Founder gift purchase. Same funnel-
+    // measurement reasoning as sponsor_plus_completed above.
+    try {
+      const { recordEvent } = await import("./analytics");
+      recordEvent({
+        name: "founder_gift_completed",
+        source: "webhook",
+        props: { sponsorEmail, recipientEmail, position: String(entry.position) },
+      });
+    } catch (analyticsErr: any) {
+      console.warn('[Webhook] sponsor_founder analytics fire failed (non-fatal):', analyticsErr?.message || analyticsErr);
+    }
 
     // Recipient notification email — the warm beat. "X just gifted
     // you a Founding Member slot." Includes the message if the

@@ -5471,6 +5471,22 @@ export async function registerRoutes(
         ? `${gifterName} (${gifterEmail}) asked to set up monthly contributions. They wrote: "${message}"`
         : `${gifterName} (${gifterEmail}) asked to set up monthly contributions to ${childName}'s fund. Enable recurring with Kiddo+ in your plan settings to let them.`;
 
+      // Analytics: gifter intent moment. Recurring-request is the
+      // single highest-intent conversion signal in the gifter funnel
+      // before payment (gifter has actively raised their hand asking
+      // for recurring). Tracking this lets us measure the conversion
+      // rate gifter-request → parent-Plus-upgrade post-launch — the
+      // empirical signal that determines if the sponsor-Plus path
+      // becomes urgent (locked decision rule in
+      // project_acorns_playbook_application.md).
+      recordEvent({
+        name: "recurring_request_sent",
+        userId: fund.userId,
+        fundId,
+        source: "public",
+        props: { gifterEmail, gifterName, hasMessage: !!message },
+      });
+
       await db.insert(activities).values({
         userId: fund.userId,
         fundId,
@@ -9803,6 +9819,17 @@ export async function registerRoutes(
         undefined,
       );
 
+      // Analytics: gifter intent moment — they opened Stripe Checkout
+      // for sponsor-Plus. Tracks pre-payment intent so post-launch
+      // we can measure the started→completed conversion rate of the
+      // checkout flow itself (separate from card-decline / abandon).
+      recordEvent({
+        name: "sponsor_plus_started",
+        fundId,
+        source: "public",
+        props: { tier, sponsorEmail },
+      });
+
       return res.json({ url: session.url });
     } catch (error) {
       console.error('Error creating sponsor-plus checkout session:', error);
@@ -9924,6 +9951,15 @@ export async function registerRoutes(
         undefined,
         undefined,
       );
+
+      // Analytics: gifter intent moment — they opened Stripe Checkout
+      // for Founder gifting. Same pattern as sponsor_plus_started;
+      // tracks pre-payment intent for funnel measurement.
+      recordEvent({
+        name: "founder_gift_started",
+        source: "public",
+        props: { sponsorEmail, recipientEmail },
+      });
 
       return res.json({ url: session.url });
     } catch (error) {
@@ -11410,6 +11446,25 @@ export async function registerRoutes(
         for (let i = 1; i < seriesEntries.length; i++) {
           await storage.createMemoryEntry(seriesEntries[i]);
         }
+      }
+      // Analytics: scheduled sealed letter (Prong B Plus differentiator).
+      // Tracks both one-shot and yearly-series creates with the count
+      // of generated entries; lets us measure adoption of the sealed-
+      // letter feature relative to Plus conversions. Only fires for
+      // the actual sealed visibility (not kid_now / kid_at_18 — those
+      // are different scheduling concepts).
+      if (kidVisibility === 'sealed') {
+        recordEvent({
+          name: "sealed_letter_scheduled",
+          userId: authorUserId || fund.userId,
+          fundId: fund.id,
+          source: "web",
+          props: {
+            isYearlySeries: !!isYearlySeries,
+            entryCount: isYearlySeries && seriesEntries.length > 0 ? seriesEntries.length : 1,
+            hasMedia: !!(photoUrl || videoUrl || audioUrlRaw),
+          },
+        });
       }
       await patchMemoryMeta(entry.id, {
         visibility: parseVisibility(req.body?.visibility),
@@ -13285,6 +13340,17 @@ export async function registerRoutes(
         rothIraInterestAt: interested ? new Date() : null,
         updatedAt: new Date(),
       } as any).where(eq(users.id, userId));
+      // Kid-2.0 funnel signal capture (Phase 1 of the locked 6-phase
+      // ladder). Only record when transitioning TO opted-in; opt-out
+      // is intentionally not tracked to keep the signal interpretable
+      // as "parent intent moments" rather than UI churn.
+      if (interested) {
+        recordEvent({
+          name: "roth_interest_opted_in",
+          userId,
+          source: "web",
+        });
+      }
       res.json({ success: true, interested });
     } catch (error) {
       console.error("Error saving Roth interest:", error);

@@ -22,6 +22,19 @@ export type KnownEventName =
   | "share_link_visited"
   | "gift_started"
   | "gift_completed"
+  // New conversion-critical events shipped 2026-05-23 to close the
+  // launch-blind gap flagged in project_pre_launch_strategic_frame.md.
+  // Every event fires at a server-side conversion point so we can
+  // measure post-launch funnel performance without depending on
+  // client-side tracking discipline. Each has a 1:1 with a real
+  // commitment-of-money or commitment-of-intent moment.
+  | "roth_interest_opted_in" // parent stamped users.rothIraInterestAt
+  | "recurring_request_sent" // gifter pushed parent to enable monthly on Free fund
+  | "sealed_letter_scheduled" // parent created visibility='sealed' entry (single or series)
+  | "sponsor_plus_started" // gifter began the sponsor-plus checkout flow
+  | "sponsor_plus_completed" // gifter checkout completed and fund unlocked
+  | "founder_gift_started" // gifter began the founder-slot-gift flow
+  | "founder_gift_completed" // gifter checkout completed and recipient added to waitlist
   // The set is intentionally narrow today. Extend by adding the
   // string literal here AND wiring a single `recordEvent` call at
   // the right point in the request path.
