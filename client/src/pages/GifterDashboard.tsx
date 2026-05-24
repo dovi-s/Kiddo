@@ -62,6 +62,25 @@ type GifterFundRow = {
   valueHistory30d?: Array<{ at: string; totalValue: number }>;
 };
 
+type SponsoredSubRow = {
+  id: string;
+  fundId: string;
+  fundSlug: string | null;
+  childName: string;
+  tier: string;
+  status: string;
+  activatedAt: string;
+  expiresAt: string;
+};
+
+type FounderGiftRow = {
+  recipientName: string;
+  recipientEmail: string;
+  position: number;
+  createdAt: string;
+  message: string | null;
+};
+
 type GifterDashboardData = {
   summary: {
     savedFundCount: number;
@@ -71,6 +90,8 @@ type GifterDashboardData = {
     followingUpdatesCount: number;
   };
   funds: GifterFundRow[];
+  sponsoredSubs?: SponsoredSubRow[];
+  founderGifts?: FounderGiftRow[];
 };
 
 function fmtMoney(value: number) {

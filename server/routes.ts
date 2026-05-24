@@ -4218,16 +4218,25 @@ export async function registerRoutes(
           const stats = statsByFund.get(fund.id) || { totalGifted: 0, giftCount: 0, lastGiftAt: null };
           const ageInfo = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
           const holdingsForFund = await storage.getHoldingsByFund(fund.id);
-          const [recentMemory] = await db
-            .select({
-              content: memoryEntries.content,
-              authorName: memoryEntries.authorName,
-              createdAt: memoryEntries.createdAt,
-            })
-            .from(memoryEntries)
-            .where(eq(memoryEntries.fundId, fund.id))
-            .orderBy(desc(memoryEntries.createdAt))
-            .limit(1);
+          // Memory preview MUST go through storage.getMemoryEntriesByFund
+          // not a direct table SELECT — the storage helper applies the
+          // locked filters from feedback_memory_book_inversion:
+          //   1. Excludes moderation_status IN ('hidden','removed','escalated')
+          //   2. Excludes the silent-gift template "X sent a gift of $Y."
+          //   3. Excludes the legacy auto-invest boilerplate
+          // The previous direct-SELECT bypassed all three filters and
+          // surfaced junk like "Someone who loves Emma sent a gift of
+          // $50.00." as the "Latest Memory Book moment" on the gifter
+          // dashboard — exactly the failure the locked filters exist
+          // to prevent. User flagged this 2026-05-23.
+          const filteredEntries = await storage.getMemoryEntriesByFund(fund.id);
+          const recentMemory = filteredEntries[0]
+            ? {
+                content: filteredEntries[0].content,
+                authorName: filteredEntries[0].authorName,
+                createdAt: filteredEntries[0].createdAt,
+              }
+            : undefined;
           const [activeEventCountRow] = await db
             .select({ count: sql<number>`count(*)::int` })
             .from(events)
@@ -4317,6 +4326,79 @@ export async function registerRoutes(
           return bTs - aTs;
         });
 
+      // Sponsor-Plus history — the gifter's active + past sponsored
+      // Plus/Family subscriptions on other people's funds. Added 2026-05-23
+      // after user flagged the gifter dashboard didn't surface the new
+      // gifter-as-customer features. Joins through funds + users to
+      // resolve the child + parent names for display.
+      let sponsoredSubs: any[] = [];
+      if (email) {
+        try {
+          const sponsoredRes = await db.execute(sql`
+            SELECT
+              ss.id, ss.fund_id, ss.tier, ss.activated_at, ss.expires_at, ss.status,
+              f.name AS fund_name, f.recipient_first_name, f.slug AS fund_slug
+            FROM sponsored_subscriptions ss
+            JOIN funds f ON f.id = ss.fund_id
+            WHERE LOWER(COALESCE(ss.sponsor_email, '')) = ${email}
+            ORDER BY ss.activated_at DESC
+            LIMIT 20
+          `);
+          sponsoredSubs = ((sponsoredRes.rows as any[]) || []).map((r) => ({
+            id: String(r.id),
+            fundId: String(r.fund_id),
+            fundSlug: r.fund_slug || null,
+            childName: r.recipient_first_name || r.fund_name || "the fund",
+            tier: String(r.tier || "starter"),
+            status: String(r.status || "active"),
+            activatedAt: new Date(r.activated_at).toISOString(),
+            expiresAt: new Date(r.expires_at).toISOString(),
+          }));
+        } catch (err) {
+          // Non-fatal: if the table is missing (pre-migration) or the
+          // query fails, just skip this section.
+          console.warn("[gifter-dashboard] sponsored subs query failed:", err);
+        }
+      }
+
+      // Founder-gift history — the gifter has bought Founder slots
+      // for other people. Reads the .local/founding-members.jsonl
+      // file and filters by sponsorEmail. Light-touch implementation
+      // (file read on each request) is acceptable at expected volume
+      // (<1000 lines total, only specific gifter records returned).
+      let founderGifts: any[] = [];
+      if (email) {
+        try {
+          const path = await import("path");
+          const fs = await import("fs/promises");
+          const FOUNDING_PATH = path.join(process.cwd(), ".local", "founding-members.jsonl");
+          const text = await fs.readFile(FOUNDING_PATH, "utf8").catch((err: any) => {
+            if (err?.code === "ENOENT") return "";
+            throw err;
+          });
+          const lines = text.split("\n").filter((l) => l.trim());
+          for (const line of lines) {
+            try {
+              const entry = JSON.parse(line);
+              if (String(entry?.sponsorEmail || "").toLowerCase() === email) {
+                founderGifts.push({
+                  recipientName: String(entry.recipientName || entry.firstName || "a friend"),
+                  recipientEmail: String(entry.recipientEmail || entry.email || ""),
+                  position: Number(entry.position || 0),
+                  createdAt: String(entry.createdAt || new Date().toISOString()),
+                  message: entry.message ? String(entry.message) : null,
+                });
+              }
+            } catch {
+              // skip malformed line
+            }
+          }
+          founderGifts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        } catch (err) {
+          console.warn("[gifter-dashboard] founder gifts read failed:", err);
+        }
+      }
+
       res.json({
         summary: {
           savedFundCount: resolvedFundsPayload.length,
@@ -4326,6 +4408,8 @@ export async function registerRoutes(
           followingUpdatesCount: resolvedFundsPayload.filter((row) => row.updatesEnabled).length,
         },
         funds: resolvedFundsPayload,
+        sponsoredSubs,
+        founderGifts,
       });
     } catch (error) {
       console.error("Error fetching gifter dashboard:", error);
@@ -10471,8 +10555,10 @@ export async function registerRoutes(
       // cancellation home in /gifter. Created silently.
       const [existingUser] = await db.select().from(users).where(eq(users.email, trimmedEmail)).limit(1);
       let gifterUserId: string;
+      let gifterUserForLogin: any;
       if (existingUser) {
         gifterUserId = existingUser.id;
+        gifterUserForLogin = existingUser;
         // Don't overwrite an existing user's password.
       } else {
         const passwordHash = await bcrypt.hash(accountPassword, 10);
@@ -10482,6 +10568,35 @@ export async function registerRoutes(
           passwordHash,
         } as any).returning();
         gifterUserId = created.id;
+        gifterUserForLogin = created;
+      }
+
+      // Establish session as the gifter so /gifter dashboard works
+      // when they return from Stripe Checkout. Per Decision A locked
+      // 2026-05-21 (project_gifter_recurring_restoration.md): "stable
+      // cancellation home" only works if the gifter is authenticated
+      // when they navigate to /gifter. Without this, the account is
+      // created but the browser session is never established, so the
+      // dashboard's /api/gifter-account/dashboard endpoint returns
+      // 401 and the gifter sees a login wall.
+      //
+      // Skip auto-login if the request already has a session (someone
+      // logged in as a parent gifting on a separate fund). Their
+      // existing session wins; don't hijack it to a different user.
+      // The session cookie persists across the Stripe redirect because
+      // checkout.stripe.com is a separate domain — Kiddo's cookie
+      // stays in the browser jar and is replayed on the success_url
+      // redirect back.
+      const reqAny = req as any;
+      if (!reqAny.user && reqAny.login && gifterUserForLogin) {
+        await new Promise<void>((resolve) => {
+          reqAny.login(gifterUserForLogin, (loginErr: any) => {
+            if (loginErr) {
+              console.warn("[gift-recurring] auto-login failed (non-fatal, gifter will need manual login):", loginErr?.message || loginErr);
+            }
+            resolve();
+          });
+        });
       }
 
       const stripe = await getUncachableStripeClient();
@@ -10549,7 +10664,23 @@ export async function registerRoutes(
         },
       });
 
-      res.json({ url: session.url, sessionId: session.id });
+      // Save the session BEFORE the response goes out so the gifter's
+      // auto-login cookie is written before the client follows the
+      // Stripe redirect. Without this, the cookie write races the
+      // redirect and the gifter sometimes returns from Stripe without
+      // an authenticated session. Per the same pattern auth.ts uses
+      // in respondAfterSessionSave (line 660).
+      const replyWithCheckoutUrl = () => res.json({ url: session.url, sessionId: session.id });
+      if (req.session && typeof (req.session as any).save === "function") {
+        (req.session as any).save((saveErr: any) => {
+          if (saveErr) {
+            console.warn("[gift-recurring] session save failed (non-fatal):", saveErr?.message || saveErr);
+          }
+          replyWithCheckoutUrl();
+        });
+      } else {
+        replyWithCheckoutUrl();
+      }
     } catch (error) {
       console.error("Error creating recurring gift checkout session:", error);
       res.status(500).json({
