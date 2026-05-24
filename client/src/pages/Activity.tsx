@@ -6,7 +6,7 @@ import { useLocation, useSearch } from "wouter";
 // row-types it was used for (Kid suggestion / Subscription / Age-18 invite)
 // now use semantically-correct icons: Lightbulb (gentle nudge), CreditCard
 // (billing event), Mail (invitation).
-import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History } from "lucide-react";
+import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Sparkles, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
@@ -239,6 +239,15 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // project_sealed_letters_implementation_plan.md Phase 6.
   if (t === "sealed_letter_delivered")
     return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <BookOpen size={16} />, label: "Sealed letter delivered" };
+  // Sponsor-Plus activation (Prong B of pricing-v3 conversion, locked
+  // 2026-05-23). The handleSponsorPlusPurchase webhook writes this
+  // when a gifter sponsors a year of Plus/Family for the fund. Warm
+  // gold palette signals "this is a gift moment" (matches the gift-
+  // family treatment but distinct enough to read as the upgrade
+  // moment, not a deposit). Sparkles icon signals "something opened
+  // up on this fund." See project_gifter_sponsors_plus_subscription.md.
+  if (t === "sponsor_plus_activated")
+    return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <Sparkles size={16} />, label: "Plus sponsored" };
   if (t === "parent_contribution_failed")
     return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Charge failed" };
   // Memory family — purple palette (kid-domain story).

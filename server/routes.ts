@@ -9095,6 +9095,24 @@ export async function registerRoutes(
         userFunds.map(async (fund) => [String(fund.id), await getFundCoverageState(userId, fund.id)] as const),
       );
       const coverageByFund = Object.fromEntries(coverageByFundEntries);
+      // Per-fund sponsored-subscription metadata (Prong B of pricing-v3
+      // conversion, locked 2026-05-23). Drives the "Plus from {Grandma}"
+      // attribution badge on Account → Plan tab. The coverage is
+      // already handled by coverageByFund above; this is the SOURCE
+      // attribution layer the parent sees alongside the standard plan
+      // card. Per project_gifter_sponsors_plus_subscription.md.
+      const sponsoredByFundEntries = await Promise.all(
+        userFunds.map(async (fund) => {
+          const sponsored = await getActiveSponsorshipForFund(fund.id);
+          return [String(fund.id), sponsored ? {
+            tier: sponsored.tier,
+            sponsorName: sponsored.sponsorName,
+            sponsorEmail: sponsored.sponsorEmail,
+            expiresAt: sponsored.expiresAt.toISOString(),
+          } : null] as const;
+        }),
+      );
+      const sponsoredByFund = Object.fromEntries(sponsoredByFundEntries);
       const householdPlan =
         (subscription.plan === "legacy" || subscription.plan === "family") &&
         hasEntitlementFromStatus(subscription.status, subscription.currentPeriodEnd);
@@ -9112,6 +9130,7 @@ export async function registerRoutes(
         starterMemberships,
         starterByFund,
         coverageByFund,
+        sponsoredByFund,
         familyAnnualOptions: [...KORA_FAMILY_YEARLY_OPTIONS],
         activeFamilyYearlyPrice: KORA_DEFAULT_FAMILY_YEARLY,
         activeLegacyYearlyPrice: KIDDO_LEGACY_YEARLY,

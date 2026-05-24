@@ -7,7 +7,7 @@ import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus, Loader2 } from "lucide-react";
+import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus, Loader2, Star } from "lucide-react";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
@@ -1041,6 +1041,62 @@ export default function Account() {
                 memory) for the principle. See IN_APP_UPGRADE_FEATURE_
                 WALL_SPEC.md for the parallel contextual-upgrade work
                 (different problem, different solution; not conflated). */}
+
+            {/* Sponsored-coverage attribution (Prong B of pricing-v3
+                conversion, locked 2026-05-23). When a gifter sponsored
+                a year of Plus/Family for one of the parent's funds,
+                this card surfaces the source ("Plus from Grandma on
+                Emma's fund") above the standard plan card. Diplomatic
+                framing — relationship signal, not "your paywall was
+                bypassed." Per
+                project_gifter_sponsors_plus_subscription.md. */}
+            {(() => {
+              const sponsoredByFund = (subscription as any)?.sponsoredByFund || {};
+              const entries = Object.entries(sponsoredByFund)
+                .filter(([_, v]) => v != null)
+                .map(([fundId, v]: [string, any]) => {
+                  const fund = (funds as any[]).find((f) => String(f.id) === String(fundId));
+                  const childName = String(fund?.recipientFirstName || fund?.name || "the kid").trim();
+                  const expiresLabel = (() => {
+                    try {
+                      return new Date(v.expiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+                    } catch {
+                      return "later this year";
+                    }
+                  })();
+                  const tierLabel = v.tier === "family" ? "Family" : "Plus";
+                  return { fundId, childName, sponsorName: v.sponsorName || "Someone", expiresLabel, tierLabel };
+                });
+              if (entries.length === 0) return null;
+              return (
+                <SectionCard className="border-[hsl(var(--kiddo-gold))]/30 bg-[hsl(var(--kiddo-gold))]/8">
+                  <div className="p-5">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-gold))] text-white">
+                        <Star size={17} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-foreground">
+                          {entries.length === 1
+                            ? `${entries[0].tierLabel} from ${entries[0].sponsorName}`
+                            : `${entries.length} sponsored subscriptions active`}
+                        </p>
+                        <ul className="mt-2 space-y-1.5">
+                          {entries.map((e) => (
+                            <li key={e.fundId} className="text-xs leading-relaxed text-muted-foreground">
+                              <span className="text-foreground font-medium">{e.tierLabel} on {e.childName}'s fund</span> · sponsored by {e.sponsorName} through {e.expiresLabel}
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground/85">
+                          We'll send you a renewal reminder before each one expires. Your card won't be charged automatically; you choose whether to take over the bill.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </SectionCard>
+              );
+            })()}
             {subLoading ? (
               <div className="kiddo-card h-24 animate-pulse" />
             ) : subscription?.status === "canceled" && userPlan !== "free" && subscription?.currentPeriodEnd && new Date(subscription.currentPeriodEnd).getTime() > Date.now() ? (

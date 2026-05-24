@@ -20,6 +20,7 @@ import { startGiftIntentExpiryWorker } from "./giftIntentExpiryWorker";
 import { startFundBirthdayWorker } from "./fundBirthdayWorker";
 import { startFundAnniversaryWorker } from "./fundAnniversaryWorker";
 import { startSealedLetterDeliveryWorker } from "./sealedLetterDeliveryWorker";
+import { startSponsoredSubscriptionRenewalWorker } from "./sponsoredSubscriptionRenewalWorker";
 import { startKidMilestoneWorker } from "./kidMilestoneWorker";
 import { startMonthlyPulseWorker } from "./monthlyPulseWorker";
 import { startHolidayWarmthWorker } from "./holidayWarmthWorker";
@@ -641,6 +642,7 @@ app.use((req, res, next) => {
   startFundBirthdayWorker(log);
   startFundAnniversaryWorker(log);
   startSealedLetterDeliveryWorker(log);
+  startSponsoredSubscriptionRenewalWorker(log);
   startKidMilestoneWorker(log);
   startMonthlyPulseWorker(log);
   startHolidayWarmthWorker(log);
