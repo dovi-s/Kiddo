@@ -564,10 +564,24 @@ export const memoryEntries = pgTable("memory_entries", {
   //   'parent_only' → never visible to the kid; parent's private notes about
   //                   the fund (rare, but reserved for things like medical
   //                   reasoning, legal context, etc.)
+  //   'sealed'      → Prong B sealed letter with explicit deliverAt timestamp
+  //                   (pricing-v3 Plus differentiator, locked 2026-05-23).
+  //                   Hidden from kid surfaces until deliverAt <= NOW().
+  //                   Requires deliverAt to be set; sealed-without-deliverAt
+  //                   is rejected by the server insert validator. Per
+  //                   project_sealed_letters_implementation_plan.md.
   // Default 'kid_now' preserves existing behavior — every entry created
   // before this column landed stays visible. Parents opt INTO 'kid_at_18'
-  // for specific entries via the modal toggle.
+  // (or 'sealed' with a specific date, Plus only) via the modal toggle.
   visibility: text("visibility").notNull().default("kid_now"),
+  // Sealed-letter delivery timestamp. Set ONLY when visibility = 'sealed'
+  // (Prong B Plus differentiator). The kid-surface visibility filter
+  // checks `deliver_at <= NOW()` before surfacing sealed entries.
+  // Parent always sees their own sealed entries (with "sealed until
+  // {date}" indicator in the composer / parent Memory Book view).
+  // NULL on every row created before migration 0029 + on every non-
+  // sealed entry going forward. Per project_sealed_letters_implementation_plan.md.
+  deliverAt: timestamp("deliver_at"),
   // Moderation status. 'published' is the universal default — entries are
   // immediately live in the Memory Book. When fund.gifterMemoryModeration
   // is true, gifter-submitted entries land as 'pending_review' and stay

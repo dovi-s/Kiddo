@@ -5064,6 +5064,11 @@ export async function registerRoutes(
       //   'kid_at_18'  → reserved for the 18th-birthday reveal — only visible
       //                  once the kid has actually turned 18 (phase==='adult')
       //   'parent_only' → never visible to kid in any phase
+      //   'sealed'     → Prong B sealed letter with explicit deliverAt
+      //                  timestamp. Visible to kid only when deliverAt
+      //                  <= NOW(). Per project_sealed_letters_implementation_plan.md.
+      //                  Missing deliverAt = never visible (safer than
+      //                  visible-by-default for sealed entries).
       // The pre-18 kid view stays warm and personal; the 18th birthday
       // becomes a real product event when the reserved entries unlock.
       //
@@ -5077,10 +5082,16 @@ export async function registerRoutes(
       // locked memory pattern says to suppress. Locked 2026-05-18.
       const AUTO_INVEST_MEMORY_RE = /^[A-Z][^.]*\s+added\s+\$[\d,.]+(?:\s+into\s+[A-Z][A-Z0-9.\-]+)?\s+to\s+.+'s\s+fund\.?$/i;
       const isAdult = ageInfo.phase === "adult";
+      const nowMs = Date.now();
       const entries = entriesAll.filter((e: any) => {
         const v = String(e.visibility || "kid_now");
         if (v === "parent_only") return false;
         if (v === "kid_at_18" && !isAdult) return false;
+        if (v === "sealed") {
+          const deliverAt = e.deliverAt ? new Date(e.deliverAt).getTime() : null;
+          if (!deliverAt || Number.isNaN(deliverAt)) return false;
+          if (deliverAt > nowMs) return false;
+        }
         // Suppress auto-generated transactional memory entries.
         if (e.type === "parent_investment_start") return false;
         const content = String(e.content || "").trim();
@@ -5880,6 +5891,7 @@ export async function registerRoutes(
       // prevent. Adding (1) gates correctly per the kid-at-18 lens.
       const ageInfoForTransition = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
       const isAdultForTransition = ageInfoForTransition.phase === "adult";
+      const nowMsForClaim = Date.now();
       const enrichedEntries = await Promise.all(
         entries.map(async (entry) => {
           const meta = await getMemoryMeta(entry.id);
@@ -5887,6 +5899,10 @@ export async function registerRoutes(
           const entryVis = String((entry as any).visibility || "kid_now");
           if (entryVis === "parent_only") return null;
           if (entryVis === "kid_at_18" && !isAdultForTransition) return null;
+          if (entryVis === "sealed") {
+            const deliverAt = (entry as any).deliverAt ? new Date((entry as any).deliverAt).getTime() : null;
+            if (!deliverAt || Number.isNaN(deliverAt) || deliverAt > nowMsForClaim) return null;
+          }
           const gift = entry.giftId ? await storage.getGift(entry.giftId) : null;
           return {
             id: entry.id,
@@ -10931,10 +10947,46 @@ export async function registerRoutes(
       // which controls who sees the entry on the gift PAGE. The column
       // controls when the KID sees it. Whitelist accepted values so an
       // unknown payload can't smuggle in arbitrary text.
+      //
+      // Pricing-v3 (locked 2026-05-23, Prong B Phase 1 shipped this session):
+      // 'sealed' is the new value that pairs with deliverAt for arbitrary
+      // future-delivery dates. It's Plus-gated — Free parents who pass
+      // 'sealed' silently downgrade to 'kid_now' (defensive, server-side
+      // is the authority). The UI prevents Free parents from reaching
+      // this code path with 'sealed' via the composer Plus wall.
       const rawKidVisibility = String(req.body?.kidVisibility || "").toLowerCase();
-      const kidVisibility = ["kid_now", "kid_at_18", "parent_only"].includes(rawKidVisibility)
-        ? rawKidVisibility as "kid_now" | "kid_at_18" | "parent_only"
-        : "kid_now";
+      // Parse + validate deliverAt for sealed entries. Must be a parsable
+      // date AND in the future (at least 1 minute out — sub-minute future
+      // dates are almost certainly client clock skew). Sealed without a
+      // valid deliverAt = reject the sealed bit and silently downgrade to
+      // 'kid_now' (the schema invariant is "sealed implies deliverAt").
+      let deliverAt: Date | null = null;
+      const rawDeliverAt = req.body?.deliverAt ? String(req.body.deliverAt).trim() : null;
+      if (rawDeliverAt) {
+        const parsed = new Date(rawDeliverAt);
+        if (!Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now() + 60_000) {
+          deliverAt = parsed;
+        }
+      }
+      // Plus gating for 'sealed' visibility. Per pricing-v3, sealed
+      // letters with arbitrary delivery dates are a Plus-only feature.
+      // Sealed-at-18 (kid_at_18 visibility) stays free across all plans;
+      // only the arbitrary-date version is gated. Free parents passing
+      // 'sealed' downgrade to 'kid_now' server-side.
+      const sealedCoverage = rawKidVisibility === 'sealed'
+        ? await getFundCoverageState(fund.userId, fund.id)
+        : null;
+      const sealedAllowed = sealedCoverage === 'covered_family' || sealedCoverage === 'covered_starter' || sealedCoverage === 'trial_active';
+      const kidVisibility: "kid_now" | "kid_at_18" | "parent_only" | "sealed" =
+        rawKidVisibility === 'sealed' && sealedAllowed && deliverAt
+          ? 'sealed'
+          : ["kid_now", "kid_at_18", "parent_only"].includes(rawKidVisibility)
+            ? rawKidVisibility as "kid_now" | "kid_at_18" | "parent_only"
+            : "kid_now";
+      // If kidVisibility ended up non-sealed, null out deliverAt so we
+      // don't persist a stray timestamp on a non-sealed row (the schema
+      // comment is "NULL on every non-sealed entry").
+      const finalDeliverAt = kidVisibility === 'sealed' ? deliverAt : null;
       // audioUrl + audioTranscript come straight from req.body — both already
       // validated server-side: audioUrl was minted by our own upload endpoint
       // (relative /uploads/... path), audioTranscript was produced by Whisper
@@ -10949,6 +11001,7 @@ export async function registerRoutes(
         audioUrl: audioUrlRaw || null,
         audioTranscript: audioTranscriptRaw || null,
         visibility: kidVisibility,
+        deliverAt: finalDeliverAt,
         ...(authorPhotoUrl ? { authorPhotoUrl } : {}),
         ...(authorUserId ? { authorUserId } : {}),
       };
@@ -11201,10 +11254,46 @@ export async function registerRoutes(
       // Kid-reveal visibility column edit. Whitelist accepted values; unknown
       // payloads silently ignored. Distinct from the audience-visibility
       // sidecar that's still patched via patchMemoryMeta below.
+      //
+      // Pricing-v3: 'sealed' visibility accepted on update IFF caller has
+      // Plus/Family/trial on the fund AND a valid future deliverAt is
+      // provided alongside. Same gating as the create endpoint above.
       if (Object.prototype.hasOwnProperty.call(req.body ?? {}, 'kidVisibility')) {
         const raw = String(req.body.kidVisibility || "").toLowerCase();
         if (["kid_now", "kid_at_18", "parent_only"].includes(raw)) {
           updates.visibility = raw;
+          // Clear deliverAt when transitioning away from sealed.
+          updates.deliverAt = null;
+        } else if (raw === 'sealed') {
+          const rawDeliverAt = req.body?.deliverAt ? String(req.body.deliverAt).trim() : null;
+          const parsed = rawDeliverAt ? new Date(rawDeliverAt) : null;
+          if (parsed && !Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now() + 60_000) {
+            const [existingEntry] = await db.select().from(memoryEntries).where(eq(memoryEntries.id, req.params.id)).limit(1);
+            const ownerId = existingEntry?.fundId ? (await storage.getFund(existingEntry.fundId))?.userId : null;
+            if (ownerId && existingEntry?.fundId) {
+              const coverage = await getFundCoverageState(ownerId, existingEntry.fundId);
+              const sealedOk = coverage === 'covered_family' || coverage === 'covered_starter' || coverage === 'trial_active';
+              if (sealedOk) {
+                updates.visibility = 'sealed';
+                updates.deliverAt = parsed;
+              }
+            }
+          }
+        }
+      }
+      // Standalone deliverAt edit (e.g. parent rescheduling a sealed
+      // letter without changing visibility). Only honored when the
+      // entry is ALREADY sealed.
+      if (Object.prototype.hasOwnProperty.call(req.body ?? {}, 'deliverAt') && !Object.prototype.hasOwnProperty.call(req.body ?? {}, 'kidVisibility')) {
+        const [existingEntry] = await db.select().from(memoryEntries).where(eq(memoryEntries.id, req.params.id)).limit(1);
+        if (existingEntry && String((existingEntry as any).visibility || '') === 'sealed') {
+          const rawDeliverAt = req.body?.deliverAt ? String(req.body.deliverAt).trim() : null;
+          if (rawDeliverAt) {
+            const parsed = new Date(rawDeliverAt);
+            if (!Number.isNaN(parsed.getTime()) && parsed.getTime() > Date.now() + 60_000) {
+              updates.deliverAt = parsed;
+            }
+          }
         }
       }
 

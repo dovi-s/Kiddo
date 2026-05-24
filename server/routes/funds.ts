@@ -527,10 +527,15 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       }
 
       let sealedLetter: { content: string | null; authorName: string | null; createdAt: string } | null = null;
+      const nowMsForStory = Date.now();
       for (const e of allEntries) {
         const v = String((e as any).visibility || "kid_now");
         if (v === "parent_only") continue;
         if (v === "kid_at_18" && !isAdult) continue;
+        if (v === "sealed") {
+          const deliverAt = (e as any).deliverAt ? new Date((e as any).deliverAt).getTime() : null;
+          if (!deliverAt || Number.isNaN(deliverAt) || deliverAt > nowMsForStory) continue;
+        }
         if ((e as any).type === "sealed_letter" || (e as any).type === "parent_letter") {
           const candidate = {
             content: e.content || null,

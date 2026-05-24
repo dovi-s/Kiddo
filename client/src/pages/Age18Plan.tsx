@@ -7,6 +7,7 @@ import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { NoteEditorSheet } from "@/components/NoteEditorSheet";
+import { ScheduledLetterEditor } from "@/components/ScheduledLetterEditor";
 import { useFunds } from "@/hooks/use-funds";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -414,6 +415,13 @@ export default function Age18Plan() {
   const contributors = Number((activeFund as any)?.contributorCount || 0);
 
   const [noteEditorOpen, setNoteEditorOpen] = useState(false);
+  // Scheduled-letter (sealed for a specific date) editor state. Per
+  // pricing-v3 Prong B Phase 3 (locked 2026-05-23), the parent can
+  // schedule a sealed letter for any future date in addition to the
+  // canonical at-18 letter. Plus-gated: Free parents see the
+  // FeatureWallModal instead of the composer. Per
+  // project_sealed_letters_implementation_plan.md.
+  const [scheduledLetterOpen, setScheduledLetterOpen] = useState(false);
 
   // Checklist - persisted in localStorage per fund
   const checklistKey = `age18-checklist-${activeFund?.id}`;
@@ -849,6 +857,23 @@ export default function Age18Plan() {
                 </Button>
               </div>
             )}
+            {/* Schedule-a-letter CTA (pricing-v3 Prong B, Phase 3 shipped
+                2026-05-23). Sits below the canonical at-18 letter CTA
+                because the at-18 letter is the load-bearing emotional
+                moment; arbitrary-date sealed letters are the Plus-only
+                extension. Composer Plus-gates itself if the parent isn't
+                on Plus/Family/trial on this fund. Per
+                project_sealed_letters_implementation_plan.md. */}
+            <div className="mt-3 pt-3 border-t border-border/40">
+              <button
+                type="button"
+                onClick={() => { haptic("selection"); setScheduledLetterOpen(true); }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2"
+                data-testid="button-schedule-sealed-letter"
+              >
+                🕯️ Or schedule a letter for a specific moment (13th birthday, graduation, etc.) →
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1131,6 +1156,25 @@ export default function Age18Plan() {
           // Single key now — the memory query feeds both parentLetter
           // and memoryStats off one fetch. Old `parent_letter` sub-key
           // retired when the two queries merged 2026-05-21.
+          void queryClient.invalidateQueries({ queryKey: ["memory", activeFund?.id] });
+        }}
+      />
+      <ScheduledLetterEditor
+        open={scheduledLetterOpen}
+        onClose={() => setScheduledLetterOpen(false)}
+        fundId={activeFund?.id ?? ""}
+        childName={activeFund?.recipientFirstName || "them"}
+        parentName={parentName}
+        pronoun={(activeFund as any)?.pronoun}
+        recipientBirthdate={activeFund?.recipientBirthdate ? String(activeFund.recipientBirthdate) : null}
+        // Same Plus-on-fund gate the NoteEditorSheet's media picker
+        // uses: noteEditorRequiresPlus=true means the parent is on
+        // Free for this fund (the picker shows the wall). For the
+        // ScheduledLetterEditor we want the INVERSE — isPlusOnFund
+        // is true when the parent IS on a paid plan (so the composer
+        // renders; otherwise the FeatureWallModal renders instead).
+        isPlusOnFund={!noteEditorRequiresPlus}
+        onSaved={() => {
           void queryClient.invalidateQueries({ queryKey: ["memory", activeFund?.id] });
         }}
       />
