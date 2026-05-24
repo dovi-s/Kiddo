@@ -1,8 +1,21 @@
 export const KORA_FREE_GIFT_FEE = 0;
-export const KORA_STARTER_MONTHLY = 4.99;
-export const KORA_STARTER_YEARLY = 39;
-export const KORA_FAMILY_MONTHLY = 7.99;
-export const KORA_FAMILY_YEARLY = 69;
+// Pricing v3 (locked 2026-05-23). Plus drops $4.99→$3.99 ($39→$29
+// annual); Family drops $7.99→$6.99 ($69→$59 annual). Per
+// project_pricing_v3_pricing_levels.md. This file is the CANONICAL
+// source of truth for plan prices — Account.tsx, Settings.tsx,
+// EventGateModal, AddFundSheet, ActivateInvesting, Dashboard,
+// monetization.ts server, and other surfaces consume from here.
+// Marketing copy in Pricing.tsx, Compare.tsx, FAQ.tsx, Legal.tsx,
+// Home.tsx, FeatureWallModal.tsx, MemoryMediaPicker.tsx,
+// PlusUpgradePromptCard.tsx, CoParentAccessCard.tsx use the values
+// directly (hardcoded strings, kept in sync via the pricing-truth
+// sweep discipline). When changing prices: update this file first,
+// then run the cross-surface sweep per
+// project_pricing_truth_must_match_across_surfaces.md.
+export const KORA_STARTER_MONTHLY = 3.99;
+export const KORA_STARTER_YEARLY = 29;
+export const KORA_FAMILY_MONTHLY = 6.99;
+export const KORA_FAMILY_YEARLY = 59;
 export const KIDDO_LEGACY_YEARLY = 129;
 export const KIDDO_LEGACY_INCLUDED_OCCASION_CREDITS = 2;
 export const KORA_OCCASION_TOP_UP = 7.99;

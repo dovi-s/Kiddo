@@ -511,6 +511,30 @@ async function processParentContributions(log: LogFn): Promise<void> {
   // handoff, the same tick auto-pauses and then re-queries.
   await autoPauseOwnershipMismatchedContributions(log);
 
+  // PRICING-V3 GRANDFATHERING (locked 2026-05-23, see
+  // project_pricing_v3_recurring_at_plus.md). This worker MUST NOT
+  // check the parent's plan status before processing a charge.
+  //
+  // Under pricing-v3, recurring is gated at fund creation time
+  // (POST /api/funds/:fundId/parent-contributions in routes.ts
+  // requires Plus/Family coverage). Once a contribution row exists,
+  // it CONTINUES if the parent later churns to Free — these are
+  // real recurring relationships and cancelling them on plan-churn
+  // is brand poison.
+  //
+  // Plan-status check would BREAK pricing-v3's grandfathering
+  // design constraint. The parent's correct grandfathering experience:
+  //   - Existing recurring continues firing on schedule
+  //   - No NEW recurring can be created (routes.ts gate handles this)
+  //   - Parent gets a warm retention nudge in Dashboard noting that
+  //     they can't add new gifter recurring relationships without
+  //     reactivating Plus
+  //
+  // DO NOT add a `LEFT JOIN subscriptions ... WHERE s.plan IN (...)`
+  // gate to the SELECT below. The plan join is already present (line
+  // 526) but only to surface stripeCustomerId — it does NOT filter.
+  // Keep it that way.
+
   const result = await pool.query<Record<string, any>>(`
     SELECT
       pc.id, pc.fund_id, pc.user_id, pc.amount, pc.frequency,

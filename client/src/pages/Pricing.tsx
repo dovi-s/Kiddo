@@ -205,7 +205,7 @@ const pricingFaqs = [
   },
   {
     question: "What happens to my fund if I downgrade?",
-    answer: "Your fund stays active and your investments stay invested. Plus features pause: custom fund mix, strategy switching, adding new photos and videos to Memory Book entries, and co-parent invites. Recurring contributions stay (they're free across all plans). Everything you have already added stays. Your kid's money never leaves the fund.",
+    answer: "Your fund stays active and your investments stay invested. Plus features pause: custom fund mix, strategy switching, adding new photos and videos to Memory Book entries, co-parent invites, and the ability to create new recurring contributions on the fund. Existing recurring contributions you have already set up continue running. Existing gifter recurring relationships continue too. We never cancel an existing recurring relationship on plan downgrade. Everything you have already added stays. Your kid's money never leaves the fund.",
   },
   {
     question: "Is there a platform fee on gifts?",
@@ -274,6 +274,19 @@ export default function Pricing() {
             <p className="mx-auto mt-4 max-w-3xl rounded-2xl border border-border bg-card px-5 py-4 text-sm leading-relaxed text-muted-foreground">
               <span className="font-medium text-foreground">Every new account gets 14 days of Plus, free.</span>{" "}
               Every premium feature unlocks so you can try before deciding. No credit card. Your fund stays either way.
+            </p>
+            {/* Founding Members pointer (pricing-v3 launch). Surfaces the
+                $19/yr lifetime price-lock deal on the canonical pricing
+                page for pre-launch visitors who care about pricing
+                enough to land here. Capped at 1,000; deal expires when
+                the cap fills. Per project_pricing_v3_pricing_levels.md
+                + project_pre_launch_strategic_frame.md. */}
+            <p className="mx-auto mt-4 max-w-3xl rounded-2xl border border-primary/30 bg-primary/5 px-5 py-4 text-sm leading-relaxed text-foreground">
+              <span className="font-semibold">Pre-launch: Founding Members get $19/year Plus, locked in for life.</span>{" "}
+              First 1,000 families. Plus a Founding Member badge, $25 starter credit, and early access to every future Kiddo product.{" "}
+              <Link href="/founding-members" className="font-medium text-primary underline underline-offset-2">
+                Reserve your spot →
+              </Link>
             </p>
           </motion.div>
         </div>

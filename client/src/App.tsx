@@ -53,6 +53,7 @@ const RobuxVsUtma = lazy(() => import("@/pages/RobuxVsUtma"));
 const UtmaByStateIndex = lazy(() => import("@/pages/UtmaByStateIndex"));
 const UtmaByState = lazy(() => import("@/pages/UtmaByState"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
+const FoundingMembers = lazy(() => import("@/pages/FoundingMembers"));
 const Blog = lazy(() => import("@/pages/Blog"));
 const BlogPost = lazy(() => import("@/pages/BlogPost"));
 const Stories = lazy(() => import("@/pages/Stories"));
@@ -179,6 +180,7 @@ function isMarketingRoute(path: string): boolean {
     pathname === "/faq" ||
     pathname === "/how-it-works" ||
     pathname === "/pricing" ||
+    pathname === "/founding-members" ||
     pathname === "/blog" ||
     pathname === "/stories" ||
     pathname === "/compare" ||
@@ -241,6 +243,14 @@ function getSeoForPath(path: string): SeoConfig {
     return {
       title: "Kiddo Pricing | Simple, transparent pricing for every family",
       description: "Free to start. Kiddo+ is $3.99/mo for one child. Kiddo Family is $6.99/mo for every child fund you manage. Gifters pay transparent processing before checkout.",
+      robots: "index, follow",
+      ogType: "website",
+    };
+  }
+  if (pathname === "/founding-members") {
+    return {
+      title: "Kiddo Founding Members | First 1,000 families shape the platform",
+      description: "Lifetime $19/year Plus price lock, Founding Member badge, early access to every future Kiddo product, $25 starter gift credit. Cap 1,000.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -788,6 +798,7 @@ function Router() {
           <Route path="/tools/utma-by-state"><UtmaByStateIndex /></Route>
           <Route path="/tools/utma-by-state/:stateCode"><UtmaByState /></Route>
           <Route path="/pricing"><Pricing /></Route>
+          <Route path="/founding-members"><FoundingMembers /></Route>
           <Route path="/blog"><Blog /></Route>
           <Route path="/blog/:slug"><BlogPost /></Route>
           <Route path="/stories"><Stories /></Route>

@@ -131,6 +131,13 @@ export async function registerRoutes(
   const INVESTMENT_CONFIG_PATH = path.join(process.cwd(), ".local", "investment-config.json");
   const PERSONAL_FUNDS_WAITLIST_PATH = path.join(process.cwd(), ".local", "personal-fund-waitlist.jsonl");
   const INTERNATIONAL_WAITLIST_PATH = path.join(process.cwd(), ".local", "international-waitlist.jsonl");
+  // Founding Members capture (locked 2026-05-23 per pricing-v3). $19/yr
+  // lifetime price-lock cap 1,000. .jsonl append-only follows the same
+  // waitlist pattern as the personal-fund and international lists; the
+  // cap is enforced at POST time by counting lines. See
+  // project_pricing_v3_pricing_levels.md.
+  const FOUNDING_MEMBERS_WAITLIST_PATH = path.join(process.cwd(), ".local", "founding-members.jsonl");
+  const FOUNDING_MEMBERS_CAP = 1000;
   // AGE_TRANSITION_STATE_PATH lives in ./ageTransitionStore now — shared with
   // the age18TransitionWorker so both writers operate on the same JSON store
   // (preventing the "two writers, drift" failure mode). The store helpers
@@ -1034,6 +1041,86 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error saving personal fund waitlist entry:", error);
       return res.status(500).json({ error: "Failed to join the waitlist." });
+    }
+  });
+
+  // ── Founding Members waitlist (pricing-v3, locked 2026-05-23) ─────
+  // Pre-launch advocacy program: first 1,000 signups get $19/yr Plus
+  // lifetime price lock + Founding Member badge + early access to
+  // future products (Roth IRA, banking, printing, P2P) + $25 starter
+  // gift credit. Structured for advocacy not bargain-hunting (per
+  // project_pricing_v3_pricing_levels.md). Cap enforced at write time
+  // by counting lines in the .jsonl file.
+
+  async function countFoundingMembers(): Promise<number> {
+    try {
+      const text = await fs.readFile(FOUNDING_MEMBERS_WAITLIST_PATH, "utf8");
+      return text.split("\n").filter((line) => line.trim().length > 0).length;
+    } catch (err: any) {
+      if (err?.code === "ENOENT") return 0;
+      throw err;
+    }
+  }
+
+  app.get("/api/waitlist/founding-members/count", async (_req, res) => {
+    try {
+      const count = await countFoundingMembers();
+      return res.json({ count, cap: FOUNDING_MEMBERS_CAP, spotsRemaining: Math.max(0, FOUNDING_MEMBERS_CAP - count) });
+    } catch (error) {
+      console.error("Error counting founding members:", error);
+      // Best-effort: return cap as remaining so the form stays open
+      // even if the file system hiccups. Worst case: a few signups
+      // squeeze past 1,000, which is a much better failure mode than
+      // blocking legitimate signups on a transient I/O error.
+      return res.json({ count: 0, cap: FOUNDING_MEMBERS_CAP, spotsRemaining: FOUNDING_MEMBERS_CAP });
+    }
+  });
+
+  app.post("/api/waitlist/founding-members", async (req, res) => {
+    try {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      const firstName = String(req.body?.firstName || "").trim().slice(0, 100);
+      const message = String(req.body?.message || "").trim().slice(0, 1000);
+      const sourceSurface = String(req.body?.sourceSurface || "founding-members-page").trim().slice(0, 120);
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: "A valid email is required." });
+      }
+      if (!firstName) {
+        return res.status(400).json({ error: "Your first name is required." });
+      }
+
+      // Check the cap. Hard stop at 1,000 — past the cap, the deal
+      // converts to the regular Plus price for new signups.
+      const currentCount = await countFoundingMembers();
+      if (currentCount >= FOUNDING_MEMBERS_CAP) {
+        return res.status(410).json({
+          error: "All founding member spots are taken. The regular Plus plan is still $3.99/mo when we launch.",
+          cap: FOUNDING_MEMBERS_CAP,
+        });
+      }
+
+      const entry = {
+        email,
+        firstName,
+        message: message || null,
+        sourceSurface,
+        position: currentCount + 1,
+        tag: "founding-members",
+        createdAt: new Date().toISOString(),
+      };
+
+      await fs.mkdir(path.dirname(FOUNDING_MEMBERS_WAITLIST_PATH), { recursive: true });
+      await fs.appendFile(FOUNDING_MEMBERS_WAITLIST_PATH, `${JSON.stringify(entry)}\n`, "utf8");
+
+      return res.status(201).json({
+        success: true,
+        position: entry.position,
+        spotsRemaining: Math.max(0, FOUNDING_MEMBERS_CAP - entry.position),
+      });
+    } catch (error) {
+      console.error("Error saving founding members entry:", error);
+      return res.status(500).json({ error: "Failed to join. Try again in a moment." });
     }
   });
 
