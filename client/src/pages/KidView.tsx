@@ -529,6 +529,45 @@ export default function KidView() {
   // just disappears from the list. Same energy as unsending a text mom
   // hadn't read yet.
   const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+
+  // Suggestion-reviewed celebration moment (Tier-2 deferred item #3,
+  // shipped 2026-05-23). When the kid lands on Kid View after their
+  // parent has acted on a suggestion, surface a one-time soft beat
+  // ("Your parent looked at your AAPL pick"). Per-suggestion-id
+  // localStorage flag so each pick gets its own moment, dismissable.
+  // Lives in Kid View (not authenticated Dashboard) because Kid View
+  // is the kid's surface and the suggestion was THEIRS. PIN-protected
+  // access means localStorage on this device is the right scope —
+  // the kid uses the same browser repeatedly, this is THEIR moment.
+  const SEEN_KEY_PREFIX = "kiddo.kid-suggestion-reviewed-seen:";
+  const [seenSuggestionIds, setSeenSuggestionIds] = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
+    const seen = new Set<string>();
+    try {
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const k = window.localStorage.key(i);
+        if (k && k.startsWith(SEEN_KEY_PREFIX)) {
+          seen.add(k.slice(SEEN_KEY_PREFIX.length));
+        }
+      }
+    } catch {
+      // localStorage unavailable — kid sees the celebration every visit
+      // until storage works. Better than swallowing the moment.
+    }
+    return seen;
+  });
+  const markSuggestionSeen = (suggestionId: string) => {
+    try {
+      window.localStorage.setItem(`${SEEN_KEY_PREFIX}${suggestionId}`, new Date().toISOString());
+    } catch {
+      // best-effort
+    }
+    setSeenSuggestionIds((prev) => {
+      const next = new Set(prev);
+      next.add(suggestionId);
+      return next;
+    });
+  };
   const handleWithdrawSuggestion = async (suggestionId: string) => {
     if (!suggestionId || !accessToken) return;
     if (!window.confirm("Take this suggestion back? Your parent won't see it.")) return;
@@ -1466,6 +1505,76 @@ export default function KidView() {
                         {savingSuggestion ? "Saving..." : "Send suggestion"}
                       </Button>
                     </div>
+                    {/* Newly-reviewed celebration — fires for any approved
+                        or declined suggestion the kid hasn't acknowledged
+                        yet. One-time per suggestion (localStorage flag).
+                        Approved gets a warm green beat; declined gets a
+                        soft amber acknowledgment with explicit "you can
+                        suggest another anytime" anchoring so the moment
+                        doesn't read as rejection. Per Tier-2 deferred #3. */}
+                    {(() => {
+                      const newlyReviewed = content.suggestions.filter((s) => {
+                        const status = String((s as any)?.reviewedStatus || "pending").toLowerCase();
+                        return (status === "approved" || status === "declined") && !seenSuggestionIds.has(s.id);
+                      });
+                      if (newlyReviewed.length === 0) return null;
+                      return (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.35 }}
+                          className="mt-5 space-y-2"
+                          data-testid="kid-suggestion-reviewed-celebration"
+                        >
+                          {newlyReviewed.map((s) => {
+                            const status = String((s as any)?.reviewedStatus || "pending").toLowerCase();
+                            const isApproved = status === "approved";
+                            const dismiss = () => markSuggestionSeen(s.id);
+                            return (
+                              <div
+                                key={s.id}
+                                className={`rounded-2xl border p-4 ${
+                                  isApproved
+                                    ? "border-green-300/60 bg-gradient-to-br from-green-50 to-white"
+                                    : "border-amber-300/50 bg-gradient-to-br from-amber-50 to-white"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <p
+                                      className={`text-[10px] font-bold uppercase tracking-[0.14em] ${
+                                        isApproved ? "text-green-700" : "text-amber-800"
+                                      }`}
+                                    >
+                                      {isApproved ? "Your parent said yes" : "Your parent saw it"}
+                                    </p>
+                                    <p className="mt-1.5 font-heading text-base font-semibold text-foreground">
+                                      {isApproved
+                                        ? `${s.ticker} is on your parent's radar.`
+                                        : `${s.ticker} got reviewed.`}
+                                    </p>
+                                    <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                                      {isApproved
+                                        ? "They're looking at adding it to your fund. Pick another company anytime — it's how the fund starts feeling like yours."
+                                        : "They went a different way this time. You can suggest another anytime — they're listening."}
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={dismiss}
+                                    className="shrink-0 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                    data-testid={`kid-suggestion-reviewed-dismiss-${s.id}`}
+                                    aria-label="Dismiss"
+                                  >
+                                    Got it
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </motion.div>
+                      );
+                    })()}
                     {content.suggestions.length > 0 && (
                       <div className="mt-5 space-y-2">
                         <p className="text-[11px] font-bold uppercase tracking-[0.10em] text-muted-foreground/70">What you've suggested</p>
