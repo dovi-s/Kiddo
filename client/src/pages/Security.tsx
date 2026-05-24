@@ -8,7 +8,7 @@ import { usePageSeo } from "@/lib/seo";
 export default function Security() {
   usePageSeo({
     title: "Kiddo Security | Your child's money is protected.",
-    description: "SIPC insured. FINRA regulated. Bank-level encryption. Here is exactly how Kiddo protects your child's investments.",
+    description: "Investments held by DriveWealth, a FINRA-registered broker-dealer with SIPC coverage. Here is exactly how Kiddo protects your child's investments.",
     ogType: "article",
   });
 
@@ -39,7 +39,7 @@ export default function Security() {
             {
               icon: Shield,
               title: "What protects your child&apos;s fund",
-              body: "SIPC coverage, FINRA oversight, encrypted data handling, and private fund links sit underneath the product experience.",
+              body: "SIPC coverage and FINRA oversight through DriveWealth, encrypted data handling, and private fund links sit underneath the product experience.",
             },
             {
               icon: Lock,
@@ -75,8 +75,34 @@ export default function Security() {
 
             <h3 className="mt-10 font-heading text-2xl font-semibold text-foreground">Who regulates what</h3>
             <p className="mt-4 text-base leading-8 text-muted-foreground">
-              Kiddo is the technology layer. DriveWealth is the broker-dealer and custodian. Stripe handles payment processing. Each layer has a distinct job.
+              Kiddo is the technology layer — not a broker-dealer, investment adviser, or bank. DriveWealth, LLC is the broker-dealer and custodian. Stripe handles payment processing. Each layer has a distinct job.
             </p>
+
+            {/* Canonical DriveWealth + SIPC disclosure. Same shape as
+                CalculatorAt18.tsx + UtmaByState.tsx so the legal posture
+                reads consistently across every page that touches custody
+                claims. The /security page is the most canonical surface
+                for this — it must render the disclosure explicitly, not
+                just hint at it through card bodies above. Per the
+                2026-05-23 overclaim audit. */}
+            <div className="mt-6 rounded-2xl border border-border bg-muted/30 p-5 text-sm leading-7 text-muted-foreground">
+              <p>
+                Kiddo funds are held at DriveWealth, LLC, a FINRA-registered broker-dealer and member of SIPC. Eligible accounts are SIPC-protected up to $500,000 against brokerage failure. SIPC does not protect against market losses. Investments may lose value. Not FDIC insured, not bank guaranteed.
+              </p>
+              <p className="mt-3">
+                Check the background of DriveWealth, LLC on{" "}
+                <a
+                  href="https://brokercheck.finra.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  FINRA's BrokerCheck
+                </a>
+                .
+              </p>
+            </div>
+
             <div className="mt-4 flex flex-wrap gap-4 text-sm">
               <Link href="/faq" className="text-primary hover:underline">Read the FAQ</Link>
               <Link href="/contact" className="text-primary hover:underline">Contact us</Link>

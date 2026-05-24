@@ -780,7 +780,7 @@ export default function Home() {
               <div className="space-y-2 text-muted-foreground">
                 <p>Investments held by DriveWealth, LLC, a FINRA-registered broker-dealer.</p>
                 <p>SIPC insured up to $500,000 in securities.</p>
-                <p>Bank-level encryption on all data.</p>
+                <p>Encrypted in transit and at rest.</p>
                 <p>Private fund links. Not searchable. Not public.</p>
                 <p>Fees shown in full before every checkout.</p>
               </div>
