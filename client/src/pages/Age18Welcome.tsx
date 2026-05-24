@@ -82,6 +82,16 @@ export default function Age18Welcome() {
   const [screen, setScreen] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [hasJob, setHasJob] = useState<boolean | null>(null);
   const [bracket, setBracket] = useState<"0_45" | "45_100" | "100_plus" | null>(null);
+  // Roth IRA waitlist opt-in. Per project_kid_2.0_handoff_funnel.md:
+  // the 18-handoff is the highest-engagement moment we get with this
+  // user, and Roth IRA is the right first beachhead in the kid-2.0
+  // funnel (DriveWealth has IRA products; taps the earned-income
+  // moment naturally). The Settings tax section already has this
+  // toggle and the server endpoint already exists — but ZERO users
+  // were being added to the waitlist at the walkthrough moment
+  // because screen 4 never called it. Default OFF so this is opt-in,
+  // never dark-pattern. Locked 2026-05-23.
+  const [rothInterest, setRothInterest] = useState<boolean>(false);
   // Screen transitions are state-driven, not URL-driven — so the
   // global ScrollToTop never fires. Without this, screen 4 (Roth
   // pitch with income-bracket toggles) inherits screen 3's scroll
@@ -103,6 +113,24 @@ export default function Age18Welcome() {
             hasEarnedIncome: hasJob,
             estimatedIncomeBracket: bracket,
           }),
+        });
+      }
+      // Roth waitlist signal — only fire when the kid actively opted
+      // in via screen 4 toggle. Never auto-stamp on hasJob=true (that
+      // would be dark-pattern: "you said you have a job, so we added
+      // you to a list you didn't see"). Endpoint is idempotent —
+      // safe to call with interested=false to clear later.
+      if (rothInterest) {
+        await fetch(`/api/users/me/roth-interest`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ interested: true }),
+        }).catch(() => {
+          // Best-effort: the waitlist signal is nice-to-have, never
+          // block walkthrough completion. The Settings tax section
+          // also exposes this toggle so the kid can opt in later
+          // if this request silently fails.
         });
       }
       const res = await fetch(`/api/funds/${fundId}/welcome-complete`, {
@@ -329,6 +357,49 @@ export default function Age18Welcome() {
                 </>
               )}
             </div>
+
+            {/* Roth IRA waitlist opt-in. Per the kid-2.0 handoff funnel
+                principle: the 18-moment is the highest-engagement
+                window we get, and the Roth pitch is right above this
+                toggle — capturing intent HERE means we have a real
+                waitlist when DriveWealth IRA support ships. Default
+                off (no dark pattern). Can also be toggled later from
+                Settings → Tax. */}
+            {hasJob === true && (
+              <button
+                type="button"
+                onClick={() => setRothInterest(!rothInterest)}
+                className={`w-full rounded-2xl border-2 p-4 text-left transition-colors ${
+                  rothInterest
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-card hover:border-foreground/30"
+                }`}
+                data-testid="age18-roth-waitlist-toggle"
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`mt-0.5 h-5 w-5 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors ${
+                      rothInterest ? "border-primary bg-primary" : "border-border bg-card"
+                    }`}
+                    aria-hidden
+                  >
+                    {rothInterest && (
+                      <svg viewBox="0 0 12 12" className="h-3 w-3 text-white" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M2.5 6.5L5 9l4.5-5.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      Notify me when Roth IRA is ready in Kiddo.
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      No spam, no waitlist drama — one email when it's actually live so you can move the first $1 in.
+                    </p>
+                  </div>
+                </div>
+              </button>
+            )}
             <div className="flex gap-3">
               <Button
                 type="button"
