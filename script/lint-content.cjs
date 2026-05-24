@@ -59,12 +59,39 @@ const INCLUDED_PAGE_FILES = new Set([
   path.normalize("client/src/pages/Stories.tsx"),
   path.normalize("client/src/pages/Blog.tsx"),
   path.normalize("client/src/pages/Pricing.tsx"),
+  // 2026-05-23 session ships — added after a user-facing em-dash slipped
+  // into GiftCheckout's recurring toggle subtitle and the user caught it.
+  // These files all carry user-visible copy at the gifter or parent
+  // surface; lint coverage prevents future em-dash slip-throughs.
+  path.normalize("client/src/pages/GiftCheckout.tsx"),
+  path.normalize("client/src/pages/SponsorSuccess.tsx"),
+  path.normalize("client/src/pages/FoundingMembers.tsx"),
+]);
+
+// Component allowlist — same expansion-after-violation reasoning as
+// INCLUDED_PAGE_FILES. Components that render user-visible copy
+// (cards, sheets, modals, banners) are now scanned for em-dashes
+// and the other rules. Internal-utility components and ui/*
+// primitives are intentionally NOT included (they don't render
+// user-facing prose).
+const INCLUDED_COMPONENT_FILES = new Set([
+  path.normalize("client/src/components/SponsorPlusCard.tsx"),
+  path.normalize("client/src/components/ScheduledLetterEditor.tsx"),
+  path.normalize("client/src/components/ScheduledLettersList.tsx"),
+  path.normalize("client/src/components/ReminderAndAskParentsCard.tsx"),
+  path.normalize("client/src/components/RecurringRequestsNudge.tsx"),
+  path.normalize("client/src/components/RothInterestOptIn.tsx"),
+  path.normalize("client/src/components/PlusUpgradePromptCard.tsx"),
+  path.normalize("client/src/components/MemoryMediaPicker.tsx"),
+  path.normalize("client/src/components/CoParentAccessCard.tsx"),
+  path.normalize("client/src/components/FeatureWallModal.tsx"),
 ]);
 
 function shouldScan(filePath) {
   const normalized = path.normalize(filePath);
   if (normalized.endsWith(".md")) return true;
   if (normalized.endsWith(path.normalize("client/src/components/ui/share-kit.tsx"))) return true;
+  if (INCLUDED_COMPONENT_FILES.has(normalized)) return true;
   return INCLUDED_PAGE_FILES.has(normalized);
 }
 
@@ -87,8 +114,30 @@ function extractSegments(filePath, content) {
       .map((segment) => segment.trim())
       .filter(Boolean);
   }
-  const matches = content.match(/"[^"\n]{12,}"|'[^'\n]{12,}'|`[^`\n]{12,}`/g) || [];
-  return matches.map((segment) => segment.slice(1, -1));
+  // Strip comments first so em-dashes in code comments don't trigger
+  // (comments are internal; the em-dash ban applies only to
+  // user-facing copy). Order: block comments, then line comments.
+  // Block-comment regex uses [\s\S] not . so it crosses newlines.
+  const codeOnly = content
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|\s)\/\/[^\n]*/g, "$1");
+
+  // String literals — the original surface.
+  const stringMatches = codeOnly.match(/"[^"\n]{12,}"|'[^'\n]{12,}'|`[^`\n]{12,}`/g) || [];
+
+  // JSX text content — em-dashes in `<p>Hello — world</p>` would
+  // slip through the string-literal regex above. Match runs of
+  // text between > and < that don't include other tag boundaries
+  // or JSX expression braces. 12-char minimum keeps single-char
+  // separators ("→", " ", etc.) from triggering false positives.
+  // Added 2026-05-23 after the GiftCheckout recurring-toggle em-dash
+  // slipped past the string-literal-only scan.
+  const jsxTextMatches = codeOnly.match(/>[^<>{}\n]{12,}</g) || [];
+
+  return [
+    ...stringMatches.map((segment) => segment.slice(1, -1)),
+    ...jsxTextMatches.map((segment) => segment.slice(1, -1).trim()),
+  ];
 }
 
 function lintSegment(segment) {

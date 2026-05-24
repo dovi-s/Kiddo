@@ -1776,7 +1776,7 @@ export default function GiftCheckout() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground">Make this recurring</p>
                     <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-                      Send the same amount on a regular schedule. Cancel any time. Free — no Kiddo subscription.
+                      Send the same amount on a regular schedule. Cancel any time. Free. No Kiddo subscription.
                     </p>
                   </div>
                 </label>

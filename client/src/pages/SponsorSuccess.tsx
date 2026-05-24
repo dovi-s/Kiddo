@@ -65,8 +65,8 @@ export default function SponsorSuccess() {
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
             {isDemo
-              ? `Demo mode — no card was charged. In production this is where ${childName}'s family would see Kiddo ${tierLabel} active on their fund.`
-              : `${childName}'s family was just emailed that it was you. Kiddo ${tierLabel} is now active on their fund for the next 12 months — unlocking recurring contributions for everyone, custom fund mix, photo and voice memos in the Memory Book, and co-parent access.`}
+              ? `Demo mode. No card was charged. In production this is where ${childName}'s family would see Kiddo ${tierLabel} active on their fund.`
+              : `${childName}'s family was just emailed that it was you. Kiddo ${tierLabel} is now active on their fund for the next 12 months. That unlocks recurring contributions for everyone, custom fund mix, photo and voice memos in the Memory Book, and co-parent access.`}
           </p>
           <div className="mx-auto mt-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-foreground">
             <Sparkles size={14} className="text-primary" />
@@ -85,7 +85,7 @@ export default function SponsorSuccess() {
           </div>
 
           <p className="mt-10 text-xs leading-relaxed text-muted-foreground/80 max-w-md mx-auto">
-            We sent you a receipt by email. Keep it for your records. {childName}'s family takes over the bill if they want to keep Plus going past the year — your card won't be charged again.
+            We sent you a receipt by email. Keep it for your records. {childName}'s family takes over the bill if they want to keep Plus going past the year. Your card won't be charged again.
           </p>
         </div>
       </section>

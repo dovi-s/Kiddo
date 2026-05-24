@@ -296,7 +296,7 @@ export function MemoryMediaPicker({
                   strategic frame upgrade-conversion plan. */}
               <p className="mt-1.5 text-[11px] text-muted-foreground/85">
                 <span className="font-semibold text-foreground">$3.99/month</span>
-                <span className="text-muted-foreground/70"> — about 13¢ a day.</span>
+                <span className="text-muted-foreground/70">, about 13¢ a day.</span>
               </p>
               <div className="mt-3">
                 <Button
@@ -464,7 +464,7 @@ export function MemoryMediaPicker({
               }}
             />
           </div>
-          <label htmlFor="memory-video-url" className="sr-only">Video URL — YouTube, Vimeo, or Loom</label>
+          <label htmlFor="memory-video-url" className="sr-only">Video URL: YouTube, Vimeo, or Loom</label>
           <input
             id="memory-video-url"
             name="videoUrl"

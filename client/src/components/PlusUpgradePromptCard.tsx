@@ -163,7 +163,7 @@ export function PlusUpgradePromptCard({
                 (commit 67bed3c). */}
             <p className="mt-1.5 text-[11px] text-muted-foreground/85">
               <span className="font-semibold text-foreground">$3.99/month</span>
-              <span className="text-muted-foreground/70"> — about 13¢ a day.</span>
+              <span className="text-muted-foreground/70">, about 13¢ a day.</span>
             </p>
             <div className="mt-3 flex gap-2">
               <Button

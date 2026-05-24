@@ -463,7 +463,7 @@ export function ScheduledLetterEditor({
                     </div>
                     {repeat === "yearly" && (
                       <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                        We'll generate one sealed letter per year from {formattedDeliveryDate || "the chosen date"} through {displayName}'s 18th birthday. Same content each year — edit or cancel any individual year, or cancel the whole series.
+                        We'll generate one sealed letter per year from {formattedDeliveryDate || "the chosen date"} through {displayName}'s 18th birthday. Same content each year. Edit or cancel any individual year, or cancel the whole series.
                       </p>
                     )}
                   </div>

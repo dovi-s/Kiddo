@@ -378,7 +378,7 @@ export function CoParentAccessCard({
         featureId="co_parent_access"
         requiredTier="plus"
         title="Co-parent access is a Kiddo+ feature."
-        body={`Invite a partner or guardian to see ${childName ? `${childName}'s` : "your child's"} fund. They get viewer or co-admin access; their notes land in the Memory Book alongside yours; you can revoke anytime. You stay the legal custodian — they have no legal claim.`}
+        body={`Invite a partner or guardian to see ${childName ? `${childName}'s` : "your child's"} fund. They get viewer or co-admin access; their notes land in the Memory Book alongside yours; you can revoke anytime. You stay the legal custodian. They have no legal claim.`}
         upgradePath={fund?.id ? `/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fund.id)}` : "/account?tab=plan"}
       />
     </SectionCard>
