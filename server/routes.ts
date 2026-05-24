@@ -5343,6 +5343,84 @@ export async function registerRoutes(
     return diffMs / (1000 * 60 * 60 * 24 * 365.25);
   };
 
+  // ── Gifter → parent recurring request (pricing-v3) ───────────────
+  // When a gifter on a Free fund clicks "Want to set up monthly?",
+  // they can send a feature request to the fund's parent. The parent
+  // sees this in their dashboard activities as a relationship signal
+  // ("Grandma wants to give monthly to Emma") and can choose to
+  // upgrade Plus on their fund to enable it.
+  //
+  // Diplomatic framing per pricing-v3 design constraint #4: this is a
+  // FEATURE-REQUEST flow on the gifter side and a relationship
+  // signal on the parent side. The parent's discovery of Plus
+  // happens organically when they go to enable recurring; the
+  // gifter never weaponizes "your fund's parents haven't paid."
+  //
+  // Public endpoint (no auth — gifters don't have accounts at this
+  // moment in the flow). Lightly rate-limited by basic cooldown:
+  // one request per gifter-email per fund per 7 days, enforced
+  // softly by checking recent activity rows.
+  app.post('/api/funds/:fundId/recurring-request', async (req, res) => {
+    try {
+      const { fundId } = req.params;
+      const gifterEmail = String(req.body?.gifterEmail || '').trim().toLowerCase();
+      const gifterName = String(req.body?.gifterName || '').trim().slice(0, 120);
+      const message = String(req.body?.message || '').trim().slice(0, 500);
+
+      if (!gifterEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gifterEmail)) {
+        return res.status(400).json({ error: 'A valid email is required so we know who is asking.' });
+      }
+      if (!gifterName) {
+        return res.status(400).json({ error: 'Tell us your name so the parent knows who is asking.' });
+      }
+
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (!fund.userId) {
+        return res.status(409).json({ error: 'This fund has no associated parent account yet.' });
+      }
+
+      // Soft cooldown — if a recurring-request from the same gifter
+      // email landed in the last 7 days, no-op (return success to
+      // avoid leaking whether a previous request existed). Prevents
+      // a gifter from spamming the parent's dashboard.
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const recent = await db
+        .select({ id: activities.id })
+        .from(activities)
+        .where(and(
+          eq(activities.fundId, fundId),
+          eq(activities.type, 'recurring_request'),
+          sql`${activities.metadata} LIKE ${'%' + gifterEmail + '%'}`,
+          sql`${activities.createdAt} > ${sevenDaysAgo}`,
+        ))
+        .limit(1);
+      if (recent.length > 0) {
+        return res.json({ success: true, alreadySent: true });
+      }
+
+      const childName = String(fund.recipientFirstName || fund.name || 'your kid').trim();
+      const titleSafe = `${gifterName} wants to give monthly to ${childName}`;
+      const descSafe = message
+        ? `${gifterName} (${gifterEmail}) asked to set up monthly contributions. They wrote: "${message}"`
+        : `${gifterName} (${gifterEmail}) asked to set up monthly contributions to ${childName}'s fund. Enable recurring with Kiddo+ in your plan settings to let them.`;
+
+      await db.insert(activities).values({
+        userId: fund.userId,
+        fundId,
+        type: 'recurring_request',
+        title: titleSafe,
+        description: descSafe,
+        metadata: JSON.stringify({ gifterEmail, gifterName, message: message || null }),
+      } as any);
+
+      return res.status(201).json({ success: true });
+    } catch (error) {
+      console.error('Error creating recurring request activity:', error);
+      return res.status(500).json({ error: 'Could not send the request. Try again.' });
+    }
+  });
+
   app.get('/api/public/funds/:slug', async (req, res) => {
     try {
       const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.params.slug);
@@ -5397,6 +5475,17 @@ export async function registerRoutes(
         return !!senderEmailKey && senderEmailKey === creatorEmailKey;
       };
       const socialProofFundGifts = fundGifts.filter(g => !isFromCreator(g));
+      // Pricing-v3 (locked 2026-05-23): recurring is gated at the FUND
+      // tier. The public response carries `recurringSupported` so the
+      // gifter UI can show the recurring toggle (Plus/Family funds) or
+      // the reminder-only path (Free funds). Gifters never pay; they
+      // inherit the fund's tier. See
+      // project_pricing_v3_recurring_at_plus.md.
+      const fundCoverageForGifter = await getFundCoverageState(fund.userId, fund.id);
+      const recurringSupported =
+        fundCoverageForGifter === 'covered_family' ||
+        fundCoverageForGifter === 'covered_starter' ||
+        fundCoverageForGifter === 'trial_active';
       res.json({
         fund: {
           id: fund.id,
@@ -5414,6 +5503,13 @@ export async function registerRoutes(
           allowGifterCashGift: investmentPreferences?.allowGifterCashGift,
           creatorFirstName: creator?.firstName || null,
           pronoun: fund.pronoun || null,
+          // Pricing-v3: tells the gifter UI whether to surface recurring
+          // or the reminder-only path. NEVER exposed as the parent's
+          // "plan status" — only as "this fund supports recurring or
+          // not." Diplomatic framing protected per pricing-v3 design
+          // constraint #2 (gifter-side copy is product-statement, never
+          // paywall).
+          recurringSupported,
         },
         availability,
         permanentEventSlug: permanentEvent?.slug,
@@ -9903,6 +9999,29 @@ export async function registerRoutes(
         return res.status(410).json({
           error: "fund_closed",
           message: "This fund is no longer accepting gifts.",
+        });
+      }
+
+      // Pricing-v3 fund-tier gate (locked 2026-05-23, see
+      // project_pricing_v3_recurring_at_plus.md). Recurring is gated at
+      // the FUND tier — gifters never pay, they inherit the fund's
+      // tier. The public /api/public/funds/:slug response surfaces
+      // `recurringSupported` so the gifter UI hides the recurring
+      // toggle on Free funds; this server-side check is defense in
+      // depth in case a direct API hit bypasses the UI. The error
+      // framing is a product statement, not a paywall: "this fund
+      // supports one-time gifts and reminders" is the locked
+      // gifter-side copy direction per design constraint #2.
+      const recurringFundCoverage = await getFundCoverageState(fund.userId, fund.id);
+      const fundSupportsRecurring =
+        recurringFundCoverage === 'covered_family' ||
+        recurringFundCoverage === 'covered_starter' ||
+        recurringFundCoverage === 'trial_active';
+      if (!fundSupportsRecurring) {
+        return res.status(403).json({
+          error: 'recurring_not_supported_on_this_fund',
+          message: `This fund supports one-time gifts and reminders. Recurring contributions become available when the family's plan includes them.`,
+          recurringRequestEndpoint: `/api/funds/${fund.id}/recurring-request`,
         });
       }
 

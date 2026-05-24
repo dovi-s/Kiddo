@@ -17,6 +17,7 @@ import { trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition";
 import { getPronouns } from "@/lib/pronouns";
 import { KIDDO_GIFT_ADD_ONS, calculateKoraContributionFee, getGiftAddOn, type GiftAddOnId } from "@shared/monetization";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
+import { ReminderAndAskParentsCard } from "@/components/ReminderAndAskParentsCard";
 
 const AMOUNTS = [25, 50, 100, 250];
 const PAGE_MAX = "kiddo-canvas px-4 sm:px-5";
@@ -129,6 +130,11 @@ interface PublicEventData {
     creatorFirstName?: string | null;
     childPhotoUrl?: string | null;
     pronoun?: string | null;
+    // Pricing-v3: gifter UI uses this to decide whether to show the
+    // recurring toggle (true → Plus/Family fund) or the reminder-only
+    // path with a "ask parents to enable" CTA (false → Free fund).
+    // NEVER expose as "the parent's plan" to the gifter.
+    recurringSupported?: boolean;
   };
   recentGifters?: Array<{
     name: string;
@@ -1718,14 +1724,33 @@ export default function GiftCheckout() {
                 </div>
               )}
 
-              {/* Recurring gift toggle — Tier-1 deferred work, restored
-                  2026-05-21 per project_gifter_recurring_restoration.md.
-                  Inline account creation per locked Decision A: when
-                  isRecurring is true, we ALSO collect a password so the
-                  gifter ends with a Kiddo gifter account and has a
-                  stable cancellation home in the gifter dashboard.
-                  Per locked Plus pricing reframe (project_plus_pricing_reframe.md),
-                  recurring is free — no Plus prompt, no upgrade gate. */}
+              {/* Recurring gift block — pricing-v3 (locked 2026-05-23,
+                  see project_pricing_v3_recurring_at_plus.md).
+                  Recurring is gated at the FUND tier; gifters never pay
+                  but inherit the fund's tier.
+                    - Plus/Family fund (recurringSupported=true): show
+                      the recurring toggle as before (gifter sets up
+                      a real Stripe subscription, free to them, with
+                      inline account creation per locked Decision A
+                      from project_gifter_recurring_restoration.md).
+                    - Free fund (recurringSupported=false): show the
+                      reminder-only path + "Ask Emma's parents to
+                      enable monthly" feature-request CTA (POSTs to
+                      /api/funds/:fundId/recurring-request which
+                      creates a relationship-signal activity on the
+                      parent's dashboard). Diplomatic framing per
+                      pricing-v3 design constraint #2 — product
+                      statement, never paywall.
+                  Server-side defense in depth at
+                  /api/stripe/checkout/gift-recurring also enforces
+                  the fund-tier check. */}
+              {eventData?.fund?.recurringSupported === false ? (
+                <ReminderAndAskParentsCard
+                  fundId={eventData.fund.id}
+                  childName={eventData.fund.recipientFirstName || eventData.fund.name || "the kid"}
+                  defaultAmount={activeAmount}
+                />
+              ) : (
               <div className="kiddo-card p-5">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
@@ -1829,6 +1854,7 @@ export default function GiftCheckout() {
                   </div>
                 )}
               </div>
+              )}
 
                 <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!isValidAmount || (isRecurring && recurringPassword.length < 8)} onClick={() => { haptic("selection"); trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", { baselineEvent: "gift_amount_selected", amount: activeAmount, amountSource: showCustom ? "custom_confirmed" : "confirmed", isRecurring, recurringFrequency: isRecurring ? recurringFrequency : null }); trackGiftEvent("cta_click", "gift_amount_continue", { amount: activeAmount }); setStep("preview"); }} data-testid="button-continue-to-preview">
                 Continue
