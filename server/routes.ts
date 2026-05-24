@@ -5414,6 +5414,62 @@ export async function registerRoutes(
         metadata: JSON.stringify({ gifterEmail, gifterName, message: message || null }),
       } as any);
 
+      // Wake the parent via email so they don't miss the request
+      // sitting in the dashboard activity feed. Best-effort: if email
+      // delivery fails the activity row is still captured (which is
+      // the load-bearing piece). Per project_pricing_v3_recurring_at_plus.md
+      // design constraint #4 — relationship signal, never paywall
+      // pressure. The email pitches Plus as the way to fulfill the
+      // gifter's wish, framed as enabling THEM, not as a sales push.
+      try {
+        const [parent] = await db
+          .select({ email: users.email, firstName: users.firstName })
+          .from(users)
+          .where(eq(users.id, fund.userId))
+          .limit(1);
+        if (parent?.email) {
+          const baseUrl = getAppBaseUrl(req);
+          const parentFirst = parent.firstName ? String(parent.firstName).trim() : "";
+          const upgradeUrl = `${baseUrl}/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(fundId)}`;
+          const subject = `${gifterName} wants to give monthly to ${childName}`;
+          const introLines = [
+            parentFirst ? `Hi ${parentFirst},` : `Hi,`,
+            "",
+            `${gifterName} just left a note on ${childName}'s gift page asking to set up monthly contributions.`,
+          ];
+          if (message) {
+            introLines.push("", `They wrote: "${message}"`);
+          }
+          introLines.push(
+            "",
+            `Right now ${childName}'s fund accepts one-time gifts and reminders. To let ${gifterName} (and any other gifter) set up monthly contributions, enable Kiddo+ on the fund.`,
+            "",
+            `Plus is $3.99/month or $29/year for one child. Cancel any time. Existing one-time gifts and Memory Book entries stay either way.`,
+            "",
+            `The decision is yours. We're just passing the message along.`,
+          );
+          const { renderKiddoEmail } = await import("./templates/baseTemplate");
+          const { sendEmail } = await import("./emailDelivery");
+          const { html } = renderKiddoEmail({
+            heading: subject,
+            intro: introLines.join("\n"),
+            cta: { text: "Enable monthly contributions", url: upgradeUrl },
+          });
+          await sendEmail({
+            to: parent.email,
+            subject,
+            text: introLines.join("\n"),
+            html,
+            tags: ["recurring_request"],
+            metadata: { fundId, gifterEmail, gifterName },
+          }).catch((emailErr) => {
+            console.warn("[recurring-request] email send failed (non-fatal):", String(emailErr));
+          });
+        }
+      } catch (emailLookupErr) {
+        console.warn("[recurring-request] could not look up parent for email (non-fatal):", String(emailLookupErr));
+      }
+
       return res.status(201).json({ success: true });
     } catch (error) {
       console.error('Error creating recurring request activity:', error);

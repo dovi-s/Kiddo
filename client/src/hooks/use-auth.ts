@@ -153,6 +153,10 @@ export function useAuth() {
     // kora:dismissed:plus-prompt:{kind}. Shipped 2026-05-23 per the
     // pre-launch upgrade-conversion plan; same per-user-scope reason.
     "kora:dismissed:plus-prompt:",
+    // Aggregated recurring-requests nudge per-fund dismissals — pattern
+    // is kora:dismissed:recurring-requests-nudge:{fundId}. Shipped
+    // 2026-05-23 (later this session) per pricing-v3 gifter-side ship.
+    "kora:dismissed:recurring-requests-nudge:",
   ];
 
   function clearPerUserDismissals() {

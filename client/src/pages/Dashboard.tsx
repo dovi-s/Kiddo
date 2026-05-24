@@ -137,6 +137,7 @@ import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanne
 import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
 import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
 import { PlusUpgradePromptCard, pickDashboardPlusPrompt } from "@/components/PlusUpgradePromptCard";
+import { RecurringRequestsNudge } from "@/components/RecurringRequestsNudge";
 import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
@@ -4605,6 +4606,27 @@ export default function Dashboard() {
           plusFirstMediaAt={(dashboardSummary as any)?.plusFirstMediaAt}
           fundId={activeFundId}
         />
+
+        {/* Aggregated recurring-requests nudge — surfaces when ANY
+            gifter has used "ask the family to enable monthly" CTA in
+            GiftCheckout (creates a recurring_request activity row).
+            Conversion thesis: this is the highest-intent Plus upgrade
+            moment in the product. Someone has actively raised their
+            hand. The card aggregates unique gifters (dedup by email)
+            and presents a single CTA. Suppressed on Plus/Family
+            (already enabled). Per project_pricing_v3_recurring_at_plus.md
+            design constraint #4. Renders BEFORE the proactive Plus
+            prompts because the explicit signal beats the inferred
+            signal — if a parent has recurring requests, that's the
+            conversion moment, not the 30-day-anniversary nudge. */}
+        {activeFundId && (
+          <RecurringRequestsNudge
+            fundId={activeFundId}
+            childName={recipientFirstNameDisplay}
+            effectivePlan={effectivePlan}
+            className="mb-4"
+          />
+        )}
 
         {/* Proactive Plus upgrade prompt at high-engagement Free moments.
             Per project_pre_launch_strategic_frame.md upgrade-conversion

@@ -220,6 +220,17 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
     return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Recurring investment" };
   if (t === "parent_contribution")
     return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Your gift" };
+  // Pricing-v3 (locked 2026-05-23): a gifter on a Free fund used the
+  // "ask the family to enable monthly contributions" CTA in
+  // GiftCheckout. This activity row IS the relationship signal; the
+  // dashboard surfaces an aggregated "X gifters want to give monthly"
+  // nudge separately for the conversion moment. Green palette signals
+  // "this is a positive event" (someone loves your kid enough to want
+  // to give monthly), BellRing icon signals "you got a request to
+  // respond to." See project_pricing_v3_recurring_at_plus.md design
+  // constraint #4 (feature-request flow, not paywall pressure).
+  if (t === "recurring_request")
+    return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <BellRing size={16} />, label: "Recurring request" };
   if (t === "parent_contribution_failed")
     return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Charge failed" };
   // Memory family — purple palette (kid-domain story).
