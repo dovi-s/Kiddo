@@ -582,6 +582,15 @@ export const memoryEntries = pgTable("memory_entries", {
   // NULL on every row created before migration 0029 + on every non-
   // sealed entry going forward. Per project_sealed_letters_implementation_plan.md.
   deliverAt: timestamp("deliver_at"),
+  // Recurring-series grouping ID (Prong B Phase 5, migration 0030,
+  // locked 2026-05-23). When a parent picks "Repeat yearly" on a
+  // sealed letter, the server generates N entries (one per year
+  // from the chosen date to the kid's 18th birthday) all sharing
+  // the same parent_sealed_series_id. Cancel-series UI cancels all
+  // entries with the matching ID. NULL on one-shot sealed entries
+  // + on all non-sealed entries. Per
+  // project_sealed_letters_implementation_plan.md Phase 5.
+  parentSealedSeriesId: varchar("parent_sealed_series_id"),
   // Moderation status. 'published' is the universal default — entries are
   // immediately live in the Memory Book. When fund.gifterMemoryModeration
   // is true, gifter-submitted entries land as 'pending_review' and stay

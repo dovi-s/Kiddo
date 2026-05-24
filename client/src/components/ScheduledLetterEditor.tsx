@@ -95,6 +95,13 @@ export function ScheduledLetterEditor({
   const [text, setText] = useState("");
   const [media, setMedia] = useState<MemoryMediaValue>(EMPTY_MEMORY_MEDIA);
   const [deliverDate, setDeliverDate] = useState<string>(() => tomorrowIso());
+  // Repeat cadence for Prong B Phase 5 yearly-series (locked 2026-05-23).
+  // "none" = one-shot letter on the chosen date; "yearly" = server
+  // generates one entry per year from the chosen date through the
+  // kid's 18th birthday. Future cadences (Mother's Day specifically,
+  // every birthday, etc.) extend this enum + the server's series
+  // generator.
+  const [repeat, setRepeat] = useState<"none" | "yearly">("none");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -106,6 +113,7 @@ export function ScheduledLetterEditor({
       setText("");
       setMedia(EMPTY_MEMORY_MEDIA);
       setDeliverDate(tomorrowIso());
+      setRepeat("none");
       setShowCelebration(false);
       setError(null);
       setSaving(false);
@@ -163,6 +171,9 @@ export function ScheduledLetterEditor({
           audioTranscript: media.audioTranscript || null,
           kidVisibility: "sealed",
           deliverAt: deliverAtIso,
+          // Server generates the yearly series when repeat='yearly'.
+          // None = one-shot. See routes.ts createMemoryEntry handler.
+          repeat,
         }),
       });
       if (!res.ok) {
@@ -330,6 +341,46 @@ export function ScheduledLetterEditor({
                           <> ({yearsUntil} {yearsUntil === 1 ? "year" : "years"} from today)</>
                         ) : null}
                         .
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Repeat picker (Prong B Phase 5, locked 2026-05-23).
+                      "Yearly" lets one composer interaction generate
+                      one letter per year from the chosen date through
+                      the kid's 18th birthday. Use case: "Write this
+                      once, deliver every Mother's Day for the next 15
+                      years." Cap at 18 entries server-side to bound
+                      the worst case. Per
+                      project_sealed_letters_implementation_plan.md
+                      Phase 5. */}
+                  <div>
+                    <label className="text-xs font-semibold text-foreground mb-2 block">
+                      Deliver it once, or every year?
+                    </label>
+                    <div className="flex gap-2">
+                      {([
+                        { value: "none", label: "Once" },
+                        { value: "yearly", label: "Yearly" },
+                      ] as const).map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => { haptic("selection"); setRepeat(opt.value); }}
+                          className={`flex-1 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
+                            repeat === opt.value
+                              ? "border-primary bg-primary/5 text-primary"
+                              : "border-border text-muted-foreground"
+                          }`}
+                          data-testid={`button-scheduled-repeat-${opt.value}`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    {repeat === "yearly" && (
+                      <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
+                        We'll generate one sealed letter per year from {formattedDeliveryDate || "the chosen date"} through {displayName}'s 18th birthday. Same content each year — edit or cancel any individual year, or cancel the whole series.
                       </p>
                     )}
                   </div>

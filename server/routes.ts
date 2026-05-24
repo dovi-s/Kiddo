@@ -5374,6 +5374,40 @@ export async function registerRoutes(
     return diffMs / (1000 * 60 * 60 * 24 * 365.25);
   };
 
+  // ── Cancel sealed-letter series (Prong B Phase 5) ─────────────────
+  // Cancels every entry in a yearly series with one call. PATCHes
+  // all matching entries to visibility='parent_only' (per the
+  // existing single-entry cancel pattern in ScheduledLettersList):
+  // keeps audit trail intact, removes from kid surfaces, removes
+  // from the parent's scheduled list. Owner-gated.
+  app.delete('/api/funds/:fundId/sealed-series/:seriesId', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const { fundId, seriesId } = req.params;
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+      // PATCH all sealed entries in the series. Bounded to entries
+      // that haven't fired yet — once an entry has been delivered
+      // (deliver_at <= NOW()), the kid has potentially already seen
+      // it; cancelling past entries would yank content from the
+      // kid's Memory Book. Only cancel future-dated entries.
+      const result = await db.update(memoryEntries)
+        .set({ visibility: 'parent_only' })
+        .where(and(
+          eq(memoryEntries.fundId, fundId),
+          eq(memoryEntries.parentSealedSeriesId, seriesId),
+          eq(memoryEntries.visibility, 'sealed'),
+          sql`${memoryEntries.deliverAt} > NOW()`,
+        ))
+        .returning({ id: memoryEntries.id });
+      return res.json({ success: true, cancelledCount: result.length });
+    } catch (error) {
+      console.error('Error cancelling sealed series:', error);
+      return res.status(500).json({ error: 'Failed to cancel the series.' });
+    }
+  });
+
   // ── Gifter → parent recurring request (pricing-v3) ───────────────
   // When a gifter on a Free fund clicks "Want to set up monthly?",
   // they can send a feature request to the fund's parent. The parent
@@ -11014,6 +11048,72 @@ export async function registerRoutes(
       // null so empty strings don't pollute the DB.
       const audioUrlRaw = req.body?.audioUrl ? String(req.body.audioUrl).trim() : null;
       const audioTranscriptRaw = req.body?.audioTranscript ? String(req.body.audioTranscript).trim() : null;
+      // Recurring sealed-letter series (Prong B Phase 5, locked
+      // 2026-05-23). When the parent picks repeat='yearly' on a
+      // sealed letter, generate one entry per year from the chosen
+      // deliverAt through the kid's 18th birthday (capped at 18
+      // entries max). Each entry shares a parent_sealed_series_id
+      // so the parent can cancel the whole series with one click.
+      // Per project_sealed_letters_implementation_plan.md Phase 5.
+      //
+      // Repeat is honored ONLY for sealed entries with a future
+      // deliverAt — non-sealed entries ignore it. Non-yearly values
+      // ignored at this MVP; future cadences (weekly Mother's Day,
+      // every birthday, etc.) would extend this branch.
+      const rawRepeat = String(req.body?.repeat || "none").toLowerCase();
+      const isYearlySeries = rawRepeat === "yearly" && kidVisibility === "sealed" && finalDeliverAt;
+      let seriesId: string | null = null;
+      const seriesEntries: any[] = [];
+      if (isYearlySeries) {
+        seriesId = crypto.randomUUID();
+        // Determine the series end: kid's 18th birthday, fallback
+        // 18 years from the deliverAt if birthdate is missing. Cap
+        // at 18 entries max as a defensive bound — a parent
+        // accidentally setting a yearly series for "every year for
+        // the next 100 years" would create 100 rows otherwise.
+        const startMs = finalDeliverAt.getTime();
+        let endMs: number;
+        if (fund.recipientBirthdate) {
+          const bd = new Date(fund.recipientBirthdate);
+          if (!Number.isNaN(bd.getTime())) {
+            const eighteenth = new Date(bd.getFullYear() + 18, bd.getMonth(), bd.getDate());
+            endMs = eighteenth.getTime();
+          } else {
+            endMs = new Date(finalDeliverAt.getFullYear() + 18, finalDeliverAt.getMonth(), finalDeliverAt.getDate()).getTime();
+          }
+        } else {
+          endMs = new Date(finalDeliverAt.getFullYear() + 18, finalDeliverAt.getMonth(), finalDeliverAt.getDate()).getTime();
+        }
+        // Walk year-by-year from start to end. Cap at 18 entries
+        // total even if the math would generate more.
+        let cursor = new Date(startMs);
+        let generated = 0;
+        while (cursor.getTime() <= endMs && generated < 18) {
+          seriesEntries.push({
+            ...parsedBody,
+            photoUrl,
+            videoUrl,
+            audioUrl: audioUrlRaw || null,
+            audioTranscript: audioTranscriptRaw || null,
+            visibility: kidVisibility,
+            deliverAt: new Date(cursor),
+            parentSealedSeriesId: seriesId,
+            ...(authorPhotoUrl ? { authorPhotoUrl } : {}),
+            ...(authorUserId ? { authorUserId } : {}),
+          });
+          // Advance one year (preserve month + day; handles Feb 29
+          // by JS Date overflow — Feb 29 in a non-leap year becomes
+          // Mar 1, acceptable behavior for the MVP).
+          cursor = new Date(cursor.getFullYear() + 1, cursor.getMonth(), cursor.getDate());
+          generated++;
+        }
+        // Floor of 1 — if the series math somehow generates 0
+        // entries (start > end edge case), fall back to single-shot.
+        if (seriesEntries.length === 0) {
+          seriesId = null;
+        }
+      }
+
       const data = {
         ...parsedBody,
         photoUrl,
@@ -11022,10 +11122,20 @@ export async function registerRoutes(
         audioTranscript: audioTranscriptRaw || null,
         visibility: kidVisibility,
         deliverAt: finalDeliverAt,
+        parentSealedSeriesId: seriesId,
         ...(authorPhotoUrl ? { authorPhotoUrl } : {}),
         ...(authorUserId ? { authorUserId } : {}),
       };
       const entry = await storage.createMemoryEntry(data);
+      // For yearly series, create the REMAINING entries (skipping
+      // index 0 which we just created above as `entry`). Each
+      // generated entry copies the same content/media but with
+      // its own deliverAt year-by-year.
+      if (isYearlySeries && seriesEntries.length > 1) {
+        for (let i = 1; i < seriesEntries.length; i++) {
+          await storage.createMemoryEntry(seriesEntries[i]);
+        }
+      }
       await patchMemoryMeta(entry.id, {
         visibility: parseVisibility(req.body?.visibility),
         isFeatured: Boolean(req.body?.isFeatured),

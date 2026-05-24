@@ -231,6 +231,14 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // constraint #4 (feature-request flow, not paywall pressure).
   if (t === "recurring_request")
     return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <BellRing size={16} />, label: "Recurring request" };
+  // Sealed-letter delivery (Prong B Phase 6, locked 2026-05-23). The
+  // sealedLetterDeliveryWorker writes this row when a sealed letter's
+  // deliver_at fires. Warm gold palette matches the Memory Book story
+  // category (ceremonial moment, not transactional). BookOpen icon
+  // signals "a story moment just opened." See
+  // project_sealed_letters_implementation_plan.md Phase 6.
+  if (t === "sealed_letter_delivered")
+    return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <BookOpen size={16} />, label: "Sealed letter delivered" };
   if (t === "parent_contribution_failed")
     return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Charge failed" };
   // Memory family — purple palette (kid-domain story).

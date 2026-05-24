@@ -39,6 +39,7 @@ type MemoryEntryRow = {
   kidVisibility?: string;
   visibility?: string;
   deliverAt?: string | null;
+  parentSealedSeriesId?: string | null;
 };
 
 export type ScheduledLettersListProps = {
@@ -84,18 +85,58 @@ export function ScheduledLettersList({ fundId, childName, className }: Scheduled
   // Filter to sealed entries that haven't yet been delivered (deliverAt
   // in the future). Sealed entries that already fired are essentially
   // "delivered to the kid" and don't need parent management.
-  const scheduled = (entries || [])
+  const scheduledRaw = (entries || [])
     .filter((e) => (e.kidVisibility || e.visibility) === "sealed")
     .filter((e) => {
       if (!e.deliverAt) return false;
       const d = new Date(e.deliverAt).getTime();
       return !Number.isNaN(d) && d > Date.now();
-    })
-    .sort((a, b) => {
-      const ad = a.deliverAt ? new Date(a.deliverAt).getTime() : 0;
-      const bd = b.deliverAt ? new Date(b.deliverAt).getTime() : 0;
+    });
+
+  // Group by parent_sealed_series_id for Phase 5 yearly series. Each
+  // series renders as a single card showing the count, the next
+  // delivery date, and a "cancel series" button. One-shot sealed
+  // letters (no series_id) render as individual cards.
+  type Grouped =
+    | { kind: "single"; entry: MemoryEntryRow }
+    | { kind: "series"; seriesId: string; entries: MemoryEntryRow[] };
+  const groups: Grouped[] = (() => {
+    const seriesMap = new Map<string, MemoryEntryRow[]>();
+    const singles: MemoryEntryRow[] = [];
+    for (const e of scheduledRaw) {
+      const sid = e.parentSealedSeriesId;
+      if (sid) {
+        const list = seriesMap.get(sid) || [];
+        list.push(e);
+        seriesMap.set(sid, list);
+      } else {
+        singles.push(e);
+      }
+    }
+    const out: Grouped[] = [];
+    seriesMap.forEach((list, seriesId) => {
+      list.sort((a: MemoryEntryRow, b: MemoryEntryRow) => {
+        const ad = a.deliverAt ? new Date(a.deliverAt).getTime() : 0;
+        const bd = b.deliverAt ? new Date(b.deliverAt).getTime() : 0;
+        return ad - bd;
+      });
+      out.push({ kind: "series", seriesId, entries: list });
+    });
+    for (const single of singles) {
+      out.push({ kind: "single", entry: single });
+    }
+    // Sort grouped list by earliest delivery date so the soonest
+    // upcoming surface is at the top regardless of series vs single.
+    out.sort((a, b) => {
+      const aDate = a.kind === "series" ? a.entries[0]?.deliverAt : a.entry.deliverAt;
+      const bDate = b.kind === "series" ? b.entries[0]?.deliverAt : b.entry.deliverAt;
+      const ad = aDate ? new Date(aDate).getTime() : 0;
+      const bd = bDate ? new Date(bDate).getTime() : 0;
       return ad - bd;
     });
+    return out;
+  })();
+  const scheduled = groups; // keeps the variable name reference below intact
 
   const safeChildName = (childName || "your kid").trim() || "your kid";
 
@@ -131,6 +172,28 @@ export function ScheduledLettersList({ fundId, childName, className }: Scheduled
     }
   }
 
+  async function handleCancelSeries(seriesId: string, count: number) {
+    if (cancellingId) return;
+    const msg = count === 1
+      ? "Cancel this sealed letter series? You can write new letters any time, but the remaining year of deliveries will not happen."
+      : `Cancel this sealed letter series? You can write new letters any time, but the remaining ${count} years of deliveries will not happen.`;
+    if (!window.confirm(msg)) return;
+    setCancellingId(seriesId);
+    haptic("medium");
+    try {
+      await fetch(`/api/funds/${encodeURIComponent(fundId)}/sealed-series/${encodeURIComponent(seriesId)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      haptic("success");
+      void queryClient.invalidateQueries({ queryKey: ["memory", fundId] });
+    } catch {
+      haptic("error");
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
   return (
     <div className={className}>
       <div className="rounded-2xl border border-border bg-card p-5">
@@ -149,7 +212,78 @@ export function ScheduledLettersList({ fundId, childName, className }: Scheduled
         </div>
 
         <ul className="space-y-2.5">
-          {previewItems.map((entry) => {
+          {previewItems.map((group) => {
+            // Series card — groups N years of the same letter under
+            // one row with a "next delivery" date + cancel-series CTA.
+            if (group.kind === "series") {
+              const first = group.entries[0];
+              const last = group.entries[group.entries.length - 1];
+              const dateLabel = formatDeliveryDate(first?.deliverAt);
+              const lastLabel = formatDeliveryDate(last?.deliverAt);
+              const years = yearsFromNow(first?.deliverAt);
+              const preview = String(first?.content || "").trim().slice(0, 120);
+              const hasPhoto = !!first?.photoUrl;
+              const hasVideo = !!first?.videoUrl;
+              const hasAudio = !!first?.audioUrl;
+              const count = group.entries.length;
+              return (
+                <li
+                  key={`series-${group.seriesId}`}
+                  className="rounded-xl border border-primary/30 bg-primary/5 p-3"
+                  data-testid={`scheduled-series-${group.seriesId}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground mt-0.5">
+                      <Calendar size={14} strokeWidth={1.8} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-foreground">
+                        Yearly series · {count} {count === 1 ? "delivery" : "deliveries"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Next: <span className="text-foreground font-medium">{dateLabel || "scheduled"}</span>
+                        {years !== null && years > 0 ? (
+                          <> ({years} {years === 1 ? "year" : "years"} away)</>
+                        ) : null}
+                        {lastLabel && lastLabel !== dateLabel ? (
+                          <> · last in {lastLabel}</>
+                        ) : null}
+                      </p>
+                      {preview && (
+                        <p className="mt-1 text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                          "{preview}{preview.length === 120 ? "..." : ""}"
+                        </p>
+                      )}
+                      {(hasPhoto || hasVideo || hasAudio) && (
+                        <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/80">
+                          {hasPhoto && (
+                            <span className="inline-flex items-center gap-0.5"><ImageIcon size={10} /> photo</span>
+                          )}
+                          {hasVideo && (
+                            <span className="inline-flex items-center gap-0.5"><Video size={10} /> video</span>
+                          )}
+                          {hasAudio && (
+                            <span className="inline-flex items-center gap-0.5"><Mic size={10} /> voice</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void handleCancelSeries(group.seriesId, count)}
+                      disabled={cancellingId === group.seriesId}
+                      className="text-muted-foreground hover:text-destructive transition-colors p-1 shrink-0"
+                      aria-label="Cancel entire scheduled series"
+                      data-testid={`cancel-scheduled-series-${group.seriesId}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </li>
+              );
+            }
+            // Single sealed letter card
+            const entry = group.entry;
             const dateLabel = formatDeliveryDate(entry.deliverAt);
             const years = yearsFromNow(entry.deliverAt);
             const preview = String(entry.content || "").trim().slice(0, 120);
