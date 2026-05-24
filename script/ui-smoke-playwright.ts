@@ -1336,6 +1336,14 @@ async function main() {
     await runCheck(publicContext, results, "public-home", "/", "body");
     await runCheck(publicContext, results, "public-login", "/login", "[data-testid='input-login-email']");
     await runPricingPageCheck(publicContext, results);
+    // Phase 7 surface smoke — pages shipped in the 2026-05-23 session
+    // (sponsor-Plus + Founder gifting). Page-renders only; full
+    // payment flow requires real Stripe and is verified manually
+    // via the locked smoke checklist. These checks catch
+    // route-wiring regressions + missing imports + 5xx errors.
+    await runCheck(publicContext, results, "public-founding-members", "/founding-members", "[data-testid='text-founding-headline']");
+    await runCheck(publicContext, results, "public-founding-members-open-gift", "/founding-members", "[data-testid='button-open-gift-founder']");
+    await runCheck(publicContext, results, "public-sponsor-success-page", "/sponsor-success?demo=1&fundId=00000000-0000-4000-8000-000000000000&tier=starter", "[data-testid='text-sponsor-success-headline']");
     await runCheck(publicContext, results, "public-activity-redirect-login", "/activity", "[data-testid='input-login-email']");
     await runCheck(publicContext, results, "public-dashboard-redirect-login", "/dashboard", "[data-testid='input-login-email']");
     await runCheck(publicContext, results, "public-events-redirect-login", "/events", "[data-testid='input-login-email']");
