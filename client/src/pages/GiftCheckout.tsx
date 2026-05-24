@@ -1738,7 +1738,7 @@ export default function GiftCheckout() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground">Make this recurring</p>
                     <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
-                      Send the same amount every month. Cancel any time. Free — no Kiddo subscription.
+                      Send the same amount on a regular schedule. Cancel any time. Free — no Kiddo subscription.
                     </p>
                   </div>
                 </label>
@@ -1764,6 +1764,46 @@ export default function GiftCheckout() {
                         ))}
                       </div>
                     </div>
+
+                    {/* Daily-equivalent display — per
+                        project_behavioral_framing_discipline.md.
+                        Benartzi/Hershfield/Shu Acorns research showed
+                        same dollar amount framed as daily vs monthly
+                        produced 4× enrollment lift on recurring (30%
+                        vs 7%) AND eliminated the income-bracket gap.
+                        Mechanism: "$5/day" triggers latte mental
+                        accounting (skippable); "$150/month" triggers
+                        car-payment mental accounting (committed).
+                        Shipped 2026-05-23 as the first behavioral-
+                        framing experiment on a conversion-critical
+                        surface. */}
+                    {isValidAmount && activeAmount > 0 && (() => {
+                      const daysPerCycle = recurringFrequency === "weekly"
+                        ? 7
+                        : recurringFrequency === "monthly"
+                          ? 30
+                          : 365;
+                      const dailyAmt = activeAmount / daysPerCycle;
+                      // Formatting: <$1 shows two decimals ("$0.33"),
+                      // >=$1 shows two decimals for consistency
+                      // ("$5.00", "$12.50"). Tabular-nums prevents
+                      // layout shift as the user changes amounts.
+                      return (
+                        <div
+                          className="rounded-2xl bg-[hsl(var(--kiddo-gold)/0.10)] border border-[hsl(var(--kiddo-gold)/0.30)] px-4 py-3 text-center"
+                          data-testid="recurring-daily-equivalent"
+                        >
+                          <p className="text-[10px] uppercase tracking-[0.14em] font-bold text-muted-foreground/80">
+                            That's about
+                          </p>
+                          <p className="mt-0.5 text-2xl font-bold text-foreground tabular-nums leading-tight">
+                            ${dailyAmt.toFixed(2)}
+                            <span className="text-base font-medium text-muted-foreground"> / day</span>
+                          </p>
+                        </div>
+                      );
+                    })()}
+
                     <div>
                       <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="recurring-password">
                         Set a password
