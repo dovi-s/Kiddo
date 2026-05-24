@@ -21,6 +21,7 @@ import { capFirst } from "@/lib/format-name";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { USOnlyOffRamp } from "@/components/USOnlyOffRamp";
 import { GiftIntentBanner } from "@/components/GiftIntentBanner";
+import { RothInterestOptIn } from "@/components/RothInterestOptIn";
 import { useAuth } from "@/hooks/use-auth";
 import type {
   AuthProvidersStatus,
@@ -1101,6 +1102,18 @@ export default function GetStarted() {
                   </div>
                 ))}
               </AnimatedBlock>
+              {/* Roth IRA waitlist opt-in — captures parent intent 18 years
+                  before the actual Roth IRA product needs to exist. Per
+                  project_kid_2.0_handoff_funnel.md (Phase 1 of the 6-phase
+                  ladder); the cheapest possible signal on the most expensive
+                  bet (kid-2.0 funnel viability). Child-account only because
+                  Roth IRA at 18 is structured around the eventual kid-owner;
+                  personal accounts don't have a custodial handoff moment. */}
+              {accountType === "child" && (
+                <AnimatedBlock className="mt-6">
+                  <RothInterestOptIn childName={childDisplayName} />
+                </AnimatedBlock>
+              )}
               <Dock
                 primary={
                   <div className="space-y-2">
