@@ -284,6 +284,20 @@ export function MemoryMediaPicker({
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 Text entries are free on every plan. Media on your own entries unlocks with Kiddo+.
               </p>
+              {/* Price callout — per project_behavioral_framing_discipline.md,
+                  daily framing on subscription price at the moment of
+                  upgrade intent. Acorns research: daily framing produced 4×
+                  lift vs monthly on enrollment for the same dollar amount.
+                  The MemoryMediaPicker Plus wall is the highest-converting
+                  Free→Plus moment because the parent has already
+                  articulated intent ("I want to add this photo"); the
+                  daily-framing addition here is the single most leveraged
+                  upgrade-conversion improvement per the locked pre-launch
+                  strategic frame upgrade-conversion plan. */}
+              <p className="mt-1.5 text-[11px] text-muted-foreground/85">
+                <span className="font-semibold text-foreground">$4.99/month</span>
+                <span className="text-muted-foreground/70"> — about 16¢ a day.</span>
+              </p>
               <div className="mt-3">
                 <Button
                   size="sm"
