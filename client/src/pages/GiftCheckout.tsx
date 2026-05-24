@@ -2331,14 +2331,44 @@ export default function GiftCheckout() {
                   </div>
 
                   <div className="mt-4 border-t border-border pt-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-foreground font-semibold">{isRecurring ? "You pay today" : "You pay"}</span>
-                      <span className="text-lg font-bold text-foreground" data-testid="text-total-charge">${totalCharge.toFixed(2)}</span>
-                    </div>
-                    {isRecurring && (
-                      <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                        Then ${totalCharge.toFixed(2)} every {recurringFrequency === "weekly" ? "week" : recurringFrequency === "yearly" ? "year" : "month"}. Cancel any time from your gifter dashboard.
-                      </p>
+                    {/* Recurring previews show TODAY + NEXT as two equally-
+                        weighted lines (matches Apple/Spotify/Netflix
+                        subscription confirmation pattern). The concrete
+                        next-charge date anchors the commitment to a
+                        calendar moment instead of the abstract "every
+                        month" — the gifter knows exactly when the second
+                        charge fires, which is the single most useful fact
+                        for them to retain post-purchase. */}
+                    {isRecurring ? (() => {
+                      const nextChargeDate = (() => {
+                        const d = new Date();
+                        if (recurringFrequency === "weekly") d.setDate(d.getDate() + 7);
+                        else if (recurringFrequency === "yearly") d.setFullYear(d.getFullYear() + 1);
+                        else d.setMonth(d.getMonth() + 1);
+                        return d;
+                      })();
+                      const nextChargeLabel = nextChargeDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                      const cadenceWord = recurringFrequency === "weekly" ? "week" : recurringFrequency === "yearly" ? "year" : "month";
+                      return (
+                        <>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-foreground font-semibold">You pay today</span>
+                            <span className="text-lg font-bold text-foreground" data-testid="text-total-charge">${totalCharge.toFixed(2)}</span>
+                          </div>
+                          <div className="mt-2 flex items-center justify-between gap-3">
+                            <span className="text-foreground font-semibold">Next charge ({nextChargeLabel})</span>
+                            <span className="text-lg font-bold text-foreground" data-testid="text-next-charge">${totalCharge.toFixed(2)}</span>
+                          </div>
+                          <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
+                            And every {cadenceWord} after that, until you cancel. Cancel any time from your gifter dashboard.
+                          </p>
+                        </>
+                      );
+                    })() : (
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-foreground font-semibold">You pay</span>
+                        <span className="text-lg font-bold text-foreground" data-testid="text-total-charge">${totalCharge.toFixed(2)}</span>
+                      </div>
                     )}
                   </div>
                   <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.15)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-3">
