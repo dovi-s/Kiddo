@@ -5204,6 +5204,26 @@ export async function registerRoutes(
         unlockedAtMajorityCount: isAdult
           ? entries.filter((e: any) => String(e.visibility || "kid_now") === "kid_at_18").length
           : 0,
+        // Pricing-v3 Prong B Phase 4 (locked 2026-05-23): count of
+        // sealed-letter entries whose deliver_at just fired in the
+        // last 14 days. Drives the "A message just unlocked for you"
+        // celebration treatment when the kid opens KidView soon after
+        // a scheduled sealed letter arrives. 14-day window matches
+        // "the kid checked in within two weeks of the date" pattern;
+        // longer windows risk muting the moment with stale celebration.
+        // The entry itself has been filtered through the visibility
+        // gate above so it's already in `entries`; this is just the
+        // count for the hero treatment.
+        recentlyUnlockedSealedCount: (() => {
+          const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+          const nowMsForSealedCount = Date.now();
+          return entries.filter((e: any) => {
+            if (String(e.visibility || "") !== "sealed") return false;
+            const da = e.deliverAt ? new Date(e.deliverAt).getTime() : null;
+            if (!da || Number.isNaN(da)) return false;
+            return da <= nowMsForSealedCount && (nowMsForSealedCount - da) <= fourteenDaysMs;
+          }).length;
+        })(),
         // Parent letter as a top-level field, separate from memories list.
         // Renderer treats it as the featured emotional capstone, not a generic
         // Memory Book row. Null when the parent hasn't written one yet.

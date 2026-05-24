@@ -63,6 +63,12 @@ type KidViewContent = {
   // Count of entries with visibility='kid_at_18' that just unlocked because
   // the kid hit majority age. Populated server-side; always 0 pre-majority.
   unlockedAtMajorityCount?: number;
+  // Pricing-v3 Prong B Phase 4: count of sealed-letter entries whose
+  // deliver_at fired within the last 14 days. Drives the "A message
+  // just unlocked for you" celebration when the kid checks in soon
+  // after a scheduled sealed letter arrives. Independent of majority
+  // age — sealed letters can deliver at any kid age the parent picked.
+  recentlyUnlockedSealedCount?: number;
 };
 
 type KidLanguageMode = "younger" | "older";
@@ -884,6 +890,38 @@ export default function KidView() {
             ))}
           </div>
         </motion.div>
+
+        {/* ─── Sealed-letter unlock celebration (Prong B Phase 4) ──
+            Renders when sealed-letter entries' deliver_at fired within
+            the last 14 days. Independent of phase — sealed letters can
+            be scheduled for any age (5th birthday, 13th, graduation,
+            etc.) so the celebration fires for any age. Quiet warm
+            treatment matching the at-18 ceremony but a degree softer
+            because this can fire repeatedly throughout childhood; the
+            18-handoff is once-in-a-lifetime, sealed letters are
+            recurring touches. Per project_sealed_letters_implementation_plan.md
+            Phase 4. */}
+        {(content.recentlyUnlockedSealedCount ?? 0) > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: 0.4 }}
+            className="rounded-[24px] border border-[hsl(var(--kiddo-gold))]/30 bg-[hsl(var(--kiddo-gold))]/8 px-5 py-4 mb-4 flex items-start gap-3"
+            data-testid="kid-view-sealed-unlocked"
+          >
+            <div className="text-2xl shrink-0" aria-hidden>🕯️</div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">
+                {content.recentlyUnlockedSealedCount === 1
+                  ? `A sealed message just unlocked for you, ${childName}.`
+                  : `${content.recentlyUnlockedSealedCount} sealed messages just unlocked for you, ${childName}.`}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                Your parent picked today {content.recentlyUnlockedSealedCount === 1 ? "to share something" : "to share these"} with you. Scroll down to read {content.recentlyUnlockedSealedCount === 1 ? "it" : "them"}.
+              </p>
+            </div>
+          </motion.div>
+        )}
 
         {/* ─── Adult-phase celebration ─────────────────────────────
             Renders ONLY when phase === "adult" (kid has actually turned

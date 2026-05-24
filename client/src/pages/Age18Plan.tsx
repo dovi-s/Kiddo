@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { NoteEditorSheet } from "@/components/NoteEditorSheet";
 import { ScheduledLetterEditor } from "@/components/ScheduledLetterEditor";
+import { ScheduledLettersList } from "@/components/ScheduledLettersList";
 import { useFunds } from "@/hooks/use-funds";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
@@ -876,6 +877,21 @@ export default function Age18Plan() {
             </div>
           </div>
         </div>
+
+        {/* Scheduled letters list (Phase 3 follow-on shipped 2026-05-23).
+            Surfaces the parent's pending sealed letters so they don't get
+            lost. Component is self-suppressing — returns null when no
+            scheduled letters exist, so Free parents and Plus parents who
+            haven't scheduled anything see nothing here. Per
+            project_sealed_letters_implementation_plan.md. */}
+        {activeFund?.id && (
+          <div className="mb-4">
+            <ScheduledLettersList
+              fundId={activeFund.id}
+              childName={activeFund?.recipientFirstName || "them"}
+            />
+          </div>
+        )}
 
         {/* THE MEMORY BOOK */}
         <div className="kiddo-card mb-4 overflow-hidden">
