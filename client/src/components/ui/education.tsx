@@ -141,7 +141,7 @@ export const educationContent = {
   },
   fees: {
     title: "How do fees work?",
-    content: "There are two parts: payment processing (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at 0.8% max $5) and the platform fee. Free uses a $2 platform fee on gifts up to $200 and 1% above $200 (minimum gift: $10 on Free). Kiddo+ and Kiddo Family remove the platform fee from contributions. Contributions of $10,000 or more include a separate 0.1% large-gift processing fee on every plan. All fees are shown before checkout.",
+    content: "There are two parts. First, payment processing on gifts (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at 0.8% max $5), paid by the gift-giver. Kiddo does not charge a platform fee on gifts: $50 from grandma is $50 to the fund. Second, Kiddo's annual fee on invested assets: $1/yr per $1,000 invested (about $10/yr on a $10,000 fund). Same rate on Free, Kiddo+, and Kiddo Family. Cash and pending gifts are not charged. All fees are shown before checkout.",
   },
   pendingCash: {
     title: "What does 'pending' mean?",
