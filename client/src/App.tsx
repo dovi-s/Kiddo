@@ -54,6 +54,7 @@ const UtmaByStateIndex = lazy(() => import("@/pages/UtmaByStateIndex"));
 const UtmaByState = lazy(() => import("@/pages/UtmaByState"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
 const FoundingMembers = lazy(() => import("@/pages/FoundingMembers"));
+const SponsorSuccess = lazy(() => import("@/pages/SponsorSuccess"));
 const Blog = lazy(() => import("@/pages/Blog"));
 const BlogPost = lazy(() => import("@/pages/BlogPost"));
 const Stories = lazy(() => import("@/pages/Stories"));
@@ -799,6 +800,7 @@ function Router() {
           <Route path="/tools/utma-by-state/:stateCode"><UtmaByState /></Route>
           <Route path="/pricing"><Pricing /></Route>
           <Route path="/founding-members"><FoundingMembers /></Route>
+          <Route path="/sponsor-success"><SponsorSuccess /></Route>
           <Route path="/blog"><Blog /></Route>
           <Route path="/blog/:slug"><BlogPost /></Route>
           <Route path="/stories"><Stories /></Route>

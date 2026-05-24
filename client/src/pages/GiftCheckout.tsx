@@ -18,6 +18,7 @@ import { getPronouns } from "@/lib/pronouns";
 import { KIDDO_GIFT_ADD_ONS, calculateKoraContributionFee, getGiftAddOn, type GiftAddOnId } from "@shared/monetization";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
 import { ReminderAndAskParentsCard } from "@/components/ReminderAndAskParentsCard";
+import { SponsorPlusCard } from "@/components/SponsorPlusCard";
 
 const AMOUNTS = [25, 50, 100, 250];
 const PAGE_MAX = "kiddo-canvas px-4 sm:px-5";
@@ -1745,11 +1746,23 @@ export default function GiftCheckout() {
                   /api/stripe/checkout/gift-recurring also enforces
                   the fund-tier check. */}
               {eventData?.fund?.recurringSupported === false ? (
-                <ReminderAndAskParentsCard
-                  fundId={eventData.fund.id}
-                  childName={eventData.fund.recipientFirstName || eventData.fund.name || "the kid"}
-                  defaultAmount={activeAmount}
-                />
+                <>
+                  <ReminderAndAskParentsCard
+                    fundId={eventData.fund.id}
+                    childName={eventData.fund.recipientFirstName || eventData.fund.name || "the kid"}
+                    defaultAmount={activeAmount}
+                  />
+                  {/* Sponsor-a-year-of-Plus (Prong B of pricing-v3 conversion,
+                      locked 2026-05-23). Third path on Free funds: gifter
+                      buys a year of Plus/Family for the parent's fund as a
+                      one-time gift. Removes the parent's payment-decision
+                      bottleneck that the recurring-request flow leaves
+                      open. Per project_gifter_sponsors_plus_subscription.md. */}
+                  <SponsorPlusCard
+                    fundId={eventData.fund.id}
+                    childName={eventData.fund.recipientFirstName || eventData.fund.name || "the kid"}
+                  />
+                </>
               ) : (
               <div className="kiddo-card p-5">
                 <label className="flex items-start gap-3 cursor-pointer">

@@ -675,6 +675,37 @@ export const subscriptionsRelations = relations(subscriptions, ({ one }) => ({
   user: one(users, { fields: [subscriptions.userId], references: [users.id] }),
 }));
 
+// Sponsored subscriptions — gifter-sponsored Plus/Family on a fund.
+// Per project_gifter_sponsors_plus_subscription.md (locked 2026-05-23)
+// and migration 0031. One-time annual Stripe payment from a gifter
+// activates 12 months of plan benefits on a fund. NOT a recurring
+// Stripe subscription — the gifter is never re-charged. At month 11
+// the parent gets a soft-conversion reminder to start direct billing.
+//
+// Coverage interaction: the helper hasActiveSponsorshipForFund(fundId)
+// in server/services/monetization.ts ORs an active+unexpired row
+// into the standard coverage detection so sponsored funds return
+// covered_starter / covered_family alongside direct subs and trials.
+// Parent UI shows the source ("Plus from Grandma"); the gating
+// mechanic is identical.
+export const sponsoredSubscriptions = pgTable("sponsored_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fundId: varchar("fund_id").notNull().references(() => funds.id),
+  sponsorEmail: text("sponsor_email").notNull(),
+  sponsorName: text("sponsor_name"),
+  tier: text("tier").notNull(), // 'starter' | 'family'
+  activatedAt: timestamp("activated_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  stripeSessionId: text("stripe_session_id").unique(),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  status: text("status").notNull().default("active"), // 'active' | 'expired' | 'refunded'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const sponsoredSubscriptionsRelations = relations(sponsoredSubscriptions, ({ one }) => ({
+  fund: one(funds, { fields: [sponsoredSubscriptions.fundId], references: [funds.id] }),
+}));
+
 export const fundMemberships = pgTable("fund_memberships", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),

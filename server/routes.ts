@@ -48,6 +48,7 @@ import {
   getTrialForFund,
   startTrialForFund,
   getFundCoverageState,
+  getActiveSponsorshipForFund,
   getRecommendationState,
   resolveAllowedFundStrategy,
   logMonetizationActivity,
@@ -9235,7 +9236,11 @@ export async function registerRoutes(
     // 0) Explicit env override (most reliable for local/dev)
       const envPriceId = (() => {
         const key = mode === "payment"
-        ? (names.some((n) => n.includes("deluxe"))
+        ? (names.some((n) => n.includes("plus annual gift") || n.includes("plus gift"))
+            ? process.env.STRIPE_PRICE_PLUS_GIFT
+            : names.some((n) => n.includes("family annual gift") || n.includes("family gift"))
+              ? process.env.STRIPE_PRICE_FAMILY_GIFT
+              : names.some((n) => n.includes("deluxe"))
             ? (process.env.STRIPE_PRICE_OCCASION_DELUXE || process.env.STRIPE_PRICE_OCCASION_TOP_UP || process.env.STRIPE_PRICE_EVENT_BOOST)
             : names.some((n) => n.includes("premium"))
               ? (process.env.STRIPE_PRICE_OCCASION_PREMIUM || process.env.STRIPE_PRICE_OCCASION_TOP_UP || process.env.STRIPE_PRICE_EVENT_BOOST)
@@ -9681,6 +9686,133 @@ export async function registerRoutes(
   };
 
   app.post('/api/stripe/checkout/event-pass', isAuthenticated, createOccasionCheckout);
+
+  // ── Sponsor-a-year-of-Plus (Prong B of pricing-v3 conversion) ─────
+  // Public endpoint (no auth — gifters don't have Kiddo accounts at
+  // this moment in the flow). A gifter purchases 12 months of Plus
+  // ($29) or Family ($59) for the parent's fund. One-time payment;
+  // never auto-renews. Stacking guard: refuses if fund already has
+  // direct or sponsored Plus active. Per
+  // project_gifter_sponsors_plus_subscription.md (locked 2026-05-23).
+  app.post('/api/stripe/checkout/sponsor-plus', async (req, res) => {
+    try {
+      const baseUrl = getAppBaseUrl(req);
+      const fundId = String(req.body?.fundId || '').trim();
+      const tierRaw = String(req.body?.tier || 'starter').toLowerCase();
+      const tier = (tierRaw === 'family') ? 'family' : 'starter';
+      const sponsorEmail = String(req.body?.sponsorEmail || '').trim().toLowerCase();
+      const sponsorName = String(req.body?.sponsorName || '').trim().slice(0, 120);
+
+      if (!fundId) {
+        return res.status(400).json({ error: 'fundId is required.' });
+      }
+      if (!sponsorEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sponsorEmail)) {
+        return res.status(400).json({ error: 'A valid email is required so we can send your confirmation.' });
+      }
+      if (!sponsorName) {
+        return res.status(400).json({ error: 'Tell us your name so the family knows who their thanks goes to.' });
+      }
+
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found.' });
+      if (String(fund.status || '').toLowerCase() === 'closed') {
+        return res.status(410).json({ error: 'This fund is no longer accepting gifts.' });
+      }
+
+      // Stacking + redundancy guards. Refuse if:
+      //   (a) An active sponsored sub already covers this fund — the
+      //       "Emma's fund is already covered through {date}" case
+      //   (b) The parent already has a direct Plus/Family/trial on the
+      //       fund — buying a year of Plus on top would be wasted
+      //       (the parent's direct billing supersedes; gift would
+      //       provide no incremental benefit to the parent until the
+      //       parent's sub lapses)
+      const existingCoverage = await getFundCoverageState(fund.userId, fund.id);
+      if (existingCoverage === 'covered_family' || existingCoverage === 'covered_starter' || existingCoverage === 'trial_active') {
+        // Pull the source so we can be specific in the friendly refusal.
+        const sponsored = await getActiveSponsorshipForFund(fund.id);
+        const childName = String(fund.recipientFirstName || fund.name || 'this kid').trim();
+        const message = sponsored
+          ? `${childName}'s fund is already covered through ${sponsored.expiresAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Want to give a one-time gift instead?`
+          : `${childName}'s fund already has an active subscription. Want to give a one-time gift instead?`;
+        return res.status(409).json({ error: 'fund_already_covered', message });
+      }
+
+      // Demo-fund sandbox: same pattern as one-time gifts + gifter
+      // recurring. Returns a synthetic success URL so the UI can
+      // confirm flow without Stripe involvement.
+      if (await isDemoFund(fundId)) {
+        return res.json({
+          url: `${baseUrl}/sponsor-success?demo=1&fundId=${encodeURIComponent(fundId)}&tier=${tier}`,
+          sessionId: `demo_sponsor_${Date.now()}`,
+          isDemo: true,
+          message: 'Demo mode. No card was charged.',
+        });
+      }
+
+      const productNames = tier === 'family'
+        ? ['Kiddo Family Annual Gift', 'Family Annual Gift', 'Kiddo Family Gift']
+        : ['Kiddo Plus Annual Gift', 'Kiddo+ Annual Gift', 'Plus Annual Gift', 'Kiddo Plus Gift'];
+      const priceId = await findCheckoutPriceId({
+        productNames,
+        mode: 'payment',
+      });
+      if (!priceId) {
+        return res.status(404).json({
+          error: 'Sponsor-Plus price not found in Stripe. Run `npx tsx scripts/seed-products.ts` with STRIPE_SECRET_KEY to create it.',
+        });
+      }
+
+      const successPath = `/sponsor-success?fundId=${encodeURIComponent(fundId)}&tier=${tier}`;
+      const cancelPath = `/${encodeURIComponent(fund.slug || fundId)}`;
+
+      const session = await stripeService.createCheckoutSession(
+        priceId,
+        'payment',
+        `${baseUrl}${successPath}`,
+        `${baseUrl}${cancelPath}`,
+        {
+          type: 'sponsor_plus',
+          fundId,
+          tier,
+          sponsorEmail,
+          sponsorName: sponsorName.slice(0, 490),
+        },
+        undefined,
+        undefined,
+      );
+
+      return res.json({ url: session.url });
+    } catch (error) {
+      console.error('Error creating sponsor-plus checkout session:', error);
+      return res.status(500).json({ error: getCheckoutErrorMessage(error), details: getCheckoutErrorDetails(error) });
+    }
+  });
+
+  // Status lookup for the GiftCheckout UI. Returns whether the fund
+  // already has sponsored coverage so the UI can show the right state
+  // (CTA when uncovered, "already covered through {date}" when sponsored).
+  app.get('/api/funds/:fundId/sponsor-plus/status', async (req, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found.' });
+      const sponsored = await getActiveSponsorshipForFund(fund.id);
+      const coverage = await getFundCoverageState(fund.userId, fund.id);
+      const directlyCovered =
+        (coverage === 'covered_starter' || coverage === 'covered_family' || coverage === 'trial_active') && !sponsored;
+      return res.json({
+        sponsored: sponsored ? {
+          tier: sponsored.tier,
+          sponsorName: sponsored.sponsorName,
+          expiresAt: sponsored.expiresAt.toISOString(),
+        } : null,
+        directlyCovered,
+      });
+    } catch (error) {
+      console.error('Error fetching sponsor-plus status:', error);
+      return res.status(500).json({ error: 'Failed to fetch sponsorship status.' });
+    }
+  });
   app.post('/api/stripe/checkout/premium-event-coverage', isAuthenticated, createOccasionCheckout);
 
   app.get('/api/stripe/publishable-key', async (req, res) => {

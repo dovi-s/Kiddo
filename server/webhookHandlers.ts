@@ -1075,6 +1075,13 @@ export class WebhookHandlers {
       // fires immediately after subscription creation); this handler just
       // creates the schedule record.
       await this.handleGifterRecurringSetup(session);
+    } else if (type === 'sponsor_plus') {
+      // Gifter sponsored a year of Plus or Family for a fund (Prong B
+      // of pricing-v3 conversion). One-time payment; insert the
+      // sponsored_subscriptions row, activate 12 months of coverage,
+      // send notification emails to parent + gifter. Per
+      // project_gifter_sponsors_plus_subscription.md.
+      await this.handleSponsorPlusPurchase(session);
     }
 
     const paymentIntentId = typeof session.payment_intent === 'string'
@@ -1811,6 +1818,173 @@ export class WebhookHandlers {
     } as any);
 
     console.log(`[Webhook] gifter_recurring row created: fund=${fundId} amount=$${amountUsd} ${frequency}`);
+  }
+
+  // Sponsor-Plus purchase handler — fires on checkout.session.completed
+  // when metadata.type === 'sponsor_plus'. Inserts the
+  // sponsored_subscriptions row, activates 12 months of plan coverage
+  // on the fund, sends notification emails to parent + gifter.
+  // Idempotency: the table has UNIQUE(stripe_session_id) so a webhook
+  // double-fire is a no-op at the SQL level. Per
+  // project_gifter_sponsors_plus_subscription.md.
+  static async handleSponsorPlusPurchase(session: any): Promise<void> {
+    const metadata = session.metadata || {};
+    const fundId = String(metadata.fundId || '');
+    const tierRaw = String(metadata.tier || 'starter').toLowerCase();
+    const tier = tierRaw === 'family' ? 'family' : 'starter';
+    const sponsorEmail = String(metadata.sponsorEmail || '').trim().toLowerCase();
+    const sponsorName = String(metadata.sponsorName || '').trim();
+    if (!fundId || !sponsorEmail) {
+      console.warn('[Webhook] sponsor_plus session missing fundId or sponsorEmail; skipping');
+      return;
+    }
+
+    const fund = await storage.getFund(fundId);
+    if (!fund) {
+      console.warn(`[Webhook] sponsor_plus session references missing fund ${fundId}; skipping`);
+      return;
+    }
+
+    const paymentIntentId = typeof session.payment_intent === 'string'
+      ? session.payment_intent
+      : session.payment_intent?.id || null;
+
+    // 12-month activation window. The expires_at math is "today + 365
+    // days" rather than "today + 1 calendar year" — slightly simpler,
+    // matches the parent's intuition of "a year of Plus" within a few
+    // days. Leap-year edge case handled by the +365 approach.
+    const activatedAt = new Date();
+    const expiresAt = new Date(activatedAt.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+    try {
+      const { db } = await import("./db");
+      const { sponsoredSubscriptions } = await import("@shared/schema");
+      await db.insert(sponsoredSubscriptions).values({
+        fundId,
+        sponsorEmail,
+        sponsorName: sponsorName || null,
+        tier,
+        activatedAt,
+        expiresAt,
+        stripeSessionId: session.id,
+        stripePaymentIntentId: paymentIntentId,
+        status: 'active',
+      } as any).onConflictDoNothing();
+    } catch (insertErr: any) {
+      // ON CONFLICT DO NOTHING handles the webhook double-fire case
+      // via the unique stripe_session_id. The unique partial index
+      // on (fund_id) WHERE status='active' may also reject — that's
+      // the race-condition guard for two simultaneous purchases.
+      // Both cases: log and continue (the original row is authoritative).
+      console.warn('[Webhook] sponsor_plus insert conflict (likely double-fire or race):', insertErr?.message || insertErr);
+    }
+
+    // Write activity row on the parent's dashboard. The parent sees
+    // this in their feed as "{Grandma} sponsored Plus on Emma's fund
+    // until {date}." Relationship signal, framed warmly.
+    const childName = String(fund.recipientFirstName || fund.name || 'your kid').trim();
+    const sponsorDisplay = sponsorName ? sponsorName.split(/\s+/)[0] : 'Someone';
+    const tierLabel = tier === 'family' ? 'Family' : 'Plus';
+    const expiresLabel = expiresAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    try {
+      await storage.createActivity({
+        userId: fund.userId,
+        fundId,
+        type: 'sponsor_plus_activated',
+        title: `${sponsorDisplay} sponsored ${tierLabel} for ${childName}'s fund`,
+        description: `${tierLabel} is active on ${childName}'s fund through ${expiresLabel}. Sponsored by ${sponsorName || sponsorEmail}.`,
+      });
+    } catch (activityErr: any) {
+      console.warn('[Webhook] sponsor_plus activity insert failed (non-fatal):', activityErr?.message || activityErr);
+    }
+
+    // Parent notification email. Warm relationship framing, NOT
+    // transactional. The parent's Plan tab will show "Plus from
+    // {sponsorName}" as the source attribution.
+    try {
+      const { db } = await import("./db");
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      const [parent] = await db
+        .select({ email: users.email, firstName: users.firstName })
+        .from(users)
+        .where(eq(users.id, fund.userId))
+        .limit(1);
+      if (parent?.email) {
+        const { renderKiddoEmail } = await import("./templates/baseTemplate");
+        const { sendEmail } = await import("./emailDelivery");
+        const baseUrl = (() => {
+          const configured =
+            process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL || process.env.APP_URL || process.env.BASE_URL;
+          return configured ? configured.replace(/\/+$/, '') : 'https://kiddofund.com';
+        })();
+        const dashboardUrl = `${baseUrl}/dashboard?fundId=${encodeURIComponent(fundId)}`;
+        const parentFirst = parent.firstName ? String(parent.firstName).trim() : '';
+        const subject = `${sponsorDisplay} sponsored Kiddo ${tierLabel} for ${childName}`;
+        const intro = [
+          parentFirst ? `Hi ${parentFirst},` : `Hi,`,
+          '',
+          `${sponsorName || sponsorEmail} just sponsored a year of Kiddo ${tierLabel} for ${childName}'s fund. It's active through ${expiresLabel}.`,
+          '',
+          `That unlocks recurring contributions on ${childName}'s fund (for you and for any gifter), custom fund mix, photo and voice memos in the Memory Book, and the rest of ${tierLabel} on this fund. We won't charge you for any of it — ${sponsorName ? sponsorName.split(/\s+/)[0] : 'the gifter'} covered the cost.`,
+          '',
+          `If you want to keep ${tierLabel} going past ${expiresLabel}, we'll send a gentle reminder ahead of the renewal so you can take over with direct billing. No surprises.`,
+        ].join('\n');
+        const { html } = renderKiddoEmail({
+          heading: subject,
+          intro,
+          cta: { text: `Open ${childName}'s fund`, url: dashboardUrl },
+        });
+        await sendEmail({
+          to: parent.email,
+          subject,
+          text: intro,
+          html,
+          tags: ['sponsor_plus_activated'],
+          metadata: { fundId, sponsorEmail, tier },
+        }).catch((emailErr: any) => {
+          console.warn('[Webhook] sponsor_plus parent email failed (non-fatal):', emailErr?.message || emailErr);
+        });
+      }
+    } catch (parentLookupErr: any) {
+      console.warn('[Webhook] sponsor_plus parent lookup failed (non-fatal):', parentLookupErr?.message || parentLookupErr);
+    }
+
+    // Gifter confirmation email. Simple receipt + emotional reinforcement
+    // ("you just gave Emma a year of Plus"). No upsell, no follow-on
+    // marketing — the gifter paid for a gift and is done.
+    try {
+      const { renderKiddoEmail } = await import("./templates/baseTemplate");
+      const { sendEmail } = await import("./emailDelivery");
+      const subject = `Your gift of Kiddo ${tierLabel} for ${childName} is active`;
+      const intro = [
+        sponsorName ? `Hi ${sponsorName.split(/\s+/)[0]},` : `Hi,`,
+        '',
+        `Thank you for sponsoring a year of Kiddo ${tierLabel} for ${childName}'s fund. It's active right now and runs through ${expiresLabel}.`,
+        '',
+        `${childName}'s parents just got an email letting them know it was you. They'll be able to set up recurring contributions, add photos and voice memos to the Memory Book, and use the rest of ${tierLabel} for the whole year on you.`,
+        '',
+        `Keep this email for your records. There's nothing more for you to do — your card won't be charged again. If ${childName}'s parents want to keep Plus going next year, that's on their own subscription.`,
+      ].join('\n');
+      const { html } = renderKiddoEmail({
+        heading: subject,
+        intro,
+      });
+      await sendEmail({
+        to: sponsorEmail,
+        subject,
+        text: intro,
+        html,
+        tags: ['sponsor_plus_confirmation'],
+        metadata: { fundId, tier, sessionId: session.id },
+      }).catch((emailErr: any) => {
+        console.warn('[Webhook] sponsor_plus gifter email failed (non-fatal):', emailErr?.message || emailErr);
+      });
+    } catch (gifterEmailErr: any) {
+      console.warn('[Webhook] sponsor_plus gifter email setup failed (non-fatal):', gifterEmailErr?.message || gifterEmailErr);
+    }
+
+    console.log(`[Webhook] sponsor_plus activated: fund=${fundId} tier=${tier} sponsor=${sponsorEmail} expires=${expiresAt.toISOString()}`);
   }
 
   // Per-cycle gifter recurring charge handler. Fires on invoice.paid

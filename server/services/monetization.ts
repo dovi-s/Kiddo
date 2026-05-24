@@ -86,6 +86,54 @@ export async function hasStarterPlanForFund(
   return hasEntitlementFromStatus(membership.status, membership.currentPeriodEnd);
 }
 
+// Sponsored-subscription detection (Prong B of pricing-v3 conversion
+// architecture, locked 2026-05-23 in
+// project_gifter_sponsors_plus_subscription.md). A gifter purchased
+// a year of Plus or Family for the fund; this returns the active
+// sponsorship tier if one exists, or null. Unlike hasStarterPlanForFund
+// this is FUND-scoped (not user-scoped) because sponsored subs belong
+// to the fund, not to the parent's user record — the parent didn't
+// pay, the gifter did.
+//
+// Used by getFundCoverageState to OR sponsored coverage into the
+// standard coverage detection. A sponsored fund returns
+// covered_starter (or covered_family) so the existing gating logic
+// at /api/funds/:fundId/parent-contributions + /api/stripe/checkout/
+// gift-recurring etc. all "just work" — no changes needed to those
+// endpoints to honor sponsored coverage.
+export async function getActiveSponsorshipForFund(
+  fundId: string | null | undefined,
+): Promise<{ tier: "starter" | "family"; sponsorEmail: string; sponsorName: string | null; expiresAt: Date } | null> {
+  if (!fundId) return null;
+  const { db } = await import("../db");
+  const { sponsoredSubscriptions } = await import("@shared/schema");
+  const { and, eq, gt, sql } = await import("drizzle-orm");
+  const [row] = await db
+    .select({
+      tier: sponsoredSubscriptions.tier,
+      sponsorEmail: sponsoredSubscriptions.sponsorEmail,
+      sponsorName: sponsoredSubscriptions.sponsorName,
+      expiresAt: sponsoredSubscriptions.expiresAt,
+    })
+    .from(sponsoredSubscriptions)
+    .where(and(
+      eq(sponsoredSubscriptions.fundId, fundId),
+      eq(sponsoredSubscriptions.status, "active"),
+      gt(sponsoredSubscriptions.expiresAt, sql`NOW()`),
+    ))
+    .limit(1);
+  if (!row) return null;
+  // Defensive: only return rows with a valid tier value. Anything
+  // else is data corruption and shouldn't unlock coverage.
+  if (row.tier !== "starter" && row.tier !== "family") return null;
+  return {
+    tier: row.tier,
+    sponsorEmail: row.sponsorEmail,
+    sponsorName: row.sponsorName,
+    expiresAt: row.expiresAt,
+  };
+}
+
 export async function getActiveStarterMembershipsForUser(
   userId: string | null | undefined,
 ) {
@@ -211,13 +259,22 @@ export async function getFundCoverageState(
   fundId: string | null | undefined,
 ): Promise<FundCoverageState> {
   if (!fundId) return "uncovered";
-  const [householdPlan, starter, trial] = await Promise.all([
+  const [householdPlan, starter, trial, sponsorship] = await Promise.all([
     getActiveHouseholdPlan(userId),
     hasStarterPlanForFund(userId, fundId),
     getTrialForFund(fundId),
+    getActiveSponsorshipForFund(fundId),
   ]);
   if (householdPlan) return "covered_family";
   if (starter) return "covered_starter";
+  // Sponsored coverage: a gifter purchased Plus or Family for this
+  // fund (Prong B of pricing-v3 conversion). Sponsored Family returns
+  // covered_family; sponsored Plus returns covered_starter. The
+  // resulting coverage gates identically to direct customer subs.
+  // Per project_gifter_sponsors_plus_subscription.md.
+  if (sponsorship) {
+    return sponsorship.tier === "family" ? "covered_family" : "covered_starter";
+  }
   if (trial) {
     const expiresAt = new Date(trial.expiresAt);
     if (!Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() > Date.now()) return "trial_active";

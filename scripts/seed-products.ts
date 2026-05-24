@@ -179,6 +179,68 @@ async function createProducts() {
     console.log('Deactivated old Kiddo Family price:', oldPrice.id, `($${(oldPrice.unit_amount || 0) / 100}/${oldPrice.recurring?.interval})`);
   }
 
+  // ── Sponsor-Plus gift products (Prong B of pricing-v3 conversion) ───
+  // Per project_gifter_sponsors_plus_subscription.md (locked 2026-05-23).
+  // One-time payment products (mode='payment', no recurring) priced
+  // to match the canonical annual plans: Plus $29, Family $59.
+  // Activate 12 months of plan coverage on the fund when purchased
+  // by a gifter via POST /api/stripe/checkout/sponsor-plus.
+
+  async function ensureGiftProduct(name: string, description: string, priceCents: number, displayName: string): Promise<string> {
+    const search = await stripe.products.search({ query: `name:'${name}'` });
+    let productId: string;
+    if (search.data.length > 0) {
+      productId = search.data[0].id;
+      console.log(`${name} already exists:`, productId);
+      await stripe.products.update(productId, {
+        name,
+        description,
+        metadata: { type: 'one_time', benefit: 'sponsored_plus' },
+      });
+    } else {
+      const product = await stripe.products.create({
+        name,
+        description,
+        metadata: { type: 'one_time', benefit: 'sponsored_plus' },
+      });
+      productId = product.id;
+      console.log(`Created ${name} product:`, productId);
+    }
+    const prices = await stripe.prices.list({ product: productId, active: true });
+    const existing = prices.data.find(p => p.unit_amount === priceCents && !p.recurring);
+    if (existing) {
+      console.log(`${name} price already exists:`, existing.id);
+      return existing.id;
+    }
+    const price = await stripe.prices.create({
+      product: productId,
+      unit_amount: priceCents,
+      currency: 'usd',
+      metadata: { display_name: displayName },
+    });
+    console.log(`Created ${name} price:`, price.id);
+    // Deactivate older prices at different amounts for the same product.
+    const oldGiftPrices = prices.data.filter(p => p.unit_amount !== priceCents || p.recurring);
+    for (const oldPrice of oldGiftPrices) {
+      await stripe.prices.update(oldPrice.id, { active: false });
+      console.log(`Deactivated old ${name} price:`, oldPrice.id);
+    }
+    return price.id;
+  }
+
+  const plusGiftPriceId = await ensureGiftProduct(
+    'Kiddo Plus Annual Gift',
+    'A year of Kiddo+ for a child\'s fund, sponsored by a gifter. One-time payment; never auto-renews. Activates recurring contributions, custom fund mix, parent-authored Memory Book media, and co-parent access on the recipient fund for 12 months.',
+    2900, // $29
+    'Kiddo Plus Annual Gift',
+  );
+  const familyGiftPriceId = await ensureGiftProduct(
+    'Kiddo Family Annual Gift',
+    'A year of Kiddo Family for a child\'s fund, sponsored by a gifter. One-time payment; never auto-renews. Activates Family-tier benefits on the recipient fund for 12 months.',
+    5900, // $59
+    'Kiddo Family Annual Gift',
+  );
+
   // ── Event Boost (one-time per event) ────────────────────────────────────
   let eventBoostId: string;
   if (existingBoostSearch.data.length > 0) {
@@ -230,6 +292,8 @@ async function createProducts() {
   console.log('Kiddo+ Yearly Price ID:', starterYearlyPriceId);
   console.log('Kiddo Family Monthly Price ID:', familyMonthlyPriceId);
   console.log('Kiddo Family Yearly Price ID:', familyYearlyPriceId);
+  console.log('Kiddo Plus Annual Gift Price ID:', plusGiftPriceId);
+  console.log('Kiddo Family Annual Gift Price ID:', familyGiftPriceId);
   console.log('Event Boost Price ID:', eventBoostPriceId);
 }
 
