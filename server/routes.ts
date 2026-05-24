@@ -9255,7 +9255,9 @@ export async function registerRoutes(
     // 0) Explicit env override (most reliable for local/dev)
       const envPriceId = (() => {
         const key = mode === "payment"
-        ? (names.some((n) => n.includes("plus annual gift") || n.includes("plus gift"))
+        ? (names.some((n) => n.includes("founder slot gift") || n.includes("founder gift"))
+            ? process.env.STRIPE_PRICE_FOUNDER_GIFT
+            : names.some((n) => n.includes("plus annual gift") || n.includes("plus gift"))
             ? process.env.STRIPE_PRICE_PLUS_GIFT
             : names.some((n) => n.includes("family annual gift") || n.includes("family gift"))
               ? process.env.STRIPE_PRICE_FAMILY_GIFT
@@ -9804,6 +9806,128 @@ export async function registerRoutes(
       return res.json({ url: session.url });
     } catch (error) {
       console.error('Error creating sponsor-plus checkout session:', error);
+      return res.status(500).json({ error: getCheckoutErrorMessage(error), details: getCheckoutErrorDetails(error) });
+    }
+  });
+
+  // ── Sponsor-a-Founder-slot ────────────────────────────────────────
+  // Gifter pays $19 to add someone they love to the Kiddo founding-
+  // members waitlist. Recipient gets the Founding Member badge +
+  // lifetime $19/yr Plus price-lock + early access to all future
+  // Kiddo products + $25 starter credit at launch. Counts against
+  // the 1,000 cap (preserves scarcity — gifting a slot doesn't bypass
+  // the cap mechanism). MVP doesn't auto-activate Plus year-1 because
+  // Plus isn't live yet (pre-launch); when launch ships, the
+  // founding-members.jsonl IS the activation list — same path for
+  // direct and gifted founders.
+  //
+  // Per project_gifter_sponsors_plus_subscription.md (founder gifting
+  // closes the engineering arc, 2026-05-23) +
+  // project_pricing_v3_pricing_levels.md (Founder spec).
+  app.post('/api/stripe/checkout/sponsor-founder', async (req, res) => {
+    try {
+      const baseUrl = getAppBaseUrl(req);
+      const sponsorEmail = String(req.body?.sponsorEmail || '').trim().toLowerCase();
+      const sponsorName = String(req.body?.sponsorName || '').trim().slice(0, 120);
+      const recipientEmail = String(req.body?.recipientEmail || '').trim().toLowerCase();
+      const recipientName = String(req.body?.recipientName || '').trim().slice(0, 120);
+      const message = String(req.body?.message || '').trim().slice(0, 500);
+
+      if (!sponsorEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sponsorEmail)) {
+        return res.status(400).json({ error: 'A valid sponsor email is required.' });
+      }
+      if (!sponsorName) {
+        return res.status(400).json({ error: 'Tell us your name so the recipient knows who gifted them.' });
+      }
+      if (!recipientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+        return res.status(400).json({ error: 'A valid recipient email is required.' });
+      }
+      if (!recipientName) {
+        return res.status(400).json({ error: 'The recipient\'s first name is required so we can address them properly.' });
+      }
+      if (sponsorEmail === recipientEmail) {
+        return res.status(400).json({ error: 'You can\'t gift a Founder slot to yourself. Sign up directly at /founding-members instead.' });
+      }
+
+      // Cap check against the live founding-members.jsonl. Shared
+      // counter with direct signups — gifted Founders count against
+      // the same 1,000 cap to preserve scarcity. Decision (a) locked
+      // in the architecture: scarcity is the value mechanism;
+      // exempting gifted founders would dilute it.
+      const currentCount = await countFoundingMembers();
+      if (currentCount >= FOUNDING_MEMBERS_CAP) {
+        return res.status(410).json({
+          error: 'founder_cap_reached',
+          message: 'All founding member slots are taken. The regular Plus plan is still $3.99/mo when we launch.',
+          cap: FOUNDING_MEMBERS_CAP,
+        });
+      }
+
+      // Soft duplicate guard: refuse if recipient is ALREADY a
+      // founding member (direct signup OR previous gift). Prevents
+      // a gifter from "double-buying" or two gifters from buying
+      // for the same recipient. Counted against cap once, only
+      // billed once. Check is best-effort — race conditions between
+      // count + insert are accepted (worst case: one extra row past
+      // cap, which is well within tolerance).
+      try {
+        const text = await fs.readFile(FOUNDING_MEMBERS_WAITLIST_PATH, "utf8");
+        const lines = text.split("\n").filter((l) => l.trim());
+        const recipientAlreadyFounder = lines.some((line) => {
+          try {
+            const entry = JSON.parse(line);
+            return String(entry?.email || '').toLowerCase() === recipientEmail
+              || String(entry?.recipientEmail || '').toLowerCase() === recipientEmail;
+          } catch {
+            return false;
+          }
+        });
+        if (recipientAlreadyFounder) {
+          return res.status(409).json({
+            error: 'recipient_already_founder',
+            message: `${recipientName} is already a Kiddo Founding Member. Want to give them a year of Plus instead via a fund's gift page?`,
+          });
+        }
+      } catch (lookupErr: any) {
+        if (lookupErr?.code !== 'ENOENT') {
+          console.warn('Founder dup-check failed (non-fatal, allowing through):', lookupErr?.message || lookupErr);
+        }
+      }
+
+      const productNames = ['Kiddo Founder Slot Gift', 'Founder Slot Gift', 'Founder Gift'];
+      const priceId = await findCheckoutPriceId({
+        productNames,
+        mode: 'payment',
+      });
+      if (!priceId) {
+        return res.status(404).json({
+          error: 'Founder gift price not found in Stripe. Run `npx tsx scripts/seed-products.ts` with STRIPE_SECRET_KEY to create it.',
+        });
+      }
+
+      const successPath = `/founding-members?gift=success&recipient=${encodeURIComponent(recipientName)}`;
+      const cancelPath = `/founding-members?gift=canceled`;
+
+      const session = await stripeService.createCheckoutSession(
+        priceId,
+        'payment',
+        `${baseUrl}${successPath}`,
+        `${baseUrl}${cancelPath}`,
+        {
+          type: 'sponsor_founder',
+          sponsorEmail,
+          sponsorName: sponsorName.slice(0, 490),
+          recipientEmail,
+          recipientName: recipientName.slice(0, 490),
+          message: message.slice(0, 490),
+        },
+        undefined,
+        undefined,
+      );
+
+      return res.json({ url: session.url });
+    } catch (error) {
+      console.error('Error creating sponsor-founder checkout session:', error);
       return res.status(500).json({ error: getCheckoutErrorMessage(error), details: getCheckoutErrorDetails(error) });
     }
   });

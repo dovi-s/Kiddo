@@ -241,6 +241,21 @@ async function createProducts() {
     'Kiddo Family Annual Gift',
   );
 
+  // Founder Slot Gift — gifter pays $19 to add someone they love to
+  // the Kiddo founding-members waitlist. Recipient gets Founding
+  // Member badge + lifetime $19/yr Plus price lock + early access
+  // to future Kiddo products + $25 starter credit at launch. Counts
+  // against the 1,000 cap (preserves scarcity). Per
+  // project_gifter_sponsors_plus_subscription.md (founder gifting
+  // shipped 2026-05-23 as final closure item) +
+  // project_pricing_v3_pricing_levels.md (Founder $19/yr lifetime).
+  const founderGiftPriceId = await ensureGiftProduct(
+    'Kiddo Founder Slot Gift',
+    'A Kiddo Founding Member slot, gifted to someone you love. They get the Founding Member badge, lifetime $19/yr Plus price lock, early access to all future Kiddo products, and a $25 starter gift credit when launch ships. Capped at 1,000 founder slots total; first 1,000 win.',
+    1900, // $19
+    'Kiddo Founder Slot Gift',
+  );
+
   // ── Event Boost (one-time per event) ────────────────────────────────────
   let eventBoostId: string;
   if (existingBoostSearch.data.length > 0) {
@@ -294,6 +309,7 @@ async function createProducts() {
   console.log('Kiddo Family Yearly Price ID:', familyYearlyPriceId);
   console.log('Kiddo Plus Annual Gift Price ID:', plusGiftPriceId);
   console.log('Kiddo Family Annual Gift Price ID:', familyGiftPriceId);
+  console.log('Kiddo Founder Slot Gift Price ID:', founderGiftPriceId);
   console.log('Event Boost Price ID:', eventBoostPriceId);
 }
 

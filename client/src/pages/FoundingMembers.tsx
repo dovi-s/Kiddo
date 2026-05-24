@@ -17,9 +17,9 @@
 // the regular Plus $3.99/mo for new signups.
 
 import { useEffect, useState, useCallback } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Sparkles, Lock, Users, Gift } from "lucide-react";
+import { ArrowRight, Check, Sparkles, Lock, Users, Gift, Heart } from "lucide-react";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,29 @@ export default function FoundingMembers() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<SubmissionResult | null>(null);
   const [countState, setCountState] = useState<CountState | null>(null);
+
+  // Gift-a-slot state (Founder gifting closes the engineering arc,
+  // 2026-05-23). Lives in a secondary card below the main form;
+  // submits to /api/stripe/checkout/sponsor-founder which redirects
+  // to Stripe Checkout. Recipient gets added to the same
+  // founding-members.jsonl as direct signups (cap-shared).
+  const search = useSearch();
+  const giftedSuccess = (() => {
+    try {
+      const params = new URLSearchParams(search || "");
+      return params.get("gift") === "success" ? params.get("recipient") || "" : null;
+    } catch {
+      return null;
+    }
+  })();
+  const [giftOpen, setGiftOpen] = useState(false);
+  const [giftSponsorName, setGiftSponsorName] = useState("");
+  const [giftSponsorEmail, setGiftSponsorEmail] = useState("");
+  const [giftRecipientName, setGiftRecipientName] = useState("");
+  const [giftRecipientEmail, setGiftRecipientEmail] = useState("");
+  const [giftMessage, setGiftMessage] = useState("");
+  const [giftSubmitting, setGiftSubmitting] = useState(false);
+  const [giftError, setGiftError] = useState<string | null>(null);
 
   // Fetch the current count on mount so the cap counter renders with
   // a real number. The fetch failure is non-blocking — without the
@@ -114,6 +137,49 @@ export default function FoundingMembers() {
 
   const capFilled = countState ? countState.spotsRemaining <= 0 : false;
   const showCount = countState !== null && !capFilled;
+
+  const handleGiftSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (giftSubmitting) return;
+    setGiftSubmitting(true);
+    setGiftError(null);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/stripe/checkout/sponsor-founder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          sponsorName: giftSponsorName.trim(),
+          sponsorEmail: giftSponsorEmail.trim(),
+          recipientName: giftRecipientName.trim(),
+          recipientEmail: giftRecipientEmail.trim(),
+          message: giftMessage.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const friendly = typeof data?.message === "string" ? data.message
+          : typeof data?.error === "string" ? data.error
+          : "Couldn't start the checkout. Try again.";
+        setGiftError(friendly);
+        haptic("error");
+        void refreshCount();
+        setGiftSubmitting(false);
+        return;
+      }
+      if (data?.url) {
+        window.location.assign(String(data.url));
+        return;
+      }
+      setGiftError("Checkout link missing. Try again.");
+      setGiftSubmitting(false);
+    } catch {
+      setGiftError("Network hiccup. Try again in a moment.");
+      haptic("error");
+      setGiftSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -333,6 +399,156 @@ export default function FoundingMembers() {
                   We'll only email you about launch, founder-exclusive previews, and the quarterly survey. No marketing list, no third parties. Unsubscribe at any time.
                 </p>
               </form>
+            )}
+
+            {/* Gift-a-slot secondary card (founder gifting shipped
+                2026-05-23 as the closing engineering item). Lives below
+                the primary capture form so the page's main job (sign
+                yourself up) stays load-bearing; gifting is the
+                "or do this too" path. Per
+                project_gifter_sponsors_plus_subscription.md and
+                project_pricing_v3_pricing_levels.md. */}
+            {!capFilled && (
+              <div className="mt-6">
+                {giftedSuccess ? (
+                  <div
+                    className="rounded-3xl border border-[hsl(var(--kiddo-gold))]/30 bg-[hsl(var(--kiddo-gold))]/10 p-6 text-center"
+                    data-testid="founding-gift-success"
+                  >
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--kiddo-gold))] text-white">
+                      <Heart size={20} strokeWidth={2.5} />
+                    </div>
+                    <h3 className="mt-4 font-heading text-xl font-semibold text-foreground">
+                      You just made {giftedSuccess} a Founder.
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      We just emailed {giftedSuccess} the good news. They'll claim their slot when Kiddo launches.
+                    </p>
+                  </div>
+                ) : !giftOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => { haptic("selection"); setGiftOpen(true); }}
+                    className="w-full rounded-2xl border border-border bg-card hover:border-[hsl(var(--kiddo-gold))]/40 px-5 py-4 text-left transition-colors"
+                    data-testid="button-open-gift-founder"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold))]/15 text-[hsl(var(--kiddo-gold-ink))]">
+                        <Heart size={16} strokeWidth={1.8} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-foreground">Or gift a Founder slot to someone you love</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          $19 buys them the Founding Member badge, lifetime $19/yr Plus, and $25 starter credit at launch. Counts against the same 1,000 cap.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                ) : (
+                  <form
+                    onSubmit={handleGiftSubmit}
+                    className="rounded-3xl border border-[hsl(var(--kiddo-gold))]/30 bg-[hsl(var(--kiddo-gold))]/8 p-6 shadow-premium-sm space-y-4"
+                    data-testid="founding-gift-form"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Heart size={16} className="text-[hsl(var(--kiddo-gold-ink))]" />
+                      <p className="text-sm font-semibold text-foreground">Gift a Founder slot</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      $19 one-time. They get the Founding Member badge + lifetime $19/yr Plus + early access to every future Kiddo product + $25 starter credit at launch. We email them that it was you.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label htmlFor="gift-sponsor-name" className="text-xs font-medium text-foreground">Your name</label>
+                        <input
+                          id="gift-sponsor-name"
+                          type="text"
+                          autoComplete="name"
+                          required
+                          value={giftSponsorName}
+                          onChange={(e) => setGiftSponsorName(e.target.value)}
+                          className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary"
+                          placeholder="Your name"
+                          data-testid="input-gift-sponsor-name"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label htmlFor="gift-sponsor-email" className="text-xs font-medium text-foreground">Your email</label>
+                        <input
+                          id="gift-sponsor-email"
+                          type="email"
+                          autoComplete="email"
+                          required
+                          value={giftSponsorEmail}
+                          onChange={(e) => setGiftSponsorEmail(e.target.value)}
+                          className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary"
+                          placeholder="your@email.com"
+                          data-testid="input-gift-sponsor-email"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label htmlFor="gift-recipient-name" className="text-xs font-medium text-foreground">Their first name</label>
+                        <input
+                          id="gift-recipient-name"
+                          type="text"
+                          required
+                          value={giftRecipientName}
+                          onChange={(e) => setGiftRecipientName(e.target.value)}
+                          className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary"
+                          placeholder="Their first name"
+                          data-testid="input-gift-recipient-name"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label htmlFor="gift-recipient-email" className="text-xs font-medium text-foreground">Their email</label>
+                        <input
+                          id="gift-recipient-email"
+                          type="email"
+                          required
+                          value={giftRecipientEmail}
+                          onChange={(e) => setGiftRecipientEmail(e.target.value)}
+                          className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none focus:border-primary"
+                          placeholder="their@email.com"
+                          data-testid="input-gift-recipient-email"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label htmlFor="gift-message" className="text-xs font-medium text-foreground">
+                        A message for them? (optional)
+                      </label>
+                      <textarea
+                        id="gift-message"
+                        rows={3}
+                        value={giftMessage}
+                        onChange={(e) => setGiftMessage(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-primary resize-none"
+                        placeholder="A note we'll include in the email"
+                        data-testid="input-gift-message"
+                      />
+                    </div>
+                    {giftError && (
+                      <p className="text-xs text-destructive" data-testid="gift-error">{giftError}</p>
+                    )}
+                    <Button
+                      type="submit"
+                      className="h-12 w-full rounded-xl text-base btn-premium"
+                      disabled={giftSubmitting || !giftSponsorEmail.trim() || !giftSponsorName.trim() || !giftRecipientEmail.trim() || !giftRecipientName.trim()}
+                      data-testid="button-submit-gift-founder"
+                      onClick={() => haptic("medium")}
+                    >
+                      {giftSubmitting ? "Opening checkout..." : `Give ${giftRecipientName.trim() || "them"} a Founder slot for $19`}
+                      {!giftSubmitting && <ArrowRight className="ml-2 h-4 w-4" />}
+                    </Button>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      <Lock className="inline-block w-3 h-3 mr-0.5 -mt-0.5" />
+                      One-time payment via Stripe. We never charge your card again. Counts against the 1,000-cap shared with direct signups.
+                    </p>
+                  </form>
+                )}
+              </div>
             )}
           </div>
         </div>

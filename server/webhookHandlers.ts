@@ -1082,6 +1082,15 @@ export class WebhookHandlers {
       // send notification emails to parent + gifter. Per
       // project_gifter_sponsors_plus_subscription.md.
       await this.handleSponsorPlusPurchase(session);
+    } else if (type === 'sponsor_founder') {
+      // Gifter purchased a Founder slot for someone they love.
+      // Appends recipient to founding-members.jsonl (cap-counted with
+      // direct signups), sends recipient + gifter emails. The
+      // founding-members.jsonl IS the activation list at launch —
+      // gifted founders convert to real Plus accounts the same way
+      // direct signups do. Per project_gifter_sponsors_plus_subscription.md
+      // (founder gifting closes the engineering arc, 2026-05-23).
+      await this.handleSponsorFounderPurchase(session);
     }
 
     const paymentIntentId = typeof session.payment_intent === 'string'
@@ -2033,6 +2042,171 @@ export class WebhookHandlers {
     }
 
     console.log(`[Webhook] sponsor_plus activated: fund=${fundId} tier=${tier} sponsor=${sponsorEmail} expires=${expiresAt.toISOString()}`);
+  }
+
+  // Sponsor-Founder purchase handler — fires on checkout.session.completed
+  // when metadata.type === 'sponsor_founder'. Appends recipient to
+  // .local/founding-members.jsonl with sponsor metadata. Cap is
+  // re-checked at write time (race-safe within tolerance — worst
+  // case one extra row past 1,000 cap, accepted). Sends warm
+  // notification emails to recipient + gifter.
+  //
+  // Per project_gifter_sponsors_plus_subscription.md (founder
+  // gifting closes the engineering arc, 2026-05-23).
+  static async handleSponsorFounderPurchase(session: any): Promise<void> {
+    const metadata = session.metadata || {};
+    const sponsorEmail = String(metadata.sponsorEmail || '').trim().toLowerCase();
+    const sponsorName = String(metadata.sponsorName || '').trim();
+    const recipientEmail = String(metadata.recipientEmail || '').trim().toLowerCase();
+    const recipientName = String(metadata.recipientName || '').trim();
+    const message = String(metadata.message || '').trim();
+
+    if (!sponsorEmail || !recipientEmail) {
+      console.warn('[Webhook] sponsor_founder session missing sponsor or recipient email; skipping');
+      return;
+    }
+
+    const paymentIntentId = typeof session.payment_intent === 'string'
+      ? session.payment_intent
+      : session.payment_intent?.id || null;
+
+    // Append to founding-members.jsonl with the gift markers. Idempotency
+    // via Stripe session ID — webhook double-fire would re-add the
+    // same entry, so we check existing entries by stripe_session_id.
+    const path = await import("path");
+    const fs = await import("fs/promises");
+    const FOUNDING_PATH = path.join(process.cwd(), ".local", "founding-members.jsonl");
+
+    let alreadyWritten = false;
+    let currentCount = 0;
+    try {
+      const text = await fs.readFile(FOUNDING_PATH, "utf8");
+      const lines = text.split("\n").filter((l) => l.trim());
+      currentCount = lines.length;
+      alreadyWritten = lines.some((line) => {
+        try {
+          const e = JSON.parse(line);
+          return e?.stripeSessionId === session.id;
+        } catch {
+          return false;
+        }
+      });
+    } catch (err: any) {
+      if (err?.code !== "ENOENT") throw err;
+    }
+    if (alreadyWritten) {
+      console.log(`[Webhook] sponsor_founder webhook double-fire skipped: session=${session.id}`);
+      return;
+    }
+
+    const entry = {
+      // Use recipientEmail as the canonical email so launch-time
+      // activation finds the recipient by their own email (not the
+      // sponsor's). Direct-signup entries use `email`; this stays
+      // backward-compatible by also setting `email` to recipientEmail.
+      email: recipientEmail,
+      firstName: recipientName,
+      sponsorEmail,
+      sponsorName: sponsorName || null,
+      recipientEmail,
+      recipientName,
+      message: message || null,
+      sourceSurface: "founding-members-gifted",
+      position: currentCount + 1,
+      tag: "founding-members-gifted",
+      stripeSessionId: session.id,
+      stripePaymentIntentId: paymentIntentId,
+      createdAt: new Date().toISOString(),
+    };
+
+    await fs.mkdir(path.dirname(FOUNDING_PATH), { recursive: true });
+    await fs.appendFile(FOUNDING_PATH, `${JSON.stringify(entry)}\n`, "utf8");
+    console.log(`[Webhook] sponsor_founder activated: position=${entry.position} sponsor=${sponsorEmail} recipient=${recipientEmail}`);
+
+    // Recipient notification email — the warm beat. "X just gifted
+    // you a Founding Member slot." Includes the message if the
+    // sponsor wrote one. Names the recipient's benefits explicitly
+    // so they know what they're getting.
+    try {
+      const { renderKiddoEmail } = await import("./templates/baseTemplate");
+      const { sendEmail } = await import("./emailDelivery");
+      const baseUrl = (() => {
+        const configured =
+          process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL || process.env.APP_URL || process.env.BASE_URL;
+        return configured ? configured.replace(/\/+$/, '') : 'https://kiddofund.com';
+      })();
+      const sponsorDisplay = sponsorName ? sponsorName.split(/\s+/)[0] : sponsorEmail;
+      const subject = `${sponsorDisplay} just made you a Kiddo Founding Member`;
+      const recipientFirst = recipientName ? recipientName.split(/\s+/)[0] : '';
+      const introLines = [
+        recipientFirst ? `Hi ${recipientFirst},` : `Hi,`,
+        '',
+        `${sponsorName || sponsorEmail} just bought you a Kiddo Founding Member slot. You're founding member #${entry.position} of 1,000.`,
+      ];
+      if (message) {
+        introLines.push('', `${sponsorDisplay} wrote: "${message}"`);
+      }
+      introLines.push(
+        '',
+        `What you get:`,
+        ` · $19/year Plus, forever (vs the regular $29/yr — locked at the founder price for life)`,
+        ` · Founding Member badge on your profile when launch ships`,
+        ` · Early access to every future Kiddo product (Roth IRA, banking, printing, peer-to-peer)`,
+        ` · $25 starter gift credit when you create your first kid's fund`,
+        '',
+        `Nothing for you to do right now — Kiddo isn't live yet, but you're on the list. When we launch we'll email you with the link to claim your slot.`,
+      );
+      const { html } = renderKiddoEmail({
+        heading: subject,
+        intro: introLines.join('\n'),
+        cta: { text: `Learn about Kiddo`, url: `${baseUrl}/founding-members` },
+      });
+      await sendEmail({
+        to: recipientEmail,
+        subject,
+        text: introLines.join('\n'),
+        html,
+        tags: ['sponsor_founder_gifted'],
+        metadata: { sponsorEmail, recipientEmail, position: String(entry.position) },
+      }).catch((emailErr: any) => {
+        console.warn('[Webhook] sponsor_founder recipient email failed (non-fatal):', emailErr?.message || emailErr);
+      });
+    } catch (recipientEmailErr: any) {
+      console.warn('[Webhook] sponsor_founder recipient email setup failed (non-fatal):', recipientEmailErr?.message || recipientEmailErr);
+    }
+
+    // Gifter confirmation email.
+    try {
+      const { renderKiddoEmail } = await import("./templates/baseTemplate");
+      const { sendEmail } = await import("./emailDelivery");
+      const sponsorFirst = sponsorName ? sponsorName.split(/\s+/)[0] : '';
+      const subject = `Your Founder slot gift for ${recipientName} is confirmed`;
+      const introLines = [
+        sponsorFirst ? `Hi ${sponsorFirst},` : `Hi,`,
+        '',
+        `Thank you for gifting a Kiddo Founding Member slot to ${recipientName}. They were just emailed the good news — they're founding member #${entry.position} of 1,000.`,
+        '',
+        `When Kiddo launches, ${recipientName} will claim their slot via the email link we sent them. They keep the $19/yr lifetime price-lock and the Founding Member badge for as long as they're with Kiddo.`,
+        '',
+        `Your card won't be charged again. Keep this email for your records.`,
+      ];
+      const { html } = renderKiddoEmail({
+        heading: subject,
+        intro: introLines.join('\n'),
+      });
+      await sendEmail({
+        to: sponsorEmail,
+        subject,
+        text: introLines.join('\n'),
+        html,
+        tags: ['sponsor_founder_confirmation'],
+        metadata: { recipientEmail, position: String(entry.position) },
+      }).catch((emailErr: any) => {
+        console.warn('[Webhook] sponsor_founder gifter email failed (non-fatal):', emailErr?.message || emailErr);
+      });
+    } catch (sponsorEmailErr: any) {
+      console.warn('[Webhook] sponsor_founder gifter email setup failed (non-fatal):', sponsorEmailErr?.message || sponsorEmailErr);
+    }
   }
 
   // Per-cycle gifter recurring charge handler. Fires on invoice.paid
