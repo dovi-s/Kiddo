@@ -12202,6 +12202,42 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Daily-equivalent display — per
+                    project_behavioral_framing_discipline.md.
+                    Same principle and visual treatment as the
+                    GiftCheckout recurring picker (commit a43a63c);
+                    this is the parent side of the same discipline.
+                    Per Benartzi/Hershfield/Shu Acorns research,
+                    "$5/day" beat "$150/month" 4× on enrollment for
+                    the same dollar amount. Hidden when the parent
+                    already picked "daily" frequency — no need to
+                    translate daily into daily. Also hidden under
+                    the $5 floor (matches the projection card's
+                    own gating). Shipped 2026-05-23. */}
+                {autoInvestAmount && parseFloat(autoInvestAmount) >= 5 && autoInvestFrequency !== "daily" && (() => {
+                  const amt = parseFloat(autoInvestAmount);
+                  const daysPerCycle = autoInvestFrequency === "weekly"
+                    ? 7
+                    : autoInvestFrequency === "monthly"
+                      ? 30
+                      : 365;
+                  const dailyAmt = amt / daysPerCycle;
+                  return (
+                    <div
+                      className="mt-3 rounded-2xl bg-[hsl(var(--kiddo-gold)/0.10)] border border-[hsl(var(--kiddo-gold)/0.30)] px-4 py-3 text-center"
+                      data-testid="auto-invest-daily-equivalent"
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.14em] font-bold text-muted-foreground/80">
+                        That's about
+                      </p>
+                      <p className="mt-0.5 text-2xl font-bold text-foreground tabular-nums leading-tight">
+                        ${dailyAmt.toFixed(2)}
+                        <span className="text-base font-medium text-muted-foreground"> / day</span>
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 {autoInvestAmount && parseFloat(autoInvestAmount) >= 5 && (() => {
                   const amt = parseFloat(autoInvestAmount);
                   const periodsPerYear = autoInvestFrequency === "daily" ? 365 : autoInvestFrequency === "weekly" ? 52 : autoInvestFrequency === "yearly" ? 1 : 12;
