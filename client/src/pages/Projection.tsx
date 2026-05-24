@@ -14,6 +14,8 @@ import { capFirst } from "@/lib/format-name";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCountUp as useSharedCountUp } from "@/hooks/use-count-up";
+import { useSubscription } from "@/hooks/use-subscription";
+import { PlusUpgradePromptCard } from "@/components/PlusUpgradePromptCard";
 
 // Thin local wrapper around shared/projection.ts so the original
 // call signature in this file keeps working. The shared helper is
@@ -82,6 +84,35 @@ export default function Projection() {
 
   const { data: funds = [] } = useFunds();
   const activeFund = funds.find((f) => f.id === fundId);
+
+  // Subscription state for the proactive Plus prompt below (only fires
+  // for Free-plan users on 3rd+ view of this page). Read via the
+  // canonical useSubscription hook so the trial/starter/family
+  // suppression logic in pickDashboardPlusPrompt stays the single
+  // source of truth.
+  const { data: subscription } = useSubscription();
+  const effectivePlan = subscription?.effectivePlan ?? "free";
+
+  // Projection-page view counter for the "projection-3rd-view" Plus
+  // prompt. localStorage so it survives across page navigations;
+  // per-user (NOT per-fund) because a parent who's clearly engaged
+  // with projection math for ANY of their kids is a candidate. The
+  // key is intentionally outside PER_USER_PREFIXES_TO_CLEAR — view
+  // count should persist across logout on a shared device too,
+  // because the cognitive engagement is browser-level not user-level.
+  // (If this turns out to leak across users in a meaningful way, add
+  // user-scoping.) Per the locked pre-launch upgrade-conversion plan.
+  const [projectionViewCount, setProjectionViewCount] = useState<number>(0);
+  useEffect(() => {
+    try {
+      const key = "kora:projection-view-count";
+      const next = (parseInt(window.localStorage.getItem(key) || "0", 10) || 0) + 1;
+      window.localStorage.setItem(key, String(next));
+      setProjectionViewCount(next);
+    } catch {
+      setProjectionViewCount(0);
+    }
+  }, []);
 
   // Sync URL with the global active-fund context. The header's fund switcher
   // (and any other UI that calls setActiveFundId) dispatches the
@@ -731,6 +762,20 @@ ${shareUrl}`;
           }{" "}
           Investing involves risk, including possible loss of principal.
         </p>
+
+        {/* Proactive Plus prompt — fires for Free-plan users on 3rd+
+            view of this page. Signals the parent is emotionally engaged
+            with the long-horizon math; custom mix / strategy switching
+            (the Plus features pitched here) become legible at this
+            engagement level. Per project_pre_launch_strategic_frame.md
+            upgrade-conversion plan (locked 2026-05-23). */}
+        {projectionViewCount >= 3 && fundId && effectivePlan !== "starter" && effectivePlan !== "family" && effectivePlan !== "trial" && effectivePlan !== "legacy" && (
+          <PlusUpgradePromptCard
+            kind="projection-3rd-view"
+            childName={childName}
+            fundId={fundId}
+          />
+        )}
       </div>
 
       {/* Change-monthly bottom sheet */}

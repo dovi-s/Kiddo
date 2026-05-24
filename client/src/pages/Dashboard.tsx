@@ -136,6 +136,7 @@ import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/
 import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanner";
 import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
 import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
+import { PlusUpgradePromptCard, pickDashboardPlusPrompt } from "@/components/PlusUpgradePromptCard";
 import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
@@ -2008,6 +2009,29 @@ export default function Dashboard() {
       return entries.find((e) => e.type === "parent_letter") ?? null;
     },
     enabled: !!activeFundId,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // Parent-authored memory entry count for the proactive Plus prompt
+  // trigger ("third-entry" — fires when a Free parent has written 3+
+  // entries themselves, signaling they're building the Memory Book
+  // even without the media-authoring feature Plus would unlock).
+  // Separate query from parentLetter above to avoid restructuring the
+  // existing parentLetter consumer; same endpoint, response is HTTP-
+  // cacheable so the cost is minimal. Per the locked pre-launch
+  // strategic frame upgrade-conversion plan.
+  const { data: parentAuthoredEntryCount = 0 } = useQuery<number>({
+    queryKey: ["memory-entry-count", activeFundId, user?.id],
+    queryFn: async () => {
+      if (!activeFundId || !user?.id) return 0;
+      const res = await fetch(`/api/funds/${activeFundId}/memory`, { credentials: "include" });
+      if (!res.ok) return 0;
+      const entries: any[] = await res.json();
+      return entries.filter((e) =>
+        e.authorUserId === user.id && e.type !== "parent_letter" && e.type !== "sealed_letter"
+      ).length;
+    },
+    enabled: !!activeFundId && !!user?.id,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -4581,6 +4605,41 @@ export default function Dashboard() {
           plusFirstMediaAt={(dashboardSummary as any)?.plusFirstMediaAt}
           fundId={activeFundId}
         />
+
+        {/* Proactive Plus upgrade prompt at high-engagement Free moments.
+            Per project_pre_launch_strategic_frame.md upgrade-conversion
+            plan (locked 2026-05-23) — Prong A: surface Plus value at the
+            moments a Free parent reveals commitment. Single instance picks
+            the highest-priority candidate via pickDashboardPlusPrompt
+            (30-day anniversary > 5+ gifts > 3+ parent-authored entries).
+            Each candidate is suppressed when dismissed, so the next
+            candidate takes the slot organically. Free-plan-only (the
+            picker returns null for starter/family). */}
+        {activeFundId && (() => {
+          const accountCreatedAt = (user as any)?.createdAt;
+          const accountAgeDays = accountCreatedAt
+            ? Math.floor((Date.now() - new Date(accountCreatedAt).getTime()) / (24 * 60 * 60 * 1000))
+            : 0;
+          const settledGiftCount = (gifts || []).filter((g: any) =>
+            g?.status === "settled" || g?.status === "processing"
+          ).length;
+          const promptKind = pickDashboardPlusPrompt({
+            effectivePlan,
+            fundId: activeFundId,
+            parentAuthoredEntryCount,
+            settledGiftCount,
+            accountAgeDays,
+          });
+          if (!promptKind) return null;
+          return (
+            <PlusUpgradePromptCard
+              kind={promptKind}
+              childName={recipientFirstNameDisplay}
+              fundId={activeFundId}
+              className="mb-4"
+            />
+          );
+        })()}
 
         {/* Milestone celebration moment — wired 2026-05-20 (the component
             was built, imported, and the prev/current value-tracking

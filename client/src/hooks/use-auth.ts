@@ -149,6 +149,10 @@ export function useAuth() {
     // kora:dismissed:gentle-nudge:{nudgeKey}. Wipe all of them on auth
     // change so user B doesn't inherit A's dismissals.
     "kora:dismissed:gentle-nudge:",
+    // Proactive Plus prompt dismissals — pattern is
+    // kora:dismissed:plus-prompt:{kind}. Shipped 2026-05-23 per the
+    // pre-launch upgrade-conversion plan; same per-user-scope reason.
+    "kora:dismissed:plus-prompt:",
   ];
 
   function clearPerUserDismissals() {
