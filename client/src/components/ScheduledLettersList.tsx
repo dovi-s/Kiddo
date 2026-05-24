@@ -24,7 +24,7 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, Image as ImageIcon, Video, Mic, Trash2, ChevronDown } from "lucide-react";
+import { Calendar, Image as ImageIcon, Video, Mic, Trash2, Pencil, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 
@@ -46,6 +46,12 @@ export type ScheduledLettersListProps = {
   fundId: string;
   childName: string;
   className?: string;
+  /** When provided, an Edit button appears on single sealed letter cards
+   *  that reopens the composer pre-filled with the entry. Series entries
+   *  also get an edit button — per-year edits are scoped to that year
+   *  only (series-level cadence edits are deferred per implementation
+   *  plan). */
+  onEdit?: (entry: MemoryEntryRow) => void;
 };
 
 function formatDeliveryDate(iso: string | null | undefined): string | null {
@@ -64,7 +70,7 @@ function yearsFromNow(iso: string | null | undefined): number | null {
   return Math.floor(ms / (365.25 * 24 * 60 * 60 * 1000));
 }
 
-export function ScheduledLettersList({ fundId, childName, className }: ScheduledLettersListProps) {
+export function ScheduledLettersList({ fundId, childName, className, onEdit }: ScheduledLettersListProps) {
   const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
@@ -268,16 +274,29 @@ export function ScheduledLettersList({ fundId, childName, className }: Scheduled
                         </div>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => void handleCancelSeries(group.seriesId, count)}
-                      disabled={cancellingId === group.seriesId}
-                      className="text-muted-foreground hover:text-destructive transition-colors p-1 shrink-0"
-                      aria-label="Cancel entire scheduled series"
-                      data-testid={`cancel-scheduled-series-${group.seriesId}`}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {onEdit && first && (
+                        <button
+                          type="button"
+                          onClick={() => { haptic("selection"); onEdit(first); }}
+                          className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                          aria-label="Edit next year's entry in this series"
+                          data-testid={`edit-scheduled-series-${group.seriesId}`}
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void handleCancelSeries(group.seriesId, count)}
+                        disabled={cancellingId === group.seriesId}
+                        className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                        aria-label="Cancel entire scheduled series"
+                        data-testid={`cancel-scheduled-series-${group.seriesId}`}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </li>
               );
@@ -328,16 +347,29 @@ export function ScheduledLettersList({ fundId, childName, className }: Scheduled
                       </div>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => void handleCancel(entry.id)}
-                    disabled={cancellingId === entry.id}
-                    className="text-muted-foreground hover:text-destructive transition-colors p-1 shrink-0"
-                    aria-label="Cancel scheduled letter"
-                    data-testid={`cancel-scheduled-${entry.id}`}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {onEdit && (
+                      <button
+                        type="button"
+                        onClick={() => { haptic("selection"); onEdit(entry); }}
+                        className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                        aria-label="Edit scheduled letter"
+                        data-testid={`edit-scheduled-${entry.id}`}
+                      >
+                        <Pencil size={13} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void handleCancel(entry.id)}
+                      disabled={cancellingId === entry.id}
+                      className="text-muted-foreground hover:text-destructive transition-colors p-1"
+                      aria-label="Cancel scheduled letter"
+                      data-testid={`cancel-scheduled-${entry.id}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               </li>
             );

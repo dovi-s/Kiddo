@@ -43,6 +43,17 @@ import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "./
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { capFirst } from "@/lib/format-name";
 
+export type ScheduledLetterEntry = {
+  id: string;
+  content?: string | null;
+  photoUrl?: string | null;
+  videoUrl?: string | null;
+  audioUrl?: string | null;
+  audioTranscript?: string | null;
+  deliverAt?: string | null;
+  parentSealedSeriesId?: string | null;
+};
+
 export type ScheduledLetterEditorProps = {
   open: boolean;
   onClose: () => void;
@@ -55,6 +66,13 @@ export type ScheduledLetterEditorProps = {
    *  When false, the composer renders the FeatureWallModal instead of the form.
    *  Caller should compute this from the fund's coverage state. */
   isPlusOnFund: boolean;
+  /** When present, composer reschedules / edits this existing entry instead
+   *  of creating a new one. Body + media + deliverAt all pre-populate.
+   *  Repeat picker is hidden in edit mode — series-level edits are out
+   *  of scope for MVP (cancel-series + write-new is the recommended
+   *  pattern). Per project_sealed_letters_implementation_plan.md
+   *  follow-on note 2026-05-23. */
+  existingEntry?: ScheduledLetterEntry | null;
   onSaved?: () => void;
 };
 
@@ -90,8 +108,16 @@ export function ScheduledLetterEditor({
   pronoun: _pronoun,
   recipientBirthdate,
   isPlusOnFund,
+  existingEntry,
   onSaved,
 }: ScheduledLetterEditorProps) {
+  const isEditMode = !!existingEntry?.id;
+  // When editing a series entry, series-level operations (changing the
+  // repeat cadence, regenerating future entries) are out of MVP scope.
+  // Edit mode only adjusts THIS specific entry's content/media/date.
+  // The series stays intact; cancel-series remains the way to wipe
+  // and start over with a different cadence.
+  const isSeriesEntry = !!existingEntry?.parentSealedSeriesId;
   const [text, setText] = useState("");
   const [media, setMedia] = useState<MemoryMediaValue>(EMPTY_MEMORY_MEDIA);
   const [deliverDate, setDeliverDate] = useState<string>(() => tomorrowIso());
@@ -108,11 +134,36 @@ export function ScheduledLetterEditor({
   const [wallOpen, setWallOpen] = useState(false);
 
   // Reset state on open. Mirrors NoteEditorSheet's lifecycle pattern.
+  // In edit mode, pre-populate from the existing entry.
   useEffect(() => {
     if (open) {
-      setText("");
-      setMedia(EMPTY_MEMORY_MEDIA);
-      setDeliverDate(tomorrowIso());
+      if (existingEntry) {
+        setText(existingEntry.content || "");
+        setMedia({
+          photoUrl: existingEntry.photoUrl || "",
+          videoUrl: existingEntry.videoUrl || "",
+          audioUrl: existingEntry.audioUrl || "",
+          audioTranscript: existingEntry.audioTranscript || "",
+        });
+        // Convert ISO timestamp back to YYYY-MM-DD for the date input.
+        if (existingEntry.deliverAt) {
+          const d = new Date(existingEntry.deliverAt);
+          if (!Number.isNaN(d.getTime())) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            setDeliverDate(`${y}-${m}-${day}`);
+          } else {
+            setDeliverDate(tomorrowIso());
+          }
+        } else {
+          setDeliverDate(tomorrowIso());
+        }
+      } else {
+        setText("");
+        setMedia(EMPTY_MEMORY_MEDIA);
+        setDeliverDate(tomorrowIso());
+      }
       setRepeat("none");
       setShowCelebration(false);
       setError(null);
@@ -122,7 +173,7 @@ export function ScheduledLetterEditor({
         setWallOpen(true);
       }
     }
-  }, [open, isPlusOnFund]);
+  }, [open, isPlusOnFund, existingEntry]);
 
   const safeChildName = (childName || "your kid").trim() || "your kid";
   const displayName = capFirst(safeChildName);
@@ -156,26 +207,43 @@ export function ScheduledLetterEditor({
       // it's future + at least 1 minute out — both safely satisfied
       // by a tomorrow-or-later date at local-midnight.
       const deliverAtIso = new Date(`${deliverDate}T00:00:00`).toISOString();
-      const res = await fetch(`/api/funds/${fundId}/memory`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          type: "sealed_letter",
-          content: text.trim(),
-          authorName: parentName || "A parent",
-          fundId,
-          photoUrl: media.photoUrl || null,
-          videoUrl: media.videoUrl || null,
-          audioUrl: media.audioUrl || null,
-          audioTranscript: media.audioTranscript || null,
-          kidVisibility: "sealed",
-          deliverAt: deliverAtIso,
-          // Server generates the yearly series when repeat='yearly'.
-          // None = one-shot. See routes.ts createMemoryEntry handler.
-          repeat,
-        }),
-      });
+      // Edit mode: PATCH the existing entry with new content/media/date.
+      // Server's PATCH handler accepts deliverAt rescheduling when the
+      // entry is already sealed (per pricing-v3 Phase 2 update endpoint).
+      const res = isEditMode
+        ? await fetch(`/api/memory/${encodeURIComponent(existingEntry!.id)}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              content: text.trim(),
+              photoUrl: media.photoUrl || null,
+              videoUrl: media.videoUrl || null,
+              audioUrl: media.audioUrl || null,
+              audioTranscript: media.audioTranscript || null,
+              deliverAt: deliverAtIso,
+            }),
+          })
+        : await fetch(`/api/funds/${fundId}/memory`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              type: "sealed_letter",
+              content: text.trim(),
+              authorName: parentName || "A parent",
+              fundId,
+              photoUrl: media.photoUrl || null,
+              videoUrl: media.videoUrl || null,
+              audioUrl: media.audioUrl || null,
+              audioTranscript: media.audioTranscript || null,
+              kidVisibility: "sealed",
+              deliverAt: deliverAtIso,
+              // Server generates the yearly series when repeat='yearly'.
+              // None = one-shot. See routes.ts createMemoryEntry handler.
+              repeat,
+            }),
+          });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(typeof data?.error === "string" ? data.error : "Couldn't save the letter. Try again.");
@@ -185,7 +253,15 @@ export function ScheduledLetterEditor({
       }
       haptic("success");
       onSaved?.();
-      setShowCelebration(true);
+      // Edit mode: skip the celebration sheet and close cleanly. The
+      // emotional moment IS the act of sealing; rescheduling is
+      // housekeeping. Mirrors NoteEditorSheet's pattern of suppressing
+      // the celebration on edit-mode saves.
+      if (isEditMode) {
+        onClose();
+      } else {
+        setShowCelebration(true);
+      }
     } catch {
       setError("Network hiccup. Try again in a moment.");
       haptic("error");
@@ -294,10 +370,12 @@ export function ScheduledLetterEditor({
                 <div className="flex items-start justify-between px-5 pt-5 pb-4 shrink-0">
                   <div className="flex-1 pr-4">
                     <p className="text-base font-bold text-foreground leading-snug">
-                      Schedule a letter for {displayName}. 🕯️
+                      {isEditMode ? `Reschedule letter for ${displayName}.` : `Schedule a letter for ${displayName}.`} 🕯️
                     </p>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                      Pick a future date. {displayName} will read it on that day, not before.
+                      {isEditMode
+                        ? `Update the date, content, or media. ${isSeriesEntry ? "This change applies only to this year's letter in the series." : `${displayName} will read it on the date you pick, not before.`}`
+                        : `Pick a future date. ${displayName} will read it on that day, not before.`}
                     </p>
                   </div>
                   <button
@@ -353,7 +431,12 @@ export function ScheduledLetterEditor({
                       years." Cap at 18 entries server-side to bound
                       the worst case. Per
                       project_sealed_letters_implementation_plan.md
-                      Phase 5. */}
+                      Phase 5.
+                      Hidden in edit mode: changing repeat on an
+                      existing entry would imply regenerating the
+                      series, which is series-level scope deferred
+                      to a future session. */}
+                  {!isEditMode && (
                   <div>
                     <label className="text-xs font-semibold text-foreground mb-2 block">
                       Deliver it once, or every year?
@@ -384,6 +467,7 @@ export function ScheduledLetterEditor({
                       </p>
                     )}
                   </div>
+                  )}
 
                   {/* Letter body */}
                   <div>
@@ -438,7 +522,9 @@ export function ScheduledLetterEditor({
                     onClick={handleSave}
                     data-testid="button-save-scheduled-letter"
                   >
-                    {saving ? "Sealing..." : "Seal until that day"}
+                    {saving
+                      ? (isEditMode ? "Saving..." : "Sealing...")
+                      : (isEditMode ? "Save changes" : "Seal until that day")}
                   </Button>
                   <p className="mt-2 text-[10px] text-muted-foreground/70 text-center leading-snug">
                     <Lock className="inline-block w-2.5 h-2.5 mr-0.5 -mt-0.5" />

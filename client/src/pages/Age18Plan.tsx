@@ -423,6 +423,10 @@ export default function Age18Plan() {
   // FeatureWallModal instead of the composer. Per
   // project_sealed_letters_implementation_plan.md.
   const [scheduledLetterOpen, setScheduledLetterOpen] = useState(false);
+  // Edit mode — when present, the composer opens pre-filled with this
+  // existing sealed entry. Cleared on close. Set from the
+  // ScheduledLettersList's per-entry edit button.
+  const [editingScheduledEntry, setEditingScheduledEntry] = useState<any | null>(null);
 
   // Checklist - persisted in localStorage per fund
   const checklistKey = `age18-checklist-${activeFund?.id}`;
@@ -883,12 +887,18 @@ export default function Age18Plan() {
             lost. Component is self-suppressing — returns null when no
             scheduled letters exist, so Free parents and Plus parents who
             haven't scheduled anything see nothing here. Per
-            project_sealed_letters_implementation_plan.md. */}
+            project_sealed_letters_implementation_plan.md.
+            onEdit wires per-entry edit through the same composer
+            (reschedule UI, locked 2026-05-23 follow-on). */}
         {activeFund?.id && (
           <div className="mb-4">
             <ScheduledLettersList
               fundId={activeFund.id}
               childName={activeFund?.recipientFirstName || "them"}
+              onEdit={(entry) => {
+                setEditingScheduledEntry(entry);
+                setScheduledLetterOpen(true);
+              }}
             />
           </div>
         )}
@@ -1177,7 +1187,7 @@ export default function Age18Plan() {
       />
       <ScheduledLetterEditor
         open={scheduledLetterOpen}
-        onClose={() => setScheduledLetterOpen(false)}
+        onClose={() => { setScheduledLetterOpen(false); setEditingScheduledEntry(null); }}
         fundId={activeFund?.id ?? ""}
         childName={activeFund?.recipientFirstName || "them"}
         parentName={parentName}
@@ -1190,6 +1200,7 @@ export default function Age18Plan() {
         // is true when the parent IS on a paid plan (so the composer
         // renders; otherwise the FeatureWallModal renders instead).
         isPlusOnFund={!noteEditorRequiresPlus}
+        existingEntry={editingScheduledEntry}
         onSaved={() => {
           void queryClient.invalidateQueries({ queryKey: ["memory", activeFund?.id] });
         }}
