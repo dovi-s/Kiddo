@@ -12085,7 +12085,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2.5">
                   <div>
                     <p className="text-sm font-semibold text-foreground">Kiddo+</p>
-                    <p className="text-[11px] text-muted-foreground">$4.99/month or $39/year. Cancel any time.</p>
+                    <p className="text-[11px] text-muted-foreground">$3.99/month or $29/year. Cancel any time.</p>
                   </div>
                 </div>
 

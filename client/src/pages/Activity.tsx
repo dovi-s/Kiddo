@@ -2998,7 +2998,7 @@ export default function Activity() {
                                     detail for parent-paid rows. The bank-
                                     statement reconciliation surface that
                                     closed Gap 4 of the Activity audit:
-                                    parents seeing "KIDDO $4.99" on Chase
+                                    parents seeing "KIDDO $3.99" on Chase
                                     couldn't match it to anything inside
                                     the app. Renders only when there's
                                     something material to show + only on

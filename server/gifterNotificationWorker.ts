@@ -817,8 +817,15 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
       "",
       giftUrl ? `Gift again any time: ${giftUrl}` : "",
       "",
-      "Want to set up a fund for your own child or grandchild?",
-      "The whole family can send lasting gifts in under a minute. No app. No account for gifters.",
+      // Gifter→parent conversion CTA. Per project_pre_launch_strategic_frame.md
+      // (locked 2026-05-23): every one-time gift success email gets a soft
+      // "want one for your own kid?" CTA. Greenlight/Acorns structurally
+      // can't replicate this — they don't have a gifter loop. Probably 5-10%
+      // conversion from this high-intent moment. Sharpened 2026-05-23 to
+      // reference the just-experienced moment and frame the kid-2.0
+      // family-spanning story rather than the generic feature pitch.
+      "Want one for your own child or grandchild?",
+      `You just experienced what it's like to give a lasting investment gift. Set up a fund for someone you love and let your whole family show up for them the way you just showed up for ${childName}.`,
       `Start a fund: ${startFundUrl}`,
       "",
       "Kora Inc. is a technology company, not a broker-dealer.",

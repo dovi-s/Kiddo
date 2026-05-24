@@ -182,12 +182,12 @@ const BENTO_TILES: BentoTile[] = [
     title: "Custom mix and strategy switching",
     body: "Design the portfolio your child grows up holding. Pick the ETF allocation, switch between conservative / balanced / growth as the years change.",
     modalLead:
-      "Recurring contributions are free for everyone. Plus is for the parent who actively DECIDES what those contributions buy into. Design a custom ETF allocation (40% VTI / 30% VXUS / 20% BND / 10% AAPL, or whatever fits), switch the strategy as the kid ages, rebalance when your view changes.",
+      "Plus is for the parent who operates the fund. Recurring contributions on the fund unlock for you AND any gifter (the baby shower's six relatives can each set $25/mo, free, because the fund is Plus). Custom ETF allocation (40% VTI / 30% VXUS / 20% BND / 10% AAPL, or whatever fits). Switch the strategy as the kid ages. Rebalance when your view changes. Invite a co-parent.",
     modalDetails: [
+      "Recurring contributions on the fund (parent + any gifter); Free funds get a reminder system for gifters instead.",
       "Custom mix: pick from VTI, VXUS, BND, VGT, VUG, VYM, SCHD, QQQ. Set your own weights.",
       "Strategy switching: move between conservative, balanced, and growth as the kid grows up.",
       "Auto-rebalancing keeps the mix on target as prices drift.",
-      "Recurring contributions on any cadence (free); auto-allocate across your custom mix.",
       "Annual contribution summary for tax records.",
     ],
     modalCallout: { label: "Plan tier", value: "Kiddo+ and above" },
@@ -414,11 +414,18 @@ export default function Home() {
               <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-[hsl(var(--kiddo-evergreen))]">
                 Cash gifts disappear. Kiddo gifts last.
               </p>
+              {/* Hero repositioned 2026-05-23 per the pricing-v3 strategic
+                  session: Memory Book moves into the H1 alongside the fund
+                  metaphor. Every UTMA platform says "invest in your child's
+                  future"; only Kiddo can credibly say "the book." Leading
+                  with the soul (Memory Book) + the body (fund) is the
+                  Target-not-Walmart positioning move. See
+                  project_pre_launch_strategic_frame.md repositioning beats. */}
               <h1 className="mb-6 font-heading text-4xl font-bold leading-tight tracking-normal text-foreground md:text-6xl" data-testid="text-hero-headline">
-                Turn birthday money into a head start.
+                The fund and the book your kid opens at 18.
               </h1>
               <p className="mx-auto mb-8 max-w-3xl text-lg leading-relaxed text-muted-foreground md:text-xl" data-testid="text-hero-subheading">
-                {websiteCopy.hero.subhead}
+                A real investment account that grows with them, with letters, photos, and voice memos from the people who loved them. Set up in 2 minutes. Anyone can gift.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link href="/get-started">
@@ -431,7 +438,12 @@ export default function Home() {
                   {websiteCopy.hero.secondaryCta}
                 </Link>
               </div>
-              <p className="mt-5 text-sm text-muted-foreground">Free to start. Takes 2 minutes.</p>
+              {/* AUM honesty in hero — per pricing-v3 + behavioral framing
+                  discipline (cents-on-dollar legibility): the 0.10% AUM
+                  appears as "10¢ per $100 invested" so the genuinely tiny
+                  fee reads as genuinely tiny. Acorns hides fees; Kiddo
+                  flaunts them. Trust is a moat with parents specifically. */}
+              <p className="mt-5 text-sm text-muted-foreground">Free to start. 10¢ per $100 invested per year. No platform fee on gifts.</p>
               {/* Honest geographic scope. Kora is structurally US-only at
                   launch (UTMA + DriveWealth + 1099s). Surfacing this
                   before signup catches non-US visitors before they

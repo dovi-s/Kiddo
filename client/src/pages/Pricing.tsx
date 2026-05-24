@@ -28,8 +28,8 @@ function FadeIn({ children, delay = 0, className = "" }: { children: ReactNode; 
 //           Approved phrasings: "$0 per month", "$0/month", "Free to start", "No monthly fee".
 //           "/ per month" form retired 2026-05-15 (doubled prepositions read awkwardly).
 //           Never "$0 forever" or "Always free" — Acorns-scrutiny risk with the 0.10% AUM line.
-//   Plus:   $4.99/mo or $39/yr (annual is 35% off monthly — aggressive).
-//   Family: $7.99/mo or $69/yr (annual is 28% off monthly — standard).
+//   Plus:   $3.99/mo or $29/yr (annual is 39% off monthly — aggressive; updated 2026-05-23 pricing-v3).
+//   Family: $6.99/mo or $59/yr (annual is 30% off monthly — standard; updated 2026-05-23 pricing-v3).
 //   Legacy: PULLED from public pricing 2026-05-12. Existing subscribers keep their plan;
 //           no new signups via the marketing site. NAME preserved for future tier.
 // Fee model locked per MEMORY (2026-05-08):
@@ -93,8 +93,8 @@ const plans: readonly Plan[] = [
     eyebrow: "For the parent who shows up every month.",
     pricing: {
       kind: "billed",
-      yearly: { price: "$39", period: "/year", equivalent: "or $4.99/month" },
-      monthly: { price: "$4.99", period: "/month", equivalent: "or $39/year" },
+      yearly: { price: "$29", period: "/year", equivalent: "or $3.99/month" },
+      monthly: { price: "$3.99", period: "/month", equivalent: "or $29/year" },
     },
     cta: "Start with Kiddo+",
     featured: true,
@@ -107,12 +107,14 @@ const plans: readonly Plan[] = [
       // not surface-as-friction when they try to add a second kid.
       "One child fund. Move to Family if you add a second.",
       "Everything in Free",
-      // Recurring lives in Free now (per the 2026-05-21 Plus reframe —
-      // see project_plus_pricing_reframe.md). Plus's headline gates
-      // shift to the investment-decision-making layer: design the mix,
-      // switch the strategy, operate the fund. "Recurring" stays as
-      // an under-the-hood mechanism that's free for everyone; Plus is
-      // for the parent who actively DECIDES what recurring buys into.
+      // Recurring is BACK in Plus's headline gate under pricing-v3
+      // (locked 2026-05-23, see project_pricing_v3_recurring_at_plus.md).
+      // The Plus tier on a fund unlocks recurring contributions for
+      // both the parent AND any gifter to that fund — gifters never
+      // pay; they inherit the fund's tier. Free funds get a real
+      // reminder system instead. This supersedes the 2026-05-21
+      // reframe that briefly moved recurring out of Plus's gate.
+      "Recurring contributions. For you and for any gifter to the fund",
       "Custom fund mix. Pick your own ETFs and weights",
       "Strategy switching with rebalancing. Move between conservative, balanced, and growth",
       "Add your own photos, videos, and voice memos to Memory Book entries",
@@ -129,8 +131,8 @@ const plans: readonly Plan[] = [
     eyebrow: "For families with two or more children.",
     pricing: {
       kind: "billed",
-      yearly: { price: "$69", period: "/year", equivalent: "or $7.99/month" },
-      monthly: { price: "$7.99", period: "/month", equivalent: "or $69/year" },
+      yearly: { price: "$59", period: "/year", equivalent: "or $6.99/month" },
+      monthly: { price: "$6.99", period: "/month", equivalent: "or $59/year" },
     },
     cta: "Cover all your children",
     featured: false,
@@ -359,8 +361,8 @@ export default function Pricing() {
                       <span className="text-sm font-medium text-muted-foreground">{priceDisplay.period}</span>
                     </div>
                     {/* Equivalent line color: muted (was text-green-700).
-                        Now that the line reads "or $39/year" symmetrically
-                        with the yearly card's "or $4.99/month" — not a
+                        Now that the line reads "or $29/year" symmetrically
+                        with the yearly card's "or $3.99/month" — not a
                         savings badge — green coloring (which signals
                         positive/saving) would over-emphasize a neutral
                         conversion. Muted gray matches the period label

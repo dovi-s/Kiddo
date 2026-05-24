@@ -57,8 +57,13 @@ async function createProducts() {
   }
 
   const starterPrices = await stripe.prices.list({ product: starterPlanId, active: true });
-  const STARTER_MONTHLY_CENTS = 499; // $4.99
+  // Pricing v3 (locked 2026-05-23). Plus drops from $4.99/$39 to $3.99/$29
+  // and gains an annual SKU (was previously monthly-only). See
+  // project_pricing_v3_pricing_levels.md.
+  const STARTER_MONTHLY_CENTS = 399; // $3.99
+  const STARTER_YEARLY_CENTS = 2900; // $29.00
   const hasStarterMonthly = starterPrices.data.some(p => p.unit_amount === STARTER_MONTHLY_CENTS && p.recurring?.interval === 'month');
+  const hasStarterYearly = starterPrices.data.some(p => p.unit_amount === STARTER_YEARLY_CENTS && p.recurring?.interval === 'year');
   let starterPriceId: string;
   if (hasStarterMonthly) {
     starterPriceId = starterPrices.data.find(p => p.unit_amount === STARTER_MONTHLY_CENTS && p.recurring?.interval === 'month')!.id;
@@ -75,9 +80,26 @@ async function createProducts() {
     console.log('Created Kiddo+ monthly price:', starterPriceId);
   }
 
-  // Deactivate old starter prices
+  let starterYearlyPriceId: string;
+  if (hasStarterYearly) {
+    starterYearlyPriceId = starterPrices.data.find(p => p.unit_amount === STARTER_YEARLY_CENTS && p.recurring?.interval === 'year')!.id;
+    console.log('Kiddo+ yearly price already exists:', starterYearlyPriceId);
+  } else {
+    const starterPlanYearlyPrice = await stripe.prices.create({
+      product: starterPlanId,
+      unit_amount: STARTER_YEARLY_CENTS,
+      currency: 'usd',
+      recurring: { interval: 'year' },
+      metadata: { display_name: 'Kiddo+ Annual (per fund)' },
+    });
+    starterYearlyPriceId = starterPlanYearlyPrice.id;
+    console.log('Created Kiddo+ yearly price:', starterYearlyPriceId);
+  }
+
+  // Deactivate old starter prices (anything not matching current monthly + yearly)
   const oldStarterPrices = starterPrices.data.filter(p =>
-    !(p.unit_amount === STARTER_MONTHLY_CENTS && p.recurring?.interval === 'month')
+    !(p.unit_amount === STARTER_MONTHLY_CENTS && p.recurring?.interval === 'month') &&
+    !(p.unit_amount === STARTER_YEARLY_CENTS  && p.recurring?.interval === 'year')
   );
   for (const oldPrice of oldStarterPrices) {
     await stripe.prices.update(oldPrice.id, { active: false });
@@ -105,8 +127,13 @@ async function createProducts() {
   }
 
   const familyPrices = await stripe.prices.list({ product: familyPlanId, active: true });
-  const FAMILY_MONTHLY_CENTS = 999;  // $9.99
-  const FAMILY_YEARLY_CENTS  = 9999; // $99.99 (~$8.33/mo)
+  // Pricing v3 (locked 2026-05-23). Family drops from $9.99/$99.99 (the
+  // outdated values that were in this seed script) to the locked
+  // $6.99/$59. The seed script had drifted from MEMORY canonical
+  // pricing — pricing-v3 brings them back in sync. See
+  // project_pricing_v3_pricing_levels.md.
+  const FAMILY_MONTHLY_CENTS = 699;  // $6.99
+  const FAMILY_YEARLY_CENTS  = 5900; // $59.00
   const hasMonthly = familyPrices.data.some(p => p.unit_amount === FAMILY_MONTHLY_CENTS && p.recurring?.interval === 'month');
   const hasYearly  = familyPrices.data.some(p => p.unit_amount === FAMILY_YEARLY_CENTS  && p.recurring?.interval === 'year');
 
@@ -200,6 +227,7 @@ async function createProducts() {
 
   console.log('\nAll products synced successfully!');
   console.log('Kiddo+ Monthly Price ID:', starterPriceId);
+  console.log('Kiddo+ Yearly Price ID:', starterYearlyPriceId);
   console.log('Kiddo Family Monthly Price ID:', familyMonthlyPriceId);
   console.log('Kiddo Family Yearly Price ID:', familyYearlyPriceId);
   console.log('Event Boost Price ID:', eventBoostPriceId);

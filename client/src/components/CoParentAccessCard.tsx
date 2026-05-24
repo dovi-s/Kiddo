@@ -344,7 +344,7 @@ export function CoParentAccessCard({
           <div className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <p className="text-sm font-semibold text-foreground">Invite a co-parent with Kiddo+</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              $4.99/month or $39/year. A partner or guardian sees the fund's growth, the Memory Book, and recent gifts. Their notes show up on the kid's timeline alongside yours.
+              $3.99/month or $29/year. A partner or guardian sees the fund's growth, the Memory Book, and recent gifts. Their notes show up on the kid's timeline alongside yours.
             </p>
             <Button
               size="sm"

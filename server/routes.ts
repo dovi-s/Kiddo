@@ -12750,27 +12750,26 @@ export async function registerRoutes(
         });
       }
 
-      // Plan gate REMOVED 2026-05-21 per the Plus pricing reframe
-      // (see project_plus_pricing_reframe.md). Recurring contributions
-      // are now free across all tiers. Plus's gate moves to the
-      // investment-decision layer (custom mix design via
-      // resolveAllowedFundStrategy), NOT to the recurring mechanism.
-      // A free parent can set up recurring; what their contributions
-      // BUY INTO is gated by the existing strategy gate (free →
-      // growth/balanced/conservative; Plus → custom mix).
+      // Plan gate RESTORED 2026-05-23 per pricing-v3 (see
+      // project_pricing_v3_recurring_at_plus.md). Recurring contributions
+      // are gated at the FUND tier — Plus on the fund unlocks recurring
+      // for the parent AND for any gifter to that fund. Free funds get
+      // a reminder system (separate ship) instead. The reframe that
+      // briefly removed this gate (2026-05-21) is SUPERSEDED; recurring
+      // is back in Plus where it belongs.
       //
-      // Original gate kept here as a code-comment audit trail in case
-      // the reframe needs to be reverted:
-      //   const subscription = await storage.getSubscription(userId);
-      //   const plan = subscription?.plan;
-      //   const isGlobalActive = subscription?.status === 'active';
-      //   const isFamily = isGlobalActive && (plan === 'family' || plan === 'legacy');
-      //   const isGlobalStarter = isGlobalActive && plan === 'starter';
-      //   const fundMembership = await storage.getFundMembership(userId, req.params.fundId);
-      //   const isFundStarter = fundMembership?.status === 'active' || ...;
-      //   if (!isFamily && !isGlobalStarter && !isFundStarter) {
-      //     return res.status(403).json({ error: 'Kiddo+...' });
-      //   }
+      // Coverage states that unlock recurring: covered_family,
+      // covered_starter, trial_active. Anything else is "uncovered"
+      // and gets a 403 with the upgrade pitch.
+      const coverage = await getFundCoverageState(userId, req.params.fundId);
+      const recurringUnlocked = coverage === 'covered_family' || coverage === 'covered_starter' || coverage === 'trial_active';
+      if (!recurringUnlocked) {
+        return res.status(403).json({
+          error: 'Recurring investments unlock with Kiddo+ or Family',
+          coverage,
+          upgradePath: `/account?tab=plan&upgrade=starter&fundId=${encodeURIComponent(req.params.fundId)}`,
+        });
+      }
 
       const { amount, frequency, executionModel, selectedTicker, bankAccountId, note } = req.body;
       if (!amount || !frequency) {

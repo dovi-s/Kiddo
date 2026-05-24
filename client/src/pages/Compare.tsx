@@ -120,7 +120,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     competitorLabel: "EarlyBird",
     comparisonRows: [
       { label: "Status", competitor: "Acquired by Acorns; brand retired", kora: "Active and growing" },
-      { label: "Monthly fee", competitor: "$3/mo per child (legacy)", kora: "Free to start. Kiddo+ is $4.99/mo or $39/yr." },
+      { label: "Monthly fee", competitor: "$3/mo per child (legacy)", kora: "Free to start. Kiddo+ is $3.99/mo or $29/yr." },
       { label: "UTMA investment account", competitor: "Yes", kora: "Yes, via DriveWealth" },
       { label: "Gifting link for family", competitor: "Yes", kora: "Yes" },
       { label: "No account needed to give", competitor: "Yes", kora: "Yes" },
@@ -181,7 +181,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     comparisonRows: [
       { label: "Category", competitor: "Micro-investing (parent saves for child)", kora: "Investment gifting (family invests in child)" },
       { label: "How money enters the fund", competitor: "Round-ups and manual deposits from parent", kora: "Gifts from anyone via shareable link" },
-      { label: "Monthly fee", competitor: "$5/mo through Acorns Gold", kora: "Free to start. Kiddo+ is $4.99/mo or $39/yr." },
+      { label: "Monthly fee", competitor: "$5/mo through Acorns Gold", kora: "Free to start. Kiddo+ is $3.99/mo or $29/yr." },
       { label: "Shareable gift link", competitor: "No", kora: "Yes" },
       { label: "No account needed to give", competitor: "No", kora: "Yes" },
       { label: "Occasion pages", competitor: "No", kora: "Yes" },
@@ -236,7 +236,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     competitorLabel: "Greenlight",
     comparisonRows: [
       { label: "Primary focus", competitor: "Spending and banking", kora: "Gifting and investing" },
-      { label: "Monthly fee", competitor: "$5.99 to $24.98/mo", kora: "Free to start. Paid plans from $4.99/mo" },
+      { label: "Monthly fee", competitor: "$5.99 to $24.98/mo", kora: "Free to start. Paid plans from $3.99/mo" },
       { label: "Debit card for kids", competitor: "Yes", kora: "No" },
       { label: "Parental spending controls", competitor: "Yes", kora: "No" },
       { label: "Gifting link for family", competitor: "No", kora: "Yes" },
@@ -286,7 +286,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     tableTitle: "Stockpile vs Kiddo: the real differences",
     competitorLabel: "Stockpile",
     comparisonRows: [
-      { label: "Monthly fee", competitor: "$4.95/mo", kora: "Free to start. Paid plans from $4.99/mo" },
+      { label: "Monthly fee", competitor: "$4.95/mo", kora: "Free to start. Paid plans from $3.99/mo" },
       { label: "Gifting model", competitor: "Gift card purchase and redemption", kora: "Shareable link" },
       { label: "Account needed to give", competitor: "Often yes", kora: "No" },
       { label: "Occasion pages", competitor: "No", kora: "Yes" },
@@ -443,7 +443,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     tableTitle: "Fidelity UTMA vs Kiddo: the honest comparison",
     competitorLabel: "Fidelity UTMA",
     comparisonRows: [
-      { label: "Monthly subscription", competitor: "$0", kora: "$0 Free. Plus $4.99/mo or $39/yr." },
+      { label: "Monthly subscription", competitor: "$0", kora: "$0 Free. Plus $3.99/mo or $29/yr." },
       { label: "Annual fee on invested assets", competitor: "None on the UTMA itself. ETF expense ratios apply.", kora: "$1/year per $1,000 invested, all plans (about $10/yr on a $10,000 fund). ETF expense ratios still apply on top." },
       { label: "Account opening time", competitor: "About 20 to 30 minutes including KYC", kora: "About 5 minutes. KYC handled in flow." },
       { label: "Investment universe", competitor: "Full ETFs, mutual funds, individual stocks", kora: "Curated age-appropriate mixes plus custom ticker selection" },
@@ -508,7 +508,7 @@ const fullComparisonRows: FullComparisonRow[] = [
   },
   {
     feature: "Monthly fee",
-    kiddo: "Free to start. Kiddo+ is $4.99/mo.",
+    kiddo: "Free to start. Kiddo+ is $3.99/mo.",
     earlybird: "$3/mo per child (no longer available)",
     acornsEarly: "$5/mo bundled with Acorns Gold",
     greenlight: "$4.99 to $14.98/mo depending on tier",

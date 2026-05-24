@@ -24,8 +24,8 @@
 //   - One-time per moment (dismiss key stored per-user)
 //   - Calm tone — invitational not transactional (per the locked
 //     Plus-gate-softness audit 2026-05-19)
-//   - Daily-framing on price ($4.99/mo or 16¢/day) per locked
-//     behavioral framing discipline
+//   - Daily-framing on price ($3.99/mo or 13¢/day) per locked
+//     behavioral framing discipline (updated 2026-05-23 pricing-v3)
 //   - Emotional pitch tied to the moment, not generic upgrade ask
 //   - Names CURRENTLY SHIPPED Plus features only (no promising
 //     sealed letters / printing that are Prong B post-launch
@@ -162,8 +162,8 @@ export function PlusUpgradePromptCard({
                 reframe). Same pattern as MemoryMediaPicker Plus wall
                 (commit 67bed3c). */}
             <p className="mt-1.5 text-[11px] text-muted-foreground/85">
-              <span className="font-semibold text-foreground">$4.99/month</span>
-              <span className="text-muted-foreground/70"> — about 16¢ a day.</span>
+              <span className="font-semibold text-foreground">$3.99/month</span>
+              <span className="text-muted-foreground/70"> — about 13¢ a day.</span>
             </p>
             <div className="mt-3 flex gap-2">
               <Button

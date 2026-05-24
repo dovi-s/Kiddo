@@ -1,9 +1,14 @@
 export const brandTruths = {
   headline: "Cash gifts disappear. Kiddo gifts last.",
-  positioning: "Kiddo turns birthday money into a head start.",
+  // Positioning updated 2026-05-23 (pricing-v3 session): Memory Book is
+  // the soul, the fund is the body. Every UTMA platform says "invest
+  // for your kid's future"; only Kiddo can credibly say "the book."
+  // Lead with what's unique. See project_pre_launch_strategic_frame.md
+  // repositioning beats.
+  positioning: "The fund and the book your kid opens at 18.",
   parentHook: "Set up a fund in 2 minutes. Share a link. Watch it grow.",
   gifterHook: "Give $50 that's still there in 18 years.",
-  subhead: "Set up a fund in 2 minutes. Anyone can gift. No app or account needed.",
+  subhead: "A real investment account that grows with them, with letters and photos from the people who loved them. Set up in 2 minutes. Anyone can gift.",
   speed: "60 seconds. No account needed.",
   trust: "Assets are held by our regulated brokerage custodian.",
   longTermExample: "$9,000 in gifts could become much more over time. Investing involves risk and is not guaranteed.",

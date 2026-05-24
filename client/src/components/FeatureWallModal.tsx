@@ -133,8 +133,8 @@ export function FeatureWallModal({
 
   const tierLabel = requiredTier === "plus" ? "Kiddo+" : "Kiddo Family";
   const priceLine = requiredTier === "plus"
-    ? "$4.99/month or $39/year. Cancel any time."
-    : "$7.99/month or $69/year. Cancel any time.";
+    ? "$3.99/month or $29/year. Cancel any time."
+    : "$6.99/month or $59/year. Cancel any time.";
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleDismiss(); }}>
