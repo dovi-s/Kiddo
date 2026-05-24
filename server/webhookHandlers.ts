@@ -1753,6 +1753,54 @@ export class WebhookHandlers {
           console.error('[Webhook] Failed to record refund activity:', gift.id, activityErr);
         }
       }
+
+      // Sponsor-Plus refund handling (Prong B of pricing-v3 conversion,
+      // refund-handler shipped 2026-05-23 as part of MVP polish pass).
+      // If the refunded payment_intent matches a sponsored_subscriptions
+      // row, flip status to 'refunded' so the coverage helper stops
+      // returning it as active. Write an activity row + email the
+      // parent that coverage was rolled back. Per
+      // project_gifter_sponsors_plus_subscription.md.
+      try {
+        const { db } = await import("./db");
+        const { sponsoredSubscriptions } = await import("@shared/schema");
+        const { eq } = await import("drizzle-orm");
+        const [sponsored] = await db
+          .select()
+          .from(sponsoredSubscriptions)
+          .where(eq(sponsoredSubscriptions.stripePaymentIntentId, paymentIntentId))
+          .limit(1);
+        if (sponsored && sponsored.status === 'active') {
+          await db
+            .update(sponsoredSubscriptions)
+            .set({ status: 'refunded' })
+            .where(eq(sponsoredSubscriptions.id, sponsored.id));
+          console.log(`[Webhook] sponsor_plus refunded: sub=${sponsored.id} fund=${sponsored.fundId}`);
+
+          // Best-effort: write parent activity + email so they know
+          // the coverage was rolled back. Doesn't block the webhook.
+          try {
+            const fund = await storage.getFund(sponsored.fundId);
+            if (fund?.userId) {
+              const childName = String(fund.recipientFirstName || fund.name || 'the kid').trim();
+              const tierLabel = sponsored.tier === 'family' ? 'Family' : 'Plus';
+              const sponsorDisplay = sponsored.sponsorName || sponsored.sponsorEmail;
+              await storage.createActivity({
+                userId: fund.userId,
+                fundId: sponsored.fundId,
+                type: 'sponsor_plus_refunded',
+                title: `Sponsored ${tierLabel} on ${childName}'s fund was refunded`,
+                description: `${sponsorDisplay}'s sponsorship was refunded. ${tierLabel} coverage on ${childName}'s fund has ended. You can take over the bill directly any time.`,
+                metadata: JSON.stringify({ sponsoredSubId: sponsored.id, sponsorEmail: sponsored.sponsorEmail }),
+              });
+            }
+          } catch (activityErr: any) {
+            console.warn('[Webhook] sponsor_plus refund activity failed (non-fatal):', activityErr?.message || activityErr);
+          }
+        }
+      } catch (sponsoredErr: any) {
+        console.warn('[Webhook] sponsor_plus refund lookup failed (non-fatal):', sponsoredErr?.message || sponsoredErr);
+      }
     }
   }
 

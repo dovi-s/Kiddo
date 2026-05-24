@@ -178,10 +178,64 @@ async function sendRenewalReminder(
   return true;
 }
 
+// Expired-row cleanup. Flips status='active' rows past expires_at
+// to status='expired'. Coverage helper handles expiry correctly via
+// the expires_at > NOW() check (lazy evaluation) so this is purely
+// operational hygiene — keeps the table cleanly partitioned so
+// queries that filter by status='active' don't have to ALSO filter
+// by expires_at. Also surfaces an activity row so the parent's feed
+// reflects the expiry beat.
+async function cleanupExpiredSubscriptions(log: LogFn): Promise<number> {
+  const result = await pool.query<{ id: string; fund_id: string; tier: string; sponsor_name: string | null; sponsor_email: string }>(
+    `
+    UPDATE sponsored_subscriptions
+    SET status = 'expired'
+    WHERE status = 'active'
+      AND expires_at < NOW()
+    RETURNING id, fund_id, tier, sponsor_name, sponsor_email
+  `,
+  );
+  if (result.rows.length === 0) return 0;
+
+  // Write activity rows so each expiry is visible on the parent's
+  // feed. Per-row try/catch keeps any single failure from cascading.
+  const { db } = await import("./db");
+  const { activities } = await import("@shared/schema");
+  for (const row of result.rows) {
+    try {
+      const fund = await (await import("./storage")).storage.getFund(row.fund_id);
+      if (!fund?.userId) continue;
+      const childName = String(fund.recipientFirstName || fund.name || 'your kid').trim();
+      const tierLabel = row.tier === 'family' ? 'Family' : 'Plus';
+      const sponsorDisplay = row.sponsor_name || row.sponsor_email;
+      await db.insert(activities).values({
+        userId: fund.userId,
+        fundId: row.fund_id,
+        type: 'sponsor_plus_expired',
+        title: `Sponsored ${tierLabel} on ${childName}'s fund ended`,
+        description: `${sponsorDisplay}'s sponsorship has ended. ${childName}'s fund returned to the previous coverage state. Reactivate ${tierLabel} any time from your Plan settings.`,
+        metadata: JSON.stringify({ sponsoredSubId: row.id, sponsorEmail: row.sponsor_email }),
+      } as any);
+    } catch (activityErr) {
+      log(`sub ${row.id} expiry activity write failed (non-fatal): ${String(activityErr)}`, WORKER_SOURCE);
+    }
+  }
+  return result.rows.length;
+}
+
 export async function runSponsoredSubscriptionRenewalWorker(log: LogFn = () => undefined): Promise<void> {
   if (workerRunning) return;
   workerRunning = true;
   try {
+    // Cleanup expired rows first so the renewal-reminder pass below
+    // doesn't reconsider rows that should already be expired (defense
+    // against race conditions between the cleanup window and the
+    // renewal window).
+    const expiredCount = await cleanupExpiredSubscriptions(log);
+    if (expiredCount > 0) {
+      log(`cleaned up ${expiredCount} expired sponsored subscription(s)`, WORKER_SOURCE);
+    }
+
     const due = await loadDueSubscriptions();
     if (due.length === 0) return;
     let sent = 0;

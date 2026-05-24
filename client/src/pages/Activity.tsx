@@ -248,6 +248,26 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // up on this fund." See project_gifter_sponsors_plus_subscription.md.
   if (t === "sponsor_plus_activated")
     return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <Sparkles size={16} />, label: "Plus sponsored" };
+  // Sponsor-Plus renewal reminder sent (shipped 2026-05-23 same-day as
+  // MVP). Quieter palette than the activation moment — it's a beat,
+  // not a celebration. Mail icon signals "we sent you a thing." See
+  // sponsoredSubscriptionRenewalWorker.ts + the locked spec.
+  if (t === "sponsor_renewal_reminder_sent")
+    return { bg: "rgb(243,240,236)", color: "rgb(100,90,80)", icon: <Mail size={16} />, label: "Renewal reminder" };
+  // Sponsor-Plus refunded — Stripe sent us a charge.refunded event
+  // and we flipped the sponsored sub to status='refunded'. Coverage
+  // is rolled back; parent gets the activity row + (eventually) email.
+  // Muted red palette signals "this is undoing something." Per the
+  // handleChargeRefunded extension shipped 2026-05-23.
+  if (t === "sponsor_plus_refunded")
+    return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <XIcon size={16} />, label: "Plus refunded" };
+  // Sponsor-Plus expired — cleanup worker flipped status to 'expired'
+  // when expires_at passed. Coverage helper already rolled back via
+  // lazy expiry check; this row gives the parent dashboard a clear
+  // beat ("the coverage ended; here's how to reactivate"). Calm
+  // neutral palette since it's the natural end of a fixed-term gift.
+  if (t === "sponsor_plus_expired")
+    return { bg: "rgb(243,240,236)", color: "rgb(100,90,80)", icon: <Clock size={16} />, label: "Plus ended" };
   if (t === "parent_contribution_failed")
     return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Charge failed" };
   // Memory family — purple palette (kid-domain story).
