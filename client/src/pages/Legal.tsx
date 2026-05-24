@@ -88,7 +88,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">3. How Gifts Work</h3>
-                  <p>When someone sends a gift through Kiddo, the payment is processed via Stripe. Once the payment clears (typically 1 to 2 business days), the funds are directed to the recipient's investment account. Depending on the fund's settings, the money may be automatically invested or held as cash until the account owner decides.</p>
+                  <p>When someone sends a gift through Kiddo, the payment is processed via Stripe. Once the payment clears (typically 1 to 2 business days), the funds are directed to the recipient's investment account. Depending on the fund's settings, the money may be automatically invested or held as cash until the account owner decides. Gift-givers may also set up recurring gifts (weekly, monthly, or yearly), which create a Stripe Subscription that can be cancelled at any time via the gifter's account dashboard.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">4. Fees</h3>
@@ -104,7 +104,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">7. Account Closure</h3>
-                  <p>You may close your account at any time. Outstanding investments will need to be sold or transferred before account closure. Standard ACATS transfer to another brokerage is supported.</p>
+                  <p>You may close your account at any time. Outstanding investments must be liquidated to cash before account closure, and cash is sent to your linked bank account via ACH. For brokerage-to-brokerage transfers of in-kind positions, please contact support; this may require direct coordination with DriveWealth (our broker-dealer custodian) and can take several weeks.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">8. Changes to Terms</h3>
@@ -154,7 +154,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Bank Linking and ACH</h3>
-                  <p>If Kiddo enables ACH bank transfers or bank-linking features through a provider such as Plaid, that provider may receive your banking credentials, account metadata, and account verification information solely to support bank connection, verification, and payment flows. When that functionality is live, the provider will be treated as a named data processor in this policy.</p>
+                  <p>Kiddo uses Plaid to enable bank linking and ACH bank transfers. When you link a bank account through Plaid, Plaid receives your banking credentials, account metadata, and account verification information solely to support bank connection, verification, and payment flows. Plaid is a named data processor for these features.</p>
                 </div>
               </div>
             </div>
