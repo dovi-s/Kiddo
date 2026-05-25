@@ -485,6 +485,80 @@ export default function Home() {
             hero placement, accumulates weight over time). */}
         <SignatureTrustCounter />
 
+        {/* Memory Book emotional section — RELOCATED 2026-05-25 from
+            its previous position deep in the page (was position 9 in
+            the section flow). The copy specialist audit caught that
+            the load-bearing emotional beat ("proof that people loved
+            them") lived at paragraph 15 — buried behind feature
+            breadth (ProductBento) + the problem section + the 3-step
+            flow + the gifter card + the Kid View card. A parent
+            scanning the page for 20 seconds would never reach it.
+
+            The relocated section now lands immediately after the
+            SignatureTrustCounter (trust → scale) and before the
+            ProductBento (feature breadth). Narrative becomes:
+              1. Hero: "the fund and the book your kid opens at 18"
+              2. Trust strip: brokerage credibility
+              3. Trust counter: durability proof
+              4. Memory Book: WHY this matters (proof of love)
+              5. ProductBento: HOW it's built (feature exploration)
+              6. Rest of the page: problem → flow → gifter → kid → ...
+
+            The emotional payoff lands at the moment of highest
+            attention (post-hero, pre-feature-fatigue) instead of
+            being buried 9 sections deep. Per the team-audit copy
+            specialist's #1 recommendation. */}
+        <section className="py-20 md:py-28">
+          <div className={SECTION_MAX}>
+            <FadeIn className="mx-auto max-w-3xl text-center">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                <BookOpen className="h-3.5 w-3.5" />
+                Memory Book
+              </div>
+              <h2 className="mb-6 font-heading text-3xl font-bold tracking-normal text-foreground md:text-5xl">
+                Not a transaction log. A story.
+              </h2>
+              <p className="mx-auto mb-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">
+                Every gift, every note, every person who showed up for your child. Captured, in order, forever.
+              </p>
+              <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground">
+                Grandma&apos;s Disney gift from the first birthday. The note from a college friend you hadn&apos;t spoken to in years. The $20 from someone who just wanted to be part of it.
+              </p>
+              <p className="mt-6 text-lg font-semibold text-foreground">
+                At 18, they don&apos;t just get a brokerage balance. They get proof that people loved them.
+              </p>
+            </FadeIn>
+
+            <div className="mx-auto mt-14 max-w-4xl grid gap-5 md:grid-cols-3">
+              {[
+                {
+                  eyebrow: "Emma's 1st birthday",
+                  note: "\"For my Emma, with all my love. May this grow as fast as you do.\"",
+                  detail: "Grandma gifted $100 - invested in Disney - Jan 14, 2023",
+                },
+                {
+                  eyebrow: "Baby shower",
+                  note: "\"We can't wait to watch you grow up. This is the start of something big.\"",
+                  detail: "Aunt Sarah gifted $50 - invested in Apple - Aug 2, 2022",
+                },
+                {
+                  eyebrow: "Just because",
+                  note: "\"Saw your link in the group chat. Had to be part of it.\"",
+                  detail: "Michael gifted $25 - invested in Nike - Mar 8, 2024",
+                },
+              ].map((entry, i) => (
+                <FadeIn key={entry.eyebrow} delay={i * 0.08}>
+                  <div className="h-full rounded-2xl bg-card p-6 shadow-premium-sm">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">{entry.eyebrow}</p>
+                    <p className="mb-4 text-sm italic leading-relaxed text-foreground">{entry.note}</p>
+                    <p className="text-xs text-muted-foreground">{entry.detail}</p>
+                  </div>
+                </FadeIn>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Product surfaces — bento grid replacing the 3 inline preview
             cards that previously crowded the hero. Stripe's pattern:
             light visual + 1-line outcome + click-to-expand modal that
@@ -636,56 +710,15 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-24 md:py-32">
-          <div className={SECTION_MAX}>
-            <FadeIn className="mx-auto max-w-3xl text-center">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                <BookOpen className="h-3.5 w-3.5" />
-                Memory Book
-              </div>
-              <h2 className="mb-6 font-heading text-3xl font-bold tracking-normal text-foreground md:text-5xl">
-                Not a transaction log. A story.
-              </h2>
-              <p className="mx-auto mb-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-                Every gift, every note, every person who showed up for your child. Captured, in order, forever.
-              </p>
-              <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground">
-                Grandma&apos;s Disney gift from the first birthday. The note from a college friend you hadn&apos;t spoken to in years. The $20 from someone who just wanted to be part of it.
-              </p>
-              <p className="mt-6 text-lg font-semibold text-foreground">
-                At 18, they don&apos;t just get a brokerage balance. They get proof that people loved them.
-              </p>
-            </FadeIn>
-
-            <div className="mx-auto mt-14 max-w-4xl grid gap-5 md:grid-cols-3">
-              {[
-                {
-                  eyebrow: "Emma's 1st birthday",
-                  note: "\"For my Emma, with all my love. May this grow as fast as you do.\"",
-                  detail: "Grandma gifted $100 - invested in Disney - Jan 14, 2023",
-                },
-                {
-                  eyebrow: "Baby shower",
-                  note: "\"We can't wait to watch you grow up. This is the start of something big.\"",
-                  detail: "Aunt Sarah gifted $50 - invested in Apple - Aug 2, 2022",
-                },
-                {
-                  eyebrow: "Just because",
-                  note: "\"Saw your link in the group chat. Had to be part of it.\"",
-                  detail: "Michael gifted $25 - invested in Nike - Mar 8, 2024",
-                },
-              ].map((entry, i) => (
-                <FadeIn key={entry.eyebrow} delay={i * 0.08}>
-                  <div className="h-full rounded-2xl bg-card p-6 shadow-premium-sm">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">{entry.eyebrow}</p>
-                    <p className="mb-4 text-sm italic leading-relaxed text-foreground">{entry.note}</p>
-                    <p className="text-xs text-muted-foreground">{entry.detail}</p>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* The Memory Book emotional section moved 2026-05-25 from
+            position 9 (deep in the page) to position 4 (right after
+            SignatureTrustCounter, before ProductBento). Per the copy
+            specialist audit: the load-bearing emotional beat ("proof
+            that people loved them") was buried at paragraph 15 — a
+            parent scanning for 20 seconds would never reach it. The
+            relocated section now lands the emotional promise BEFORE
+            asking the parent to evaluate features. See the new
+            section in this file for the actual implementation. */}
 
         <section className="py-20 md:py-28">
           <div className={SECTION_MAX}>
