@@ -255,7 +255,7 @@ export default function Pricing() {
             </p>
             <p className="mx-auto mt-6 max-w-3xl rounded-2xl border border-border bg-card/70 px-5 py-4 text-sm leading-relaxed text-muted-foreground">
               <span className="font-medium text-foreground">No platform fee on gifts.</span>{" "}
-              The gift amount always stays whole. Kiddo's annual fee is $1 per $1,000 invested, charged only on invested assets, the same rate on every plan.
+              The gift amount always stays whole. Kiddo's annual fee is $1 per $1,000 invested. Only on invested assets. Same rate on every plan.
             </p>
             {/* Meta-explanation about why annual is shown first
                 retired 2026-05-15. The savings are visible in the

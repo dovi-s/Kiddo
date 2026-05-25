@@ -693,8 +693,9 @@ export default function ActivateInvesting() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">Your first name</label>
+                    <label htmlFor="activate-first-name" className="block text-sm font-medium text-foreground mb-1.5">Your first name</label>
                     <input
+                      id="activate-first-name"
                       type="text"
                       value={personal.firstName}
                       onChange={(e) => setPersonal({ ...personal, firstName: e.target.value })}
@@ -704,8 +705,9 @@ export default function ActivateInvesting() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">Your last name</label>
+                    <label htmlFor="activate-last-name" className="block text-sm font-medium text-foreground mb-1.5">Your last name</label>
                     <input
+                      id="activate-last-name"
                       type="text"
                       value={personal.lastName}
                       onChange={(e) => setPersonal({ ...personal, lastName: e.target.value })}
@@ -778,8 +780,9 @@ export default function ActivateInvesting() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Your home address</label>
+                  <label htmlFor="activate-street" className="block text-sm font-medium text-foreground mb-1.5">Your home address</label>
                   <input
+                    id="activate-street"
                     type="text"
                     value={personal.street}
                     onChange={(e) => setPersonal({ ...personal, street: e.target.value })}
@@ -791,8 +794,9 @@ export default function ActivateInvesting() {
 
                 <div className="grid grid-cols-6 gap-3">
                   <div className="col-span-3">
-                    <label className="block text-sm font-medium text-foreground mb-1.5">City</label>
+                    <label htmlFor="activate-city" className="block text-sm font-medium text-foreground mb-1.5">City</label>
                     <input
+                      id="activate-city"
                       type="text"
                       value={personal.city}
                       onChange={(e) => setPersonal({ ...personal, city: e.target.value })}
@@ -802,8 +806,9 @@ export default function ActivateInvesting() {
                     />
                   </div>
                   <div className="col-span-1">
-                    <label className="block text-sm font-medium text-foreground mb-1.5">State</label>
+                    <label htmlFor="activate-state" className="block text-sm font-medium text-foreground mb-1.5">State</label>
                     <input
+                      id="activate-state"
                       type="text"
                       value={personal.state}
                       onChange={(e) => setPersonal({ ...personal, state: e.target.value.toUpperCase().slice(0, 2) })}
@@ -813,8 +818,9 @@ export default function ActivateInvesting() {
                     />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-foreground mb-1.5">ZIP</label>
+                    <label htmlFor="activate-zip" className="block text-sm font-medium text-foreground mb-1.5">ZIP</label>
                     <input
+                      id="activate-zip"
                       type="text"
                       value={personal.zip}
                       onChange={(e) => setPersonal({ ...personal, zip: e.target.value.replace(/\D/g, "").slice(0, 5) })}
@@ -826,8 +832,9 @@ export default function ActivateInvesting() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Your phone number</label>
+                  <label htmlFor="activate-phone" className="block text-sm font-medium text-foreground mb-1.5">Your phone number</label>
                   <input
+                    id="activate-phone"
                     type="tel"
                     value={personal.phone}
                     onChange={(e) => setPersonal({ ...personal, phone: e.target.value.replace(/[^\d()\-\s.]/g, "").slice(0, 14) })}
@@ -871,8 +878,9 @@ export default function ActivateInvesting() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Social Security Number</label>
+                  <label htmlFor="activate-ssn" className="block text-sm font-medium text-foreground mb-1.5">Social Security Number</label>
                   <input
+                    id="activate-ssn"
                     type="password"
                     value={identity.ssn}
                     onChange={(e) =>
@@ -890,8 +898,9 @@ export default function ActivateInvesting() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Citizenship</label>
+                  <label htmlFor="activate-citizenship" className="block text-sm font-medium text-foreground mb-1.5">Citizenship</label>
                   <select
+                    id="activate-citizenship"
                     value={identity.citizenship}
                     onChange={(e) => setIdentity({ ...identity, citizenship: e.target.value })}
                     data-testid="select-citizenship"
@@ -909,8 +918,9 @@ export default function ActivateInvesting() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1.5">Employment status</label>
+                  <label htmlFor="activate-employment" className="block text-sm font-medium text-foreground mb-1.5">Employment status</label>
                   <select
+                    id="activate-employment"
                     value={identity.employment}
                     onChange={(e) => setIdentity({ ...identity, employment: e.target.value })}
                     data-testid="select-employment"

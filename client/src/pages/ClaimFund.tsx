@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useRoute, useSearch } from "wouter";
 import { motion, useReducedMotion } from "framer-motion";
+import { Check, Sparkles, BookOpen, ArrowRight } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -32,6 +33,18 @@ export default function ClaimFund() {
   const [firstName, setFirstName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Two-phase state: form-phase → success-phase. After a successful
+  // claim the page used to redirect to /dashboard silently, which
+  // missed the locked principle "the at-18 handoff is the only
+  // product-transition window the company has." The celebration
+  // state surfaces the load-bearing facts (subscription retires,
+  // AUM-only pricing, kid-2.0 Roth signpost) at the exact moment
+  // the kid takes legal ownership. Per project_kid_2.0_handoff_funnel.md
+  // and the team motion-audit recommendation 2026-05-25.
+  const [claimedName, setClaimedName] = useState<string | null>(null);
+  const [rothOptedIn, setRothOptedIn] = useState(false);
+  const [rothSubmitting, setRothSubmitting] = useState(false);
+  const [rothError, setRothError] = useState<string | null>(null);
   // Respect OS-level prefers-reduced-motion. The staged-reveal card on
   // this page is the highest-stakes moment in the product, but a kid
   // with vestibular sensitivity should not be forced to ride through
@@ -72,13 +85,45 @@ export default function ClaimFund() {
         return;
       }
       haptic("success");
-      // Server has already established the session as the new owner. Send
-      // them straight to the dashboard — they're now logged in as themselves,
-      // and the just-claimed fund is the only one they own.
-      setLocation("/dashboard");
+      // Flip to celebration state instead of silent redirect. The kid is
+      // logged in (server established the session) but stays on this page
+      // for the success moment. The "Go to my dashboard" CTA below
+      // navigates manually when the kid taps it.
+      const claimedFirstName = (firstName.trim() || data?.firstName || "you").trim();
+      setClaimedName(claimedFirstName);
+      setSubmitting(false);
     } catch (err: any) {
       setError(err?.message || "Network error. Try again.");
       setSubmitting(false);
+    }
+  };
+
+  // Kid-self Roth IRA waitlist opt-in. Kid is now the authenticated user;
+  // POSTs to the same /api/users/me/roth-interest endpoint the parent
+  // signup uses, but the copy framing is first-person ("let me know").
+  // Optimistic flip with revert-on-failure, same pattern as the parent
+  // RothInterestOptIn component but inlined here to avoid prop-bloat
+  // on the shared component (which assumes parent context).
+  const handleRothToggle = async () => {
+    if (rothSubmitting) return;
+    const next = !rothOptedIn;
+    setRothOptedIn(next);
+    setRothSubmitting(true);
+    setRothError(null);
+    haptic(next ? "success" : "light");
+    try {
+      const res = await fetch("/api/users/me/roth-interest", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ interested: next }),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+    } catch (e) {
+      setRothOptedIn(!next);
+      setRothError("Couldn't save right now. Tap to try again.");
+    } finally {
+      setRothSubmitting(false);
     }
   };
 
@@ -88,6 +133,174 @@ export default function ClaimFund() {
         <div className="max-w-md w-full bg-white border border-border/60 rounded-2xl p-6 text-center shadow-sm">
           <p className="text-sm font-semibold text-foreground mb-2">Open this from your Kid View.</p>
           <p className="text-xs text-muted-foreground">The claim link needs to come from inside your unlocked Kid View page so we know it's actually you.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Celebration / success state — renders after a successful claim
+  // instead of silently redirecting to /dashboard. The locked
+  // principle (project_kid_2.0_handoff_funnel.md) requires the
+  // at-18 handoff to route TOWARD a next Kiddo product, NOT OUT.
+  // This surface delivers on that: animated checkmark + personalized
+  // "It's yours" + three load-bearing facts (subscription retires,
+  // AUM-only pricing, investments stay) + Roth IRA waitlist opt-in
+  // (kid-2.0 Phase 1) + clear next-step CTAs to dashboard + Memory
+  // Book. The kid is logged in (server established session before
+  // we got here); they just stay on the page to absorb the moment.
+  if (claimedName) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[hsl(var(--kiddo-cream))] via-white to-[hsl(var(--kiddo-gold)/0.10)]">
+        <div className="mx-auto max-w-md px-4 py-8">
+          <div className="flex items-center justify-between mb-8">
+            <Logo />
+          </div>
+
+          <motion.div
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.22)_0%,#fff_55%,hsl(var(--kiddo-cream))_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+            role="status"
+            aria-live="polite"
+          >
+            {/* Animated checkmark badge — spring scale on entry. The
+                single most ceremonial element on the page. Skipped
+                for reduced-motion users (instant render at final
+                state). */}
+            <motion.div
+              initial={prefersReducedMotion ? false : { scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 240, damping: 16, delay: 0.05 }}
+              className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[hsl(var(--kiddo-gold-ink))] shadow-[0_8px_24px_-8px_hsl(var(--kiddo-gold-ink)/0.5)]"
+              aria-hidden="true"
+            >
+              <Check size={32} className="text-white" strokeWidth={2.5} />
+            </motion.div>
+
+            <motion.div
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: "easeOut", delay: 0.18 }}
+              className="text-center mb-5"
+            >
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85 mb-2">Welcome, owner</p>
+              <h1 className="font-heading text-3xl font-bold text-foreground leading-tight">
+                It's yours now, {claimedName}.
+              </h1>
+              <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                Legal ownership transferred. Your fund, your call from here.
+              </p>
+            </motion.div>
+
+            {/* Three load-bearing facts. Each one is a locked-memory
+                fact (subscription_retires_at_majority + Fee Architecture
+                + Investments-stay-as-is) made concrete at the moment
+                of ownership transfer. */}
+            <motion.div
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0.30 }}
+              className="mb-5 space-y-2.5 rounded-2xl bg-white/65 border border-[hsl(var(--kiddo-border)/0.5)] px-4 py-4"
+            >
+              <div className="flex items-start gap-2.5">
+                <Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" strokeWidth={2.5} aria-hidden="true" />
+                <p className="text-sm text-foreground/85 leading-relaxed">
+                  <span className="font-semibold text-foreground">Every investment stays exactly where it is.</span> Nothing was sold. Holdings, dividends, basis: all transferred to you.
+                </p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" strokeWidth={2.5} aria-hidden="true" />
+                <p className="text-sm text-foreground/85 leading-relaxed">
+                  <span className="font-semibold text-foreground">Your parents' Plus subscription for this fund ends today.</span> You don't pay it. Kiddo+ exists for parents managing custody.
+                </p>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" strokeWidth={2.5} aria-hidden="true" />
+                <p className="text-sm text-foreground/85 leading-relaxed">
+                  <span className="font-semibold text-foreground">The only ongoing charge: 10 cents per $100 invested per year.</span> That's it. No subscription. No platform fee.
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Kid-2.0 funnel signpost — Roth IRA waitlist opt-in.
+                Per project_kid_2.0_handoff_funnel.md Phase 3 (Roth IRA
+                on DriveWealth, Year 2-3). Waitlist already live at
+                parent signup; this is the kid-side equivalent for
+                the just-claimed kid. */}
+            <motion.div
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0.42 }}
+              className="mb-5"
+            >
+              <button
+                type="button"
+                onClick={() => void handleRothToggle()}
+                disabled={rothSubmitting}
+                aria-pressed={rothOptedIn}
+                className={`w-full rounded-2xl border p-4 text-left transition-colors disabled:opacity-60 ${
+                  rothOptedIn
+                    ? "border-primary/40 bg-primary/5"
+                    : "border-border bg-white/70 hover:border-primary/30"
+                }`}
+                data-testid="claim-roth-opt-in"
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                    rothOptedIn ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
+                  }`}>
+                    {rothOptedIn ? <Check size={16} strokeWidth={2.5} /> : <Sparkles size={16} strokeWidth={1.8} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      {rothOptedIn ? "We'll let you know when Roth IRA opens." : "Want a heads-up when Roth IRA opens?"}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      Once you have earned income from a job, a Roth IRA lets the money keep compounding tax-free for life. Kiddo is building this path. {rothOptedIn ? "Tap to opt out." : "Tap to join the waitlist."}
+                    </p>
+                    {rothError && (
+                      <p className="mt-2 text-xs text-destructive" role="alert" aria-live="polite">{rothError}</p>
+                    )}
+                  </div>
+                </div>
+              </button>
+            </motion.div>
+
+            {/* Next-step CTAs — primary navigates to dashboard, secondary
+                opens the Memory Book (the gifts/notes/photos from the
+                kid's life that just became theirs forever). */}
+            <motion.div
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut", delay: 0.55 }}
+              className="space-y-2.5"
+            >
+              <Button
+                type="button"
+                onClick={() => { haptic("selection"); setLocation("/dashboard"); }}
+                className="w-full rounded-full h-12 font-semibold bg-[hsl(var(--kiddo-gold-ink))] hover:opacity-90 text-base"
+                data-testid="claim-success-dashboard"
+              >
+                Go to my dashboard
+                <ArrowRight size={16} className="ml-2" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => { haptic("selection"); setLocation("/memory"); }}
+                className="w-full rounded-full h-12 font-medium"
+                data-testid="claim-success-memory"
+              >
+                <BookOpen size={16} className="mr-2" />
+                Open my Memory Book
+              </Button>
+            </motion.div>
+          </motion.div>
+
+          <div className="mt-6">
+            <TrustMicroStrip />
+          </div>
         </div>
       </div>
     );

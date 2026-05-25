@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, Lock, Mail, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ThinkingOrb } from "@/components/ui/gemini";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { haptic } from "@/lib/haptics";
 import { useAuth } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
@@ -339,73 +340,76 @@ export default function Login() {
         </motion.div>
       </main>
 
-      {showForgotPassword && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4" onClick={() => setShowForgotPassword(false)}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 24 }}
-            className="w-full max-w-sm bg-card rounded-2xl border border-border shadow-2xl p-6 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {resetSent ? (
-              <div className="text-center space-y-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                  <ShieldCheck size={22} className="text-primary" />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground">Check your inbox</h3>
-                <p className="text-sm text-muted-foreground">
-                  If an account exists for <span className="font-medium text-foreground">{resetEmail}</span>, we've sent a password reset link.
-                </p>
-                <button
-                  onClick={() => setShowForgotPassword(false)}
-                  className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
-                >
-                  Done
-                </button>
+      {/* Forgot-password modal — Radix Dialog primitive instead of the
+          previous custom <div className="fixed inset-0"> implementation.
+          Radix provides role="dialog" + aria-modal="true" + focus trap
+          + Escape-to-close + return-focus-to-opener semantics out of
+          the box, all of which the custom impl was missing (WCAG 4.1.2
+          failure caught by the 2026-05-25 team a11y audit). The
+          Dialog primitive used here is the same one Home.tsx ProductBento
+          modal uses — established codebase pattern. */}
+      <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+        <DialogContent className="max-w-sm">
+          {resetSent ? (
+            <div className="text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <ShieldCheck size={22} className="text-primary" />
               </div>
-            ) : (
-              <>
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Reset your password</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Enter your email and we'll send you a reset link.</p>
-                </div>
-                <form onSubmit={handleForgotPassword} className="space-y-3">
-                  <label htmlFor="reset-email" className="sr-only">Email address</label>
-                  <input
-                    id="reset-email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    inputMode="email"
-                    value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    required
-                    className="w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
-                    data-testid="input-reset-email"
-                  />
-                  <button
-                    type="submit"
-                    disabled={!resetEmail.trim() || resetLoading}
-                    className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-                    data-testid="button-reset-submit"
-                  >
-                    {resetLoading ? "Sending..." : "Send reset link"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowForgotPassword(false)}
-                    className="w-full h-11 rounded-xl font-medium text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </form>
-              </>
-            )}
-          </motion.div>
-        </div>
-      )}
+              <DialogHeader>
+                <DialogTitle className="text-center">Check your inbox</DialogTitle>
+                <DialogDescription className="text-center">
+                  If an account exists for <span className="font-medium text-foreground">{resetEmail}</span>, we've sent a password reset link.
+                </DialogDescription>
+              </DialogHeader>
+              <button
+                onClick={() => setShowForgotPassword(false)}
+                className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Reset your password</DialogTitle>
+                <DialogDescription>Enter your email and we'll send you a reset link.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleForgotPassword} className="space-y-3">
+                <label htmlFor="reset-email" className="sr-only">Email address</label>
+                <input
+                  id="reset-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
+                  data-testid="input-reset-email"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={!resetEmail.trim() || resetLoading}
+                  className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  data-testid="button-reset-submit"
+                >
+                  {resetLoading ? "Sending..." : "Send reset link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotPassword(false)}
+                  className="w-full h-11 rounded-xl font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

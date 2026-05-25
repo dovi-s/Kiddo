@@ -762,6 +762,11 @@ function Router() {
     <>
       <ScrollToTop />
       <DemoBanner />
+      {/* id="main-content" is the skip-to-content link target (defined
+          on the App shell above). tabIndex={-1} lets the anchor jump
+          focus here without making the wrapper itself part of the tab
+          sequence. Audit 2026-05-25. */}
+      <main id="main-content" tabIndex={-1} className="outline-none">
       <Suspense fallback={<RouteLoadingFallback />}>
         <RouteFader>
         <Switch>
@@ -838,6 +843,7 @@ function Router() {
         </Switch>
         </RouteFader>
       </Suspense>
+      </main>
     </>
   );
 }
@@ -908,6 +914,18 @@ function App() {
         <RealtimeProvider>
           <TooltipProvider>
             <div className={`mobile-app-shell ${!hideGlobalNav ? "mobile-app-shell--with-nav" : ""}`}>
+              {/* Skip-to-content link — WCAG 2.4.1 "Bypass Blocks" fix.
+                  Visually hidden until keyboard-focused, then jumps to
+                  the #main-content anchor (the Router's content wrapper).
+                  Keyboard-only users can skip past the sidebar + mobile
+                  nav with one Tab + Enter. Audit 2026-05-25 caught the
+                  absence. */}
+              <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-primary-foreground focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              >
+                Skip to main content
+              </a>
               <SeoManager />
               <Toaster />
               {!hideGlobalNav && <DesktopSidebar />}

@@ -796,6 +796,30 @@ export default function GiftSuccess() {
           </motion.div>
         )}
 
+        {/* One-time gifters: "send another" CTA. The team-audit conversion
+            specialist flagged that one-time gifters land on success with
+            NO follow-up CTA (only recurring gifters get the dashboard
+            link). A gifter who just sent $50 and felt good is in the
+            highest-intent moment to send again or save the fund for
+            next year. The CTA routes back to the gift page (using
+            fundSlug when resolved, fundId as fallback) so the gifter
+            can immediately start another gift. Audit 2026-05-25. */}
+        {!isRecurringSetup && (fundSlug || fundId) && (
+          <motion.div
+            className="flex justify-center mb-6"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.66, duration: 0.4 }}
+            data-testid="cta-success-send-another"
+          >
+            <Link href={`/${fundSlug || fundId}`}>
+              <Button variant="outline" size="sm" className="rounded-full" data-testid="button-send-another">
+                Send {childFirstName ? `${childFirstName}` : "another gift"} again →
+              </Button>
+            </Link>
+          </motion.div>
+        )}
+
         {/* Affirmative anonymous confirmation. Replaces what would
             otherwise read as "Someone added $50..." (placeholder name)
             with explicit acknowledgment that the gifter chose anonymous

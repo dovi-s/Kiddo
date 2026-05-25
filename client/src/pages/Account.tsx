@@ -114,8 +114,9 @@ function EmailRow({ currentEmail }: { currentEmail: string | null }) {
 
   return (
     <div className="space-y-2.5">
-      <p className="text-xs text-muted-foreground">New email</p>
+      <label htmlFor="input-new-email" className="text-xs text-muted-foreground block">New email</label>
       <input
+        id="input-new-email"
         type="email"
         autoComplete="email"
         value={newEmail}
