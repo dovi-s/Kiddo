@@ -415,7 +415,7 @@ export default function AgeTransitionInvite() {
                       {memory.content || memory.gift?.message || "A gift that became part of your story."}
                     </p>
                     {memory.photoUrl ? (
-                      <img src={memory.photoUrl} alt="Memory" className="mt-3 max-h-64 w-full rounded-2xl object-cover" />
+                      <img src={memory.photoUrl} alt="Memory" loading="lazy" className="mt-3 max-h-64 w-full rounded-2xl object-cover" />
                     ) : null}
                     {embed ? (
                       <iframe

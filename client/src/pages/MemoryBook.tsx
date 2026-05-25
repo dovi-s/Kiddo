@@ -3183,7 +3183,7 @@ export default function MemoryBook() {
                                   : "0 0 0 2px hsl(var(--kiddo-evergreen)/0.55)",
                               }}
                             >
-                              <img src={ownerProfileImageUrl} alt="" className="h-full w-full object-cover" />
+                              <img src={ownerProfileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                             </div>
                           ) : (
                             <div
@@ -3669,7 +3669,7 @@ export default function MemoryBook() {
                               style={ident.avatarStyle === "gifter" && ident.gifterBg ? { background: ident.gifterBg } : undefined}
                             >
                               {ident.profileImageUrl
-                                ? <img src={ident.profileImageUrl} alt="" className="h-full w-full object-cover" />
+                                ? <img src={ident.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                 : ident.avatarLetter}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -4870,7 +4870,7 @@ export default function MemoryBook() {
                           <div className="flex items-start gap-3 p-4">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-sm font-bold text-[hsl(var(--kiddo-evergreen))] overflow-hidden">
                               {entry.authorPhotoUrl
-                                ? <img src={entry.authorPhotoUrl} alt="" className="h-full w-full object-cover" />
+                                ? <img src={entry.authorPhotoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                 : (entry.authorName || "P").slice(0, 1).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
@@ -4920,7 +4920,7 @@ export default function MemoryBook() {
                                     }}
                                   >
                                     {memoryIdent.profileImageUrl
-                                      ? <img src={memoryIdent.profileImageUrl} alt="" className="h-full w-full object-cover" />
+                                      ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                       : memoryIdent.avatarLetter}
                                   </div>
                                   <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -4953,7 +4953,7 @@ export default function MemoryBook() {
                                   }}
                                 >
                                   {memoryIdent.profileImageUrl
-                                    ? <img src={memoryIdent.profileImageUrl} alt="" className="h-full w-full object-cover" />
+                                    ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                     : memoryIdent.avatarLetter}
                                 </div>
                                 <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -5009,7 +5009,7 @@ export default function MemoryBook() {
                                     }}
                                   >
                                     {memoryIdent.profileImageUrl
-                                      ? <img src={memoryIdent.profileImageUrl} alt="" className="h-full w-full object-cover" />
+                                      ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                       : memoryIdent.avatarLetter}
                                   </div>
                                   <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>
@@ -5034,7 +5034,7 @@ export default function MemoryBook() {
                                   }}
                                 >
                                   {memoryIdent.profileImageUrl
-                                    ? <img src={memoryIdent.profileImageUrl} alt="" className="h-full w-full object-cover" />
+                                    ? <img src={memoryIdent.profileImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                                     : memoryIdent.avatarLetter}
                                 </div>
                                 <span className="font-semibold text-foreground/80">{memoryIdent.displayName}</span>

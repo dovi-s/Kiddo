@@ -319,7 +319,7 @@ export function CoParentAccessCard({
           <div className="flex items-center gap-3 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.12)] text-sm font-bold text-[hsl(var(--kiddo-evergreen))]">
               {user?.profileImageUrl
-                ? <img src={user.profileImageUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                ? <img src={user.profileImageUrl} alt="" loading="lazy" className="h-full w-full rounded-full object-cover" />
                 : ownerInitial}
             </div>
             <div className="flex-1 min-w-0">

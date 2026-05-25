@@ -1223,7 +1223,7 @@ export default function KidView() {
                       ) : (
                         <p className="text-xs text-muted-foreground">A memory from {entry.authorName || "someone"}.</p>
                       )}
-                      {entry.photoUrl && <img src={entry.photoUrl} alt="Memory" className="mt-3 h-44 w-full rounded-2xl object-cover" />}
+                      {entry.photoUrl && <img src={entry.photoUrl} alt="Memory" loading="lazy" className="mt-3 h-44 w-full rounded-2xl object-cover" />}
                       {(entry as any).audioUrl && (
                         <div className="mt-3 rounded-xl border border-border/40 bg-background px-3 py-2">
                           <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-1">🎙 Voice note</p>
