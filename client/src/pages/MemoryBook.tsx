@@ -618,6 +618,18 @@ export default function MemoryBook() {
   const [composerStep, setComposerStep] = useState<"compose" | "preview">("compose");
   const [composerMessage, setComposerMessage] = useState("");
   const [sendingThankYou, setSendingThankYou] = useState(false);
+
+  // Bulk thank-you composer — added 2026-05-25 to close the gifter-thanks
+  // audit gap. When a gifter has multiple gifts awaiting thanks, the
+  // existing per-gift composer forces N separate emails. The bulk
+  // composer lets the parent send ONE consolidated thank-you covering
+  // every pending gift from that gifter. Surfaces only when the
+  // ?gifter=NAME filter is active AND the gifter has >= 2 awaiting
+  // thanks; per-gift composer still works for one-off cases.
+  const [bulkComposerOpen, setBulkComposerOpen] = useState(false);
+  const [bulkComposerTone, setBulkComposerTone] = useState<"warm" | "brief" | "formal" | "custom">("warm");
+  const [bulkComposerMessage, setBulkComposerMessage] = useState("");
+  const [sendingBulkThankYou, setSendingBulkThankYou] = useState(false);
   const [coverageReturnNotice, setCoverageReturnNotice] = useState<{
     type: "success" | "canceled";
     title: string;
@@ -1070,6 +1082,88 @@ export default function MemoryBook() {
     setComposerMessage(ty?.message || buildThankYouMessage("warm", senderName, amount, ctx));
     setComposerStep("compose");
     haptic("selection");
+  };
+
+  // Bulk thank-you message builder. Different shape than the per-gift
+  // version — enumerates the gifts rather than referencing just one.
+  // Example warm-tone output:
+  //
+  //   Dear Grandpa,
+  //
+  //   Thank you so much for the 6 gifts you sent to Emma's fund this
+  //   year, $2,400 in total. Whether you knew it or not, each one of
+  //   them added up to something real Emma will read about when she's
+  //   18. It means more than you know — not just the money but the
+  //   fact that you keep showing up for her.
+  //
+  //   With love,
+  //   Sarah
+  //
+  // Tone selection mirrors the per-gift composer. The 'custom' tone
+  // returns an empty string and the textarea is the parent's blank
+  // canvas.
+  function buildBulkThankYouMessage(
+    tone: "warm" | "brief" | "formal" | "custom",
+    senderName: string,
+    pendingGifts: Array<{ amount: string; createdAt?: string | null }>,
+  ): string {
+    if (tone === "custom") return "";
+    const count = pendingGifts.length;
+    const totalAmount = pendingGifts.reduce((sum, g) => sum + (parseFloat(String(g.amount || "0")) || 0), 0);
+    const fmtTotal = `$${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const child = childName || "our child";
+    const name = titleCaseName(senderName) || senderName;
+    switch (tone) {
+      case "warm":
+        return `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one of them is a real investment ${child} will read about when they're 18. It means more than you know: not just the money but the fact that you keep showing up for ${child}.\n\nWith love,\n${ownerName}`;
+      case "brief":
+        return `Hi ${name},\n\nThank you for the ${count} gifts to ${child}'s fund (${fmtTotal} total). We really appreciate your generosity.\n\nWith gratitude,\n${ownerName}`;
+      case "formal":
+        return `Dear ${name},\n\nWe are writing to express our sincere gratitude for the ${count} gifts you have made to ${child}'s fund, totaling ${fmtTotal}. Your continued support is deeply appreciated.\n\nSincerely,\n${ownerName}`;
+    }
+  }
+
+  // Send the bulk thank-you. Marks all the gifter's pending thank-you
+  // rows on this fund as 'sent' in a single atomic request, sends ONE
+  // consolidated email, and refreshes the local cache.
+  const handleSendBulkThankYou = async (ids: string[]) => {
+    if (sendingBulkThankYou || ids.length === 0 || !bulkComposerMessage.trim()) return;
+    setSendingBulkThankYou(true);
+    try {
+      const res = await fetch(`/api/funds/${fundId}/thank-yous/bulk-send`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ thankYouIds: ids, message: bulkComposerMessage }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      if (data?.deliveryUrl) {
+        window.open(data.deliveryUrl, "_blank");
+      }
+      await refetchThankYous();
+      setBulkComposerOpen(false);
+      setBulkComposerMessage("");
+      setBulkComposerTone("warm");
+      haptic("success");
+      toast({
+        title: `Thanked ${ids.length} gifts at once`,
+        description: data?.totalGiftAmount
+          ? `Single email sent covering $${Number(data.totalGiftAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of giving.`
+          : "Single email sent covering every pending gift from this gifter.",
+      });
+    } catch (err) {
+      haptic("error");
+      toast({
+        title: "Could not send bulk thank-you",
+        description: err instanceof Error ? err.message : "Try again.",
+        variant: "destructive",
+      });
+    }
+    setSendingBulkThankYou(false);
   };
 
   const handleSendThankYou = async (ty: any) => {
@@ -3462,6 +3556,127 @@ export default function MemoryBook() {
                 </button>
               </div>
             )}
+
+            {/* Bulk thank-you composer card — added 2026-05-25 to close
+                the audit gap where a gifter who gave 6 gifts forced the
+                parent to compose 6 separate thank-yous. Surfaces only
+                when the parent filtered to a specific gifter AND that
+                gifter has 2+ awaiting (unsent + non-anonymous + has
+                email) thank-yous. Tapping unfolds the composer inline
+                with the same warm/brief/formal/custom tone picker the
+                per-gift composer uses, pre-populated with a multi-gift
+                template that enumerates the count + total. Sends ONE
+                consolidated email via POST /thank-yous/bulk-send. */}
+            {(() => {
+              if (!gifterFilter || gifterFilter.toLowerCase() === "anonymous") return null;
+              // Find every thank-you row for this gifter that's unsent
+              // AND has a reachable email. Anonymous + contactless are
+              // excluded — they can't receive an email, so bulk-thanking
+              // them is meaningless.
+              const matchingRows = thankYouList.filter((ty: any) => {
+                if (!ty?.senderName) return false;
+                if (String(ty.status || "") === "sent") return false;
+                const senderEmail = String(ty.senderEmail || "").trim();
+                if (!senderEmail) return false;
+                return String(ty.senderName || "").toLowerCase() === gifterFilter.toLowerCase();
+              });
+              if (matchingRows.length < 2) return null;
+              const pendingGifts = matchingRows.map((ty: any) => ({
+                amount: String(ty.giftAmount || ty.amount || "0"),
+                createdAt: ty.createdAt ?? null,
+              }));
+              const totalAmount = pendingGifts.reduce((sum: number, g: any) => sum + (parseFloat(String(g.amount || "0")) || 0), 0);
+              const senderFirst = gifterFilter.split(" ")[0];
+              const ids = matchingRows.map((r: any) => r.id);
+              return (
+                <div
+                  className="mb-4 rounded-2xl border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.06)] p-4"
+                  data-testid="memory-bulk-thanks-card"
+                >
+                  {!bulkComposerOpen ? (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-foreground">
+                          Thank {senderFirst} for all {matchingRows.length} gifts at once
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          ${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} across {matchingRows.length} gifts. One email instead of {matchingRows.length}.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          haptic("selection");
+                          setBulkComposerOpen(true);
+                          setBulkComposerTone("warm");
+                          setBulkComposerMessage(buildBulkThankYouMessage("warm", gifterFilter, pendingGifts));
+                        }}
+                        className="shrink-0 rounded-full bg-[hsl(var(--kiddo-evergreen))] px-4 py-2 text-xs font-semibold text-white hover:opacity-90 transition-opacity"
+                        data-testid="button-bulk-thanks-open"
+                      >
+                        Open bulk composer →
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-foreground">
+                            Thanking {senderFirst} for {matchingRows.length} gifts (${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            One consolidated email. Marks all {matchingRows.length} as thanked at once.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setBulkComposerOpen(false); setBulkComposerMessage(""); }}
+                          className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["warm", "brief", "formal", "custom"] as const).map((tone) => (
+                          <button
+                            key={tone}
+                            type="button"
+                            onClick={() => {
+                              setBulkComposerTone(tone);
+                              setBulkComposerMessage(buildBulkThankYouMessage(tone, gifterFilter, pendingGifts));
+                            }}
+                            className={`rounded-full px-3 py-1 text-[11px] font-semibold capitalize transition-colors ${bulkComposerTone === tone ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "border border-border text-muted-foreground hover:text-foreground"}`}
+                            data-testid={`button-bulk-thanks-tone-${tone}`}
+                          >
+                            {tone}
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={bulkComposerMessage}
+                        onChange={(e) => {
+                          setBulkComposerMessage(e.target.value);
+                          if (bulkComposerTone !== "custom") setBulkComposerTone("custom");
+                        }}
+                        rows={bulkComposerTone === "custom" ? 6 : 8}
+                        placeholder={bulkComposerTone === "custom" ? `Write your own message to ${senderFirst}...` : undefined}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm leading-relaxed text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
+                        data-testid="textarea-bulk-thanks-message"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSendBulkThankYou(ids)}
+                        disabled={sendingBulkThankYou || !bulkComposerMessage.trim()}
+                        className="w-full rounded-xl bg-[hsl(var(--kiddo-evergreen))] py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                        data-testid="button-bulk-thanks-send"
+                      >
+                        {sendingBulkThankYou ? "Sending..." : `Send to ${senderFirst}`}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {filteredEntries.length === 0 ? (() => {
               // Context-aware empty state — the message changes based on

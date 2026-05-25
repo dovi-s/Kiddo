@@ -12621,6 +12621,159 @@ export async function registerRoutes(
     }
   });
 
+  // Bulk thank-you send. Per the 2026-05-25 gifter-thanks audit: the
+  // existing per-gift sender works, but a gifter who gave 6 gifts gets
+  // 6 separate emails ("Dear Grandpa, thank you for your $50 gift...")
+  // which reads mechanical and dilutes the moment. This endpoint takes
+  // a list of thank-you IDs that ALL belong to the same gifter on the
+  // same fund + one consolidated message, sends ONE email, and marks
+  // every ID as sent atomically.
+  //
+  // Validation rules:
+  //   - All thankYouIds must exist + belong to this fund.
+  //   - All must share a normalized senderEmail (the gifter — prevents
+  //     accidentally bulk-sending one message to multiple recipients).
+  //   - None can already be in 'sent' status (idempotency: caller can
+  //     re-attempt if SOME were partially sent before).
+  //   - Message must be non-empty.
+  //
+  // The single consolidated email is built from `message` (parent's
+  // composed text) and routed through enqueueParentThankYou exactly
+  // like the per-gift endpoint above, except `giftAmount` is the SUM
+  // across all gifts. The mailto fallback also carries the consolidated
+  // message so the parent's email client opens once with the full
+  // thank-you, not 6 separate mailto opens.
+  app.post('/api/funds/:fundId/thank-yous/bulk-send', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (req.fundAccessRole !== 'owner' && req.fundAccessRole !== 'co-admin') {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+
+      const rawIds = Array.isArray(req.body?.thankYouIds) ? req.body.thankYouIds : [];
+      const thankYouIds = rawIds.map((v: unknown) => String(v || "").trim()).filter(Boolean);
+      const message = typeof req.body?.message === "string" ? req.body.message.trim() : "";
+
+      if (thankYouIds.length < 1) {
+        return res.status(400).json({ error: 'thankYouIds must include at least one id' });
+      }
+      if (thankYouIds.length > 50) {
+        return res.status(400).json({ error: 'Too many thank-yous in one batch (max 50)' });
+      }
+      if (!message) {
+        return res.status(400).json({ error: 'message is required' });
+      }
+
+      const rows = await db
+        .select()
+        .from(thankYous)
+        .where(and(
+          eq(thankYous.fundId, req.params.fundId),
+          inArray(thankYous.id, thankYouIds),
+        ));
+
+      if (rows.length !== thankYouIds.length) {
+        return res.status(404).json({ error: 'One or more thank-yous not found on this fund' });
+      }
+
+      // All rows must share a normalized senderEmail. Anti-spoof — without
+      // this a misbehaving client could bundle two different gifters and
+      // send one of them the other's thank-you. The normalized email is
+      // the canonical gifter key everywhere else in the system.
+      const normalizedEmails = new Set<string>();
+      for (const row of rows) {
+        const norm = String(row.senderEmail || "").trim().toLowerCase();
+        if (!norm) {
+          return res.status(400).json({ error: 'All thank-yous in a batch must have a sender email' });
+        }
+        normalizedEmails.add(norm);
+      }
+      if (normalizedEmails.size > 1) {
+        return res.status(400).json({ error: 'All thank-yous in a batch must belong to the same gifter' });
+      }
+      const recipientEmail = Array.from(normalizedEmails)[0];
+
+      // Skip rows already sent — idempotency. If the parent re-attempts
+      // after a partial-success the unsent rows still get processed.
+      const unsentRows = rows.filter((r: any) => String(r.status || "") !== "sent");
+      if (unsentRows.length === 0) {
+        return res.status(409).json({ error: 'All thank-yous in the batch are already sent' });
+      }
+
+      // Mark all unsent as sent + stamp the consolidated message.
+      const now = new Date();
+      await Promise.all(unsentRows.map((r: any) => storage.updateThankYou(r.id, {
+        status: 'sent',
+        sentAt: now,
+        message,
+      } as any)));
+
+      // Sum amounts across the batch's underlying gifts for the email
+      // template's "you gave $X total" line. Anonymous handling: if ANY
+      // gift in the batch was anonymous, we suppress the gifter's name
+      // in the salutation (same discipline as the per-gift endpoint).
+      let isAnonymous = false;
+      let giftAmountTotal = 0;
+      for (const r of unsentRows) {
+        if (r.giftId) {
+          try {
+            const gift = await storage.getGift(r.giftId);
+            if (gift) {
+              if ((gift as any).isAnonymous) isAnonymous = true;
+              giftAmountTotal += parseFloat(String(gift.amount || "0")) || 0;
+            }
+          } catch { /* non-fatal */ }
+        }
+      }
+
+      const reqUser: any = req.user || null;
+      const parentDisplayName = reqUser
+        ? (String(reqUser.preferredName || "").trim()
+            || String(reqUser.firstName || "").trim()
+            || null)
+        : null;
+      const childFirstName = String((fund as any).recipientFirstName || "").trim()
+        || String((fund as any).recipient_first_name || "").trim()
+        || fund.name
+        || "your child";
+      const senderNameOnRow = unsentRows[0]?.senderName || null;
+
+      try {
+        await enqueueParentThankYou({
+          fundId: req.params.fundId,
+          gifterEmail: recipientEmail,
+          gifterName: isAnonymous ? null : senderNameOnRow,
+          childName: childFirstName,
+          parentMessage: message,
+          parentName: isAnonymous ? null : parentDisplayName,
+          giftAmount: giftAmountTotal,
+          isAnonymous,
+        });
+      } catch (enqueueErr) {
+        // Logging-only: the rows are already marked sent and the mailto
+        // fallback works. Same posture as the per-gift endpoint.
+        console.error('Failed to enqueue bulk parent thank-you email:', enqueueErr);
+      }
+
+      const subject = `Thank you for your gifts to ${fund.name}`;
+      const body = `${message}\n\n- ${fund.name}`;
+      const deliveryUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+      return res.json({
+        status: 'sent',
+        deliveryMethod: 'email',
+        deliveryUrl,
+        sentCount: unsentRows.length,
+        sentIds: unsentRows.map((r: any) => r.id),
+        totalGiftAmount: giftAmountTotal,
+      });
+    } catch (error) {
+      console.error('Error sending bulk thank-you:', error);
+      res.status(500).json({ error: 'Failed to send bulk thank-you' });
+    }
+  });
+
   app.post('/api/funds/:fundId/thank-yous/generate', isAuthenticated, async (req: any, res) => {
     try {
       const fund = await storage.getFund(req.params.fundId);

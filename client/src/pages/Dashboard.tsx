@@ -60,7 +60,16 @@ import { CreateEventSheet, type EditEventData } from "@/components/CreateEventSh
 // math — raw 7% (not netted), hardcoded 18-year horizon. Rather than
 // fix dead code, delete it.)
 import { EventGateModal } from "@/components/EventGateModal";
-import { ThankYouManager } from "@/components/ThankYouManager";
+// ThankYouManager import removed 2026-05-25 audit. The component was
+// imported but NEVER rendered anywhere in Dashboard — orphaned code
+// per project_locked memory (thank-you templates dropped from public
+// pricing 2026-05-13; the component stayed in the repo as a hypothetical
+// future surface but the import here was forcing it into the bundle
+// for zero user-visible value). The active thank-you flow lives in
+// MemoryBook (per-gift composer + new bulk composer 2026-05-25) plus
+// the per-gift status pills in this file (dashboardThankYouByGiftId
+// further down). The orphaned component file remains in repo as a
+// potential future surface.
 import { InvestCashModal, type CashContext } from "@/components/InvestCashModal";
 import { GiftReceivedToast } from "@/components/ui/plg-loops";
 import { isGiftToastDismissed, markGiftToastDismissed } from "@/lib/gift-toast-dismissed";
@@ -11323,10 +11332,14 @@ export default function Dashboard() {
                     only the rows; single-gift gifters now do too. */}
 
                 {/* Bulk-thanks shortcut — only when 3+ unthanked gifts.
-                    Routes to this gifter's Memory Book filter where the
-                    parent can run through thanks at speed. Sits between
-                    the header and the list so it's visible without
-                    scrolling. */}
+                    Routes to this gifter's Memory Book filter where a
+                    real bulk composer card now surfaces at the top
+                    (added 2026-05-25 audit). The destination IS a real
+                    bulk action — ONE email covering all N pending
+                    gifts from this gifter. Prior to the audit fix, the
+                    destination forced per-gift composition; the button
+                    promised bulk but delivered N x single. Now both
+                    sides match. */}
                 {showBulkThanks && activeFundId && (
                   <div className="px-5 pt-3 pb-1">
                     <button
@@ -11339,7 +11352,7 @@ export default function Dashboard() {
                       className="w-full flex items-center justify-center gap-2 rounded-full border border-[hsl(43,75%,55%/0.35)] bg-[hsl(43,75%,55%/0.10)] py-2 text-[12.5px] font-semibold text-[hsl(43,55%,30%)] hover:bg-[hsl(43,75%,55%/0.18)] transition-colors"
                       data-testid="button-bulk-thanks"
                     >
-                      💌 Thank all {unthankedCount} unthanked →
+                      💌 Thank all {unthankedCount} at once →
                     </button>
                   </div>
                 )}
