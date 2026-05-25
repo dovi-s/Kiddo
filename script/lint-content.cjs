@@ -128,6 +128,16 @@ const INCLUDED_PAGE_FILES = new Set([
   path.normalize("client/src/pages/UtmaByState.tsx"),
   path.normalize("client/src/pages/UtmaByStateIndex.tsx"),
   path.normalize("client/src/pages/BlogPost.tsx"),
+  // 2026-05-25 gift-flow batch — last 5 uncovered surfaces. Claim is
+  // where every gift recipient lands (conversion-critical), EventCreate
+  // is the occasion creation flow (1374 lines), the rest are
+  // smaller token entry points. Together with the marketing-page
+  // batch the entire user-facing page set is now lint-covered.
+  path.normalize("client/src/pages/Claim.tsx"),
+  path.normalize("client/src/pages/EventCreate.tsx"),
+  path.normalize("client/src/pages/InvitationAccept.tsx"),
+  path.normalize("client/src/pages/GiftLookup.tsx"),
+  path.normalize("client/src/pages/ActivityDetail.tsx"),
 ]);
 
 // Component allowlist — same expansion-after-violation reasoning as

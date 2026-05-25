@@ -125,7 +125,7 @@ export default function GiftLookup() {
           }
         }
         toast({
-          title: copied ? "Link copied — text it to them" : "Text this link to them",
+          title: copied ? "Link copied. Text it to them." : "Text this link to them",
           description: url
             ? (copied
                 ? `${url} is on your clipboard. Paste it in a message to the parent and we'll guide them from there.`
@@ -227,21 +227,37 @@ export default function GiftLookup() {
               </p>
 
               <form onSubmit={handleInviteRequest} className="mt-6 space-y-4">
+                {/* Visible sr-only labels + input type attributes added
+                    2026-05-25 audit. The placeholder-only inputs failed
+                    WCAG 3.3.2 (labels must persist, not vanish on focus).
+                    type="email" on the contact field triggers the mobile
+                    email keyboard, materially better UX on phones where
+                    most gifters land. */}
+                <label htmlFor="lookup-parent-contact" className="sr-only">Parent email or phone</label>
                 <input
+                  id="lookup-parent-contact"
+                  type="email"
+                  inputMode="email"
                   value={parentContact}
                   onChange={(e) => setParentContact(e.target.value)}
                   placeholder="Parent email or phone"
                   className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
                   data-testid="input-parent-contact"
                 />
+                <label htmlFor="lookup-child-name" className="sr-only">Child's first name (optional)</label>
                 <input
+                  id="lookup-child-name"
+                  type="text"
                   value={childName}
                   onChange={(e) => setChildName(e.target.value)}
                   placeholder="Child's first name (optional)"
                   className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
                   data-testid="input-child-name"
                 />
+                <label htmlFor="lookup-requester-name" className="sr-only">Your name (optional)</label>
                 <input
+                  id="lookup-requester-name"
+                  type="text"
                   value={requesterName}
                   onChange={(e) => setRequesterName(e.target.value)}
                   placeholder="Your name (optional)"

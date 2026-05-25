@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, TrendingUp, Gift as GiftIcon, Shield, Lock, ChevronRight, Plus, Loader2 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
+import { Button } from "@/components/ui/button";
 // Confetti import removed 2026-05-12 per feedback_animation_primitives.md
 // locked rule: "Confetti at most on the at-18 ceremony moment, if at all.
 // Not on first-gift, not on subscription upgrade, not on Memory Book
@@ -336,9 +337,30 @@ export default function Claim() {
                   </div>
                 )}
 
+                {/* Already-claimed state: previously a dead-end (just "This
+                    gift has already been claimed." with no next action).
+                    A user landing here is either (a) the recipient who
+                    already claimed and clicked the link again, or
+                    (b) a different gifter who got the wrong link. Both
+                    deserve a forward path. Audit 2026-05-25. */}
                 {isAlreadyClaimed && (
                   <div className="border-t border-border p-6 lg:p-8 bg-muted/50 text-center">
-                    <p className="text-muted-foreground" data-testid="text-already-claimed">This gift has already been claimed.</p>
+                    <p className="text-muted-foreground mb-4" data-testid="text-already-claimed">This gift has already been claimed.</p>
+                    <p className="text-sm text-muted-foreground mb-5 max-w-md mx-auto">
+                      The recipient has the gift safe in their fund. If you'd like to start a fund for a kid you love, you can in two minutes.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Link href="/get-started">
+                        <Button size="lg" data-testid="button-already-claimed-start-fund">
+                          Start a fund for your own kid
+                        </Button>
+                      </Link>
+                      <Link href="/">
+                        <Button variant="outline" size="lg" data-testid="button-already-claimed-home">
+                          Learn about Kiddo
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>
@@ -403,10 +425,11 @@ export default function Claim() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                    <label htmlFor="claim-auth-email" className="block text-sm font-medium text-foreground mb-1.5">
                       Email
                     </label>
                     <input
+                      id="claim-auth-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -416,10 +439,11 @@ export default function Claim() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                    <label htmlFor="claim-auth-password" className="block text-sm font-medium text-foreground mb-1.5">
                       Password
                     </label>
                     <input
+                      id="claim-auth-password"
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -550,10 +574,11 @@ export default function Claim() {
                     animate={{ opacity: 1, height: "auto" }}
                     className="pt-4"
                   >
-                    <label className="block text-sm font-medium text-foreground mb-1.5">
+                    <label htmlFor="claim-fund-name" className="block text-sm font-medium text-foreground mb-1.5">
                       Fund name
                     </label>
                     <input
+                      id="claim-fund-name"
                       type="text"
                       value={newFundName}
                       onChange={(e) => setNewFundName(e.target.value)}

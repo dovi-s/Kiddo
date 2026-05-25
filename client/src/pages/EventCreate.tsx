@@ -136,6 +136,28 @@ export default function EventCreate() {
   const canProceedStep4Gifting = fundId !== "";
 
   const handleImageSelect = (file: File) => {
+    // File-size validation added 2026-05-25 audit. The UI label below the
+    // upload control promises "JPG, PNG, WebP up to 10 MB" but previously
+    // no enforcement existed — a 50MB upload would silently fail at the
+    // canvas resize step. Now: reject anything over 10MB with a friendly
+    // toast at the moment of selection.
+    const MAX_BYTES = 10 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      toast({
+        title: "Image too large",
+        description: "Cover photos need to be 10 MB or smaller. Pick a smaller image or compress this one first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Image file required",
+        description: "Pick a JPG, PNG, or WebP image.",
+        variant: "destructive",
+      });
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string;
@@ -539,9 +561,13 @@ export default function EventCreate() {
             Events
           </button>
           <div className="flex-1" />
-          <h1 className="text-base font-semibold font-heading text-foreground">
+          {/* Sticky-header label demoted from h1 to p 2026-05-25 — the
+              sticky bar is chrome (back button + page label), not page
+              content. The wizard step heading inside main IS the page
+              content's h1. Having both was a WCAG h1-uniqueness issue. */}
+          <p className="text-base font-semibold font-heading text-foreground">
             {eventCategory === null ? "New occasion or goal" : isSavingsGoal ? "New savings goal" : "New occasion"}
-          </h1>
+          </p>
           <div className="flex-1" />
         </div>
       </motion.header>
@@ -834,6 +860,14 @@ export default function EventCreate() {
                                   }}
                                   fromYear={new Date().getFullYear()}
                                   toYear={new Date().getFullYear() + 25}
+                                  // Disable past dates. Audit 2026-05-25
+                                  // caught that the picker let users pick
+                                  // birthdates/event dates that already
+                                  // happened (e.g. click into Jan 2025
+                                  // via the month dropdown). Setting
+                                  // disabled.before to today blocks all
+                                  // past selections.
+                                  disabled={{ before: new Date(new Date().setHours(0,0,0,0)) }}
                                   defaultMonth={eventDate ? new Date(eventDate + "T12:00:00") : new Date()}
                                 />
                               </PopoverContent>
@@ -898,6 +932,9 @@ export default function EventCreate() {
                                   }}
                                   fromYear={new Date().getFullYear()}
                                   toYear={new Date().getFullYear() + 10}
+                                  // Past-date guard — same reasoning as
+                                  // the gifting-occasion picker above.
+                                  disabled={{ before: new Date(new Date().setHours(0,0,0,0)) }}
                                   defaultMonth={eventDate ? new Date(eventDate + "T12:00:00") : new Date()}
                                 />
                               </PopoverContent>
@@ -984,22 +1021,28 @@ export default function EventCreate() {
                                     <X size={14} className="text-white" />
                                   </button>
                                 </div>
+                                {/* aria-label added 2026-05-25 audit on all
+                                    icon-only buttons (pan up/down/left/right
+                                    + reset + zoom in/out). Screen readers
+                                    previously announced these as unlabeled
+                                    buttons; the visible icons carry no
+                                    accessible name. */}
                                 <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-3 py-2">
                                   <div className="grid grid-cols-3 gap-0.5" style={{ width: 72 }}>
                                     <div />
-                                    <button type="button" onClick={() => setImagePosY(y => y - MOVE_STEP)} className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors"><ChevronUp size={14} /></button>
+                                    <button type="button" aria-label="Move image up" onClick={() => setImagePosY(y => y - MOVE_STEP)} className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors"><ChevronUp size={14} /></button>
                                     <div />
-                                    <button type="button" onClick={() => setImagePosX(x => x - MOVE_STEP)} className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors"><ChevronLeft size={14} /></button>
-                                    <button type="button" onClick={() => { setImagePosX(0); setImagePosY(0); setImageZoom(1); }} className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors text-[9px] font-bold text-muted-foreground leading-none">✕</button>
-                                    <button type="button" onClick={() => setImagePosX(x => x + MOVE_STEP)} className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors"><ChevronRight size={14} /></button>
+                                    <button type="button" aria-label="Move image left" onClick={() => setImagePosX(x => x - MOVE_STEP)} className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors"><ChevronLeft size={14} /></button>
+                                    <button type="button" aria-label="Reset image position and zoom" onClick={() => { setImagePosX(0); setImagePosY(0); setImageZoom(1); }} className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors text-[9px] font-bold text-muted-foreground leading-none">✕</button>
+                                    <button type="button" aria-label="Move image right" onClick={() => setImagePosX(x => x + MOVE_STEP)} className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors"><ChevronRight size={14} /></button>
                                     <div />
-                                    <button type="button" onClick={() => setImagePosY(y => y + MOVE_STEP)} className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors"><ChevronDown size={14} /></button>
+                                    <button type="button" aria-label="Move image down" onClick={() => setImagePosY(y => y + MOVE_STEP)} className="flex items-center justify-center w-6 h-6 rounded hover:bg-muted transition-colors"><ChevronDown size={14} /></button>
                                     <div />
                                   </div>
                                   <div className="flex items-center gap-1.5">
-                                    <button type="button" onClick={() => setImageZoom(z => Math.max(MIN_ZOOM, parseFloat((z - ZOOM_STEP).toFixed(2))))} className="flex items-center justify-center w-7 h-7 rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-40" disabled={imageZoom <= MIN_ZOOM}><ZoomOut size={13} /></button>
+                                    <button type="button" aria-label="Zoom out" onClick={() => setImageZoom(z => Math.max(MIN_ZOOM, parseFloat((z - ZOOM_STEP).toFixed(2))))} className="flex items-center justify-center w-7 h-7 rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-40" disabled={imageZoom <= MIN_ZOOM}><ZoomOut size={13} /></button>
                                     <span className="text-xs text-muted-foreground tabular-nums w-10 text-center">{Math.round(imageZoom * 100)}%</span>
-                                    <button type="button" onClick={() => setImageZoom(z => Math.min(MAX_ZOOM, parseFloat((z + ZOOM_STEP).toFixed(2))))} className="flex items-center justify-center w-7 h-7 rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-40" disabled={imageZoom >= MAX_ZOOM}><ZoomIn size={13} /></button>
+                                    <button type="button" aria-label="Zoom in" onClick={() => setImageZoom(z => Math.min(MAX_ZOOM, parseFloat((z + ZOOM_STEP).toFixed(2))))} className="flex items-center justify-center w-7 h-7 rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-40" disabled={imageZoom >= MAX_ZOOM}><ZoomIn size={13} /></button>
                                   </div>
                                   <label className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors">
                                     Replace

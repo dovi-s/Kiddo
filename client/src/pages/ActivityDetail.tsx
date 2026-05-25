@@ -48,8 +48,16 @@ function formatAmount(amount?: string | number | null): string | null {
 
 function getTypeConfig(type: string) {
   switch (type) {
+    // Gift Received uses the evergreen-green family to match Activity.tsx's
+    // PALETTE.GIFT (rgb 237,244,238 + rgb 26,61,43). Previously this page
+    // showed gift_received in gold while the same gift in Activity.tsx
+    // showed it in green, breaking visual continuity between the list view
+    // and this deep-link detail view. Audit 2026-05-25 caught. The detail
+    // page intentionally uses Tailwind HSL classes (vs Activity's inline
+    // rgb literals) because the detail page is className-styled top to
+    // bottom; the visual identity matches.
     case "gift_received":
-      return { icon: Gift, bg: "bg-[hsl(var(--kora-gold)/0.15)]", color: "text-[hsl(var(--kora-gold))]", label: "Gift Received" };
+      return { icon: Gift, bg: "bg-[hsl(var(--kora-evergreen)/0.12)]", color: "text-[hsl(var(--kora-evergreen))]", label: "Gift Received" };
     case "auto_invest":
       return { icon: TrendingUp, bg: "bg-[hsl(var(--kora-evergreen)/0.15)]", color: "text-[hsl(var(--kora-evergreen))]", label: "Investment" };
     case "kyc_approved":
@@ -300,7 +308,7 @@ export default function ActivityDetail() {
                   {" "}until {giftProjection.childName} turns {giftProjection.majorityAge}.
                 </p>
                 <p className="text-[10px] text-muted-foreground/60 mt-3 leading-snug">
-                  Assumes 7% yearly average net of Kiddo's annual fee ($1/yr per $1,000 invested). Illustrative only — markets vary.
+                  Assumes 7% yearly average net of Kiddo's annual fee ($1/yr per $1,000 invested). Illustrative only. Markets vary.
                 </p>
               </motion.div>
             )}
