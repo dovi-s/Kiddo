@@ -145,7 +145,15 @@ export default function GiftSuccess() {
   const [updatesSaved, setUpdatesSaved] = useState(false)
   const [giftStatus, setGiftStatus] = useState<string | null>(null)
   const [holdUntil, setHoldUntil] = useState<string | null>(null)
-  const [yearsUntil18, setYearsUntil18] = useState<number>(18)
+  // Initial state 0 (not 18) so the projection doesn't render with a
+  // wildly rosy max-growth assumption before the server-loaded value
+  // arrives. The projection gates on `yearsUntil18 > 1` further below;
+  // a 0 default means "don't show a projection yet" rather than "show
+  // an 18-year growth curve we haven't confirmed." Audit 2026-05-25.
+  // Variable name kept as `yearsUntil18` for parity with the server's
+  // gift-summary contract; the value is the years-until-majority,
+  // state-variant under the locked state-majority-age policy.
+  const [yearsUntil18, setYearsUntil18] = useState<number>(0)
   // State-specific UTMA majority age — server may or may not include this
   // on the gift summary today; fall back to 18 (universal default). The
   // "when {kid} turns {N}" projection copy below uses this. See

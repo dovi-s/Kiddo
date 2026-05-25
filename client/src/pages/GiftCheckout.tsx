@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearch } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Building2, Camera, ChevronDown, CreditCard, DollarSign, Gift, ImagePlus, Link as LinkIcon, Lock, Mic, MicOff, Repeat, Shield, Smartphone, Trash2, TrendingUp, Video, Wallet } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Camera, ChevronDown, CreditCard, DollarSign, Gift, ImagePlus, Link as LinkIcon, Lock, Mic, MicOff, Repeat, Shield, Smartphone, TrendingUp, Video, Wallet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
@@ -1760,8 +1760,18 @@ export default function GiftCheckout() {
                       statement, never paywall.
                   Server-side defense in depth at
                   /api/stripe/checkout/gift-recurring also enforces
-                  the fund-tier check. */}
-              {eventData?.fund?.recurringSupported === false ? (
+                  the fund-tier check.
+
+                  Defensive null-check: when the field is undefined
+                  (older fund cache, schema-migration edge case, or
+                  any server response that drops the field), fall
+                  through to the reminder/sponsor path rather than
+                  showing the toggle. The toggle showing on a fund
+                  that doesn't actually support recurring lets the
+                  gifter fill out everything and fail at the 403 at
+                  submit — bad UX. Defaulting to no-toggle is the
+                  safer behavior. Audit 2026-05-25 caught. */}
+              {eventData?.fund?.recurringSupported !== true ? (
                 <>
                   <ReminderAndAskParentsCard
                     fundId={eventData.fund.id}
@@ -2192,7 +2202,7 @@ export default function GiftCheckout() {
 
                   <div>
                     <div className="flex items-center justify-between gap-3">
-                      <label className="text-sm font-medium text-foreground">Who&apos;s this from? <span className="text-muted-foreground font-normal">(optional)</span></label>
+                      <label htmlFor="input-sender-name" className="text-sm font-medium text-foreground">Who&apos;s this from? <span className="text-muted-foreground font-normal">(optional)</span></label>
                       {/* Explicit anonymous toggle — replaces the previous
                           infer-from-blank pattern. When checked, the name
                           field is hidden and the gift is marked
@@ -2237,6 +2247,7 @@ export default function GiftCheckout() {
                     {!isAnonymous ? (
                       <>
                         <input
+                          id="input-sender-name"
                           value={senderName}
                           onChange={(e) => setSenderName(e.target.value)}
                           placeholder="Grandma, Uncle Marcus, Sarah..."
@@ -2264,7 +2275,7 @@ export default function GiftCheckout() {
                     )}
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground">
+                    <label htmlFor="input-sender-email" className="text-sm font-medium text-foreground">
                       Email {isRecurring ? (
                         <span className="text-[hsl(var(--kiddo-evergreen))] font-semibold">(required for recurring)</span>
                       ) : (
@@ -2272,6 +2283,7 @@ export default function GiftCheckout() {
                       )}
                     </label>
                     <input
+                      id="input-sender-email"
                       value={senderEmail}
                       onChange={(e) => setSenderEmail(e.target.value)}
                       placeholder="you@example.com"
