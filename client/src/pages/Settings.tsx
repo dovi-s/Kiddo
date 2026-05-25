@@ -3114,15 +3114,21 @@ const [editFundName, setEditFundName] = useState("");
   const notificationChildName = gifterNotifications?.childName || selectedNotificationFund?.recipientFirstName || "your child";
   const notificationSettings = gifterNotifications?.settings || {};
   const memoryBookSharesSent = Number(notificationSettings?.memoryBookSharesSentThisYear || 0);
+  const notificationMajorityAge = Number((selectedNotificationFund as any)?.majorityAge) || 18;
   const notificationAgeTransition = getAge18Transition(
     selectedNotificationFund?.recipientBirthdate,
-    Number((selectedNotificationFund as any)?.majorityAge) || 18,
+    notificationMajorityAge,
   );
+  // Title + body honor the fund's state-specific majority age. The
+  // "Age-18 notification" / "control passes at adulthood" copy was
+  // hardcoded — accurate for the 18-state default, wrong for any fund
+  // in a 21-state or custom-25 statute. Audit 2026-05-25 caught.
+  const age18NotificationTitle = `Age-${notificationMajorityAge} notification`;
   const age18NotificationBody = !notificationAgeTransition
-    ? "Final thank-you note when control passes at adulthood. Add a birthdate first."
+    ? `Final thank-you note when control passes at ${notificationMajorityAge}. Add a birthdate first.`
     : notificationAgeTransition.stage === "adult"
-      ? "Age-18 handoff is ready now. Review transfer steps before sending this note."
-      : `Final thank-you note when control passes at adulthood. Planning anchor: ${formatAgeTransitionDate(notificationAgeTransition.eighteenthBirthday)}.`;
+      ? `Age-${notificationMajorityAge} handoff is ready now. Review transfer steps before sending this note.`
+      : `Final thank-you note when control passes at ${notificationMajorityAge}. Planning anchor: ${formatAgeTransitionDate(notificationAgeTransition.eighteenthBirthday)}.`;
   const getFundValue = (fund: any) =>
     parseFloat(fund?.balance || "0") +
     parseFloat(fund?.pendingBalance || "0") +
@@ -4466,7 +4472,7 @@ const [editFundName, setEditFundName] = useState("");
                     testId="row-gifter-memory-sharing"
                   />
                   <NotificationSwitchRow
-                    title="Age-18 notification"
+                    title={age18NotificationTitle}
                     body={age18NotificationBody}
                     checked={notificationSettings.age18Notification ?? true}
                     disabled={loadingGifterNotifications || updateGifterNotificationSettings.isPending}
@@ -4478,7 +4484,7 @@ const [editFundName, setEditFundName] = useState("");
                   {[
                     ["Birthday reminders", `Annual reminder on ${recipientFirstNameDisplay || "your child"}'s birthday with a one-tap gift-back path.`],
                     ["Memory Book sharing", "Lets you send warm parent-written updates. 0 of 4 used this year."],
-                    ["Age-18 notification", `Final thank-you note when control passes at adulthood. Planning anchor: ${primaryFund?.recipientBirthdate ? new Date(primaryFund.recipientBirthdate).toLocaleDateString("en-US") : "add a birthdate first"}.`],
+                    [age18NotificationTitle, age18NotificationBody],
                   ].map(([title, body]) => (
                     <div key={title} className="py-4 first:pt-0 last:pb-0">
                       <p className="text-sm font-bold text-foreground">{title}</p>
