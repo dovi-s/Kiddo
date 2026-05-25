@@ -74,6 +74,11 @@ const INCLUDED_PAGE_FILES = new Set([
   path.normalize("client/src/pages/Settings.tsx"),
   path.normalize("client/src/pages/Account.tsx"),
   path.normalize("client/src/pages/Profile.tsx"),
+  // 2026-05-25 Activity audit caught an em-dash in the expanded
+  // gifter-reminder detail row that the existing lint never scanned.
+  // Add Activity to lint so the same drift can't recur on a 4,000+
+  // line page that renders heavy user-facing copy.
+  path.normalize("client/src/pages/Activity.tsx"),
 ]);
 
 // Component allowlist — same expansion-after-violation reasoning as

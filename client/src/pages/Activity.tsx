@@ -346,6 +346,15 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // Subscription
   if (t === "subscription_started" || t === "starter_plan_activated" || t === "family_plan_activated")
     return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <CreditCard size={16} />, label: "Subscription" };
+  // Event pass (Kiddo Occasions one-time upgrade) — RETIRED 2026-05-13 per
+  // the locked product memory. Historical rows in older user feeds still
+  // need a meaningful label rather than the generic "Update" fallback the
+  // type was falling through to. No new rows of this type are created
+  // (the product surface returns 410). When/if every historical row
+  // ages out of all users' feeds, this branch and the MILESTONE_TYPES
+  // entry below can both be deleted.
+  if (t === "event_pass_purchased")
+    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <Calendar size={16} />, label: "Occasion pass" };
   if (t === "subscription_renewal")
     // Renewals are a recurring billing event, not a one-shot activation.
     // Distinct label keeps the History feed honest: "Renewed" for repeated
@@ -3880,7 +3889,7 @@ export default function Activity() {
                               {isExpanded && (
                                 <div style={{ marginTop: 12, marginLeft: 48 }}>
                                   <p style={{ fontSize: 11.5, color: "rgb(120,110,100)", lineHeight: 1.45, marginBottom: 10 }}>
-                                    {r.senderName || "This gifter"} set up a recurring reminder when they gave. They manage pause/resume themselves from the email — you can stop the reminders entirely from here.
+                                    {r.senderName || "This gifter"} set up a recurring reminder when they gave. They manage pause/resume themselves from the email. You can stop the reminders entirely from here.
                                   </p>
                                   <button
                                     type="button"
