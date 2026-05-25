@@ -192,34 +192,91 @@ function mapActivityTypeToCategory(type?: string | null): "gift" | "auto" | "gro
   return "update";
 }
 
+// Named semantic palette for activity-row pills. Extracted 2026-05-25
+// from the inline rgb() literals previously scattered through every
+// branch of getTypeConfig. Each row category now picks from this
+// palette instead of inventing a new rgb pair — the team-audit
+// visual specialist's #1 finding ("colors are designed in DevTools,
+// not in Figma") in concrete form.
+//
+// Why named tuples and not CSS variables / tailwind tokens:
+//   - The activity-row pill is inline-styled (not via className) so
+//     the dynamic per-type bg/color need to be runtime values, not
+//     compile-time class lookups. Named constants are the smallest
+//     change that delivers single-source-of-truth without rewriting
+//     the rendering layer.
+//   - The rgb() literals are preserved verbatim so this refactor
+//     ships with ZERO visual change. Any future brand-color sweep
+//     updates this object, and every consuming branch picks up
+//     the new value automatically.
+//
+// Categories:
+//   - GIFT       — light green, warm. Gifts received / invested / released.
+//   - RECURRING  — sage green, slightly darker. Recurring auto-invest active.
+//   - GROWTH     — soft blue, financial movement (sells, withdrawals, bank).
+//   - MEMORY     — soft purple, kid-domain story (memory entries, suggestions).
+//   - CELEBRATION_GOLD — warm gold, gift-moment iconography (sponsor-Plus
+//                       activation, sealed letter delivered).
+//   - MILESTONE_GOLD   — saturated gold, milestones engine (money-cross,
+//                       anniversary, first photo). Same family as celebration
+//                       gold but the text-color skews deeper for engine rows.
+//   - SUBTLE_CREAM     — paper-tone background, milestone "soft" variants.
+//   - ALERT_DESTRUCTIVE — light red, undoing actions (refund, cancellation,
+//                        deletion).
+//   - ALERT_FAILED      — saturated red, hard failure (payment failed,
+//                        charge declined).
+//   - WARNING           — light amber, paused / on-hold / needs-action.
+//   - NEUTRAL_MUTED     — desaturated brown-gray, ended / archived / quiet
+//                        completion (sponsor expired, subscription canceled).
+const PALETTE = {
+  GIFT:              { bg: "rgb(237,244,238)", color: "rgb(26,61,43)"   },
+  RECURRING:         { bg: "rgb(224,237,227)", color: "rgb(43,88,64)"   },
+  GROWTH:            { bg: "rgb(232,242,255)", color: "rgb(30,80,170)"  },
+  MEMORY:            { bg: "rgb(245,237,253)", color: "rgb(126,68,180)" },
+  CELEBRATION_GOLD:  { bg: "rgb(253,248,236)", color: "rgb(122,92,30)"  },
+  MILESTONE_GOLD:    { bg: "rgb(255,247,230)", color: "rgb(146,108,46)" },
+  SUBTLE_CREAM:      { bg: "rgb(253,250,243)", color: "rgb(146,108,46)" },
+  ALERT_DESTRUCTIVE: { bg: "rgb(254,242,242)", color: "rgb(185,28,28)"  },
+  ALERT_FAILED:      { bg: "rgb(254,228,228)", color: "rgb(170,38,38)"  },
+  WARNING:           { bg: "rgb(255,247,230)", color: "rgb(184,121,26)" },
+  NEUTRAL_MUTED:     { bg: "rgb(243,240,236)", color: "rgb(100,90,80)"  },
+  // Gift-status pill family — used by StatusPill, distinct from the
+  // activity-event palettes above. Pending/host-hold use a deeper
+  // amber text than WARNING (rgb 161,88,0 vs 184,121,26) for the
+  // pill-size legibility. Refunded uses a desaturated gray that
+  // doesn't appear elsewhere.
+  PILL_PENDING:      { bg: "rgb(255,247,230)", color: "rgb(161,88,0)"   },
+  PILL_REFUNDED:     { bg: "rgb(245,245,245)", color: "rgb(100,92,86)"  },
+} as const;
+
 function getTypeConfig(type?: string | null): { bg: string; color: string; icon: React.ReactNode; label: string } {
   const t = normalizeActivityType(type);
   // Gift family — green palette (kid-domain warmth)
   if (t === "refund")
-    return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <ArrowUp size={16} style={{ transform: "rotate(180deg)" }} />, label: "Refund" };
+    return { ...PALETTE.ALERT_DESTRUCTIVE, icon: <ArrowUp size={16} style={{ transform: "rotate(180deg)" }} />, label: "Refund" };
   if (t === "large_gift_hold_started")
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <Clock size={16} />, label: "Gift on hold" };
+    return { ...PALETTE.WARNING, icon: <Clock size={16} />, label: "Gift on hold" };
   if (t === "large_gift_hold_released")
-    return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <Gift size={16} />, label: "Gift released" };
+    return { ...PALETTE.GIFT, icon: <Gift size={16} />, label: "Gift released" };
   if (t === "gift_received_cash")
-    return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <Gift size={16} />, label: "Gift held as cash" };
+    return { ...PALETTE.GIFT, icon: <Gift size={16} />, label: "Gift held as cash" };
   if (GIFT_TYPES.includes(t))
-    return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <Gift size={16} />, label: t === "gift_invested" ? "Gift invested" : "Gift received" };
+    return { ...PALETTE.GIFT, icon: <Gift size={16} />, label: t === "gift_invested" ? "Gift invested" : "Gift received" };
   // Auto / recurring family — sage palette (parent ongoing action)
   if (t === "recurring_paused")
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <Pause size={16} />, label: "Recurring paused" };
+    return { ...PALETTE.WARNING, icon: <Pause size={16} />, label: "Recurring paused" };
   if (t === "recurring_resumed")
-    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Play size={16} />, label: "Recurring resumed" };
+    return { ...PALETTE.RECURRING, icon: <Play size={16} />, label: "Recurring resumed" };
   if (t === "gifter_recurring_paused")
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <Pause size={16} />, label: "Gifter paused recurring" };
+    return { ...PALETTE.WARNING, icon: <Pause size={16} />, label: "Gifter paused recurring" };
   if (t === "gifter_recurring_resumed")
-    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Play size={16} />, label: "Gifter resumed recurring" };
+    return { ...PALETTE.RECURRING, icon: <Play size={16} />, label: "Gifter resumed recurring" };
   if (t === "gifter_recurring_cancelled")
-    return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <XIcon size={16} />, label: "Gifter cancelled recurring" };
+    return { ...PALETTE.ALERT_DESTRUCTIVE, icon: <XIcon size={16} />, label: "Gifter cancelled recurring" };
   if (t === "auto_invest")
-    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Recurring investment" };
+    return { ...PALETTE.RECURRING, icon: <Repeat size={16} />, label: "Recurring investment" };
   if (t === "parent_contribution")
-    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Your gift" };
+    return { ...PALETTE.RECURRING, icon: <Repeat size={16} />, label: "Your gift" };
   // Pricing-v3 (locked 2026-05-23): a gifter on a Free fund used the
   // "ask the family to enable monthly contributions" CTA in
   // GiftCheckout. This activity row IS the relationship signal; the
@@ -230,7 +287,7 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // respond to." See project_pricing_v3_recurring_at_plus.md design
   // constraint #4 (feature-request flow, not paywall pressure).
   if (t === "recurring_request")
-    return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <BellRing size={16} />, label: "Recurring request" };
+    return { ...PALETTE.GIFT, icon: <BellRing size={16} />, label: "Recurring request" };
   // Sealed-letter delivery (Prong B Phase 6, locked 2026-05-23). The
   // sealedLetterDeliveryWorker writes this row when a sealed letter's
   // deliver_at fires. Warm gold palette matches the Memory Book story
@@ -238,7 +295,7 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // signals "a story moment just opened." See
   // project_sealed_letters_implementation_plan.md Phase 6.
   if (t === "sealed_letter_delivered")
-    return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <BookOpen size={16} />, label: "Sealed letter delivered" };
+    return { ...PALETTE.CELEBRATION_GOLD, icon: <BookOpen size={16} />, label: "Sealed letter delivered" };
   // Sponsor-Plus activation (Prong B of pricing-v3 conversion, locked
   // 2026-05-23). The handleSponsorPlusPurchase webhook writes this
   // when a gifter sponsors a year of Plus/Family for the fund. Warm
@@ -247,29 +304,29 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // moment, not a deposit). Sparkles icon signals "something opened
   // up on this fund." See project_gifter_sponsors_plus_subscription.md.
   if (t === "sponsor_plus_activated")
-    return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <Sparkles size={16} />, label: "Plus sponsored" };
+    return { ...PALETTE.CELEBRATION_GOLD, icon: <Sparkles size={16} />, label: "Plus sponsored" };
   // Sponsor-Plus renewal reminder sent (shipped 2026-05-23 same-day as
   // MVP). Quieter palette than the activation moment — it's a beat,
   // not a celebration. Mail icon signals "we sent you a thing." See
   // sponsoredSubscriptionRenewalWorker.ts + the locked spec.
   if (t === "sponsor_renewal_reminder_sent")
-    return { bg: "rgb(243,240,236)", color: "rgb(100,90,80)", icon: <Mail size={16} />, label: "Renewal reminder" };
+    return { ...PALETTE.NEUTRAL_MUTED, icon: <Mail size={16} />, label: "Renewal reminder" };
   // Sponsor-Plus refunded — Stripe sent us a charge.refunded event
   // and we flipped the sponsored sub to status='refunded'. Coverage
   // is rolled back; parent gets the activity row + (eventually) email.
   // Muted red palette signals "this is undoing something." Per the
   // handleChargeRefunded extension shipped 2026-05-23.
   if (t === "sponsor_plus_refunded")
-    return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <XIcon size={16} />, label: "Plus refunded" };
+    return { ...PALETTE.ALERT_DESTRUCTIVE, icon: <XIcon size={16} />, label: "Plus refunded" };
   // Sponsor-Plus expired — cleanup worker flipped status to 'expired'
   // when expires_at passed. Coverage helper already rolled back via
   // lazy expiry check; this row gives the parent dashboard a clear
   // beat ("the coverage ended; here's how to reactivate"). Calm
   // neutral palette since it's the natural end of a fixed-term gift.
   if (t === "sponsor_plus_expired")
-    return { bg: "rgb(243,240,236)", color: "rgb(100,90,80)", icon: <Clock size={16} />, label: "Plus ended" };
+    return { ...PALETTE.NEUTRAL_MUTED, icon: <Clock size={16} />, label: "Plus ended" };
   if (t === "parent_contribution_failed")
-    return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Charge failed" };
+    return { ...PALETTE.ALERT_FAILED, icon: <AlertCircle size={16} />, label: "Charge failed" };
   // Memory family — purple palette (kid-domain story).
   //
   // Eyebrow labels use consistent verb form across all three Memory
@@ -281,25 +338,25 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // "are all of the milestones and all that perfect?" — caught
   // exactly this inconsistency. Locked verb-form convention.
   if (t === "memory_milestone_added")
-    return { bg: "rgb(253,248,236)", color: "rgb(122,92,30)", icon: <Star size={16} />, label: "Milestone" };
+    return { ...PALETTE.CELEBRATION_GOLD, icon: <Star size={16} />, label: "Milestone" };
   if (t === "memory_entry_added")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <BookOpen size={16} />, label: "Memory added" };
+    return { ...PALETTE.MEMORY, icon: <BookOpen size={16} />, label: "Memory added" };
   if (t === "memory_entry_edited")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <FileText size={16} />, label: "Memory edited" };
+    return { ...PALETTE.MEMORY, icon: <FileText size={16} />, label: "Memory edited" };
   if (t === "memory_entry_deleted")
-    return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <XIcon size={16} />, label: "Memory deleted" };
+    return { ...PALETTE.ALERT_DESTRUCTIVE, icon: <XIcon size={16} />, label: "Memory deleted" };
   // Catchall for any future memory_* type that isn't explicitly
   // handled above. Falls back to the "Memory Book" category label.
   if (t.startsWith("memory_"))
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <BookOpen size={16} />, label: "Memory Book" };
+    return { ...PALETTE.MEMORY, icon: <BookOpen size={16} />, label: "Memory Book" };
   // Growth / portfolio family — blue palette (financial movement)
   if (t === "bank_unlinked")
-    return { bg: "rgb(254,242,242)", color: "rgb(185,28,28)", icon: <Building2 size={16} />, label: "Bank removed" };
+    return { ...PALETTE.ALERT_DESTRUCTIVE, icon: <Building2 size={16} />, label: "Bank removed" };
   if (t === "bank_linked")
-    return { bg: "rgb(232,242,255)", color: "rgb(30,80,170)", icon: <Building2 size={16} />, label: "Bank linked" };
+    return { ...PALETTE.GROWTH, icon: <Building2 size={16} />, label: "Bank linked" };
   if (GROWTH_TYPES.includes(t))
     return {
-      bg: "rgb(232,242,255)", color: "rgb(30,80,170)", icon: <TrendingUp size={16} />,
+      ...PALETTE.GROWTH, icon: <TrendingUp size={16} />,
       // Specific labels per row type — `Cash invested` is its own thing
       // (money moved from balance into holdings), distinct from `Sold`
       // (closed a position) and `Withdrawal` (money left the fund).
@@ -313,39 +370,39 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
     };
   // Account / fund-decision family — neutral palette (parent admin actions)
   if (t === "fund_created")
-    return { bg: "rgb(237,244,238)", color: "rgb(26,61,43)", icon: <Sprout size={16} />, label: "Fund created" };
+    return { ...PALETTE.GIFT, icon: <Sprout size={16} />, label: "Fund created" };
   if (t === "fund_strategy_changed")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <Sliders size={16} />, label: "Strategy" };
+    return { ...PALETTE.MEMORY, icon: <Sliders size={16} />, label: "Strategy" };
   if (t === "custom_allocations_changed")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <Sliders size={16} />, label: "Custom mix" };
+    return { ...PALETTE.MEMORY, icon: <Sliders size={16} />, label: "Custom mix" };
   if (t === "event_created")
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <Calendar size={16} />, label: "Occasion" };
+    return { ...PALETTE.WARNING, icon: <Calendar size={16} />, label: "Occasion" };
   if (t === "event_archived")
-    return { bg: "rgb(243,240,236)", color: "rgb(100,90,80)", icon: <Calendar size={16} />, label: "Archived" };
+    return { ...PALETTE.NEUTRAL_MUTED, icon: <Calendar size={16} />, label: "Archived" };
   if (t === "event_unarchived")
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <Calendar size={16} />, label: "Reopened" };
+    return { ...PALETTE.WARNING, icon: <Calendar size={16} />, label: "Reopened" };
   if (t === "ssn_provided")
-    return { bg: "rgb(232,242,255)", color: "rgb(30,80,170)", icon: <ShieldCheck size={16} />, label: "Tax ID" };
+    return { ...PALETTE.GROWTH, icon: <ShieldCheck size={16} />, label: "Tax ID" };
   if (t.startsWith("successor_custodian_"))
-    return { bg: "rgb(232,242,255)", color: "rgb(30,80,170)", icon: <UserCheck size={16} />, label: "Successor custodian" };
+    return { ...PALETTE.GROWTH, icon: <UserCheck size={16} />, label: "Successor custodian" };
   if (t === "child_profile_updated")
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <Settings size={16} />, label: "Profile" };
+    return { ...PALETTE.WARNING, icon: <Settings size={16} />, label: "Profile" };
   if (t === "kid_stock_suggestion")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <Lightbulb size={16} />, label: "Kid suggestion" };
+    return { ...PALETTE.MEMORY, icon: <Lightbulb size={16} />, label: "Kid suggestion" };
   if (t === "kid_suggestion_approved")
-    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Check size={16} />, label: "Approved" };
+    return { ...PALETTE.RECURRING, icon: <Check size={16} />, label: "Approved" };
   if (t === "kid_suggestion_declined")
-    return { bg: "rgb(243,240,236)", color: "rgb(100,90,80)", icon: <XIcon size={16} />, label: "Declined" };
+    return { ...PALETTE.NEUTRAL_MUTED, icon: <XIcon size={16} />, label: "Declined" };
   // KYC / compliance — neutral with caution tones
   if (t === "kyc_approved")
-    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <ShieldCheck size={16} />, label: "Identity verified" };
+    return { ...PALETTE.RECURRING, icon: <ShieldCheck size={16} />, label: "Identity verified" };
   if (t === "kyc_action_required")
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <AlertCircle size={16} />, label: "Identity action needed" };
+    return { ...PALETTE.WARNING, icon: <AlertCircle size={16} />, label: "Identity action needed" };
   if (t === "kyc_pending_review")
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <Clock size={16} />, label: "Identity review" };
+    return { ...PALETTE.WARNING, icon: <Clock size={16} />, label: "Identity review" };
   // Subscription
   if (t === "subscription_started" || t === "starter_plan_activated" || t === "family_plan_activated")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <CreditCard size={16} />, label: "Subscription" };
+    return { ...PALETTE.MEMORY, icon: <CreditCard size={16} />, label: "Subscription" };
   // Event pass (Kiddo Occasions one-time upgrade) — RETIRED 2026-05-13 per
   // the locked product memory. Historical rows in older user feeds still
   // need a meaningful label rather than the generic "Update" fallback the
@@ -354,48 +411,48 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // ages out of all users' feeds, this branch and the MILESTONE_TYPES
   // entry below can both be deleted.
   if (t === "event_pass_purchased")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <Calendar size={16} />, label: "Occasion pass" };
+    return { ...PALETTE.MEMORY, icon: <Calendar size={16} />, label: "Occasion pass" };
   if (t === "subscription_renewal")
     // Renewals are a recurring billing event, not a one-shot activation.
     // Distinct label keeps the History feed honest: "Renewed" for repeated
     // monthly/annual charges vs "Subscription" for the original activation.
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <Repeat size={16} />, label: "Renewed" };
+    return { ...PALETTE.MEMORY, icon: <Repeat size={16} />, label: "Renewed" };
   if (t === "subscription_canceled")
-    return { bg: "rgb(243,240,236)", color: "rgb(100,90,80)", icon: <XIcon size={16} />, label: "Subscription ended" };
+    return { ...PALETTE.NEUTRAL_MUTED, icon: <XIcon size={16} />, label: "Subscription ended" };
   if (t === "payment_failed")
     // Subscription / billing payment failure (different from
     // parent_contribution_failed which is the recurring auto-invest worker).
     // Both share the red AlertCircle treatment so the parent reads "fix me"
     // at the same glance.
-    return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Payment failed" };
+    return { ...PALETTE.ALERT_FAILED, icon: <AlertCircle size={16} />, label: "Payment failed" };
   // Milestones engine — celebratory rows (money-cross, returning gifter,
   // anniversary, first-X). Each gets a distinctive emoji-driven pill that
   // reads as a moment, not a transaction. Color stays warm (gold/cream
   // family) so milestones feel like ribbons, not status changes.
   if (t === "milestone_money_cross")
-    return { bg: "rgb(255,247,230)", color: "rgb(146,108,46)", icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🌱</span>, label: "Milestone" };
+    return { ...PALETTE.MILESTONE_GOLD, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🌱</span>, label: "Milestone" };
   if (t === "milestone_returning_gifter")
-    return { bg: "rgb(253,250,243)", color: "rgb(146,108,46)", icon: <span style={{ fontSize: 16, lineHeight: 1 }}>💚</span>, label: "Returning gifter" };
+    return { ...PALETTE.SUBTLE_CREAM, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>💚</span>, label: "Returning gifter" };
   if (t === "milestone_unique_gifters")
-    return { bg: "rgb(253,250,243)", color: "rgb(146,108,46)", icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🤲</span>, label: "Community" };
+    return { ...PALETTE.SUBTLE_CREAM, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🤲</span>, label: "Community" };
   if (t === "milestone_anniversary")
-    return { bg: "rgb(255,247,230)", color: "rgb(146,108,46)", icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🎂</span>, label: "Anniversary" };
+    return { ...PALETTE.MILESTONE_GOLD, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🎂</span>, label: "Anniversary" };
   if (t === "milestone_first_voice")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🎙️</span>, label: "First voice" };
+    return { ...PALETTE.MEMORY, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>🎙️</span>, label: "First voice" };
   if (t === "milestone_first_photo")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <span style={{ fontSize: 16, lineHeight: 1 }}>📷</span>, label: "First photo" };
+    return { ...PALETTE.MEMORY, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>📷</span>, label: "First photo" };
   if (t === "milestone_first_kid_pick_approved")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <span style={{ fontSize: 16, lineHeight: 1 }}>⭐</span>, label: "First pick" };
+    return { ...PALETTE.MEMORY, icon: <span style={{ fontSize: 16, lineHeight: 1 }}>⭐</span>, label: "First pick" };
   // Age-phase milestones (age16/17/18). The age18 family includes the
   // climax of the entire product — kid accepting their fund at 18 — so it
   // gets the brand evergreen + sprout treatment, distinct from generic
   // milestones. Specific labels are friendlier than the raw type names.
   if (t === "age18_child_claimed" || t === "age18_handoff_completed_child")
-    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Sprout size={16} />, label: "Fund handed off" };
+    return { ...PALETTE.RECURRING, icon: <Sprout size={16} />, label: "Fund handed off" };
   if (t === "age18_handoff_completed_parent")
-    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Sprout size={16} />, label: "Handoff complete" };
+    return { ...PALETTE.RECURRING, icon: <Sprout size={16} />, label: "Handoff complete" };
   if (t === "age18_handoff_requested")
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <Clock size={16} />, label: "Handoff requested" };
+    return { ...PALETTE.WARNING, icon: <Clock size={16} />, label: "Handoff requested" };
   // Labels renamed 2026-05-12 from "Age-18" / "Age-17" to state-agnostic
   // forms — UTMA majority age varies by state (18-21), and this function is
   // keyed on event-type strings without fund context, so it can't access
@@ -404,16 +461,16 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // Internal event-type strings keep their original "age18_*" / "age17_*"
   // names for server compat.
   if (t === "age18_invite_prepared")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <Mail size={16} />, label: "Ownership invite" };
+    return { ...PALETTE.MEMORY, icon: <Mail size={16} />, label: "Ownership invite" };
   if (t === "age18_preview_prepared" || t === "age17_memory_book_preview")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <Star size={16} />, label: "Memory Book preview" };
+    return { ...PALETTE.MEMORY, icon: <Star size={16} />, label: "Memory Book preview" };
   if (t === "age16_parent_notice" || t === "age18_handoff_ready")
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <BellRing size={16} />, label: "Age milestone" };
+    return { ...PALETTE.WARNING, icon: <BellRing size={16} />, label: "Age milestone" };
   // Lifecycle nudges
   if (t.startsWith("lifecycle_"))
-    return { bg: "rgb(255,247,230)", color: "rgb(184,121,26)", icon: <BellRing size={16} />, label: "Nudge" };
+    return { ...PALETTE.WARNING, icon: <BellRing size={16} />, label: "Nudge" };
   // Fallback
-  return { bg: "rgb(232,242,255)", color: "rgb(30,80,170)", icon: <Calendar size={16} />, label: "Update" };
+  return { ...PALETTE.GROWTH, icon: <Calendar size={16} />, label: "Update" };
 }
 
 function parseMetadata(raw: unknown): Record<string, unknown> {
@@ -572,13 +629,13 @@ function StatusPill({ status, type }: { status?: string | null; type?: string | 
   if (!resolved) return null;
   const status_ = resolved;
   const map: Record<string, { label: string; bg: string; color: string; icon: React.ReactNode }> = {
-    pending:    { label: "Pending",    bg: "rgb(255,247,230)", color: "rgb(161,88,0)",   icon: <Clock size={9} /> },
-    processing: { label: "Processing", bg: "rgb(232,242,255)", color: "rgb(30,80,170)",  icon: <Clock size={9} /> },
-    invested:   { label: "Invested",   bg: "rgb(237,244,238)", color: "rgb(26,61,43)",   icon: <ArrowUp size={9} /> },
-    settled:    { label: "Settled",    bg: "rgb(237,244,238)", color: "rgb(26,61,43)",   icon: <Check size={9} /> },
-    failed:     { label: "Failed",     bg: "rgb(254,228,228)", color: "rgb(170,38,38)",  icon: <AlertCircle size={9} /> },
-    refunded:   { label: "Refunded",   bg: "rgb(245,245,245)", color: "rgb(100,92,86)",  icon: <Clock size={9} /> },
-    host_hold:  { label: "On hold",    bg: "rgb(255,247,230)", color: "rgb(161,88,0)",   icon: <Clock size={9} /> },
+    pending:    { label: "Pending",    ...PALETTE.PILL_PENDING,  icon: <Clock size={9} /> },
+    processing: { label: "Processing", ...PALETTE.GROWTH,        icon: <Clock size={9} /> },
+    invested:   { label: "Invested",   ...PALETTE.GIFT,          icon: <ArrowUp size={9} /> },
+    settled:    { label: "Settled",    ...PALETTE.GIFT,          icon: <Check size={9} /> },
+    failed:     { label: "Failed",     ...PALETTE.ALERT_FAILED,  icon: <AlertCircle size={9} /> },
+    refunded:   { label: "Refunded",   ...PALETTE.PILL_REFUNDED, icon: <Clock size={9} /> },
+    host_hold:  { label: "On hold",    ...PALETTE.PILL_PENDING,  icon: <Clock size={9} /> },
   };
   const m = map[status_];
   if (!m) return null;
