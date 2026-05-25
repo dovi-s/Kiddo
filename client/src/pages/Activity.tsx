@@ -9,6 +9,7 @@ import { useLocation, useSearch } from "wouter";
 import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Sparkles, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
 import { AppHeader } from "@/components/layout/AppHeader";
@@ -2054,27 +2055,35 @@ export default function Activity() {
           );
         })()}
 
-        {/* Empty */}
+        {/* Empty state — uses the unified <EmptyState> primitive
+            (client/src/components/ui/empty-state.tsx, built 2026-05-25
+            from the team-audit visual-system recommendation). Previous
+            implementation hand-rolled the card with inline styles +
+            rgb literals; now uses the shared component so Activity +
+            MemoryBook + Settings all share one visual language for
+            empty list states. Same copy, same behavior, same
+            filter-aware variant — the action button only renders in
+            the unfiltered case where "go to dashboard" makes sense. */}
         {!feedLoading && !feedError && filtered.length === 0 && (
           <EnlighteningReveal>
-            <div style={{
-              background: "white", borderRadius: 20, border: "1px solid rgba(26,23,16,0.09)",
-              padding: "48px 24px", textAlign: "center",
-            }}>
-              <p className="font-heading" style={{ fontSize: 18, fontWeight: 700, color: "rgb(26,23,16)", marginBottom: 8 }}>
-                {search || filter !== "all" ? "No activity matches this filter." : "Nothing here yet."}
-              </p>
-              <p style={{ fontSize: 13.5, color: "rgb(140,130,122)", lineHeight: 1.6, marginBottom: search || filter !== "all" ? 0 : 20 }}>
-                {search || filter !== "all"
+            <EmptyState
+              icon={BookOpen}
+              align="center"
+              title={search || filter !== "all" ? "No activity matches this filter." : "Nothing here yet."}
+              description={
+                search || filter !== "all"
                   ? "Try a different filter or search term."
-                  : "Gifts, contributions, and fund updates show up here. Share the gift link to get started."}
-              </p>
-              {!search && filter === "all" && (
-                <Button onClick={() => { haptic("selection"); navigate("/dashboard"); }} data-testid="button-activity-empty-go-dashboard">
-                  Go to dashboard
-                </Button>
-              )}
-            </div>
+                  : "Gifts, contributions, and fund updates show up here. Share the gift link to get started."
+              }
+              action={
+                !search && filter === "all" ? (
+                  <Button onClick={() => { haptic("selection"); navigate("/dashboard"); }} data-testid="button-activity-empty-go-dashboard">
+                    Go to dashboard
+                  </Button>
+                ) : undefined
+              }
+              testId="activity-empty-state"
+            />
           </EnlighteningReveal>
         )}
 

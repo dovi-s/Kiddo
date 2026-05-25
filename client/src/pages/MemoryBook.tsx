@@ -57,6 +57,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Gift, Camera, Star, MessageCircle, X, Calendar, Pencil, Trash2, Globe, Users, Lock, Pin, Send, Copy, BookOpen, Repeat, Heart, MoreVertical, Mic, Video, AlertCircle } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { EnlighteningReveal } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
@@ -2677,52 +2678,51 @@ export default function MemoryBook() {
           >
           <EnlighteningReveal delay={0.1}>
             <div className="space-y-7">
-              <div className="kiddo-card p-8 text-left md:p-10" data-testid="memory-empty-state">
-                <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.10)]">
-                  <BookOpen size={24} className="text-[hsl(var(--kiddo-evergreen))]" />
-                </div>
-                {/* Empty state retoned 2026-05-19 per the Memory Book
-                    register audit. Was: "Story starts here" eyebrow +
-                    slogan h3 ("The first gift starts {child}'s story")
-                    + descriptive sentence with "Every person who gives
-                    to {child} leaves a memory here..." Hallmark-register
-                    that wore its heart on its sleeve. Replaced with
-                    product-register: literal heading, concrete prose,
-                    no "story starts" framing. The emotion comes when
-                    the first real gift lands, not from the empty state
-                    declaring there will be one. */}
-                <h3 className="font-heading text-xl font-bold leading-tight text-foreground">
-                  {childName ? `Nothing here yet.` : "Nothing here yet."}
-                </h3>
-                <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                  {childName
+              {/* Empty state uses the unified <EmptyState> primitive
+                  (built 2026-05-25 from the team-audit visual-system
+                  recommendation). Same visual treatment + behavior as
+                  before — kiddo-card wrapper, evergreen icon chip,
+                  product-register title, two CTAs (Share + Write note).
+                  Copy retoned 2026-05-19 per the Memory Book register
+                  audit (was: "Story starts here" Hallmark-register;
+                  now: literal heading, product-register, the emotion
+                  comes when the first real gift lands not from the
+                  empty state declaring there will be one). */}
+              <EmptyState
+                icon={BookOpen}
+                title="Nothing here yet."
+                description={
+                  childName
                     ? `Gifts and notes for ${childName} land here as they arrive. Share the gift link to start.`
-                    : `Gifts and notes land here as they arrive. Share the gift link to start.`}
-                </p>
-                <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                  <Button
-                    className="bg-[hsl(var(--kiddo-evergreen))] rounded-full text-white hover:bg-[hsl(var(--kiddo-evergreen)/0.92)]"
-                    onClick={() => {
-                      haptic("selection");
-                      setLocation("/dashboard");
-                    }}
-                    data-testid="button-add-first-entry"
-                  >
-                    Share
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => {
-                      haptic("selection");
-                      openFirstStoryPrompt();
-                    }}
-                    data-testid="button-add-first-note"
-                  >
-                    Write the first parent note
-                  </Button>
-                </div>
-              </div>
+                    : `Gifts and notes land here as they arrive. Share the gift link to start.`
+                }
+                action={
+                  <>
+                    <Button
+                      className="bg-[hsl(var(--kiddo-evergreen))] rounded-full text-white hover:bg-[hsl(var(--kiddo-evergreen)/0.92)]"
+                      onClick={() => {
+                        haptic("selection");
+                        setLocation("/dashboard");
+                      }}
+                      data-testid="button-add-first-entry"
+                    >
+                      Share
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={() => {
+                        haptic("selection");
+                        openFirstStoryPrompt();
+                      }}
+                      data-testid="button-add-first-note"
+                    >
+                      Write the first parent note
+                    </Button>
+                  </>
+                }
+                testId="memory-empty-state"
+              />
 
               <section className="kiddo-card p-5">
                 <p className="kiddo-section-label mb-4">What will appear</p>
