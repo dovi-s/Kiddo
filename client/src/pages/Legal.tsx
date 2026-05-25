@@ -172,7 +172,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Brokerage Services</h3>
-                  <p>Securities are offered through DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. Clearing and custody services are provided by DriveWealth. Kiddo facilitates the user experience but does not execute trades or hold customer assets.</p>
+                  <p>Securities are offered through DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. Clearing and custody services are provided by DriveWealth. Kiddo provides the user experience but does not execute trades or hold customer assets.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">SIPC Coverage</h3>

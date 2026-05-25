@@ -262,11 +262,11 @@ export default function RobuxVsUtma() {
             </h3>
             <div>
               <p className="font-semibold text-foreground">Is Robux a waste of money?</p>
-              <p className="mt-1">No, but it isn't an investment. A $25 Robux purchase is a $25 entertainment buy. The same $25 in a UTMA gets ~$72 by your kid's 18th birthday (over 10 years at 7%). That's not Roblox's fault; it's the difference between consumption and compounding.</p>
+              <p className="mt-1">No, but it isn't an investment. A $25 Robux purchase is a $25 entertainment buy. The same $25 in a UTMA gets ~$72 by the time the kid takes ownership at majority (18 in most states, 19 to 21 in a few; about 10 years at 7%). That's not Roblox's fault; it's the difference between consumption and compounding.</p>
             </div>
             <div>
               <p className="font-semibold text-foreground">Can I do both?</p>
-              <p className="mt-1">Most families do. Set a Robux budget you're comfortable with; redirect what you would have over-spent into a fund. Even a $10/month UTMA contribution from age 8 onward becomes meaningful by 18.</p>
+              <p className="mt-1">Most families do. Set a Robux budget you're comfortable with; redirect what you would have over-spent into a fund. Even a $10/month UTMA contribution from age 8 onward becomes meaningful by the time the kid takes ownership at majority.</p>
             </div>
             <div>
               <p className="font-semibold text-foreground">Why a UTMA and not a 529?</p>

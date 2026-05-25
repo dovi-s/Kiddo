@@ -140,7 +140,7 @@ export default function UtmaByState() {
           </div>
           <p className="mt-6 text-sm">
             <Link href="/tools/utma-by-state" className="text-primary hover:underline">
-              View all 50 states →
+              View all 50 states + DC →
             </Link>
           </p>
         </div>

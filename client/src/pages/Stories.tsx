@@ -14,8 +14,8 @@ export default function Stories() {
   const startHref = buildTrackedGetStartedHref(search, { ref: "stories:index", src: "stories_index" });
 
   usePageSeo({
-    title: "Kiddo Stories | Real families. Real funds. Real growth.",
-    description: "See how real families are using Kiddo to turn birthdays, baby showers, and holidays into real investments for their children.",
+    title: "Kiddo Stories | How families use Kiddo to make gifts last",
+    description: "Stories of how Kiddo families turn birthdays, baby showers, and holidays into real investments for their children.",
     ogType: "website",
   });
 
@@ -26,12 +26,25 @@ export default function Stories() {
       <section className="pt-24 pb-16 md:pt-32 md:pb-20">
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-3xl text-center">
+            {/* Headline + subhead softened 2026-05-25 audit. Previous
+                copy ("Real families. Real funds. Real growth." + "Every
+                story here is a real family using Kiddo...") made a
+                verified-customer claim, but the underlying story files
+                (emma-birthday-fund.md, noah-baby-shower-fund.md) carry
+                explicit "needs verified customer details before wider
+                promotion" notes. Pre-launch, asserting these are
+                real-customer stories without that verification creates
+                FTC-side and trust risk. New copy frames them as the
+                kind of story Kiddo is built for, without claiming any
+                specific story is a verified customer. When real
+                customer stories ship (with verified quotes + permission),
+                the page copy can return to the stronger framing. */}
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Stories</p>
             <h1 className="mt-4 font-heading text-4xl font-bold tracking-tight text-foreground md:text-6xl">
-              Real families. Real funds. Real growth.
+              The kinds of stories Kiddo is built for.
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
-              Every story here is a real family using Kiddo to turn everyday occasions into something that lasts.
+              Examples of how families turn everyday occasions into something that lasts. As Kiddo families share their own, real stories will live here too.
             </p>
           </div>
         </div>

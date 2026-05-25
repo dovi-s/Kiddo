@@ -52,6 +52,15 @@ type PlanPrice =
   | { kind: "flat"; price: string; period: string }
   | {
       kind: "billed";
+      // Daily-framing line per the locked behavioral-framing discipline
+      // (project_behavioral_framing_discipline.md): "Daily-framing beats
+      // monthly-framing on recurring conversion — Acorns saw 4× enrollment
+      // lift from '$5/day' vs '$150/month' same money." Applies to
+      // recurring-conversion surfaces including the Pricing tier cards.
+      // The phrasing matches the established "$3.99/month — about 13¢
+      // a day" pattern from PlusUpgradePromptCard + MemoryMediaPicker.
+      // Optional field — Free / Founding cards skip it (no monthly billing).
+      dailyFraming?: string;
       yearly: { price: string; period: string; equivalent: string };
       monthly: { price: string; period: string; equivalent: string };
     };
@@ -93,6 +102,7 @@ const plans: readonly Plan[] = [
     eyebrow: "For the parent who shows up every month.",
     pricing: {
       kind: "billed",
+      dailyFraming: "About 13¢ a day",
       yearly: { price: "$29", period: "/year", equivalent: "or $3.99/month" },
       monthly: { price: "$3.99", period: "/month", equivalent: "or $29/year" },
     },
@@ -131,6 +141,7 @@ const plans: readonly Plan[] = [
     eyebrow: "For families with two or more children.",
     pricing: {
       kind: "billed",
+      dailyFraming: "About 23¢ a day",
       yearly: { price: "$59", period: "/year", equivalent: "or $6.99/month" },
       monthly: { price: "$6.99", period: "/month", equivalent: "or $59/year" },
     },
@@ -349,10 +360,10 @@ export default function Pricing() {
               // Resolve the price block based on the current toggle
               // state. Flat-priced plans (Free) ignore the toggle.
               const priceDisplay = plan.pricing.kind === "flat"
-                ? { price: plan.pricing.price, period: plan.pricing.period, equivalent: null as string | null }
+                ? { price: plan.pricing.price, period: plan.pricing.period, equivalent: null as string | null, dailyFraming: null as string | null }
                 : billingPeriod === "yearly"
-                  ? { ...plan.pricing.yearly, equivalent: plan.pricing.yearly.equivalent }
-                  : { ...plan.pricing.monthly, equivalent: plan.pricing.monthly.equivalent };
+                  ? { ...plan.pricing.yearly, equivalent: plan.pricing.yearly.equivalent, dailyFraming: plan.pricing.dailyFraming ?? null }
+                  : { ...plan.pricing.monthly, equivalent: plan.pricing.monthly.equivalent, dailyFraming: plan.pricing.dailyFraming ?? null };
               return (
               <FadeIn key={plan.id} delay={index * 0.08}>
                 <div className={`relative flex h-full flex-col rounded-2xl bg-card p-8 shadow-premium-sm ${plan.featured ? "ring-2 ring-primary" : ""}`}>
@@ -381,6 +392,15 @@ export default function Pricing() {
                         conversion. Muted gray matches the period label
                         treatment one line above. Locked 2026-05-20. */}
                     {priceDisplay.equivalent ? <p className="mt-2 text-sm text-muted-foreground">{priceDisplay.equivalent}</p> : null}
+                    {/* Daily-framing line — added 2026-05-25 per the
+                        locked behavioral-framing discipline. Acorns saw
+                        a 4× recurring-conversion lift framing "$5/day"
+                        vs "$150/month" — same dollars, different cognitive
+                        size. The Pricing tier cards are recurring-
+                        conversion surfaces, so they deserve the daily
+                        framing. Matches the established phrasing in
+                        PlusUpgradePromptCard + MemoryMediaPicker. */}
+                    {priceDisplay.dailyFraming ? <p className="mt-1 text-xs text-muted-foreground/75">{priceDisplay.dailyFraming}</p> : null}
                   </div>
 
                   <ul className="mb-8 flex-1 space-y-3">

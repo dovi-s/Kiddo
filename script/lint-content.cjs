@@ -117,6 +117,17 @@ const INCLUDED_PAGE_FILES = new Set([
   path.normalize("client/src/pages/ClaimFund.tsx"),
   path.normalize("client/src/pages/Onboard.tsx"),
   path.normalize("client/src/pages/GetStarted.tsx"),
+  // 2026-05-25 marketing-page batch audits — add the remaining 6
+  // public surfaces that weren't yet in coverage. Together with
+  // the ones already linted (Home, About, Blog, Compare, Contact,
+  // FAQ, Pricing, Security, Stories, Age18, FoundingMembers) this
+  // brings the full marketing-page surface area under lint.
+  path.normalize("client/src/pages/Legal.tsx"),
+  path.normalize("client/src/pages/Demo.tsx"),
+  path.normalize("client/src/pages/RobuxVsUtma.tsx"),
+  path.normalize("client/src/pages/UtmaByState.tsx"),
+  path.normalize("client/src/pages/UtmaByStateIndex.tsx"),
+  path.normalize("client/src/pages/BlogPost.tsx"),
 ]);
 
 // Component allowlist — same expansion-after-violation reasoning as
