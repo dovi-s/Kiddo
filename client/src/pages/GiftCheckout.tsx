@@ -145,6 +145,10 @@ interface PublicEventData {
     // path with a "ask parents to enable" CTA (false → Free fund).
     // NEVER expose as "the parent's plan" to the gifter.
     recurringSupported?: boolean;
+    // Magic-link gifter auth feature flag (locked 2026-05-25). When true,
+    // we drop the password field on the recurring step and tell the
+    // gifter we'll email them a sign-in link after Stripe success.
+    magicLinkAuth?: boolean;
   };
   recentGifters?: Array<{
     name: string;
@@ -815,7 +819,11 @@ export default function GiftCheckout() {
           // (i.e., when the endpoint above is the one-time variant).
           isRecurring,
           recurringFrequency: isRecurring ? recurringFrequency : undefined,
-          accountPassword: isRecurring ? recurringPassword : undefined,
+          // Password is sent only when the magic-link flag is OFF for the
+          // fund. When ON, the server expects NO password and dispatches
+          // a magic-link welcome email after the Stripe success webhook.
+          // Per project_recurring_gifting_without_password_spec.md.
+          accountPassword: isRecurring && eventData?.fund?.magicLinkAuth !== true ? recurringPassword : undefined,
         }),
       });
       if (!res.ok) {
@@ -1868,25 +1876,46 @@ export default function GiftCheckout() {
                       );
                     })()}
 
-                    <div>
-                      <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="recurring-password">
-                        Set a password
-                      </label>
-                      <p className="text-[11px] text-muted-foreground/80 mt-0.5 mb-2 leading-relaxed">
-                        We'll create your free gifter account at the same time so you can manage or cancel any time. Uses the email you enter on the next step.
-                      </p>
-                      <input
-                        id="recurring-password"
-                        type="password"
-                        value={recurringPassword}
-                        onChange={(e) => setRecurringPassword(e.target.value)}
-                        placeholder="At least 8 characters"
-                        minLength={8}
-                        autoComplete="new-password"
-                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
-                        data-testid="input-recurring-password"
-                      />
-                    </div>
+                    {eventData?.fund?.magicLinkAuth === true ? (
+                      // Magic-link gifter auth (locked 2026-05-25). No
+                      // password field; we email a sign-in link after
+                      // Stripe success. The conversion-bet rationale +
+                      // 25-40% expected lift live in the spec memory
+                      // file. Copy is product-statement: tells the
+                      // gifter what happens; never frames the absence
+                      // of a password as a downgrade.
+                      <div
+                        className="rounded-2xl bg-[hsl(var(--kiddo-evergreen)/0.08)] border border-[hsl(var(--kiddo-evergreen)/0.20)] px-4 py-3"
+                        data-testid="recurring-magic-link-callout"
+                      >
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--kiddo-evergreen))]">
+                          No password needed
+                        </p>
+                        <p className="text-[12px] text-foreground/80 mt-1 leading-relaxed">
+                          After you finish, we'll email a one-tap sign-in link to manage or cancel any time. Uses the email you enter on the next step.
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground" htmlFor="recurring-password">
+                          Set a password
+                        </label>
+                        <p className="text-[11px] text-muted-foreground/80 mt-0.5 mb-2 leading-relaxed">
+                          We'll create your free gifter account at the same time so you can manage or cancel any time. Uses the email you enter on the next step.
+                        </p>
+                        <input
+                          id="recurring-password"
+                          type="password"
+                          value={recurringPassword}
+                          onChange={(e) => setRecurringPassword(e.target.value)}
+                          placeholder="At least 8 characters"
+                          minLength={8}
+                          autoComplete="new-password"
+                          className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
+                          data-testid="input-recurring-password"
+                        />
+                      </div>
+                    )}
                     <p className="text-[10px] text-muted-foreground/70 leading-snug">
                       Recurring gifts count toward the IRS annual gift exclusion ($18,000 per recipient per year). Most family contributions are well under this.
                     </p>
@@ -1895,7 +1924,7 @@ export default function GiftCheckout() {
               </div>
               )}
 
-                <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!isValidAmount || (isRecurring && recurringPassword.length < 8)} onClick={() => { haptic("selection"); trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", { baselineEvent: "gift_amount_selected", amount: activeAmount, amountSource: showCustom ? "custom_confirmed" : "confirmed", isRecurring, recurringFrequency: isRecurring ? recurringFrequency : null }); trackGiftEvent("cta_click", "gift_amount_continue", { amount: activeAmount }); setStep("preview"); }} data-testid="button-continue-to-preview">
+                <Button size="lg" className="kiddo-gold-button h-14 w-full rounded-2xl text-base font-bold" disabled={!isValidAmount || (isRecurring && eventData?.fund?.magicLinkAuth !== true && recurringPassword.length < 8)} onClick={() => { haptic("selection"); trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", { baselineEvent: "gift_amount_selected", amount: activeAmount, amountSource: showCustom ? "custom_confirmed" : "confirmed", isRecurring, recurringFrequency: isRecurring ? recurringFrequency : null }); trackGiftEvent("cta_click", "gift_amount_continue", { amount: activeAmount }); setStep("preview"); }} data-testid="button-continue-to-preview">
                 Continue
                 <ArrowRight size={16} className="ml-2" />
               </Button>

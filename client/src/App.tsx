@@ -43,6 +43,7 @@ const GiftCheckout = lazy(() => import("@/pages/GiftCheckout"));
 const Login = lazy(() => import("@/pages/Login"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
+const AuthMagic = lazy(() => import("@/pages/AuthMagic"));
 const ConfirmEmailChange = lazy(() => import("@/pages/ConfirmEmailChange"));
 const CancelEmailChange = lazy(() => import("@/pages/CancelEmailChange"));
 const EventCreate = lazy(() => import("@/pages/EventCreate"));
@@ -774,6 +775,7 @@ function Router() {
           <Route path="/login"><Login /></Route>
           <Route path="/reset-password"><ResetPassword /></Route>
           <Route path="/verify-email"><VerifyEmail /></Route>
+          <Route path="/auth/magic"><AuthMagic /></Route>
           <Route path="/confirm-email-change"><ConfirmEmailChange /></Route>
           <Route path="/cancel-email-change"><CancelEmailChange /></Route>
           <Route path="/demo"><Demo /></Route>

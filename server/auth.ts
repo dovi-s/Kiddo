@@ -52,6 +52,12 @@ import { buildPasswordResetEmail } from "./templates/passwordReset";
 import { buildVerificationEmail } from "./templates/emailVerification";
 import { buildNewDeviceAlertEmail } from "./templates/newDeviceAlert";
 import { buildEmailChangeConfirmEmail, buildEmailChangeHeadsUpEmail } from "./templates/emailChange";
+import {
+  isMagicLinkAuthEnabled,
+  checkMagicLinkRateLimit,
+  issueGifterMagicLink,
+  consumeMagicLinkToken,
+} from "./services/magicLinkAuth";
 import { z } from "zod";
 
 const emailSchema = z
@@ -1686,6 +1692,128 @@ export function setupAuth(app: Express) {
       return res.status(200).json({ ok: true, email: verifyRow.email });
     } catch (err: any) {
       console.error("[verify-email] error:", err);
+      return res.status(500).json({ message: "Something went wrong. Try again." });
+    }
+  });
+
+  // Magic-link sign-in: request.
+  //
+  // Per project_recurring_gifting_without_password_spec.md (locked
+  // 2026-05-25). Posts an email; if it matches a real user we mint a
+  // single-use token + send the link email. Always returns 200 to
+  // preserve anti-enumeration discipline. Rate-limited 5/email/hour.
+  //
+  // Used by:
+  //   - Login.tsx "email me a sign-in link" alternative (re-login path).
+  //   - Tests + smoke scripts (`scripts/smoke-magic-link-gifter-flow.ts`).
+  //
+  // Gated by MAGIC_LINK_GIFTER_AUTH=true. While the flag is OFF the
+  // route still responds 200 but DOES NOT mint a token or send mail.
+  // This keeps the surface present in case a stale email link is
+  // clicked during rollback while still preventing accidental usage.
+  app.post("/api/auth/magic-link/request", async (req, res) => {
+    const parsed = forgotPasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(200).json({ message: "If that email exists, a sign-in link is on its way." });
+    }
+    const { email } = parsed.data;
+    if (!isMagicLinkAuthEnabled()) {
+      // Flag off — silent no-op. Same response shape so callers don't
+      // need to feature-detect at the API layer.
+      return res.status(200).json({ message: "If that email exists, a sign-in link is on its way." });
+    }
+    const rate = checkMagicLinkRateLimit(email);
+    if (!rate.allowed) {
+      // Soft rate-limit: still respond 200 (anti-enumeration) but skip
+      // the email send. The retry-after is logged for forensics.
+      console.warn("[magic-link/request] rate-limit hit for", email, "retry in ms:", rate.retryAfterMs);
+      return res.status(200).json({ message: "If that email exists, a sign-in link is on its way." });
+    }
+    try {
+      const userRow = await db
+        .select({ id: users.id, firstName: users.firstName, deletedAt: users.deletedAt })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      if (userRow.length > 0 && !userRow[0].deletedAt) {
+        try {
+          await issueGifterMagicLink({
+            userId: userRow[0].id,
+            email,
+            intent: "gifter_relogin",
+            firstName: userRow[0].firstName ?? null,
+            req,
+          });
+        } catch (issueErr: any) {
+          // Anti-enumeration: don't surface send failures. The outbox
+          // fallback in sendEmail catches transient ESP failures; only
+          // catastrophic errors land here.
+          console.error("[magic-link/request] issue failed:", issueErr?.message || issueErr);
+        }
+      }
+    } catch (err: any) {
+      console.error("[magic-link/request] lookup error:", err);
+    }
+    return res.status(200).json({ message: "If that email exists, a sign-in link is on its way." });
+  });
+
+  // Magic-link sign-in: verify.
+  //
+  // Validates the raw token from the email URL, marks it used, then
+  // establishes a session via req.login. The session is indistinguishable
+  // from a password login — the user lands authenticated on the
+  // destination route.
+  //
+  // GET (not POST) because the email link is a click. Token is in the
+  // query string; we never log it.
+  //
+  // Failure modes (expired, used, never-existed) all return the same
+  // generic "Invalid or expired sign-in link" with status 400. The
+  // client redirects to /login?magic_expired=1 which renders a friendly
+  // retry CTA — never reveals which failure mode hit.
+  app.get("/api/auth/magic-link/verify", async (req, res) => {
+    const rawToken = String((req.query?.token as string | undefined) || "").trim();
+    if (!rawToken) {
+      return res.status(400).json({ message: "Invalid or expired sign-in link." });
+    }
+    try {
+      const row = await consumeMagicLinkToken(rawToken);
+      if (!row) {
+        return res.status(400).json({ message: "Invalid or expired sign-in link." });
+      }
+      // Pull the full user row so req.login serializes the right payload.
+      const userRows = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, row.userId))
+        .limit(1);
+      if (userRows.length === 0 || userRows[0].deletedAt) {
+        return res.status(400).json({ message: "Invalid or expired sign-in link." });
+      }
+      const user = userRows[0];
+      req.login(user, (err) => {
+        if (err) {
+          console.error("[magic-link/verify] session failed:", err);
+          return res.status(500).json({ message: "Session could not be established. Try requesting a fresh link." });
+        }
+        try {
+          db.insert(activities).values({
+            userId: user.id,
+            type: "magic_link_signin",
+            title: "Signed in via magic link",
+            description: `Intent: ${row.intent}. IP: ${req.ip || "unknown"}.`,
+            metadata: { intent: row.intent, ip: req.ip || null, userAgent: req.get("user-agent") || null } as any,
+          } as any).then(() => {}).catch((auditErr: any) => {
+            console.warn("[magic-link/verify] Could not write audit entry (non-fatal):", auditErr?.message);
+          });
+        } catch (auditErr: any) {
+          console.warn("[magic-link/verify] audit prep failed (non-fatal):", auditErr?.message);
+        }
+        const { passwordHash: _ph, kycData: _kd, ...safeUser } = user;
+        return res.status(200).json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email), intent: row.intent });
+      });
+    } catch (err: any) {
+      console.error("[magic-link/verify] error:", err);
       return res.status(500).json({ message: "Something went wrong. Try again." });
     }
   });

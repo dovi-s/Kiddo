@@ -1875,6 +1875,59 @@ export class WebhookHandlers {
     } as any);
 
     console.log(`[Webhook] gifter_recurring row created: fund=${fundId} amount=$${amountUsd} ${frequency}`);
+
+    // Magic-link welcome email dispatch.
+    //
+    // Per project_recurring_gifting_without_password_spec.md (locked
+    // 2026-05-25). Fires the magic-link welcome email ONLY when:
+    //   - MAGIC_LINK_GIFTER_AUTH=true (feature flag), AND
+    //   - the gifter user row was just created without a passwordHash
+    //     (we look it up via gifterUserId from metadata to confirm),
+    //   - we have a senderEmail to mail to.
+    //
+    // The flag check + table writes happen in services/magicLinkAuth.ts;
+    // this site just orchestrates the dispatch. Email-send failures are
+    // logged and swallowed — the recurring_gifts row is already
+    // persisted, so the gift functions; the gifter can request a fresh
+    // link from /login at any time.
+    try {
+      const { isMagicLinkAuthEnabled, issueGifterMagicLink } = await import("./services/magicLinkAuth");
+      if (isMagicLinkAuthEnabled() && senderEmail) {
+        const gifterUserId = String(metadata.gifterUserId || "");
+        if (gifterUserId) {
+          // Look up the gifter row to confirm passwordHash is NULL (the
+          // user was created via the passwordless flow). If they have a
+          // hash, they signed up the old way and don't need a welcome
+          // link — Login.tsx still works for them.
+          const { users } = await import("@shared/models/auth");
+          const [gifterRow] = await db
+            .select({ id: users.id, email: users.email, firstName: users.firstName, passwordHash: users.passwordHash })
+            .from(users)
+            .where(eq(users.id, gifterUserId))
+            .limit(1);
+          if (gifterRow && !gifterRow.passwordHash && gifterRow.email) {
+            const fund = await storage.getFund(fundId);
+            const fundName = fund?.recipientFirstName || fund?.name || "the family";
+            const selectedTicker = String(metadata.selectedTicker || "").toUpperCase() || "the chosen stock";
+            await issueGifterMagicLink({
+              userId: gifterRow.id,
+              email: gifterRow.email,
+              intent: "gifter_welcome",
+              firstName: gifterRow.firstName ?? senderName ?? null,
+              giftSummary: {
+                amount: amountUsd,
+                ticker: selectedTicker,
+                fundName,
+              },
+              req: null, // webhook context — no request object available.
+            });
+            console.log(`[Webhook] gifter_recurring magic-link welcome sent: user=${gifterRow.id} email=${gifterRow.email}`);
+          }
+        }
+      }
+    } catch (emailErr: any) {
+      console.warn("[Webhook] gifter_recurring magic-link welcome failed (non-fatal):", emailErr?.message || emailErr);
+    }
   }
 
   // Sponsor-Plus purchase handler — fires on checkout.session.completed

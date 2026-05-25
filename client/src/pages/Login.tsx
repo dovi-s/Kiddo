@@ -28,6 +28,15 @@ export default function Login() {
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  // Magic-link re-login state. Mirrors the forgot-password dialog
+  // shape — same anti-enumeration discipline, same "always 200" copy.
+  // Per project_recurring_gifting_without_password_spec.md (locked
+  // 2026-05-25). Gifters who signed up via magic-link have no
+  // password to "forget"; this gives them a parallel re-entry path.
+  const [showMagicLink, setShowMagicLink] = useState(false);
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicSent, setMagicSent] = useState(false);
+  const [magicLoading, setMagicLoading] = useState(false);
   const [oauthProviders, setOauthProviders] = useState({ google: false, apple: false, biometricReady: false });
   const { login, isLoggingIn, loginError } = useAuth();
   const queryClient = useQueryClient();
@@ -107,6 +116,26 @@ export default function Login() {
     } finally {
       setResetLoading(false);
       setResetSent(true);
+      haptic('success');
+    }
+  };
+
+  const handleMagicLinkRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!magicEmail.trim()) return;
+    haptic('medium');
+    setMagicLoading(true);
+    try {
+      await fetch("/api/auth/magic-link/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: magicEmail.trim().toLowerCase() }),
+      });
+    } catch {
+      // silently ignore network errors - always show success to avoid email enumeration
+    } finally {
+      setMagicLoading(false);
+      setMagicSent(true);
       haptic('success');
     }
   };
@@ -263,7 +292,15 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
+                  onClick={() => { haptic('light'); setMagicEmail(email); setShowMagicLink(true); setMagicSent(false); }}
+                  data-testid="button-magic-link-signin"
+                >
+                  Email me a sign-in link
+                </button>
                 <button
                   type="button"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-150"
@@ -348,6 +385,75 @@ export default function Login() {
           failure caught by the 2026-05-25 team a11y audit). The
           Dialog primitive used here is the same one Home.tsx ProductBento
           modal uses — established codebase pattern. */}
+      {/* Magic-link sign-in modal. Mirrors the forgot-password modal
+          shape per Login.tsx convention. Gifters who signed up via the
+          passwordless flow have no password to reset; this gives them
+          a parallel path. Anti-enumeration: same generic "if account
+          exists" success copy. Per
+          project_recurring_gifting_without_password_spec.md. */}
+      <Dialog open={showMagicLink} onOpenChange={setShowMagicLink}>
+        <DialogContent className="max-w-sm">
+          {magicSent ? (
+            <div className="text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <ShieldCheck size={22} className="text-primary" />
+              </div>
+              <DialogHeader>
+                <DialogTitle className="text-center">Check your inbox</DialogTitle>
+                <DialogDescription className="text-center">
+                  If an account exists for <span className="font-medium text-foreground">{magicEmail}</span>, we've sent a one-tap sign-in link. The link is good for 15 minutes.
+                </DialogDescription>
+              </DialogHeader>
+              <button
+                onClick={() => setShowMagicLink(false)}
+                className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Sign in with email link</DialogTitle>
+                <DialogDescription>Enter your email and we'll send you a one-tap sign-in link. No password needed.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleMagicLinkRequest} className="space-y-3">
+                <label htmlFor="magic-email" className="sr-only">Email address</label>
+                <input
+                  id="magic-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  value={magicEmail}
+                  onChange={(e) => setMagicEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  className="w-full h-12 px-4 border-2 border-border/50 rounded-xl text-foreground bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all"
+                  data-testid="input-magic-email"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={!magicEmail.trim() || magicLoading}
+                  className="w-full h-11 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  data-testid="button-magic-submit"
+                >
+                  {magicLoading ? "Sending..." : "Send sign-in link"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMagicLink(false)}
+                  className="w-full h-11 rounded-xl font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
         <DialogContent className="max-w-sm">
           {resetSent ? (

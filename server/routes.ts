@@ -12,6 +12,7 @@ import bcrypt from "bcryptjs";
 import { sql, eq, and, desc, inArray, isNotNull, gte } from "drizzle-orm";
 import { db, pool } from "./db";
 import { isAuthenticated, isAdmin } from "./auth";
+import { isMagicLinkAuthEnabled } from "./services/magicLinkAuth";
 import { getConfiguredSuperAdminEmails, isEmailInAdminSet } from "@shared/adminAccess";
 import { sendEmail } from "./emailDelivery";
 import { buildParentHandoffSubscriptionEmail } from "./templates/parentHandoffSubscription";
@@ -5765,6 +5766,14 @@ export async function registerRoutes(
           // constraint #2 (gifter-side copy is product-statement, never
           // paywall).
           recurringSupported,
+          // Magic-link gifter auth feature flag, surfaced to the client
+          // via the fund response so GiftCheckout can hide the password
+          // field atomically when the rollout flips. Per
+          // project_recurring_gifting_without_password_spec.md (locked
+          // 2026-05-25). Single source of truth — the SAME env var
+          // controls both the server-side password validation (in the
+          // gift-recurring endpoint) and the client-side UI gating.
+          magicLinkAuth: isMagicLinkAuthEnabled(),
         },
         availability,
         permanentEventSlug: permanentEvent?.slug,
@@ -10502,7 +10511,18 @@ export async function registerRoutes(
       const trimmedSenderName = typeof senderName === "string" ? senderName.trim() : "";
       const numericAmount = parseFloat(String(amount));
       const validFreq = ["weekly", "monthly", "yearly"].includes(String(recurringFrequency));
-      const validPassword = typeof accountPassword === "string" && accountPassword.length >= 8;
+      // Password requirement is conditional on the MAGIC_LINK_GIFTER_AUTH
+      // feature flag. When the flag is ON, this endpoint no longer collects
+      // a password — auth happens via the magic-link welcome email sent by
+      // webhookHandlers.ts after checkout.session.completed. When the flag
+      // is OFF, password validation stays exactly as before (8+ chars).
+      // Per project_recurring_gifting_without_password_spec.md (locked
+      // 2026-05-25). The feature flag check itself lives in
+      // server/services/magicLinkAuth.ts to keep a single source of truth.
+      const magicLinkAuthOn = isMagicLinkAuthEnabled();
+      const validPassword = magicLinkAuthOn
+        ? true // password no longer required; existing users keep their hash.
+        : typeof accountPassword === "string" && accountPassword.length >= 8;
 
       if (!fundId || !Number.isFinite(numericAmount) || numericAmount < 5) {
         return res.status(400).json({ error: "fundId and a valid amount (>=$5) are required" });
@@ -10572,9 +10592,17 @@ export async function registerRoutes(
       if (existingUser) {
         gifterUserId = existingUser.id;
         gifterUserForLogin = existingUser;
-        // Don't overwrite an existing user's password.
+        // Don't overwrite an existing user's password — they may still
+        // sign in via the password they previously set OR via the new
+        // magic-link path. Both work in parallel for legacy gifters.
       } else {
-        const passwordHash = await bcrypt.hash(accountPassword, 10);
+        // When MAGIC_LINK_GIFTER_AUTH is ON, the user is created with
+        // NO passwordHash. Auth happens via the magic-link welcome email
+        // dispatched by webhookHandlers.ts after checkout.session.completed.
+        // When the flag is OFF, we bcrypt the password the gifter just set.
+        const passwordHash = magicLinkAuthOn
+          ? null
+          : await bcrypt.hash(accountPassword, 10);
         const [created] = await db.insert(users).values({
           email: trimmedEmail,
           firstName: trimmedSenderName || null,

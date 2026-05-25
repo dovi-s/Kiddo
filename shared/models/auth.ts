@@ -455,3 +455,66 @@ export const emailChangeRequests = pgTable("email_change_requests", {
 
 export type EmailChangeRequest = typeof emailChangeRequests.$inferSelect;
 export type InsertEmailChangeRequest = typeof emailChangeRequests.$inferInsert;
+
+// Magic-link auth tokens for passwordless gifter sign-in. Same hashed-
+// token discipline as password_resets + email_verifications: the raw
+// token in the email is 32 random bytes, but we persist only the
+// SHA-256 hash — a DB leak doesn't grant authentication.
+//
+// Per project_recurring_gifting_without_password_spec.md (locked
+// 2026-05-25). Backs the team-audit conversion #1 experiment: drop
+// password collection from the gifter-recurring checkout flow; replace
+// with a magic-link welcome email after Stripe success.
+//
+// Lifecycle:
+//   1. Created when /api/auth/magic-link/request fires OR when the
+//      gifter-recurring webhook handler emits a welcome email after
+//      Stripe checkout.session.completed.
+//   2. The raw 32-byte hex token is embedded in the email link
+//      ({APP_URL}/auth/magic?token=...). The hash goes in the DB.
+//   3. /api/auth/magic-link/verify reads the token from the query,
+//      SHA-256s it, looks up the row, validates expiresAt + usedAt,
+//      establishes a session, stamps usedAt.
+//   4. Single-use: after usedAt is non-null, the link can't be
+//      redeemed again — the gifter must request a new one.
+//   5. Time-limited: 15-minute TTL is short enough that a stolen-
+//      then-unused link expires quickly. Most legitimate clicks
+//      happen within 1 minute.
+//
+// intent column distinguishes the two surfaces:
+//   - 'gifter_welcome' — fired after the post-recurring Stripe
+//     success webhook. Welcomes a freshly-created gifter to their
+//     dashboard.
+//   - 'gifter_relogin' — fired when an existing gifter clicks
+//     "email me a sign-in link" on the Login screen.
+//
+// Rate limiting (server-side): 5 requests per email per hour, soft
+// enforced in the route handler (not the DB). Enumeration mitigation:
+// the request endpoint ALWAYS returns 200 regardless of whether the
+// email matched a real user — same discipline as password_resets.
+//
+// Cleanup: rows are kept for 7 days post-expiry to support
+// enumeration detection ("which emails have been probed?"). After
+// that, a future cron worker hard-deletes used + expired rows.
+export const magicLinkTokens = pgTable("magic_link_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // SHA-256(token) — never store the raw token. Hex-encoded.
+  tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+  // 'gifter_welcome' | 'gifter_relogin' (extensible).
+  intent: varchar("intent", { length: 32 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  // Forensic context. Read by future enumeration-detection tooling
+  // ("which IPs requested links for which emails in the last 24h").
+  requestIp: text("request_ip"),
+  requestUserAgent: text("request_user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("magic_link_tokens_token_hash_unique").on(table.tokenHash),
+  index("magic_link_tokens_user_id_idx").on(table.userId),
+  index("magic_link_tokens_expires_at_idx").on(table.expiresAt),
+]);
+
+export type MagicLinkToken = typeof magicLinkTokens.$inferSelect;
+export type InsertMagicLinkToken = typeof magicLinkTokens.$inferInsert;
