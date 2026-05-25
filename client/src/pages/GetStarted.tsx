@@ -48,6 +48,7 @@ import {
   slugify,
   yearsTo18,
 } from "@kora/utils";
+import { US_STATES, getMajorityAgeForState } from "@shared/utma";
 
 const DRAFT_KEY = "kiddo:get-started-v2";
 const PAGE = "mx-auto w-full max-w-lg";
@@ -238,6 +239,19 @@ export default function GetStarted() {
     | null>(null);
   const [direction, setDirection] = useState(1);
   const [projectionMilestone, setProjectionMilestone] = useState(18);
+  // Recipient state — collected inline on the projection step so the
+  // load-bearing aha math respects the kid's actual UTMA majority age
+  // (18 in most states, 19-21 in a few like AL/MS/CA/NE). Optional
+  // field with smart default: empty string falls back to age 18 via
+  // getMajorityAgeForState. When set, the projection numbers + the
+  // "by the time {kid} is N" copy + the fund-creation payload all
+  // update together. Audit 2026-05-25 caught this — the projection
+  // math previously hardcoded 18 in the two projectContributionSeries
+  // calls below, undercutting the conversion aha for ~15% of US
+  // parents whose state has a non-18 majority age. Per locked
+  // state-variance discipline.
+  const [recipientState, setRecipientState] = useState("");
+  const effectiveMajorityAge = useMemo(() => getMajorityAgeForState(recipientState), [recipientState]);
   const [stockSearch, setStockSearch] = useState("");
   const [showSkipWarning, setShowSkipWarning] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -245,7 +259,22 @@ export default function GetStarted() {
   const trackedStepViewsRef = useRef<Set<string>>(new Set());
 
   const dobIssue = accountType === "child" ? childDobError(birthdate) : "";
-  const years = accountType === "child" ? yearsTo18(birthdate) : 15;
+  // Years-to-majority replaces the hardcoded yearsTo18 helper. Both
+  // serve the same purpose (compute years until UTMA control transfers)
+  // but the helper bakes in 18; the inline version respects the kid's
+  // actual majority age. yearsTo18 still imported because it's the
+  // safe fallback when birthdate is invalid / missing.
+  const years = accountType === "child"
+    ? (birthdate
+        ? (() => {
+            const dob = new Date(birthdate + "T12:00:00.000Z");
+            if (Number.isNaN(dob.getTime())) return yearsTo18(birthdate);
+            const majorityDate = new Date(dob);
+            majorityDate.setUTCFullYear(majorityDate.getUTCFullYear() + effectiveMajorityAge);
+            return Math.max(1, Math.ceil((majorityDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 365.25)));
+          })()
+        : yearsTo18(birthdate))
+    : 15;
   const projection = getProjectionSnapshot(annualGift, years);
   const savings = projection.savings;
   const invested = projection.invested;
@@ -255,18 +284,21 @@ export default function GetStarted() {
     // 0.001 = 0.10% Kiddo AUM annual fee netted out so the projection
     // matches what the parent actually keeps. Same rule applied across
     // every Kiddo projection surface per the 2026-05-15 audit.
-    const series = projectContributionSeries(annualGift, projectionMilestone, 0.07, 18, 0.001);
+    // contributionEndAge now respects the state-specific majority age
+    // (was hardcoded 18). Audit 2026-05-25.
+    const series = projectContributionSeries(annualGift, projectionMilestone, 0.07, effectiveMajorityAge, 0.001);
     return series[series.length - 1]?.projectedValue ?? 0;
-  }, [annualGift, projectionMilestone]);
+  }, [annualGift, projectionMilestone, effectiveMajorityAge]);
 
   const milestoneSavings = useMemo(() => {
     // Savings comparison stays NET-FEE-FREE — this represents an
     // external savings account that doesn't have our 0.10% fee. The
     // 0.5% rate is the comparison APY (intentionally generous for a
     // mainstream non-HYSA savings account). Pass 0 for aumFeeRate.
-    const series = projectContributionSeries(annualGift, projectionMilestone, 0.005, 18, 0);
+    // contributionEndAge state-aware per the same fix.
+    const series = projectContributionSeries(annualGift, projectionMilestone, 0.005, effectiveMajorityAge, 0);
     return series[series.length - 1]?.projectedValue ?? 0;
-  }, [annualGift, projectionMilestone]);
+  }, [annualGift, projectionMilestone, effectiveMajorityAge]);
 
   const milestoneDiff = milestoneInvested - milestoneSavings;
   // Display-capitalize the parent-typed name (handles lowercase
@@ -500,6 +532,16 @@ export default function GetStarted() {
           : undefined,
         recipientRelation: accountType === "child" ? "Parent" : "self",
         recipientBirthdate: accountType === "child" ? new Date(`${birthdate}T12:00:00.000Z`) : undefined,
+        // recipientState captured on the projection step (optional). When
+        // set, the fund record locks in the state-specific UTMA majority
+        // age so future projections (Dashboard, Age18Plan, KidView,
+        // etc.) all use the right number. Pre-fills the KYC state field
+        // at /activate, saving the parent from re-answering. Empty when
+        // the parent skipped the picker; server defaults to age 18 then.
+        recipientState: accountType === "child" && recipientState
+          ? recipientState
+          : undefined,
+        majorityAge: accountType === "child" ? effectiveMajorityAge : undefined,
         investmentStrategy: "growth",
         yearsUntilMaturity: years,
         projectedValue: String(invested),
@@ -940,7 +982,7 @@ export default function GetStarted() {
                 <div className="pointer-events-none absolute inset-x-10 top-3 h-20 rounded-full bg-[hsl(var(--kora-gold))]/10 blur-3xl" />
                 <p className="text-xs text-muted-foreground mb-4">
                   {accountType === "child" && birthdate
-                    ? `If ${displayName}'s family gifts $${annualGift.toLocaleString()}/yr, by the time ${displayName} is 18:`
+                    ? `If ${displayName}'s family gifts $${annualGift.toLocaleString()}/yr, by the time ${displayName} is ${effectiveMajorityAge}:`
                     : `If you receive $${annualGift.toLocaleString()}/yr in gifts:`}
                 </p>
                 <div className="grid gap-4">
@@ -973,22 +1015,56 @@ export default function GetStarted() {
                       <p className="text-sm font-medium text-foreground">The difference: {formatCurrencyWhole(diff)}</p>
                     </div>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">The difference? Time. And you just gave {displayName === "your child" || displayName === "you" ? "them" : displayName} that.</p>
-                    {/* Expanded disclaimer 2026-05-15 (projection-step audit):
+                    {/* Disclaimer rev 2026-05-25 (state-collection audit):
                         - 7% historical-average rate, locked across surfaces.
-                        - Net of the 0.10% AUM fee — matches what the parent
-                          actually keeps (getProjectionSnapshot now nets it).
-                        - 0.5% APY savings comparison surfaced so the reader
-                          can verify the math on the other line.
-                        - "Past performance does not guarantee future results"
-                          is the canonical regulatory phrasing used elsewhere;
-                          reads less abrupt than the prior "Not guaranteed."
-                        - UTMA majority age 18 in most states but 19-21 in a
-                          few; honest mention here even though the user's
-                          state isn't collected until address entry later. */}
-                    <p className="mt-2 text-[10px] leading-snug text-muted-foreground/85">At 7% hypothetical annual growth, net of Kiddo's annual fee ($1/yr per $1,000 invested). Savings comparison assumes 0.5% APY. UTMA majority is 18 in most states; a few are 19-21. Past performance does not guarantee future results.</p>
+                        - Net of 0.10% AUM, matches what the parent keeps.
+                        - 0.5% APY savings comparison surfaced.
+                        - "Past performance does not guarantee" canonical.
+                        - UTMA majority NO LONGER hardcoded — the picker
+                          below this disclaimer lets the parent dial in
+                          their state, and the math updates inline. If
+                          unselected, defaults to 18 (federal default).
+                        Previously this disclaimer just acknowledged "18
+                        in most states; a few are 19-21" without giving
+                        the parent any way to fix the math for their
+                        state. The audit caught that the load-bearing
+                        aha number was wrong for ~15% of US parents. */}
+                    <p className="mt-2 text-[10px] leading-snug text-muted-foreground/85">At 7% hypothetical annual growth, net of Kiddo's annual fee ($1/yr per $1,000 invested). Savings comparison assumes 0.5% APY. Past performance does not guarantee future results.</p>
                   </motion.div>
                 </div>
               </AnimatedBlock>
+              {/* Inline state picker — optional. Empty default means age 18
+                  (federal UTMA default, correct for ~85% of US states). When
+                  the parent selects a state, the projection numbers + the
+                  "by the time {kid} is N" copy + the fund-creation payload
+                  all recompute. Native <select> for minimal-friction
+                  picker — no popover overhead, mobile-keyboard-native. */}
+              {accountType === "child" && (
+                <AnimatedBlock className="mt-4">
+                  <div className="rounded-2xl border border-border bg-card px-4 py-3">
+                    <label htmlFor="get-started-state" className="text-xs font-semibold text-foreground mb-1.5 block">
+                      Where do you live?
+                    </label>
+                    <select
+                      id="get-started-state"
+                      value={recipientState}
+                      onChange={(e) => { haptic("selection"); setRecipientState(e.target.value); }}
+                      className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      data-testid="select-recipient-state"
+                    >
+                      <option value="">Select a state (optional). Defaults to age 18 majority.</option>
+                      {US_STATES.map((s) => (
+                        <option key={s.code} value={s.code}>{s.name}</option>
+                      ))}
+                    </select>
+                    <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground/80">
+                      {recipientState
+                        ? `In your state, UTMA control transfers to ${displayName} at age ${effectiveMajorityAge}. Projection updated.`
+                        : "UTMA majority is 18 in most states. A few are 19, 20, or 21. Pick yours to personalize the math."}
+                    </p>
+                  </div>
+                </AnimatedBlock>
+              )}
               {isLastStep && submitError && <div className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{submitError}</div>}
               <Dock primary={<Button onClick={() => void handleContinue()} disabled={creating} className="h-14 w-full rounded-2xl text-base btn-premium" data-testid="button-projection-continue">{isLastStep ? (creating ? "Creating fund..." : "Create my fund") : "This is why I'm starting"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>} />
             </div>
