@@ -10637,10 +10637,33 @@ export async function registerRoutes(
         },
       });
 
+      // custom_text reframes the Stripe-hosted Checkout page for gifters.
+      // Stripe's subscription mode hard-codes the submit button to
+      // "Subscribe" (no submit_type override is available for subscription
+      // mode — only payment/donate modes can customize that). The button
+      // text alone reads as "subscribe to Kiddo," which is wrong: the
+      // gifter is setting up a recurring GIFT to a kid's fund, not
+      // subscribing to our product. custom_text.submit.message renders
+      // explanatory prose directly below the button (Stripe's documented
+      // pattern for exactly this kind of framing disambiguation).
+      // User feedback 2026-05-25: "the gifter/stripe page says subscribe
+      // as the button but for gifter that seems wrong."
+      const cadenceLabel = recurringFrequency === "weekly"
+        ? "every week"
+        : recurringFrequency === "yearly"
+          ? "every year"
+          : "every month";
+      const submitMessage =
+        `This sets up a recurring gift of $${numericAmount.toFixed(2)} ${cadenceLabel} to ${recipientName}'s fund. ` +
+        `You're not subscribing to Kiddo. Cancel anytime from your gifter dashboard.`;
+
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         customer: customer.id,
         line_items: [{ price: price.id, quantity: 1 }],
+        custom_text: {
+          submit: { message: submitMessage },
+        },
         subscription_data: {
           metadata: {
             type: "gifter_recurring",
