@@ -54,6 +54,12 @@ type GifterFundRow = {
   recentMemoryAuthor: string | null;
   recentMemoryAt: string | null;
   updatesEnabled: boolean;
+  // Sponsor-Plus eligibility per fund. True when the fund is on Free
+  // tier (could meaningfully receive a year of Plus / Family from a
+  // gifter sponsor). False when already covered. Drives the inline
+  // sponsor pill on the fund card. Added 2026-05-25 to replace the
+  // previously-removed (false-claim) Sponsor-Plus 'discovery card.'
+  eligibleForSponsorship?: boolean;
   // 30-day fund-value history for the inline sparkline. Server-
   // populated; sparse weeks are fine — the sparkline interpolates
   // linearly between snapshots. Empty array when no snapshots
@@ -980,19 +986,31 @@ export default function GifterDashboard() {
                             <ArrowRight className="ml-2 h-4 w-4" />
                           </Button>
                         </Link>
-                        {/* Disabled "Read-only tracking" button REMOVED
-                            2026-05-19 per the Five Towns gifter audit.
-                            The card itself IS the read-only tracking view:
-                            it surfaces current fund value, holdings count,
-                            active events, last gift date, next milestone
-                            progress, and latest Memory Book preview. A
-                            separate "tracking" destination would either
-                            duplicate the card or expose PII the parent's
-                            privacy settings haven't authorized. Promising
-                            a feature via a disabled button is worse than
-                            not promising it. If a dedicated detail view
-                            ships later (per-holding allocation, balance
-                            chart, etc.) this is the slot for its CTA. */}
+                        {/* Sponsor-Plus pill — ONLY renders when the
+                            fund's coverage state is Free (server-derived
+                            `eligibleForSponsorship`). Replaces the
+                            previously-removed 'discovery card' that made
+                            a false 'scroll up' claim — now the pill IS
+                            the discovery, in the right place (per-fund
+                            context), with a real deep-link to the
+                            sponsor sidebar on GiftCheckout. Soft
+                            language ('Cover Plus for $29'), gold tint
+                            differentiates from primary Gift-again CTA
+                            so it reads as an additional option, not a
+                            competing primary action. Per
+                            project_gifter_sponsors_plus_subscription.md. */}
+                        {fund.eligibleForSponsorship && (
+                          <Link href={`${fund.sharePath}${fund.sharePath.includes("?") ? "&" : "?"}sponsor=1&src=gifter_dashboard_pill`}>
+                            <Button
+                              variant="outline"
+                              className="border-[hsl(var(--kiddo-gold)/0.45)] bg-[hsl(var(--kiddo-gold)/0.06)] text-[hsl(var(--kiddo-ink))] hover:bg-[hsl(var(--kiddo-gold)/0.12)]"
+                              data-testid={`button-sponsor-plus-${fund.fundId}`}
+                            >
+                              <Crown className="mr-2 h-4 w-4" />
+                              Cover Plus for $29
+                            </Button>
+                          </Link>
+                        )}
                       </div>
                     </div>
                     );

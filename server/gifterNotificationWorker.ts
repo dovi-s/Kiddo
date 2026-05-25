@@ -817,6 +817,20 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
       "",
       giftUrl ? `Gift again any time: ${giftUrl}` : "",
       "",
+      // Sponsor-Plus secondary CTA, only when the recipient fund is on
+      // Free tier (eligibleForSponsorship=true gets set server-side at
+      // queue time). Per project_gifter_sponsors_plus_subscription.md
+      // (locked 2026-05-23). The CTA points at the fund's GiftCheckout
+      // with ?sponsor=1 so the SponsorPlusCard sidebar is surfaced on
+      // load. Soft language ('one more way to show up') keeps this from
+      // reading as a paywall pitch; the CTA is the same scale as the
+      // existing 'start a fund' below it, not larger.
+      entry.eligibleForSponsorship && entry.sponsorUrl ? `One more way to show up for ${childName}'s family?` : "",
+      entry.eligibleForSponsorship && entry.sponsorUrl
+        ? `For \$29, you can cover a year of Kiddo Plus for ${childName}'s fund — unlocks recurring gifts for everyone who gives, parent-authored Memory Book media, and a custom fund mix.`
+        : "",
+      entry.eligibleForSponsorship && entry.sponsorUrl ? `Cover Plus for them: ${entry.sponsorUrl}` : "",
+      entry.eligibleForSponsorship && entry.sponsorUrl ? "" : "",
       // Gifter→parent conversion CTA. Per project_pre_launch_strategic_frame.md
       // (locked 2026-05-23): every one-time gift success email gets a soft
       // "want one for your own kid?" CTA. Greenlight/Acorns structurally

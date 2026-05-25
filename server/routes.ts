@@ -3867,6 +3867,24 @@ export async function registerRoutes(
         console.warn("[gift-receipt] Stripe enrichment failed (non-fatal):", err);
       }
 
+      // Sponsorship eligibility lookup. Added 2026-05-25 so the receipt
+      // email can include a soft Sponsor-Plus CTA when (and ONLY when)
+      // the recipient fund is on the Free tier. The check happens here
+      // (server-side at queue time) rather than at render time so the
+      // worker stays sync + pure. Failure is non-fatal: if the lookup
+      // errors, eligible defaults to false and the CTA simply doesn't
+      // render.
+      let eligibleForSponsorship = false;
+      try {
+        const fundCoverageForReceipt = await getFundCoverageState(fund.userId, fund.id);
+        eligibleForSponsorship =
+          fundCoverageForReceipt !== 'covered_family' &&
+          fundCoverageForReceipt !== 'covered_starter' &&
+          fundCoverageForReceipt !== 'trial_active';
+      } catch (err) {
+        console.warn("[gift-receipt] coverage lookup failed (non-fatal, CTA skipped):", err);
+      }
+
       await appendGifterNotificationQueue({
         id: `gift_receipt_followup:${sessionId}`,
         type: "gift_receipt_followup",
@@ -3880,6 +3898,13 @@ export async function registerRoutes(
         ticker: String(gift?.selectedTicker || metadata.selectedTicker || metadata.ticker || "").trim().toUpperCase() || null,
         giftUrl: fund.slug ? `${baseUrl}/${fund.slug}` : `${baseUrl}/gift/${fund.id}`,
         startFundUrl: `${baseUrl}/get-started?${sourceParams.toString()}`,
+        // Sponsor-Plus deep link — opens GiftCheckout with the sponsor
+        // sidebar surfaced. Renderer only inserts the CTA when
+        // eligibleForSponsorship is true.
+        sponsorUrl: fund.slug
+          ? `${baseUrl}/${fund.slug}?sponsor=1&src=gift_receipt_email`
+          : `${baseUrl}/gift/${fund.id}?sponsor=1&src=gift_receipt_email`,
+        eligibleForSponsorship,
         eventName,
         // Receipt-grade enrichment fields. All nullable; renderer
         // gracefully degrades to warm-prose-only when missing.
@@ -4403,6 +4428,30 @@ export async function registerRoutes(
             console.warn("[gifter-dashboard] sparkline fetch failed:", err);
           }
 
+          // Sponsorship eligibility per fund. True when the fund is on
+          // the Free tier (i.e., the gifter could meaningfully cover a
+          // year of Plus or Family for the family). False when the fund
+          // already has Plus / Family / trial coverage. Per
+          // project_gifter_sponsors_plus_subscription.md (locked
+          // 2026-05-23) — sponsorship is annual-only and only mints
+          // value when the underlying fund isn't already on a paid
+          // tier. Adding this to the dashboard response 2026-05-25 so
+          // the per-fund card can render a contextual sponsor pill
+          // when applicable, replacing the previously-removed
+          // 'discovery card' that made a false claim about scrolling
+          // up to find the option.
+          let eligibleForSponsorship = false;
+          try {
+            const fundCoverage = await getFundCoverageState(fund.userId, fund.id);
+            eligibleForSponsorship =
+              fundCoverage !== 'covered_family' &&
+              fundCoverage !== 'covered_starter' &&
+              fundCoverage !== 'trial_active';
+          } catch (err) {
+            // Non-fatal — pill simply doesn't render on this fund.
+            console.warn("[gifter-dashboard] coverage lookup failed:", err);
+          }
+
           return {
             fundId: fund.id,
             childName: fund.recipientFirstName || fund.name,
@@ -4438,6 +4487,7 @@ export async function registerRoutes(
             recentMemoryAuthor: recentMemory?.authorName ? String(recentMemory.authorName) : null,
             recentMemoryAt: recentMemory?.createdAt ? new Date(recentMemory.createdAt).toISOString() : null,
             updatesEnabled: Boolean(subscriber && !subscriber.unsubscribed),
+            eligibleForSponsorship,
             valueHistory30d,
           };
         });

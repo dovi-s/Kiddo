@@ -360,6 +360,31 @@ export default function GiftCheckout() {
       ratePct: Number.isFinite(rateNum) && rateNum > 0 ? Math.round(rateNum * 100) : null,
     };
   }, [searchString]);
+
+  // ?sponsor=1 deep-link auto-scroll. When the gifter lands via the
+  // gifter-dashboard 'Cover Plus' pill or the gift-receipt email's
+  // Sponsor-Plus CTA, surface the SponsorPlusCard sidebar immediately
+  // rather than making them hunt for it on the page. Runs after the
+  // page has had time to mount + the SponsorPlusCard's eligibility
+  // query resolves. Honors prefers-reduced-motion via the smooth
+  // scroll fallback. No-op when the fund isn't Free-tier eligible
+  // (the card itself doesn't render in that case, so #sponsor-plus-card
+  // resolves to nothing and the scroll is silently skipped).
+  const sponsorAnchorActive = useMemo(() => {
+    const params = new URLSearchParams(searchString || "");
+    return params.get("sponsor") === "1";
+  }, [searchString]);
+  useEffect(() => {
+    if (!sponsorAnchorActive || !eventData?.fund) return;
+    const timer = window.setTimeout(() => {
+      const el = document.getElementById("sponsor-plus-card");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [sponsorAnchorActive, eventData?.fund]);
+
   const eventThemeId = eventData?.event?.theme || "classic";
   const themeHeroBg: Record<string, string> = {
     midnight: "bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900",
@@ -1791,11 +1816,17 @@ export default function GiftCheckout() {
                       buys a year of Plus/Family for the parent's fund as a
                       one-time gift. Removes the parent's payment-decision
                       bottleneck that the recurring-request flow leaves
-                      open. Per project_gifter_sponsors_plus_subscription.md. */}
-                  <SponsorPlusCard
-                    fundId={eventData.fund.id}
-                    childName={eventData.fund.recipientFirstName || eventData.fund.name || "the kid"}
-                  />
+                      open. Per project_gifter_sponsors_plus_subscription.md.
+                      Deep-link surface 2026-05-25: the gifter-dashboard pill
+                      ("Cover Plus for $29") + the gift-receipt-email CTA
+                      both link here with ?sponsor=1; the wrapper id below
+                      lets that anchor scroll into view. */}
+                  <div id="sponsor-plus-card">
+                    <SponsorPlusCard
+                      fundId={eventData.fund.id}
+                      childName={eventData.fund.recipientFirstName || eventData.fund.name || "the kid"}
+                    />
+                  </div>
                 </>
               ) : (
               <div className="kiddo-card p-5">
