@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation, useSearch } from "wouter";
 // Sparkles dropped 2026-05-12 — banned per feedback_no_ai_slop.md. The three
@@ -663,6 +663,17 @@ export default function Activity() {
   const [, navigate] = useLocation();
   const searchString = useSearch();
   const queryClient = useQueryClient();
+  // Respect prefers-reduced-motion for in-page motion. Route-level
+  // entry/exit is already covered by RouteFader in App.tsx; this
+  // catches the AnimatePresence + motion.div blocks INSIDE the
+  // page content (row expansions, list reveals, group transitions).
+  // Per WCAG 2.3.3, motion animations triggered by interaction
+  // must be disabled when the user has the OS preference set.
+  // Audit 2026-05-25 caught Activity as one of the heavy-motion
+  // pages missing this explicit check. The motion.divs below use
+  // initial / animate patterns that respect the flag where
+  // adopted; new motion sites should follow the same pattern.
+  const prefersReducedMotion = useReducedMotion();
 
   // Action items — the "needs your attention" section above the
   // history feed. Sticks at the top regardless of how old the
@@ -2827,10 +2838,16 @@ export default function Activity() {
                           }
                           return (
                             <motion.div
-                              initial={{ height: 0, opacity: 0 }}
+                              // Row-expansion: tap a collapsed activity row,
+                              // the detail panel slides down from height 0.
+                              // Gated on prefersReducedMotion so users with
+                              // vestibular sensitivity see an instant reveal
+                              // instead of the slide. The exit animation
+                              // similarly snaps when reduced-motion is on.
+                              initial={prefersReducedMotion ? false : { height: 0, opacity: 0 }}
                               animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={MOTION.modal}
+                              exit={prefersReducedMotion ? { height: 0, opacity: 0, transition: { duration: 0 } } : { height: 0, opacity: 0 }}
+                              transition={prefersReducedMotion ? { duration: 0 } : MOTION.modal}
                               style={{ overflow: "hidden" }}
                             >
                               <div

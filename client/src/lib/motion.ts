@@ -50,7 +50,37 @@ export const MOTION = {
   fast: { duration: MOTION_DURATION.fast, ease: MOTION_EASE.outExpo },
   /** Modal/drawer open. */
   modal: { duration: MOTION_DURATION.normal, ease: MOTION_EASE.outExpo },
+  /**
+   * Canonical card-arrival animation. The team motion-audit
+   * (2026-05-25) flagged that "card enters list" durations were
+   * spread 0.25-0.55s across files for the same UX moment —
+   * ClaimFund 0.55s, Dashboard 0.30s, AgeTransitionInvite 0.45s,
+   * Blog 0.45s, GiftCheckout 0.28s. Picking this one preset over
+   * inline-tuned values eliminates the perceived-speed drift that
+   * accumulates as the user navigates between pages.
+   *
+   * 0.45s is a deliberate midpoint: long enough that the card
+   * "lands" with weight (not a snap), short enough that staggered
+   * lists don't waterfall noticeably.
+   */
+  cardEnter: { duration: 0.45, ease: MOTION_EASE.outExpo },
 } as const;
+
+/**
+ * Canonical count-up duration (milliseconds). The team motion-audit
+ * (2026-05-25) caught that count-up animations ran 600 / 900 / 1500ms
+ * across surfaces (useCountUp default 600, useCachedFirstNumber 900,
+ * celebration.tsx CountUp 1500). Three different speeds for the same
+ * "watch a number tick up" moment. 700ms is the new locked midpoint:
+ * snappy enough that fast networks don't feel laggy, slow enough that
+ * the ticker animation is legible (not a blur).
+ *
+ * The useCountUp hook reads this constant for its default. Consumers
+ * with a specific reason to override (e.g. celebration moments wanting
+ * the slower 1200-1500ms dramatic ticker) can still pass a duration,
+ * but the default-case animation drifts toward consistency.
+ */
+export const MOTION_COUNT_UP_MS = 700;
 
 // ─── Motion audit additions (2026-05-18) ───────────────────────────
 //

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MOTION_COUNT_UP_MS } from "@/lib/motion";
 
 // Smooth value-transition hook — animates the displayed number from its
 // previous value to the new target with ease-out cubic. Used for the
@@ -37,14 +38,14 @@ export function useCountUp(target: number, duration?: number, precision?: number
 export function useCountUp(options: UseCountUpOptions): UseCountUpResult;
 export function useCountUp(
   targetOrOptions: number | UseCountUpOptions,
-  duration: number = 600,
+  duration: number = MOTION_COUNT_UP_MS,
   precision: number = 0,
 ): number | UseCountUpResult {
   const isObjectArg = typeof targetOrOptions === "object";
   const target = isObjectArg ? targetOrOptions.to : targetOrOptions;
   const fromOpt = isObjectArg ? targetOrOptions.from : undefined;
   const enabled = isObjectArg ? targetOrOptions.enabled !== false : true;
-  const effectiveDuration = isObjectArg ? targetOrOptions.duration ?? 600 : duration;
+  const effectiveDuration = isObjectArg ? targetOrOptions.duration ?? MOTION_COUNT_UP_MS : duration;
   const effectivePrecision = isObjectArg ? targetOrOptions.precision ?? 0 : precision;
 
   const initial = fromOpt !== undefined && Number.isFinite(fromOpt) ? fromOpt : target;

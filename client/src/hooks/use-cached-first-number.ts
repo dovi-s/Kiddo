@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useCountUp } from "@/hooks/use-count-up";
+import { MOTION_COUNT_UP_MS } from "@/lib/motion";
 
 type UseCachedFirstNumberOptions = {
   seedValue: number | null | undefined;
@@ -11,7 +12,7 @@ type UseCachedFirstNumberOptions = {
 export function useCachedFirstNumber({
   seedValue,
   liveValue,
-  duration = 900,
+  duration = MOTION_COUNT_UP_MS,
   minDelta = 0.01,
 }: UseCachedFirstNumberOptions) {
   const normalizedSeed = typeof seedValue === "number" && Number.isFinite(seedValue) ? seedValue : null;
