@@ -1180,7 +1180,7 @@ export default function GiftSuccess() {
                   ) : null}
                   {noteError === "still-settling" ? (
                     <div className="mt-2 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                      <p>The gift is still settling. Your message is ready. Tap below in a moment to save it.</p>
+                      <p>The gift is still settling. Your message is ready. This usually takes 30 to 60 seconds. Try again in a moment, or wait for the page to refresh.</p>
                       <button
                         className="mt-1.5 font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity"
                         disabled={noteRetrying}
@@ -1440,8 +1440,17 @@ export default function GiftSuccess() {
             <span>·</span>
             <Link href="/security" className="hover:text-foreground transition-colors">Security</Link>
           </div>
+          {/* SIPC + FINRA trust line on the post-payment success surface.
+              Quantified per the team trust-audit (2026-05-25): previously
+              read "Eligible assets have SIPC coverage" without the dollar
+              amount, which felt like bait-and-switch vs the GiftCheckout
+              landing page that DOES quantify ($500,000). Payment-completed
+              is the highest-anxiety moment a gifter encounters — the
+              dollar amount needs to repeat exactly here. Also surfaces
+              the brokerage-failure-vs-market-loss distinction explicitly
+              (was implicit in "Investing can go up or down" — too soft). */}
           <p className="text-[10px] text-muted-foreground/60 text-center px-4">
-            Real stocks, real accounts. Assets held by DriveWealth, LLC, Member FINRA/SIPC. Eligible assets have SIPC coverage. Investing can go up or down.
+            Real stocks, real accounts. Assets held by DriveWealth, LLC (Member FINRA/SIPC). SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.
           </p>
         </motion.div>
 

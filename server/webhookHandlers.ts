@@ -2556,6 +2556,59 @@ export class WebhookHandlers {
     }
   }
 
+  /**
+   * Convert a Stripe failure event into a friendly user-facing reason
+   * line. Trust-audit 2026-05-25 caught that payment_failed activity
+   * rows surfaced "Charge failed" with no reason — parents whose
+   * card declined had no idea whether to fix the card, contact the
+   * bank, or wait. Now each row gets a concrete next-step hint.
+   *
+   * Reads (in order) from the most-specific Stripe error surface
+   * down to the least:
+   *   1. invoice.last_finalization_error (rare, for invoice creation
+   *      failures specifically)
+   *   2. invoice.charge.failure_message / failure_code (charge-level
+   *      failures — the most common path for invoice.payment_failed)
+   *   3. invoice.payment_intent.last_payment_error.message
+   *
+   * Maps common Stripe decline_codes to friendly user-facing copy.
+   * Falls through to the raw message if no mapping applies.
+   */
+  private static friendlyStripeFailureReason(invoiceOrPi: any): string {
+    if (!invoiceOrPi) return "We couldn't process the charge.";
+    const declineCode =
+      invoiceOrPi.charge?.failure_code ||
+      invoiceOrPi.last_payment_error?.decline_code ||
+      invoiceOrPi.payment_intent?.last_payment_error?.decline_code ||
+      "";
+    const rawMessage =
+      invoiceOrPi.charge?.failure_message ||
+      invoiceOrPi.last_finalization_error?.message ||
+      invoiceOrPi.last_payment_error?.message ||
+      invoiceOrPi.payment_intent?.last_payment_error?.message ||
+      "";
+    const code = String(declineCode).toLowerCase();
+    if (code.includes("insufficient_funds")) {
+      return "Insufficient funds on the card. Update payment in Settings or try a different card.";
+    }
+    if (code.includes("expired_card") || code.includes("expired")) {
+      return "Card has expired. Update payment in Settings.";
+    }
+    if (code.includes("incorrect_cvc") || code.includes("incorrect_zip")) {
+      return "Card details didn't match. Update payment in Settings.";
+    }
+    if (code.includes("card_declined") || code.includes("generic_decline")) {
+      return "Card was declined. Contact your bank or try a different card.";
+    }
+    if (code.includes("processing_error") || code.includes("issuer_unavailable")) {
+      return "Processing error from the card network. Try again in a moment.";
+    }
+    if (rawMessage) {
+      return rawMessage;
+    }
+    return "We couldn't process the charge. Update payment in Settings.";
+  }
+
   static async handleInvoicePaymentFailed(invoice: any): Promise<void> {
     console.log('[Webhook] invoice.payment_failed:', invoice.id);
 
@@ -2626,13 +2679,20 @@ export class WebhookHandlers {
       console.warn("[Webhook] gifter_recurring payment_failed detection failed:", gifterCheckErr);
     }
 
+    // Friendly failure reason threaded from Stripe error data per the
+    // 2026-05-25 trust audit. Replaces the generic "Please update your
+    // payment method in Settings" with a concrete decline reason
+    // (insufficient funds / expired card / declined / etc.) so the
+    // parent knows what to fix.
+    const friendlyReason = WebhookHandlers.friendlyStripeFailureReason(invoice);
+
     const existingSub = await storage.getSubscriptionByStripeId(subscriptionId);
     if (existingSub) {
       await storage.createActivity({
         userId: existingSub.userId,
         type: 'payment_failed',
         title: 'Kiddo Family payment failed',
-        description: 'Your Kiddo Family payment failed. Please update your payment method in Settings.',
+        description: `Your Kiddo Family payment didn't go through. ${friendlyReason}`,
       });
       return;
     }
@@ -2644,7 +2704,7 @@ export class WebhookHandlers {
         fundId: existingMembership.fundId,
         type: 'payment_failed',
         title: 'Kiddo+ payment failed',
-        description: 'Your Kiddo+ payment failed for this fund. Please update your payment method in Settings.',
+        description: `Your Kiddo+ payment for this fund didn't go through. ${friendlyReason}`,
       });
     }
   }

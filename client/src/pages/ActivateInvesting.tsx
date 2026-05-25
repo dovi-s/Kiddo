@@ -935,10 +935,20 @@ export default function ActivateInvesting() {
                 </div>
               </div>
 
+              {/* Encryption claim symmetry per the team trust-audit
+                  (2026-05-25). The earlier personal step says
+                  "transmitted over TLS and stored encrypted" — explicit
+                  about both transit + at-rest. This identity step
+                  previously said only "encrypted and never shared,"
+                  ambiguous on whether transit was protected. SSN entry
+                  is the highest-stakes parent moment in onboarding; the
+                  asymmetric language implied (incorrectly) that less
+                  care went into protecting SSN than the personal info.
+                  Now aligned: both steps name TLS + at-rest encryption. */}
               <div className="bg-card rounded-2xl border border-border/50 p-4 flex items-start gap-3">
                 <Lock size={16} className="text-muted-foreground shrink-0 mt-0.5" />
                 <p className="text-xs text-muted-foreground">
-                  We use this information to open a regulated brokerage account. Your data is encrypted and never shared.
+                  We use this information to open a regulated brokerage account. Your SSN is transmitted over TLS and stored encrypted. Never shared.
                 </p>
               </div>
 
@@ -976,7 +986,7 @@ export default function ActivateInvesting() {
                   {recipientChildName}'s Social Security Number
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Required by the IRS for 1099-DIV / 1099-B forms tied to {recipientChildName}'s UTMA account. One-time. Encrypted in transit. Last 4 digits stored, not the full number.
+                  Required by the IRS for 1099-DIV / 1099-B forms tied to {recipientChildName}'s UTMA account. One-time. Transmitted over TLS, stored encrypted. Last 4 digits visible only; the full number is never readable in plain text.
                 </p>
               </div>
 
