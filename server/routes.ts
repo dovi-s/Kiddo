@@ -2163,6 +2163,39 @@ export async function registerRoutes(
     });
   };
 
+  // PUBLIC sponsor-plus status — register BEFORE the auth gate below.
+  // Called by SponsorPlusCard on public gift pages, where the gifter
+  // is unauthenticated. The endpoint returns only the public-safe
+  // signal "is this fund already covered?" — no PII, no ownership-
+  // gated data. Without this early registration, the auth gate at
+  // app.use('/api/funds/:fundId', isAuthenticated, ...) below would
+  // 401 every gifter request, killing the "already covered" passive
+  // state in the UI (the server-side 409 at submit time would still
+  // catch the duplicate-purchase race, but the gifter would never
+  // see the diplomatic empty state before clicking Sponsor).
+  // Smoke-test caught this 2026-05-25.
+  app.get('/api/funds/:fundId/sponsor-plus/status', async (req, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found.' });
+      const sponsored = await getActiveSponsorshipForFund(fund.id);
+      const coverage = await getFundCoverageState(fund.userId, fund.id);
+      const directlyCovered =
+        (coverage === 'covered_starter' || coverage === 'covered_family' || coverage === 'trial_active') && !sponsored;
+      return res.json({
+        sponsored: sponsored ? {
+          tier: sponsored.tier,
+          sponsorName: sponsored.sponsorName,
+          expiresAt: sponsored.expiresAt.toISOString(),
+        } : null,
+        directlyCovered,
+      });
+    } catch (error) {
+      console.error('Error fetching sponsor-plus status:', error);
+      return res.status(500).json({ error: 'Failed to fetch sponsorship status.' });
+    }
+  });
+
   app.use('/api/funds/:fundId', isAuthenticated, requireOwnedFundParam);
 
   // Default-safe mutator gate: any non-GET/HEAD/OPTIONS request under
@@ -10052,30 +10085,10 @@ export async function registerRoutes(
     }
   });
 
-  // Status lookup for the GiftCheckout UI. Returns whether the fund
-  // already has sponsored coverage so the UI can show the right state
-  // (CTA when uncovered, "already covered through {date}" when sponsored).
-  app.get('/api/funds/:fundId/sponsor-plus/status', async (req, res) => {
-    try {
-      const fund = await storage.getFund(req.params.fundId);
-      if (!fund) return res.status(404).json({ error: 'Fund not found.' });
-      const sponsored = await getActiveSponsorshipForFund(fund.id);
-      const coverage = await getFundCoverageState(fund.userId, fund.id);
-      const directlyCovered =
-        (coverage === 'covered_starter' || coverage === 'covered_family' || coverage === 'trial_active') && !sponsored;
-      return res.json({
-        sponsored: sponsored ? {
-          tier: sponsored.tier,
-          sponsorName: sponsored.sponsorName,
-          expiresAt: sponsored.expiresAt.toISOString(),
-        } : null,
-        directlyCovered,
-      });
-    } catch (error) {
-      console.error('Error fetching sponsor-plus status:', error);
-      return res.status(500).json({ error: 'Failed to fetch sponsorship status.' });
-    }
-  });
+  // (Sponsor-plus status lookup was moved earlier in this file, BEFORE
+  // the app.use('/api/funds/:fundId', isAuthenticated, ...) gate, so
+  // unauthenticated gifters on public gift pages can reach it. See the
+  // route around line 2177.)
   app.post('/api/stripe/checkout/premium-event-coverage', isAuthenticated, createOccasionCheckout);
 
   app.get('/api/stripe/publishable-key', async (req, res) => {
