@@ -11077,6 +11077,25 @@ export async function registerRoutes(
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
 
+      // Plus gate for parent-authored Memory Book MEDIA per the locked
+      // tier policy (project_pricing_v3_recurring_at_plus.md +
+      // feedback_memory_book_locks.md): parent text entries are free
+      // across all tiers, but photo/video/voice for parent-authored
+      // entries unlock with Kiddo+. Gifter-attached media (uploaded via
+      // /api/public/funds/:id/memory/upload-* on the gift checkout page)
+      // is always free at every tier — that path is intentionally NOT
+      // gated. This server check is load-bearing because the MemoryBook
+      // composer doesn't use the MemoryMediaPicker component (the other
+      // 4 mount sites — 3 Dashboard composers + Age18Plan NoteEditorSheet
+      // — do). Audit 2026-05-25 caught.
+      const entitlement = await hasPaidPlanForFund(fund.userId, fund.id);
+      if (!entitlement?.paid) {
+        return res.status(402).json({
+          error: 'plus_required',
+          message: 'Photos for parent-authored Memory Book entries unlock with Kiddo+. Gifter-attached photos stay free at every tier.',
+        });
+      }
+
       const parsed = parseImageDataUrl(req.body?.dataUrl);
       if (!parsed) {
         return res.status(400).json({ error: 'Invalid image data. Upload PNG/JPG/WEBP/GIF.' });
@@ -11104,6 +11123,15 @@ export async function registerRoutes(
       const fund = await storage.getFund(req.params.fundId);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
+
+      // Plus gate — same reasoning as upload-photo above.
+      const entitlement = await hasPaidPlanForFund(fund.userId, fund.id);
+      if (!entitlement?.paid) {
+        return res.status(402).json({
+          error: 'plus_required',
+          message: 'Video for parent-authored Memory Book entries unlocks with Kiddo+. Gifter-attached video stays free at every tier.',
+        });
+      }
 
       const parsed = parseVideoDataUrl(req.body?.dataUrl);
       if (!parsed) {
@@ -11180,6 +11208,17 @@ export async function registerRoutes(
       const fund = await storage.getFund(req.params.fundId);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
+
+      // Plus gate — same reasoning as upload-photo above. Voice notes
+      // get the locked Whisper transcription step below; both the audio
+      // file and the transcript are parent-authored MEDIA per policy.
+      const entitlement = await hasPaidPlanForFund(fund.userId, fund.id);
+      if (!entitlement?.paid) {
+        return res.status(402).json({
+          error: 'plus_required',
+          message: 'Voice notes for parent-authored Memory Book entries unlock with Kiddo+. Gifter-attached voice notes stay free at every tier.',
+        });
+      }
 
       const parsed = parseAudioDataUrl(req.body?.dataUrl);
       if (!parsed) {

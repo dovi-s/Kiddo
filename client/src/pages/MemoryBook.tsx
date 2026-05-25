@@ -1735,7 +1735,13 @@ export default function MemoryBook() {
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok || !data?.url) {
-            throw new Error(data?.error || "Upload failed");
+            // Server returns { error: 'plus_required', message: '...' } on
+            // the locked parent-media Plus gate. Prefer the friendly
+            // message when present so the parent sees "Photos for parent-
+            // authored Memory Book entries unlock with Kiddo+" instead of
+            // the raw error code. Same pattern for any other server-side
+            // friendly-error response.
+            throw new Error(data?.message || data?.error || "Upload failed");
           }
           setPhotoUrl(data.url);
           setRetryFile(null);
@@ -1791,7 +1797,8 @@ export default function MemoryBook() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.url) {
-        throw new Error(data?.error || "Upload failed");
+        // Same friendly-message preference as photo upload above.
+        throw new Error(data?.message || data?.error || "Upload failed");
       }
       setVideoUrl(data.url);
       haptic("success");
@@ -1834,7 +1841,8 @@ export default function MemoryBook() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.url) {
-        throw new Error(data?.error || "Upload failed");
+        // Same friendly-message preference as photo upload above.
+        throw new Error(data?.message || data?.error || "Upload failed");
       }
       setAudioUrl(data.url);
       // Whisper transcript may be present (when OPENAI_API_KEY is set on the
@@ -2719,7 +2727,7 @@ export default function MemoryBook() {
                     { icon: MessageCircle, title: "Every note", body: "The message behind the money." },
                     { icon: Camera, title: "Photos & videos", body: "Captured moments and short clips." },
                     { icon: Star, title: "Growth milestones", body: "$100, $500, $1,000, and the moments after." },
-                    { icon: Calendar, title: "Birthdays", body: "Annual snapshots of the fund's journey." },
+                    { icon: Calendar, title: "Birthdays", body: "Annual snapshots of how the fund has grown." },
                   ].map((item) => {
                     const Icon = item.icon;
                     return (
@@ -5206,7 +5214,7 @@ export default function MemoryBook() {
                                 body: JSON.stringify({ dataUrl }),
                               });
                               const data = await res.json().catch(() => ({}));
-                              if (!res.ok) throw new Error(data?.error || "Upload failed");
+                              if (!res.ok) throw new Error(data?.message || data?.error || "Upload failed");
                               const url = data?.url || data?.photoUrl;
                               if (!url) throw new Error("No URL returned");
                               setSharePhotoUrl(String(url));

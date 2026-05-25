@@ -89,6 +89,11 @@ const INCLUDED_PAGE_FILES = new Set([
   // primary engagement page. Spot-fixing here without lint coverage
   // is a losing battle as the page accumulates copy over months.
   path.normalize("client/src/pages/Dashboard.tsx"),
+  // 2026-05-25 MemoryBook audit: 6.9k-line page is the emotional
+  // climax of the product (sealed letters, voice notes, memory
+  // entries). Locked tier policy makes the parent-media gate
+  // load-bearing; adding to lint guards the surrounding copy too.
+  path.normalize("client/src/pages/MemoryBook.tsx"),
 ]);
 
 // Component allowlist — same expansion-after-violation reasoning as
