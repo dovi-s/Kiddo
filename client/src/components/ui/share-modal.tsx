@@ -695,7 +695,12 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-sm p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
+      {/* Width audit 2026-05-25: was max-w-sm (384px) for all viewports —
+          mobile-correct but cramped on desktop where 384px next to 1000+
+          available px reads as "default tablet width" not "intentional
+          mobile width". md:max-w-md bumps to 448px on tablet/desktop
+          where there's room; mobile keeps the tighter 384 footprint. */}
+      <DialogContent className="max-w-sm md:max-w-md p-0 gap-0 overflow-hidden rounded-2xl" aria-describedby={undefined}>
         <DialogTitle className="sr-only">Share {recipientName}'s gift link</DialogTitle>
 
         {/* Header */}
@@ -938,6 +943,13 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                           Quick share placement is the prominent
                           person-to-person share, the Physical placement
                           is the "produce a thing I can pass on" share. */}
+                      <ShareRow
+                        iconBg="rgb(184,121,26)"
+                        icon={<Mail size={16} color="white" />}
+                        label="Email invite"
+                        subtitle="Pre-written, warm, fully editable"
+                        onClick={() => { setView("email"); haptic("selection"); }}
+                      />
                       {canNativeShare ? (
                         <ShareRow
                           iconBg="rgb(26,61,43)"
@@ -956,18 +968,6 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                         />
                       )}
                     </div>
-                  </div>
-
-                  {/* Invite */}
-                  <div style={{ marginBottom: 18 }}>
-                    <SectionLabel>Send an invite</SectionLabel>
-                    <ShareRow
-                      iconBg="rgb(184,121,26)"
-                      icon={<Mail size={16} color="white" />}
-                      label="Email invite"
-                      subtitle="Pre-written, warm, and fully editable"
-                      onClick={() => { setView("email"); haptic("selection"); }}
-                    />
                   </div>
 
                   {/* Social */}
@@ -1020,23 +1020,15 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                     </div>
                   </div>
 
-                  {/* Copy link */}
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    style={{
-                      width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
-                      padding: "11px 14px", borderRadius: 12, border: "1.5px solid rgba(26,23,16,0.12)",
-                      background: "white", cursor: "pointer",
-                      fontSize: 12.5, fontWeight: 600, color: "rgb(26,23,16)", fontFamily: "inherit",
-                      transition: "all 0.12s",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {copied ? <Check size={14} color="rgb(26,61,43)" /> : <Copy size={14} />}
-                    {copied ? "Copied!" : "Copy link"}
-                  </button>
-
+                  {/* Redundancy audit 2026-05-25: the full-width "Copy link"
+                      button that used to live here has been removed. The
+                      same affordance already lives in TWO better-placed
+                      spots: (1) the URL chip directly under the QR (always
+                      visible at the top of the modal) and (2) the Quick
+                      share "Copy link" row that renders when navigator.share
+                      is unavailable. A third copy at the bottom was clutter
+                      with no incremental utility. The Physical section
+                      above (Print flyer / Save QR) ends the modal cleanly. */}
                 </div>
 
                 <div style={{ height: 8 }} />
@@ -1173,19 +1165,22 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
             }}
           >
             <div style={{ minWidth: 0 }}>
-              {/* Copy retoned 2026-05-21 — "outside the gift loop" was
-                  internal-team jargon ("the gift loop" is how the team
-                  talks about the multi-gifter retention mechanic);
-                  a real parent has no idea what that means and reads
-                  the line as broken AI output. Em-dash also dropped
-                  (banned in product copy). Now states the actual use
-                  case factually: a printable view for people who
-                  aren't on the app. */}
+              {/* Copy retoned 2026-05-25 — previously read "Print a one-
+                  page summary" which collided with the "Print flyer"
+                  button in the Physical section above. Two competing
+                  "print" affordances confused parents into asking which
+                  one prints what. The Physical/Print flyer creates the
+                  RECIPIENT-facing artifact (big QR, "scan to give a
+                  gift"). The snapshot below is the AUDIT-facing one-
+                  pager — fund holdings, strategy, balance — for a
+                  spouse, advisor, or grandparent who needs to review
+                  the fund's structure, not gift to it. Renaming to
+                  "Fund snapshot" makes the difference legible. */}
               <p style={{ fontSize: 12.5, fontWeight: 600, color: "rgb(26,23,16)" }}>
-                Print a one-page summary
+                Fund snapshot
               </p>
               <p style={{ fontSize: 11, color: "rgb(120,110,100)", marginTop: 1, lineHeight: 1.4 }}>
-                For people who aren't on the app. A spouse, advisor, or grandparent.
+                Holdings + strategy on one page. For a spouse, advisor, or grandparent reviewing the fund.
               </p>
             </div>
             <a
