@@ -869,6 +869,14 @@ export default function Age18Plan() {
                 extension. Composer Plus-gates itself if the parent isn't
                 on Plus/Family/trial on this fund. Per
                 project_sealed_letters_implementation_plan.md. */}
+            {/* Copy tightened 2026-05-25 audit. Was "Or schedule a
+                letter..." implying it was an alternative to the at-18
+                note above. Parents can do BOTH (one at-18 + unlimited
+                scheduled letters at any date, plus yearly recurring).
+                Now reads "Schedule another letter..." which is honest
+                about the additive shape: the at-18 letter sits in the
+                first slot; this button adds more, each with its own
+                deliver-at date. */}
             <div className="mt-3 pt-3 border-t border-border/40">
               <button
                 type="button"
@@ -876,7 +884,7 @@ export default function Age18Plan() {
                 className="text-xs font-medium text-muted-foreground hover:text-foreground underline underline-offset-2"
                 data-testid="button-schedule-sealed-letter"
               >
-                🕯️ Or schedule a letter for a specific moment (13th birthday, graduation, etc.) →
+                🕯️ Schedule another letter for a specific moment (13th birthday, graduation, every birthday, etc.) →
               </button>
             </div>
           </div>
@@ -1155,8 +1163,20 @@ export default function Age18Plan() {
               </p>
             </li>
           </ul>
+          {/* Roth IRA signpost — tightened 2026-05-25 audit. Was three
+              sentences with a misleading middle: '{childName} can join the
+              waitlist at the handoff' implied the parent has nothing to
+              do on this page about it (true), but also didn't add value
+              for the parent reading it now. The waitlist itself was
+              already captured at parent signup per the locked kid-2.0
+              spec. Removed the passive line; replaced with the Roth-
+              specific insight: tax-free growth is uniquely valuable
+              when the kid's tax bracket is near zero, not when they're
+              47. Kept the compound-the-same-way anchor (the strongest
+              beat — connects the future Roth to the existing fund
+              metaphor). Per project_kid_2.0_handoff_funnel.md. */}
           <p className="text-xs text-muted-foreground leading-relaxed mt-4 pt-3 border-t border-border/50">
-            Building next: a Roth IRA path for when {childName} starts earning income (a teen job, early college work). {childName} can join the waitlist at the handoff. Earned-income dollars compound the same way the gifts in this fund have.
+            Building next: a Roth IRA path for when {childName} starts earning income (a teen job, early college work). Tax-free growth is uniquely valuable when you're 17, not 47. Earned-income dollars compound the same way the gifts in this fund have.
           </p>
         </div>
 
