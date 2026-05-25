@@ -957,6 +957,61 @@ export default function GifterDashboard() {
                 </div>
               )}
             </div>
+
+            {/* Give more — discovery surface for the two non-gift
+                product paths a highly-engaged gifter rarely sees from
+                a fund page: Founder slot gifting + sponsoring a year
+                of Plus / Family on a fund they already give to.
+                Sponsor-Plus discovery deep-links into each saved fund
+                card (the SponsorPlusCard component lives on GiftCheckout
+                for Free funds); this section's job is to make sure a
+                loyal gifter on the dashboard knows the Founder-gift
+                option exists. */}
+            <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
+              <h2 className="font-heading text-2xl font-semibold text-foreground">Give beyond a single gift</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Two ways to show up bigger for someone you love.
+              </p>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div className="rounded-3xl border border-border/60 bg-background p-5" data-testid="cta-gift-founder">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
+                      <Sparkles size={18} strokeWidth={1.8} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-heading text-lg font-semibold text-foreground">Gift a Founder membership</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Lifetime price lock + $25 starter credit + a numbered Founder slot for someone starting their first kid fund.
+                      </p>
+                      <Link href="/founding-members">
+                        <Button variant="outline" size="sm" className="mt-3 rounded-xl">
+                          Gift a Founder slot
+                          <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-3xl border border-border/60 bg-background p-5" data-testid="cta-sponsor-plus-discovery">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
+                      <Crown size={18} strokeWidth={1.8} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-heading text-lg font-semibold text-foreground">Sponsor a year of Plus or Family</h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Cover a year of Kiddo Plus or Family on a fund you already give to. Open any of your saved funds above to find the sponsor option.
+                      </p>
+                      {(data?.funds?.length ?? 0) === 0 && (
+                        <p className="mt-2 text-xs text-muted-foreground italic">
+                          Save a fund first by sending a gift and choosing "Save this fund".
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
