@@ -10671,6 +10671,22 @@ export async function registerRoutes(
           `&fundName=${encodeURIComponent(recipientName)}`,
         cancel_url: `${baseUrl}/${fund.slug || fundId}?canceled=true`,
         metadata: {
+          // `type` is the canonical discriminator the webhook dispatcher
+          // reads at handleCheckoutCompleted (server/webhookHandlers.ts).
+          // Previously this was `kind`, which silently bypassed the
+          // dispatcher's if/else chain — handleGifterRecurringSetup was
+          // never called, so recurring_gifts rows never got inserted at
+          // setup time. The first invoice.paid still processed the
+          // charge correctly via handleGifterRecurringCharge (which
+          // reads subscription.metadata.type, set via subscription_data),
+          // so money flowed to the fund — but the gifter dashboard's
+          // recurringSchedules array was always empty (no row to render),
+          // making the "What's happening with your gifts" hero
+          // permanently empty for actual recurring gifters and breaking
+          // cancellation from /gifter. Smoke-test caught this 2026-05-25.
+          // `kind` retained as an alias for any external listener that
+          // historically keyed off it.
+          type: "gifter_recurring",
           kind: "gifter_recurring",
           fundId: String(fundId),
           gifterUserId,
