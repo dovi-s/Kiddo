@@ -85,6 +85,10 @@ const INCLUDED_PAGE_FILES = new Set([
   // protected from drift.
   path.normalize("client/src/pages/Age18Plan.tsx"),
   path.normalize("client/src/pages/Age18Welcome.tsx"),
+  // 2026-05-25 Dashboard audit: 14k-line parent surface is the
+  // primary engagement page. Spot-fixing here without lint coverage
+  // is a losing battle as the page accumulates copy over months.
+  path.normalize("client/src/pages/Dashboard.tsx"),
 ]);
 
 // Component allowlist — same expansion-after-violation reasoning as

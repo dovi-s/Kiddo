@@ -9911,7 +9911,7 @@ export default function Dashboard() {
                     {/* Pronoun-aware "{name|pronoun} turn(s) 18" + "{name|pronoun}
                         see(s) first" — names take singular verb regardless,
                         pronouns use childPronouns.singular. */}
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "rgb(26,23,16)" }}>What happens when {recipientFirstNameDisplay ? `${recipientFirstNameDisplay} turns` : `${childPronouns.subject} turn${childPronouns.singular ? "s" : ""}`} 18?</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: "rgb(26,23,16)" }}>What happens when {recipientFirstNameDisplay ? `${recipientFirstNameDisplay} turns` : `${childPronouns.subject} turn${childPronouns.singular ? "s" : ""}`} {majorityAge}?</p>
                     <p style={{ fontSize: 11.5, color: "rgba(26,23,16,0.45)", marginTop: 1 }}>How the fund transfers, what {recipientFirstNameDisplay || childPronouns.subject} see{recipientFirstNameDisplay || childPronouns.singular ? "s" : ""} first.</p>
                   </div>
                   <svg width="15" height="15" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
@@ -10079,7 +10079,7 @@ export default function Dashboard() {
         title="Kiddo Family covers every child."
         body={
           effectivePlan === "starter"
-            ? "Kiddo+ covers one child's fund. Kiddo Family unlocks unlimited child funds — one price for every kid in your household, one dashboard across all of them, recurring investments and co-parent access on every fund."
+            ? "Kiddo+ covers one child's fund. Kiddo Family unlocks unlimited child funds: one price for every kid in your household, one dashboard across all of them, recurring investments and co-parent access on every fund."
             : "Add unlimited child funds with Kiddo Family. One price for every kid, one dashboard across all of them, recurring investments and co-parent access on every fund. Cancel anytime."
         }
         upgradePath="/account?tab=plan&upgrade=family"
@@ -10270,7 +10270,7 @@ export default function Dashboard() {
                   <p className="mt-2 text-sm text-muted-foreground">
                     {oneTimeExecutionModel === "cash"
                       ? `${formatCurrency(parseFloat(oneTimeAmount))} will sit as cash in the fund until you invest it from the dashboard.`
-                      : `${formatCurrency(parseFloat(oneTimeAmount))} will be invested as soon as it clears.`}
+                      : `Kiddo invests ${formatCurrency(parseFloat(oneTimeAmount))} as soon as it clears.`}
                   </p>
                 </div>
 
@@ -10688,7 +10688,7 @@ export default function Dashboard() {
                     {/* Pronoun-aware reads-on-18 helper. */}
                     {recipientFirstNameDisplay
                       ? `${recipientFirstNameDisplay} reads it on ${childPronouns.possAdj} ${majorityOrdinal} birthday.`
-                      : `${capFirst(childPronouns.subject)}'ll read it when ${childPronouns.subject} ${childPronouns.singular ? "is" : "are"} 18.`} Optional, but it matters.
+                      : `${capFirst(childPronouns.subject)}'ll read it when ${childPronouns.subject} ${childPronouns.singular ? "is" : "are"} ${majorityAge}.`} Optional, but it matters.
                   </p>
                   {oneTimeNoteSaved ? (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 font-medium">
@@ -11732,7 +11732,7 @@ export default function Dashboard() {
                     in the one-time-amount sheet — same copy, same pattern. */}
                 {recipientFirstNameDisplay
                   ? `${recipientFirstNameDisplay} reads it on ${childPronouns.possAdj} ${majorityOrdinal} birthday.`
-                  : `${capFirst(childPronouns.subject)}'ll read it when ${childPronouns.subject} ${childPronouns.singular ? "is" : "are"} 18.`}{" "}
+                  : `${capFirst(childPronouns.subject)}'ll read it when ${childPronouns.subject} ${childPronouns.singular ? "is" : "are"} ${majorityAge}.`}{" "}
                 Optional, but it matters.
               </p>
               <textarea
