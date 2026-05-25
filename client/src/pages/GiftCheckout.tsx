@@ -49,19 +49,28 @@ type MarketQuoteResponse = {
     isEstimate?: boolean;
   }>;
 };
-// Payment methods. Order matters — Apple Pay first (fastest, "Recommended"
-// label below), card second (universal fallback), Cash App + PayPal in
-// the digital-wallet middle (Cash App skews younger, PayPal skews older
-// — together they cover the demographics card alone misses), bank last
-// (cheapest fee, slowest settlement). The PayPal entry is load-bearing
-// for the older grandparent demographic — many will refuse to type a
-// card number on a website they've never heard of but will happily click
-// "Pay with PayPal" because their info is already there. Stripe processes
+// Payment methods. Order: Apple Pay first (fastest when device supports
+// it), card second (universal fallback), Cash App + PayPal in the
+// digital-wallet middle (Cash App skews younger, PayPal skews older;
+// together they cover demographics card alone misses), bank last
+// (cheapest fee, slowest settlement). PayPal is load-bearing for the
+// older grandparent demographic: many will refuse to type a card number
+// on a website they have never heard of but will happily click "Pay
+// with PayPal" because their info is already there. Stripe processes
 // it natively (no new vendor relationship). PayPal's US fee via Stripe
-// is 3.49% + $0.49 — slightly higher than card, but the audience gap it
-// covers more than justifies the spread.
+// is 3.49% + $0.49, slightly higher than card, but the audience gap
+// it covers more than justifies the spread.
+//
+// Honest-routing note (audit 2026-05-25): the "apple_pay" picker
+// option and the "card" picker option both map to Stripe's `card`
+// payment_method_type. Stripe automatically renders the Apple Pay /
+// Google Pay / Link quick-pay buttons at the top of the page when
+// the device supports them; otherwise the gifter sees a card form.
+// The Apple Pay desc reflects this so the user is not surprised when
+// a non-Apple-Pay device routes them to a card form. Other methods
+// (Cash App, PayPal, ACH) lock to their respective rails on Stripe.
 const PAYMENT_METHODS = [
-  { id: "apple_pay", label: "Apple Pay / Google Pay", icon: Smartphone, desc: "Fastest way to gift", feeLine: "~2.9% + $0.30" },
+  { id: "apple_pay", label: "Apple Pay / Google Pay", icon: Smartphone, desc: "Tap with Face ID or fingerprint (card form on unsupported devices)", feeLine: "~2.9% + $0.30" },
   { id: "card", label: "Credit or debit card", icon: CreditCard, desc: "Visa, Mastercard, Amex, Discover", feeLine: "~2.9% + $0.30" },
   { id: "cashapp", label: "Cash App", icon: DollarSign, desc: "Pay with Cash App balance", feeLine: "~2.9% + $0.30" },
   { id: "paypal", label: "PayPal", icon: Wallet, desc: "Pay with your PayPal account", feeLine: "~3.49% + $0.49" },

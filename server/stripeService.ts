@@ -185,9 +185,24 @@ export class StripeService {
   private getPaymentMethodTypes(preference?: PaymentMethodPreference): Stripe.Checkout.SessionCreateParams.PaymentMethodType[] {
     switch (preference) {
       case 'bank':
+        // ACH-only. The Stripe page locks to us_bank_account; card is
+        // not shown. This is load-bearing: the gifter saw "0.8% (max $5)"
+        // on the Kiddo picker; if card were a fallback, a user could
+        // pay 2.9% + $0.30 instead, and we'd undercharge the processing
+        // fee line item on the Stripe session by the gap (Kiddo would
+        // eat the difference per transaction). Lock prevents that.
         return ['us_bank_account'];
       case 'cashapp':
-        return ['cashapp', 'card'];
+        // Cash-App-only. Previously included 'card' as a fallback for
+        // users whose Cash App was unavailable, but the fallback broke
+        // the picker promise ("Pay with Cash App balance") and let a
+        // user who selected Cash App in the Kiddo UI pay by card on
+        // the Stripe page — confusing UX even though the fee math is
+        // identical (both rails are 2.9% + $0.30). Locked 2026-05-25
+        // per user audit. Cash App Pay supports desktop browsers via
+        // QR-code redirect to the mobile app, so device-coverage is
+        // not a problem.
+        return ['cashapp'];
       case 'paypal':
         // PayPal-only at Stripe Checkout; no card fallback because the
         // user explicitly chose PayPal (the typical demographic actively
@@ -196,6 +211,15 @@ export class StripeService {
       case 'apple_pay':
       case 'card':
       default:
+        // Stripe's 'card' payment method type automatically includes
+        // the Apple Pay / Google Pay / Link quick-pay buttons at the
+        // top of the page when the device supports them. There is no
+        // separate 'apple_pay' payment_method_type in the Stripe API
+        // for Checkout; the apple_pay preference on the Kiddo picker
+        // is purely a marketing/promotion of the same underlying rail.
+        // Card fee = wallet fee (2.9% + $0.30), so the line-item
+        // processing fee is identical regardless of which rail the
+        // gifter ends up using on the Stripe page.
         return ['card'];
     }
   }
