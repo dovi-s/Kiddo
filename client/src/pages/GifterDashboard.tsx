@@ -444,7 +444,13 @@ export default function GifterDashboard() {
                   <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground">
                     Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
                   </h1>
-                  <p className="mt-2 text-muted-foreground">Everything you have saved or gifted to regularly, in one place.</p>
+                  {/* Subtitle copy 2026-05-25 audit. Was 'Everything you
+                      have saved or gifted to regularly, in one place.' —
+                      the word 'regularly' implied recurring gifts that
+                      most one-time gifters don't have, creating a copy-
+                      vs-reality mismatch. Now plainly names what's here:
+                      the funds you've gifted to. */}
+                  <p className="mt-2 text-muted-foreground">The funds you've gifted to, in one place.</p>
                 </div>
                 {sessionId && mode === "save" && (
                   <div className="rounded-2xl bg-primary/5 px-4 py-3 text-sm text-primary">
@@ -501,61 +507,49 @@ export default function GifterDashboard() {
                 </div>
               </div>
 
-              {/* Download your gift history — CSV export. For
-                  sophisticated gifters tracking Form 709 annual-exclusion
-                  compliance, family-office bookkeeping, or CPA hand-off
-                  at year-end. Authenticated server endpoint scopes to
-                  this gifter's email. Locked 2026-05-19 per the
-                  Five Towns roadmap P5. */}
-              {totalGifts > 0 && (
-                <div className="mt-4 flex items-center justify-between rounded-2xl border border-border/60 bg-background p-4">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">Download your gift history</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">CSV with every gift, date, amount, recipient, and occasion. For your CPA or your records.</p>
-                  </div>
-                  <a
-                    href="/api/gifter-account/gifts.csv"
-                    download
-                    onClick={() => haptic("selection")}
-                    className="shrink-0 inline-flex items-center gap-1.5 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-3 py-1.5 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.12)]"
-                    data-testid="button-download-gifter-csv"
-                    aria-label="Download gift history CSV"
-                  >
-                    Download CSV
-                  </a>
-                </div>
-              )}
+              {/* CSV download — demoted 2026-05-25 audit. Was a full
+                  border-rounded card sitting between the welcome
+                  header and the page body; for the 99% of gifters who
+                  never need a CSV (it's a year-end tax-prep tool for
+                  CPA hand-off / Form 709 compliance) it was dashboard
+                  noise. Now a tiny inline link in the page footer
+                  alongside the other small affordances. Power users
+                  still find it; everyone else doesn't have to look at
+                  it as a hero element. */}
             </div>
 
-            {/* ─── HERO: What needs your attention ──────────────────
-                IA restructure 2026-05-23 per user feedback "says a
-                whole lot without saying anything." The 5-stat strip
-                was informationally rich but actionable-poor; nothing
-                told the gifter what to DO. This hero leads with the
-                things they're CURRENTLY ON THE HOOK FOR: active
-                recurring schedules + sponsored Plus subs nearing
-                expiry. Empty-state messaging when neither exists
-                still gives a useful frame ("nothing to manage right
-                now") rather than silently hiding.
+            {/* ─── Active commitments hero ─────────────────────
+                2026-05-25 audit: the previous version of this card
+                ALSO rendered when there were no active recurring or
+                sponsorship commitments, showing 'Nothing on your
+                plate right now' as a full hero card with a Repeat
+                icon. That was the central confusion the user kept
+                flagging: a gifter who has given $475 across 6 gifts
+                isn't 'doing nothing' — they're a real customer with
+                history. Celebrating emptiness as the second card on
+                the page was wrong framing.
 
-                Renders BEFORE the stat strip so it's first thing
-                visible after the welcome header. */}
+                Now: this card ONLY renders when there's actually
+                something active. When empty, we skip it entirely
+                and let the fund cards below carry the page. The
+                'Start a fund for someone you love' CTA that used
+                to live inside the empty-state body has been moved
+                to the page footer alongside Founder gifting. */}
+            {hasActiveCommitments && (
             <div
-              className={`rounded-[28px] border p-6 sm:p-8 ${hasActiveCommitments ? "border-[hsl(var(--kiddo-evergreen))]/30 bg-[hsl(var(--kiddo-evergreen))]/6" : "border-border/60 bg-card"}`}
+              className="rounded-[28px] border border-[hsl(var(--kiddo-evergreen))]/30 bg-[hsl(var(--kiddo-evergreen))]/6 p-6 sm:p-8"
               data-testid="hero-active-commitments"
             >
               <div className="flex items-start gap-3">
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${hasActiveCommitments ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "bg-muted text-muted-foreground"}`}>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[hsl(var(--kiddo-evergreen))] text-white">
                   <Repeat size={18} strokeWidth={1.8} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h2 className="font-heading text-xl font-semibold text-foreground">
-                    {hasActiveCommitments ? "What's happening with your gifts" : "Nothing on your plate right now"}
+                    What's happening with your gifts
                   </h2>
                   <p className="mt-1.5 text-sm text-muted-foreground">
-                    {hasActiveCommitments
-                      ? "Active recurring schedules and sponsorships. Cancel or change anything below."
-                      : "No active recurring gifts or sponsorships. Find a fund below to give to, or start your own."}
+                    Active recurring schedules and sponsorships. Cancel or change anything below.
                   </p>
                 </div>
               </div>
@@ -628,17 +622,8 @@ export default function GifterDashboard() {
                 </div>
               )}
 
-              {!hasActiveCommitments && (
-                <div className="mt-5">
-                  <Link href={startFundHref}>
-                    <Button variant="outline" size="sm" className="rounded-xl">
-                      Start a fund for someone you love
-                      <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
-                </div>
-              )}
             </div>
+            )}
 
             {/* Recurring schedules (history view) — Tier-1 deferred work
                 restored 2026-05-21 per project_gifter_recurring_restoration.md.
@@ -858,6 +843,14 @@ export default function GifterDashboard() {
                         <Heart className="h-5 w-5 text-primary" />
                       </div>
 
+                      {/* Stats row 2026-05-25 audit: the second cell used
+                          to be 'Status: Live and receiving gifts' which
+                          was dashboard cosplay — 99% of funds shown here
+                          are live (otherwise they wouldn't accept gifts).
+                          When status IS non-active (paused/closed) we
+                          surface a different cell ('Status: Paused' etc).
+                          When active, the slot now goes to 'Your total
+                          gifts' which is gifter-owned context. */}
                       <div className="mt-4 grid grid-cols-2 gap-3">
                         <div className="rounded-2xl bg-muted/40 p-3">
                           <div className="flex items-start justify-between gap-2">
@@ -865,27 +858,32 @@ export default function GifterDashboard() {
                               <p className="text-xs text-muted-foreground">Fund value now</p>
                               <p className="mt-1 font-medium text-foreground tabular-nums">{fmtMoney(fund.currentFundValue)}</p>
                             </div>
-                            {/* 30-day sparkline — landing 2026-05-19 as the
-                                gifter read-only enrichment from the Five
-                                Towns roadmap. Renders only when we have
-                                2+ snapshot points so brand-new funds don't
-                                show a misleading flat line. Same data
-                                domain as currentFundValue (total fund
-                                value, no per-position or per-gifter PII). */}
                             {(fund.valueHistory30d ?? []).length >= 2 && (
                               <GifterFundSparkline points={fund.valueHistory30d ?? []} className="mt-0.5 shrink-0" />
                             )}
                           </div>
                         </div>
-                        <div className="rounded-2xl bg-muted/40 p-3">
-                          <p className="text-xs text-muted-foreground">Status</p>
-                          <p className="mt-1 font-medium text-foreground">{statusLabel(fund.fundStatus)}</p>
-                        </div>
+                        {String(fund.fundStatus || "").toLowerCase() === "active" ? (
+                          <div className="rounded-2xl bg-muted/40 p-3">
+                            <p className="text-xs text-muted-foreground">Your total gifts</p>
+                            <p className="mt-1 font-medium text-foreground tabular-nums">{fmtMoney(fund.totalGifted)}</p>
+                          </div>
+                        ) : (
+                          <div className="rounded-2xl bg-muted/40 p-3">
+                            <p className="text-xs text-muted-foreground">Status</p>
+                            <p className="mt-1 font-medium text-foreground">{statusLabel(fund.fundStatus)}</p>
+                          </div>
+                        )}
                       </div>
 
+                      {/* Detail rows 2026-05-25 audit: 'Birthday anchor'
+                          was internal jargon ('anchor' = the date used to
+                          peg upcoming-event calendars); a gifter doesn't
+                          need the term, they need 'when's the next
+                          birthday'. Renamed to 'Next birthday'. */}
                       <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                         <p>Last gift: {fmtDate(fund.lastGiftAt)}</p>
-                        <p>Birthday anchor: {fund.nextBirthdayLabel || "Not added yet"}</p>
+                        <p>Next birthday: {fund.nextBirthdayLabel || "Not added yet"}</p>
                         <p>{fund.holdingsCount} holdings • {fund.activeEventCount} active events</p>
                       </div>
 
@@ -1009,60 +1007,67 @@ export default function GifterDashboard() {
               )}
             </div>
 
-            {/* Give more — discovery surface for the two non-gift
-                product paths a highly-engaged gifter rarely sees from
-                a fund page: Founder slot gifting + sponsoring a year
-                of Plus / Family on a fund they already give to.
-                Sponsor-Plus discovery deep-links into each saved fund
-                card (the SponsorPlusCard component lives on GiftCheckout
-                for Free funds); this section's job is to make sure a
-                loyal gifter on the dashboard knows the Founder-gift
-                option exists. */}
-            <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
-              <h2 className="font-heading text-2xl font-semibold text-foreground">Give beyond a single gift</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Two ways to show up bigger for someone you love.
-              </p>
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                <div className="rounded-3xl border border-border/60 bg-background p-5" data-testid="cta-gift-founder">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
-                      <Sparkles size={18} strokeWidth={1.8} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-heading text-lg font-semibold text-foreground">Gift a Founder membership</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Lifetime price lock + $25 starter credit + a numbered Founder slot for someone starting their first kid fund.
-                      </p>
-                      <Link href="/founding-members">
-                        <Button variant="outline" size="sm" className="mt-3 rounded-xl">
-                          Gift a Founder slot
-                          <ArrowRight className="ml-2 h-3.5 w-3.5" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-3xl border border-border/60 bg-background p-5" data-testid="cta-sponsor-plus-discovery">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
-                      <Crown size={18} strokeWidth={1.8} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-heading text-lg font-semibold text-foreground">Sponsor a year of Plus or Family</h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Cover a year of Kiddo Plus or Family on a fund you already give to. Open any of your saved funds above to find the sponsor option.
-                      </p>
-                      {(data?.funds?.length ?? 0) === 0 && (
-                        <p className="mt-2 text-xs text-muted-foreground italic">
-                          Save a fund first by sending a gift and choosing "Save this fund".
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            {/* Page footer — small actionable items 2026-05-25 audit
+                rewrite. Was previously a full 'Give beyond a single
+                gift' section with two cards: a Founder-membership
+                CTA (real, actionable) AND a Sponsor-Plus 'discovery
+                card' whose body literally said 'Open any of your
+                saved funds above to find the sponsor option.' That
+                second card was making a false claim: the per-fund
+                card doesn't surface a sponsor button, and Sponsor-
+                Plus is only eligible on Free-tier funds anyway. The
+                user-flagged confusion ('I don't think it's perfect')
+                kept pointing at this telling-the-user-to-scroll-up
+                non-action.
+
+                Now: a single footer strip with the two real,
+                directly-actionable links — Start a fund (was inside
+                the empty-state hero we just removed) and Gift a
+                Founder slot (kept). Sponsor-Plus discovery now lives
+                where it CAN actually deep-link (GiftCheckout on
+                eligible funds), not on a dashboard that doesn't have
+                the tier metadata. */}
+            <div className="rounded-2xl border border-border/60 bg-card px-5 py-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+              <div className="min-w-0">
+                <p className="font-medium text-foreground">More ways to show up</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">Start a fund for someone you love, or gift a Founder slot.</p>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2 sm:mt-0">
+                <Link href={startFundHref}>
+                  <Button variant="ghost" size="sm" className="rounded-xl">
+                    <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                    Start a fund
+                  </Button>
+                </Link>
+                <Link href="/founding-members">
+                  <Button variant="outline" size="sm" className="rounded-xl" data-testid="cta-gift-founder">
+                    <Crown className="mr-1.5 h-3.5 w-3.5" />
+                    Gift a Founder slot
+                  </Button>
+                </Link>
               </div>
             </div>
+
+            {/* Page-level tiny utilities — CSV export lives here as a
+                small text-link rather than as a hero card up top. Only
+                renders when the gifter has actually given (totalGifts
+                > 0); a brand-new account with no gifts has nothing to
+                export. */}
+            {totalGifts > 0 && (
+              <p className="text-center text-xs text-muted-foreground">
+                <a
+                  href="/api/gifter-account/gifts.csv"
+                  download
+                  onClick={() => haptic("selection")}
+                  className="underline-offset-4 hover:underline"
+                  data-testid="button-download-gifter-csv"
+                  aria-label="Download gift history CSV"
+                >
+                  Download your gift history (CSV)
+                </a>
+                {" "}— for your CPA or your records.
+              </p>
+            )}
           </div>
         )}
       </div>
