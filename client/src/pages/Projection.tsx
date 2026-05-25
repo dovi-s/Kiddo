@@ -519,6 +519,8 @@ ${shareUrl}`;
                 data-testid="slider-target-age"
                 className="w-full kiddo-age-slider"
                 style={{ ["--kiddo-fill" as any]: `${sliderFillPct}%` }}
+                aria-label={`Project ${childName}'s fund to a future age`}
+                aria-valuetext={`Age ${visibleMilestones[milestoneIdx] ?? majorityAge}`}
               />
               <div className="flex justify-between mt-1">
                 {visibleMilestones.map((age, idx) => {

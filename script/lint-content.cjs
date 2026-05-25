@@ -101,6 +101,11 @@ const INCLUDED_PAGE_FILES = new Set([
   // (majority age) that lint catches when hardcoded "18" drifts in.
   path.normalize("client/src/pages/KidView.tsx"),
   path.normalize("client/src/pages/FundSnapshot.tsx"),
+  // 2026-05-25 Projection audit: 'Potential' page (age-slider
+  // explorer at /projection/:fundId). State-variance already
+  // parameterized correctly throughout; lint coverage protects
+  // the projection-disclaimer copy from drift.
+  path.normalize("client/src/pages/Projection.tsx"),
 ]);
 
 // Component allowlist — same expansion-after-violation reasoning as
