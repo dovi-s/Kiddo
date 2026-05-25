@@ -366,10 +366,16 @@ function AccordionItem({
   isOpen: boolean;
   onToggle: () => void;
 }) {
+  const panelId = `faq-panel-${item.id}`;
+  const triggerId = `faq-trigger-${item.id}`;
   return (
     <div className="border-b border-border last:border-b-0">
       <button
+        type="button"
+        id={triggerId}
         onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-controls={panelId}
         className="group flex w-full items-center justify-between px-1 py-5 text-left"
         data-testid={`faq-toggle-${item.id}`}
       >
@@ -385,6 +391,7 @@ function AccordionItem({
           animate={{ rotate: isOpen ? 180 : 0 }}
           transition={{ duration: 0.3 }}
           className="shrink-0"
+          aria-hidden="true"
         >
           <ChevronDown className="h-5 w-5 text-muted-foreground" />
         </motion.div>
@@ -392,6 +399,9 @@ function AccordionItem({
       <AnimatePresence initial={false}>
         {isOpen && (
           <motion.div
+            id={panelId}
+            role="region"
+            aria-labelledby={triggerId}
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -413,11 +423,27 @@ export default function FAQ() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [openId, setOpenId] = useState<string | null>("why-kiddo");
   const allCategories = ["All", ...Array.from(new Set(faqItems.map((item) => item.category)))];
+  // Recursively extract plain text from any value (string, ReactElement,
+  // ReactFragment, array). Without this, the search only worked for the
+  // ~25% of answers that happen to be raw strings; the ~75% wrapped in
+  // <>...</> fragments were silently unsearchable because the
+  // typeof === "string" check returned false and answerText fell back
+  // to "". Audit 2026-05-25 caught.
+  const extractAnswerText = (node: React.ReactNode): string => {
+    if (node == null || typeof node === "boolean") return "";
+    if (typeof node === "string" || typeof node === "number") return String(node);
+    if (Array.isArray(node)) return node.map(extractAnswerText).join(" ");
+    if (typeof node === "object" && "props" in node) {
+      const children = (node as any).props?.children;
+      return extractAnswerText(children);
+    }
+    return "";
+  };
   const filteredFaqs = faqItems.filter((item) => {
-    const answerText = typeof item.answer === "string" ? item.answer.toLowerCase() : "";
+    const q = searchQuery.toLowerCase();
+    const answerText = extractAnswerText(item.answer).toLowerCase();
     return (
-      (item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        answerText.includes(searchQuery.toLowerCase())) &&
+      (item.question.toLowerCase().includes(q) || answerText.includes(q)) &&
       (activeCategory === "All" || item.category === activeCategory)
     );
   });

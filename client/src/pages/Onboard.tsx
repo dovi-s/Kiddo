@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Loader2, Check } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { SetupProgressNudge, TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -11,6 +11,7 @@ export default function Onboard() {
   const search = useSearch();
   const [, setLocation] = useLocation();
   const params = new URLSearchParams(search);
+  const prefersReducedMotion = useReducedMotion();
   
   const hasValidParams = params.get("email") && params.get("name");
   
@@ -71,10 +72,17 @@ export default function Onboard() {
             Setting up your dashboard...
           </p>
 
+          {/* Spinner respects prefers-reduced-motion. When users have
+              the OS-level reduced-motion preference set, the icon stays
+              still rather than rotating indefinitely — a WCAG 2.3.3 fix
+              caught in the audit 2026-05-25. The icon is decorative
+              (aria-hidden) since the surrounding 'Setting up your
+              dashboard...' copy carries the status meaning. */}
           <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            animate={prefersReducedMotion ? undefined : { rotate: 360 }}
+            transition={prefersReducedMotion ? undefined : { duration: 1, repeat: Infinity, ease: "linear" }}
             className="mx-auto w-6 h-6"
+            aria-hidden="true"
           >
             <Loader2 size={24} className="text-primary" />
           </motion.div>
@@ -86,6 +94,14 @@ export default function Onboard() {
           </div>
 
           <div className="mt-4 text-left">
+            {/* CTA wiring added 2026-05-25 audit — the SetupProgressNudge
+                rendered with no ctaLabel/onCta meant the nudge was
+                informational only with no path to /activate. Combined
+                with the 2-second auto-redirect to /dashboard, parents
+                had no actionable way to reach Activate Investing from
+                this splash. Now: tap "Activate investing" → manual
+                navigation to /activate (cancels the dashboard timer
+                via the useEffect cleanup). */}
             <SetupProgressNudge
               title="Account created"
               subtitle="One more quick step to unlock automatic investing on incoming gifts."
@@ -95,6 +111,8 @@ export default function Onboard() {
                 "Dashboard ready",
                 "Identity verification remaining",
               ]}
+              ctaLabel="Activate investing"
+              onCta={() => setLocation("/activate")}
             />
           </div>
 

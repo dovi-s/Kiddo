@@ -106,6 +106,17 @@ const INCLUDED_PAGE_FILES = new Set([
   // parameterized correctly throughout; lint coverage protects
   // the projection-disclaimer copy from drift.
   path.normalize("client/src/pages/Projection.tsx"),
+  // 2026-05-25 sixth-batch audits — Home, FAQ, FoundingMembers
+  // already in lint via earlier additions. ClaimFund (highest-
+  // emotional kid surface), Onboard (post-signup splash),
+  // GetStarted (acquisition entry point) added so the locked
+  // marketing-tone-vs-product-tone discipline is enforced
+  // across all top-of-funnel + handoff surfaces.
+  path.normalize("client/src/pages/Home.tsx"),
+  path.normalize("client/src/pages/FAQ.tsx"),
+  path.normalize("client/src/pages/ClaimFund.tsx"),
+  path.normalize("client/src/pages/Onboard.tsx"),
+  path.normalize("client/src/pages/GetStarted.tsx"),
 ]);
 
 // Component allowlist — same expansion-after-violation reasoning as

@@ -141,6 +141,15 @@ export default function FoundingMembers() {
   const handleGiftSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (giftSubmitting) return;
+    // Client-side self-gift guard. Server enforces the same check (returns
+    // 400 with the friendly "You can't gift a Founder slot to yourself"
+    // message), but failing fast in the browser saves a round-trip and
+    // surfaces the issue inline at the form, not as a post-Stripe error.
+    // Audit 2026-05-25 caught the missing client guard.
+    if (giftSponsorEmail.trim().toLowerCase() === giftRecipientEmail.trim().toLowerCase()) {
+      setGiftError("You can't gift a Founder slot to yourself. Sign up directly above instead.");
+      return;
+    }
     setGiftSubmitting(true);
     setGiftError(null);
     haptic("medium");
@@ -381,7 +390,7 @@ export default function FoundingMembers() {
                   />
                 </div>
                 {submitError && (
-                  <p className="text-xs text-destructive" data-testid="founding-error">
+                  <p className="text-xs text-destructive" data-testid="founding-error" role="alert" aria-live="polite">
                     {submitError}
                   </p>
                 )}
@@ -530,7 +539,7 @@ export default function FoundingMembers() {
                       />
                     </div>
                     {giftError && (
-                      <p className="text-xs text-destructive" data-testid="gift-error">{giftError}</p>
+                      <p className="text-xs text-destructive" data-testid="gift-error" role="alert" aria-live="polite">{giftError}</p>
                     )}
                     <Button
                       type="submit"

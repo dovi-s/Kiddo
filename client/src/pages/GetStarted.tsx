@@ -150,8 +150,20 @@ function Shell({
             </button>
           ) : <div className="w-11" />}
           {progress ? (
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex gap-1.5">
+            // Progress indicator now uses semantic ARIA so screen readers
+            // announce the active step. role="progressbar" with aria-valuenow
+            // is the load-bearing pattern; the dot row stays decorative
+            // (aria-hidden) since the text below ("Step N of M") is the
+            // canonical announcement. Audit 2026-05-25 caught.
+            <div
+              className="flex flex-col items-center gap-2"
+              role="progressbar"
+              aria-valuemin={1}
+              aria-valuemax={progress.total}
+              aria-valuenow={progress.current}
+              aria-valuetext={`Step ${progress.current} of ${progress.total}`}
+            >
+              <div className="flex gap-1.5" aria-hidden="true">
                 {Array.from({ length: progress.total }).map((_, i) => <span key={i} className={`h-1.5 rounded-full ${i < progress.current ? "w-7 bg-primary" : "w-3 bg-border"}`} />)}
               </div>
               <span className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Step {progress.current} of {progress.total}</span>

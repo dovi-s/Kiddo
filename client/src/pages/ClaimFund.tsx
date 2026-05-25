@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useRoute, useSearch } from "wouter";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -32,6 +32,13 @@ export default function ClaimFund() {
   const [firstName, setFirstName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Respect OS-level prefers-reduced-motion. The staged-reveal card on
+  // this page is the highest-stakes moment in the product, but a kid
+  // with vestibular sensitivity should not be forced to ride through
+  // the cascade. When this is true, the motion.div initial states
+  // become `false` (framer-motion shorthand for "start at the animate
+  // state — no entrance animation"). Audit 2026-05-25 caught.
+  const prefersReducedMotion = useReducedMotion();
 
   // Personalize the tab title — same pattern as KidView. "Claim your fund | Kiddo".
   useEffect(() => {
@@ -100,13 +107,13 @@ export default function ClaimFund() {
             form, and trailing reassurance bullets stagger so the eye
             tracks top-to-bottom rather than seeing everything at once. */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
+          initial={prefersReducedMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
           className="rounded-3xl border border-[hsl(var(--kiddo-gold)/0.40)] bg-[linear-gradient(135deg,hsl(var(--kiddo-gold)/0.18)_0%,#fff_55%,hsl(var(--kiddo-cream))_100%)] p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]"
         >
           <motion.div
-            initial={{ opacity: 0, y: 4 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: "easeOut", delay: 0.15 }}
             className="flex items-start gap-3 mb-4"
@@ -119,7 +126,7 @@ export default function ClaimFund() {
           </motion.div>
 
           <motion.p
-            initial={{ opacity: 0 }}
+            initial={prefersReducedMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.28 }}
             className="text-sm text-muted-foreground leading-relaxed mb-5"
@@ -129,8 +136,9 @@ export default function ClaimFund() {
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="text-xs font-semibold text-foreground mb-1 block">Your name</label>
+              <label htmlFor="claim-input-first-name" className="text-xs font-semibold text-foreground mb-1 block">Your name</label>
               <input
+                id="claim-input-first-name"
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
@@ -141,8 +149,9 @@ export default function ClaimFund() {
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-foreground mb-1 block">Email</label>
+              <label htmlFor="claim-input-email" className="text-xs font-semibold text-foreground mb-1 block">Email</label>
               <input
+                id="claim-input-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -155,8 +164,9 @@ export default function ClaimFund() {
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-foreground mb-1 block">Password</label>
+              <label htmlFor="claim-input-password" className="text-xs font-semibold text-foreground mb-1 block">Password</label>
               <input
+                id="claim-input-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -170,8 +180,12 @@ export default function ClaimFund() {
               <p className="text-[10px] text-muted-foreground mt-1">If you already have a Kiddo account with this email, enter that password to claim into it.</p>
             </div>
 
+            {/* role="alert" + aria-live makes screen readers announce
+                claim failures (invalid token, expired, already-claimed,
+                wrong password on existing account) without the kid
+                needing to know where to look. Audit 2026-05-25. */}
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" data-testid="claim-error">
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" data-testid="claim-error" role="alert" aria-live="polite">
                 {error}
               </div>
             )}
@@ -187,7 +201,7 @@ export default function ClaimFund() {
           </form>
 
           <motion.div
-            initial={{ opacity: 0, y: 4 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut", delay: 0.42 }}
             className="mt-5 pt-4 border-t border-[hsl(var(--kiddo-border)/0.6)] text-xs text-muted-foreground space-y-1.5 leading-relaxed"
