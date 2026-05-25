@@ -252,7 +252,18 @@ export default function GiftCheckout() {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [uploadingMemoryMedia, setUploadingMemoryMedia] = useState<MemoryAttachmentMode | null>(null);
   const [memoryMediaError, setMemoryMediaError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("apple_pay");
+  // Apple Pay default — gated to iOS / macOS user agents 2026-05-25 audit.
+  // The 'Recommended' pill + the default selection used to apply on ALL
+  // devices, but Apple Pay only actually surfaces in Stripe Checkout on
+  // Safari / iOS / macOS. On Chrome on Windows or any Android device,
+  // tapping Apple Pay falls back to Card silently — mislead-then-fallback.
+  // Now: detect the platform once at mount, default to "card" on non-
+  // Apple devices, and gate the 'Recommended' pill behind the same flag.
+  const isAppleDevice = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    return /iPhone|iPad|iPod|Mac/.test(navigator.userAgent) && !/Windows/.test(navigator.userAgent);
+  }, []);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(isAppleDevice ? "apple_pay" : "card");
   const [giftAddOn, setGiftAddOn] = useState<GiftAddOnId>("none");
   const coverFees = true;
   const [showFeeDetails, setShowFeeDetails] = useState(false);
@@ -1245,10 +1256,19 @@ export default function GiftCheckout() {
 
         {(fundAvailability?.state === "cash_only" || eventAvailability?.state === "goal_reached" || eventAvailability?.state === "date_passed") && (
           <div className="mb-6 space-y-3">
+            {/* Cash-only banner color sweep 2026-05-25 audit. Was
+                amber (border-amber-200 / bg-amber-50 / text-amber-900)
+                which by color convention reads as 'warning, caution
+                required.' But the actual message is reassuring info
+                ("this fund is in cash-only mode; the family invests
+                it when ready"). Color/copy mismatch made the gifter
+                anxious about an action that isn't risky. Now uses the
+                kiddo-evergreen tint family that the rest of the
+                checkout's informational callouts use. */}
             {fundAvailability?.state === "cash_only" && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" data-testid="banner-fund-cash-only">
-                <p className="font-medium">{fundAvailability.title}</p>
-                <p className="mt-1 text-amber-800">{fundAvailability.message}</p>
+              <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-3 text-sm" data-testid="banner-fund-cash-only">
+                <p className="font-medium text-foreground">{fundAvailability.title}</p>
+                <p className="mt-1 text-muted-foreground">{fundAvailability.message}</p>
               </div>
             )}
             {(eventAvailability?.state === "goal_reached" || eventAvailability?.state === "date_passed") && (
@@ -1421,9 +1441,38 @@ export default function GiftCheckout() {
                     </div>
                     <button type="button" className={`w-full rounded-xl border px-4 py-2.5 text-sm text-left transition-colors ${showCustom ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen)/0.06)]" : "border-border bg-background text-muted-foreground"}`} onClick={() => { haptic("selection"); setShowCustom(true); }}>
                       {showCustom ? (
-                        <input inputMode="decimal" value={customAmount} onChange={(e) => setCustomAmount(e.target.value.replace(/[^\d.]/g, ""))} placeholder="Other amount (min $5)" className="w-full bg-transparent text-foreground outline-none" autoFocus />
+                        <input inputMode="decimal" value={customAmount} onChange={(e) => setCustomAmount(e.target.value.replace(/[^\d.]/g, ""))} placeholder="Enter your own amount" className="w-full bg-transparent text-foreground outline-none" autoFocus />
                       ) : "Other amount"}
                     </button>
+
+                    {/* Feature parity 2026-05-25 audit: the occasion-event
+                        landing is a fast-path (amount + note + Give in one
+                        screen). The fund-anytime path goes through a
+                        separate amount step at line 1709 that shows the
+                        per-amount projection AND a large-gift reassurance
+                        for $500+ gifts; occasion-event gifters were
+                        bypassing both. Adding the two affordances inline
+                        here preserves the fast-path while closing the
+                        feature gap. Recurring is intentionally NOT added —
+                        a "recurring Hanukkah gift" is semantically odd
+                        (the occasion is the one-time moment); recurring
+                        belongs on the fund-anytime amount step where the
+                        gifter is committing to the relationship, not the
+                        moment. */}
+                    {amountProjection && (
+                      <div className="rounded-xl bg-[hsl(var(--kiddo-gold)/0.10)] border border-[hsl(var(--kiddo-gold)/0.30)] px-4 py-3">
+                        <p className="text-sm font-semibold text-foreground">{amountProjection.headline}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">{amountProjection.tagline}</p>
+                      </div>
+                    )}
+                    {Number.isFinite(activeAmount) && activeAmount >= 500 && (
+                      <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-3">
+                        <p className="text-[12px] leading-relaxed text-foreground">
+                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. Assets are held by DriveWealth, LLC (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
+                        </p>
+                      </div>
+                    )}
+
                     <textarea
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
@@ -2180,28 +2229,39 @@ export default function GiftCheckout() {
                         Some ideas: why you picked this company · what you want {recipientLooksLikeFund ? "them" : recipientName} to learn · the story of this gift
                       </p>
                     ) : (
+                      // 2026-05-25 audit copy fix: was "Sealed for X. Saved
+                      // for the Memory Book." while the gift hasn't been
+                      // submitted yet — pre-action claim of post-action
+                      // state. The note is captured in state, not yet
+                      // sealed in any database. Now: "Saved as you type"
+                      // accurately reflects pre-submit; the actual sealing
+                      // happens on submit + Stripe success.
                       <p className="kiddo-note-seal mt-2 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                        Sealed for {amountStepChildLabel}. Saved for the Memory Book.
+                        Saved as you type. Sealed in {amountStepChildLabel}'s Memory Book when you finish.
                       </p>
                     )}
                   </div>
                   {/* Memory media — UNIFIED via shared MemoryMediaPicker.
-                      Earlier the gifter checkout had its own bespoke card-grid
-                      implementation that drifted from the parent flows: it
-                      gated by plan tier (free=none, starter=photo-only,
-                      family=full trio), it set capture="environment" /
-                      capture="user" on the file inputs (which on many mobile
-                      browsers REMOVES the "Choose from library" option even
-                      though the subtitle promised it), and it added two
-                      different visual systems for the same job (cards here,
-                      pills in parent flows).
-                      Per the locked memory `project_giving_flows_full_media`,
-                      gifters always get the full note + photo + video + voice
-                      trio via the shared component. The plan-tier gating is
-                      preserved at the outer level (free-plan parents still
-                      don't expose media to gifters — that's a real revenue
-                      lever) but within the paid tiers all media types show. */}
-                  {fallbackPlan !== "free" && fundId && !isAnonymous && (
+                      Locked Memory Book tier policy (LOCKED 2026-05-13, see
+                      MEMORY.md): GIFTER-attached media (photo / video /
+                      voice on gifts) is ALWAYS FREE on all parent tiers.
+                      The retention mechanic depends on it: a grandparent
+                      attaching a voice memo to a gift should never hit a
+                      paywall regardless of whether the parent is on Free
+                      or Plus. The gifter loop is the moat.
+                      Older revision of this file gated the picker on
+                      `fallbackPlan !== "free"` (with a "revenue lever"
+                      comment) which contradicted the locked policy and
+                      degraded the gifter loop on the funds that need it
+                      most. 2026-05-25 audit caught + reconciled to match
+                      MEMORY.md. The `requiresPlus` prop on the picker
+                      stays unset (false) here — same as GiftSuccess —
+                      to keep gifter media unrestricted. Parent-authored
+                      media on Dashboard + Age18Plan still pass
+                      requiresPlus={true} based on parent's effective
+                      plan; that's the actual Plus differential, NOT
+                      this surface. */}
+                  {fundId && !isAnonymous && (
                     <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.42)] p-4" data-testid="section-memory-attachment">
                       <label className="text-sm font-semibold text-foreground">
                         Add a photo, video, or voice note <span className="font-normal text-muted-foreground">(optional)</span>
@@ -2251,7 +2311,15 @@ export default function GiftCheckout() {
                       allowed because text is the gifter's character-by-
                       character authorship — they choose what to reveal.
                       Per feedback_anonymous_as_explicit_flag.md. */}
-                  {fallbackPlan !== "free" && fundId && isAnonymous && (
+                  {/* Anonymous companion block — same locked-policy
+                      sweep 2026-05-25. Was gated on `fallbackPlan !==
+                      "free"`; now mirrors the picker above and renders
+                      for all tiers when the gifter explicitly chose to
+                      send anonymously. The privacy promise (face / voice
+                      / handwriting identify the gifter) still binds —
+                      the note-only fallback is the right behavior on
+                      ALL parent tiers, not just paid ones. */}
+                  {fundId && isAnonymous && (
                     <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-muted/40 p-4" data-testid="section-memory-attachment-anonymous-note">
                       <p className="text-sm font-semibold text-foreground">Note only for anonymous gifts</p>
                       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
@@ -2374,7 +2442,7 @@ export default function GiftCheckout() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-sm font-medium text-foreground">{method.label}</p>
-                              {method.id === "apple_pay" && (
+                              {method.id === "apple_pay" && isAppleDevice && (
                                 <span className="rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] px-2 py-0.5 text-[10px] font-medium text-[hsl(var(--kiddo-evergreen))]">Recommended</span>
                               )}
                             </div>
@@ -2516,9 +2584,18 @@ export default function GiftCheckout() {
                     is the tell, not a feature. Keeping just the FAQ /
                     Security / sipc.org links so the legal trail is still
                     one tap away. */}
+                {/* FAQ + Security open in a NEW TAB 2026-05-25 audit.
+                    Wouter's <Link> does client-side navigation, which
+                    REPLACES the current page; gift state (amount,
+                    ticker, note, photo upload, sender info) lives in
+                    component state, not URL, so a tap was destroying
+                    the in-progress gift. Now uses native <a target=
+                    "_blank"> so the gifter can verify trust without
+                    losing their work. Matches the sipc.org pattern
+                    directly below. */}
                 <div className="flex flex-wrap justify-center gap-4 text-xs text-muted-foreground">
-                  <Link href="/faq" className="hover:text-foreground transition-colors">FAQ</Link>
-                  <Link href="/security" className="hover:text-foreground transition-colors">Security</Link>
+                  <a href="/faq" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">FAQ</a>
+                  <a href="/security" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Security</a>
                   <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">sipc.org</a>
                 </div>
               </footer>
