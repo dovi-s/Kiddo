@@ -94,6 +94,13 @@ const INCLUDED_PAGE_FILES = new Set([
   // entries). Locked tier policy makes the parent-media gate
   // load-bearing; adding to lint guards the surrounding copy too.
   path.normalize("client/src/pages/MemoryBook.tsx"),
+  // 2026-05-25 Kid View + FundSnapshot audits: kid-facing surface
+  // (locked free across all tiers, age-aware copy registers) and
+  // print-friendly summary respectively. Adding to lint because
+  // both render heavy user copy with state-variance constraints
+  // (majority age) that lint catches when hardcoded "18" drifts in.
+  path.normalize("client/src/pages/KidView.tsx"),
+  path.normalize("client/src/pages/FundSnapshot.tsx"),
 ]);
 
 // Component allowlist — same expansion-after-violation reasoning as

@@ -822,8 +822,8 @@ export default function KidView() {
           </h1>
           <p className="text-sm opacity-70 mb-5">
             {content.phase === "teen"
-              ? "Real investments. In your name. Yours when you turn 18."
-              : "Real stocks. Invested in your name. Yours fully when you turn 18."}
+              ? `Real investments. In your name. Yours when you turn ${futureProjection.majorityAge}.`
+              : `Real stocks. Invested in your name. Yours fully when you turn ${futureProjection.majorityAge}.`}
           </p>
           {/* Balance count-ups over 1.4s on mount. Tabular-nums prevents
               digit jitter as the number climbs. aria-live flips "off" during
@@ -1246,7 +1246,7 @@ export default function KidView() {
                       ? `${cleanedGifts.length} ${cleanedGifts.length === 1 ? "person has" : "people have"} left you something.`
                       : "People will leave you something here."}
                   </p>
-                  <p className="mt-2 text-sm text-muted-foreground">You get to read it all when you turn 18.</p>
+                  <p className="mt-2 text-sm text-muted-foreground">You get to read it all when you turn {futureProjection.majorityAge}.</p>
                 </div>
               )}
             </section>
@@ -1593,8 +1593,8 @@ export default function KidView() {
                                     </p>
                                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                                       {isApproved
-                                        ? "They're looking at adding it to your fund. Pick another company anytime — it's how the fund starts feeling like yours."
-                                        : "They went a different way this time. You can suggest another anytime — they're listening."}
+                                        ? "They're looking at adding it to your fund. Pick another company anytime. It's how the fund starts feeling like yours."
+                                        : "They went a different way this time. You can suggest another anytime. They're listening."}
                                     </p>
                                   </div>
                                   <button

@@ -203,23 +203,31 @@ export default function FundSnapshot() {
   // the projection-helper consolidation sweep — previously this surface
   // skipped the AUM-fee netting and used raw 1.07^years, so its numbers
   // ran ~0.1% higher than the canonical surfaces. Now consistent.
-  const projectionAt18 = useMemo(() => {
+  // State-specific majority age — read from the fund's state via the
+  // shared US_STATES lookup. Hoisted above the projection useMemo so
+  // the projection math respects state variance (was previously
+  // hardcoded to dob+18, which over-projected by ~3 years of compound
+  // growth for IL/WI/CA/MS and other non-18 statutes — a ~20-30%
+  // overstatement of the projected balance for those states). Audit
+  // 2026-05-25 caught.
+  const fundMajorityAge = fund ? getMajorityAgeForState((fund as any).recipientState || "") : 18;
+  const projectionAtMajority = useMemo(() => {
     if (!fund || !showProjection) return null;
     const birthdate = (fund as any).recipientBirthdate;
     if (!birthdate) return null;
     const dob = new Date(birthdate);
     if (Number.isNaN(dob.getTime())) return null;
-    const eighteenth = new Date(dob);
-    eighteenth.setFullYear(dob.getFullYear() + 18);
-    const yearsLeft = (eighteenth.getTime() - Date.now()) / (365.25 * 24 * 3600 * 1000);
+    const majorityDate = new Date(dob);
+    majorityDate.setFullYear(dob.getFullYear() + fundMajorityAge);
+    const yearsLeft = (majorityDate.getTime() - Date.now()) / (365.25 * 24 * 3600 * 1000);
     if (yearsLeft <= 0) return null;
     const projected = projectFundValue({
       startingValue: balance,
       monthlyContribution: 0,
       yearsAhead: yearsLeft,
     });
-    return { value: projected, atDate: eighteenth };
-  }, [fund, balance, showProjection]);
+    return { value: projected, atDate: majorityDate };
+  }, [fund, balance, showProjection, fundMajorityAge]);
 
   // Count-up on the stats strip + projection. Same ceremony as the
   // Projection page hero number — the projection at majority is the
@@ -238,7 +246,7 @@ export default function FundSnapshot() {
     duration: 700,
     enabled: stats.giftCount > 0,
   });
-  const projectionValue = projectionAt18?.value ?? 0;
+  const projectionValue = projectionAtMajority?.value ?? 0;
   const { value: animatedProjectionAt18, isAnimating: projectionAt18Animating } = useCountUp({
     from: projectionValue * 0.6,
     to: projectionValue,
@@ -251,7 +259,9 @@ export default function FundSnapshot() {
   const displayName = showLastName && childLast ? `${childFirst} ${childLast}` : childFirst;
   const generatedAt = formatDateLong(new Date());
   const stateName = fund ? US_STATES.find((s) => s.code === (fund as any).recipientState)?.name : null;
-  const majorityAge = fund ? getMajorityAgeForState((fund as any).recipientState || "") : 18;
+  // Alias retained so other call sites that read `majorityAge` below
+  // keep working without churn. The hoisted const is fundMajorityAge.
+  const majorityAge = fundMajorityAge;
 
   const fmt = (v: number) => formatCurrency(v, exactAmounts);
   const ownerName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim();
@@ -345,7 +355,7 @@ export default function FundSnapshot() {
               <p className="snapshot-options-label">What to include</p>
               <label><input type="checkbox" checked={showGifts} onChange={(e) => setShowGifts(e.target.checked)} /> Gift history</label>
               <label><input type="checkbox" checked={showNames} onChange={(e) => setShowNames(e.target.checked)} disabled={!showGifts} /> Gifter names</label>
-              <label><input type="checkbox" checked={showProjection} onChange={(e) => setShowProjection(e.target.checked)} /> Projection at 18</label>
+              <label><input type="checkbox" checked={showProjection} onChange={(e) => setShowProjection(e.target.checked)} /> Projection at {fundMajorityAge}</label>
               <label><input type="checkbox" checked={exactAmounts} onChange={(e) => setExactAmounts(e.target.checked)} /> Exact amounts (vs rounded)</label>
               {/* Disabled when the fund has no recipientLastName on file —
                   AddFundSheet captures last name optionally, so older / quick
@@ -361,7 +371,7 @@ export default function FundSnapshot() {
                 Include last name
                 {!childLast && (
                   <span style={{ marginLeft: 6, fontSize: 11, color: "hsl(var(--muted-foreground))" }}>
-                    (none on file — add it in {childFirst}'s profile)
+                    (none on file. Add it in {childFirst}'s profile.)
                   </span>
                 )}
               </label>
@@ -441,7 +451,7 @@ export default function FundSnapshot() {
             <p className="snapshot-stat-label">Active since</p>
             <p className="snapshot-stat-value">{sinceDate ? formatDateShort(sinceDate) : "Just started"}</p>
           </div>
-          {projectionAt18 && (
+          {projectionAtMajority && (
             <div className="snapshot-stat">
               <p className="snapshot-stat-label">Est. at {majorityAge}</p>
               <p
@@ -520,7 +530,7 @@ export default function FundSnapshot() {
             {stateName && (
               <>
                 {" "}This is a Uniform Transfers to Minors Act (UTMA) custodial account registered in <strong>{stateName}</strong>.
-                {" "}{displayName} takes full legal control of this fund at age <strong>{majorityAge}</strong>{projectionAt18 && <>. That's <strong>{formatDateLong(projectionAt18.atDate)}</strong></>}.
+                {" "}{displayName} takes full legal control of this fund at age <strong>{majorityAge}</strong>{projectionAtMajority && <>. That's <strong>{formatDateLong(projectionAtMajority.atDate)}</strong></>}.
               </>
             )}
           </p>
