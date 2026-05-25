@@ -101,7 +101,7 @@ export default function Demo() {
       await login({ email, password: DEMO_PASSWORD });
       haptic("success");
       const account = ACCOUNTS.find((a) => a.email === email);
-      const dest = account?.role === "gifter" ? "/gifter" : "/dashboard";
+      const dest = account?.role === "gifter" ? "/my-gifts" : "/dashboard";
       setLocation(dest);
     } catch (err) {
       haptic("error");

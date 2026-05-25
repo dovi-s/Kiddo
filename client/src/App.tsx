@@ -426,7 +426,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname.startsWith("/transition/")) return { ...genericPrivate, title: "Age-18 Transition | Kiddo", description: "Preview, invite, and handoff flow for the age-18 milestone." };
   if (pathname.startsWith("/updates/share/")) return { title: "Shared Update | Kiddo", description: "A shared Memory Book update from a Kiddo family.", robots: "noindex, nofollow", ogType: "article" };
   if (pathname.startsWith("/updates/unsubscribe/")) return { title: "Unsubscribe | Kiddo", description: "Manage gifter update preferences.", robots: "noindex, nofollow", ogType: "website" };
-  if (pathname === "/gifter") return { ...genericPrivate, title: "Your Gifts | Kiddo", description: "Saved funds and gifting history for repeat gifters." };
+  if (pathname === "/gifter" || pathname === "/my-gifts") return { ...genericPrivate, title: "Your Gifts | Kiddo", description: "Saved funds and gifting history for repeat gifters." };
   if (pathname === "/admin") return { ...genericPrivate, title: "Admin | Kiddo", description: "Kiddo internal admin experience." };
 
   const segments = pathname.split("/").filter(Boolean);
@@ -830,6 +830,14 @@ function Router() {
           <Route path="/memory/:fundId"><ProtectedRoute><MemoryBook /></ProtectedRoute></Route>
           <Route path="/gift/success"><GiftSuccess /></Route>
           <Route path="/gifter"><GifterDashboard /></Route>
+          {/* /my-gifts alias added 2026-05-25 audit. /gifter is the
+              internal-vocab route name that ships in magic-link emails
+              and gift-receipt CTAs; /my-gifts is the brandable
+              first-person URL a returning gifter can actually type or
+              bookmark. Both render the same component, both honor the
+              same auth gate. Title metadata in seoMetaPlugin matches
+              "Your Gifts | Kiddo" on both paths. */}
+          <Route path="/my-gifts"><GifterDashboard /></Route>
           <Route path="/kid/:fundId"><KidView /></Route>
           <Route path="/transition/fund/:fundId"><ProtectedRoute><AgeTransitionManager /></ProtectedRoute></Route>
           <Route path="/transition/verify/:token"><AgeTransitionVerify /></Route>
@@ -883,6 +891,7 @@ function App() {
   const hideGlobalNav =
     location === "/admin" ||
     location === "/gifter" ||
+    location === "/my-gifts" ||
     location === "/gift/success" ||
     // /get-started is a focused onboarding journey with its own
     // Shell chrome (back button, progress dots, logo). Rendering

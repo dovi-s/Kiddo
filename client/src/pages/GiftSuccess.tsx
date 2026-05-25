@@ -788,7 +788,7 @@ export default function GiftSuccess() {
             transition={{ delay: 0.66, duration: 0.4 }}
             data-testid="cta-success-gifter-dashboard"
           >
-            <Link href="/gifter">
+            <Link href="/my-gifts">
               <Button variant="outline" size="sm" className="rounded-full">
                 See your gifter dashboard
               </Button>

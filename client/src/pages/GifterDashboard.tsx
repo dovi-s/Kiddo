@@ -231,6 +231,43 @@ export default function GifterDashboard() {
     }
   };
 
+  // Follow / unfollow updates on a saved fund. Added 2026-05-25 after
+  // the gifter-dashboard audit found the "You are not following updates
+  // for this fund yet" status was a dead-end with no associated action.
+  // Optimistic UI: flip the local cached fund state immediately, then
+  // refetch on resolve so the server is the source of truth. Failure
+  // path: rollback + toast.
+  const [updatingFollowId, setUpdatingFollowId] = useState<string | null>(null);
+  const handleToggleFollow = async (fundId: string, currentlyFollowing: boolean) => {
+    if (updatingFollowId) return;
+    setUpdatingFollowId(fundId);
+    const action = currentlyFollowing ? "unfollow" : "follow";
+    try {
+      const res = await fetch(`/api/gifter-account/funds/${fundId}/${action}`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      haptic("success");
+      toast({
+        title: currentlyFollowing ? "Updates off" : "Following updates",
+        description: currentlyFollowing
+          ? "You'll stop receiving milestone and Memory Book emails for this fund."
+          : "You'll get milestone, anniversary, and Memory Book emails for this fund.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/gifter-account/dashboard"] });
+    } catch (err) {
+      haptic("error");
+      toast({
+        title: currentlyFollowing ? "Could not turn off updates" : "Could not follow updates",
+        description: err instanceof Error ? err.message : "Try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingFollowId(null);
+    }
+  };
+
   // Count-up on the five summary cards. The gifter surface is
   // Robinhood-minimal register; count-up belongs because these are
   // lifetime stats that mean "look what you did for these kids" —
@@ -238,8 +275,10 @@ export default function GifterDashboard() {
   // on render; currency stays at default precision.
   const savedFundCount = data?.summary.savedFundCount ?? 0;
   const totalGifted = data?.summary.totalGifted ?? 0;
+  // totalGifts stays as a raw number — used by the CSV-download gate
+  // below (only renders when the gifter has actually given at least
+  // once). The stat-chip + its useCountUp were dropped 2026-05-25 audit.
   const totalGifts = data?.summary.totalGifts ?? 0;
-  const trackedFundValue = data?.summary.trackedFundValue ?? 0;
   const followingUpdatesCount = data?.summary.followingUpdatesCount ?? 0;
   const { value: animatedSavedFundCount, isAnimating: savedFundCountAnimating } = useCountUp({
     from: 0,
@@ -252,18 +291,6 @@ export default function GifterDashboard() {
     to: totalGifted,
     duration: 1000,
     enabled: totalGifted > 0,
-  });
-  const { value: animatedTotalGifts, isAnimating: totalGiftsAnimating } = useCountUp({
-    from: 0,
-    to: totalGifts,
-    duration: 700,
-    enabled: totalGifts > 0,
-  });
-  const { value: animatedTrackedFundValue, isAnimating: trackedFundValueAnimating } = useCountUp({
-    from: trackedFundValue * 0.9,
-    to: trackedFundValue,
-    duration: 1000,
-    enabled: trackedFundValue > 0,
   });
   const { value: animatedFollowingUpdatesCount, isAnimating: followingUpdatesCountAnimating } = useCountUp({
     from: 0,
@@ -290,7 +317,10 @@ export default function GifterDashboard() {
           haptic("success");
           toast({ title: "Fund saved", description: `${payload?.childName || "This fund"} is now in your gifter dashboard.` });
           queryClient.invalidateQueries({ queryKey: ["/api/gifter-account/dashboard"] });
-          setLocation("/gifter");
+          // Land the gifter on the brandable /my-gifts URL (was /gifter,
+          // an internal-vocab name they shouldn't see in their address
+          // bar). Both routes resolve to the same component.
+          setLocation("/my-gifts");
         }
       } catch (error) {
         if (!cancelled) {
@@ -423,16 +453,28 @@ export default function GifterDashboard() {
                 )}
               </div>
 
-              {/* Stats strip — demoted 2026-05-23 per IA restructure.
-                  Was previously 5 large cards reading as the page's
-                  primary content; user feedback "tons of crap, idek
-                  what I'm looking at" pointed at this being the
-                  signal-poor center of gravity. Now: compact inline
-                  chips under the welcome line, the HERO card below
-                  carries the actionable surface. Type sized down from
-                  text-2xl to text-lg; cards are smaller; aria-live
-                  preserved for animated counter accessibility. */}
-              <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+              {/* Stats strip — second pass 2026-05-25 audit.
+                  First pass (2026-05-23) demoted the 5 stats from large
+                  cards to inline chips. This pass goes further: drops
+                  TWO of the five chips that were duplicative.
+                    - "Total gifts" was duplicative of "Total gifted"
+                      (the per-fund card already shows the per-fund gift
+                      count e.g. "6 gifts sent · $475 from you"); we
+                      kept the dollar number and dropped the count.
+                    - "Tracked fund value" read as the gifter's number
+                      but is actually the PARENT's fund total. Confusing
+                      gifter-vs-parent framing; the per-fund card shows
+                      Fund value now as the proper context.
+                    - "Updates following" stays — it's the only one
+                      the gifter can directly act on (now with a
+                      "Follow updates" toggle below per fund).
+                  Result: 3 stats not 5; remaining trio actually
+                  represents the gifter's own relationship to the
+                  funds (saved / gifted / following). The dead-end
+                  "Ask a family to share their fund updates" copy
+                  has also been dropped — the per-fund Follow button
+                  below is the action surface now. */}
+              <div className="mt-5 grid gap-2 sm:grid-cols-3">
                 <div className="rounded-xl bg-muted/40 px-3 py-2.5">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Saved funds</p>
                   <p
@@ -450,33 +492,12 @@ export default function GifterDashboard() {
                   >{fmtMoney(animatedTotalGifted)}</p>
                 </div>
                 <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total gifts</p>
-                  <p
-                    className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
-                    aria-live={totalGiftsAnimating ? "off" : "polite"}
-                    aria-label={String(totalGifts)}
-                  >{Math.round(animatedTotalGifts)}</p>
-                </div>
-                <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Tracked fund value</p>
-                  <p
-                    className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
-                    aria-live={trackedFundValueAnimating ? "off" : "polite"}
-                    aria-label={fmtMoney(trackedFundValue)}
-                  >{fmtMoney(animatedTrackedFundValue)}</p>
-                </div>
-                <div className="rounded-xl bg-muted/40 px-3 py-2.5">
                   <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Updates following</p>
                   <p
                     className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
                     aria-live={followingUpdatesCountAnimating ? "off" : "polite"}
                     aria-label={String(followingUpdatesCount)}
                   >{Math.round(animatedFollowingUpdatesCount)}</p>
-                  {followingUpdatesCount === 0 && totalGifts > 0 && (
-                    <p className="mt-1 text-[10px] leading-tight text-muted-foreground">
-                      Ask a family to share their fund updates with you.
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -801,9 +822,14 @@ export default function GifterDashboard() {
             <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                  <h2 className="font-heading text-2xl font-semibold text-foreground">Saved children and funds</h2>
+                  {/* Header tightened 2026-05-25 audit. Was "Saved
+                      children and funds" with a 16-word subtitle; now
+                      "Funds you've gifted to" + a single-line subtitle
+                      that names what's actionable on each card (gift
+                      again, follow updates, sponsor a year).  */}
+                  <h2 className="font-heading text-2xl font-semibold text-foreground">Funds you've gifted to</h2>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Who you have helped, how their funds are doing, and whether their family is sharing updates with you.
+                    Each card shows fund value, milestone progress, and your follow-updates toggle.
                   </p>
                 </div>
                 <Link href={startFundHref}>
@@ -861,11 +887,36 @@ export default function GifterDashboard() {
                         <p>Last gift: {fmtDate(fund.lastGiftAt)}</p>
                         <p>Birthday anchor: {fund.nextBirthdayLabel || "Not added yet"}</p>
                         <p>{fund.holdingsCount} holdings • {fund.activeEventCount} active events</p>
-                        <p className="flex items-center gap-2">
-                          <BellRing className="h-4 w-4 text-primary" />
-                          {fund.updatesEnabled ? "You are following updates for this fund" : "You are not following updates for this fund yet"}
-                        </p>
                       </div>
+
+                      {/* Follow-updates toggle (replaced passive 2026-05-25).
+                          Was a flat sentence with a BellRing icon and no
+                          action; the dashboard audit found it was a dead-
+                          end ("You are not following updates for this
+                          fund yet" → no button → user can't do anything
+                          about it). Now: a real toggle button that flips
+                          the subscriber row server-side. Visually
+                          differentiated by state (filled evergreen when
+                          following, outline when not). */}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFollow(fund.fundId, !!fund.updatesEnabled)}
+                        disabled={updatingFollowId === fund.fundId}
+                        className={`mt-3 inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${
+                          fund.updatesEnabled
+                            ? "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.16)]"
+                            : "border border-[hsl(var(--kiddo-evergreen)/0.3)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.06)]"
+                        }`}
+                        data-testid={`button-follow-${fund.fundId}`}
+                        aria-label={fund.updatesEnabled ? `Stop following updates for ${fund.childName}` : `Follow updates for ${fund.childName}`}
+                      >
+                        <BellRing className="h-3.5 w-3.5" />
+                        {updatingFollowId === fund.fundId
+                          ? "Saving..."
+                          : fund.updatesEnabled
+                            ? "Following updates"
+                            : "Follow updates"}
+                      </button>
 
                       {/* Gifter attribution projection — Treatment 3 of
                           the five DUNPHY_DEMO_SPEC.md projection

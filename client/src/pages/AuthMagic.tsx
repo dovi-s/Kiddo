@@ -76,7 +76,10 @@ export default function AuthMagic() {
         //                     specifically only renders for new-account
         //                     intent, so it's a no-op on re-login).
         setTimeout(() => {
-          if (!cancelled) setLocation("/gifter");
+          // Prefer the brandable /my-gifts URL over the internal /gifter
+          // route name. Both resolve to the same component; /my-gifts is
+          // what the gifter's address bar should display after sign-in.
+          if (!cancelled) setLocation("/my-gifts");
         }, 1200);
       } catch (err: any) {
         if (cancelled) return;

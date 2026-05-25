@@ -4212,6 +4212,95 @@ export async function registerRoutes(
     }
   });
 
+  // Gifter-dashboard follow-updates toggle.
+  //
+  // Added 2026-05-25 after the gifter-dashboard audit found the "You are
+  // not following updates for this fund yet" status was a dead-end — the
+  // copy said something was wrong but offered no action. The existing
+  // /api/gifter-notifications/opt-in endpoint required a fresh Stripe
+  // sessionId (post-checkout flow); a gifter on their dashboard wanting
+  // to follow a saved fund has no sessionId at hand. This endpoint is
+  // the dashboard-native version: authenticated gifter + fundId in the
+  // path, no sessionId needed.
+  //
+  // Behavior: creates the subscriber row if missing OR flips
+  // unsubscribed/unsubscribedAt to (false / null) on the existing row.
+  // Idempotent — calling on an already-following fund returns ok=true
+  // without side effects.
+  //
+  // Anonymous-gift discipline: this endpoint should NEVER reveal that a
+  // given email previously gave anonymously to this fund. Since the
+  // gifter is signed in with the same email they used to gift, the
+  // existing isAnonymous flag on the subscriber row is preserved (does
+  // not flip back to non-anonymous just because they pressed Follow).
+  app.post('/api/gifter-account/funds/:fundId/follow', isAuthenticated, async (req: any, res) => {
+    try {
+      const email = String((req.user as any).email || "").trim().toLowerCase();
+      const fundId = String(req.params?.fundId || "").trim();
+      if (!email) return res.status(400).json({ error: "Account email is required." });
+      if (!fundId) return res.status(400).json({ error: "fundId is required." });
+
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: "Fund not found." });
+
+      const store = await loadGifterNotificationStore();
+      const subscribers = store.subscribersByFund[fundId] || {};
+      const existing = subscribers[email];
+
+      const next = await recomputeSubscriberContributionStats(fundId, email, {
+        ...existing,
+        name: existing?.name ?? (((req.user as any).firstName as string | undefined) || null),
+        optedInAt: existing?.optedInAt || new Date().toISOString(),
+        unsubscribed: false,
+        unsubscribedAt: null,
+        isAnonymous: existing?.isAnonymous || false,
+      });
+
+      subscribers[email] = next;
+      store.subscribersByFund[fundId] = subscribers;
+      store.settingsByFund[fundId] = normalizeGifterNotificationSettings(store.settingsByFund[fundId]);
+      await saveGifterNotificationStore(store);
+
+      res.json({ ok: true, fundId, updatesEnabled: true });
+    } catch (error) {
+      console.error("Error following fund for gifter:", error);
+      res.status(500).json({ error: "Failed to follow updates." });
+    }
+  });
+
+  // Symmetric unfollow. Used by the dashboard "Following" button to flip
+  // OFF without emailing the user a one-time unsubscribe token. The
+  // public /api/gifter-notifications/unsubscribe/:token route still
+  // exists for email-link-driven unsubscription and stays unchanged.
+  app.post('/api/gifter-account/funds/:fundId/unfollow', isAuthenticated, async (req: any, res) => {
+    try {
+      const email = String((req.user as any).email || "").trim().toLowerCase();
+      const fundId = String(req.params?.fundId || "").trim();
+      if (!email) return res.status(400).json({ error: "Account email is required." });
+      if (!fundId) return res.status(400).json({ error: "fundId is required." });
+
+      const store = await loadGifterNotificationStore();
+      const subscribers = store.subscribersByFund[fundId] || {};
+      const existing = subscribers[email];
+      if (!existing) {
+        // No row to flip — treat as success (idempotent).
+        return res.json({ ok: true, fundId, updatesEnabled: false });
+      }
+      subscribers[email] = {
+        ...existing,
+        unsubscribed: true,
+        unsubscribedAt: new Date().toISOString(),
+      };
+      store.subscribersByFund[fundId] = subscribers;
+      await saveGifterNotificationStore(store);
+
+      res.json({ ok: true, fundId, updatesEnabled: false });
+    } catch (error) {
+      console.error("Error unfollowing fund for gifter:", error);
+      res.status(500).json({ error: "Failed to unfollow updates." });
+    }
+  });
+
   app.get('/api/gifter-account/dashboard', isAuthenticated, async (req: any, res) => {
     try {
       const userId = String((req.user as any).id || "");
