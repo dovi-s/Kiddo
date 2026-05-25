@@ -129,7 +129,15 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 import { SetupProgressNudge, TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { ActionItemList } from "@/components/ActionItemCard";
 import { useActionItems } from "@/hooks/use-action-items";
-import { ShareModal, type SharePage } from "@/components/ui/share-modal";
+// ShareModal lazy-loaded so the qrcode.react + share-kit chunk only
+// downloads when the user actually opens the share sheet. Pre-2026-05-25
+// it was an eager import, pulling vendor-qr into the Dashboard route's
+// initial fetch even though most sessions never open the modal. Type
+// stays as a plain type-import (no runtime impact). The two render
+// sites below are already wrapped in a <Suspense> boundary at the
+// route level (App.tsx), so no per-mount fallback is needed here.
+const ShareModal = lazy(() => import("@/components/ui/share-modal").then(m => ({ default: m.ShareModal })));
+import type { SharePage } from "@/components/ui/share-modal";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { KIDDO_AUM_FEE_RATE } from "@shared/monetization";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
@@ -160,7 +168,11 @@ import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
 import { getCulturalSuggestions, TRADITION_LABELS, TRADITION_ICONS, type CulturalBackground, type CulturalTradition } from "@/lib/cultural-calendar";
 import { getEventCoverTheme } from "@/lib/event-cover-themes";
 import { friendlyHoldingName } from "@/lib/ticker-names";
-import { QRCodeSVG } from "qrcode.react";
+// Dead-import audit 2026-05-25: QRCodeSVG was previously imported here
+// but never referenced. The ShareModal child renders its own QR via
+// share-kit; Dashboard never instantiates one directly. The unused
+// import was forcing the vendor-qr chunk to be fetched on every
+// Dashboard mount. Removed.
 
 const DashboardTrendChart = lazy(() => import("@/components/DashboardTrendChart"));
 import type { DashboardTrendPoint } from "@/components/DashboardTrendChart";
@@ -1094,14 +1106,64 @@ export default function Dashboard() {
     return () => window.removeEventListener("kiddo:ssn-snoozed", handler);
   }, []);
 
-  // Force a re-render once per minute so Date.now()-derived labels (Quick
-  // Links occasion countdown "in Xd / Today / Tomorrow", at-18 countdown, etc.)
-  // stay accurate when the dashboard is left open across the midnight boundary
-  // — without waiting for a polling refetch or a manual navigation.
+  // Force a re-render exactly at the next midnight boundary so Date.now()-
+  // derived labels (Quick Links occasion countdown "in Xd / Today /
+  // Tomorrow", at-18 countdown, etc.) stay accurate when the dashboard
+  // is left open across the day boundary — without waiting for a polling
+  // refetch or a manual navigation.
+  //
+  // Perf-audit 2026-05-25 scope reduction: previously this re-rendered
+  // the ENTIRE Dashboard component (10K+ LoC, 100+ child components)
+  // every 60 seconds for hours of background-tab time, just to refresh
+  // copy that ONLY changes at midnight. The cost was real: a 100ms render
+  // every minute × hundreds of users × all-day sessions = measurable
+  // CPU. Now we compute time-to-next-midnight and arm a single timeout;
+  // when it fires we re-arm for the next midnight. Net: 1 re-render
+  // per day per session vs 1440 per day per session.
+  //
+  // Also pauses while the tab is hidden — a background tab doesn't need
+  // to track midnight; the next foreground transition triggers a fresh
+  // re-render via the visibilitychange handler anyway.
   const [, setMinuteTick] = useState(0);
   useEffect(() => {
-    const id = window.setInterval(() => setMinuteTick((t) => (t + 1) % 1_000_000), 60_000);
-    return () => window.clearInterval(id);
+    let timeoutId: number | null = null;
+    let cancelled = false;
+
+    const armNextMidnight = () => {
+      const now = new Date();
+      const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+      const delay = Math.max(1000, nextMidnight.getTime() - now.getTime());
+      timeoutId = window.setTimeout(() => {
+        if (cancelled) return;
+        if (document.hidden) {
+          // Tab is hidden right at the boundary — skip the re-render
+          // and rely on the visibilitychange handler to catch up when
+          // the user comes back. Re-arm for the day after.
+          armNextMidnight();
+          return;
+        }
+        setMinuteTick((t) => (t + 1) % 1_000_000);
+        armNextMidnight();
+      }, delay);
+    };
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        // Tab just regained focus — force a re-render in case we crossed
+        // a midnight boundary while hidden. Cheap; the staleTime guards
+        // on the queries below ensure we don't re-fetch unnecessarily.
+        setMinuteTick((t) => (t + 1) % 1_000_000);
+      }
+    };
+
+    armNextMidnight();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      if (timeoutId != null) window.clearTimeout(timeoutId);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   // Idle-time prefetch of next-likely pages used to live here, but
