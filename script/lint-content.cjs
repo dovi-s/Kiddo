@@ -79,6 +79,12 @@ const INCLUDED_PAGE_FILES = new Set([
   // Add Activity to lint so the same drift can't recur on a 4,000+
   // line page that renders heavy user-facing copy.
   path.normalize("client/src/pages/Activity.tsx"),
+  // 2026-05-25 Age18Plan audit: parent-facing at-18 handoff page
+  // is the locked kid-2.0 funnel signpost. Adding to lint so the
+  // copy on the most emotionally-loaded page in the product is
+  // protected from drift.
+  path.normalize("client/src/pages/Age18Plan.tsx"),
+  path.normalize("client/src/pages/Age18Welcome.tsx"),
 ]);
 
 // Component allowlist — same expansion-after-violation reasoning as

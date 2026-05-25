@@ -1113,6 +1113,53 @@ export default function Age18Plan() {
           </div>
         </div>
 
+        {/* After the handoff — kid-2.0 funnel signpost. Locked principle
+            per project_kid_2.0_handoff_funnel.md: "The 18-handoff is the
+            only product-transition window the company has. It must
+            route TOWARD a next Kiddo product, NOT OUT. NEVER ship a
+            'thanks for using Kiddo, take care' exit beat." Audit
+            2026-05-25 caught that this page previously ended at the
+            FAQ + the money-conversation essay with zero forward-looking
+            signal — reading as exactly the exit-beat the locked memory
+            forbids. This section fixes that with three concrete-today
+            facts (kid onboarding ships in Age18Welcome.tsx, subscription
+            retires at majority per project_subscription_retires_at_majority.md,
+            AUM-only post-handoff per the locked Fee Architecture)
+            plus one near-future signpost (Roth IRA path, waitlist
+            already live at parent signup + kid-side Age18Welcome
+            screen 4). No "coming soon" framing — every claim here
+            is concrete today or describes a real waitlist already
+            accepting signups. */}
+        <div className="kiddo-card mb-4 p-5">
+          <h2 className="text-base font-bold text-foreground mb-3">After the handoff</h2>
+          <p className="text-sm text-foreground/85 leading-relaxed mb-3">
+            Once {childName} takes legal control, three things change for you.
+          </p>
+          <ul className="space-y-2.5 text-sm text-foreground/85 leading-relaxed">
+            <li className="flex gap-2">
+              <span className="text-foreground/40 shrink-0" aria-hidden>·</span>
+              <p>
+                <span className="font-semibold text-foreground">{childName} gets a walkthrough</span> on the {majorityOrdinal} birthday. We explain the fund, the investments, and the choices in front of {childName}. Calm and factual, no pressure to act.
+              </p>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-foreground/40 shrink-0" aria-hidden>·</span>
+              <p>
+                <span className="font-semibold text-foreground">Your Plus subscription for this fund ends.</span> Kiddo+ exists for parents managing custody. Once {childName} owns the fund, the subscription retires. {childName} does not pay it.
+              </p>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-foreground/40 shrink-0" aria-hidden>·</span>
+              <p>
+                <span className="font-semibold text-foreground">Pricing simplifies to the 0.10% AUM line.</span> About 10 cents per $100 invested per year. That is the only ongoing charge after the handoff.
+              </p>
+            </li>
+          </ul>
+          <p className="text-xs text-muted-foreground leading-relaxed mt-4 pt-3 border-t border-border/50">
+            Building next: a Roth IRA path for when {childName} starts earning income (a teen job, early college work). {childName} can join the waitlist at the handoff. Earned-income dollars compound the same way the gifts in this fund have.
+          </p>
+        </div>
+
         {/* The money conversation */}
         <div className="kiddo-card mb-4 p-5">
           <p className="text-sm font-bold text-foreground mb-2">The money conversation does not start at {majorityAge}.</p>
