@@ -2209,7 +2209,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                   ? "Ready to save"
                   : totalCustom < 100
                     ? `Need ${(100 - totalCustom).toFixed(0)}% more to save`
-                    : `Over by ${(totalCustom - 100).toFixed(0)}% — reduce somewhere`}
+                    : `Over by ${(totalCustom - 100).toFixed(0)}%. Reduce somewhere.`}
             </span>
           </div>
         </div>
@@ -3895,7 +3895,7 @@ const [editFundName, setEditFundName] = useState("");
         ) : null}
 
         <div className="space-y-2">
-          <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="settings-tabs">
+          <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="settings-tabs" role="tablist" aria-label="Settings sections">
             {/* "Membership" tab removed from the in-app navigation
                 on 2026-05-14 per the WHO/HOW IA Phase 1c. Account is
                 now the primary home for plan management; users who
@@ -3920,6 +3920,8 @@ const [editFundName, setEditFundName] = useState("");
               <button
                 key={tab.id}
                 type="button"
+                role="tab"
+                aria-selected={settingsTab === tab.id}
                 className="kiddo-tab-item whitespace-nowrap"
                 data-active={settingsTab === tab.id ? "true" : "false"}
                 data-testid={`settings-tab-${tab.id}`}
@@ -4756,7 +4758,7 @@ const [editFundName, setEditFundName] = useState("");
                 <h2 className="text-base font-bold text-foreground">Taking money out</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   Move cash from {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} to your bank.
-                  This is a deliberate action — once invested, the money belongs to {recipientFirstNameDisplay || "the child"},
+                  This is a deliberate action. Once invested, the money belongs to {recipientFirstNameDisplay || "the child"},
                   so withdrawals are distributions to them and may have tax implications.
                 </p>
                 <Button
@@ -4800,7 +4802,7 @@ const [editFundName, setEditFundName] = useState("");
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-foreground">Tax documents</p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      1099-DIV and 1099-B ship by January 31 every year. They appear here automatically — no email needed.
+                      1099-DIV and 1099-B ship by January 31 every year. They appear here automatically. No email needed.
                     </p>
                   </div>
                   <span className="shrink-0 text-sm font-semibold text-foreground">View</span>

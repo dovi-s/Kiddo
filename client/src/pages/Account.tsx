@@ -95,7 +95,7 @@ function EmailRow({ currentEmail }: { currentEmail: string | null }) {
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground mb-1">Email</p>
-          <p className="text-sm font-semibold text-foreground truncate" data-testid="text-profile-email">{currentEmail || "—"}</p>
+          <p className="text-sm font-semibold text-foreground truncate" data-testid="text-profile-email">{currentEmail || "Not set"}</p>
         </div>
         {currentEmail && (
           <Button
@@ -832,7 +832,7 @@ export default function Account() {
       <AppHeader />
 
       <main className="kiddo-canvas px-4 py-6 space-y-6">
-        <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="account-tabs">
+        <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="account-tabs" role="tablist" aria-label="Account sections">
           {[
             { id: "personal", label: "Personal info" },
             { id: "plan", label: "Plan & billing" },
@@ -841,6 +841,8 @@ export default function Account() {
             <button
               key={tab.id}
               type="button"
+              role="tab"
+              aria-selected={accountTab === tab.id}
               className="kiddo-tab-item whitespace-nowrap"
               data-active={accountTab === tab.id ? "true" : "false"}
               onClick={() => selectTab(tab.id as AccountTab)}

@@ -66,6 +66,14 @@ const INCLUDED_PAGE_FILES = new Set([
   path.normalize("client/src/pages/GiftCheckout.tsx"),
   path.normalize("client/src/pages/SponsorSuccess.tsx"),
   path.normalize("client/src/pages/FoundingMembers.tsx"),
+  // 2026-05-25 settings audit caught four em-dashes in user-facing copy
+  // inside Settings/Account that had drifted in over time (Settings tax
+  // docs body, taking-money-out body, custom-strategy save status,
+  // Account email empty-state). Adding the parent-side membership and
+  // profile surfaces to lint so the same drift can't recur.
+  path.normalize("client/src/pages/Settings.tsx"),
+  path.normalize("client/src/pages/Account.tsx"),
+  path.normalize("client/src/pages/Profile.tsx"),
 ]);
 
 // Component allowlist — same expansion-after-violation reasoning as

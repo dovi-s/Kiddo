@@ -167,10 +167,12 @@ export default function Profile() {
             <div className="flex items-center gap-4">
               <div className="relative">
                 <button
+                  type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingPhoto}
                   className="relative w-16 h-16 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center group"
                   data-testid="button-change-profile-photo"
+                  aria-label="Upload profile photo"
                 >
                   {user.profileImageUrl ? (
                     <img src={user.profileImageUrl} alt="Profile" className="w-full h-full object-cover" />
