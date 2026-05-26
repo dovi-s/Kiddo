@@ -116,6 +116,10 @@ interface PublicEventData {
     goalAmount?: number;
     giftVolume?: number;
     giftCount?: number;
+    // uniqueGifterCount mirrors the fund-level field on event responses
+    // (the public event endpoint also surfaces aggregation). Optional —
+    // fallback handled at usage sites.
+    uniqueGifterCount?: number;
     isPermanent?: boolean;
     status?: string;
   };
@@ -152,7 +156,15 @@ interface PublicEventData {
   };
   recentGifters?: Array<{
     name: string;
+    // amount is the gifter's CUMULATIVE TOTAL across all their gifts to
+    // this fund/event — not the latest gift's amount. Aggregation fix
+    // 2026-05-25 (server-side).
     amount: number;
+    // count = how many gifts this gifter has sent. count=1 displays as
+    // "Uncle · $25 in Nike" (existing); count>1 shows "Uncle · $75 in
+    // Nike · 3 gifts" with the destination dropped when gifts targeted
+    // different tickers.
+    count?: number;
     ticker?: string | null;
     tickerName?: string | null;
     executionModel?: string | null;
@@ -165,6 +177,12 @@ interface PublicEventData {
   permanentEventSlug?: string | null;
   activeEvents?: Array<{ name: string; slug: string; eventType?: string | null }>;
   giftCount: number;
+  // uniqueGifterCount added 2026-05-25 — distinct from giftCount (total
+  // gifts). Used by the "N people have gifted" copy and the avatar
+  // carousel so a gifter who gave 3 times counts as ONE person, not 3.
+  // Falls back to giftCount when the server hasn't backfilled this
+  // field yet (cached responses pre-deploy).
+  uniqueGifterCount?: number;
   yearsUntil18?: number;
 }
 
@@ -300,7 +318,7 @@ export default function GiftCheckout() {
       const res = await fetch(`/api/public/funds/${fundSlug}`);
       if (!res.ok) throw new Error("Fund not found");
       const fundData = await res.json();
-      return { event: { id: fundData.permanentEventId || "", name: "Gift anytime", giftCount: fundData.giftCount ?? 0 }, fund: fundData.fund, giftCount: fundData.giftCount ?? 0, recentGifters: (fundData.recentGifters ?? []) as Array<{ name: string; amount: number; ticker?: string | null; tickerName?: string | null; executionModel?: string | null }>, activeEvents: fundData.activeEvents || [], permanentEventSlug: fundData.permanentEventSlug || null };
+      return { event: { id: fundData.permanentEventId || "", name: "Gift anytime", giftCount: fundData.giftCount ?? 0, uniqueGifterCount: fundData.uniqueGifterCount ?? fundData.giftCount ?? 0 }, fund: fundData.fund, giftCount: fundData.giftCount ?? 0, uniqueGifterCount: fundData.uniqueGifterCount ?? fundData.giftCount ?? 0, recentGifters: (fundData.recentGifters ?? []) as Array<{ name: string; amount: number; count?: number; ticker?: string | null; tickerName?: string | null; executionModel?: string | null }>, activeEvents: fundData.activeEvents || [], permanentEventSlug: fundData.permanentEventSlug || null };
     },
     enabled: !!(eventSlug || fundSlug),
   });
@@ -407,9 +425,17 @@ export default function GiftCheckout() {
   };
   const heroBg = themeHeroBg[eventThemeId] ?? "bg-[hsl(var(--kiddo-evergreen))]";
   const giftCount = eventData?.event?.giftCount ?? eventData?.giftCount ?? 0;
+  // uniqueGifterCount used by every "N people have gifted" copy site +
+  // the avatar carousel. Falls back to giftCount when the server hasn't
+  // backfilled the field (older deployments / cached responses), but
+  // the canonical truth is: this is the count of UNIQUE people, never
+  // the total gift count. Fix shipped 2026-05-25 after the user-flagged
+  // "uncle gave many times — is the total right?" bug audit.
+  const uniqueGifterCount = eventData?.event?.uniqueGifterCount ?? eventData?.uniqueGifterCount ?? giftCount;
   const recentGifters: Array<{
     name: string;
     amount: number;
+    count?: number;
     ticker?: string | null;
     tickerName?: string | null;
     executionModel?: string | null;
@@ -1333,16 +1359,24 @@ export default function GiftCheckout() {
                           <p className="mt-2 text-sm font-medium text-white/80">{currentOccasion.sub}</p>
                           {giftCount > 0 && (
                             <div className="mt-3 flex items-center gap-2" data-testid="social-proof-gifters">
+                              {/* Avatar carousel sized to uniqueGifterCount
+                                  2026-05-25. Was sized to giftCount which
+                                  inflated when any gifter gave more than
+                                  once (uncle giving 3 times appeared as
+                                  "+2" badge despite only 1 unique person).
+                                  Now: one avatar per unique gifter, capped
+                                  at 5. The "+N" badge reflects unique
+                                  people beyond the visible set. */}
                               <div className="flex -space-x-1.5">
-                                {Array.from({ length: Math.min(giftCount, 5) }).map((_, i) => (
+                                {Array.from({ length: Math.min(uniqueGifterCount, 5) }).map((_, i) => (
                                   <div key={i} className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white/30 bg-white/20 backdrop-blur-sm" style={{ zIndex: 5 - i }}>
                                     {recentGifters[i] ? <span className="text-[9px] font-bold text-white">{recentGifters[i].name[0].toUpperCase()}</span> : <span className="text-[9px] text-white/80">♥</span>}
                                   </div>
                                 ))}
-                                {giftCount > 5 && <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white/30 bg-white/20 backdrop-blur-sm" style={{ zIndex: 0 }}><span className="text-[9px] font-bold text-white">+{giftCount - 5}</span></div>}
+                                {uniqueGifterCount > 5 && <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-white/30 bg-white/20 backdrop-blur-sm" style={{ zIndex: 0 }}><span className="text-[9px] font-bold text-white">+{uniqueGifterCount - 5}</span></div>}
                               </div>
                               <span className="text-xs font-medium text-white/75">
-                                {giftCount} {giftCount === 1 ? "person has" : "people have"} already given.{goalAmount && goalAmount > giftVolume ? ` $${(goalAmount - giftVolume).toLocaleString()} to go.` : ""}
+                                {uniqueGifterCount} {uniqueGifterCount === 1 ? "person has" : "people have"} already given.{goalAmount && goalAmount > giftVolume ? ` $${(goalAmount - giftVolume).toLocaleString()} to go.` : ""}
                               </span>
                             </div>
                           )}
@@ -1502,6 +1536,13 @@ export default function GiftCheckout() {
                       <p className="text-sm font-semibold text-foreground mb-3">Who's already given</p>
                       <div className="space-y-2.5">
                         {recentGifters.map((gifter, i) => {
+                          // gifter.amount is the CUMULATIVE TOTAL across
+                          // all their gifts (server aggregation fix
+                          // 2026-05-25). count > 1 signals a multi-gift
+                          // gifter — appends "· N gifts" so "Uncle · $75
+                          // in Nike · 3 gifts" replaces the prior
+                          // bug where Uncle's three rows said $25 each.
+                          const giftRepeatCount = gifter.count ?? 1;
                           const amountLabel = gifter.amount > 0
                             ? `$${gifter.amount % 1 === 0 ? gifter.amount.toFixed(0) : gifter.amount.toFixed(2)}`
                             : null;
@@ -1529,6 +1570,9 @@ export default function GiftCheckout() {
                                   )}
                                   {destinationLabel && (
                                     <span className="text-muted-foreground"> in {destinationLabel}</span>
+                                  )}
+                                  {giftRepeatCount > 1 && (
+                                    <span className="text-muted-foreground"> · {giftRepeatCount} gifts</span>
                                   )}
                                 </p>
                               </div>
@@ -1628,7 +1672,7 @@ export default function GiftCheckout() {
                           <div className="mt-4 hidden flex-wrap items-center gap-3 text-xs md:flex md:text-sm text-white/85">
                             <span>{eventData.fund.creatorFirstName ? `Created by ${eventData.fund.creatorFirstName}` : `Created for ${recipientLooksLikeFund ? "this fund" : recipientName}`}</span>
                             <span className="hidden md:inline">|</span>
-                            <span>{giftCount > 0 ? `${giftCount} ${giftCount === 1 ? "person has" : "people have"} gifted so far` : "Be the one who starts it."}</span>
+                            <span>{uniqueGifterCount > 0 ? `${uniqueGifterCount} ${uniqueGifterCount === 1 ? "person has" : "people have"} gifted so far` : "Be the one who starts it."}</span>
                           </div>
                           <div className="mt-6">
                             <Button size="lg" className="kiddo-gold-button h-16 w-full rounded-2xl px-6 text-lg font-bold" onClick={() => { haptic("selection"); trackGiftEvent("cta_click", "gift_page_start", { destination: "amount_step" }); setStep("amount"); }} data-testid="button-start-gift">
@@ -1639,12 +1683,12 @@ export default function GiftCheckout() {
                           {giftCount > 0 && (
                             <div className="mt-4 flex items-center gap-2.5" data-testid="social-proof-gifters">
                               <div className="flex -space-x-2">
-                                {Array.from({ length: Math.min(giftCount, 5) }).map((_, i) => (
+                                {Array.from({ length: Math.min(uniqueGifterCount, 5) }).map((_, i) => (
                                   <div key={i} className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/30 bg-white/20 backdrop-blur-sm" style={{ zIndex: 5 - i }}>
                                     {recentGifters[i] ? <span className="text-[10px] font-bold text-white">{recentGifters[i].name[0].toUpperCase()}</span> : <span className="text-[10px] text-white/80">♥</span>}
                                   </div>
                                 ))}
-                                {giftCount > 5 && <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/30 bg-white/20 backdrop-blur-sm" style={{ zIndex: 0 }}><span className="text-[10px] font-bold text-white">+{giftCount - 5}</span></div>}
+                                {uniqueGifterCount > 5 && <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white/30 bg-white/20 backdrop-blur-sm" style={{ zIndex: 0 }}><span className="text-[10px] font-bold text-white">+{uniqueGifterCount - 5}</span></div>}
                               </div>
                               {/* Caption deliberately omits the recipient's name. "X people
                                   have gifted Emma." puts the kid as object-of-community-love
@@ -1652,9 +1696,12 @@ export default function GiftCheckout() {
                                   project_seth_godin_kora_alignment.md (Acorns landmines list).
                                   The fund hero above already names her; the count is purely
                                   transactional social proof. Brings this line into consistency
-                                  with the sibling phrasings at lines 1199 + 1442. */}
+                                  with the sibling phrasings at lines 1199 + 1442.
+                                  Count source 2026-05-25: uniqueGifterCount (true unique
+                                  people), not giftCount (total gifts including duplicates
+                                  from the same person). */}
                               <span className="text-xs font-medium text-white/75">
-                                {giftCount === 1 ? "1 person has gifted" : `${giftCount} people have gifted`}.{goalAmount && goalAmount > giftVolume ? ` $${(goalAmount - giftVolume).toLocaleString()} to go.` : ""}
+                                {uniqueGifterCount === 1 ? "1 person has gifted" : `${uniqueGifterCount} people have gifted`}.{goalAmount && goalAmount > giftVolume ? ` $${(goalAmount - giftVolume).toLocaleString()} to go.` : ""}
                               </span>
                             </div>
                           )}
@@ -1693,6 +1740,13 @@ export default function GiftCheckout() {
                       <p className="text-sm font-semibold text-foreground mb-3">Who's already given</p>
                       <div className="space-y-2.5">
                         {recentGifters.map((gifter, i) => {
+                          // gifter.amount is the CUMULATIVE TOTAL across
+                          // all their gifts (server aggregation fix
+                          // 2026-05-25). count > 1 signals a multi-gift
+                          // gifter — appends "· N gifts" so "Uncle · $75
+                          // in Nike · 3 gifts" replaces the prior
+                          // bug where Uncle's three rows said $25 each.
+                          const giftRepeatCount = gifter.count ?? 1;
                           const amountLabel = gifter.amount > 0
                             ? `$${gifter.amount % 1 === 0 ? gifter.amount.toFixed(0) : gifter.amount.toFixed(2)}`
                             : null;
@@ -1720,6 +1774,9 @@ export default function GiftCheckout() {
                                   )}
                                   {destinationLabel && (
                                     <span className="text-muted-foreground"> in {destinationLabel}</span>
+                                  )}
+                                  {giftRepeatCount > 1 && (
+                                    <span className="text-muted-foreground"> · {giftRepeatCount} gifts</span>
                                   )}
                                 </p>
                               </div>

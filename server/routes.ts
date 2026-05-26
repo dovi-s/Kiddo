@@ -3424,33 +3424,73 @@ export async function registerRoutes(
         activeEvents: activeNonPermanentEvents.map((e) => ({ name: e.name, slug: e.slug, eventType: e.eventType || null })),
         yearsUntil18: computeYearsUntil18(fund?.recipientBirthdate, Number((fund as any)?.majorityAge) || 18),
         giftCount: socialProofGifts.length,
-        recentGifters: socialProofGifts
-          // Anonymous gifts NEVER appear in the public social-proof
-          // carousel. See feedback_anonymous_as_explicit_flag.md and
-          // sibling filter at /api/public/funds/:slug. (Parent self-gifts
-          // already filtered upstream into socialProofGifts.)
-          .filter(g => g.senderName && !(g as any).isAnonymous && !['failed','refunded'].includes(String(g.status || '').toLowerCase()))
-          .filter(g => !/^(anonymous|someone who loves)/i.test(String(g.senderName || '').trim()))
-          // storage.getGiftsByFund returns DESC by createdAt (newest first), so the
-          // top-5 newest is just .slice(0, 5). The previous .slice(-5).reverse() pattern
-          // pulled the OLDEST 5 instead — bug that was hiding the most recent activity.
-          .slice(0, 5)
-          .map(g => {
-            // Destination context (ticker + friendly name) so the public gift checkout's
-            // "Who's already given" list can show "Someone · $50 in Amazon" — meaningful
-            // social proof for the next gifter, not just a flat amount.
+        // uniqueGifterCount added 2026-05-25 — same fix as
+        // /api/public/funds/:slug. Counts unique people, not total gifts.
+        uniqueGifterCount: (() => {
+          const keys = new Set<string>();
+          for (const g of socialProofGifts) {
+            if ((g as any).isAnonymous) continue;
+            if (['failed', 'refunded'].includes(String(g.status || '').toLowerCase())) continue;
+            const name = String(g.senderName || '').trim();
+            if (!name || /^(anonymous|someone who loves)/i.test(name)) continue;
+            const email = String((g as any).senderEmail || '').trim().toLowerCase();
+            const firstName = name.split(/\s+/)[0].toLowerCase();
+            keys.add(email || firstName);
+          }
+          return keys.size;
+        })(),
+        // recentGifters — AGGREGATED by canonical sender identity 2026-05-25.
+        // Same fix + logic as /api/public/funds/:slug. See that endpoint
+        // for the full rationale and discipline; this is the event-scoped
+        // mirror. Per-event recentGifters means a gifter who gave 3 times
+        // to Emma's birthday shows up as one row with $X cumulative.
+        recentGifters: (() => {
+          type AggregatedGifter = {
+            name: string;
+            amount: number;
+            count: number;
+            ticker: string | null;
+            tickerName: string | null;
+            executionModel: string | null;
+          };
+          const grouped = new Map<string, AggregatedGifter>();
+          const eligible = socialProofGifts
+            .filter(g => g.senderName && !(g as any).isAnonymous && !['failed','refunded'].includes(String(g.status || '').toLowerCase()))
+            .filter(g => !/^(anonymous|someone who loves)/i.test(String(g.senderName || '').trim()));
+          for (const g of eligible) {
+            const name = String(g.senderName || '').trim();
+            const firstName = name.split(/\s+/)[0];
+            if (!firstName) continue;
+            const email = String((g as any).senderEmail || '').trim().toLowerCase();
+            const key = email || firstName.toLowerCase();
+            const amount = parseFloat(String(g.amount || 0)) || 0;
             const ticker = String((g as any).selectedTicker || '').trim().toUpperCase() || null;
-            const tickerName = ticker ? (ADMIN_ASSET_UNIVERSE[ticker]?.name || ticker) : null;
-            const exec = String((g as any).executionModel || '').toLowerCase();
-            return {
-              name: String(g.senderName || '').trim().split(/\s+/)[0],
-              amount: parseFloat(String(g.amount || 0)),
-              ticker,
-              tickerName,
-              executionModel: exec || null,
-            };
-          })
-          .filter(g => g.name),
+            const exec = String((g as any).executionModel || '').toLowerCase() || null;
+            const existing = grouped.get(key);
+            if (existing) {
+              existing.amount += amount;
+              existing.count += 1;
+              if (existing.ticker !== ticker) {
+                existing.ticker = null;
+                existing.tickerName = null;
+              }
+              if (existing.executionModel !== exec) {
+                existing.executionModel = null;
+              }
+            } else {
+              const tickerName = ticker ? (ADMIN_ASSET_UNIVERSE[ticker]?.name || ticker) : null;
+              grouped.set(key, {
+                name: firstName,
+                amount,
+                count: 1,
+                ticker,
+                tickerName,
+                executionModel: exec,
+              });
+            }
+          }
+          return Array.from(grouped.values()).slice(0, 5);
+        })(),
       });
     } catch (error) {
       console.error('Error fetching public event:', error);
@@ -5924,40 +5964,103 @@ export async function registerRoutes(
         // permanentEvent.giftCount which counts every gift including the
         // parent's. Same shape as /api/public/events/:slug above.
         giftCount: socialProofFundGifts.filter(g => !['failed', 'refunded', 'pending'].includes(String(g.status || '').toLowerCase())).length,
+        // uniqueGifterCount added 2026-05-25. Distinct from giftCount —
+        // counts unique PEOPLE (by normalized senderEmail, falling back
+        // to lowercase first name when email is absent). The hero copy
+        // says "N people have gifted" which was previously using the
+        // total gift count: a misrepresentation whenever any gifter
+        // gave more than once (uncle gives 3 times -> "3 people have
+        // gifted" was the lie). See aggregation block below.
+        uniqueGifterCount: (() => {
+          const keys = new Set<string>();
+          for (const g of socialProofFundGifts) {
+            if ((g as any).isAnonymous) continue;
+            if (['failed', 'refunded', 'pending'].includes(String(g.status || '').toLowerCase())) continue;
+            const name = String(g.senderName || '').trim();
+            if (!name || /^(anonymous|someone who loves)/i.test(name)) continue;
+            const email = String((g as any).senderEmail || '').trim().toLowerCase();
+            const firstName = name.split(/\s+/)[0].toLowerCase();
+            keys.add(email || firstName);
+          }
+          return keys.size;
+        })(),
         yearsUntil18: computeYearsUntil18(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18),
-        recentGifters: socialProofFundGifts
-          // Anonymous gifts NEVER appear in the public social-proof
-          // carousel. Per feedback_anonymous_as_explicit_flag.md, the
-          // public carousel is visible to every other family member
-          // who has the gift link, so surfacing an anonymous gift here
-          // (even as "Someone") would breach the gifter's intent. The
-          // total gift count below still includes anonymous gifts —
-          // they show up in volume, not by name.
-          .filter(g => g.senderName && !(g as any).isAnonymous && !['failed', 'refunded', 'pending'].includes(String(g.status || '').toLowerCase()))
-          // Defensive filter for legacy rows where is_anonymous wasn't
-          // set but the sender_name matches the legacy fallback. The
-          // 0009 migration backfilled these, but a re-run safety net
-          // means new code never trusts the string match alone.
-          .filter(g => !/^(anonymous|someone who loves)/i.test(String(g.senderName || '').trim()))
-          // fundGifts comes from storage.getGiftsByFund (DESC by createdAt), so top-5
-          // newest = .slice(0, 5). The old .slice(-5).reverse() pattern was returning
-          // oldest 5 instead — bug. Same fix as the event endpoint above.
-          .slice(0, 5)
-          .map(g => {
-            // Same destination-context shape as the event endpoint above so the gift
-            // checkout's social-proof list can render "Grandma · $50 in Amazon".
+        // recentGifters — AGGREGATED by canonical sender identity 2026-05-25.
+        //
+        // Pre-2026-05-25 bug: this returned the last 5 GIFTS in chronological
+        // order, one row per gift. A gifter who gave 3 times (uncle giving $25
+        // to Nike for birthday, Hanukkah, Mother's Day) took 3 of the 5 slots
+        // AND showed $25/row instead of his $75 cumulative total. User-flagged.
+        //
+        // Now: group by canonical identity key (lowercase normalized
+        // senderEmail when available, falling back to lowercase first name
+        // for legacy rows missing email). Per group:
+        //   - amount: SUM across all gifts (true cumulative total)
+        //   - count: number of gifts
+        //   - ticker/tickerName/executionModel: the LATEST gift's destination
+        //     (socialProofFundGifts is DESC by createdAt, so the first time we
+        //     see a key is the latest gift)
+        //   - When subsequent gifts target a DIFFERENT ticker, ticker is
+        //     cleared so the row reads "Uncle · $75 · 3 gifts" (no "in X")
+        //     instead of pretending all went to one stock.
+        // Top 5 by latest-activity (Map insertion order = first-seen order
+        // = latest-first since the input is sorted DESC).
+        recentGifters: (() => {
+          type AggregatedGifter = {
+            name: string;
+            amount: number;
+            count: number;
+            ticker: string | null;
+            tickerName: string | null;
+            executionModel: string | null;
+          };
+          const grouped = new Map<string, AggregatedGifter>();
+          const eligible = socialProofFundGifts
+            // Anonymous gifts NEVER appear in the public social-proof
+            // carousel. Per feedback_anonymous_as_explicit_flag.md, the
+            // public carousel is visible to every other family member
+            // who has the gift link, so surfacing an anonymous gift here
+            // (even as "Someone") would breach the gifter's intent.
+            .filter(g => g.senderName && !(g as any).isAnonymous && !['failed', 'refunded', 'pending'].includes(String(g.status || '').toLowerCase()))
+            // Defensive filter for legacy rows where is_anonymous wasn't
+            // set but the sender_name matches the legacy fallback.
+            .filter(g => !/^(anonymous|someone who loves)/i.test(String(g.senderName || '').trim()));
+          for (const g of eligible) {
+            const name = String(g.senderName || '').trim();
+            const firstName = name.split(/\s+/)[0];
+            if (!firstName) continue;
+            const email = String((g as any).senderEmail || '').trim().toLowerCase();
+            const key = email || firstName.toLowerCase();
+            const amount = parseFloat(String(g.amount || 0)) || 0;
             const ticker = String((g as any).selectedTicker || '').trim().toUpperCase() || null;
-            const tickerName = ticker ? (ADMIN_ASSET_UNIVERSE[ticker]?.name || ticker) : null;
-            const exec = String((g as any).executionModel || '').toLowerCase();
-            return {
-              name: String(g.senderName || '').trim().split(/\s+/)[0],
-              amount: parseFloat(String(g.amount || 0)),
-              ticker,
-              tickerName,
-              executionModel: exec || null,
-            };
-          })
-          .filter(g => g.name),
+            const exec = String((g as any).executionModel || '').toLowerCase() || null;
+            const existing = grouped.get(key);
+            if (existing) {
+              existing.amount += amount;
+              existing.count += 1;
+              // Multi-destination detection — drop ticker if this gift
+              // targeted a different one from the first-seen (latest) gift.
+              if (existing.ticker !== ticker) {
+                existing.ticker = null;
+                existing.tickerName = null;
+              }
+              if (existing.executionModel !== exec) {
+                existing.executionModel = null;
+              }
+            } else {
+              const tickerName = ticker ? (ADMIN_ASSET_UNIVERSE[ticker]?.name || ticker) : null;
+              grouped.set(key, {
+                name: firstName,
+                amount,
+                count: 1,
+                ticker,
+                tickerName,
+                executionModel: exec,
+              });
+            }
+          }
+          return Array.from(grouped.values()).slice(0, 5);
+        })(),
       });
 
       recordEvent({
