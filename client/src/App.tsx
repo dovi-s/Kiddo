@@ -179,6 +179,7 @@ function isMarketingRoute(path: string): boolean {
 
   if (
     pathname === "/" ||
+    pathname === "/demo" ||
     pathname === "/faq" ||
     pathname === "/how-it-works" ||
     pathname === "/pricing" ||
