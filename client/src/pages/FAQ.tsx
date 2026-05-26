@@ -520,8 +520,37 @@ export default function FAQ() {
                   />
                 ))
               ) : (
-                <div className="py-12 text-center text-muted-foreground">
-                  <p>No matching questions found.</p>
+                /* Empty-state polish 2026-05-25 Sprint 2. Was a plain
+                   "No matching questions found." line — bland, no
+                   recovery path. Now: gentle icon + friendly copy
+                   + a clear next action ("Ask us directly") so a
+                   user whose search comes up empty has a real
+                   exit. Matches the EmptyState primitive's shape
+                   without importing it (FAQ is a marketing page
+                   with its own visual register). */
+                <div className="py-16 text-center" data-testid="faq-empty-state">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Search size={20} />
+                  </div>
+                  <p className="text-base font-medium text-foreground">
+                    Nothing matched &ldquo;{searchQuery.trim()}&rdquo;.
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Try a shorter search, browse a category, or ask us directly.
+                  </p>
+                  <div className="mt-5 flex flex-wrap justify-center gap-3 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => { setSearchQuery(""); setActiveCategory("All"); }}
+                      className="rounded-full border border-border bg-card px-4 py-2 font-medium text-foreground hover:bg-muted transition-colors"
+                      data-testid="faq-empty-reset"
+                    >
+                      Clear search
+                    </button>
+                    <Link href="/contact" className="rounded-full bg-primary px-4 py-2 font-medium text-primary-foreground hover:opacity-90 transition-opacity">
+                      Ask us
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>
