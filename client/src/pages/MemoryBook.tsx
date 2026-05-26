@@ -75,6 +75,7 @@ import { getPronouns } from "@/lib/pronouns";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { filterMemoryEntries, getVisibleMemoryEntries, validateMemoryMedia } from "./memoryBookUtils";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { projectFundValue } from "@shared/projection";
 
 const MEMORY_ACTIVE_STALE_MS = 5_000;
 const MEMORY_LIVE_REFRESH_MS = 15_000;
@@ -4555,6 +4556,39 @@ export default function MemoryBook() {
                                   <p className="font-heading text-base font-bold leading-none tabular-nums text-[hsl(var(--kiddo-evergreen))]" data-testid={`text-amount-${entry.id}`}>
                                     {displayAmount(entry.gift.amount)}
                                   </p>
+                                  {/* Per-gift compound visualization — added
+                                      2026-05-25 per the first-principles audit.
+                                      The compound number IS the moat. KidView
+                                      already shows it; Memory Book should too
+                                      because grandparents read THIS surface.
+                                      Shows "now worth ~$Y" when the gift has
+                                      been invested for long enough to have any
+                                      visible growth + when there's a real
+                                      createdAt. Skips silently otherwise — no
+                                      misleading $X = $X line. Routes through
+                                      the canonical projectFundValue (7% net of
+                                      fee, monthly compounded) so the number
+                                      matches every other surface. */}
+                                  {(() => {
+                                    const giftAmount = parseFloat(String(entry.gift.amount || "0"));
+                                    if (!Number.isFinite(giftAmount) || giftAmount <= 0) return null;
+                                    const giftDate = entry.gift.createdAt ? new Date(String(entry.gift.createdAt)) : null;
+                                    if (!giftDate || !Number.isFinite(giftDate.getTime())) return null;
+                                    const yearsInvested = (Date.now() - giftDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+                                    if (yearsInvested < 0.08) return null; // < ~1 month, no meaningful growth yet
+                                    const nowValue = projectFundValue({
+                                      startingValue: giftAmount,
+                                      monthlyContribution: 0,
+                                      yearsAhead: yearsInvested,
+                                    });
+                                    const gain = nowValue - giftAmount;
+                                    if (gain < 0.5) return null; // < 50 cents, not worth surfacing
+                                    return (
+                                      <p className="mt-1 text-[10.5px] text-green-600 tabular-nums leading-none" data-testid={`text-gift-now-worth-${entry.id}`}>
+                                        now ~${nowValue.toFixed(2)}
+                                      </p>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                               {(entry.gift.eventName || ticker || exec === "family" || exec === "cash" || (tyState && tyState !== "anonymous")) && (
