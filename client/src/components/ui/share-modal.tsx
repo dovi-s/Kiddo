@@ -904,7 +904,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                         iconBg="rgb(37,211,102)"
                         icon={<WhatsAppIcon />}
                         label="WhatsApp"
-                        subtitle="Pre-written and ready"
+                        subtitle="Pre-written, ready to send"
                         onClick={handleWhatsApp}
                       />
                       <ShareRow
@@ -947,7 +947,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                         iconBg="rgb(184,121,26)"
                         icon={<Mail size={16} color="white" />}
                         label="Email invite"
-                        subtitle="Pre-written, warm, fully editable"
+                        subtitle="Pre-written, fully editable"
                         onClick={() => { setView("email"); haptic("selection"); }}
                       />
                       {canNativeShare ? (
@@ -979,7 +979,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       <SocialBtn label="Story card" bg="linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)" icon={<StoryCardIcon />} onClick={handleStoryCard} loading={generatingCard} />
                     </div>
                     <p style={{ fontSize: 10, color: "rgb(175,164,156)", marginTop: 7, lineHeight: 1.5 }}>
-                      Story card generates a 9:16 image ready to share to Instagram Stories.
+                      Story card generates a 9:16 image for Stories or Shorts (Instagram, TikTok, Snap, YouTube Shorts).
                     </p>
                   </div>
 
@@ -1156,14 +1156,29 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
           <div
             style={{
               borderTop: "1px solid rgba(26,23,16,0.08)",
-              padding: "12px 20px",
+              padding: "10px 20px 14px 20px",
+              background: "rgba(26,23,16,0.015)",
+            }}
+          >
+            {/* Mini-header — calls out the AUDIENCE difference for
+                this affordance. Previously "Fund snapshot" sat as a
+                quiet footer next to the louder "Print flyer" / "Save
+                QR" buttons in the Physical section, which read as if
+                it was a third physical-deliverable variant. Adding
+                the audience-naming eyebrow ("For your advisor or
+                spouse") makes it legible at a glance that this is a
+                DIFFERENT audience entirely — not for grandparents
+                gifting, but for the people reviewing the fund's
+                structure. Audit-flagged 2026-05-26. */}
+            <p style={{ fontSize: 9.5, fontWeight: 700, color: "rgb(120,110,100)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 8 }}>
+              For your advisor or spouse
+            </p>
+            <div style={{
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: 10,
-              background: "rgba(26,23,16,0.015)",
-            }}
-          >
+            }}>
             <div style={{ minWidth: 0 }}>
               {/* Copy retoned 2026-05-25 — previously read "Print a one-
                   page summary" which collided with the "Print flyer"
@@ -1203,6 +1218,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
             >
               Open →
             </a>
+            </div>
           </div>
         )}
       </DialogContent>

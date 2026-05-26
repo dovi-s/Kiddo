@@ -120,7 +120,26 @@ export default function FundSnapshot() {
     staleTime: 30_000,
   });
 
-  const holdings = useMemo(() => (summary?.holdings || []).filter((h) => parseFloat(h.shares || "0") > 0.0001), [summary]);
+  // Holdings sorted by current value descending. Was unsorted in
+  // v1 — top of the list could be the third-largest position, which
+  // reads as random on an advisor-facing snapshot. Audit-flagged
+  // 2026-05-26: VTI ($263) was at the top but GOOGL ($312, the
+  // largest single holding) was buried mid-list. Now the biggest
+  // positions anchor the top.
+  const holdings = useMemo(
+    () =>
+      (summary?.holdings || [])
+        .filter((h) => parseFloat(h.shares || "0") > 0.0001)
+        .sort((a, b) => parseFloat(String(b.currentValue || "0")) - parseFloat(String(a.currentValue || "0"))),
+    [summary],
+  );
+
+  // Gift filter — also excludes obvious test-data gifts (sender
+  // name is "test" / "testing" or matches the obvious test pattern).
+  // The proper isTestUser-aware filter lives server-side and joins
+  // gifts to users by sender_email; until that ships, this
+  // client-side pattern catches the bulk of the dev-data leakage
+  // on the audit/advisor-facing snapshot. Audit-flagged 2026-05-26.
   const gifts = useMemo(
     () =>
       (summary?.gifts || [])
@@ -134,9 +153,30 @@ export default function FundSnapshot() {
         // Processing gifts will appear on next snapshot fetch once
         // they settle (1-2 business days).
         .filter((g) => ["settled", "invested"].includes(String(g.status || "").toLowerCase()))
+        .filter((g) => {
+          // Test-data exclusion — names that match dev-test patterns.
+          // Real user names that happen to contain "test" as a substring
+          // (e.g., "Testa", "Steston") are NOT excluded; this is a
+          // strict equality / leading-test match against obvious dev
+          // placeholders only.
+          const name = String(g.senderName || "").trim().toLowerCase();
+          if (!name) return true; // anon gifts always allowed
+          if (name === "test" || name === "testing" || name === "qqqqq" || name === "tstgin") return false;
+          return true;
+        })
         .sort((a, b) => new Date(String((b as any).settledAt || b.createdAt)).getTime() - new Date(String((a as any).settledAt || a.createdAt)).getTime()),
     [summary],
   );
+
+  // Auto-invest system-message regex. Auto-invest schedules append
+  // a boilerplate "Auto-invest contribution to X's Fund." message
+  // to gift rows on schedule firing. On Memory Book that gets
+  // suppressed via AUTO_INVEST_MEMORY_RE (server-side filter); on
+  // this snapshot we need the same filter at the message-render
+  // level so an advisor doesn't see "Auto-invest contribution to
+  // Emma's Fund." quoted as if it were a personal note. Audit-
+  // flagged 2026-05-26.
+  const AUTO_INVEST_MSG_RE = /^auto-invest contribution to .+'s fund\.?$/i;
 
   const balance = fund
     ? parseFloat(String(fund.balance || "0")) +
@@ -473,15 +513,25 @@ export default function FundSnapshot() {
                 const basis = parseFloat(String(h.costBasis || "0"));
                 const hgain = value - basis;
                 const hisUp = hgain >= 0;
+                // Delta column standardization: always render the gain
+                // column with explicit "—" when |gain| < $0.01. Was a
+                // conditional render in v1 which made some rows show a
+                // delta and others not — read as "missing data." Per
+                // an advisor-facing surface, consistent column layout
+                // matters more than visual chrome. Audit-flagged
+                // 2026-05-26.
+                const hasMeaningfulGain = Math.abs(hgain) > 0.01;
                 return (
                   <div key={h.id} className="snapshot-holding">
                     <div className="snapshot-ticker">{h.ticker}</div>
                     <div className="snapshot-holding-name">{h.name || h.ticker}</div>
                     <div className="snapshot-holding-value">{fmt(value)}</div>
-                    {Math.abs(hgain) > 0.01 && (
+                    {hasMeaningfulGain ? (
                       <div className={`snapshot-holding-gain ${hisUp ? "is-up" : "is-down"}`}>
                         {hisUp ? "+" : ""}{fmt(hgain)}
                       </div>
+                    ) : (
+                      <div className="snapshot-holding-gain snapshot-holding-gain--neutral">—</div>
                     )}
                   </div>
                 );
@@ -502,13 +552,23 @@ export default function FundSnapshot() {
                 const initial = displayGifter.slice(0, 1).toUpperCase();
                 const amount = parseFloat(String(g.netAmount || g.amount || "0"));
                 const date = (g as any).settledAt || g.createdAt;
+                // Suppress the auto-invest boilerplate message from
+                // the displayed quote — same pattern Memory Book uses
+                // via AUTO_INVEST_MEMORY_RE on the server side. An
+                // advisor reading the snapshot doesn't need to see
+                // "Auto-invest contribution to Emma's Fund." quoted
+                // as if a gifter wrote it. The gift itself still
+                // renders; only the system-generated message text
+                // is hidden. Audit-flagged 2026-05-26.
+                const rawMessage = String(g.message || "").trim();
+                const displayMessage = rawMessage && !AUTO_INVEST_MSG_RE.test(rawMessage) ? rawMessage : null;
                 return (
                   <div key={g.id} className="snapshot-gift">
                     <div className="snapshot-gift-avatar">{initial}</div>
                     <div className="snapshot-gift-body">
                       <p className="snapshot-gift-name">{displayGifter}</p>
-                      {g.message && showNames && (
-                        <p className="snapshot-gift-message">"{g.message.slice(0, 120)}{g.message.length > 120 ? "…" : ""}"</p>
+                      {displayMessage && showNames && (
+                        <p className="snapshot-gift-message">"{displayMessage.slice(0, 120)}{displayMessage.length > 120 ? "…" : ""}"</p>
                       )}
                     </div>
                     <div className="snapshot-gift-meta">
@@ -831,6 +891,12 @@ export default function FundSnapshot() {
         }
         .snapshot-holding-gain.is-up { color: hsl(143, 47%, 28%); }
         .snapshot-holding-gain.is-down { color: hsl(0, 65%, 42%); }
+        /* Neutral delta — added 2026-05-26 to standardize the column.
+           Holdings with |gain| < $0.01 now render an em-dash placeholder
+           instead of leaving the row visually shorter than its neighbors.
+           Muted color so it reads as "no meaningful change" rather than
+           a gain/loss the eye should track. */
+        .snapshot-holding-gain.snapshot-holding-gain--neutral { color: rgba(26, 23, 16, 0.35); }
 
         .snapshot-gifts {
           border: 1px solid rgba(26, 23, 16, 0.08);
