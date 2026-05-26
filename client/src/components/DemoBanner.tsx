@@ -5,12 +5,13 @@
 // Dismissible per session — re-appears on next login so the user
 // always knows they're in the demo context.
 //
-// NOT shown on public marketing pages (Home, Pricing, How it works,
-// the /demo landing page itself) — there's no illustrative fund data
-// there, so the "amounts reset periodically" message is noise and the
-// banner would just stack on the marketing Nav. Gated via the shared
-// isMarketingRoute() classifier (lib/routes.ts) — the same one the app
-// shell uses to hide the sidebar on those pages.
+// Shown ONLY on authenticated app surfaces (allowlist via
+// isDemoAppSurface() in lib/routes.ts). NOT on any public / front-door
+// page — marketing pages, Home, /login, /get-started, the /demo landing
+// page, claim + gift-checkout flows — even when the visitor is a
+// logged-in demo account who navigated back out there. On those pages
+// the "amounts reset periodically" message is contextually wrong and
+// would just stack on the page's own chrome.
 //
 // Reads `isDemoAccount` from useAuth(). Renders null for non-demo users
 // (zero cost on real-user surfaces). Per DUNPHY_DEMO_SPEC.md.
@@ -19,7 +20,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link, useLocation } from "wouter";
 import { X } from "lucide-react";
-import { isMarketingRoute } from "@/lib/routes";
+import { isDemoAppSurface } from "@/lib/routes";
 
 const SESSION_DISMISS_KEY = "kora:demo-banner-dismissed";
 
@@ -43,15 +44,16 @@ export function DemoBanner() {
   }, []);
 
   const isDemoUser = Boolean((user as any)?.isDemoAccount);
-  // Suppress on public marketing pages (Home, Pricing, How it works,
-  // the /demo landing page itself, etc.). The banner's "dollar amounts
-  // reset periodically" message + "create your own fund" CTA only make
-  // sense where the demo user is looking at illustrative fund data —
-  // i.e. the authenticated app surfaces (Dashboard, Memory Book,
-  // Activity, gift flow, /my-gifts). On marketing chrome it's noise and
-  // stacks redundantly on the marketing Nav. Same marketing-route
-  // classifier the app shell uses to hide the sidebar.
-  if (!isDemoUser || dismissed || isMarketingRoute(location)) return null;
+  // Show ONLY on authenticated app surfaces — where the demo user is
+  // actually looking at the seeded Dunphy data (Dashboard, Memory Book,
+  // Activity, Settings, /my-gifts, Kid View, etc.). Everything else is
+  // a public / front-door page (marketing, Home, /login, /get-started,
+  // claim + gift-checkout flows, ...) where the "amounts reset
+  // periodically / create your own fund" message is contextually wrong
+  // and just stacks on top of that page's own chrome. Allowlist, not
+  // blocklist — see isDemoAppSurface. A logged-in demo account browsing
+  // back out to Home or Login should NOT carry the banner with them.
+  if (!isDemoUser || dismissed || !isDemoAppSurface(location)) return null;
 
   const handleDismiss = () => {
     setDismissed(true);

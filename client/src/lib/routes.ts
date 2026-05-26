@@ -58,3 +58,54 @@ export function isMarketingRoute(path: string): boolean {
     pathname.startsWith("/tools/utma-by-state/")
   );
 }
+
+// Authenticated app surfaces — the pages where a signed-in user is
+// actually operating on fund data (theirs or, in the demo, the seeded
+// Dunphy data). This is an ALLOWLIST on purpose: the demo banner shows
+// ONLY here. Any route not listed (marketing, /login, /get-started,
+// claim / transfer / invite flows, public gift checkout, password
+// reset, email verify, magic-link landing, etc.) is a public /
+// front-door page where the "you're in the demo, amounts reset" banner
+// is contextually wrong — even when the visitor happens to be a logged-
+// in demo account browsing back out to those pages.
+//
+// Allowlist (not blocklist) because the failure modes are asymmetric:
+// a NEW public page accidentally showing the banner looks broken
+// (that's the bug this replaces), whereas a NEW app page that forgets
+// to opt in merely lacks the banner until someone adds it here. The
+// safe default is "no banner."
+//
+// When you add a new authenticated app page, add its path here.
+const APP_SURFACE_EXACT = new Set<string>([
+  "/dashboard",
+  "/activity",
+  "/events",
+  "/event/create",
+  "/settings",
+  "/account",
+  "/profile",
+  "/funds",
+  "/admin",
+  "/age-18-plan",
+  "/tax-documents",
+  "/memory",
+  "/gifter",
+  "/my-gifts",
+  "/welcome-at-18",
+]);
+const APP_SURFACE_PREFIXES = [
+  "/activity/",
+  "/tax-documents/",
+  "/projection/",
+  "/fund/",
+  "/memory/",
+  "/kid/",
+  "/transition/fund/",
+  "/your-story/",
+];
+
+export function isDemoAppSurface(path: string): boolean {
+  const pathname = normalizePath(path);
+  if (APP_SURFACE_EXACT.has(pathname)) return true;
+  return APP_SURFACE_PREFIXES.some((p) => pathname.startsWith(p));
+}
