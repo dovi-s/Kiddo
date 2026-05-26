@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation, useSearch } from "wouter";
+import { useLocation, useSearch, Link } from "wouter";
 // Sparkles dropped 2026-05-12 — banned per feedback_no_ai_slop.md. The three
 // row-types it was used for (Kid suggestion / Subscription / Age-18 invite)
 // now use semantically-correct icons: Lightbulb (gentle nudge), CreditCard
@@ -1692,12 +1692,40 @@ export default function Activity() {
       <AppHeader />
       <main className="kiddo-canvas px-4 py-5 md:py-6">
 
-        {/* Removed: in-page H1 "Activity" + per-tab tagline. AppHeader
-            already provides the page title (and fund context), and the
-            History/Pending/Scheduled tab switcher below is self-evident.
-            Sibling pages (Dashboard, Memory Book, Account) don't repeat
-            their title in-page either — this aligns Activity to the same
-            single-title pattern. */}
+        {/* Activity hero strip — added 2026-05-25 per
+            project_secondary_page_polish_pattern.md.
+            The prior comment block here said 'sibling pages (Dashboard,
+            Memory Book, Account) don't repeat their title in-page' as the
+            justification for removing the H1. That comment was correct
+            at the time but became stale once Settings + Account were
+            polished with hero strips this session — leaving Activity as
+            the only secondary page WITHOUT a sense-of-place strip.
+            Aligned now to match the polish pattern. Activity is the
+            ACCOUNT-GLOBAL surface (cross-fund) so the headline doesn't
+            name a specific child; the 1-line context names the three
+            sub-views and the inverse link points at Dashboard. Same
+            quiet register as Settings + Account: eyebrow + h1 + 1-line
+            context, 400ms / 6px / out-expo entrance. */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="px-1 mb-6"
+          data-testid="activity-hero"
+        >
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+            Activity
+          </p>
+          <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
+            Your activity
+          </h1>
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            History, pending, and scheduled — across every fund.{" "}
+            <Link href="/dashboard" className="underline underline-offset-2 hover:text-foreground">
+              Back to Dashboard →
+            </Link>
+          </p>
+        </motion.div>
 
         {/* "Needs your attention" — open action items derived
             server-side from current user + fund state. Sits ABOVE
@@ -1775,7 +1803,17 @@ export default function Activity() {
         </div>
 
         {/* ============================ HISTORY TAB ============================ */}
-        {tab === "history" && (<>
+        {/* Tab fade-ins added 2026-05-25 per the secondary-page polish
+            pattern. Each branch wraps in motion.div with a unique key
+            so the entrance animation fires on tab switch. 280ms/6px/
+            out-expo register matches Settings + Account. */}
+        {tab === "history" && (
+          <motion.div
+            key="activity-tab-history"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          >
 
         {/* 30-day money summary — replaces the old 3-stat row. The "feel it working"
             moment at the top of every Activity visit. */}
@@ -3333,12 +3371,19 @@ export default function Activity() {
             </div>
           </EnlighteningReveal>
         ))}
-        </>)}
+          </motion.div>
+        )}
         {/* ============================ END HISTORY TAB ============================ */}
 
         {/* ============================ PENDING TAB ============================ */}
         {tab === "pending" && (
-          <div data-testid="pending-content">
+          <motion.div
+            key="activity-tab-pending"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            data-testid="pending-content"
+          >
             {pendingTotalCount === 0 ? (
               <EnlighteningReveal>
                 <div style={{
@@ -3490,13 +3535,19 @@ export default function Activity() {
                 )}
               </>
             )}
-          </div>
+          </motion.div>
         )}
         {/* ============================ END PENDING TAB ============================ */}
 
         {/* ============================ SCHEDULED TAB ============================ */}
         {tab === "scheduled" && (
-          <div data-testid="scheduled-content">
+          <motion.div
+            key="activity-tab-scheduled"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            data-testid="scheduled-content"
+          >
             {scheduledTotalCount === 0 ? (
               <EnlighteningReveal>
                 <div style={{
@@ -4047,7 +4098,7 @@ export default function Activity() {
                 )}
               </>
             )}
-          </div>
+          </motion.div>
         )}
         {/* ============================ END SCHEDULED TAB ============================ */}
 
