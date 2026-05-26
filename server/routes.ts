@@ -10938,9 +10938,16 @@ export async function registerRoutes(
       if (!result) return res.status(404).json({ error: 'No chart data' });
       const timestamps: number[] = result.timestamp || [];
       const closes: (number | null)[] = result.indicators?.quote?.[0]?.close || [];
+      // ts (unix ms) added 2026-05-25 alongside the formatted date so the
+      // client can match per-gift buy dates to the closest chart point.
+      // Powers the buy-marker overlay on HoldingDetailSheet's chart —
+      // each gift to this ticker gets a small gold dot on the line at
+      // the price-when-bought. The formatted `date` stays as-is for the
+      // x-axis tick labels (Recharts renders them as categorical strings).
       const points = timestamps
         .map((ts, i) => ({
           date: new Date(ts * 1000).toLocaleString('en-US', dateFormat),
+          ts: ts * 1000,
           value: closes[i] != null ? Math.round(closes[i]! * 100) / 100 : null,
         }))
         .filter((p) => p.value != null);

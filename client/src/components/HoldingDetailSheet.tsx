@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus, TrendingDown, Users, ArrowRight, Layers, ChevronDown } from "lucide-react";
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceDot } from "recharts";
 import {
   Sheet,
   SheetContent,
@@ -68,11 +68,21 @@ interface HoldingDetailSheetProps {
   onNavigateToGifter?: (name: string) => void;
 }
 
-type PricePoint = { date: string; value: number };
+type PricePoint = { date: string; ts: number; value: number };
 type ChartRange = "1D" | "1W" | "1M" | "1Y" | "ALL";
 const CHART_RANGES: ChartRange[] = ["1D", "1W", "1M", "1Y", "ALL"];
 
-function StockPriceChart({ ticker }: { ticker: string }) {
+// Buy-marker shape — derived from per-gift records that targeted this
+// ticker. Plotted as ReferenceDots on the AreaChart at the closest
+// historical price point. Multiple gifts on the same chart point merge
+// into one marker (count > 1) so dots don't overlap visually.
+type BuyMarker = {
+  x: string;       // matches PricePoint.date (the categorical x-axis value)
+  y: number;       // price at that point (so the dot sits on the line)
+  count: number;   // how many gifts collapsed into this marker
+};
+
+function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
   const [range, setRange] = useState<ChartRange>("1Y");
   const [data, setData] = useState<PricePoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +104,64 @@ function StockPriceChart({ ticker }: { ticker: string }) {
   const color = isUp ? "#16a34a" : "#dc2626";
   const stride = Math.max(1, Math.floor((data.length || 1) / 5));
   const ticks = data.filter((_, i) => i % stride === 0 || i === data.length - 1).map((d) => d.date);
+
+  // Buy markers — for each gift to this ticker, find the closest chart
+  // point by timestamp and stack on its x. Filtered down to settled +
+  // invested gifts (pending and held aren't real buys yet). Off-range
+  // gifts (e.g., a gift 18 months ago when on 1Y view) silently skip
+  // because the closest point ends up too far from the gift date.
+  //
+  // Implementation: O(gifts x data) lookup. With data ~250 points (1Y
+  // daily) and gifts typically < 20 per ticker, this is ~5000 ops —
+  // negligible, no memoization needed.
+  const buyMarkers: BuyMarker[] = (() => {
+    if (data.length === 0) return [];
+    const tickerUpper = ticker.toUpperCase();
+    const matched = gifts.filter((g) => {
+      const status = String(g.status || "").toLowerCase();
+      if (status !== "settled" && status !== "invested") return false;
+      return String(g.selectedTicker || "").toUpperCase() === tickerUpper;
+    });
+    if (matched.length === 0) return [];
+
+    // Range tolerance: if the gift date is more than 4 intervals away
+    // from the nearest chart point, the gift is considered out-of-range
+    // for this chart timeframe. Computed from the actual data spacing
+    // so it scales across 1W (hour intervals), 1Y (day intervals), and
+    // ALL (week intervals) automatically.
+    const ms_per_interval = data.length > 1
+      ? (data[data.length - 1].ts - data[0].ts) / (data.length - 1)
+      : Number.POSITIVE_INFINITY;
+    const tolerance = ms_per_interval * 4;
+
+    const grouped = new Map<string, BuyMarker>();
+    for (const gift of matched) {
+      const giftTs = gift.createdAt ? new Date(gift.createdAt).getTime() : 0;
+      if (!giftTs) continue;
+      // Binary search would be cleaner but linear is fine at this size.
+      let closest = data[0];
+      let closestDelta = Math.abs(closest.ts - giftTs);
+      for (const pt of data) {
+        const d = Math.abs(pt.ts - giftTs);
+        if (d < closestDelta) {
+          closest = pt;
+          closestDelta = d;
+        }
+      }
+      if (closestDelta > tolerance) continue;
+      const existing = grouped.get(closest.date);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        grouped.set(closest.date, {
+          x: closest.date,
+          y: closest.value,
+          count: 1,
+        });
+      }
+    }
+    return Array.from(grouped.values());
+  })();
 
   return (
     <div className="space-y-2">
@@ -163,9 +231,49 @@ function StockPriceChart({ ticker }: { ticker: string }) {
                 dot={false}
                 activeDot={{ r: 4, fill: color }}
               />
+              {/* Buy markers — one gold ReferenceDot per (chart point, gift)
+                  pair. Multiple gifts on the same point merge into a
+                  single marker (kept as one dot; the count metadata is
+                  available if a future iteration wants to scale dot
+                  radius or show a label). Gold matches the kiddo-gold
+                  token; white stroke keeps the dot visible against both
+                  the green-shaded gain fill and the red-shaded loss
+                  fill. ifOverflow='hidden' prevents Recharts from
+                  surfacing a dot that's slightly off-domain (the
+                  computed y is the chart's actual value at the closest
+                  matched date, so this should always be in-domain, but
+                  the safeguard catches edge cases). Per 2026-05-25 audit
+                  ship — anchors the contributors block below to specific
+                  moments on the price timeline. */}
+              {buyMarkers.map((m) => (
+                // ReferenceDot rendered AFTER <Area> so it draws ON TOP
+                // (Recharts respects JSX child order for z-ordering;
+                // no isFront prop needed — and it isn't typed on this
+                // Recharts version anyway).
+                <ReferenceDot
+                  key={`buy-${m.x}-${m.count}`}
+                  x={m.x}
+                  y={m.y}
+                  r={4.5}
+                  fill="hsl(43, 75%, 55%)"
+                  stroke="white"
+                  strokeWidth={1.5}
+                  ifOverflow="hidden"
+                />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
         </div>
+      )}
+      {/* Legend for the buy markers — renders only when at least one
+          marker is on the chart so the line stays clean for tickers
+          with no on-range gifts. Keeps the gifter loop's "you bought
+          here" story legible without needing a tooltip on each dot. */}
+      {buyMarkers.length > 0 && !loading && !error && data.length >= 2 && (
+        <p className="text-[10px] text-muted-foreground/80 leading-snug px-1">
+          <span className="inline-block h-2 w-2 rounded-full mr-1.5" style={{ background: "hsl(43, 75%, 55%)", verticalAlign: "middle" }} />
+          {buyMarkers.length === 1 ? "Gold dot marks when this gift was made." : `Gold dots mark when each of the ${buyMarkers.reduce((s, m) => s + m.count, 0)} gifts to ${ticker} was made.`}
+        </p>
       )}
     </div>
   );
@@ -812,8 +920,16 @@ function HoldingDetailSheetBody({
           );
         })()}
 
-        {/* 1-year price chart */}
-        <StockPriceChart ticker={ticker} />
+        {/* Price chart with per-gift buy markers (2026-05-25). Pass
+            settledGifts (filtered upstream to settled + invested
+            statuses); the chart filters AGAIN to gifts that target
+            THIS ticker and renders one gold dot per buy at the closest
+            historical price point. Off-range gifts are silently
+            skipped — a gift made 18 months ago doesn't render on the
+            1M view, only on 1Y / ALL where the timeline includes that
+            date. Powers the visual "you bought here" anchor for the
+            contributors block below. */}
+        <StockPriceChart ticker={ticker} gifts={settledGifts} />
 
         {/* Position summary grid */}
         <div className="mt-4 grid grid-cols-2 gap-2.5">
