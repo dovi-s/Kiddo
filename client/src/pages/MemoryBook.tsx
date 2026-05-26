@@ -3503,16 +3503,21 @@ export default function MemoryBook() {
                         ))}
                       </select>
                     )}
+                    {/* Story / Timeline segmented control — small polish
+                        2026-05-25: added transition-colors so the bg + text
+                        color swap on toggle reads as a soft transition not
+                        an instant pop. Matches the considered-design register
+                        of the rest of Memory Book. */}
                     <div className="flex h-11 rounded-2xl border border-border bg-background p-1">
                       <button
                         onClick={() => setViewMode("story")}
-                        className={`rounded-xl px-3 text-sm font-semibold ${viewMode === "story" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground"}`}
+                        className={`rounded-xl px-3 text-sm font-semibold transition-colors duration-200 ${viewMode === "story" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Story
                       </button>
                       <button
                         onClick={() => setViewMode("timeline")}
-                        className={`rounded-xl px-3 text-sm font-semibold ${viewMode === "timeline" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground"}`}
+                        className={`rounded-xl px-3 text-sm font-semibold transition-colors duration-200 ${viewMode === "timeline" ? "bg-[hsl(var(--kiddo-evergreen))] text-white" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         Timeline
                       </button>
