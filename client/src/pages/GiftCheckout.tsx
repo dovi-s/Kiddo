@@ -22,7 +22,28 @@ import { SponsorPlusCard } from "@/components/SponsorPlusCard";
 
 const AMOUNTS = [25, 50, 100, 250];
 const PAGE_MAX = "kiddo-canvas px-4 sm:px-5";
-const STOCK_PICKS = [
+// Two tiers added 2026-05-25 audit. The server-side ADMIN_ASSET_UNIVERSE
+// at server/marketQuotes.ts marks 17 stocks as source='stock_pick' (the
+// canonical approved gifter-picker list). The client picker had been
+// showing only 9 of them since launch — 8 approved stocks (Adobe, Airbnb,
+// Chewy, Comcast, Domino's, Duolingo, Nintendo, Target) were silently
+// hidden. Several of the missing 8 are obviously kid-relevant (Nintendo,
+// Duolingo, Domino's, Chewy) and should never have been excluded.
+//
+// Tier structure: FEATURED renders by default (the curated "obvious"
+// picks at first glance — preserves the existing UX density of a
+// ~2-column 5-row grid). ADDITIONAL renders behind a 'Show more
+// options' expander, so the full approved universe is reachable
+// without forcing 17 tiles on the initial render.
+//
+// Both tiers share the same shape: { symbol, name, price, tagline }.
+// The live-quotes effect at line ~453 fetches quotes for EVERY symbol
+// in both arrays via STOCK_PICKS (the union), so live prices keep
+// flowing for both tiers without per-tier plumbing.
+//
+// Fallback prices are deliberately rough — they only render when the
+// live-quotes API fails. Real prices come via /api/market/quotes.
+const FEATURED_STOCK_PICKS = [
   { symbol: "DIS", name: "Disney", price: 106.42, tagline: "for the magic" },
   { symbol: "AAPL", name: "Apple", price: 214.38, tagline: "for the future" },
   { symbol: "NKE", name: "Nike", price: 92.14, tagline: "for the ones who go for it" },
@@ -33,6 +54,17 @@ const STOCK_PICKS = [
   { symbol: "SPOT", name: "Spotify", price: 618.92, tagline: "for the music lovers" },
   { symbol: "RBLX", name: "Roblox", price: 37.44, tagline: "for the gamers" },
 ] as const;
+const ADDITIONAL_STOCK_PICKS = [
+  { symbol: "NTDOY", name: "Nintendo", price: 13.40, tagline: "for the players" },
+  { symbol: "DUOL", name: "Duolingo", price: 200.00, tagline: "for the lifelong learners" },
+  { symbol: "DPZ", name: "Domino's", price: 470.00, tagline: "for the Friday night classic" },
+  { symbol: "CHWY", name: "Chewy", price: 30.00, tagline: "for the animal lovers" },
+  { symbol: "ABNB", name: "Airbnb", price: 130.00, tagline: "for the travelers" },
+  { symbol: "ADBE", name: "Adobe", price: 520.00, tagline: "for the makers" },
+  { symbol: "TGT", name: "Target", price: 150.00, tagline: "for the everyday family" },
+  { symbol: "CMCSA", name: "Comcast", price: 40.00, tagline: "for the family movie nights" },
+] as const;
+const STOCK_PICKS = [...FEATURED_STOCK_PICKS, ...ADDITIONAL_STOCK_PICKS] as const;
 type StockPick = Omit<(typeof STOCK_PICKS)[number], "price"> & {
   price: number;
   quoteSource?: string;
@@ -254,6 +286,14 @@ export default function GiftCheckout() {
   const [customAmount, setCustomAmount] = useState("");
   const [executionModel, setExecutionModel] = useState<ExecutionModel>("auto");
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+  // Stock-picker expansion state. The picker shows FEATURED 9 by default
+  // (curated landing-density); tapping "Show more options" expands to
+  // include the ADDITIONAL 8 approved stocks. Re-collapses when the
+  // gifter switches to family-default mode (no point keeping 17 tiles
+  // visible if the picker is disabled). Per 2026-05-25 audit closing
+  // the gap between the server's 17 approved picker stocks and the
+  // client's hardcoded 9.
+  const [showMoreStocks, setShowMoreStocks] = useState(false);
   const [senderName, setSenderName] = useState("");
   // Explicit anonymous flag — replaces the previous infer-from-blank
   // pattern. When true, sender name is hidden from every public surface
@@ -2147,24 +2187,63 @@ export default function GiftCheckout() {
                 <div className={`kiddo-card p-5 transition-opacity duration-200 ${executionModel === "family" ? "opacity-40 pointer-events-none select-none" : ""}`}>
                   <p className="text-sm font-semibold text-foreground">Pick a company that means something.</p>
                   <p className="mt-1 text-xs text-muted-foreground">This is the personal part of the gift.</p>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {stockPicks.map((stock) => {
-                      const active = executionModel !== "family" && (executionModel === "pick" ? selectedStock : familyDefaultStock.symbol) === stock.symbol;
-                      return (
-                        <button
-                          key={stock.symbol}
-                          type="button"
-                          className={`rounded-xl border p-3 text-left transition-colors ${active ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen)/0.06)]" : "border-border hover:border-[hsl(var(--kiddo-evergreen)/0.4)]"}`}
-                          onClick={() => { haptic("selection"); setExecutionModel("pick"); setSelectedStock(stock.symbol); }}
-                          data-testid={`button-stock-${stock.symbol}`}
-                        >
-                          <StockLogo ticker={stock.symbol} size={32} className="mb-1.5" />
-                          <p className="text-sm font-semibold text-foreground leading-tight">{stock.name}</p>
-                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {/* 17-stock picker with default-9 + expander 2026-05-25.
+                      Computes visible tiles = FEATURED ++ (showMore ?
+                      ADDITIONAL : []). One special case: when the
+                      currently-selected ticker is in ADDITIONAL (e.g.,
+                      gifter picked Nintendo, then collapsed, then opens
+                      this card again), auto-expand so the selection stays
+                      visible — otherwise the collapsed view would show
+                      Disney as 'active' while the actual selection is
+                      Nintendo hidden under the expander. */}
+                  {(() => {
+                    const additionalSymbols = new Set(ADDITIONAL_STOCK_PICKS.map((s) => s.symbol as string));
+                    const selectedIsInAdditional = !!selectedStock && additionalSymbols.has(selectedStock);
+                    const expanded = showMoreStocks || selectedIsInAdditional;
+                    const visibleStocks = expanded ? stockPicks : stockPicks.filter((s) => !additionalSymbols.has(s.symbol));
+                    return (
+                      <>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          {visibleStocks.map((stock) => {
+                            const active = executionModel !== "family" && (executionModel === "pick" ? selectedStock : familyDefaultStock.symbol) === stock.symbol;
+                            return (
+                              <button
+                                key={stock.symbol}
+                                type="button"
+                                className={`rounded-xl border p-3 text-left transition-colors ${active ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen)/0.06)]" : "border-border hover:border-[hsl(var(--kiddo-evergreen)/0.4)]"}`}
+                                onClick={() => { haptic("selection"); setExecutionModel("pick"); setSelectedStock(stock.symbol); }}
+                                data-testid={`button-stock-${stock.symbol}`}
+                              >
+                                <StockLogo ticker={stock.symbol} size={32} className="mb-1.5" />
+                                <p className="text-sm font-semibold text-foreground leading-tight">{stock.name}</p>
+                                <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{stock.tagline}</p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {!expanded && (
+                          <button
+                            type="button"
+                            onClick={() => { haptic("selection"); setShowMoreStocks(true); }}
+                            className="mt-3 w-full rounded-xl border border-dashed border-border bg-background py-2 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.04)] transition-colors"
+                            data-testid="button-show-more-stocks"
+                          >
+                            Show {ADDITIONAL_STOCK_PICKS.length} more options
+                          </button>
+                        )}
+                        {showMoreStocks && !selectedIsInAdditional && (
+                          <button
+                            type="button"
+                            onClick={() => { haptic("selection"); setShowMoreStocks(false); }}
+                            className="mt-3 w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            data-testid="button-show-fewer-stocks"
+                          >
+                            Show fewer
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
                   {executionModel === "pick" && selectedStock && (
                     <button type="button" className="mt-3 text-xs text-muted-foreground underline" onClick={() => { setExecutionModel("auto"); setSelectedStock(null); }}>
                       Use family default instead
