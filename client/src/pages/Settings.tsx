@@ -3919,6 +3919,43 @@ const [editFundName, setEditFundName] = useState("");
           </SectionCard>
         ) : null}
 
+        {/* Settings hero strip — added 2026-05-25 to close the design-debt
+            gap between Dashboard's rich hero ceremony and the secondary
+            pages' "form-config" baseline. Settings doesn't need pyrotechnics
+            (it's settings), but it does need a sense of place. The eyebrow
+            + headline + 1-line context tells the parent WHERE they are and
+            FOR WHICH FUND they're configuring — same anchoring discipline
+            Apple's iOS Settings uses (clean rows + considered section
+            headers). The fund-scope language ("Emma's fund" + Account
+            settings link) was previously buried below the tab row; moved
+            up so it reads as the page's intent statement, not a
+            footnote. Quiet motion: fade-in from 6px down, no count-ups,
+            no gradient — restrained register matches "settings" semantics.
+            Only renders when there's a primaryFund (skips the no-fund
+            empty state that's already handled upstream). */}
+        {primaryFund && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+            className="px-1"
+            data-testid="settings-hero"
+          >
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+              Settings
+            </p>
+            <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
+              {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "Your fund"}
+            </h1>
+            <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+              Changes apply to this fund.{" "}
+              <Link href="/account" className="underline underline-offset-2 hover:text-foreground">
+                Account settings →
+              </Link>
+            </p>
+          </motion.div>
+        )}
+
         <div className="space-y-2">
           <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="settings-tabs" role="tablist" aria-label="Settings sections">
             {/* "Membership" tab removed from the in-app navigation
@@ -3959,12 +3996,23 @@ const [editFundName, setEditFundName] = useState("");
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-muted-foreground px-0.5">
-            Changes here apply to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} only.{" "}
-            <Link href="/account" className="underline underline-offset-2 hover:text-foreground">Account settings →</Link>
-          </p>
+          {/* Inline 'Changes apply to this fund · Account settings →'
+              footnote moved into the Settings hero strip above 2026-05-25.
+              Keeping the helper anchor in one place — having the same
+              line ABOVE and BELOW the tab row was duplicative once the
+              hero shipped. The hero strip's version is the single
+              source of truth for the per-fund / account-global
+              distinction. */}
         </div>
 
+        {/* Tab-fade transitions added 2026-05-25. Each branch wraps in
+            a motion.div keyed by the tab name so switching tabs reads
+            as a soft fade-in, not an instant swap. No exit animation
+            — only one branch can be active at a time so the previous
+            unmounts immediately when the new one mounts; the entrance
+            fade is what carries the "considered design" feeling. Quiet
+            register: 280ms / 6px / out-expo. Matches the page-hero
+            entrance timing for visual coherence. */}
         {settingsTab === "child" && primaryFund && (
           // The full Child-tab body now lives in FundSettingsChildPanel
           // (chunk 9). Same composition, same eight cards, same order.
@@ -3977,19 +4025,33 @@ const [editFundName, setEditFundName] = useState("");
           // nav entry, and the sheet's split-brain UX bounced every
           // write action back here anyway. Settings is now the single
           // mount point.)
-          <FundSettingsChildPanel
-            fund={primaryFund as any}
-            user={user as any}
-            userPlan={userPlan}
-            kidViewQueryEnabled={settingsTab === "child"}
-            onEditFund={() => setEditFundOpen(true)}
-            onOpenInviteModal={() => setCollabModalOpen(true)}
-            onOpenCloseDialog={() => setCloseFundOpen(true)}
-          />
+          <motion.div
+            key="settings-tab-child"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <FundSettingsChildPanel
+              fund={primaryFund as any}
+              user={user as any}
+              userPlan={userPlan}
+              kidViewQueryEnabled={settingsTab === "child"}
+              onEditFund={() => setEditFundOpen(true)}
+              onOpenInviteModal={() => setCollabModalOpen(true)}
+              onOpenCloseDialog={() => setCloseFundOpen(true)}
+            />
+          </motion.div>
         )}
 
         {settingsTab === "gifts" && (
-          <div className="space-y-4" data-testid="settings-gifts-panel">
+          <motion.div
+            key="settings-tab-gifts"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-4"
+            data-testid="settings-gifts-panel"
+          >
             {/* Gift page group */}
             <SectionCard>
               <div className="p-5">
@@ -4028,7 +4090,7 @@ const [editFundName, setEditFundName] = useState("");
                 ) : null}
               </div>
             </SectionCard>
-          </div>
+          </motion.div>
         )}
 
         {settingsTab === "membership" && (
@@ -4401,7 +4463,14 @@ const [editFundName, setEditFundName] = useState("");
         )}
 
         {settingsTab === "notifications" && (
-          <div className="space-y-4" data-testid="settings-notifications-panel">
+          <motion.div
+            key="settings-tab-notifications"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-4"
+            data-testid="settings-notifications-panel"
+          >
             <EmailPreferenceCenterCard />
 
             <SectionCard>
@@ -4622,11 +4691,18 @@ const [editFundName, setEditFundName] = useState("");
                 </Button>
               </div>
             </SectionCard>
-          </div>
+          </motion.div>
         )}
 
         {settingsTab === "money" && (
-          <div className="space-y-4" data-testid="settings-money-panel">
+          <motion.div
+            key="settings-tab-money"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-4"
+            data-testid="settings-money-panel"
+          >
 
             {/* ── Investing group ── */}
             <p className="kiddo-section-label">Investing</p>
@@ -4839,7 +4915,7 @@ const [editFundName, setEditFundName] = useState("");
                 only when GET /api/me/tax-profile returns isKidOwner=true.
                 Per AGE_18_HANDOFF_SPEC.md bucket 3. */}
             <KidOwnerTaxSection />
-          </div>
+          </motion.div>
         )}
 
         <TrustMicroStrip />
