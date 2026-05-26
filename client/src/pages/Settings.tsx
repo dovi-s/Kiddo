@@ -3944,11 +3944,74 @@ const [editFundName, setEditFundName] = useState("");
             <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
               Settings
             </p>
-            <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
-              {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "Your fund"}
-            </h1>
+            {/* Multi-fund parents get an in-place fund switcher on the
+                headline. The per-fund tabs below (Child / Money / Gifts)
+                silently scope to ONE child, so with several kids a bare
+                "this fund" reads as ambiguous — "which one did it land
+                on?" Naming the child AND making it a picker answers both
+                "which fund am I editing" and "how do I switch" without
+                leaving Settings. Single-fund parents keep the static
+                headline; there's nothing to disambiguate. Reuses the
+                pre-existing selectSettingsFund + settingsFundMenuOpen
+                plumbing (state, ref, outside-click/Escape close). */}
+            {funds.length > 1 ? (
+              <div className="relative mt-1 w-fit" ref={settingsFundMenuRef}>
+                <h1 className="font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
+                  <button
+                    type="button"
+                    onClick={() => { setSettingsFundMenuOpen((o) => !o); haptic("selection"); }}
+                    className="group inline-flex items-center gap-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-haspopup="listbox"
+                    aria-expanded={settingsFundMenuOpen}
+                    data-testid="settings-fund-switcher"
+                  >
+                    {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "This fund"}
+                    <ChevronDown
+                      size={20}
+                      className={`shrink-0 text-muted-foreground transition-transform group-hover:text-foreground ${settingsFundMenuOpen ? "rotate-180" : ""}`}
+                      aria-hidden
+                    />
+                  </button>
+                </h1>
+                {settingsFundMenuOpen && (
+                  <div
+                    role="listbox"
+                    aria-label="Choose a fund to configure"
+                    className="absolute left-0 z-20 mt-1.5 max-h-72 w-64 overflow-auto rounded-2xl border border-border bg-card p-1.5 shadow-lg"
+                    data-testid="settings-fund-dropdown"
+                  >
+                    {funds.map((f: any) => {
+                      const selected = String(f.id) === String(primaryFund?.id);
+                      const name = capFirst(f.recipientFirstName) || f.name || "Fund";
+                      return (
+                        <button
+                          key={f.id}
+                          type="button"
+                          role="option"
+                          aria-selected={selected}
+                          onClick={() => selectSettingsFund(f)}
+                          className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${selected ? "bg-[hsl(var(--kiddo-cream))]" : "hover:bg-muted/60"}`}
+                          data-testid={`settings-fund-option-${f.id}`}
+                        >
+                          <span className="truncate text-sm font-semibold text-foreground">{name}'s fund</span>
+                          {selected && <Check size={16} className="shrink-0 text-foreground" aria-hidden />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
+                {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "Your fund"}
+              </h1>
+            )}
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-              Changes apply to this fund.{" "}
+              {funds.length > 1 ? (
+                <>These settings apply only to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund above"} — tap the name to switch child.{" "}</>
+              ) : (
+                <>Changes apply to this fund.{" "}</>
+              )}
               <Link href="/account" className="underline underline-offset-2 hover:text-foreground">
                 Account settings →
               </Link>
