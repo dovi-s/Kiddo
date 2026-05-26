@@ -1706,6 +1706,14 @@ export default function Activity() {
             sub-views and the inverse link points at Dashboard. Same
             quiet register as Settings + Account: eyebrow + h1 + 1-line
             context, 400ms / 6px / out-expo entrance. */}
+        {/* Hero copy fix 2026-05-25: was 'History, pending, and scheduled
+            — across every fund' which was FACTUALLY WRONG. Activity is
+            per-fund-scoped (filters via activeFundIdForActivity at line
+            833). The 'across every fund' phrasing got copied from the
+            Account hero's framing and slipped past review. Honest copy
+            now: Activity reflects whichever fund is active in the
+            AppHeader switcher. Per-fund context comes through the
+            AppHeader's fund chip; the hero just anchors the page. */}
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1720,7 +1728,7 @@ export default function Activity() {
             Your activity
           </h1>
           <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-            History, pending, and scheduled — across every fund.{" "}
+            History, pending, and scheduled for this fund.{" "}
             <Link href="/dashboard" className="underline underline-offset-2 hover:text-foreground">
               Back to Dashboard →
             </Link>
@@ -3525,6 +3533,32 @@ export default function Activity() {
                                 <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3 }}>
                                   Into {c.recipientFirstName ? `${capFirst(c.recipientFirstName)}'s` : "the"} fund · {c.frequency}
                                 </p>
+                                {/* Manage link added 2026-05-25 — user-flagged
+                                    that pending 'Coming soon' rows had no
+                                    action ('shouldnt i be able to adjust
+                                    something in pending like cancel it'). The
+                                    full management UI (pause, resume, cancel,
+                                    top-up) lives on the Scheduled tab where
+                                    pauseToggleMutation + cancelContribMutation
+                                    are already wired. Routing here keeps
+                                    Pending visually clean (it's a 'peek at
+                                    what's coming' surface) while giving the
+                                    user a one-tap path to act. ?tab=scheduled
+                                    &highlight={id} triggers the existing
+                                    scroll-to-highlight helper, so the user
+                                    lands on Scheduled with this exact row
+                                    pre-scrolled + outlined. */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    haptic("selection");
+                                    navigate(`/activity?tab=scheduled&highlight=${encodeURIComponent(String(c.id))}`);
+                                  }}
+                                  className="mt-2 text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline underline-offset-2"
+                                  data-testid={`upcoming-manage-${c.id}`}
+                                >
+                                  Pause or cancel →
+                                </button>
                               </div>
                             </div>
                           );
