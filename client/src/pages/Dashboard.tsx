@@ -1504,6 +1504,14 @@ export default function Dashboard() {
     title: string;
     description: string;
   } | null>(null);
+  // First-gift ceremony dismissal token. Incrementing this forces the
+  // celebration card's IIFE to re-evaluate the localStorage flag. Pure
+  // dismissed-state nudge; the actual persistence lives in localStorage
+  // so it survives refresh + new sessions. Without this, the
+  // queryClient.invalidateQueries shortcut might not trigger a re-render
+  // (cached funds data may be unchanged), leaving the card visible after
+  // dismiss. Bug caught in the 2026-05-25 review pass.
+  const [firstGiftDismissTick, setFirstGiftDismissTick] = useState(0);
   const oneTimeContributionAmount = Number.parseFloat(oneTimeAmount || "0");
   const oneTimeEstimatedRailOptions = useMemo(() => {
     const amount = Number.isFinite(oneTimeContributionAmount) ? Math.max(0, oneTimeContributionAmount) : 0;
@@ -4707,8 +4715,14 @@ export default function Dashboard() {
           const dismiss = () => {
             haptic("light");
             try { window.localStorage.setItem(STORAGE_KEY, new Date().toISOString()); } catch {}
-            // Force re-render by bumping the active-fund query — re-rendering Dashboard re-reads localStorage and the card disappears.
-            queryClient.invalidateQueries({ queryKey: ["/api/funds"] }).catch(() => {});
+            // Force re-render via state tick. invalidateQueries alone
+            // isn't reliable here — if the funds query data hasn't
+            // changed (just-fetched + cached), refetch returns the
+            // same reference and React skips the re-render. The state
+            // tick guarantees the IIFE re-runs and re-reads the now-
+            // set localStorage flag. Bug caught in the 2026-05-25
+            // review pass.
+            setFirstGiftDismissTick((t) => t + 1);
           };
           return (
             <motion.section

@@ -1858,34 +1858,67 @@ export default function GiftCheckout() {
                 <p className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">Most people give $50 or $100</p>
                 <h1 className="mt-2 font-heading text-2xl md:text-3xl font-semibold text-foreground">How much do you want to give {recipientLooksLikeFund ? "this child" : recipientName}?</h1>
                 <p className="mt-2 text-sm text-muted-foreground">Choose a quick amount, or enter your own. The gift can become part of their story today.</p>
+                {/* Per-tile consequence preview added 2026-05-25 per the
+                    first-principles audit. Pre-this-commit, each amount
+                    tile showed amount + tagline; the projection of "what
+                    this becomes at 18" only appeared AFTER the user
+                    clicked (via amountProjection card below the grid).
+                    Now each tile carries its own micro-projection so the
+                    user sees the consequence INSIDE the choice — every
+                    amount option visually anchors to "this is what your
+                    gift compounds to" before commitment. The conversion
+                    moment is the gifter's gift moment; making the
+                    consequence legible at choice-time is the highest-
+                    ROI polish on the gift flow.
+
+                    Routes through the same compoundGrowth helper as the
+                    main amountProjection card; same 7% rate, same
+                    yearsUntil18 horizon. Single source of truth.
+
+                    Only renders when yearsUntil18 > 0 (a kid past
+                    majority is shown the existing projection-less tile)
+                    and when the projected value would be meaningfully
+                    different from the input (gain > $1; for kids ~3
+                    months pre-majority the compound add is sub-dollar
+                    and the line would read as wallpaper). */}
                 <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-                  {AMOUNTS.map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      className={`tap-bounce rounded-2xl border px-4 py-4 text-left transition-colors ${!showCustom && selectedAmount === amt ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen))] text-white shadow-premium-sm" : "border-border bg-muted/70 text-foreground hover:bg-muted"}`}
-                      onClick={() => {
-                        haptic("selection");
-                        setSelectedAmount(amt);
-                        setShowCustom(false);
-                        setCustomAmount("");
-                        trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", {
-                          baselineEvent: "gift_amount_selected",
-                          amount: amt,
-                          amountSource: "preset",
-                        });
-                      }}
-                      data-testid={`button-amount-${amt}`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-lg font-bold">${amt}</p>
-                        {amt === 50 && <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${!showCustom && selectedAmount === amt ? "bg-white/20 text-white" : "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]"}`}>Most common</span>}
-                      </div>
-                      <p className={`mt-2 text-[11px] ${!showCustom && selectedAmount === amt ? "text-white/85" : "text-muted-foreground"}`}>
-                        {amt === 25 ? "A small gift, a real start" : amt === 50 ? "Grows more than a toy ever would" : amt === 100 ? "More than a card. More than cash." : "A head start on their future"}
-                      </p>
-                    </button>
-                  ))}
+                  {AMOUNTS.map((amt) => {
+                    const isActive = !showCustom && selectedAmount === amt;
+                    const projected = yearsUntil18 > 0 ? compoundGrowth(amt, 0.07, yearsUntil18) : null;
+                    const showProjection = projected !== null && projected - amt > 1;
+                    return (
+                      <button
+                        key={amt}
+                        type="button"
+                        className={`tap-bounce rounded-2xl border px-4 py-4 text-left transition-colors ${isActive ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen))] text-white shadow-premium-sm" : "border-border bg-muted/70 text-foreground hover:bg-muted"}`}
+                        onClick={() => {
+                          haptic("selection");
+                          setSelectedAmount(amt);
+                          setShowCustom(false);
+                          setCustomAmount("");
+                          trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", {
+                            baselineEvent: "gift_amount_selected",
+                            amount: amt,
+                            amountSource: "preset",
+                          });
+                        }}
+                        data-testid={`button-amount-${amt}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-lg font-bold">${amt}</p>
+                          {amt === 50 && <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${isActive ? "bg-white/20 text-white" : "bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))]"}`}>Most common</span>}
+                        </div>
+                        <p className={`mt-2 text-[11px] ${isActive ? "text-white/85" : "text-muted-foreground"}`}>
+                          {amt === 25 ? "A small gift, a real start" : amt === 50 ? "Grows more than a toy ever would" : amt === 100 ? "More than a card. More than cash." : "A head start on their future"}
+                        </p>
+                        {showProjection && (
+                          <p className={`mt-1.5 text-[10.5px] font-semibold tabular-nums ${isActive ? "text-white/90" : "text-[hsl(var(--kiddo-evergreen))]"}`} data-testid={`amount-projection-${amt}`}>
+                            → ~${Math.round(projected!).toLocaleString()} at {fundMajorityAge}
+                          </p>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
                 <button type="button" className={`mt-3 w-full rounded-2xl border px-4 py-3 text-left transition-colors ${showCustom ? "border-[hsl(var(--kiddo-evergreen))] bg-[hsl(var(--kiddo-evergreen)/0.06)]" : "border-border bg-background"}`} onClick={() => { haptic("selection"); setShowCustom(true); trackGiftEvent("gift_amount_selected", "gift_link_opened_to_amount_selected", { baselineEvent: "gift_amount_selected", amount: null, amountSource: "custom_opened" }); }} data-testid="button-custom-amount">
                   <span className="text-sm font-medium text-foreground">Enter your own amount</span>
