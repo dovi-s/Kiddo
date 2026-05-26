@@ -770,8 +770,17 @@ export default function KidView() {
   // (balance count-up hook moved above the early-return guards — see
   // the comment block before the metaLoading check.)
 
+  // monthsUntil18 / yearsUntil18Fallback — variable names retain the "18"
+  // suffix for backwards compat with the server's field name (server has
+  // the same naming-but-correct-semantics situation; see
+  // server/routes.ts:515 comment block). The server's field IS majority-
+  // aware regardless of name. The fallback below is what fires when the
+  // server omits the field — fixed 2026-05-25 to use the fund's actual
+  // majority age instead of a hardcoded 18, so a CA / MS / etc. teen
+  // sees the right years-to-majority even on the fallback path.
   const monthsUntil18 = (content as any).monthsUntil18 as number | null | undefined;
-  const yearsUntil18Fallback = content.age !== null ? Math.max(0, 18 - content.age) : null;
+  const fundMajorityAge = Number((content.fund as any)?.majorityAge) || 18;
+  const yearsUntil18Fallback = content.age !== null ? Math.max(0, fundMajorityAge - content.age) : null;
   const timeUntil18Display: string = (() => {
     if (monthsUntil18 !== null && monthsUntil18 !== undefined) {
       if (monthsUntil18 === 0) return "Now";
@@ -1406,7 +1415,7 @@ export default function KidView() {
 
             {content.phase === "teen" && (
               <>
-                {content.age !== null && content.age < 18 && (
+                {content.age !== null && content.age < ((content.fund as any)?.majorityAge || 18) && (
                   <section className="rounded-[28px] border border-[hsl(var(--kiddo-gold)/0.30)] bg-[hsl(var(--kiddo-gold)/0.06)] p-6">
                     {/* The at-18 callout — the moment of legal handoff, framed as
                         the kid's agency moment, not a process detail. Order matters:
