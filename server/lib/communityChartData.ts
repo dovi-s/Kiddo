@@ -59,11 +59,28 @@ export function computeCommunityChartData(gifts: GiftLike[], fund: FundLike): Co
     return ["processing", "invested", "settled", "host_hold"].includes(s);
   });
 
-  // Aggregate by sender_email (the canonical identity). Display
-  // label is the most-recent non-empty sender_name; anonymous gifts
-  // collapse into a single bucket so the chart doesn't lie about
-  // "5 contributors" when 3 are repeat anonymous.
+  // Aggregate by canonical identity. Three identity tiers exist:
+  //   1. Real email → bucket by lowercased email (gifters who left
+  //      contact info, including magic-link gifters).
+  //   2. No email but a real name → bucket by lowercased name (handles
+  //      "Aunt Sally" cash gifts where the parent typed a name but
+  //      didn't capture an email; two such gifts aggregate by name).
+  //   3. Anonymous → bucket as __anon__ (the explicit isAnonymous flag
+  //      OR the implicit "no email + name missing or matches the
+  //      anon-label string" case). All anonymous gifts across the
+  //      lifetime of the fund collapse into ONE legend entry. Previous
+  //      behavior bucketed by `__unnamed_${gift_id}__` which created
+  //      a separate "Someone who loves Emma" entry per gift —
+  //      audit-flagged 2026-05-26.
+  //
+  // Why the implicit-anon catch matters: gifters can land in case (3)
+  // through three paths — explicit anonymous toggle, name field left
+  // empty entirely, or typing the anon-label string into the name
+  // field (some gifters type "Anonymous" or "Someone who loves Emma"
+  // themselves). All three should aggregate; previously only the
+  // first did.
   const anonLabel = `Someone who loves ${fund.recipientFirstName || "this kid"}`;
+  const anonLabelLower = anonLabel.toLowerCase();
   type GifterAgg = {
     email: string;
     label: string;
@@ -73,22 +90,49 @@ export function computeCommunityChartData(gifts: GiftLike[], fund: FundLike): Co
   const aggByEmail = new Map<string, GifterAgg>();
 
   for (const g of eligibleGifts) {
-    const isAnon = Boolean(g.isAnonymous);
-    const rawEmail = String(g.senderEmail || "").trim().toLowerCase();
-    const groupKey = isAnon ? "__anon__" : (rawEmail || `__unnamed_${g.id || Math.random()}__`);
-    const rawName = String(g.senderName || "").trim();
-    const displayLabel = isAnon ? anonLabel : (rawName || "A gifter");
     const amount = parseFloat(String(g.netAmount || g.amount || "0")) || 0;
     if (amount <= 0) continue;
+
+    const isAnonFlag = Boolean(g.isAnonymous);
+    const rawEmail = String(g.senderEmail || "").trim().toLowerCase();
+    const rawName = String(g.senderName || "").trim();
+    const rawNameLower = rawName.toLowerCase();
+    // The name "looks anonymous" if it's empty OR matches the system
+    // anon-label string (case-insensitive). The case-insensitive match
+    // catches "Anonymous", "anonymous", "Someone who loves Emma",
+    // "someone who loves emma", etc.
+    const nameLooksAnon = !rawName
+      || rawNameLower === anonLabelLower
+      || rawNameLower === "anonymous";
+    const treatAsAnon = isAnonFlag || (!rawEmail && nameLooksAnon);
+
+    let groupKey: string;
+    let displayLabel: string;
+    if (treatAsAnon) {
+      groupKey = "__anon__";
+      displayLabel = anonLabel;
+    } else if (rawEmail) {
+      groupKey = rawEmail;
+      displayLabel = rawName || "A gifter";
+    } else {
+      // No email but has a non-anon-looking name. Bucket by lowercased
+      // name so multiple "Aunt Sally" gifts (without emails) aggregate
+      // into one band instead of N separate bands. The `__name_`
+      // prefix prevents collision with email-based keys (an email like
+      // `__name_sally@x.com` can't exist).
+      groupKey = `__name_${rawNameLower}__`;
+      displayLabel = rawName;
+    }
+
     const at = g.createdAt ? new Date(g.createdAt as any).toISOString() : new Date().toISOString();
     let entry = aggByEmail.get(groupKey);
     if (!entry) {
       entry = { email: groupKey, label: displayLabel, totalUsd: 0, events: [] };
       aggByEmail.set(groupKey, entry);
-    } else if (!isAnon && rawName && entry.label === "A gifter") {
+    } else if (!treatAsAnon && rawName && entry.label === "A gifter") {
       // Backfill display label if a later gift carried a name and
-      // earlier didn't (most common case: gifter signed in with
-      // magic link after their first anon-name gift).
+      // earlier didn't (most common case: email-only first gift,
+      // then a later gift adds the gifter's name).
       entry.label = rawName;
     }
     entry.totalUsd += amount;

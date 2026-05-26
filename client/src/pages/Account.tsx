@@ -855,11 +855,29 @@ export default function Account() {
           <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
             {((user as any)?.preferredName?.trim() || (user as any)?.firstName?.trim()) || "Your account"}
           </h1>
+          {/* Cross-link to per-fund settings. From the Account
+              context the user expects a fund picker, not a jump
+              into whichever fund happens to be the active one
+              (that drops them into a random child's settings page
+              without picking — flagged in audit 2026-05-26).
+              Single-fund parents skip the picker since there's
+              only one destination; multi-fund parents land on
+              /funds where they pick which child's settings to
+              edit. Zero-funds parents shouldn't see this link at
+              all (they have no per-fund settings yet). */}
           <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-            Settings that apply to you across every fund.{" "}
-            <Link href="/settings" className="underline underline-offset-2 hover:text-foreground">
-              Per-fund settings →
-            </Link>
+            Settings that apply to you across every fund.{funds.length > 0 && (
+              <>
+                {" "}
+                <Link
+                  href={funds.length === 1 ? "/settings" : "/funds?then=settings"}
+                  className="underline underline-offset-2 hover:text-foreground"
+                  data-testid="link-per-fund-settings"
+                >
+                  {funds.length === 1 ? "Per-fund settings →" : "Choose a fund to edit →"}
+                </Link>
+              </>
+            )}
           </p>
         </motion.div>
 

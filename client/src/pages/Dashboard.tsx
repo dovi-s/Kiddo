@@ -8904,24 +8904,36 @@ export default function Dashboard() {
                 // Type-aware empty-state copy. Tiles are 140px wide, so each line stays terse;
                 // the warm aspiration ("share the link and watch it grow") shows up via the
                 // emoji + verb pair rather than a paragraph the tile can't fit.
+                // Empty-state copy per occasion type. The word "fund"
+                // is intentionally avoided here — the footer says
+                // "All occasions and goals go into the same fund"
+                // (one fund per kid, money is fungible), so a tile
+                // labeled "Cake fund" / "Cap & gown fund" /
+                // "Welcome fund" inside that section directly
+                // contradicts the footer (reads as if the kid has
+                // a separate cake fund AND a main fund). Each tile
+                // is an OCCASION the parent is saving toward,
+                // pointing at the kid's single fund. Audit-flagged
+                // 2026-05-26. Locked: no "X fund" wording on tile
+                // empty states.
                 const emptyStateByType: Record<string, string> = {
-                  car: "🚗 Vroom from $0",
-                  graduation: "🎓 Cap & gown fund",
-                  birthday: "🎂 Cake fund",
-                  holiday: "🎄 Holiday glow",
-                  baby_shower: "🍼 Welcome fund",
-                  religious_holiday: "✡️ Tradition fund",
+                  car: "🚗 Toward first wheels",
+                  graduation: "🎓 Toward cap & gown",
+                  birthday: "🎂 Toward their cake day",
+                  holiday: "🎄 Toward holiday glow",
+                  baby_shower: "🍼 Welcome to the world",
+                  religious_holiday: "✡️ Toward family traditions",
                   just_because: "💛 Start the story",
                 };
                 const emptyStateByName = (eventName: string): string | null => {
                   const n = eventName.toLowerCase();
-                  if (n.includes("car")) return "🚗 Vroom from $0";
-                  if (n.includes("college") || n.includes("school")) return "📚 College fund";
-                  if (n.includes("graduation")) return "🎓 Cap & gown fund";
-                  if (n.includes("hanukkah")) return "🕎 Festival fund";
-                  if (n.includes("christmas") || n.includes("holiday")) return "🎄 Holiday glow";
-                  if (n.includes("birthday")) return "🎂 Cake fund";
-                  if (n.includes("trip") || n.includes("travel")) return "🌍 Adventure fund";
+                  if (n.includes("car")) return "🚗 Toward first wheels";
+                  if (n.includes("college") || n.includes("school")) return "📚 Toward college";
+                  if (n.includes("graduation")) return "🎓 Toward cap & gown";
+                  if (n.includes("hanukkah")) return "🕎 Toward the festival";
+                  if (n.includes("christmas") || n.includes("holiday")) return "🎄 Toward holiday glow";
+                  if (n.includes("birthday")) return "🎂 Toward their cake day";
+                  if (n.includes("trip") || n.includes("travel")) return "🌍 Toward the adventure";
                   return null;
                 };
 

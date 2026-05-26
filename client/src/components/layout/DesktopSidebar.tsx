@@ -252,7 +252,22 @@ export function DesktopSidebar() {
       // Clicking still drills into the last-active fund's
       // Dashboard.
       label: suppressFundChrome ? "Home" : (capFirst(activeFund?.recipientFirstName) || "Home"),
-      isActive: location === "/dashboard" || location.startsWith("/dashboard") || location === "/age-18-plan",
+      // isActive is ONLY true on /dashboard itself. /age-18-plan was
+      // previously included here to visually mark "you're inside
+      // Emma's section" while on the age-18-plan sub-page, but that
+      // broke the click semantics: the sidebar item's click handler
+      // treats `isActive` as "scroll to top of CURRENT page" instead
+      // of navigating. So from /age-18-plan, clicking "Emma" would
+      // scroll-to-top of the age-18-plan page rather than navigate
+      // to /dashboard, which is the user's actual intent (and the
+      // expectation that flagged this 2026-05-26). Per-sub-page
+      // visual cues for "you're in the fund section" live elsewhere
+      // (AppHeader's fund dropdown shows the active fund); the
+      // sidebar item's job is "click = take me home." Same applies
+      // to /settings, /activity, /memory — those have their own
+      // sidebar items with their own isActive matchers, so the
+      // dashboard item doesn't need to mirror them.
+      isActive: location === "/dashboard" || location.startsWith("/dashboard?") || location.startsWith("/dashboard/"),
     },
     {
       href: memoryBookHref,

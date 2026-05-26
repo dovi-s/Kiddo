@@ -106,7 +106,14 @@ export function FundTabs({ funds, activeFundId: activeFundIdProp }: FundTabsProp
               aria-selected={isActive}
               aria-controls="dashboard-main-content"
               onClick={() => handleSelect(fund.id)}
-              className={`relative shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors kiddo-tab-item ${
+              // `kiddo-tab-item` class removed 2026-05-26 — that class
+              // is for the cream-tab-row pattern (Settings/Account
+              // tab strips) and sets `color: hsl(var(--kiddo-muted))`
+              // which fought Tailwind's `text-white` on the active
+              // state (same specificity, source-order resolved
+              // unpredictably). FundTabs is its own pill pattern;
+              // doesn't share the cream-tab-row styling.
+              className={`relative shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--kiddo-evergreen)/0.55)] focus-visible:ring-offset-2 ${
                 isActive
                   ? "text-white"
                   : "border border-[hsl(var(--kiddo-border))] bg-card text-foreground hover:bg-[hsl(var(--kiddo-cream))]"

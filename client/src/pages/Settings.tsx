@@ -47,6 +47,7 @@ import { toMonthlyEquivalent } from "@shared/recurring-math";
 import { getMajorityDate } from "@shared/utma";
 import { prefetchDashboard, prefetchMemoryBook, prefetchActivity, prefetchTaxDocuments, onIdle } from "@/lib/prefetch";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { FundTabs } from "@/components/layout/FundTabs";
 import {
   KIDDO_LEGACY_YEARLY,
   KORA_FAMILY_MONTHLY,
@@ -3770,6 +3771,18 @@ const [editFundName, setEditFundName] = useState("");
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
       <AppHeader />
       <div className="kiddo-canvas px-4 py-6 space-y-6">
+        {/* Fund switcher tabs for Settings — multi-fund parents need
+            to switch which kid's settings they're editing without
+            backtracking through Dashboard. Same component as the
+            Dashboard's FundTabs (introduced 2026-05-26); renders
+            nothing for single-fund parents. Audit 2026-05-26 caught
+            the gap: the hero copy "tap the name to switch child"
+            had no clear referent because there was no name-row to
+            tap on Settings (the AppHeader dropdown was the implicit
+            answer but discoverability was poor). With FundTabs
+            rendered here, the copy now points at a visible row of
+            tabs. */}
+        <FundTabs funds={funds} activeFundId={selectedSettingsFundId} />
 
         {/* In-content back link removed 2026-05-11. Settings is Tier-1
             fund-scoped per page-scope.ts; AppHeader (logo + fund switcher
@@ -4008,7 +4021,7 @@ const [editFundName, setEditFundName] = useState("");
             )}
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
               {funds.length > 1 ? (
-                <>These settings apply only to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund above"} — tap the name to switch child.{" "}</>
+                <>These settings apply only to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund above"}. Tap the tabs above to switch child.{" "}</>
               ) : (
                 <>Changes apply to this fund.{" "}</>
               )}

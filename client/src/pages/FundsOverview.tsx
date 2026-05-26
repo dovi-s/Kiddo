@@ -22,7 +22,7 @@
 // big-picture; the kid pages are the management + emotional layers.
 
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowRight, CalendarClock, ChevronRight, Gift, Heart, Plus } from "lucide-react";
@@ -135,9 +135,23 @@ type OverviewResponse = {
 // for a meaningful curve (< 2 points).
 function HouseholdSparkline({ history }: { history: Array<{ date: string; total: number }> }) {
   if (!history || history.length < 2) return null;
+  // Upgraded 2026-05-26 — the v1 sparkline was 36px tall with a
+  // 1.5px stroke at 85% opacity, barely visible on the evergreen
+  // hero card. Audit said "the chart" felt anemic next to Dashboard's
+  // trend chart. Two changes:
+  //   1. The sparkline itself is more confident — taller (60px),
+  //      stronger stroke (2px @ 95% opacity), stronger fill
+  //      gradient top stop (0.20 → 0.32). Still shape-only — no
+  //      gridlines, no dots, no labels — preserves the locked
+  //      "household-glance is shape, not numbers" rule.
+  //   2. A small data-context callout below the SVG shows the 30d
+  //      delta in dollars. Calm-register text, no celebration —
+  //      this is just the spread of data points the sparkline
+  //      already plots, made readable. Skipped when delta is < $1
+  //      (would be noise like "+$0").
   const width = 280;
-  const height = 36;
-  const padding = 1; // 1px breathing room so endpoints don't clip on stroke
+  const height = 60;
+  const padding = 2; // breathing room so endpoints don't clip on stroke
   const totals = history.map((h) => h.total);
   const min = Math.min(...totals);
   const max = Math.max(...totals);
@@ -153,31 +167,57 @@ function HouseholdSparkline({ history }: { history: Array<{ date: string; total:
   });
   const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const fillPath = `${linePath} L${points[points.length - 1].x.toFixed(1)},${height} L${points[0].x.toFixed(1)},${height} Z`;
+
+  // 30-day delta callout. The history endpoint already filters to
+  // the last 30 days (per server/routes.ts:21385+ SQL — interval
+  // '30 days'), so the spread of first → last total IS the
+  // household's 30-day net change. Skip when the delta is below $1
+  // to avoid noisy "+$0" / "−$0" lines on inactive households.
+  const delta = history[history.length - 1].total - history[0].total;
+  const showDelta = Math.abs(delta) >= 1;
+  const deltaPrefix = delta >= 0 ? "+" : "−";
   return (
-    <svg
-      width="100%"
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      className="mt-3 opacity-90"
-      aria-hidden
-    >
-      <defs>
-        <linearGradient id="household-sparkline-fill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.20)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-        </linearGradient>
-      </defs>
-      <path d={fillPath} fill="url(#household-sparkline-fill)" />
-      <path
-        d={linePath}
-        fill="none"
-        stroke="rgba(255,255,255,0.85)"
-        strokeWidth={1.5}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-    </svg>
+    <div className="mt-4">
+      <svg
+        width="100%"
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        className="opacity-95 block"
+        aria-hidden
+      >
+        <defs>
+          <linearGradient id="household-sparkline-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.32)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+          </linearGradient>
+        </defs>
+        <path d={fillPath} fill="url(#household-sparkline-fill)" />
+        <path
+          d={linePath}
+          fill="none"
+          stroke="rgba(255,255,255,0.95)"
+          strokeWidth={2}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      {showDelta && (
+        <p
+          className="mt-2 text-[11px] font-semibold tabular-nums opacity-80"
+          data-testid="household-sparkline-delta"
+        >
+          {deltaPrefix}{new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          }).format(Math.abs(delta))}
+          <span className="opacity-60"> · last 30 days</span>
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -378,10 +418,28 @@ export default function FundsOverview() {
     enabled: recurringMonthlyLive > 0,
   });
 
+  // ?then=settings sets the post-pick destination to /settings instead
+  // of /dashboard. Used by the Account-page cross-link "Choose a fund
+  // to edit →" so a multi-fund parent can pick which kid's settings
+  // they want to edit (vs landing randomly in the active fund's
+  // settings, which was the audit-flagged confusion 2026-05-26). Other
+  // landing surfaces (Dashboard, schedules, deep-links) ignore the
+  // param and route normally.
+  const search = useSearch();
+  const thenDestination = (() => {
+    try {
+      const params = new URLSearchParams(search || "");
+      const then = String(params.get("then") || "").toLowerCase();
+      return then === "settings" ? "/settings" : "/dashboard";
+    } catch {
+      return "/dashboard";
+    }
+  })();
+
   const handleOpenFund = (fundId: string) => {
     haptic("selection");
     setActiveFundId(fundId);
-    setLocation("/dashboard");
+    setLocation(thenDestination);
   };
 
   // Recurring rows route to the SCHEDULE's detail modal, not just the
@@ -555,9 +613,30 @@ export default function FundsOverview() {
           >
             {fmtCurrency(animatedAggregate)}
           </h1>
-          <p className="text-sm opacity-70">
-            across {funds.length} fund{funds.length === 1 ? "" : "s"}
-          </p>
+          {/* Hero context line — was just "across N funds" which read
+              as administrative scaffolding. Added this-month signal
+              (gifts in + parent contributions) inline so the hero
+              actually has a heartbeat. Falls back gracefully to the
+              old "across N funds" line when no thisMonth data exists.
+              Audit-flagged 2026-05-26: hero felt anemic compared to
+              Dashboard's hero. This closes the gap without violating
+              the locked "calm administrative, not emotional" rule —
+              one factual contextual line, no celebration copy. */}
+          {thisMonth && (thisMonth.giftCount > 0 || parseFloat(String(thisMonth.contribTotal || "0")) > 0) ? (
+            <p className="text-sm opacity-75 tabular-nums">
+              {thisMonth.giftCount > 0 && (
+                <span>{thisMonth.giftCount} {thisMonth.giftCount === 1 ? "gift" : "gifts"} · {fmtCurrency(thisMonth.giftTotal, { whole: true })} this month</span>
+              )}
+              {thisMonth.giftCount > 0 && parseFloat(String(thisMonth.contribTotal || "0")) > 0 && <span className="opacity-60"> · </span>}
+              {parseFloat(String(thisMonth.contribTotal || "0")) > 0 && (
+                <span>{fmtCurrency(thisMonth.contribTotal, { whole: true })} from you</span>
+              )}
+            </p>
+          ) : (
+            <p className="text-sm opacity-70">
+              across {funds.length} fund{funds.length === 1 ? "" : "s"}
+            </p>
+          )}
           {/* Household sparkline. Shape only — direction, not
               percentage. Respects the locked 'no aggregate return %'
               rule (combining returns across different time horizons
@@ -593,6 +672,19 @@ export default function FundsOverview() {
               const transferredLabel = isTransferred && f.transferredAt
                 ? `Transferred · ${new Date(f.transferredAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
                 : null;
+              // Funded vs unfunded visual differentiation — audit
+              // 2026-05-26 flagged that a $1,967 fund and a $0 test
+              // fund rendered at identical visual weight, so on
+              // scan you couldn't tell which fund actually had
+              // money. Funded rows get a subtle evergreen left
+              // accent + slightly bolder balance typography. Unfunded
+              // rows get muted name + balance. Transferred rows
+              // still get the existing opacity-70 treatment (gentle
+              // dim of the whole row). The accent stays well within
+              // the locked "calm administrative" register — no
+              // celebration, no glow, just visual hierarchy that
+              // matches information hierarchy.
+              const isFunded = balance >= 1 && !isTransferred;
               return (
                 <motion.button
                   key={f.id}
@@ -601,7 +693,13 @@ export default function FundsOverview() {
                   initial={{ opacity: 0, x: -4 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.35, ease: "easeOut", delay: 0.18 + i * 0.08 }}
-                  className={`w-full flex items-center justify-between gap-3 rounded-2xl border border-[hsl(var(--kiddo-border))] bg-card p-4 text-left hover:border-[hsl(var(--kiddo-border))]/80 transition-colors ${isTransferred ? "opacity-70" : ""}`}
+                  className={`relative w-full flex items-center justify-between gap-3 rounded-2xl border bg-card p-4 text-left transition-colors ${
+                    isTransferred
+                      ? "opacity-70 border-[hsl(var(--kiddo-border))]"
+                      : isFunded
+                        ? "border-[hsl(var(--kiddo-evergreen)/0.18)] hover:border-[hsl(var(--kiddo-evergreen)/0.32)] shadow-[inset_3px_0_0_hsl(var(--kiddo-evergreen)/0.55)]"
+                        : "border-[hsl(var(--kiddo-border))] hover:border-[hsl(var(--kiddo-border))]/80"
+                  }`}
                   data-testid={`overview-fund-${f.id}`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
@@ -610,8 +708,14 @@ export default function FundsOverview() {
                         monogram chip — same evergreen tint as the
                         empty-state avatars elsewhere. The container
                         clips the photo with `overflow-hidden` so it
-                        fills the circle cleanly. */}
-                    <div className="h-10 w-10 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
+                        fills the circle cleanly. Unfunded fund rows
+                        get a slightly more muted chip background so
+                        the funded row's avatar pops by comparison. */}
+                    <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden ${
+                      isFunded
+                        ? "bg-[hsl(var(--kiddo-evergreen)/0.12)] text-[hsl(var(--kiddo-evergreen))]"
+                        : "bg-[hsl(var(--kiddo-evergreen)/0.06)] text-[hsl(var(--kiddo-evergreen)/0.7)]"
+                    }`}>
                       {f.childPhotoUrl ? (
                         <img
                           src={f.childPhotoUrl}
@@ -624,7 +728,7 @@ export default function FundsOverview() {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
+                      <p className={`text-sm font-semibold truncate ${isFunded ? "text-foreground" : "text-foreground/65"}`}>
                         {displayName}
                         {age && <span className="ml-1.5 text-xs text-muted-foreground font-normal">({age})</span>}
                       </p>
@@ -652,7 +756,11 @@ export default function FundsOverview() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="flex flex-col items-end">
-                      <p className="text-sm font-semibold text-foreground tabular-nums">{fmtCurrency(balance)}</p>
+                      <p className={`tabular-nums ${
+                        isFunded
+                          ? "text-base font-bold text-foreground"
+                          : "text-sm font-semibold text-foreground/55"
+                      }`}>{fmtCurrency(balance)}</p>
                       {/* 30-day delta. Subtle at-a-glance growth read.
                           Skips for transferred funds (their numbers
                           aren't moving) + funds without prior snapshot

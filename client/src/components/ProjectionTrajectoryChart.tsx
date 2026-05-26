@@ -160,22 +160,29 @@ export function ProjectionTrajectoryChart({
     >
       <svg
         viewBox={`0 0 ${VB_W} ${VB_H}`}
-        preserveAspectRatio="none"
+        // preserveAspectRatio="xMidYMid meet" preserves the 3:1
+        // viewBox ratio, so circles stay circular and text labels
+        // stay un-stretched. The previous `none` value stretched
+        // the SVG non-uniformly to fill its container; circles read
+        // as ovals on wide containers and the dollar callout text
+        // looked distorted horizontally. Audit-flagged 2026-05-26.
+        preserveAspectRatio="xMidYMid meet"
         style={{ width: "100%", height: heightPx, display: "block" }}
         aria-label={`Projected growth trajectory from ${fmtCompact(currentValue)}${currentAge ? ` at age ${currentAge}` : ""} to ${fmtCompact(drawnArea.targetValue)} at age ${drawnArea.targetAgeReal}`}
         role="img"
       >
-        {/* Gradient for the area fill — soft cream-to-evergreen,
-            calm register, no harsh boundary. */}
+        {/* Gradient for the area fill — stronger top stop than the
+            v1 (0.24 vs 0.18) so the curve reads against the card
+            background instead of fading into it. Still soft at the
+            bottom (0.03) so the calm register holds. */}
         <defs>
           <linearGradient id="trajectory-area-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={evergreen} stopOpacity="0.18" />
-            <stop offset="100%" stopColor={evergreen} stopOpacity="0.02" />
+            <stop offset="0%" stopColor={evergreen} stopOpacity="0.24" />
+            <stop offset="100%" stopColor={evergreen} stopOpacity="0.03" />
           </linearGradient>
         </defs>
 
-        {/* Filled area below the curve. Vector-effect keeps the
-            stroke width consistent across the responsive scale. */}
+        {/* Filled area below the curve. */}
         <motion.path
           d={drawnArea.fillPath}
           fill="url(#trajectory-area-fill)"
@@ -185,14 +192,15 @@ export function ProjectionTrajectoryChart({
           transition={{ duration: 0.4, delay: 0.05 }}
         />
 
-        {/* The curve itself. Spring stroke-dashoffset animation
-            traces the line on mount — single moment of motion, no
-            looping or pulsing. */}
+        {/* The curve itself. Bolder stroke (3 vs 2.5 in v1) so the
+            line reads confidently. vector-effect keeps the visual
+            width identical across responsive scales — the curve
+            never goes "thin" when the chart is wide. */}
         <motion.path
           d={drawnArea.linePath}
           fill="none"
           stroke={evergreen}
-          strokeWidth={2.5}
+          strokeWidth={3}
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
@@ -201,41 +209,43 @@ export function ProjectionTrajectoryChart({
           transition={{ duration: 0.9, ease: "easeOut" }}
         />
 
-        {/* Start dot — small, lower contrast, anchors "today." */}
+        {/* Start dot — anchors "today" at the curve's beginning. */}
         <circle
           cx={drawnArea.startX}
           cy={drawnArea.startY}
-          r={4}
+          r={4.5}
           fill="white"
           stroke={evergreen}
           strokeWidth={2}
           vectorEffect="non-scaling-stroke"
         />
 
-        {/* Target dot — emphasized, the focal point of the curve. */}
+        {/* Target dot — bigger (r=7 vs 6 in v1) so the focal point
+            actually reads as the focal point on mobile-sized charts. */}
         <motion.circle
           cx={drawnArea.targetX}
           cy={drawnArea.targetY}
-          r={6}
+          r={7}
           fill={evergreen}
           stroke="white"
-          strokeWidth={2.5}
+          strokeWidth={3}
           vectorEffect="non-scaling-stroke"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.4, type: "spring", stiffness: 380, damping: 22 }}
         />
 
-        {/* Target callout — small dollar label above the dot. The
-            calm register avoids axis labels on the curve; this is
-            the ONE label we render because it carries the entire
-            "where does this end up" emotional answer. */}
+        {/* Target callout — bigger dollar label (16 vs 14 in v1)
+            and stronger age eyebrow weight. The calm register said
+            "single label, no axis ticks" — that's still true — but
+            the one label we DO render needs to anchor the chart's
+            emotional point ("where does this end up"). */}
         <text
           x={drawnArea.targetX}
-          y={drawnArea.targetY - 14}
+          y={drawnArea.targetY - 16}
           textAnchor="middle"
-          fontSize="14"
-          fontWeight="600"
+          fontSize="16"
+          fontWeight="700"
           fill={evergreen}
           style={{ fontVariantNumeric: "tabular-nums" }}
         >
@@ -243,12 +253,12 @@ export function ProjectionTrajectoryChart({
         </text>
         <text
           x={drawnArea.targetX}
-          y={drawnArea.targetY - 28}
+          y={drawnArea.targetY - 32}
           textAnchor="middle"
           fontSize="10"
-          fontWeight="500"
-          fill="rgba(26,23,16,0.50)"
-          style={{ letterSpacing: "0.04em", textTransform: "uppercase" }}
+          fontWeight="600"
+          fill="rgba(26,23,16,0.55)"
+          style={{ letterSpacing: "0.06em", textTransform: "uppercase" }}
         >
           Age {drawnArea.targetAgeReal}
         </text>
