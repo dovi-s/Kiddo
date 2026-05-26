@@ -25,6 +25,13 @@ import { useAuth } from "@/hooks/use-auth"
 // StockLogo handles the empty-name and CDN-failure cases via its
 // own ticker-text fallback, so this map is purely for the prose
 // label, not for any logo behavior.
+// Synced 2026-05-25 with the server's ADMIN_ASSET_UNIVERSE
+// source='stock_pick' set (17 stocks). Prior list had only 9 — a
+// gifter who picked Nintendo (newly exposed in the gifter picker
+// 2026-05-25) would have seen this success page render "NTDOY" as
+// the prose label instead of "Nintendo". StockLogo handles the
+// visual fallback; this map is just for the prose. Now matches the
+// picker's full set.
 const COMPANY_INFO: Record<string, { name: string }> = {
   DIS: { name: "Disney" },
   AAPL: { name: "Apple" },
@@ -35,6 +42,14 @@ const COMPANY_INFO: Record<string, { name: string }> = {
   GOOGL: { name: "Google" },
   SPOT: { name: "Spotify" },
   RBLX: { name: "Roblox" },
+  NTDOY: { name: "Nintendo" },
+  DUOL: { name: "Duolingo" },
+  DPZ: { name: "Domino's" },
+  CHWY: { name: "Chewy" },
+  ABNB: { name: "Airbnb" },
+  ADBE: { name: "Adobe" },
+  TGT: { name: "Target" },
+  CMCSA: { name: "Comcast" },
 }
 
 // Mirrors the canonical EVENT_TYPE_EMOJI map used on Dashboard. Inline here

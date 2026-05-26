@@ -3054,19 +3054,42 @@ function AccessReviewTab() {
 }
 
 function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+  // Synced 2026-05-25 with the server's actual ADMIN_ASSET_UNIVERSE.
+  // Prior fallback had 8 stocks (DIS/AAPL/NKE/TSLA/NFLX/RBLX/SBUX/AMZN)
+  // AND incorrectly marked TSLA as source='stock_pick' — but Tesla is
+  // NOT in the server's picker universe. Removed TSLA; added the
+  // missing 9 (SPOT, GOOGL, TGT, CMCSA, DUOL, ABNB, NTDOY, DPZ, CHWY,
+  // ADBE). This is purely a FALLBACK shown when /api/admin/config/
+  // investments fails to load — the real source of truth lives
+  // server-side in server/marketQuotes.ts. Keeping it accurate so
+  // admins debugging a load failure see the canonical list, not a
+  // stale snapshot.
   const DEFAULT_UNIVERSE: Record<string, any> = {
     VTI: { name: "Vanguard Total Stock Market ETF", type: "ETF", source: "auto_invest", enabled: true },
     VXUS: { name: "Vanguard Total International Stock ETF", type: "ETF", source: "auto_invest", enabled: true },
     BND: { name: "Vanguard Total Bond Market ETF", type: "ETF", source: "auto_invest", enabled: true },
     VGT: { name: "Vanguard Information Technology ETF", type: "ETF", source: "auto_invest", enabled: true },
+    VUG: { name: "Vanguard Growth ETF", type: "ETF", source: "auto_invest", enabled: true },
+    VYM: { name: "Vanguard High Dividend Yield ETF", type: "ETF", source: "auto_invest", enabled: true },
+    SCHD: { name: "Schwab US Dividend Equity ETF", type: "ETF", source: "auto_invest", enabled: true },
+    QQQ: { name: "Invesco QQQ Trust", type: "ETF", source: "auto_invest", enabled: true },
     DIS: { name: "Disney", type: "Stock", source: "stock_pick", enabled: true },
     AAPL: { name: "Apple", type: "Stock", source: "stock_pick", enabled: true },
     NKE: { name: "Nike", type: "Stock", source: "stock_pick", enabled: true },
-    TSLA: { name: "Tesla", type: "Stock", source: "stock_pick", enabled: true },
     NFLX: { name: "Netflix", type: "Stock", source: "stock_pick", enabled: true },
     RBLX: { name: "Roblox", type: "Stock", source: "stock_pick", enabled: true },
     SBUX: { name: "Starbucks", type: "Stock", source: "stock_pick", enabled: true },
     AMZN: { name: "Amazon", type: "Stock", source: "stock_pick", enabled: true },
+    GOOGL: { name: "Google", type: "Stock", source: "stock_pick", enabled: true },
+    SPOT: { name: "Spotify", type: "Stock", source: "stock_pick", enabled: true },
+    TGT: { name: "Target", type: "Stock", source: "stock_pick", enabled: true },
+    CMCSA: { name: "Comcast", type: "Stock", source: "stock_pick", enabled: true },
+    DUOL: { name: "Duolingo", type: "Stock", source: "stock_pick", enabled: true },
+    ABNB: { name: "Airbnb", type: "Stock", source: "stock_pick", enabled: true },
+    NTDOY: { name: "Nintendo", type: "Stock", source: "stock_pick", enabled: true },
+    DPZ: { name: "Domino's", type: "Stock", source: "stock_pick", enabled: true },
+    CHWY: { name: "Chewy", type: "Stock", source: "stock_pick", enabled: true },
+    ADBE: { name: "Adobe", type: "Stock", source: "stock_pick", enabled: true },
   };
   const DEFAULT_AUTO_STRATEGIES: Record<string, any> = {
     growth: { label: "Growth Mix", allocations: { VTI: 0.5, VXUS: 0.25, BND: 0.15, VGT: 0.1 } },
