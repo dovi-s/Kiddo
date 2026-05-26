@@ -6,7 +6,7 @@ import { getDefaultSuperAdminEmails, isEmailInAdminSet } from "@shared/adminAcce
 import { useLocation, useSearch } from "wouter";
 import {
   Users, Wallet, Gift, CreditCard, TrendingUp, Shield, Calendar,
-  Building2, ArrowUpRight, ArrowDownToLine, ChevronDown, ChevronUp, Eye, Server, Activity, AlertTriangle, Heart, BarChart3, RefreshCw, MoreHorizontal, Download
+  Building2, ArrowUpRight, ArrowDownToLine, ChevronDown, ChevronUp, Eye, Server, Activity, AlertTriangle, Heart, BarChart3, RefreshCw, MoreHorizontal, Download, MessageSquare
 } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import {
@@ -1438,6 +1438,18 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
     refetchInterval: 30000,
     refetchOnWindowFocus: true,
   });
+  // PMF survey aggregation. The Sean Ellis 40% threshold sits
+  // alongside the North Star section as the second quantitative
+  // PMF gate (locked 2026-05-26 per
+  // project_launch_wedge_and_creator_distribution.md). North Star
+  // measures behavioral PMF (are gifters returning?); PMF survey
+  // measures stated PMF (would users be very disappointed without us?).
+  const { data: pmfSurvey, isLoading: pmfSurveyLoading } = useQuery<any>({
+    queryKey: ["/api/admin/pmf-survey"],
+    queryFn: async () => fetchAdminJson("/api/admin/pmf-survey"),
+    refetchInterval: 60000,
+    refetchOnWindowFocus: true,
+  });
   const { data: pendingGifts = [], isLoading: pendingGiftsLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/pending-gifts"],
     queryFn: async () => fetchAdminJson("/api/admin/pending-gifts"),
@@ -1918,6 +1930,89 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             />
           </div>
         </div>
+      </section>
+
+      {/* PMF Survey (Sean Ellis test). Sits below North Star because
+          they answer different questions: North Star measures whether
+          gifters are actually coming back (behavioral signal); the
+          Sean Ellis 40%-very-disappointed threshold measures whether
+          users would care if Kiddo went away (stated-preference signal).
+          Both are required PMF gates per the locked launch wedge.
+          Insufficient-sample state below 10 unique respondents — too
+          few to call green/yellow/red without statistical lying. */}
+      <section>
+        <h2 className="font-heading text-lg font-semibold mb-4 flex items-center gap-2" data-testid="heading-pmf-survey">
+          <MessageSquare size={18} className="text-primary" />
+          PMF Survey (Sean Ellis)
+        </h2>
+        <p className="text-xs text-muted-foreground mb-3">
+          "How would you feel if you could no longer use Kiddo?" Very-disappointed % across unique respondents. 40%+ sustained over 4 weeks is the PMF gate to scale creator spend.
+        </p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <StatCard
+            label="Very Disappointed %"
+            value={pmfSurveyLoading ? "..." : `${Number(pmfSurvey?.veryDisappointedPct || 0).toFixed(1)}%`}
+            icon={Heart}
+            color={
+              pmfSurvey?.healthStatus === "green"
+                ? "green"
+                : pmfSurvey?.healthStatus === "yellow"
+                  ? "amber"
+                  : pmfSurvey?.healthStatus === "insufficient_sample"
+                    ? "blue"
+                    : "red"
+            }
+            sub={pmfSurveyLoading ? "..." : `${fmtNum(pmfSurvey?.veryDisappointed || 0)} of ${fmtNum(pmfSurvey?.uniqueRespondents || 0)} respondents`}
+          />
+          <StatCard
+            label="Health Status"
+            value={pmfSurveyLoading ? "..." : String(pmfSurvey?.healthStatus || "no_data").replace(/_/g, " ").toUpperCase()}
+            icon={Shield}
+            color={
+              pmfSurvey?.healthStatus === "green"
+                ? "green"
+                : pmfSurvey?.healthStatus === "yellow"
+                  ? "amber"
+                  : pmfSurvey?.healthStatus === "insufficient_sample"
+                    ? "blue"
+                    : "red"
+            }
+            sub="40%+ green, 30-39% yellow, below 30% red, <10 sample insufficient"
+          />
+          <StatCard
+            label="Somewhat Disappointed"
+            value={pmfSurveyLoading ? "..." : fmtNum(pmfSurvey?.somewhatDisappointed || 0)}
+            icon={MessageSquare}
+            color="amber"
+            sub="Middle band — convertible if product gap closes"
+          />
+          <StatCard
+            label="Not Disappointed"
+            value={pmfSurveyLoading ? "..." : fmtNum(pmfSurvey?.notDisappointed || 0)}
+            icon={AlertTriangle}
+            color={Number(pmfSurvey?.notDisappointed || 0) > Number(pmfSurvey?.veryDisappointed || 0) ? "red" : "amber"}
+            sub="Wrong audience or weak product fit"
+          />
+        </div>
+        {!pmfSurveyLoading && Array.isArray(pmfSurvey?.recentNotes) && pmfSurvey.recentNotes.length > 0 && (
+          <div className="mt-4 bg-card rounded-xl border border-border/50 p-4">
+            <h3 className="text-sm font-semibold mb-3">Recent qualitative notes</h3>
+            <div className="space-y-3">
+              {pmfSurvey.recentNotes.slice(0, 10).map((n: any, idx: number) => (
+                <div key={idx} className="border-l-2 border-primary/40 pl-3 py-1">
+                  <div className="flex items-center gap-2 mb-1 text-[11px] text-muted-foreground">
+                    <span className="font-mono">{n.emailRedacted}</span>
+                    <span>·</span>
+                    <span className="capitalize">{String(n.responseLabel || n.response || "").replace(/_/g, " ")}</span>
+                    <span>·</span>
+                    <span>{new Date(n.createdAt).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-sm text-foreground leading-relaxed">{n.note}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <section>

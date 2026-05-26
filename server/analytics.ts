@@ -35,6 +35,14 @@ export type KnownEventName =
   | "sponsor_plus_completed" // gifter checkout completed and fund unlocked
   | "founder_gift_started" // gifter began the founder-slot-gift flow
   | "founder_gift_completed" // gifter checkout completed and recipient added to waitlist
+  | "founder_signup_completed" // direct waitlist signup at /founding-members
+  // PMF instrumentation (locked 2026-05-26 per project_launch_wedge_and_creator_distribution.md).
+  // The Sean Ellis test ("How would you feel if you could no longer use Kiddo?") is the
+  // single quantitative metric that decides whether to scale creator spend or pivot.
+  // Trigger automation (sending the email to week-4-active users) is a deferred workstream;
+  // these events fire today on response capture so the response surface ships first.
+  | "pmf_survey_email_sent" // PMF survey email delivered to a user
+  | "pmf_survey_response" // user clicked one of the three response options
   // The set is intentionally narrow today. Extend by adding the
   // string literal here AND wiring a single `recordEvent` call at
   // the right point in the request path.

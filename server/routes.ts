@@ -16,6 +16,8 @@ import { isMagicLinkAuthEnabled } from "./services/magicLinkAuth";
 import { getConfiguredSuperAdminEmails, isEmailInAdminSet } from "@shared/adminAccess";
 import { sendEmail } from "./emailDelivery";
 import { buildParentHandoffSubscriptionEmail } from "./templates/parentHandoffSubscription";
+import { buildFoundingMemberWelcomeEmail } from "./templates/foundingMemberWelcome";
+import { computeCommunityChartData } from "./lib/communityChartData";
 import { autoPauseOwnershipMismatchedContributions } from "./recurringContributionWorker";
 import { sendOpsAlert } from "./ops";
 import { runGifterNotificationWorker, enqueueParentThankYou } from "./gifterNotificationWorker";
@@ -61,7 +63,7 @@ import { DEFAULT_CUSTOM_ALLOCATIONS, getFundCustomAllocations, setFundCustomAllo
 import { getFundInvestmentPreferences, setFundInvestmentPreferences } from "./fundInvestmentPreferences";
 import { getPublicEventGiftingAvailability, getPublicFundGiftingAvailability } from "./publicGiftingState";
 import { ADMIN_ASSET_UNIVERSE, getMarketQuote, startMarketQuoteCacheRefresher } from "./marketQuotes";
-import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftIntents, trustedDevices, passkeys } from "@shared/schema";
+import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftIntents, trustedDevices, passkeys, foundingMembers } from "@shared/schema";
 import { toMonthlyEquivalent, sumMonthlyEquivalent } from "@shared/recurring-math";
 import { KIDDO_AUM_FEE_BASIS_POINTS, KIDDO_AUM_FEE_RATE, KIDDO_GIFT_ADD_ONS, KIDDO_LEGACY_INCLUDED_OCCASION_CREDITS, KIDDO_LEGACY_YEARLY, KIDDO_OCCASION_TIERS, KIDDO_REVERSE_TRIAL_DAYS, KORA_DEFAULT_FAMILY_YEARLY, KORA_FAMILY_MONTHLY, KORA_FAMILY_YEARLY_OPTIONS, KORA_FREE_GIFT_FEE, KORA_LARGE_GIFT_FLAT_FEE, KORA_LARGE_GIFT_THRESHOLD, KORA_STARTER_MONTHLY, KORA_STARTER_YEARLY, MONETIZATION_TRIGGER_IDS, calculateKoraContributionFee, estimateAnnualAumFee, getGiftAddOn, getKiddoOccasionTier, type FundCoverageState, type RecommendationState } from "@shared/monetization";
 
@@ -140,6 +142,21 @@ export async function registerRoutes(
   // project_pricing_v3_pricing_levels.md.
   const FOUNDING_MEMBERS_WAITLIST_PATH = path.join(process.cwd(), ".local", "founding-members.jsonl");
   const FOUNDING_MEMBERS_CAP = 1000;
+  // PMF survey responses (Sean Ellis test). One row per response —
+  // dedupe is at the per-email level: a user's most recent response
+  // wins. The admin aggregation endpoint filters to latest-per-email
+  // before computing percentages. JSONL append-only mirrors the rest
+  // of our waitlist-style storage so we can ship without a migration;
+  // graduates to a real table when the trigger-automation workstream
+  // ships (locked in project_launch_wedge_and_creator_distribution.md
+  // as a launch must-have).
+  const PMF_SURVEY_RESPONSES_PATH = path.join(process.cwd(), ".local", "pmf-survey-responses.jsonl");
+  const PMF_RESPONSE_VALUES = new Set(["vd", "sd", "nd"]);
+  const PMF_RESPONSE_LABEL: Record<string, string> = {
+    vd: "very_disappointed",
+    sd: "somewhat_disappointed",
+    nd: "not_disappointed",
+  };
   // AGE_TRANSITION_STATE_PATH lives in ./ageTransitionStore now — shared with
   // the age18TransitionWorker so both writers operate on the same JSON store
   // (preventing the "two writers, drift" failure mode). The store helpers
@@ -1051,16 +1068,96 @@ export async function registerRoutes(
   // lifetime price lock + Founding Member badge + early access to
   // future products (Roth IRA, banking, printing, P2P) + $25 starter
   // gift credit. Structured for advocacy not bargain-hunting (per
-  // project_pricing_v3_pricing_levels.md). Cap enforced at write time
-  // by counting lines in the .jsonl file.
+  // project_pricing_v3_pricing_levels.md).
+  //
+  // Graduated 2026-05-26 from JSONL-only to Postgres-backed (migration
+  // 0033). The DB is now the source of truth for cap-enforcement +
+  // dedupe (race-safe via unique constraints on `email` and `position`).
+  // The JSONL file stays as an append-only audit trail (every direct
+  // signup ALSO appends) and serves as the hydrate source for existing
+  // pre-migration rows. Per project_founding_member_claim_flow_spec.md
+  // Day 1 (locked 2026-05-26). Days 2-5 of the spec build the claim
+  // flow itself (token issuance + landing page + Stripe price lock +
+  // $25 credit + badge); this Day 1 ship lays the data foundation.
+
+  // Lazy hydrate: copy existing JSONL rows into the DB on first request
+  // after the migration applies. Uses ON CONFLICT DO NOTHING for idempotence
+  // so concurrent first-request races don't double-insert. Module-level
+  // flag means the JSONL scan happens at most once per process lifetime.
+  let foundingMembersHydrated = false;
+  async function ensureFoundingMembersHydrated(): Promise<void> {
+    if (foundingMembersHydrated) return;
+    try {
+      const countRows = await db.select({ count: sql<number>`count(*)::int` }).from(foundingMembers);
+      const currentDbCount = Number(countRows[0]?.count || 0);
+      if (currentDbCount > 0) {
+        // Table already has rows — either from a prior hydrate run or
+        // from new signups since migration applied. Skip the JSONL scan;
+        // we trust the DB as the source of truth from here on.
+        foundingMembersHydrated = true;
+        return;
+      }
+      // Empty table — read JSONL and bulk insert. Both direct signups
+      // (sourceSurface = founding-members-page) and gifted slots
+      // (sourceSurface = founding-members-gifted) land here. Gifted
+      // entries carry `sponsorEmail` which we map to `giftedBy`.
+      const text = await fs.readFile(FOUNDING_MEMBERS_WAITLIST_PATH, "utf8").catch(() => "");
+      const lines = text.split("\n").filter((l) => l.trim());
+      if (lines.length === 0) {
+        foundingMembersHydrated = true;
+        return;
+      }
+      const rows: Array<typeof foundingMembers.$inferInsert> = [];
+      for (const line of lines) {
+        try {
+          const entry = JSON.parse(line);
+          const email = String(entry?.email || entry?.recipientEmail || "").toLowerCase();
+          const firstName = String(entry?.firstName || entry?.recipientName || "").trim();
+          const position = Number(entry?.position || 0);
+          if (!email || !firstName || position <= 0) continue;
+          rows.push({
+            email,
+            firstName,
+            position,
+            signupMessage: entry?.message || null,
+            sourceSurface: String(entry?.sourceSurface || "founding-members-page"),
+            signupAt: entry?.createdAt ? new Date(entry.createdAt) : undefined,
+            giftedBy: entry?.sponsorEmail || null,
+            giftedStripeSessionId: entry?.stripeSessionId || null,
+          });
+        } catch {
+          // Skip unparseable JSONL line
+        }
+      }
+      if (rows.length > 0) {
+        // Sort by position so the inserts go in deterministic order —
+        // helps when reading server logs to trace migration timing.
+        rows.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        await db.insert(foundingMembers).values(rows).onConflictDoNothing();
+      }
+      foundingMembersHydrated = true;
+    } catch (err) {
+      console.warn("Founding members hydrate failed (non-fatal — will retry on next request):", err);
+      // Don't set hydrated=true on failure; allow retry next call.
+    }
+  }
 
   async function countFoundingMembers(): Promise<number> {
     try {
-      const text = await fs.readFile(FOUNDING_MEMBERS_WAITLIST_PATH, "utf8");
-      return text.split("\n").filter((line) => line.trim().length > 0).length;
+      await ensureFoundingMembersHydrated();
+      const result = await db.select({ count: sql<number>`count(*)::int` }).from(foundingMembers);
+      return Number(result[0]?.count || 0);
     } catch (err: any) {
-      if (err?.code === "ENOENT") return 0;
-      throw err;
+      // DB unreachable — fall back to JSONL count so the page still
+      // renders the cap counter without going down with the database.
+      console.warn("countFoundingMembers DB query failed, falling back to JSONL:", err?.message || err);
+      try {
+        const text = await fs.readFile(FOUNDING_MEMBERS_WAITLIST_PATH, "utf8");
+        return text.split("\n").filter((line) => line.trim().length > 0).length;
+      } catch (fileErr: any) {
+        if (fileErr?.code === "ENOENT") return 0;
+        throw fileErr;
+      }
     }
   }
 
@@ -1092,6 +1189,50 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Your first name is required." });
       }
 
+      // Hydrate JSONL → DB if this is the first request after the
+      // 0033 migration applied. Safe to call on every request; the
+      // function short-circuits via a module-level flag after the
+      // first successful run.
+      await ensureFoundingMembersHydrated();
+
+      // Idempotent dedupe via DB unique constraint on email.
+      // Application-level pre-check returns a friendly response
+      // with the existing position; the DB unique constraint is
+      // the canonical defense on concurrent submits (caught below
+      // by the INSERT catch). Re-sending the welcome email when an
+      // existing founder re-submits is intentional — the email
+      // layer's 12h dedupe cache prevents spam if they're clicking
+      // around the same day; weeks later we resend gladly.
+      try {
+        const existingRows = await db
+          .select()
+          .from(foundingMembers)
+          .where(eq(foundingMembers.email, email))
+          .limit(1);
+        if (existingRows.length > 0) {
+          const row = existingRows[0];
+          try {
+            const welcome = buildFoundingMemberWelcomeEmail({
+              to: email,
+              firstName: row.firstName || firstName,
+              position: row.position,
+              cap: FOUNDING_MEMBERS_CAP,
+            });
+            void sendEmail(welcome);
+          } catch (emailErr) {
+            console.warn("Founding-member welcome resend failed (non-fatal):", emailErr);
+          }
+          return res.status(200).json({
+            success: true,
+            position: row.position,
+            spotsRemaining: Math.max(0, FOUNDING_MEMBERS_CAP - row.position),
+            alreadyFounder: true,
+          });
+        }
+      } catch (dupErr: any) {
+        console.warn("Founding-member dedupe DB query failed (non-fatal, allowing through):", dupErr?.message || dupErr);
+      }
+
       // Check the cap. Hard stop at 1,000 — past the cap, the deal
       // converts to the regular Plus price for new signups.
       const currentCount = await countFoundingMembers();
@@ -1102,27 +1243,323 @@ export async function registerRoutes(
         });
       }
 
-      const entry = {
+      // Insert into Postgres with retry on position-conflict. Two
+      // simultaneous signups computing position = N + 1 from the
+      // same count will collide on the unique index; we recompute
+      // and retry up to 3 times. The unique-on-email constraint
+      // also catches concurrent-submit-with-same-email — we return
+      // the existing row in that case (graceful degrade).
+      let assignedPosition = currentCount + 1;
+      let insertedRow: typeof foundingMembers.$inferSelect | null = null;
+      let attempt = 0;
+      while (attempt < 3 && !insertedRow) {
+        attempt++;
+        try {
+          const [row] = await db
+            .insert(foundingMembers)
+            .values({
+              email,
+              firstName,
+              position: assignedPosition,
+              signupMessage: message || null,
+              sourceSurface,
+            })
+            .returning();
+          insertedRow = row;
+        } catch (insertErr: any) {
+          const constraint = String(insertErr?.constraint || "");
+          const code = String(insertErr?.code || "");
+          // PG unique violation = 23505. Constraint name tells us which.
+          if (code === "23505" && constraint.includes("email")) {
+            // Concurrent submit with same email won the race. Return
+            // their existing row so this user sees the success state.
+            const existing = await db
+              .select()
+              .from(foundingMembers)
+              .where(eq(foundingMembers.email, email))
+              .limit(1);
+            if (existing.length > 0) {
+              return res.status(200).json({
+                success: true,
+                position: existing[0].position,
+                spotsRemaining: Math.max(0, FOUNDING_MEMBERS_CAP - existing[0].position),
+                alreadyFounder: true,
+              });
+            }
+          }
+          if (code === "23505" && constraint.includes("position")) {
+            // Position taken by a concurrent submit. Recount + retry.
+            const freshCount = await countFoundingMembers();
+            if (freshCount >= FOUNDING_MEMBERS_CAP) {
+              return res.status(410).json({
+                error: "All founding member spots are taken. The regular Plus plan is still $3.99/mo when we launch.",
+                cap: FOUNDING_MEMBERS_CAP,
+              });
+            }
+            assignedPosition = freshCount + 1;
+            continue;
+          }
+          // Unknown error — bubble out.
+          throw insertErr;
+        }
+      }
+      if (!insertedRow) {
+        console.error("Founding-member insert failed after 3 retries (position-conflict storm)");
+        return res.status(500).json({ error: "Failed to join. Try again in a moment." });
+      }
+
+      // JSONL audit trail. Source of truth is now the DB, but the
+      // append-only log stays — useful for forensic reconstruction
+      // if the DB is ever lost and for the hydrate path that catches
+      // gifted-slot rows still being written by the webhook handler
+      // (which has not yet migrated to DB-write — that's a follow-up
+      // ship per project_founding_member_claim_flow_spec.md Days 2-5).
+      const auditEntry = {
+        id: insertedRow.id,
         email,
         firstName,
         message: message || null,
         sourceSurface,
-        position: currentCount + 1,
+        position: insertedRow.position,
         tag: "founding-members",
-        createdAt: new Date().toISOString(),
+        createdAt: insertedRow.signupAt instanceof Date ? insertedRow.signupAt.toISOString() : new Date().toISOString(),
       };
+      try {
+        await fs.mkdir(path.dirname(FOUNDING_MEMBERS_WAITLIST_PATH), { recursive: true });
+        await fs.appendFile(FOUNDING_MEMBERS_WAITLIST_PATH, `${JSON.stringify(auditEntry)}\n`, "utf8");
+      } catch (auditErr) {
+        console.warn("Founding-member JSONL audit append failed (non-fatal):", auditErr);
+      }
 
-      await fs.mkdir(path.dirname(FOUNDING_MEMBERS_WAITLIST_PATH), { recursive: true });
-      await fs.appendFile(FOUNDING_MEMBERS_WAITLIST_PATH, `${JSON.stringify(entry)}\n`, "utf8");
+      // Welcome email. Non-blocking — if delivery fails, the signup is
+      // still saved and the user still sees the success card.
+      try {
+        const welcome = buildFoundingMemberWelcomeEmail({
+          to: email,
+          firstName,
+          position: insertedRow.position,
+          cap: FOUNDING_MEMBERS_CAP,
+        });
+        void sendEmail(welcome);
+      } catch (emailErr) {
+        console.warn("Founding-member welcome email failed (non-fatal):", emailErr);
+      }
+
+      // Analytics event. Mirrors founder_gift_started on the
+      // sponsor-founder route so the funnel is visible from one
+      // event stream (direct signups + gifted signups together
+      // give us spots-consumed velocity against the 1,000 cap).
+      try {
+        recordEvent({
+          name: "founder_signup_completed",
+          source: "public",
+          props: { position: insertedRow.position, sourceSurface },
+        });
+      } catch (eventErr) {
+        console.warn("Founding-member recordEvent failed (non-fatal):", eventErr);
+      }
 
       return res.status(201).json({
         success: true,
-        position: entry.position,
-        spotsRemaining: Math.max(0, FOUNDING_MEMBERS_CAP - entry.position),
+        position: insertedRow.position,
+        spotsRemaining: Math.max(0, FOUNDING_MEMBERS_CAP - insertedRow.position),
       });
     } catch (error) {
       console.error("Error saving founding members entry:", error);
       return res.status(500).json({ error: "Failed to join. Try again in a moment." });
+    }
+  });
+
+  // PMF survey response capture. Called from the public /feedback/pmf
+  // page which the user lands on via a one-tap link in the Sean Ellis
+  // email (server/templates/seanEllisSurvey.ts). Two intents share
+  // this endpoint:
+  //
+  //   1. Initial response capture on page load (email present,
+  //      response present, note absent). Records the response.
+  //   2. Follow-up note (email present, response present, note
+  //      non-empty). Same row gets an updated note — we append a
+  //      fresh row and rely on latest-per-email aggregation rather
+  //      than mutating prior rows.
+  //
+  // Auth-optional and rate-limit-free in v1. The recipient is
+  // identified by URL param, not by session. Anti-spam is bounded by:
+  //   - The response value is constrained to {vd, sd, nd}.
+  //   - Email format validated.
+  //   - Aggregation deduplicates by latest-per-email, so duplicate
+  //     submissions don't double-count the same person.
+  //   - The endpoint surface isn't linked from anywhere except the
+  //     email, so the realistic abuse vector requires guessing real
+  //     recipient emails AND a response value. Acceptable for the
+  //     pre-launch cohort size.
+  //
+  // recordEvent fires alongside the JSONL append so the response is
+  // visible in the analyticsEvents stream too. This means the
+  // existing growth/funnel admin dashboards can graph PMF responses
+  // alongside signup events without a separate data source.
+  app.post("/api/feedback/pmf-survey", async (req, res) => {
+    try {
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      const responseCode = String(req.body?.response || "").trim().toLowerCase();
+      const note = String(req.body?.note || "").trim().slice(0, 2000);
+
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ error: "A valid email is required." });
+      }
+      if (!PMF_RESPONSE_VALUES.has(responseCode)) {
+        return res.status(400).json({ error: "Invalid response value." });
+      }
+
+      const entry = {
+        email,
+        response: responseCode,
+        responseLabel: PMF_RESPONSE_LABEL[responseCode],
+        note: note || null,
+        ip: (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.socket?.remoteAddress || null,
+        createdAt: new Date().toISOString(),
+        tag: "pmf-survey-response",
+      };
+
+      await fs.mkdir(path.dirname(PMF_SURVEY_RESPONSES_PATH), { recursive: true });
+      await fs.appendFile(PMF_SURVEY_RESPONSES_PATH, `${JSON.stringify(entry)}\n`, "utf8");
+
+      // Analytics event mirror. Fires for both response-only and
+      // response+note submissions; the props.hasNote flag lets the
+      // funnel separate "tapped" from "tapped and told us why."
+      try {
+        recordEvent({
+          name: "pmf_survey_response",
+          source: "public",
+          props: {
+            response: responseCode,
+            responseLabel: PMF_RESPONSE_LABEL[responseCode],
+            hasNote: Boolean(note),
+          },
+        });
+      } catch (eventErr) {
+        console.warn("PMF survey recordEvent failed (non-fatal):", eventErr);
+      }
+
+      return res.status(201).json({ success: true });
+    } catch (error) {
+      console.error("Error saving PMF survey response:", error);
+      return res.status(500).json({ error: "Failed to save your response." });
+    }
+  });
+
+  // Admin view: aggregated PMF survey responses with the 40% Sean
+  // Ellis threshold computed against the latest-per-email cohort.
+  // The 40% threshold is the canonical PMF gate (per
+  // project_launch_wedge_and_creator_distribution.md): below 40%
+  // very-disappointed sustained 4 weeks = pivot before scaling
+  // creator spend. At 40%+ = scale.
+  //
+  // Aggregation rules:
+  //   - Latest response per email wins. If someone changes their
+  //     mind ("very" → "somewhat") we honor the more recent one.
+  //   - Notes are returned chronologically with the email redacted
+  //     to first-character + domain so the admin view is useful for
+  //     pattern-matching without exposing a queryable PII surface.
+  //     (Full email is in the JSONL on disk; the admin export route
+  //     can pull it when a specific reply needs follow-up.)
+  app.get("/api/admin/pmf-survey", isAdmin, async (_req, res) => {
+    try {
+      let text = "";
+      try {
+        text = await fs.readFile(PMF_SURVEY_RESPONSES_PATH, "utf8");
+      } catch (err: any) {
+        if (err?.code === "ENOENT") {
+          return res.json({
+            totalResponses: 0,
+            uniqueRespondents: 0,
+            veryDisappointed: 0,
+            somewhatDisappointed: 0,
+            notDisappointed: 0,
+            veryDisappointedPct: 0,
+            healthStatus: "no_data",
+            recentNotes: [],
+          });
+        }
+        throw err;
+      }
+
+      const lines = text.split("\n").filter((l) => l.trim());
+      const latestByEmail = new Map<string, any>();
+      const notesWithEmails: Array<{ email: string; response: string; note: string; createdAt: string }> = [];
+
+      for (const line of lines) {
+        try {
+          const row = JSON.parse(line);
+          const email = String(row?.email || "").toLowerCase();
+          if (!email) continue;
+          // Update latest-per-email by createdAt comparison.
+          const prior = latestByEmail.get(email);
+          if (!prior || String(row.createdAt) > String(prior.createdAt)) {
+            latestByEmail.set(email, row);
+          }
+          if (row.note && String(row.note).trim()) {
+            notesWithEmails.push({
+              email,
+              response: String(row.response || ""),
+              note: String(row.note),
+              createdAt: String(row.createdAt || ""),
+            });
+          }
+        } catch {
+          // Unparseable line, skip
+        }
+      }
+
+      let vd = 0;
+      let sd = 0;
+      let nd = 0;
+      for (const row of Array.from(latestByEmail.values())) {
+        if (row.response === "vd") vd++;
+        else if (row.response === "sd") sd++;
+        else if (row.response === "nd") nd++;
+      }
+      const uniqueRespondents = vd + sd + nd;
+      const vdPct = uniqueRespondents > 0 ? Number(((vd / uniqueRespondents) * 100).toFixed(2)) : 0;
+      const healthStatus = uniqueRespondents < 10
+        ? "insufficient_sample"
+        : vdPct >= 40
+          ? "green"
+          : vdPct >= 30
+            ? "yellow"
+            : "red";
+
+      // Sort notes newest-first, redact email for the admin tile
+      // (full email available in the JSONL on disk for follow-up).
+      const recentNotes = notesWithEmails
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 25)
+        .map((n) => {
+          const [local, domain] = n.email.split("@");
+          const redacted = local && domain
+            ? `${local.charAt(0)}***@${domain}`
+            : n.email;
+          return {
+            emailRedacted: redacted,
+            response: n.response,
+            responseLabel: PMF_RESPONSE_LABEL[n.response] || n.response,
+            note: n.note,
+            createdAt: n.createdAt,
+          };
+        });
+
+      return res.json({
+        totalResponses: lines.length,
+        uniqueRespondents,
+        veryDisappointed: vd,
+        somewhatDisappointed: sd,
+        notDisappointed: nd,
+        veryDisappointedPct: vdPct,
+        healthStatus,
+        recentNotes,
+      });
+    } catch (error) {
+      console.error("Error fetching PMF survey summary:", error);
+      return res.status(500).json({ error: "Failed to load PMF survey data." });
     }
   });
 
@@ -2603,6 +3040,30 @@ export async function registerRoutes(
   });
 
   // GET /api/funds/:fundId/transactions — extracted to ./routes/funds.ts
+
+  // Community chart data for the parent Dashboard surface. Same
+  // computation as the kid-view endpoint via the shared helper at
+  // server/lib/communityChartData.ts. The chart is one of Kiddo's
+  // strongest emotional assets and previously rendered only on the
+  // kid-facing surface — surfacing it on the parent Dashboard means
+  // the gifter loop's visual self-portrait is visible at the surface
+  // parents spend the most time on. Shipped 2026-05-26 alongside the
+  // FundTabs ship. The fund-ownership middleware
+  // (requireOwnedFundParam at line ~2500) automatically gates this
+  // route to owners + collaborators + previous-custodians — same
+  // access rules as dashboard-summary.
+  app.get('/api/funds/:fundId/community', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = req.ownedFund || await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: "Fund not found" });
+      const gifts = await storage.getGiftsByFund(req.params.fundId);
+      const community = computeCommunityChartData(gifts as any, fund as any);
+      return res.json(community);
+    } catch (error) {
+      console.error("Error fetching community chart data:", error);
+      return res.status(500).json({ error: "Failed to load community data" });
+    }
+  });
 
   app.get('/api/funds/:fundId/large-gift-holds', isAuthenticated, async (req: any, res) => {
     try {
@@ -5277,84 +5738,11 @@ export async function registerRoutes(
       // discussion. The chart is the visual self-portrait of the
       // audience Kiddo serves: kids surrounded by a community of
       // people who care, building something real over time.
-      const COMMUNITY_TOP_N = 6;
-      const communityEligibleGifts = fundGifts.filter((g: any) => {
-        const s = String(g.status || "").toLowerCase();
-        if (!["processing", "invested", "settled", "host_hold"].includes(s)) return false;
-        // Suppress the auto-invest boilerplate-row dupes from the
-        // chart aggregation — same regex used elsewhere.
-        const msg = String(g.message || "").trim();
-        if (/^auto-invest contribution to /i.test(msg)) {
-          // Still counted in the aggregation (it's a real gift), but
-          // we want the *attribution* to stay clean. Don't drop.
-        }
-        return true;
-      });
-      // Aggregate by sender_email (consistent identity); display
-      // label is the most-recent non-empty sender_name. Anonymous
-      // gifts collapse into a single bucket.
-      const anonLabel = `Someone who loves ${fund.recipientFirstName || "this kid"}`;
-      type GifterAgg = { email: string; label: string; totalUsd: number; events: Array<{ at: string; amount: number }> };
-      const aggByEmail = new Map<string, GifterAgg>();
-      for (const g of communityEligibleGifts) {
-        const isAnon = Boolean((g as any).isAnonymous);
-        const rawEmail = String((g as any).senderEmail || "").trim().toLowerCase();
-        const groupKey = isAnon ? "__anon__" : (rawEmail || `__unnamed_${g.id}__`);
-        const rawName = String((g as any).senderName || "").trim();
-        const displayLabel = isAnon ? anonLabel : (rawName || "A gifter");
-        const amount = parseFloat(String((g as any).netAmount || g.amount || "0")) || 0;
-        if (amount <= 0) continue;
-        const at = g.createdAt ? new Date(g.createdAt as any).toISOString() : new Date().toISOString();
-        let entry = aggByEmail.get(groupKey);
-        if (!entry) {
-          entry = { email: groupKey, label: displayLabel, totalUsd: 0, events: [] };
-          aggByEmail.set(groupKey, entry);
-        } else if (!isAnon && rawName && entry.label === "A gifter") {
-          // Backfill display label if a later gift carried a name
-          // and earlier didn't.
-          entry.label = rawName;
-        }
-        entry.totalUsd += amount;
-        entry.events.push({ at, amount });
-      }
-      // Sort gifters by total contribution descending, take top N
-      // as distinct series. The rest bucket into "Others" so the
-      // chart stays scannable.
-      const allGifters = Array.from(aggByEmail.values()).sort((a, b) => b.totalUsd - a.totalUsd);
-      const topGifters = allGifters.slice(0, COMMUNITY_TOP_N);
-      const restGifters = allGifters.slice(COMMUNITY_TOP_N);
-      const seriesList: Array<{ label: string; totalUsd: number; events: Array<{ at: string; amount: number }> }> = topGifters.map((g) => ({
-        label: g.label,
-        totalUsd: Number(g.totalUsd.toFixed(2)),
-        events: g.events,
-      }));
-      if (restGifters.length > 0) {
-        const othersTotal = restGifters.reduce((s, g) => s + g.totalUsd, 0);
-        const othersEvents = restGifters.flatMap((g) => g.events);
-        seriesList.push({
-          label: restGifters.length === 1 ? "1 other" : `${restGifters.length} others`,
-          totalUsd: Number(othersTotal.toFixed(2)),
-          events: othersEvents,
-        });
-      }
-      // Build the per-series cumulative path. For each series, sort
-      // events ASC by date, then emit a running cumulative total.
-      // The client uses this to render a step-stacked area chart.
-      const communitySeries = seriesList.map((s) => {
-        const sorted = [...s.events].sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
-        let running = 0;
-        const points = sorted.map((e) => {
-          running += e.amount;
-          return { at: e.at, cumulative: Number(running.toFixed(2)) };
-        });
-        return { label: s.label, totalUsd: s.totalUsd, points };
-      });
-      // Final response shape consumed by the client chart.
-      const community = {
-        fundStartedAt: fund.createdAt ? new Date(fund.createdAt as any).toISOString() : null,
-        totalContributors: allGifters.length,
-        series: communitySeries,
-      };
+      // Community chart data. Same computation drives the parent
+      // Dashboard surface (GET /api/funds/:fundId/community) shipped
+      // 2026-05-26 — the extracted helper is the single source of
+      // truth for both routes. See server/lib/communityChartData.ts.
+      const community = computeCommunityChartData(fundGifts, fund);
 
       // Visibility filter on memory entries:
       //   'kid_now'    → always visible to kid (default; gifter notes,

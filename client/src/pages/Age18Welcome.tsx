@@ -21,12 +21,13 @@ import { useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowRight, BookOpen, Briefcase, Coins, Receipt, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowRight, BookOpen, Briefcase, Coins, Receipt, Sparkles, TrendingUp, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
 import { useToast } from "@/hooks/use-toast";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
+import { MomentParticles } from "@/components/MomentParticles";
 
 type HandoffState = {
   shouldShowWelcome: boolean;
@@ -77,6 +78,31 @@ export default function Age18Welcome() {
       return res.json();
     },
     enabled: !!fundId,
+  });
+
+  // Community data for the supporters strip on Screen 1. The
+  // moment-of-arrival reveal lands EMOTIONALLY harder when the
+  // kid sees "built by 11 people who showed up for you" alongside
+  // the balance number. Same endpoint the parent Dashboard uses;
+  // after the handoff the fund's userId is the kid's, so the
+  // ownership middleware lets them through. Shipped 2026-05-26
+  // alongside the MomentParticles ship as the Age18Welcome climax
+  // upgrade. The strip is calmly hidden when there's no community
+  // data (< 2 gifters) — the calm register doesn't ship empty
+  // states with placeholder copy.
+  const { data: communityData } = useQuery<{
+    fundStartedAt: string | null;
+    totalContributors: number;
+    series: Array<{ label: string; totalUsd: number; points: Array<{ at: string; cumulative: number }> }>;
+  }>({
+    queryKey: ["/api/funds", fundId, "community"],
+    queryFn: async () => {
+      const res = await fetch(`/api/funds/${fundId}/community`, { credentials: "include" });
+      if (!res.ok) return { fundStartedAt: null, totalContributors: 0, series: [] };
+      return res.json();
+    },
+    enabled: !!fundId,
+    staleTime: 5 * 60_000, // 5 minutes — the kid won't be reloading this
   });
 
   const [screen, setScreen] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -200,13 +226,40 @@ export default function Age18Welcome() {
       <main className="px-6 py-12 max-w-2xl mx-auto">
         {screen === 1 && (
           <ScreenShell key="s1">
-            <Eyebrow icon={<Sparkles size={14} />}>This is yours now.</Eyebrow>
-            <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight">
-              {fund.recipientFirstName ? `Hi, ${capFirst(fund.recipientFirstName)}.` : "Welcome."}
-              <br />
-              <span className="text-primary">{formatMoney(balance)}</span>{" "}
-              <span className="text-2xl md:text-3xl font-semibold text-muted-foreground">is yours.</span>
-            </h1>
+            {/* Climax upgrade shipped 2026-05-26. Three additions
+                to the previous text-only reveal:
+                  1. MomentParticles burst on mount — calm, sparse,
+                     drift-up motion (not festive falling confetti).
+                     Single play, ~2.5s, then quiet.
+                  2. Breathing scale on the balance number — subtle
+                     rhythm (1.0 → 1.015 → 1.0 over 4s, infinite).
+                     Reduced-motion users see static.
+                  3. Supporters strip below the gain card showing
+                     "built by N people who showed up for you" with
+                     top-contributor names. Closes the locked
+                     "Acorns 18-handoff is paperwork; ours is the
+                     moment" thesis — the kid SEES the community at
+                     the climax, not just the balance number.
+                The hero still ships a static composition for
+                reduced-motion users; particles + breathing are
+                pure additive layers. */}
+            <div className="relative">
+              <MomentParticles count={16} durationMs={2400} />
+              <Eyebrow icon={<Sparkles size={14} />}>This is yours now.</Eyebrow>
+              <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight">
+                {fund.recipientFirstName ? `Hi, ${capFirst(fund.recipientFirstName)}.` : "Welcome."}
+                <br />
+                <motion.span
+                  className="inline-block text-primary"
+                  animate={{ scale: [1, 1.015, 1] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ transformOrigin: "left center" }}
+                >
+                  {formatMoney(balance)}
+                </motion.span>{" "}
+                <span className="text-2xl md:text-3xl font-semibold text-muted-foreground">is yours.</span>
+              </h1>
+            </div>
             <p className="text-base text-foreground/80 leading-relaxed">
               What you see here is yours legally as of today. Nothing was sold. Nothing was moved.
               Just the name on the paperwork. Your fund kept growing the whole time you were growing up.
@@ -221,6 +274,45 @@ export default function Age18Welcome() {
                   The cash gifts cousins gave you would be long gone. This isn't.
                 </p>
               </div>
+            )}
+            {/* Supporters strip — the "who showed up" beat. Lists the
+                top contributors by name as small pills, with the
+                total count headlined above. Self-hides when there
+                are fewer than 2 distinct contributors (we don't ship
+                "built by 1 person" — that's the parent's number, not
+                a community beat). Tap-through to Memory Book later
+                if we wire one; for now it's calm read-only chrome. */}
+            {communityData && communityData.totalContributors >= 2 && Array.isArray(communityData.series) && communityData.series.length >= 2 && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, duration: 0.5 }}
+                className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-5 space-y-3"
+                data-testid="age18-supporters-strip"
+              >
+                <div className="flex items-center gap-2">
+                  <Heart size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
+                  <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] uppercase tracking-wide">
+                    Built by {communityData.totalContributors} {communityData.totalContributors === 2 ? "people" : "people"} who showed up for you
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {communityData.series.map((s, idx) => (
+                    <motion.span
+                      key={`${s.label}-${idx}`}
+                      initial={{ opacity: 0, scale: 0.92 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.7 + idx * 0.06, type: "spring", stiffness: 320, damping: 22 }}
+                      className="inline-flex items-center rounded-full border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-white px-3 py-1 text-xs font-medium text-foreground/80"
+                    >
+                      {s.label}
+                    </motion.span>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Every gift they sent kept compounding. The Memory Book has all of it — notes, photos, the moments behind each one.
+                </p>
+              </motion.div>
             )}
             <Continue onClick={() => setScreen(2)}>What can I do with this?</Continue>
           </ScreenShell>

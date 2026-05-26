@@ -555,6 +555,21 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   display: none;
 }
 
+/* scrollbar-hide — pure cross-browser scrollbar suppression. Unlike
+   .kiddo-h-scroll (which also sets display:flex + overflow-x), this
+   ONLY hides the bar, so it composes with a caller's own
+   `overflow-x-auto`. Referenced by FundTabs (the multi-fund pill strip)
+   and the achievements chip row; without this rule those `scrollbar-hide`
+   classes were no-ops and the native horizontal bar showed under the
+   pills. Locked 2026-05-26 per the fund-tab strip polish. */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE / old Edge */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome / Safari / Edge (WebKit/Blink) */
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kiddo-gifter-avatar-pulse::after { animation: none; opacity: 0; }
   .kiddo-gifter-avatar:hover > div:first-child > div:first-child {

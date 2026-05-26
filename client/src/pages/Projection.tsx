@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCountUp as useSharedCountUp } from "@/hooks/use-count-up";
 import { useSubscription } from "@/hooks/use-subscription";
 import { PlusUpgradePromptCard } from "@/components/PlusUpgradePromptCard";
+import { ProjectionTrajectoryChart, type TrajectoryPoint } from "@/components/ProjectionTrajectoryChart";
 
 // Thin local wrapper around shared/projection.ts so the original
 // call signature in this file keeps working. The shared helper is
@@ -297,6 +298,27 @@ export default function Projection() {
     () => projectFund(totalValue, monthly, rate.rate, yearsAhead, contributionYearsCap),
     [totalValue, monthly, rate.rate, yearsAhead, contributionYearsCap],
   );
+
+  // Trajectory points for the visual axis below the hero. One
+  // projection per year from currentAge to targetAge inclusive, so
+  // the line shows the actual shape of compounding growth (not a
+  // straight line between today and target). The math reuses the
+  // canonical projectFund helper, so the curve EXACTLY matches the
+  // slider's target-age number — no drift between curve and text.
+  // Shipped 2026-05-26 alongside the FundTabs ship; closes the
+  // "projection is text-only" visual gap from the Acorns audit.
+  const trajectoryPoints: TrajectoryPoint[] = useMemo(() => {
+    const start = Math.max(0, Math.floor(currentAge));
+    const end = Math.max(start + 1, Math.ceil(targetAge));
+    const pts: TrajectoryPoint[] = [];
+    for (let age = start; age <= end; age++) {
+      const years = age - start;
+      const contribYears = isUtma ? Math.max(0, Math.min(years, yearsTo18)) : years;
+      const value = projectFund(totalValue, monthly, rate.rate, years, contribYears);
+      pts.push({ age, value });
+    }
+    return pts;
+  }, [currentAge, targetAge, totalValue, monthly, rate.rate, isUtma, yearsTo18]);
 
   // All three rates' projections, so the hero can show the band as a
   // calm subtitle without forcing the parent to chip-tap through each.
@@ -655,6 +677,34 @@ ${shareUrl}`;
               already lands the message; the italic line was rhetorical-
               marketing-voice noise on a calm product surface. */}
         </motion.section>
+
+        {/* Growth trajectory chart — visual axis for the slider+text
+            projection above. The slider drags = the target dot on
+            the curve moves. Closes the "projection is text-only"
+            gap from the Acorns audit (their Potential slider has
+            a visual axis; we had just an animated number). Calm
+            register: handrolled SVG, no gridlines, no axis labels,
+            single evergreen line with a soft fill underneath. The
+            chart self-hides with <2 points, so the page degrades
+            gracefully for funds with currentAge ≈ targetAge.
+            Shipped 2026-05-26. */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.05 }}
+          className="rounded-2xl border border-border bg-card p-5"
+          data-testid="projection-trajectory-card"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground mb-3">
+            Growth trajectory
+          </p>
+          <ProjectionTrajectoryChart
+            points={trajectoryPoints}
+            targetAge={targetAge}
+            currentValue={totalValue}
+            currentAge={currentAge}
+          />
+        </motion.div>
 
         {/* Monthly contribution lever. The "until [Child] turns 18" subline matters:
             without it, parents read "$677/mo" as a forever-implied number and assume

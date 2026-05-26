@@ -518,3 +518,73 @@ export const magicLinkTokens = pgTable("magic_link_tokens", {
 
 export type MagicLinkToken = typeof magicLinkTokens.$inferSelect;
 export type InsertMagicLinkToken = typeof magicLinkTokens.$inferInsert;
+
+// Founding Members — the first 1,000 signups who lock in $19/yr Plus
+// lifetime + Founding Member badge + early access to every future
+// Kiddo product + $25 starter credit at fund-live. Locked
+// 2026-05-23 per project_pricing_v3_pricing_levels.md; capture
+// surface at /founding-members shipped same day; idempotent dedupe +
+// welcome email shipped 2026-05-26.
+//
+// This table is the graduated form of `.local/founding-members.jsonl`
+// (the flat-file capture surface that's been live since the page
+// shipped). Day 1 of `project_founding_member_claim_flow_spec.md`:
+// move the source of truth from a JSONL file to Postgres so:
+//   - The 1,000-cap is enforced via a unique constraint on `position`
+//     instead of a best-effort line-count check (race-safe).
+//   - Dedupe is enforced via a unique constraint on `email` instead
+//     of a best-effort linear scan.
+//   - The data joins to `users.id` once the launch claim flow ships
+//     (Days 2-5 of the spec) — `claimedUserId` is the link.
+//   - The data survives `.local/*` resets across deploys.
+//   - Admin queries can use SQL instead of parsing JSONL.
+//
+// The JSONL file stays as an append-only audit log (every successful
+// signup also appends a row there). It's not the source of truth
+// anymore; it's the forensic trail.
+//
+// Claim columns (claimToken, claimedAt, claimedUserId) are present
+// from Day 1 even though the claim flow itself doesn't ship until
+// Days 2-5. Adding them now means the launch claim flow can be
+// built without a second migration — and a founder who signs up
+// before the claim flow ships will simply have `claimedAt = NULL`
+// until they redeem.
+export const foundingMembers = pgTable("founding_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Canonical lowercased email. Unique constraint enforces dedupe
+  // at the DB layer — the application-level scan in the endpoint
+  // becomes a fast-path optimization, with the DB as the source of
+  // truth on collisions (handles concurrent submit race correctly).
+  email: text("email").notNull(),
+  firstName: text("first_name").notNull(),
+  // Position number in the 1,000 cap. Unique so two simultaneous
+  // signups can't both claim position 47 — one INSERT wins, the
+  // other retries with the next position. The endpoint computes
+  // `currentCount + 1` and inserts; if the unique conflict fires,
+  // the endpoint can retry once with the new count.
+  position: integer("position").notNull(),
+  signupMessage: text("signup_message"),
+  sourceSurface: text("source_surface").notNull(),
+  signupAt: timestamp("signup_at").notNull().defaultNow(),
+  // Claim state. All three NULL until the launch claim flow fires.
+  // claimToken is SHA-256 of the URL token (same discipline as
+  // magic_link_tokens + password_resets); raw token in the email,
+  // hash here. Cleared after redemption.
+  claimToken: varchar("claim_token", { length: 64 }),
+  claimedAt: timestamp("claimed_at"),
+  claimedUserId: varchar("claimed_user_id").references(() => users.id, { onDelete: "set null" }),
+  // Gifted-slot tracking. When a gifter sponsors a Founder slot
+  // for a recipient (per the existing /api/stripe/checkout/sponsor-founder
+  // endpoint), the recipient gets a row here with `giftedBy` =
+  // sponsor email + `giftedStripeSessionId` = the Stripe session
+  // for audit. Direct signups have both NULL.
+  giftedBy: text("gifted_by"),
+  giftedStripeSessionId: text("gifted_stripe_session_id"),
+}, (table) => [
+  uniqueIndex("founding_members_email_unique").on(table.email),
+  uniqueIndex("founding_members_position_unique").on(table.position),
+  index("founding_members_claimed_user_id_idx").on(table.claimedUserId),
+]);
+
+export type FoundingMember = typeof foundingMembers.$inferSelect;
+export type InsertFoundingMember = typeof foundingMembers.$inferInsert;

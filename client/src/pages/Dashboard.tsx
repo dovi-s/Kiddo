@@ -130,6 +130,8 @@ import { scrollToTestId } from "@/lib/scroll-to-element";
 import { getPronouns } from "@/lib/pronouns";
 import { getDeepLinkHighlightCardStyle, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { FundTabs } from "@/components/layout/FundTabs";
+import { CommunityCompoundingChart } from "@/components/CommunityCompoundingChart";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { useRealtimeEvents } from "@/hooks/use-realtime-events";
 import { MilestoneMoment } from "@/components/MilestoneMoment";
@@ -1526,6 +1528,28 @@ export default function Dashboard() {
     oneTimePaymentMethod === "bank"
       ? Math.max(0, oneTimeCardLikeFee - oneTimeSelectedEstimate.processingFee)
       : 0;
+
+  // Community chart data — the visual self-portrait of who built
+  // this fund. The chart component self-hides with <2 gifters or <2
+  // events; we still fetch eagerly because that's the most common
+  // case for funds past the first month and the payload is small.
+  // Shipped 2026-05-26 alongside the FundTabs surface. Shared
+  // helper at server/lib/communityChartData.ts is the single source
+  // of truth between this surface and the kid-view consumer.
+  const { data: communityChartData } = useQuery<{
+    fundStartedAt: string | null;
+    totalContributors: number;
+    series: Array<{ label: string; totalUsd: number; points: Array<{ at: string; cumulative: number }> }>;
+  }>({
+    queryKey: ["/api/funds", selectedFundId, "community"],
+    queryFn: async () => {
+      const res = await fetch(`/api/funds/${encodeURIComponent(selectedFundId)}/community`, { credentials: "include" });
+      if (!res.ok) return { fundStartedAt: null, totalContributors: 0, series: [] };
+      return res.json();
+    },
+    enabled: !!user && !!selectedFundId,
+    staleTime: 60_000,
+  });
 
   const { data: inboxData } = useQuery<{ items: Array<{ id: string; tone: "info" | "success" | "warning"; title: string; description: string; ctaLabel: string | null; ctaHref: string | null }> }>({
     queryKey: ["/api/inbox", selectedFundId],
@@ -4536,7 +4560,15 @@ export default function Dashboard() {
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
       <AppHeader />
 
-      <main className="kiddo-canvas px-4 py-6 space-y-6">
+      <main className="kiddo-canvas px-4 py-6 space-y-6" id="dashboard-main-content">
+        {/* Fund switcher tabs — fast-switch between child funds for
+            multi-fund parents (Family-tier). Renders nothing for
+            single-fund parents (the AppHeader dropdown is still the
+            "add a second fund" path). The dropdown stays alongside
+            for FundsOverview + jump-to-any-fund affordances. Locked
+            2026-05-26. */}
+        <FundTabs funds={funds} activeFundId={selectedFundId} />
+
         {/* Approaching-18 prep banner. Renders when the kid's
             majority date is within the 90-day window but hasn't
             arrived yet. Calm card (sage register, not alarm) that
@@ -7319,6 +7351,30 @@ export default function Dashboard() {
                 );
               })()}
             </motion.section>
+
+            {/* Community Compounding Chart — visual self-portrait of
+                who built this fund. Each gifter renders as a colored
+                band on a stacked area chart; bands grow over time as
+                gifts arrive. The chart component self-hides when
+                there are fewer than 2 gifters or fewer than 2 events
+                (no chart before there's a community to show). Shared
+                with KidView via the computeCommunityChartData helper.
+                Shipped 2026-05-26 — was previously kid-view-only.
+                Surfacing it on the parent Dashboard means the gifter
+                loop's visual asset is visible where the parent spends
+                the most time, not just where the kid sees it. */}
+            {communityChartData && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, delay: 0.015 }}
+              >
+                <CommunityCompoundingChart
+                  data={communityChartData}
+                  childFirstName={recipientFirstNameDisplay}
+                />
+              </motion.div>
+            )}
 
             {/* Who loves [name] */}
             {gifterRoster.length > 0 && (() => {
