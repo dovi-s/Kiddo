@@ -174,6 +174,39 @@ function normalizeActivityType(type?: string | null): string {
   return (type || "event_update").toString();
 }
 
+// Category derivation 2026-05-25 audit revision: was type-only, which
+// mis-bucketed PARENT one-time gifts (type=gift_received with
+// metadata.isParentContribution=true) into "gift" (the From-others
+// bucket) instead of "auto" (the Yours bucket). Recurring parent fires
+// already create parent_contribution activity rows so they land in
+// "auto" correctly via type alone; one-time parent gifts ride on
+// gift_received and need the metadata check to ride into the right
+// bucket. The deep-link destination from Dashboard's gifter modal
+// (?filter=auto&highlight={giftId}) was landing on the right page but
+// the highlight row was filtered out — user-flagged: "clicking these
+// are not going to the exact right place." Now bucketing respects
+// the metadata flag so one-time parent gifts show up under Yours.
+function isParentContributionItem(item: any): boolean {
+  if (typeof item?.isParentContribution === "boolean") return item.isParentContribution;
+  const raw = item?.metadata;
+  if (!raw || typeof raw !== "string") return false;
+  try {
+    const parsed = JSON.parse(raw) as { isParentContribution?: unknown };
+    return parsed.isParentContribution === true;
+  } catch {
+    return false;
+  }
+}
+
+function mapItemToCategory(item: any): "gift" | "auto" | "growth" | "memory" | "milestone" | "nudge" | "update" {
+  const t = normalizeActivityType(item?.type);
+  // Parent's own gift_received rows are PARENT contributions, not
+  // from-others gifts. Bucket them as "auto" so the Yours filter
+  // captures them and the From-others Gifts filter excludes them.
+  if (t === "gift_received" && isParentContributionItem(item)) return "auto";
+  return mapActivityTypeToCategory(item?.type);
+}
+
 function mapActivityTypeToCategory(type?: string | null): "gift" | "auto" | "growth" | "memory" | "milestone" | "nudge" | "update" {
   const t = normalizeActivityType(type);
   if (GIFT_TYPES.includes(t)) return "gift";
@@ -1214,7 +1247,13 @@ export default function Activity() {
       if (/^(test|testing|tstgin|tstng|qqqqq|tester)\b/i.test(reason)) return false;
     }
     if (filter !== "all") {
-      const cat = mapActivityTypeToCategory(item?.type);
+      // Use the item-aware mapItemToCategory (not the type-only
+      // mapActivityTypeToCategory) so parent's own one-time gifts ride
+      // into "auto" (Yours) not "gift" (From others). Fix shipped
+      // 2026-05-25 audit: the Dashboard gifter-modal deep link
+      // ?filter=auto&highlight={giftId} was filtering out the row it
+      // was trying to land on.
+      const cat = mapItemToCategory(item);
       if (filter === "gifts"      && cat !== "gift") return false;
       if (filter === "auto"       && cat !== "auto") return false;
       if (filter === "growth"     && cat !== "growth") return false;
@@ -1355,14 +1394,18 @@ export default function Activity() {
     const t = normalizeActivityType(item?.type);
     return !isInternalOnlyType(t) && !t.startsWith("lifecycle_");
   });
+  // Summary counts use the item-aware bucketing (mapItemToCategory) so
+  // parent's own gift_received rows count toward Investments (Yours)
+  // not Gifts (From others). Consistent with the filter bucketing
+  // above. Fix shipped 2026-05-25.
   const totalGiftAmount = allVisible.reduce((sum, item) => {
-    if (mapActivityTypeToCategory(item.type) !== "gift") return sum;
+    if (mapItemToCategory(item) !== "gift") return sum;
     const n = parseAmount(item.amount);
     return sum + (n != null && n > 0 ? n : 0);
   }, 0);
-  const giftCount = allVisible.filter(i => mapActivityTypeToCategory(i.type) === "gift").length;
-  const investCount = allVisible.filter(i => ["auto", "growth"].includes(mapActivityTypeToCategory(i.type))).length;
-  const milestoneCount = allVisible.filter(i => ["memory", "milestone"].includes(mapActivityTypeToCategory(i.type))).length;
+  const giftCount = allVisible.filter(i => mapItemToCategory(i) === "gift").length;
+  const investCount = allVisible.filter(i => ["auto", "growth"].includes(mapItemToCategory(i))).length;
+  const milestoneCount = allVisible.filter(i => ["memory", "milestone"].includes(mapItemToCategory(i))).length;
 
   const cachedVisible = useMemo(() => {
     // Same paired-gift dedupe as the live feed — prevents a brief flash of
@@ -1386,9 +1429,9 @@ export default function Activity() {
       return true;
     });
   }, [cachedActivities]);
-  const cachedGiftCount = cachedVisible.filter(i => mapActivityTypeToCategory(i.type) === "gift").length;
+  const cachedGiftCount = cachedVisible.filter(i => mapItemToCategory(i) === "gift").length;
   const cachedTotalGiftAmt = cachedVisible.reduce((sum, item) => {
-    if (mapActivityTypeToCategory(item.type) !== "gift") return sum;
+    if (mapItemToCategory(item) !== "gift") return sum;
     const n = parseAmount(item.amount);
     return sum + (n != null && n > 0 ? n : 0);
   }, 0);
