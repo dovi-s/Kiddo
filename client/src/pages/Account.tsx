@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/use-auth";
 import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
@@ -833,6 +834,35 @@ export default function Account() {
       <AppHeader />
 
       <main className="kiddo-canvas px-4 py-6 space-y-6">
+        {/* Account hero strip — added 2026-05-25 per
+            project_secondary_page_polish_pattern.md. Account is the
+            ACCOUNT-GLOBAL surface (vs Settings which is fund-scoped),
+            so the inverse link points at /settings, and the headline
+            uses the user's name (or email fallback) rather than a
+            fund recipient. Same restrained register as Settings:
+            quiet eyebrow + h1 + 1-line context, 400ms/6px/out-expo
+            entrance, no count-ups, no gradient, no photo. */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="px-1"
+          data-testid="account-hero"
+        >
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">
+            Account
+          </p>
+          <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
+            {((user as any)?.preferredName?.trim() || (user as any)?.firstName?.trim()) || "Your account"}
+          </h1>
+          <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+            Settings that apply to you across every fund.{" "}
+            <Link href="/settings" className="underline underline-offset-2 hover:text-foreground">
+              Per-fund settings →
+            </Link>
+          </p>
+        </motion.div>
+
         <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="account-tabs" role="tablist" aria-label="Account sections">
           {[
             { id: "personal", label: "Personal info" },
@@ -855,8 +885,18 @@ export default function Account() {
         </div>
 
         {/* ── Personal Info ── */}
+        {/* Tab fade-ins added 2026-05-25 per the secondary-page polish
+            pattern. 280ms/6px/out-expo per tab branch with unique key
+            so React remounts on tab switch and the entrance animation
+            fires. No exit animation — only one tab can be active. */}
         {accountTab === "personal" && (
-          <div className="space-y-4">
+          <motion.div
+            key="account-tab-personal"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-4"
+          >
             {profileNeedsCompletion && (
               <SectionCard className="border-primary/20 bg-primary/5">
                 <div className="p-4">
@@ -1023,12 +1063,18 @@ export default function Account() {
               <LogOut size={15} />
               Log out
             </button>
-          </div>
+          </motion.div>
         )}
 
         {/* ── Plan & Billing ── */}
         {accountTab === "plan" && (
-          <div className="space-y-4">
+          <motion.div
+            key="account-tab-plan"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-4"
+          >
             {/* Plan & billing tab — the primary home of plan management
                 per the 2026-05-14 WHO/HOW IA principle. Inline actions
                 (Manage billing, Cancel plan) sit directly on the active-
@@ -1396,12 +1442,18 @@ export default function Account() {
               );
             })()}
 
-          </div>
+          </motion.div>
         )}
 
         {/* ── Security ── */}
         {accountTab === "security" && (
-          <div className="space-y-4">
+          <motion.div
+            key="account-tab-security"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-4"
+          >
             <SectionCard>
               <div className="divide-y divide-[hsl(var(--kiddo-border))]">
                 {/* Password row */}
@@ -1679,7 +1731,7 @@ export default function Account() {
             >
               Delete my account
             </button>
-          </div>
+          </motion.div>
         )}
 
         <TrustMicroStrip />
