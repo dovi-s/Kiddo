@@ -1400,12 +1400,46 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   font-size: 0.82rem;
   color: hsl(var(--kiddo-muted));
   transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+  /* Cursor pointer on inactive tabs added 2026-05-25 — the buttons are
+     interactive but the default cursor would suggest otherwise on
+     desktop. Tiny win, high-leverage (affects every tab everywhere). */
+  cursor: pointer;
+}
+
+/* Hover state on inactive tabs — added 2026-05-25 per the brilliance
+   audit. Pre-this-commit, hovering an inactive tab on Settings /
+   Account / Activity / FundSnapshot / etc. gave zero visible feedback
+   ("dead button" feel). Now: subtle bg lift + text-color darken so the
+   tab visibly responds to intent before commitment. The :not([data-
+   active="true"]) prevents the hover from competing with the white
+   active-tab background. */
+.kiddo-tab-item:not([data-active="true"]):hover {
+  background: hsl(var(--kiddo-cream));
+  color: hsl(var(--kiddo-ink));
+}
+
+/* Focus-visible state for keyboard users — added 2026-05-25. The
+   default browser focus ring on these pill-shaped tabs renders as a
+   rectangular outline that looks broken. Custom ring matches the
+   evergreen brand color + the tab's rounded-10 radius so the focus
+   indicator feels native. :focus-visible (not :focus) means mouse-
+   users don't see the ring on tap; only keyboard tabbers do. */
+.kiddo-tab-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--kiddo-evergreen) / 0.55);
 }
 
 .kiddo-tab-item[data-active="true"] {
   background: white;
   color: hsl(var(--kiddo-ink));
   box-shadow: 0 1px 3px rgba(26, 23, 16, 0.08);
+}
+
+.kiddo-tab-item[data-active="true"]:focus-visible {
+  /* Combine the active tab's drop shadow with the focus ring so the
+     active state stays visually weighted while still showing keyboard
+     focus. */
+  box-shadow: 0 1px 3px rgba(26, 23, 16, 0.08), 0 0 0 2px hsl(var(--kiddo-evergreen) / 0.55);
 }
 
 .kiddo-segmented {
