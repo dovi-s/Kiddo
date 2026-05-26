@@ -84,11 +84,16 @@ function buildContentSecurityPolicy() {
     connectSrc.push("ws:", "wss:", "http://localhost:*", "http://127.0.0.1:*");
   }
 
-  return [
+  // Dev-only: allow the app to be embedded in the VS Code "Mobile Preview"
+  // webview, whose framing origin is `vscode-webview://`. Production stays
+  // locked to 'self' so the deployed app can never be framed by anyone else.
+  const frameAncestors = isProd ? `'self'` : `'self' vscode-webview:`;
+
+  const directives = [
     `default-src 'self'`,
     `base-uri 'self'`,
     `object-src 'none'`,
-    `frame-ancestors 'self'`,
+    `frame-ancestors ${frameAncestors}`,
     `img-src 'self' data: https:`,
     `font-src 'self' data: https://fonts.gstatic.com`,
     `style-src ${styleSrc.join(" ")}`,
@@ -103,13 +108,28 @@ function buildContentSecurityPolicy() {
     `connect-src ${connectSrc.join(" ")}`,
     `frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://cdn.plaid.com https://*.plaid.com https://s.tradingview.com https://www.tradingview.com`,
     `form-action 'self'`,
-    `upgrade-insecure-requests`,
-  ].join("; ");
+  ];
+
+  // upgrade-insecure-requests would rewrite the dev server's http://localhost
+  // navigation to https inside the preview webview and break it. The deployed
+  // app is served over https, so production keeps the directive.
+  if (isProd) {
+    directives.push(`upgrade-insecure-requests`);
+  }
+
+  return directives.join("; ");
 }
 
 app.use((req, res, next) => {
   res.setHeader("X-DNS-Prefetch-Control", "on");
-  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  // In production, forbid framing outright. In dev we omit X-Frame-Options so
+  // the VS Code "Mobile Preview" webview can embed the app — X-Frame-Options
+  // has no per-origin allowlist, and Chromium blocks the frame on SAMEORIGIN
+  // regardless of CSP. The dev-only `frame-ancestors ... vscode-webview:` above
+  // still scopes exactly who may frame it.
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  }
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   // microphone=(self) so first-party voice recording works (gifter
