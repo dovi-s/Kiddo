@@ -3,6 +3,7 @@ import { Switch, Route, useLocation, useSearch } from "wouter";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MOTION } from "@/lib/motion";
 import { hasActiveDeepLink } from "@/lib/deep-link-highlight";
+import { normalizePath, isMarketingRoute } from "@/lib/routes";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RealtimeProvider } from "@/lib/realtime-context";
@@ -102,12 +103,6 @@ const appLoadingMessages = [
   "Opening the story behind the fund.",
 ];
 
-function normalizePath(path: string): string {
-  const cleaned = path.split("?")[0].split("#")[0] || "/";
-  if (cleaned !== "/" && cleaned.endsWith("/")) return cleaned.slice(0, -1);
-  return cleaned;
-}
-
 function isPublicGiftRoute(path: string): boolean {
   const pathname = normalizePath(path);
   const segments = pathname.split("/").filter(Boolean);
@@ -172,41 +167,6 @@ function isPublicGiftRoute(path: string): boolean {
   if (segments.length === 0) return false;
   if (reserved.has(segments[0])) return false;
   return segments.length === 1 || segments.length === 2;
-}
-
-function isMarketingRoute(path: string): boolean {
-  const pathname = normalizePath(path);
-
-  if (
-    pathname === "/" ||
-    pathname === "/demo" ||
-    pathname === "/faq" ||
-    pathname === "/how-it-works" ||
-    pathname === "/pricing" ||
-    pathname === "/founding-members" ||
-    pathname === "/blog" ||
-    pathname === "/stories" ||
-    pathname === "/compare" ||
-    pathname === "/security" ||
-    pathname === "/age-18" ||
-    pathname === "/about" ||
-    pathname === "/personal-funds" ||
-    pathname === "/contact" ||
-    pathname === "/legal" ||
-    pathname === "/tools/at-18-calculator" ||
-    pathname === "/tools/robux-vs-utma" ||
-    pathname === "/robux-vs-utma" ||
-    pathname === "/tools/utma-by-state"
-  ) {
-    return true;
-  }
-
-  return (
-    pathname.startsWith("/blog/") ||
-    pathname.startsWith("/stories/") ||
-    pathname.startsWith("/compare/") ||
-    pathname.startsWith("/tools/utma-by-state/")
-  );
 }
 
 function getSeoForPath(path: string): SeoConfig {

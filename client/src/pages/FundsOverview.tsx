@@ -465,29 +465,66 @@ export default function FundsOverview() {
   }
 
   // Edge case: user landed on this page but doesn't have 2+ funds.
-  // Bounce to the Dashboard rather than render an empty state — the
-  // single-fund Dashboard IS the overview.
+  // Two distinct sub-cases — don't collapse them into one "Open
+  // Dashboard" CTA:
+  //
+  //   - 1 fund: this IS a parent, just below the 2-fund overview
+  //     threshold. The single-fund Dashboard is their overview, so
+  //     bounce there.
+  //   - 0 funds: this user owns no funds at all. On /funds — a
+  //     parent-only household-aggregation page — that's almost always
+  //     a GIFTER who wandered in (gift-receipt link, sidebar, typed
+  //     URL). "Open Dashboard" sends them to ANOTHER empty parent
+  //     surface; their real home is /my-gifts. Offer that as the
+  //     primary path, with a quiet "start your own fund" escape for
+  //     the rare would-be parent. (No auto-redirect: a hard bounce
+  //     would surprise a parent mid-onboarding and risks a loop.)
   if (!enabled) {
+    const fundCount = data?.fundCount ?? 0;
+    const hasNoFunds = fundCount === 0;
     return (
       <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-funds-overview">
         <AppHeader />
         <main className="kiddo-canvas px-4 py-6">
           <div className="rounded-3xl border border-border bg-card p-8 text-center">
             <p className="font-heading text-lg font-semibold text-foreground">
-              The overview unlocks at 2 or more funds.
+              {hasNoFunds ? "This view is for funds you manage." : "The overview unlocks at 2 or more funds."}
             </p>
             <p className="mt-2 text-sm text-muted-foreground">
-              You have {data?.fundCount ?? 0} fund{(data?.fundCount ?? 0) === 1 ? "" : "s"}.
-              Open the Dashboard for the full view.
+              {hasNoFunds
+                ? "You don't manage any funds yet. If you've been gifting, your gifts live in one place."
+                : "You have 1 fund. Open the Dashboard for the full view."}
             </p>
-            <button
-              type="button"
-              onClick={() => setLocation("/dashboard")}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
-            >
-              Open Dashboard
-              <ArrowRight size={14} />
-            </button>
+            {hasNoFunds ? (
+              <div className="mt-4 flex flex-col items-center justify-center gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => setLocation("/my-gifts")}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+                  data-testid="button-funds-empty-view-gifts"
+                >
+                  View your gifts
+                  <ArrowRight size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLocation("/get-started")}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground"
+                  data-testid="button-funds-empty-start-fund"
+                >
+                  Start your own fund
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setLocation("/dashboard")}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+              >
+                Open Dashboard
+                <ArrowRight size={14} />
+              </button>
+            )}
           </div>
         </main>
       </div>

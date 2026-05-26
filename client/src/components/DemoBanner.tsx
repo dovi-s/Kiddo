@@ -1,21 +1,31 @@
-// Demo banner. Sticky top notification rendered on every authenticated
-// page when the current user has isDemoAccount=true. Calm pill register
-// (per feedback_toast_pattern_locked.md), not a flashing marketing
-// banner. Dismissible per session — re-appears on next login so the
-// user always knows they're in the demo context.
+// Demo banner. Sticky top notification rendered on the app surfaces
+// (Dashboard, Memory Book, Activity, gift flow, /my-gifts, etc.) when
+// the current user has isDemoAccount=true. Calm pill register (per
+// feedback_toast_pattern_locked.md), not a flashing marketing banner.
+// Dismissible per session — re-appears on next login so the user
+// always knows they're in the demo context.
+//
+// NOT shown on public marketing pages (Home, Pricing, How it works,
+// the /demo landing page itself) — there's no illustrative fund data
+// there, so the "amounts reset periodically" message is noise and the
+// banner would just stack on the marketing Nav. Gated via the shared
+// isMarketingRoute() classifier (lib/routes.ts) — the same one the app
+// shell uses to hide the sidebar on those pages.
 //
 // Reads `isDemoAccount` from useAuth(). Renders null for non-demo users
 // (zero cost on real-user surfaces). Per DUNPHY_DEMO_SPEC.md.
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { X } from "lucide-react";
+import { isMarketingRoute } from "@/lib/routes";
 
 const SESSION_DISMISS_KEY = "kora:demo-banner-dismissed";
 
 export function DemoBanner() {
   const { user } = useAuth();
+  const [location] = useLocation();
   const [dismissed, setDismissed] = useState(false);
 
   // Read session-dismissed state on mount. sessionStorage (not local)
@@ -33,7 +43,15 @@ export function DemoBanner() {
   }, []);
 
   const isDemoUser = Boolean((user as any)?.isDemoAccount);
-  if (!isDemoUser || dismissed) return null;
+  // Suppress on public marketing pages (Home, Pricing, How it works,
+  // the /demo landing page itself, etc.). The banner's "dollar amounts
+  // reset periodically" message + "create your own fund" CTA only make
+  // sense where the demo user is looking at illustrative fund data —
+  // i.e. the authenticated app surfaces (Dashboard, Memory Book,
+  // Activity, gift flow, /my-gifts). On marketing chrome it's noise and
+  // stacks redundantly on the marketing Nav. Same marketing-route
+  // classifier the app shell uses to hide the sidebar.
+  if (!isDemoUser || dismissed || isMarketingRoute(location)) return null;
 
   const handleDismiss = () => {
     setDismissed(true);
