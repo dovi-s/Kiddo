@@ -2466,6 +2466,59 @@ export default function Activity() {
                       const isMilestoneRow = rawType.startsWith("milestone_");
                       const ms = item.createdAt ? new Date(String(item.createdAt)).getTime() : NaN;
                       const isFreshMilestone = isMilestoneRow && Number.isFinite(ms) && (Date.now() - ms) < 60 * 60 * 1000;
+                      // Per-type row accents added 2026-05-25 Sprint 2.
+                      // Pre-this-commit, only milestone rows got the
+                      // left-border + gradient treatment; everything
+                      // else was visually flat. A 30-second scroll
+                      // through Activity read as a CSV row by row.
+                      // Now each category gets a subtle row-level
+                      // accent in its semantic color:
+                      //   - Milestone → gold (existing, unchanged)
+                      //   - Gift from others → warm-green
+                      //   - Memory (note/photo/etc.) → soft purple
+                      //   - Growth (sell/withdrawal/bank) → soft blue
+                      //   - Parent contribution → sage (slightly
+                      //     different from gift-from-others to
+                      //     distinguish "you" vs "from others")
+                      // Discipline: all accents are < 0.07 opacity so
+                      // the differentiation is visual rhythm not
+                      // peacock-feathering. The icon already carries
+                      // the saturated color; the row's job is to
+                      // belong to a family at a glance.
+                      const rowCategory = mapItemToCategory(item);
+                      const categoryAccent = (() => {
+                        if (isMilestoneRow || rowCategory === "milestone") {
+                          return {
+                            borderLeft: "3px solid hsl(var(--kiddo-gold))",
+                            background: "linear-gradient(to right, hsl(var(--kiddo-gold)/0.06) 0%, transparent 64%)",
+                          };
+                        }
+                        if (rowCategory === "memory") {
+                          return {
+                            borderLeft: "3px solid rgb(155, 110, 195)",
+                            background: "linear-gradient(to right, rgba(155,110,195,0.045) 0%, transparent 64%)",
+                          };
+                        }
+                        if (rowCategory === "gift") {
+                          return {
+                            borderLeft: "3px solid hsl(var(--kiddo-evergreen)/0.55)",
+                            background: "linear-gradient(to right, hsl(var(--kiddo-evergreen)/0.04) 0%, transparent 64%)",
+                          };
+                        }
+                        if (rowCategory === "auto") {
+                          return {
+                            borderLeft: "3px solid hsl(var(--kiddo-evergreen)/0.40)",
+                            background: "linear-gradient(to right, hsl(var(--kiddo-evergreen)/0.025) 0%, transparent 64%)",
+                          };
+                        }
+                        if (rowCategory === "growth") {
+                          return {
+                            borderLeft: "3px solid rgb(70, 110, 180)",
+                            background: "linear-gradient(to right, rgba(70,110,180,0.035) 0%, transparent 64%)",
+                          };
+                        }
+                        return null;
+                      })();
                       return (
                         <div
                           data-testid={`activity-card-${rowId}`}
@@ -2473,9 +2526,8 @@ export default function Activity() {
                           style={{
                             margin: highlightedId === rowId ? "0 -8px" : "0",
                             padding: highlightedId === rowId ? "0 8px" : "0",
-                            ...(isMilestoneRow ? {
-                              borderLeft: "3px solid hsl(var(--kiddo-gold))",
-                              background: "linear-gradient(to right, hsl(var(--kiddo-gold)/0.06) 0%, transparent 64%)",
+                            ...(categoryAccent ? {
+                              ...categoryAccent,
                               borderRadius: 8,
                               paddingLeft: highlightedId === rowId ? 11 : 8,
                               marginLeft: -3,

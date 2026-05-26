@@ -4044,12 +4044,58 @@ export default function MemoryBook() {
                       );
                     })()}
 
+                    {/* Per-type card treatment added 2026-05-25 Sprint 2.
+                        Previously every Memory Book entry used the same
+                        bg-card / kiddo-border combination regardless of
+                        type. A scrolling list of mixed types (gifts,
+                        milestones, photos, notes, parent letters) read
+                        as a stack of identical rectangles with content
+                        differentiating them. Now each type gets a
+                        BARELY-THERE bg tint + a slightly heavier left-
+                        edge accent in the type's palette so the eye
+                        instantly identifies what each entry is before
+                        reading the content.
+                        Discipline: tints are <= 0.05 opacity so the
+                        differentiation is felt not seen. No per-type
+                        color borders (would compete with the existing
+                        timeline-gutter dot); the accent goes on the
+                        inside-left of the card via a 3px box-shadow
+                        inset that respects the rounded corners. */}
                     <motion.div
                       className="relative overflow-hidden rounded-3xl border border-[hsl(var(--kiddo-border)/0.82)] bg-card"
-                      style={getDeepLinkHighlightCardStyle(
-                        isHighlighted,
-                        "0 1px 3px rgba(26,23,16,0.06), 0 14px 34px rgba(26,23,16,0.07)",
-                      )}
+                      style={(() => {
+                        const baseStyle = getDeepLinkHighlightCardStyle(
+                          isHighlighted,
+                          "0 1px 3px rgba(26,23,16,0.06), 0 14px 34px rgba(26,23,16,0.07)",
+                        );
+                        // Per-type tint + left-rail accent. The rail is
+                        // a 3px colored strip on the inside-left of the
+                        // card; the bg tint is a soft wash. Both come
+                        // from the brand palette (evergreen / gold)
+                        // routed through the existing typeConfig.dotColor
+                        // semantics for consistency.
+                        const accent = (() => {
+                          switch (entry.type) {
+                            case "gift_message":
+                              return { tint: "hsl(var(--kiddo-evergreen)/0.025)", rail: "hsl(var(--kiddo-evergreen)/0.55)" };
+                            case "milestone":
+                            case "memory_milestone_added":
+                              return { tint: "hsl(var(--kiddo-gold)/0.05)", rail: "hsl(var(--kiddo-gold)/0.75)" };
+                            case "parent_note":
+                              return { tint: "hsl(var(--kiddo-gold)/0.035)", rail: "hsl(var(--kiddo-gold)/0.55)" };
+                            case "parent_investment_start":
+                              return { tint: "hsl(var(--kiddo-evergreen)/0.035)", rail: "hsl(var(--kiddo-evergreen)/0.55)" };
+                            default:
+                              return null;
+                          }
+                        })();
+                        if (!accent) return baseStyle;
+                        return {
+                          ...baseStyle,
+                          background: accent.tint,
+                          boxShadow: `inset 3px 0 0 0 ${accent.rail}, ${(baseStyle as any).boxShadow ?? "0 1px 3px rgba(26,23,16,0.06), 0 14px 34px rgba(26,23,16,0.07)"}`,
+                        };
+                      })()}
                       // Hover lift bumped from y:-1 to y:-2 with a soft
                       // shadow build — matches Dashboard's card hover
                       // language. Subtle, not bouncy. Adds a "this is
