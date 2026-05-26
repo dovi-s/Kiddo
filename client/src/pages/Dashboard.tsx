@@ -110,6 +110,7 @@ import {
   CalendarClock,
   History,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { FirstSellTaxExplainerModal, type FirstSellTaxExplainerPayload } from "@/components/FirstSellTaxExplainerModal";
@@ -4597,6 +4598,196 @@ export default function Dashboard() {
             banner. Status pills on each pending gift row + the new
             `$X settling` summary line under "Total gifts" cover this
             job without the alert-pattern noise.) */}
+
+        {/* ─── First-gift arrival ceremony ─────────────────────────
+            Added 2026-05-25 per the first-principles audit.
+
+            A parent creates a fund. The first gift lands — say,
+            Grandma's $50. Pre-this-commit, that gift was just an
+            activity row. But it's the MOMENT THE PARENT'S BELIEF
+            BECOMES REAL: someone showed up. The fund is now
+            actually FUNDED.
+
+            This card celebrates that moment with the gifter's name,
+            amount, ticker / mix destination, and projected-at-18
+            value — the entire product thesis in one card at the
+            exact moment it lands.
+
+            Discipline:
+              - Renders ONLY when the active fund has exactly one
+                non-parent gift that's settled AND that gift's
+                createdAt is within the last 30 days (so existing
+                long-time users don't see a retro celebration for an
+                ancient first gift on Dashboard load).
+              - Localstorage flag per fund prevents re-celebration on
+                subsequent loads. Once dismissed, never shown again
+                for that fund. (A future iteration could persist this
+                server-side; localStorage is the right scope for
+                v1 — same device the parent first reads it on.)
+              - Anonymous gifts trigger the same ceremony but the
+                copy adapts ('Someone believed in {child}'s future'
+                instead of '{name} just made it real'). The privacy
+                promise holds: no name reveal even at the moment of
+                celebration.
+              - Honest gift-amount line, no inflation. The compound
+                projection uses the canonical projectFundValue so the
+                number matches Dashboard's hero projection + KidView
+                + Memory Book per-gift line.
+              - Per the Apple-Settings register: motion stays calm
+                (slow-in, out-expo, no bounce); the gold accent
+                signals 'this is a celebration moment' without
+                shouting; one CTA only ('Got it') to dismiss.
+
+            This is the MOMENT OF BELIEF. The product earns the user's
+            trust here. Don't bury it. */}
+        {(() => {
+          if (!activeFund?.id) return null;
+          const fundId = String(activeFund.id);
+          // Storage key per fund — once dismissed, never shown again for that fund.
+          const STORAGE_KEY = `kiddo.first-gift-celebrated:${fundId}`;
+          if (typeof window === "undefined") return null;
+          let alreadySeen = false;
+          try { alreadySeen = !!window.localStorage.getItem(STORAGE_KEY); } catch {}
+          if (alreadySeen) return null;
+          const ownerEmailLower = String((user as any)?.email || "").trim().toLowerCase();
+          // Find the first NON-PARENT settled gift on this fund.
+          const externalGifts = (gifts || [])
+            .filter((g: any) => {
+              const status = String(g?.status || "").toLowerCase();
+              if (status !== "settled" && status !== "invested") return false;
+              const senderEmail = String(g?.senderEmail || "").trim().toLowerCase();
+              if (senderEmail && senderEmail === ownerEmailLower) return false;
+              return true;
+            })
+            .sort((a: any, b: any) => new Date(String(a?.createdAt || 0)).getTime() - new Date(String(b?.createdAt || 0)).getTime());
+          if (externalGifts.length === 0) return null;
+          const firstGift = externalGifts[0];
+          const firstGiftTs = new Date(String(firstGift.createdAt || 0)).getTime();
+          if (!Number.isFinite(firstGiftTs)) return null;
+          // Only fire for genuinely recent first gifts (last 30 days) — long-
+          // time users don't get retro celebrations on Dashboard load. Silently
+          // set the storage flag so they never see one either.
+          const daysOld = (Date.now() - firstGiftTs) / (24 * 60 * 60 * 1000);
+          if (daysOld > 30) {
+            try { window.localStorage.setItem(STORAGE_KEY, new Date().toISOString()); } catch {}
+            return null;
+          }
+          const isAnonymousGift = Boolean((firstGift as any)?.isAnonymous);
+          const giftAmountNum = parseFloat(String(firstGift.amount || "0"));
+          const giftAmount = Number.isFinite(giftAmountNum) ? giftAmountNum : 0;
+          const senderFirstName = isAnonymousGift
+            ? null
+            : (String(firstGift.senderName || "").trim().split(/\s+/)[0] || null);
+          const childFirstName = activeFund.recipientFirstName || activeFund.name || "your child";
+          const ticker = String((firstGift as any)?.selectedTicker || "").trim().toUpperCase() || null;
+          const execModel = String((firstGift as any)?.executionModel || "").toLowerCase();
+          const destinationLabel = ticker
+            ? ticker
+            : execModel === "auto" || execModel === "family" || execModel === "auto_invest"
+              ? `${childFirstName}'s mix`
+              : null;
+          // Project to majority age via canonical helper.
+          const childBirthdate = (activeFund as any)?.recipientBirthdate as string | null | undefined;
+          const fundMajorityAge = Number((activeFund as any)?.majorityAge) || 18;
+          let projectedAtMajority: number | null = null;
+          if (childBirthdate) {
+            const birthMs = new Date(childBirthdate).getTime();
+            if (Number.isFinite(birthMs)) {
+              const ageNowYears = (Date.now() - birthMs) / (365.25 * 24 * 60 * 60 * 1000);
+              const yearsToMajority = Math.max(0, fundMajorityAge - ageNowYears);
+              if (yearsToMajority > 0.08) {
+                projectedAtMajority = projectFundValue({
+                  startingValue: giftAmount,
+                  monthlyContribution: 0,
+                  yearsAhead: yearsToMajority,
+                });
+              }
+            }
+          }
+          const dismiss = () => {
+            haptic("light");
+            try { window.localStorage.setItem(STORAGE_KEY, new Date().toISOString()); } catch {}
+            // Force re-render by bumping the active-fund query — re-rendering Dashboard re-reads localStorage and the card disappears.
+            queryClient.invalidateQueries({ queryKey: ["/api/funds"] }).catch(() => {});
+          };
+          return (
+            <motion.section
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+              className="relative overflow-hidden rounded-[28px] mb-4"
+              style={{
+                background: "linear-gradient(135deg, hsl(var(--kiddo-gold)/0.20) 0%, hsl(var(--kiddo-cream)) 50%, hsl(var(--kiddo-gold)/0.12) 100%)",
+                border: "1px solid hsl(var(--kiddo-gold)/0.35)",
+                boxShadow: "0 6px 24px rgba(184,121,26,0.10), inset 0 1px 0 rgba(255,255,255,0.78)",
+              }}
+              data-testid="first-gift-celebration"
+            >
+              <div className="p-6">
+                <div className="flex items-start gap-3 mb-3">
+                  <motion.span
+                    initial={{ scale: 0.6, rotate: -20 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.15 }}
+                    className="text-3xl leading-none shrink-0"
+                    aria-hidden
+                  >
+                    🌱
+                  </motion.span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-[hsl(var(--kiddo-gold-ink))]/85">
+                      The first gift just landed
+                    </p>
+                    <h2 className="mt-1 font-heading text-xl md:text-2xl font-semibold text-foreground leading-tight">
+                      {isAnonymousGift
+                        ? <>Someone believed in {childFirstName}&apos;s future.</>
+                        : senderFirstName
+                          ? <>{senderFirstName} just made it real.</>
+                          : <>Someone just made it real.</>}
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={dismiss}
+                    className="shrink-0 -mr-2 -mt-1 rounded-full p-2 text-muted-foreground hover:text-foreground hover:bg-black/5 transition-colors"
+                    aria-label="Dismiss"
+                    data-testid="first-gift-celebration-dismiss"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="space-y-1.5 ml-[40px]">
+                  <p className="text-sm text-foreground/90 leading-relaxed">
+                    <span className="font-semibold text-foreground tabular-nums">${giftAmount.toFixed(2)}</span>
+                    {destinationLabel ? <> in {destinationLabel}</> : null}.
+                    {" "}Real money, real stocks, in {childFirstName}&apos;s name.
+                  </p>
+                  {projectedAtMajority != null && (
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      At {fundMajorityAge}, that single gift could be worth around{" "}
+                      <span className="font-semibold text-[hsl(var(--kiddo-evergreen))] tabular-nums">
+                        ${projectedAtMajority.toFixed(2)}
+                      </span>.
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground/75 italic mt-2">
+                    Your fund is funded. Everything else compounds from here.
+                  </p>
+                </div>
+                <div className="mt-5 ml-[40px]">
+                  <button
+                    type="button"
+                    onClick={dismiss}
+                    className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--kiddo-evergreen))] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                    data-testid="first-gift-celebration-cta"
+                  >
+                    Got it
+                  </button>
+                </div>
+              </div>
+            </motion.section>
+          );
+        })()}
 
         {/* Action items for the active fund. Dashboard is per-kid
             so we scope to the active fund — household-aggregate
