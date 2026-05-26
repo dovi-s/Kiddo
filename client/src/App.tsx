@@ -52,10 +52,12 @@ const FAQ = lazy(() => import("@/pages/FAQ"));
 const HowItWorks = lazy(() => import("@/pages/HowItWorks"));
 const CalculatorAt18 = lazy(() => import("@/pages/CalculatorAt18"));
 const RobuxVsUtma = lazy(() => import("@/pages/RobuxVsUtma"));
+const TrumpAccountVsUtma = lazy(() => import("@/pages/TrumpAccountVsUtma"));
 const UtmaByStateIndex = lazy(() => import("@/pages/UtmaByStateIndex"));
 const UtmaByState = lazy(() => import("@/pages/UtmaByState"));
 const Pricing = lazy(() => import("@/pages/Pricing"));
 const FoundingMembers = lazy(() => import("@/pages/FoundingMembers"));
+const PmfSurvey = lazy(() => import("@/pages/PmfSurvey"));
 const SponsorSuccess = lazy(() => import("@/pages/SponsorSuccess"));
 const Blog = lazy(() => import("@/pages/Blog"));
 const BlogPost = lazy(() => import("@/pages/BlogPost"));
@@ -334,6 +336,14 @@ function getSeoForPath(path: string): SeoConfig {
     return {
       title: "Robux vs UTMA: What your kid's monthly Roblox spend could become by 18 | Kiddo",
       description: "Real math: the same monthly dollars going into Robux versus going into a custodial UTMA investment account. Adjust monthly spend and your kid's age to see the difference at 18. Honest 7% projection net of Kiddo's annual fee ($1/yr per $1,000 invested).",
+      robots: "index, follow",
+      ogType: "website",
+    };
+  }
+  if (pathname === "/tools/trump-account-vs-utma" || pathname === "/trump-account-vs-utma") {
+    return {
+      title: "Trump Account vs UTMA: which is for your kid? | Kiddo",
+      description: "Honest side-by-side of the new federal Trump Accounts and a custodial UTMA. The federal account is index-only, capped at $5,000/yr, and locked until 59½; a UTMA holds real companies, has no cap, and is fully theirs at 18. See which does which job — and why most families want both. 7% projection net of Kiddo's annual fee ($1/yr per $1,000 invested).",
       robots: "index, follow",
       ogType: "website",
     };
@@ -764,10 +774,15 @@ function Router() {
               get linked without the /tools/ prefix. Both paths resolve
               to the same calculator. */}
           <Route path="/robux-vs-utma"><RobuxVsUtma /></Route>
+          <Route path="/tools/trump-account-vs-utma"><TrumpAccountVsUtma /></Route>
+          {/* /trump-account-vs-utma alias — same dual-path pattern as
+              robux-vs-utma; SEO links may omit the /tools/ prefix. */}
+          <Route path="/trump-account-vs-utma"><TrumpAccountVsUtma /></Route>
           <Route path="/tools/utma-by-state"><UtmaByStateIndex /></Route>
           <Route path="/tools/utma-by-state/:stateCode"><UtmaByState /></Route>
           <Route path="/pricing"><Pricing /></Route>
           <Route path="/founding-members"><FoundingMembers /></Route>
+          <Route path="/feedback/pmf"><PmfSurvey /></Route>
           <Route path="/sponsor-success"><SponsorSuccess /></Route>
           <Route path="/blog"><Blog /></Route>
           <Route path="/blog/:slug"><BlogPost /></Route>
@@ -866,6 +881,7 @@ function App() {
     // back as escapes; the sidebar's nav links aren't urgent during
     // the 2-5 minute flow.
     location === "/get-started" ||
+    location === "/feedback/pmf" ||
     location.startsWith("/kid/") ||
     location.startsWith("/updates/share/") ||
     location.startsWith("/updates/unsubscribe/") ||
