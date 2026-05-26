@@ -19,6 +19,36 @@ import {
   rasterizeElementToPng,
   shareOrDownloadImage,
 } from "@/lib/rasterize-share-card";
+import { getActiveFundId } from "@/hooks/use-active-fund";
+
+// Per-fund "highest milestone already celebrated" persistence. Without this,
+// the card re-fires on EVERY Dashboard mount: Dashboard seeds prevValueRef to
+// 0 while funds load async (Dashboard.tsx:2059), so the first populated render
+// compares 0 -> currentValue and getMilestoneCrossed returns the highest
+// crossed threshold every single load. Storing the highest celebrated
+// threshold per fund makes each milestone fire ONCE, then archive — matching
+// the localStorage-dismiss pattern used by KidAt18WelcomeBanner /
+// CoparentAcceptedBanner and the dismiss-tiering rule
+// (project_dismiss_swipe_tiering). A genuine future crossing (a later gift
+// pushes the fund past $2,500) still fires, because 2500 > the stored 1000.
+const MILESTONE_CELEBRATED_PREFIX = "kiddo.milestone.celebrated.";
+function getCelebratedThreshold(fundId: string): number {
+  try {
+    const raw = localStorage.getItem(`${MILESTONE_CELEBRATED_PREFIX}${fundId || "default"}`);
+    const n = raw ? parseInt(raw, 10) : 0;
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+function setCelebratedThreshold(fundId: string, threshold: number): void {
+  try {
+    localStorage.setItem(`${MILESTONE_CELEBRATED_PREFIX}${fundId || "default"}`, String(threshold));
+  } catch {
+    // localStorage unavailable (private mode / quota). Non-fatal — worst case
+    // the card may re-fire, which is just the pre-fix behavior, not a new bug.
+  }
+}
 
 interface MilestoneMomentProps {
   currentValue: number;
@@ -39,13 +69,18 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, on
 
   useEffect(() => {
     const hit = getMilestoneCrossed(previousValue, currentValue);
-    if (hit) {
-      setMilestone(hit);
-      setTimeout(() => {
-        setVisible(true);
-        haptic("milestone");
-      }, 400);
-    }
+    if (!hit) return;
+    // Fire each threshold at most once per fund. See the persistence helpers
+    // above for why the unguarded version re-fired on every Dashboard mount.
+    const fundId = getActiveFundId();
+    if (hit <= getCelebratedThreshold(fundId)) return;
+    setCelebratedThreshold(fundId, hit);
+    setMilestone(hit);
+    const timer = setTimeout(() => {
+      setVisible(true);
+      haptic("milestone");
+    }, 400);
+    return () => clearTimeout(timer);
   }, [currentValue, previousValue]);
 
   const dismiss = () => {
