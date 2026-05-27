@@ -178,7 +178,12 @@ function EmailVerificationStatusRow() {
   // haven't verified see the row.
   const CUTOFF = new Date("2026-05-15T00:00:00Z").getTime();
   const isPostCutoff = createdAt ? new Date(createdAt).getTime() > CUTOFF : false;
-  const isUnverified = !verifiedAt && isPostCutoff;
+  // Demo accounts have no real inbox and can't action a verification
+  // email, so the "Email not verified / Resend" nag is a dead end that
+  // breaks the polished-demo illusion. Treat demo users as verified for
+  // display. Same demo-awareness the Dashboard setup nudge already has.
+  const isDemoUser = Boolean((user as any)?.isDemoAccount);
+  const isUnverified = !verifiedAt && isPostCutoff && !isDemoUser;
   if (!isUnverified) return null;
 
   const handleResend = async () => {

@@ -3840,7 +3840,12 @@ const [editFundName, setEditFundName] = useState("");
                about something that already happened). The Dashboard
                carries the canonical share entry; Settings doesn't need
                to be a redundant share entry once gifts are flowing. */}
-        {setup.percent < 100 ? (
+        {/* Demo accounts skip this whole setup block — the demo funds are
+            fully established (gifts already flowing) and steps like "link
+            withdrawals" can't be completed in the sandbox, so the nudge
+            would be a dead-end nag. Mirrors the Dashboard's existing
+            !isDemoAccount gate on the same nudge. Added 2026-05-26. */}
+        {!(user as any)?.isDemoAccount && (setup.percent < 100 ? (
           <SetupProgressNudge
             title="Finish the few things behind the gift link"
             subtitle="This is the quiet setup that lets gifts move cleanly."
@@ -3909,7 +3914,7 @@ const [editFundName, setEditFundName] = useState("");
               </div>
             </div>
           </SectionCard>
-        ) : null}
+        ) : null)}
 
         {/* Closed-fund banner — calm, action-bearing. Renders at the top
             of Settings whenever the active fund is closed. Single button

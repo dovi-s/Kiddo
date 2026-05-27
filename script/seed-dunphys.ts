@@ -222,11 +222,33 @@ const KIDS = [
 //   • Claire (mom)     — occasional add note
 //
 // Output count target: Haley ≈ 50 gifts, Alex ≈ 30, Luke ≈ 22.
-function giftsForKid(kid: { firstName: string; ageYears: number }) {
+function giftsForKid(kid: { firstName: string; ageYears: number; birthdate: string }) {
   const N = (yearsAgo: number, monthsAgo = 0): string => {
     const d = new Date();
     d.setFullYear(d.getFullYear() - yearsAgo);
     d.setMonth(d.getMonth() - monthsAgo);
+    return d.toISOString();
+  };
+  // Birth month (0-11), parsed straight off the YYYY-MM-DD string so a
+  // timezone offset can't shift it across a month boundary.
+  const birthMonth = Number(kid.birthdate.slice(5, 7)) - 1;
+  // Pin an occasion gift to a specific calendar month `yearsAgo` years
+  // back (e.g. birthday gifts → birth month, Christmas → December),
+  // instead of the old fixed "N months before today" offset that
+  // decoupled the date from the occasion — that's how a "Merry
+  // Christmas" note ended up dated in April and birthday gifts landed
+  // nowhere near the kid's actual birthday. Guarantees a past date: if
+  // pinning to this year's month would land in the future (birthday
+  // hasn't happened yet this year), step back one more year. `day`
+  // varies per gifter so same-month birthday gifts get distinct,
+  // deterministically-ordered timestamps.
+  const onMonth = (yearsAgo: number, month: number, day = 15): string => {
+    const now = new Date();
+    const year = now.getFullYear() - yearsAgo;
+    let d = new Date(Date.UTC(year, month, day, 12, 0, 0));
+    if (d.getTime() > now.getTime()) {
+      d = new Date(Date.UTC(year - 1, month, day, 12, 0, 0));
+    }
     return d.toISOString();
   };
   const list: Array<{
@@ -259,7 +281,7 @@ function giftsForKid(kid: { firstName: string; ageYears: number }) {
       selectedTicker: "DIS",
       message: gloriaNotes[agoYears % gloriaNotes.length],
       hasAudio: true,
-      createdAt: N(agoYears, 4),
+      createdAt: onMonth(agoYears, birthMonth, 12),
     });
   }
 
@@ -281,7 +303,7 @@ function giftsForKid(kid: { firstName: string; ageYears: number }) {
       amount: agoYears < 5 ? 100 : 200,
       selectedTicker: "DIS",
       message: camNotes[agoYears % camNotes.length],
-      createdAt: N(agoYears, 5),
+      createdAt: onMonth(agoYears, birthMonth, 20),
     });
   }
 
@@ -302,7 +324,7 @@ function giftsForKid(kid: { firstName: string; ageYears: number }) {
       amount: 100,
       selectedTicker: "AAPL",
       message: mitchNotes[agoYears % mitchNotes.length],
-      createdAt: N(agoYears, 4),
+      createdAt: onMonth(agoYears, birthMonth, 5),
     });
   }
 
@@ -316,13 +338,18 @@ function giftsForKid(kid: { firstName: string; ageYears: number }) {
     `For ${kid.firstName}'s future. — Jay`,
   ];
   for (let agoYears = 0; agoYears < age; agoYears += 3) {
+    const jayIdx = (agoYears / 3) % jayNotes.length;
+    // jayNotes[1] is the "Merry Christmas" note — date it in December so
+    // the message and the month agree. Every other note is a
+    // birthday/"big year"/"for your future" beat → birth month.
+    const isChristmas = jayIdx === 1;
     list.push({
       senderName: "Jay Pritchett",
       senderEmail: "jay@dunphyfamily.com",
       amount: agoYears < 6 ? 250 : 500,
       selectedTicker: "GOOGL",
-      message: jayNotes[(agoYears / 3) % jayNotes.length],
-      createdAt: N(agoYears, agoYears % 2 === 0 ? 4 : 1),
+      message: jayNotes[jayIdx],
+      createdAt: isChristmas ? onMonth(agoYears, 11, 22) : onMonth(agoYears, birthMonth, 25),
     });
   }
 
@@ -441,8 +468,26 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   // displayed per-holding gain reads positive (currentValue > costBasis).
   // Locked 2026-05-21 after the chart audit revealed underwater
   // funds for two of three demo kids.
-  const giftListForSizing = giftsForKid({ firstName: kid.firstName, ageYears: kid.ageYears });
+  const giftListForSizing = giftsForKid({ firstName: kid.firstName, ageYears: kid.ageYears, birthdate: kid.birthdate });
   const giftSum = giftListForSizing.reduce((sum, g) => sum + g.amount, 0);
+  // Backdate the fund's creation to just before its earliest gift. The
+  // funds table defaults createdAt=now, but the seed's gifts span YEARS
+  // into the past — and the Dashboard "{Kid}'s fund so far" breakdown
+  // starts its window at the fund's createdAt. A now-dated fund therefore
+  // excluded EVERY historical gift, zeroing the Gifts / recurring /
+  // one-time rows and dumping the whole balance into "Market growth"
+  // (impossible math: $0 contributed, $9k of "growth", and a "Worth today"
+  // that didn't match the hero balance). Anchoring createdAt before the
+  // first gift puts every gift inside the window so the breakdown
+  // attributes correctly, and makes "Growing for {Kid} since {year}"
+  // honest (a fund with 2014 gifts was not created in 2026). Locked
+  // 2026-05-26 with the demo-breakdown audit.
+  const earliestGiftMs = giftListForSizing.reduce((min, g) => {
+    const t = new Date(g.createdAt).getTime();
+    return Number.isFinite(t) && t < min ? t : min;
+  }, Date.now());
+  // One day before the first gift — the fund exists, THEN gifts arrive.
+  const fundCreatedAt = new Date(earliestGiftMs - 24 * 60 * 60 * 1000);
   const growthFactor =
     kid.firstName === "Haley" ? 1.50
     : kid.firstName === "Alex" ? 1.40
@@ -465,6 +510,9 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
 
   const [fund] = await db.insert(funds).values({
     userId: parentUserId,
+    // Backdated so the fund predates its own gift history (see above) —
+    // otherwise the "fund so far" breakdown shows $0 in gifts.
+    createdAt: fundCreatedAt,
     recipientFirstName: kid.firstName,
     recipientLastName: kid.lastName,
     // recipientBirthdate is a timestamp column in shared/schema.ts —
@@ -475,14 +523,24 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
     // which made /demo → Dashboard → /get-started for every visitor.
     recipientBirthdate: new Date(kid.birthdate),
     pronoun: kid.pronoun,
-    state: kid.state,
+    // Schema column is recipientState (recipient_state); a bare `state`
+    // key wrote to nothing, leaving recipientState NULL on every demo fund
+    // (so the snapshot fell back to a state default instead of using the
+    // elected majority age, and showed no state name). Fixed 2026-05-26.
+    recipientState: kid.state,
     majorityAge: kid.majorityAge,
     name: `${kid.firstName}'s Fund`,
     slug: kid.slug,
     description: kid.description,
     accountType: "utma",
     status: "active",
-    strategy: kid.strategy,
+    // Column is `investmentStrategy` (DB: investment_strategy). The old
+    // `strategy` key matched NO column, so Drizzle silently dropped it and
+    // every demo fund fell back to the "auto_invest" default — which the
+    // dashboard renders as "{Kid}'s mix (Growth)" with an EMPTY emoji for
+    // all three kids (so Alex/balanced + Haley/conservative both mislabeled
+    // as Growth, and the missing emoji left a stray "( Growth)" gap).
+    investmentStrategy: kid.strategy,
     balance: investedValue.toFixed(2),
     cashBalance: "0.00",
     pendingBalance: "0.00",
@@ -528,7 +586,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   // MemoryBook.tsx filters specifically for "gift_message" + "milestone"
   // + "photo" + "note", so the old entries silently fell through and
   // the Memory Book read empty regardless of how many gifts existed.
-  const giftList = giftsForKid({ firstName: kid.firstName, ageYears: kid.ageYears });
+  const giftList = giftsForKid({ firstName: kid.firstName, ageYears: kid.ageYears, birthdate: kid.birthdate });
   const sendersSeen = new Set<string>();
   for (const g of giftList) {
     const giftAudioUrl = g.hasAudio ? gloriaAudioUrl : null;
@@ -630,13 +688,17 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
     } as any);
   }
 
-  // Seed a creation activity.
+  // Seed a creation activity. Dated to match the fund's backdated
+  // createdAt so the Activity timeline's "Fund created" anchor sits at
+  // the start of the saga (before the gifts), not at today's date on a
+  // fund that's been growing for years.
   await db.insert(activities).values({
     userId: parentUserId,
     fundId: fund.id,
     type: "fund_created",
     title: `${kid.firstName}'s fund created`,
     description: kid.description,
+    createdAt: fundCreatedAt,
   } as any);
 
   // Generate the historical balance curve. Walks month-by-month from
