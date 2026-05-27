@@ -92,6 +92,14 @@ export default function GiftSuccess() {
   const executionModelParam = params.get("executionModel") || ""
   const fundNameParam = params.get("fundName") || ""
   const sessionId = params.get("session_id") || ""
+  // Demo-fund gifts route through server/demoSandbox.ts, which charges
+  // NOTHING and redirects here with ?demo=1. Without surfacing it, this
+  // celebratory page reads identically to a real purchase ("You just
+  // invested $50...") and a demo visitor can't tell their card wasn't
+  // charged. The banner below makes the no-charge reality explicit.
+  // Param-driven (not isDemoAccount) so it also covers anonymous visitors
+  // gifting to a demo fund, who have no Kiddo session. Added 2026-05-26.
+  const isDemoGift = params.get("demo") === "1"
   // Recurring-checkout URL params — set by /api/stripe/checkout/gift-recurring
   // on the success_url. When recurring=1 the page renders a recurring-aware
   // headline/subheadline ("Your monthly to Emma is set up" vs the one-time
@@ -726,6 +734,31 @@ export default function GiftSuccess() {
   return (
     <div className="kiddo-app-page min-h-screen">
       <div className="kiddo-canvas flex flex-col items-center px-4 py-8">
+
+        {/* Demo notice — leads the page (before the celebratory copy) so a
+            demo visitor immediately knows no real card was charged. Demo-fund
+            gifts never touch Stripe (server/demoSandbox.ts); this is the only
+            place that says so, since the global DemoBanner deliberately skips
+            the gift-success surface. */}
+        {isDemoGift && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="mb-6 w-full max-w-md rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.30)] bg-[hsl(var(--kiddo-evergreen)/0.08)] px-4 py-3 text-center"
+            data-testid="banner-demo-gift"
+          >
+            <p className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
+              Demo gift — no card was charged.
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--kiddo-evergreen))]/85">
+              You're in the Dunphy demo. Everything below is illustrative; no real money moved and balances reset periodically.{" "}
+              <Link href="/get-started" className="font-semibold underline underline-offset-2">
+                Create a real fund →
+              </Link>
+            </p>
+          </motion.div>
+        )}
 
         {/* Logo */}
         <motion.div
