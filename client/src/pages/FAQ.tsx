@@ -120,7 +120,7 @@ const faqItems = [
     question: "How is this different from a 529?",
     answer: (
       <>
-        A 529 is mainly for education expenses. A child fund through Kiddo is more flexible later: college, a first car, a down payment, or something else entirely. Many families use both: a 529 for school and a Kiddo fund for gifts that can grow. To see what consistent investing through a UTMA could grow into for your situation, try the{" "}
+        A 529 is built around one future: college. The money stays in your name until it's spent there, and non-qualified withdrawals are taxed and penalized. A Kiddo fund is your child's money for their whole life: college, a first business, a first home, or whatever they choose when it becomes fully theirs at 18 or 21. It's also the one account your whole family can gift into with a tap: grandparents, aunts, and friends, with each gift landing in your child's Memory Book. 529s are great at the college-savings job, and many families keep both: a 529 for tuition and a Kiddo fund for everything else (and everyone else who wants to show up). To see what consistent investing through a UTMA could grow into for your situation, try the{" "}
         <Link href="/tools/at-18-calculator" className="text-primary hover:underline">
           at-18 calculator
         </Link>
