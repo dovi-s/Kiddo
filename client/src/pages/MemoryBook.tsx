@@ -3241,7 +3241,16 @@ export default function MemoryBook() {
                   canonical surfaces: each piece of content has ONE
                   primary home; secondary surfaces show smaller versions
                   or are hidden for that audience. */}
-              {gifterRoster.length > 0 && !isOwner && (
+              {gifterRoster.length > 0 && !isOwner && !authLoading && (!isAuthenticated || !!fundData) && (
+                /* Ownership-resolved guard: `isOwner` (line ~2350) needs
+                   fundData loaded to be correct — until then it's falsy, so
+                   the owner briefly saw this "Who loves {child}" strip flash
+                   in and then vanish once fundData resolved and it computed
+                   `isOwner === true`. Only render once ownership is actually
+                   known: a public/unauthenticated viewer is never the owner
+                   (show immediately), but for an authenticated user we wait
+                   for fundData (and for auth itself to settle) before
+                   deciding. Eliminates the flash for the parent. */
                 <div className="border-b border-border/70 px-4 py-4" data-testid="memory-gifter-roster">
                   <p className="kiddo-section-label mb-3">{childName ? `Who loves ${childName}` : "Who gave"}</p>
                   <div className="flex gap-4 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
