@@ -4467,7 +4467,7 @@ export async function registerRoutes(
         .filter((subscriber) => subscriber.isAnonymous)
         .length;
 
-      const transition = getAgeMilestoneState(fund.recipientBirthdate);
+      const transition = getAgeMilestoneState(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
 
       res.json({
         fundId: fund.id,
@@ -6984,9 +6984,10 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Only the invited child account can complete this transfer." });
       }
 
-      const milestone = getAgeMilestoneState(fund.recipientBirthdate);
+      const majorityAge = Number((fund as any).majorityAge) || 18;
+      const milestone = getAgeMilestoneState(fund.recipientBirthdate, majorityAge);
       if (!milestone.inviteEligible) {
-        return res.status(409).json({ error: "The transfer can only be completed once the age-18 milestone is reached." });
+        return res.status(409).json({ error: `The transfer can only be completed once ${fund.recipientFirstName || "the child"} reaches the age of majority (${majorityAge}).` });
       }
       if (found.record.ownershipTransferredAt) {
         return res.json({
