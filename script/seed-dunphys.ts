@@ -1088,6 +1088,27 @@ async function generateHistoricalSnapshots(
     basis: p.basis * basisScaleFactor,
   }));
 
+  // Basis correctness pass. basisScaleFactor's denominator (the monthly path's
+  // final raw basis) can disagree with the true total of all gift amounts on
+  // active-recurring funds, letting the scaled basis overshoot finalCostBasis —
+  // but a cost-basis line must be monotonic and end exactly at total
+  // contributions. Recompute every anchor's basis as a clean step function of
+  // real gift dates, scaled by finalCostBasis / (true total gifts): monotonic,
+  // never overshoots, lands exactly on finalCostBasis. interpAt below derives
+  // gain = total − basis from these corrected anchors and steps basis the same
+  // way between them, so a gift produces a real step-up on its date.
+  const totalRawGifts = sortedGifts.reduce((s, g) => s + g.amount, 0);
+  const steppedBasisAt = (t: number): number => {
+    if (totalRawGifts <= 0) return 0;
+    let rawCum = 0;
+    for (const g of sortedGifts) {
+      if (new Date(g.createdAt).getTime() <= t) rawCum += g.amount;
+      else break; // sortedGifts is ascending
+    }
+    return (rawCum / totalRawGifts) * finalCostBasis;
+  };
+  for (const m of scaledMonthly) m.basis = steppedBasisAt(m.date.getTime());
+
   // Resolution policy — each toggle on the dashboard chart (1W / 1M /
   // YTD / 1Y / 5Y / ALL) reads from the same fund_snapshots series and
   // filters by date. Monthly-only data leaves 1W with 1 point and 1M
@@ -1124,18 +1145,33 @@ async function generateHistoricalSnapshots(
       }
       const span = after.date.getTime() - before.date.getTime();
       const ratio = span > 0 ? (t - before.date.getTime()) / span : 0;
-      const baseTotal = before.total + (after.total - before.total) * ratio;
-      const baseBasis = before.basis + (after.basis - before.basis) * ratio;
-      // Daily wobble: deterministic, modest, doesn't shift the long
-      // arc. Tied to day-of-epoch so the same date always gets the
-      // same wobble across resets.
+      // Basis is a STEP function of actual contribution dates, NOT a linear
+      // ramp. Linearly interpolating basis between monthly anchors smears each
+      // gift across the whole month — so a gift that landed 2 days ago barely
+      // moves the 30-day basis delta and the value line never steps up on the
+      // day money actually arrived ("got $250 in gifts but only grew $86").
+      // Compute the true cumulative (scaled) basis at `when`, then interpolate
+      // only the GAIN (market component) smoothly: value = stepped
+      // contributions + smooth market, so a gift produces a real step-up on
+      // its date and the 30-day delta reflects it.
+      // Basis steps on real gift dates (shared steppedBasisAt, same function
+      // that corrected the anchors above) — monotonic, never overshoots,
+      // consistent with the anchors at their dates.
+      const basis = steppedBasisAt(t);
+      const beforeGain = before.total - before.basis;
+      const afterGain = after.total - after.basis;
+      const gain = beforeGain + (afterGain - beforeGain) * ratio;
+      // Daily wobble: deterministic, modest, doesn't shift the long arc. Tied
+      // to day-of-epoch so the same date always gets the same wobble across
+      // resets. Applied to the gain (market) only — contributions don't wobble,
+      // and this keeps value ≥ basis whenever the fund is genuinely up.
       const dayIdx = Math.floor(t / 86_400_000);
       const wobble =
         0.004 * Math.sin(dayIdx * 0.41) +
         0.0025 * Math.cos(dayIdx * 1.13);
       return {
-        total: baseTotal * (1 + wobble),
-        basis: baseBasis, // basis doesn't wobble — it only changes when gifts arrive
+        total: basis + gain * (1 + wobble),
+        basis,
       };
     };
 
