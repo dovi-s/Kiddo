@@ -92,6 +92,10 @@ async function wipeDemoState(): Promise<void> {
     //   plus various nullable refs (referralEvents, analyticsEvents,
     //   notifications, etc.) — handled via raw SQL nullable update.
     // Locked 2026-05-21 after each FK fix surfaced the next one.
+    // Fund-id list, reused by the referral_events.event_id clear below and
+    // the nullable-ref UPDATEs near the end. Hoisted here so it's available
+    // before the events delete.
+    const idsList = drizzleSql.join(demoFundIds.map((id) => drizzleSql`${id}`), drizzleSql`, `);
     await db.delete(memoryEntries).where(inArray(memoryEntries.fundId, demoFundIds));
     await db.delete(thankYous).where(inArray(thankYous.fundId, demoFundIds));
     await db.delete(transactions).where(inArray(transactions.fundId, demoFundIds));
@@ -103,6 +107,12 @@ async function wipeDemoState(): Promise<void> {
     await db.delete(fundMemberships).where(inArray(fundMemberships.fundId, demoFundIds));
     await db.delete(fundSnapshots).where(inArray(fundSnapshots.fundId, demoFundIds));
     await db.delete(gifterFunds).where(inArray(gifterFunds.fundId, demoFundIds));
+    // referral_events.event_id → events.id (nullable, no cascade). Clear it
+    // BEFORE deleting demo events or the events delete FK-fails on
+    // referral_events_event_id_events_id_fk. This gap broke `reset:dunphys`
+    // AND the nightly demoResetWorker once any demo event accrued a referral
+    // event. The fund_id ref is nulled in the block below; event_id was missed.
+    await db.execute(drizzleSql`UPDATE referral_events SET event_id = NULL WHERE event_id IN (SELECT id FROM events WHERE fund_id IN (${idsList}))`);
     await db.delete(events).where(inArray(events.fundId, demoFundIds));
     await db.delete(ageTransitions).where(inArray(ageTransitions.fundId, demoFundIds));
     await db.delete(age18ReminderState).where(inArray(age18ReminderState.fundId, demoFundIds));
@@ -113,7 +123,6 @@ async function wipeDemoState(): Promise<void> {
     // blocked_gifters, gift_intents). The seed doesn't create rows in
     // these tables, but defensive SET NULL handles any background-
     // worker side-effects so the fund delete won't FK-fail.
-    const idsList = drizzleSql.join(demoFundIds.map((id) => drizzleSql`${id}`), drizzleSql`, `);
     await db.execute(drizzleSql`UPDATE notifications     SET fund_id = NULL WHERE fund_id IN (${idsList})`);
     await db.execute(drizzleSql`UPDATE referral_events   SET fund_id = NULL WHERE fund_id IN (${idsList})`);
     await db.execute(drizzleSql`UPDATE analytics_events  SET fund_id = NULL WHERE fund_id IN (${idsList})`);

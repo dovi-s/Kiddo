@@ -568,6 +568,15 @@ export default function GiftSuccess() {
   const childFirstName = provenanceName && provenanceName.toLowerCase() !== "their" ? provenanceName : null
   const senderLooksGeneric = /^someone who loves /i.test(senderName) || senderName === "Someone"
   const numericAmount = Number(amount)
+  // Clean display amount for the hero number — drops a trailing ".00"
+  // ($50, not $50.00) but keeps real cents ($50.50). The server's
+  // gift-summary returns amounts toFixed(2), so without this the hero
+  // would read "$50.00" while the URL-param fast-path reads "$50".
+  const amountDisplay = Number.isFinite(numericAmount) && numericAmount > 0
+    ? (numericAmount % 1 === 0
+        ? numericAmount.toLocaleString("en-US")
+        : numericAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
+    : amount
   // "Your gift could grow to ~$X at age 18" — routes through the canonical
   // projectFundValue helper so the gifter sees the same fee-netted,
   // effective-rate-compounded number that every other surface uses.
@@ -733,7 +742,18 @@ export default function GiftSuccess() {
 
   return (
     <div className="kiddo-app-page min-h-screen">
-      <div className="kiddo-canvas flex flex-col items-center px-4 py-8">
+      {/* Desktop layout: one coherent, centered confirmation column.
+          The page previously used .kiddo-canvas (max-width 960px), but
+          only the celebration elements were capped (max-w-sm / 384px) —
+          the five `kiddo-card w-full` ask-cards (gift summary, updates,
+          share, refer-a-family, start-fund) had NO max-width, so on
+          desktop they stretched to the full ~960px while the cards above
+          them sat at 384px. That width mismatch is what made the page
+          read as unloved on wide screens. Constraining the whole column
+          to max-w-lg (512px) harmonizes every card into a single tidy
+          receipt-style column — the standard pattern for a confirmation
+          surface — and keeps the celebration cards centered within it. */}
+      <div className="mx-auto w-full max-w-lg flex flex-col items-center px-4 py-8">
 
         {/* Demo notice — leads the page (before the celebratory copy) so a
             demo visitor immediately knows no real card was charged. Demo-fund
@@ -803,12 +823,13 @@ export default function GiftSuccess() {
         </motion.div>
 
         {/* Headline — recurring vs one-time. Recurring setup gets a
-            distinct headline ("Your monthly to Emma is set up") so the
-            gifter understands they've actually established a subscription,
-            not just sent a one-time gift. The one-time copy ("Your gift
-            is growing") would mislead a recurring setup. */}
+            distinct headline ("Your monthly is set up") so the gifter
+            understands they've actually established a subscription, not
+            just sent a one-time gift. The one-time copy ("Your gift is
+            growing") would mislead a recurring setup. Sized below the
+            amount on purpose (see the amount block). */}
         <motion.h1
-          className="font-heading text-3xl md:text-4xl font-bold text-center mb-2"
+          className="font-heading text-2xl md:text-3xl font-bold text-center mb-1"
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.38, duration: 0.45 }}
@@ -819,17 +840,43 @@ export default function GiftSuccess() {
             : "Your gift is growing."}
         </motion.h1>
 
-        {/* Subheadline */}
+        {/* Gift amount — the visual anchor the page was missing. The
+            money is the entire point of this surface, yet it previously
+            appeared only as inline text inside the subheadline sentence.
+            Sized LARGER than the headline on purpose: the photo above
+            answers "who," this answers "what," and "what" is the gift.
+            Evergreen (brand primary, AAA contrast on cream); a <div> not
+            a <p> so it reads as a figure, not prose. Spring-scales in just
+            after the headline for a small celebratory beat. The recurring
+            cadence suffix (/mo, /wk, /yr) makes a subscription
+            unmistakable at a glance. */}
+        <motion.div
+          className="mb-2 font-heading text-5xl md:text-6xl font-bold tabular-nums text-[hsl(var(--kiddo-evergreen))]"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.46, duration: 0.5, type: "spring", stiffness: 200, damping: 17 }}
+          data-testid="text-success-amount"
+        >
+          ${amountDisplay}
+          {isRecurringSetup && (
+            <span className="ml-0.5 align-baseline text-xl font-semibold text-muted-foreground">
+              /{recurringCadenceLabel === "weekly" ? "wk" : recurringCadenceLabel === "yearly" ? "yr" : "mo"}
+            </span>
+          )}
+        </motion.div>
+
+        {/* Subheadline — supports the amount above without repeating the
+            figure (the big number already states it). */}
         <motion.p
           className="text-muted-foreground text-center mb-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.52 }}
+          transition={{ delay: 0.56 }}
           data-testid="text-success-subheading"
         >
           {isRecurringSetup
-            ? `${childFirstName || "They"} will receive $${amount} ${recurringCadenceLabel} from you, starting today.`
-            : `You just invested $${amount} in ${childFirstName ? `${childFirstName}'s` : "their"} future.`}
+            ? `to ${childFirstName ? `${childFirstName}'s` : "their"} fund, starting today.`
+            : `now invested in ${childFirstName ? `${childFirstName}'s` : "their"} future.`}
         </motion.p>
 
         {/* Settling-window note. Tells the gifter the gift takes 1 to 2

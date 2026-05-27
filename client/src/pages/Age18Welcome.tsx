@@ -25,6 +25,7 @@ import { ArrowRight, BookOpen, Briefcase, Coins, Receipt, Sparkles, TrendingUp, 
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
+import { projectFundValue } from "@shared/projection";
 import { useToast } from "@/hooks/use-toast";
 import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { MomentParticles } from "@/components/MomentParticles";
@@ -53,15 +54,12 @@ function formatMoney(value: string | number | null | undefined, opts: { decimals
   }).format(numeric);
 }
 
-// Simple compounding projection: principal × (1 + r)^years.
-// 7% is the locked rate used across Kiddo's projection surfaces —
-// long-term real-return-on-equities heuristic, NOT a guarantee, copy
-// elsewhere already disclaims this. Keep the rate here matching the
-// Projection.tsx default so the screen 2 number doesn't disagree with
-// other surfaces the kid might check later.
+// Lump-only projection via the canonical projectFundValue (7% net the
+// 0.10% AUM fee, effective monthly compounding). Routing through the shared
+// module keeps this kid-facing handoff number in lockstep with every other
+// surface the kid might check later, instead of a parallel formula.
 function projectAt(principal: number, years: number, rate = 0.07): number {
-  if (!Number.isFinite(principal) || principal <= 0 || years <= 0) return principal || 0;
-  return principal * Math.pow(1 + rate, years);
+  return projectFundValue({ startingValue: principal, monthlyContribution: 0, yearsAhead: years, annualReturnRate: rate });
 }
 
 export default function Age18Welcome() {

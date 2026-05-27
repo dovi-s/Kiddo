@@ -133,7 +133,24 @@ type OverviewResponse = {
 // shape only; no axes, no labels, no percentage. Accepts a list of
 // {date, total} points; returns null when there's not enough data
 // for a meaningful curve (< 2 points).
-function HouseholdSparkline({ history }: { history: Array<{ date: string; total: number }> }) {
+function HouseholdSparkline({
+  history,
+  deltaOverride,
+}: {
+  history: Array<{ date: string; total: number }>;
+  // When provided, the "+$X · last 30 days" callout uses THIS value instead
+  // of (history[last] − history[0]). The aggregate series' first in-window
+  // day can be a PARTIAL-household sum — a fund whose boundary-day snapshot
+  // falls just before the exact NOW−30d timestamp is excluded from that
+  // day, so history[0] undercounts the household and the raw delta overstates
+  // growth (observed ~2× the true number). The per-fund delta rows each use
+  // their own correct baseline, so their sum is the trustworthy household
+  // 30-day change — and matching the callout to it keeps the hero consistent
+  // with the per-fund "· 30d" lines below. The sparkline SHAPE still comes
+  // from the aggregate series (shape-only, no axis), so the edge artifact is
+  // cosmetic there.
+  deltaOverride?: number | null;
+}) {
   if (!history || history.length < 2) return null;
   // Upgraded 2026-05-26 — the v1 sparkline was 36px tall with a
   // 1.5px stroke at 85% opacity, barely visible on the evergreen
@@ -173,7 +190,9 @@ function HouseholdSparkline({ history }: { history: Array<{ date: string; total:
   // '30 days'), so the spread of first → last total IS the
   // household's 30-day net change. Skip when the delta is below $1
   // to avoid noisy "+$0" / "−$0" lines on inactive households.
-  const delta = history[history.length - 1].total - history[0].total;
+  const delta = typeof deltaOverride === "number"
+    ? deltaOverride
+    : history[history.length - 1].total - history[0].total;
   const showDelta = Math.abs(delta) >= 1;
   const deltaPrefix = delta >= 0 ? "+" : "−";
   return (
@@ -395,6 +414,18 @@ export default function FundsOverview() {
   const recurringItems = recurring?.items ?? [];
   const uniqueGifterCount = data?.uniqueGifterCount ?? 0;
   const aggregateHistory = data?.aggregateHistory ?? [];
+
+  // Household 30-day change = sum of the per-fund deltas. This is the
+  // number the hero callout shows, NOT the raw aggregate-series spread
+  // (which overstates growth when the first in-window day is a partial-
+  // household sum — see HouseholdSparkline). Null when no fund has a
+  // prior snapshot, so the callout falls back to the series-based delta.
+  const householdDelta30d = useMemo(() => {
+    const vals = funds
+      .map((f) => (typeof f.delta30dUsd === "number" ? f.delta30dUsd : null))
+      .filter((v): v is number => v != null);
+    return vals.length ? vals.reduce((sum, v) => sum + v, 0) : null;
+  }, [funds]);
 
   // Fires the global add-fund event after navigating to /dashboard
   // (where AddFundSheet is mounted). Same pattern as the sidebar /
@@ -645,7 +676,7 @@ export default function FundsOverview() {
               window (brand-new accounts skip the visual entirely
               rather than show a flat line that reads as 'no growth').
               Added 2026-05-18. */}
-          <HouseholdSparkline history={aggregateHistory} />
+          <HouseholdSparkline history={aggregateHistory} deltaOverride={householdDelta30d} />
         </motion.section>
 
         {/* Per-fund list. Each card routes to the kid's Dashboard via

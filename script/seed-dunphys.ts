@@ -244,12 +244,17 @@ function giftsForKid(kid: { firstName: string; ageYears: number; birthdate: stri
   // deterministically-ordered timestamps.
   const onMonth = (yearsAgo: number, month: number, day = 15): string => {
     const now = new Date();
-    const year = now.getFullYear() - yearsAgo;
-    let d = new Date(Date.UTC(year, month, day, 12, 0, 0));
-    if (d.getTime() > now.getTime()) {
-      d = new Date(Date.UTC(year - 1, month, day, 12, 0, 0));
-    }
-    return d.toISOString();
+    // Anchor to the most recent year in which this month/day has ALREADY
+    // occurred: if the target date this year is still in the future, the
+    // latest past occurrence was last year. Then step back whole years.
+    // Computing the anchor ONCE (rather than subtracting yearsAgo first and
+    // stepping back per-call) keeps consecutive yearsAgo values on distinct
+    // years — otherwise yearsAgo 0 and 1 both collapse onto last year for a
+    // kid whose birthday hasn't happened yet this year, doubling that year's
+    // birthday gifts in the Memory Book.
+    const thisYear = new Date(Date.UTC(now.getFullYear(), month, day, 12, 0, 0));
+    const anchorYear = thisYear.getTime() > now.getTime() ? now.getFullYear() - 1 : now.getFullYear();
+    return new Date(Date.UTC(anchorYear - yearsAgo, month, day, 12, 0, 0)).toISOString();
   };
   const list: Array<{
     senderName: string;

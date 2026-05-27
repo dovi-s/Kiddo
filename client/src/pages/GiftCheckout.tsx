@@ -17,6 +17,7 @@ import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition";
 import { getPronouns } from "@/lib/pronouns";
 import { KIDDO_GIFT_ADD_ONS, calculateKoraContributionFee, getGiftAddOn, type GiftAddOnId } from "@shared/monetization";
+import { projectFundValue } from "@shared/projection";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
 import { ReminderAndAskParentsCard } from "@/components/ReminderAndAskParentsCard";
 import { SponsorPlusCard } from "@/components/SponsorPlusCard";
@@ -244,7 +245,7 @@ const readBooleanFlag = (source: Record<string, unknown> | undefined, keys: stri
 };
 
 const compoundGrowth = (amount: number, rate: number, years: number) =>
-  Math.round(amount * Math.pow(1 + rate, years));
+  projectFundValue({ startingValue: amount, monthlyContribution: 0, yearsAhead: years, annualReturnRate: rate });
 
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {

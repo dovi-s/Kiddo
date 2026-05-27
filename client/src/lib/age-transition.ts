@@ -71,12 +71,19 @@ export function getAge18Transition(
     stage = "approaching";
   }
 
+  // The "N years until age X" label uses FLOORED full years, not the ceil'd
+  // `yearsUntilMajority`. Ceil rounded 7.4 years up to "8 years," which then
+  // sat next to the precise "7 years 146 days" countdown on the Age-18 plan
+  // page ("You have 8 years to prepare" vs a 7y146d clock). Floor is the
+  // honest "full years remaining" reading and matches the live countdown.
+  // Min 1 is safe: this branch only runs when monthsUntilMajority > 18.
+  const fullYearsUntilMajority = Math.max(1, Math.floor(diffMs / YEAR_MS));
   let countdownLabel = `Age-${safeAge} milestone reached`;
   if (stage !== "adult") {
     countdownLabel =
       monthsUntilMajority <= 18
         ? `${monthsUntilMajority} month${monthsUntilMajority === 1 ? "" : "s"} until age ${safeAge}`
-        : `${yearsUntilMajority} year${yearsUntilMajority === 1 ? "" : "s"} until age ${safeAge}`;
+        : `${fullYearsUntilMajority} year${fullYearsUntilMajority === 1 ? "" : "s"} until age ${safeAge}`;
   }
 
   const previewEligible = diffPreviewMs <= 0 && diffMs > 0;

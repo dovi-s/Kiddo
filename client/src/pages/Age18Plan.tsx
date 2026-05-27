@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronDown, ChevronUp, Mic, Image as ImageIcon, Users, Mail } from "lucide-react";
@@ -15,6 +15,8 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { getAge18Transition, formatAgeTransitionDate } from "@/lib/age-transition";
+import { projectFundValue } from "@shared/projection";
+import { sumMonthlyEquivalent } from "@shared/recurring-math";
 import { getPronouns } from "@/lib/pronouns";
 import { capFirst } from "@/lib/format-name";
 import { haptic } from "@/lib/haptics";
@@ -130,23 +132,14 @@ function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n);
 }
 
-// Conservative-honest yearly return assumption used for ALL Kora projections
-// (recurring projection, edit-recurring diff, cancel loss-aversion, Age18Plan).
-// 7% maps to long-run S&P real return (~10% nominal − ~3% inflation). Inflated
-// projections are greenwashing too — same rule that bans "$0.00 (+$0.00)" in
-// the green direction. If we ever change this, change it ONCE here and let
-// every surface inherit. Disclaimer text lives next to every render.
-const KIDDO_PROJECTED_RETURN = 0.07;
+// Projection math is centralized in shared/projection.ts (projectFundValue):
+// 7% historical average, 0.10% AUM fee netted, effective monthly compounding,
+// contributions capped at the majority window. The disclaimer travels with
+// every render so a parent who reconciles against reality never feels oversold.
 const KIDDO_PROJECTION_DISCLAIMER = "Assuming 7% yearly average. Markets vary. Time is what compounds.";
 
 function projectAt18(balance: number, yearsLeft: number, monthlyContrib: number): number {
-  if (yearsLeft <= 0) return balance;
-  const r = KIDDO_PROJECTED_RETURN;
-  const grown = balance * Math.pow(1 + r, yearsLeft);
-  const months = yearsLeft * 12;
-  const monthRate = r / 12;
-  const contribFV = monthlyContrib > 0 ? monthlyContrib * ((Math.pow(1 + monthRate, months) - 1) / monthRate) : 0;
-  return Math.round(grown + contribFV);
+  return projectFundValue({ startingValue: balance, monthlyContribution: monthlyContrib, yearsAhead: yearsLeft });
 }
 
 export default function Age18Plan() {
@@ -180,6 +173,34 @@ export default function Age18Plan() {
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
   const activeFund = funds.find((f) => f.id === storedFundId) ?? funds[0];
+
+  // Active recurring on THIS fund — used to seed the projection slider's
+  // default so the "Projected value at {majority}" centerpiece reflects
+  // the parent's REAL monthly (e.g. Luke's $75/mo), not a hardcoded $50
+  // that matched no schedule and made this page's headline disagree with
+  // the Dashboard's "On track for $X when {child} turns {majority}" number.
+  // Same endpoint + monthly-normalization the Dashboard uses.
+  const { data: parentContributions = [] } = useQuery<Array<{ amount: string; frequency: string; status: string }>>({
+    queryKey: ["/api/funds", activeFund?.id, "parent-contributions"],
+    queryFn: async () => {
+      const res = await fetch(`/api/funds/${activeFund?.id}/parent-contributions`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!activeFund?.id,
+    staleTime: 30_000,
+  });
+  // Monthly-equivalent of all ACTIVE schedules, snapped to the slider's
+  // 25-step grid and clamped to its 0–300 range. Falls back to 0 (the
+  // honest gifts-only floor) when nothing is active — never a fiction.
+  const activeRecurringMonthly = useMemo(() => {
+    const active = (parentContributions || []).filter(
+      (c) => String(c?.status || "").toLowerCase() === "active",
+    );
+    const monthly = sumMonthlyEquivalent(active as any);
+    const snapped = Math.round(monthly / 25) * 25;
+    return Math.max(0, Math.min(300, snapped));
+  }, [parentContributions]);
 
   const age18Transition = useMemo(
     () => getAge18Transition(activeFund?.recipientBirthdate, Number((activeFund as any)?.majorityAge) || 18),
@@ -308,12 +329,23 @@ export default function Age18Plan() {
   // until we're ready to graduate this.
   //
   // Slider range 0–300 step 25 covers the realistic monthly-add spread
-  // (Phil's seeded amount is $50/mo, gifts-only is $0, aspirational
-  // savers go to $200-300). Defaults to $50 — Phil's actual seeded
-  // monthly-add rate, so demo viewers see the slider already "lived
-  // in" rather than at a zero anchor.
+  // (gifts-only is $0, aspirational savers go to $200-300). Defaults to
+  // the fund's ACTUAL active recurring (activeRecurringMonthly), set via
+  // the effect below once it loads — so the centerpiece opens "lived in"
+  // AND consistent with the Dashboard's headline projection, instead of a
+  // hardcoded $50 that matched no real schedule. Initialized to 0 so the
+  // first paint never shows money that isn't there; the effect snaps it
+  // up to the real rate (the count-up animates the jump).
   const isDemoUser = Boolean((user as any)?.isDemoAccount);
-  const [sliderMonthly, setSliderMonthly] = useState<number>(50);
+  const [sliderMonthly, setSliderMonthly] = useState<number>(0);
+  // Seed the slider once from the real recurring, unless the user has
+  // already dragged it (sliderTouchedRef guards against stomping their
+  // choice when the query refetches).
+  const sliderTouchedRef = useRef(false);
+  useEffect(() => {
+    if (sliderTouchedRef.current) return;
+    setSliderMonthly(activeRecurringMonthly);
+  }, [activeRecurringMonthly]);
   // When the slider is hidden (yearsLeft < 1), the hero number must
   // NOT silently bake in the slider's $50 default — that'd inflate
   // Haley's "what you inherit" number by money that doesn't exist.
@@ -660,6 +692,7 @@ export default function Age18Plan() {
                     onValueChange={(v) => {
                       const next = Array.isArray(v) ? v[0] : sliderMonthly;
                       if (next !== sliderMonthly) {
+                        sliderTouchedRef.current = true;
                         setSliderMonthly(next);
                         haptic("selection");
                       }
@@ -790,7 +823,7 @@ export default function Age18Plan() {
             {totalValue > 0 && age18Transition && (
               <div className="mt-4 bg-[hsl(var(--kiddo-evergreen)/0.08)] rounded-xl px-4 py-3">
                 <p className="text-xs text-[hsl(var(--kiddo-evergreen))] font-medium">
-                  On track for <strong>{formatCurrency(Math.round(totalValue * Math.pow(1 + KIDDO_PROJECTED_RETURN, age18Transition.daysUntil18 / 365.25)))}</strong> by {majorityAge} at 7% yearly average.<span className="opacity-60">*</span>
+                  On track for <strong>{formatCurrency(projectFundValue({ startingValue: totalValue, monthlyContribution: 0, yearsAhead: age18Transition.daysUntil18 / 365.25 }))}</strong> by {majorityAge} at 7% yearly average.<span className="opacity-60">*</span>
                 </p>
               </div>
             )}

@@ -398,7 +398,7 @@ export function DetailHistoryModal({
                 pendingRows.length === 0 ? (
                   <EmptyState
                     label="Nothing settling right now."
-                    sub="Everything in this view is invested. ✅"
+                    sub="Money on its way to the market shows up here."
                   />
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>

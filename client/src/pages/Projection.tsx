@@ -7,6 +7,7 @@ import { useFunds } from "@/hooks/use-funds";
 import { ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { useQuery } from "@tanstack/react-query";
 import { getAge18Transition } from "@/lib/age-transition";
+import { getPronouns } from "@/lib/pronouns";
 import { sumMonthlyEquivalent, WEEKS_PER_MONTH, DAYS_PER_MONTH } from "@shared/recurring-math";
 import { projectFundValue } from "@shared/projection";
 import { haptic } from "@/lib/haptics";
@@ -354,8 +355,14 @@ export default function Projection() {
   );
 
   const childName = capFirst(activeFund?.recipientFirstName) || "your child";
-  const she = activeFund?.recipientFirstName ? "she" : "they";
-  const her = activeFund?.recipientFirstName ? "her" : "their";
+  // Pronouns come from the fund's own setting via getPronouns — NEVER from
+  // whether a name exists. The old `recipientFirstName ? "she" : "they"`
+  // ternary hardcoded "she/her" for every named child, so Luke's fund read
+  // "what she does next is her decision." Same fix the Dashboard shipped for
+  // its identical footgun (see Dashboard.tsx "fund so far" pronoun comment).
+  const childPronouns = getPronouns((activeFund as any)?.pronoun);
+  const she = childPronouns.subject; // he / she / they
+  const her = childPronouns.possAdj; // his / her / their
   const possessive = `${childName}${childName.endsWith("s") ? "'" : "'s"}`;
 
   const fundSlug = (activeFund as any)?.slug;
@@ -657,7 +664,13 @@ ${shareUrl}`;
           <div className="rounded-2xl bg-white/8 border border-white/10 p-4 space-y-2">
             <p className="text-[10px] font-bold uppercase tracking-wide text-white/55">Of that</p>
             <div className="flex items-baseline justify-between">
-              <p className="text-sm text-white/80">You added</p>
+              {/* Source-neutral on UTMA funds: this bucket is today's whole
+                  balance + future deposits, most of which on a gift-funded
+                  kid's account came from gifters, not the parent — so "You
+                  added" (which elsewhere in the app means the PARENT's own
+                  contributions) is a misattribution here. Personal/self-
+                  funded accounts keep the warm "You added". */}
+              <p className="text-sm text-white/80">{isUtma ? "Money in" : "You added"}</p>
               <p className="text-sm font-bold tabular-nums text-white">{fmtMoney(totalContributed)}</p>
             </div>
             <div className="flex items-baseline justify-between">
