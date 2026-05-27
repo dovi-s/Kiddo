@@ -232,6 +232,20 @@
       "when": 1778500000000,
       "tag": "0032_magic_link_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1778600000000,
+      "tag": "0033_founding_members",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1778700000000,
+      "tag": "0034_founder_claim",
+      "breakpoints": true
     }
   ]
 }
