@@ -341,6 +341,15 @@ function getEntryIdentity(
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
+  // A gift that landed seconds ago reading "May 27, 2026" feels stale — it's
+  // the moment, not a calendar fact. Show "Just now" for the first few minutes
+  // so a brand-new entry feels brand-new. This is a genuine delight for any
+  // real gift the moment it arrives, and it's what makes the demo's just-sent
+  // gift read as truly live when the prospect taps through to watch it land.
+  // Only fires for fresh past-dated entries (guards against clock-skew future
+  // dates); every older entry keeps the exact calendar date.
+  const sinceMs = Date.now() - d.getTime();
+  if (sinceMs >= 0 && sinceMs < 5 * 60 * 1000) return "Just now";
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
