@@ -9,6 +9,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RealtimeProvider } from "@/lib/realtime-context";
 import { Toaster } from "@/components/ui/toaster";
+import { DemoGiftMoment } from "@/components/DemoGiftMoment";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { KoraProvider } from "./lib/KoraContext";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -877,6 +878,10 @@ function App() {
               </a>
               <SeoManager />
               <Toaster />
+              {/* Demo-only: one live "a gift just came in" beat ~15s after the
+                  parent lands on their dashboard, so a prospect feels the
+                  gifter-loop payoff. Headless; no-op for non-demo accounts. */}
+              <DemoGiftMoment />
               {!hideGlobalNav && <DesktopSidebar />}
               {/* Demo banner lives at the shell (not inside Router) so its
                   desktop left-offset can mirror the sidebar's presence via the
