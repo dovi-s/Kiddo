@@ -9,6 +9,21 @@ function isScraper(ua: string): boolean {
   return SCRAPER_RE.test(ua);
 }
 
+// Babylist's "Add Any Item" scrapes a URL's OG tags to build the registry tile.
+// Their bot is NOT in SCRAPER_RE above, so without this a Kiddo gift link added
+// to a Babylist registry falls back to the generic default index.html meta (a
+// bland/empty tile). `babylist` is a BEST-GUESS token — VERIFY it: add a gift
+// link to a test Babylist registry, grep server logs for the user-agent that
+// hits `/:fundSlug`, and replace this with the exact string. (If Babylist
+// fetches via Embedly, that's already matched in SCRAPER_RE and this is a
+// harmless no-op.) Kept separate from SCRAPER_RE so the registry-tuned tile
+// copy below can branch on it without affecting social-share previews.
+const BABYLIST_UA = /babylist/i;
+
+function isBabylistScraper(ua: string): boolean {
+  return BABYLIST_UA.test(ua);
+}
+
 // Paths that are definitely app routes, not fund slugs
 const APP_PATH_PREFIXES = new Set([
   "api", "dashboard", "settings", "account", "login", "register",
@@ -55,7 +70,7 @@ export function registerOGMiddleware(app: Express) {
   app.get("/:fundSlug/:eventSlug?", async (req, res, next) => {
     try {
       const ua = req.headers["user-agent"] || "";
-      if (!isScraper(ua)) return next();
+      if (!isScraper(ua) && !isBabylistScraper(ua)) return next();
 
       const { fundSlug, eventSlug } = req.params;
 
@@ -88,12 +103,22 @@ export function registerOGMiddleware(app: Express) {
 
       const familyCount = await getFamilyCount();
       const child = fund.recipientFirstName || "a child";
+      const fromBabylist = isBabylistScraper(ua);
 
-      const title = eventName
-        ? `${eventName}: Gift ${child}'s future 🎁`
-        : `Gift ${child}'s future. 🌱`;
+      // Babylist renders this as a giftABLE tile in a grid next to physical
+      // products, so lead with the product + the differentiators (grows for
+      // life, no account needed, video memory). Social shares (Facebook,
+      // WhatsApp, iMessage, ...) keep the existing "Gift {child}'s future"
+      // framing, which is tuned for a feed/chat context, not a registry.
+      const title = fromBabylist
+        ? `Invest in ${child}'s future, a gift that grows 🌱`
+        : eventName
+          ? `${eventName}: Gift ${child}'s future 🎁`
+          : `Gift ${child}'s future. 🌱`;
 
-      const desc = `Join ${roundedCount(familyCount)} families investing in their children's futures. ${child}'s fund is live. Send a real investment gift in under a minute.`;
+      const desc = fromBabylist
+        ? `Instead of something they'll outgrow, give ${child} a real investment that grows with them for life. About a minute, no account needed, and you can add a video message they'll keep.`
+        : `Join ${roundedCount(familyCount)} families investing in their children's futures. ${child}'s fund is live. Send a real investment gift in under a minute.`;
 
       const origin = `${req.protocol}://${req.get("host")}`;
       const pageUrl = `${origin}${req.path}`;
