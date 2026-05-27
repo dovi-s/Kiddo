@@ -46,6 +46,8 @@ export function isMarketingRoute(path: string): boolean {
     pathname === "/tools/at-18-calculator" ||
     pathname === "/tools/robux-vs-utma" ||
     pathname === "/robux-vs-utma" ||
+    pathname === "/tools/trump-account-vs-utma" ||
+    pathname === "/trump-account-vs-utma" ||
     pathname === "/tools/utma-by-state"
   ) {
     return true;

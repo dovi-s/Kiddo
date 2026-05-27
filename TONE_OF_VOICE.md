@@ -255,6 +255,11 @@ violations the other rules miss.
 - "Build something so beautiful that designers want to replicate it."
 - Hagiographic comparisons ("That's not a design system. That's a love
   story. Told in pixels.").
+- The negation-triplet-into-reveal ("That is not micro-investing. That is
+  not a savings account. That is investment gifting. And no one else has
+  built it."). Same animal as the hagiographic one — stacked short negations
+  as a drumroll, then a triumphant turn. Reads like a keynote slide. Keep the
+  claim, lose the cadence: say it in one plain sentence a person would say.
 - Every paragraph closing with the same emoji.
 - Listing 5 items as "perfect" with no actual analysis.
 

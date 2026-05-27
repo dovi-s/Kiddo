@@ -93,7 +93,7 @@ export default function Demo() {
   // Generic demo login. After successful auth, parents go to
   // /dashboard and gifters go to /gifter. The "Skip to Haley"
   // featured CTA below uses a specialized version that auto-selects
-  // Haley's fund and lands on /age18-plan.
+  // Haley's fund and lands on /age-18-plan.
   const handleLogin = async (email: string) => {
     setLoadingEmail(email);
     haptic("selection");
@@ -116,7 +116,7 @@ export default function Demo() {
   };
 
   // Featured-walkthrough shortcut: log in as Phil, auto-select
-  // Haley's fund as the active fund, land on /age18-plan.
+  // Haley's fund as the active fund, land on /age-18-plan.
   const HALEY_FEATURED_EMAIL = "phil@dunphyfamily.com";
   const HALEY_SLUG = "haley-dunphy";
   const handleHaleyShortcut = async () => {
@@ -137,7 +137,11 @@ export default function Demo() {
       if (haley?.id) {
         setActiveFundId(haley.id);
         haptic("success");
-        setLocation(`/age18-plan?fund=${haley.id}`);
+        // Route is /age-18-plan (with dashes) per App.tsx. Navigating to
+        // /age18-plan fell through to the public /:fund catch-all, which
+        // tried to resolve a fund slug "age18-plan", 404'd, and rendered
+        // the "this gift link is outdated" page. Fixed 2026-05-26.
+        setLocation(`/age-18-plan?fund=${haley.id}`);
       } else {
         haptic("success");
         setLocation("/dashboard");

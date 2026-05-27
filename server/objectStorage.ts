@@ -61,9 +61,25 @@ function buildFilename(ext: string): string {
 }
 
 // Best-effort bucket bootstrap. Supabase Storage needs the bucket to exist
-// before uploads succeed; we create it as PUBLIC the first time so the
-// returned URLs work in <img> / <video> / <audio> without signed-URL roundtrips.
-// This is idempotent — Supabase returns 409 on duplicate which we ignore.
+// before uploads succeed; idempotent (409 on duplicate is ignored).
+//
+// SECURITY (2026-05-26): the bucket is created PRIVATE. It holds children's
+// photos / videos / voice notes — a PUBLIC bucket would make every object
+// readable by anyone with the URL (leaked via browser history, referer
+// headers, shared links, a DB dump). That is unacceptable for kids' media,
+// and it fails OPEN. The original code created it `public: true` for
+// convenience (public URLs render in <img>/<video>/<audio> with no signed-URL
+// roundtrip); that convenience is not worth a public bucket of children's
+// media. We now fail CLOSED.
+//
+// REQUIRED FOLLOW-UP before enabling Supabase Storage in production: with a
+// private bucket the permanent `/object/public/...` URL built below will NOT
+// resolve. Migrate the read path to short-lived SIGNED URLs generated
+// on-read — store the object PATH in memory_entries and sign on serve in the
+// Memory Book / KidView read routes (/storage/v1/object/sign/{bucket}/{path}
+// with a short expiresIn). This is part of the durable-storage launch
+// workstream. Until it ships, do NOT set SUPABASE_URL + SERVICE_ROLE in prod;
+// the local-disk dev path keeps running unaffected.
 let bucketEnsured = false;
 async function ensureBucket(): Promise<void> {
   if (bucketEnsured) return;
@@ -82,7 +98,7 @@ async function ensureBucket(): Promise<void> {
       body: JSON.stringify({
         id: BUCKET,
         name: BUCKET,
-        public: true,
+        public: false, // PRIVATE — children's media; fail closed. See SECURITY note above.
         // 30MB cap covers the largest video upload (25MB) with headroom.
         // Audio cap is 10MB, photo is 3MB — both well under.
         file_size_limit: 30 * 1024 * 1024,
@@ -125,9 +141,12 @@ async function uploadToSupabase(input: UploadInput): Promise<UploadResult> {
     throw new Error(`Supabase upload failed ${res.status}: ${body.slice(0, 300)}`);
   }
 
-  // Public bucket → /storage/v1/object/public/{bucket}/{path} is the
-  // permanent CDN-cacheable URL. Survives container restarts because the
-  // bytes live in Supabase's storage tier, not on our container disk.
+  // The bucket is now PRIVATE (see the SECURITY note in ensureBucket), so this
+  // `/object/public/...` URL will NOT resolve. It's retained only as the shape
+  // to replace: store `objectPath` in memory_entries and generate a short-lived
+  // SIGNED URL on read instead. Do not enable Supabase Storage in production
+  // until that signed-read path ships. The bytes survive restarts either way
+  // (they live in Supabase's storage tier, not container disk).
   const url = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${objectPath}`;
   return { url, storage: "supabase", filename };
 }
@@ -148,6 +167,83 @@ async function uploadToLocal(input: UploadInput): Promise<UploadResult> {
 
 export async function uploadMemoryFile(input: UploadInput): Promise<UploadResult> {
   return getStorageMode() === "supabase" ? uploadToSupabase(input) : uploadToLocal(input);
+}
+
+// ─── Read-time URL resolution (signed-read for the private bucket) ──────────
+// Foundation for the signed-read migration in STORAGE_DURABILITY_SPEC.md.
+// Stored media references are a MIX today, so the resolver must handle all:
+//   - full URLs (gifter-pasted images, YouTube/Vimeo/Loom embeds, data: URLs)
+//     → returned unchanged.
+//   - local relative paths "/uploads/..." (current default) → unchanged
+//     (served by the static middleware).
+//   - bare Supabase object paths ("{fundId}/{file}") → signed on read with a
+//     short TTL, because the bucket is private.
+// The signing branch is exercised ONLY when Supabase Storage is configured;
+// the passthrough branches are active now and are verified no-ops. WIRING:
+// call resolveMediaUrl() in the Memory Book / KidView read routes (and switch
+// uploadToSupabase to return the bare path) as the second, Storage-gated half
+// of the migration — do that when SUPABASE creds exist so it's testable.
+
+const SIGNED_URL_DEFAULT_TTL_SEC = 900; // 15 minutes
+
+function isFullUrl(ref: string): boolean {
+  return /^(https?:|data:)/i.test(ref);
+}
+
+function isLocalUploadPath(ref: string): boolean {
+  return ref.startsWith("/uploads/");
+}
+
+// Generate a short-lived signed URL for a private-bucket object. Returns null
+// when Storage isn't configured or signing fails (callers fall back to the
+// raw ref so a value never becomes null). Dormant until Supabase creds exist.
+export async function getSignedUrl(
+  objectPath: string,
+  expiresInSec: number = SIGNED_URL_DEFAULT_TTL_SEC,
+): Promise<string | null> {
+  if (getStorageMode() !== "supabase") return null;
+  const clean = String(objectPath || "").replace(/^\/+/, "");
+  if (!clean) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/${BUCKET}/${clean}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ expiresIn: expiresInSec }),
+    });
+    if (!res.ok) {
+      console.warn(`[objectStorage] sign failed ${res.status} for ${clean}`);
+      return null;
+    }
+    const data: any = await res.json().catch(() => null);
+    // Supabase returns { signedURL: "/object/sign/{bucket}/{path}?token=..." }
+    const signed = data && (data.signedURL || data.signedUrl);
+    return signed ? `${SUPABASE_URL}/storage/v1${signed}` : null;
+  } catch (err) {
+    console.warn("[objectStorage] sign threw (non-fatal):", (err as any)?.message || err);
+    return null;
+  }
+}
+
+// Resolve a stored media reference to a servable URL. Pure passthrough for
+// full URLs + local paths (the only shapes in the DB today); signs bare
+// object paths when Supabase Storage is active. Never returns null for a
+// non-empty input — falls back to the raw ref.
+export async function resolveMediaUrl(
+  ref: string | null | undefined,
+  opts?: { expiresInSec?: number },
+): Promise<string | null> {
+  const r = String(ref || "").trim();
+  if (!r) return null;
+  if (isFullUrl(r) || isLocalUploadPath(r)) return r;
+  if (getStorageMode() === "supabase") {
+    const signed = await getSignedUrl(r, opts?.expiresInSec ?? SIGNED_URL_DEFAULT_TTL_SEC);
+    return signed || r;
+  }
+  return r;
 }
 
 // One-line boot log so the operator knows immediately which mode is active.

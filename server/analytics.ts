@@ -36,6 +36,12 @@ export type KnownEventName =
   | "founder_gift_started" // gifter began the founder-slot-gift flow
   | "founder_gift_completed" // gifter checkout completed and recipient added to waitlist
   | "founder_signup_completed" // direct waitlist signup at /founding-members
+  // THE willingness-to-pay metric — a parent converted free → paid.
+  // Without it you go live unable to measure your own conversion rate, the
+  // exact unit-economics blind spot that sank EarlyBird ($480K ARR, 6% of
+  // accounts ever paid). Fires from the Stripe webhook plan-purchase
+  // handlers (Starter/Family/Legacy) at the confirmed-paid moment.
+  | "plan_purchased"
   // PMF instrumentation (locked 2026-05-26 per project_launch_wedge_and_creator_distribution.md).
   // The Sean Ellis test ("How would you feel if you could no longer use Kiddo?") is the
   // single quantitative metric that decides whether to scale creator spend or pivot.

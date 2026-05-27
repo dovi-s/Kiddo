@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 // BookOpen replaces Sparkles 2026-05-12 for "Latest Memory Book moment" —
 // Sparkles banned per feedback_no_ai_slop.md. BookOpen is the locked Memory
 // Book semantic icon per feedback_iconography_consistency.md.
-import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat, Crown, Sparkles } from "lucide-react";
+import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat, Crown, Sparkles, Pause, Play, Pencil, Receipt, ChevronDown } from "lucide-react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { useAuth } from "@/hooks/use-auth";
@@ -155,6 +156,7 @@ export default function GifterDashboard() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { user, isAuthenticated, login, register, isLoggingIn, isRegistering } = useAuth();
+  const isDemoUser = Boolean((user as any)?.isDemoAccount);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -196,6 +198,9 @@ export default function GifterDashboard() {
     pauseReason: string | null;
     nextChargeDate: string | null;
     createdAt: string;
+    // True for real auto-charging Stripe subs; false for Free-fund
+    // reminder cadences (date is a reminder email, not a charge).
+    autoCharge?: boolean;
   };
   const { data: recurringData } = useQuery<{ schedules: GifterRecurringRow[] }>({
     queryKey: ["/api/gifter-account/recurring"],
@@ -271,6 +276,109 @@ export default function GifterDashboard() {
       });
     } finally {
       setUpdatingFollowId(null);
+    }
+  };
+
+  // ── Active-recurring management: pause / resume / edit / history ──
+  // The hero used to offer Cancel only. These add the rest of the
+  // lifecycle a gifter actually needs: pause ("skip this year"), resume,
+  // edit (change amount/cadence), and a per-schedule charge history
+  // ("you've given $300 across 3 charges"). Backend endpoints branch on
+  // whether the row is a real Stripe subscription or a reminder cadence.
+  const refreshRecurring = () => queryClient.invalidateQueries({ queryKey: ["/api/gifter-account/recurring"] });
+  const [busyScheduleId, setBusyScheduleId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editFrequency, setEditFrequency] = useState<"weekly" | "monthly" | "yearly">("monthly");
+  const [historyOpenId, setHistoryOpenId] = useState<string | null>(null);
+  type ChargeHistory = {
+    charges: Array<{ id: string; amount: number; at: string | null }>;
+    totalCharged: number;
+    count: number;
+    reminderOnly: boolean;
+  };
+  const [historyById, setHistoryById] = useState<Record<string, ChargeHistory | "loading" | "error">>({});
+
+  const handlePauseResume = async (sch: GifterRecurringRow, pause: boolean) => {
+    if (busyScheduleId) return;
+    setBusyScheduleId(sch.id);
+    try {
+      const res = await fetch(`/api/gifter-account/recurring/${sch.id}/${pause ? "pause" : "resume"}`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      haptic("success");
+      toast({
+        title: pause ? "Recurring paused" : "Recurring resumed",
+        description: pause
+          ? `No further charges to ${sch.fundName} until you resume.`
+          : `Charges to ${sch.fundName} will continue on schedule.`,
+      });
+      refreshRecurring();
+    } catch (err) {
+      haptic("error");
+      toast({ title: pause ? "Could not pause" : "Could not resume", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
+    } finally {
+      setBusyScheduleId(null);
+    }
+  };
+
+  const openEditor = (sch: GifterRecurringRow) => {
+    setEditingId(sch.id);
+    setEditAmount(String(sch.amount));
+    // Defensive: legacy/demo rows may carry non-canonical cadence values
+    // (e.g. "annual"). Normalize to the three the editor + /update accept
+    // so the dropdown shows a valid selection and Save doesn't 400.
+    const freq = String(sch.frequency);
+    setEditFrequency(freq === "annual" ? "yearly" : (["weekly", "monthly", "yearly"].includes(freq) ? (freq as "weekly" | "monthly" | "yearly") : "monthly"));
+    setHistoryOpenId(null);
+  };
+
+  const handleSaveEdit = async (sch: GifterRecurringRow) => {
+    const amountNum = parseFloat(editAmount);
+    if (!Number.isFinite(amountNum) || amountNum < 1) {
+      toast({ title: "Enter a valid amount", description: "At least $1.", variant: "destructive" });
+      return;
+    }
+    setBusyScheduleId(sch.id);
+    try {
+      const res = await fetch(`/api/gifter-account/recurring/${sch.id}/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ amount: amountNum, frequency: editFrequency }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || `HTTP ${res.status}`);
+      haptic("success");
+      toast({ title: "Recurring updated", description: `Now ${fmtMoney(amountNum)} ${editFrequency} to ${sch.fundName}. New terms apply next cycle.` });
+      setEditingId(null);
+      refreshRecurring();
+    } catch (err) {
+      haptic("error");
+      toast({ title: "Could not update", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
+    } finally {
+      setBusyScheduleId(null);
+    }
+  };
+
+  const handleToggleHistory = async (sch: GifterRecurringRow) => {
+    if (historyOpenId === sch.id) {
+      setHistoryOpenId(null);
+      return;
+    }
+    setHistoryOpenId(sch.id);
+    setEditingId(null);
+    if (historyById[sch.id] && historyById[sch.id] !== "error") return;
+    setHistoryById((prev) => ({ ...prev, [sch.id]: "loading" }));
+    try {
+      const res = await fetch(`/api/gifter-account/recurring/${sch.id}/history`, { credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const payload = (await res.json()) as ChargeHistory;
+      setHistoryById((prev) => ({ ...prev, [sch.id]: payload }));
+    } catch {
+      setHistoryById((prev) => ({ ...prev, [sch.id]: "error" }));
     }
   };
 
@@ -369,7 +477,18 @@ export default function GifterDashboard() {
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         <div className="flex items-center justify-between">
           <Logo />
-          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">Back to Kiddo</Link>
+          {/* Demo users came in via the /demo persona picker; sending them
+              to the marketing root ("/") on "back" dumps them out of the
+              demo entirely. Route them back to /demo instead so they can
+              keep exploring (or switch personas). Real gifters still go to
+              the marketing home. Per DUNPHY_DEMO_SPEC.md. */}
+          <Link
+            href={isDemoUser ? "/demo" : "/"}
+            className="text-sm text-muted-foreground hover:text-foreground"
+            data-testid="link-gifter-back"
+          >
+            {isDemoUser ? "Back to demo" : "Back to Kiddo"}
+          </Link>
         </div>
 
         {!isAuthenticated ? (
@@ -442,87 +561,74 @@ export default function GifterDashboard() {
             </div>
           </div>
         ) : (
-          <div className="mt-10 space-y-6">
-            <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-primary">Your gifts</p>
-                  <h1 className="mt-2 font-heading text-3xl font-semibold text-foreground">
-                    Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
-                  </h1>
-                  {/* Subtitle copy 2026-05-25 audit. Was 'Everything you
-                      have saved or gifted to regularly, in one place.' —
-                      the word 'regularly' implied recurring gifts that
-                      most one-time gifters don't have, creating a copy-
-                      vs-reality mismatch. Now plainly names what's here:
-                      the funds you've gifted to. */}
-                  <p className="mt-2 text-muted-foreground">The funds you've gifted to, in one place.</p>
+          <div className="mt-8 space-y-6">
+            {/* ── Branded impact hero ──────────────────────────────
+                Redesign 2026-05-26: the gifter surface previously opened
+                on a flat white card with three muted stat-chips — visually
+                the weakest hero in the app. This replaces it with the
+                evergreen-gradient hero treatment used on the Dashboard
+                (.kiddo-hero-card), leading with the gifter's PROUD lifetime
+                number (total gifted, count-up) and a warm impact line. The
+                same three stats survive, but they now read as "look what
+                you did for these kids" rather than a utilitarian strip.
+                Stats counts are preserved verbatim (saved / gifted /
+                following) with their count-up + aria-live attributes. */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+              className="relative overflow-hidden rounded-[28px] p-6 text-white sm:p-8"
+              style={{ background: "linear-gradient(145deg, hsl(var(--kiddo-evergreen)) 0%, hsl(153 48% 11%) 100%)" }}
+              data-testid="gifter-hero"
+            >
+              {/* Soft gold glow, top-right — the warmth accent that keeps
+                  the dark hero from reading as a bank statement. */}
+              <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-[hsl(var(--kiddo-gold)/0.20)] blur-3xl" />
+              <div className="relative">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">Your gifts</p>
+                <h1 className="mt-2 font-heading text-3xl font-semibold sm:text-4xl">
+                  Welcome back{user?.firstName ? `, ${user.firstName}` : ""}.
+                </h1>
+                <p className="mt-2 max-w-md text-sm leading-relaxed text-white/80">
+                  {savedFundCount > 0
+                    ? `You've shown up for ${savedFundCount} ${savedFundCount === 1 ? "child" : "children"} — and what you gave keeps growing for them.`
+                    : "The funds you've gifted to, in one place."}
+                </p>
+
+                <div className="mt-6 flex flex-wrap items-end gap-x-8 gap-y-4">
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Total gifted</p>
+                    <p
+                      className="mt-0.5 font-heading text-3xl font-bold tabular-nums sm:text-4xl"
+                      aria-live={totalGiftedAnimating ? "off" : "polite"}
+                      aria-label={fmtMoney(totalGifted)}
+                    >{fmtMoney(animatedTotalGifted)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">{savedFundCount === 1 ? "Child" : "Children"}</p>
+                    <p
+                      className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
+                      aria-live={savedFundCountAnimating ? "off" : "polite"}
+                      aria-label={String(savedFundCount)}
+                    >{Math.round(animatedSavedFundCount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-white/60">Following</p>
+                    <p
+                      className="mt-0.5 font-heading text-2xl font-semibold tabular-nums"
+                      aria-live={followingUpdatesCountAnimating ? "off" : "polite"}
+                      aria-label={String(followingUpdatesCount)}
+                    >{Math.round(animatedFollowingUpdatesCount)}</p>
+                  </div>
                 </div>
+
                 {sessionId && mode === "save" && (
-                  <div className="rounded-2xl bg-primary/5 px-4 py-3 text-sm text-primary">
+                  <div className="mt-5 inline-flex rounded-2xl bg-white/10 px-4 py-2.5 text-sm text-white backdrop-blur-sm">
                     {saveInFlight ? "Saving this fund..." : "This gift page is ready to save."}
                   </div>
                 )}
               </div>
-
-              {/* Stats strip — second pass 2026-05-25 audit.
-                  First pass (2026-05-23) demoted the 5 stats from large
-                  cards to inline chips. This pass goes further: drops
-                  TWO of the five chips that were duplicative.
-                    - "Total gifts" was duplicative of "Total gifted"
-                      (the per-fund card already shows the per-fund gift
-                      count e.g. "6 gifts sent · $475 from you"); we
-                      kept the dollar number and dropped the count.
-                    - "Tracked fund value" read as the gifter's number
-                      but is actually the PARENT's fund total. Confusing
-                      gifter-vs-parent framing; the per-fund card shows
-                      Fund value now as the proper context.
-                    - "Updates following" stays — it's the only one
-                      the gifter can directly act on (now with a
-                      "Follow updates" toggle below per fund).
-                  Result: 3 stats not 5; remaining trio actually
-                  represents the gifter's own relationship to the
-                  funds (saved / gifted / following). The dead-end
-                  "Ask a family to share their fund updates" copy
-                  has also been dropped — the per-fund Follow button
-                  below is the action surface now. */}
-              <div className="mt-5 grid gap-2 sm:grid-cols-3">
-                <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Saved funds</p>
-                  <p
-                    className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
-                    aria-live={savedFundCountAnimating ? "off" : "polite"}
-                    aria-label={String(savedFundCount)}
-                  >{Math.round(animatedSavedFundCount)}</p>
-                </div>
-                <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total gifted</p>
-                  <p
-                    className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
-                    aria-live={totalGiftedAnimating ? "off" : "polite"}
-                    aria-label={fmtMoney(totalGifted)}
-                  >{fmtMoney(animatedTotalGifted)}</p>
-                </div>
-                <div className="rounded-xl bg-muted/40 px-3 py-2.5">
-                  <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Updates following</p>
-                  <p
-                    className="mt-0.5 font-heading text-lg text-foreground tabular-nums"
-                    aria-live={followingUpdatesCountAnimating ? "off" : "polite"}
-                    aria-label={String(followingUpdatesCount)}
-                  >{Math.round(animatedFollowingUpdatesCount)}</p>
-                </div>
-              </div>
-
-              {/* CSV download — demoted 2026-05-25 audit. Was a full
-                  border-rounded card sitting between the welcome
-                  header and the page body; for the 99% of gifters who
-                  never need a CSV (it's a year-end tax-prep tool for
-                  CPA hand-off / Form 709 compliance) it was dashboard
-                  noise. Now a tiny inline link in the page footer
-                  alongside the other small affordances. Power users
-                  still find it; everyone else doesn't have to look at
-                  it as a hero element. */}
-            </div>
+            </motion.div>
 
             {/* ─── Active commitments hero ─────────────────────
                 2026-05-25 audit: the previous version of this card
@@ -560,41 +666,164 @@ export default function GifterDashboard() {
                 </div>
               </div>
 
-              {/* Active recurring schedules — promoted to hero */}
+              {/* Active recurring schedules — promoted to hero. Each row
+                  is now a full management surface: pause/resume, edit
+                  (amount + cadence, applied next cycle), an expandable
+                  charge history, and cancel. Redesign 2026-05-26. */}
               {recurringSchedules.filter((s) => s.status === "active").length > 0 && (
                 <div className="mt-5 space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Active recurring</p>
                   {recurringSchedules
                     .filter((s) => s.status === "active")
-                    .map((sch) => (
+                    .map((sch) => {
+                      const isEditing = editingId === sch.id;
+                      const isHistoryOpen = historyOpenId === sch.id;
+                      const busy = busyScheduleId === sch.id;
+                      const history = historyById[sch.id];
+                      return (
                       <div
                         key={sch.id}
-                        className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-border/60 bg-background p-4"
+                        className="rounded-2xl border border-border/60 bg-background p-4"
                         data-testid={`hero-recurring-${sch.id}`}
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-foreground">
-                            {fmtMoney(sch.amount)} {sch.frequency} to {sch.fundName}
-                          </p>
-                          {sch.nextChargeDate && (
-                            <p className="mt-1 text-sm text-foreground">
-                              <span className="font-medium">Next charge:</span>{" "}
-                              {new Date(sch.nextChargeDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-foreground tabular-nums">
+                              {fmtMoney(sch.amount)} {sch.frequency} to {sch.fundName}
                             </p>
-                          )}
+                            {sch.nextChargeDate && (
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                <span className="font-medium text-foreground">{sch.autoCharge === false ? "Next reminder:" : "Next charge:"}</span>{" "}
+                                {new Date(sch.nextChargeDate).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCancelRecurring(sch.id)}
-                          disabled={cancellingId === sch.id}
-                          className="text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-                          aria-label={`Cancel recurring gift of ${fmtMoney(sch.amount)} ${sch.frequency} to ${sch.fundName}`}
-                          data-testid={`hero-cancel-recurring-${sch.id}`}
-                        >
-                          {cancellingId === sch.id ? "Cancelling..." : "Cancel"}
-                        </button>
+
+                        {/* Action bar */}
+                        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handlePauseResume(sch, true)}
+                            disabled={busy}
+                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                            data-testid={`hero-pause-recurring-${sch.id}`}
+                          >
+                            <Pause className="h-3.5 w-3.5" />
+                            {busy ? "…" : "Pause"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => (isEditing ? setEditingId(null) : openEditor(sch))}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${isEditing ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                            data-testid={`hero-edit-recurring-${sch.id}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleHistory(sch)}
+                            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${isHistoryOpen ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+                            data-testid={`hero-history-recurring-${sch.id}`}
+                          >
+                            <Receipt className="h-3.5 w-3.5" />
+                            History
+                            <ChevronDown className={`h-3 w-3 transition-transform ${isHistoryOpen ? "rotate-180" : ""}`} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleCancelRecurring(sch.id)}
+                            disabled={cancellingId === sch.id}
+                            className="ml-auto inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                            aria-label={`Cancel recurring gift of ${fmtMoney(sch.amount)} ${sch.frequency} to ${sch.fundName}`}
+                            data-testid={`hero-cancel-recurring-${sch.id}`}
+                          >
+                            {cancellingId === sch.id ? "Cancelling…" : "Cancel"}
+                          </button>
+                        </div>
+
+                        {/* Inline editor */}
+                        {isEditing && (
+                          <div className="mt-3 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.2)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-3" data-testid={`hero-editor-recurring-${sch.id}`}>
+                            <div className="flex flex-wrap items-end gap-3">
+                              <label className="flex-1 min-w-[120px]">
+                                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Amount</span>
+                                <div className="mt-1 flex items-center rounded-lg border border-border bg-background px-3">
+                                  <span className="text-sm text-muted-foreground">$</span>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    inputMode="decimal"
+                                    value={editAmount}
+                                    onChange={(e) => setEditAmount(e.target.value)}
+                                    className="h-10 w-full bg-transparent px-1 text-sm tabular-nums outline-none"
+                                    data-testid={`hero-edit-amount-${sch.id}`}
+                                  />
+                                </div>
+                              </label>
+                              <label className="flex-1 min-w-[120px]">
+                                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Cadence</span>
+                                <select
+                                  value={editFrequency}
+                                  onChange={(e) => setEditFrequency(e.target.value as "weekly" | "monthly" | "yearly")}
+                                  className="mt-1 h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none"
+                                  data-testid={`hero-edit-frequency-${sch.id}`}
+                                >
+                                  <option value="weekly">Weekly</option>
+                                  <option value="monthly">Monthly</option>
+                                  <option value="yearly">Yearly</option>
+                                </select>
+                              </label>
+                            </div>
+                            <div className="mt-3 flex items-center gap-2">
+                              <Button size="sm" onClick={() => handleSaveEdit(sch)} disabled={busy} data-testid={`hero-save-edit-${sch.id}`}>
+                                {busy ? "Saving…" : "Save changes"}
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditingId(null)} disabled={busy}>
+                                Cancel
+                              </Button>
+                            </div>
+                            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+                              New amount and cadence take effect next cycle — you won't be charged anything extra today.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Charge history */}
+                        {isHistoryOpen && (
+                          <div className="mt-3 rounded-xl border border-border/60 bg-muted/30 p-3" data-testid={`hero-history-panel-${sch.id}`}>
+                            {history === "loading" || history === undefined ? (
+                              <p className="text-xs text-muted-foreground">Loading charge history…</p>
+                            ) : history === "error" ? (
+                              <p className="text-xs text-muted-foreground">Couldn't load history. Try again in a moment.</p>
+                            ) : history.reminderOnly ? (
+                              <p className="text-xs leading-snug text-muted-foreground">
+                                This is a gift reminder, not an automatic charge — nothing is billed to your card. You'll get an email each cycle so you can choose to give.
+                              </p>
+                            ) : history.count === 0 ? (
+                              <p className="text-xs text-muted-foreground">No charges yet — your first one will appear here.</p>
+                            ) : (
+                              <>
+                                <p className="text-xs font-semibold text-foreground">
+                                  {fmtMoney(history.totalCharged)} given to {sch.fundName} across {history.count} {history.count === 1 ? "charge" : "charges"}
+                                </p>
+                                <ul className="mt-2 divide-y divide-border/60">
+                                  {history.charges.map((c) => (
+                                    <li key={c.id} className="flex items-center justify-between py-1.5 text-xs">
+                                      <span className="text-muted-foreground">{c.at ? fmtDate(c.at) : "—"}</span>
+                                      <span className="font-medium text-foreground tabular-nums">{fmtMoney(c.amount)}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ))}
+                      );
+                    })}
                 </div>
               )}
 
@@ -674,15 +903,29 @@ export default function GifterDashboard() {
                           <p className="mt-1 text-xs text-muted-foreground">Paused by you.</p>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleCancelRecurring(sch.id)}
-                        disabled={cancellingId === sch.id}
-                        className="text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
-                        data-testid={`cancel-recurring-${sch.id}`}
-                      >
-                        {cancellingId === sch.id ? "Cancelling…" : "Cancel"}
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        {sch.status === "paused" && sch.pauseReason === "user" && (
+                          <button
+                            type="button"
+                            onClick={() => handlePauseResume(sch, false)}
+                            disabled={busyScheduleId === sch.id}
+                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] transition-colors hover:bg-[hsl(var(--kiddo-evergreen)/0.08)] disabled:opacity-50"
+                            data-testid={`resume-recurring-${sch.id}`}
+                          >
+                            <Play className="h-3.5 w-3.5" />
+                            {busyScheduleId === sch.id ? "Resuming…" : "Resume"}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleCancelRecurring(sch.id)}
+                          disabled={cancellingId === sch.id}
+                          className="inline-flex items-center rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                          data-testid={`cancel-recurring-${sch.id}`}
+                        >
+                          {cancellingId === sch.id ? "Cancelling…" : "Cancel"}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -834,10 +1077,16 @@ export default function GifterDashboard() {
                 <p className="mt-4 text-sm text-muted-foreground">Loading your saved funds...</p>
               ) : data?.funds?.length ? (
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  {data.funds.map((fund) => {
+                  {data.funds.map((fund, fundIdx) => {
                     const attribution = computeGifterAttribution(fund);
                     return (
-                    <div key={fund.fundId} className="rounded-3xl border border-border/60 bg-background p-5">
+                    <motion.div
+                      key={fund.fundId}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1], delay: Math.min(fundIdx * 0.05, 0.3) }}
+                      className="rounded-3xl border border-border/60 bg-background p-5 shadow-[0_1px_3px_rgba(26,23,16,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(26,23,16,0.10)]"
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">{fund.childPhase === "teen" ? "Teen fund" : "Child fund"}</p>
@@ -1012,7 +1261,7 @@ export default function GifterDashboard() {
                           </Link>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                     );
                   })}
                 </div>

@@ -16,6 +16,7 @@ const TEST_STEPS = [
   "test:dashboard-bundle-budget",
   "test:gift-reconciliation-repair",
   "test:stripe-pipeline:strict",
+  "test:founder-claim",
   "test:launch-readiness",
   "test:memory-utils",
   "test:mobile-gifter-logos",

@@ -153,6 +153,7 @@ const MILESTONE_TYPES = [
   "ssn_provided",               // tax ID added (last4 in metadata, never full)
   "successor_custodian_added", "successor_custodian_changed", "successor_custodian_removed",
   "child_profile_updated",      // name / photo / birthdate / pronoun
+  "majority_state_updated",     // residency state set → recomputes age of majority / handoff date
 ];
 // `upgrade_*` rows (upgrade_viewed / upgrade_landed / upgrade_dismissed /
 // upgrade_clicked / etc.) are written by `logMonetizationActivity` with the
@@ -421,6 +422,8 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
     return { ...PALETTE.GROWTH, icon: <UserCheck size={16} />, label: "Successor custodian" };
   if (t === "child_profile_updated")
     return { ...PALETTE.WARNING, icon: <Settings size={16} />, label: "Profile" };
+  if (t === "majority_state_updated")
+    return { ...PALETTE.GROWTH, icon: <Calendar size={16} />, label: "Age of majority" };
   if (t === "kid_stock_suggestion")
     return { ...PALETTE.MEMORY, icon: <Lightbulb size={16} />, label: "Kid suggestion" };
   if (t === "kid_suggestion_approved")

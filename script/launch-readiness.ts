@@ -155,16 +155,21 @@ async function run() {
             AND EXISTS (SELECT 1 FROM gifts g WHERE g.fund_id = f.id)
         ),
         gifts_without_memory AS (
+          -- Exclude @example.com senders (RFC-2606 reserved test domain used by
+          -- runtime test fixtures). Scopes this data-integrity check to REAL
+          -- data so test pollution can't muddy the launch-readiness report.
           SELECT COUNT(*)::int AS total
           FROM gifts g
           LEFT JOIN memory_entries m ON m.gift_id = g.id
           WHERE m.id IS NULL
+            AND COALESCE(g.sender_email, '') NOT LIKE '%@example.com'
         ),
         gifts_without_thankyou AS (
           SELECT COUNT(*)::int AS total
           FROM gifts g
           LEFT JOIN thank_yous t ON t.gift_id = g.id
           WHERE t.id IS NULL
+            AND COALESCE(g.sender_email, '') NOT LIKE '%@example.com'
         ),
         gift_tx_without_gift AS (
           SELECT COUNT(*)::int AS total

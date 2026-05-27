@@ -20,7 +20,7 @@ Their highest-ARPU years are the years right after they take
 ownership, and Kiddo has nothing tiered for them.
 
 **Kiddo Adult would be a $15–$25/mo tier sold to kid-owners aged
-18–35.** It composes with the existing $4.99 Plus / $7.99 Family
+18–35.** It composes with the existing $3.99 Plus / $6.99 Family
 ladder rather than replacing it: parents stay on Plus/Family until
 the kid is 18, the kid then has their own subscription decision to
 make. The relationship that started at $0 (Free Kid View) becomes
@@ -69,7 +69,7 @@ Without Kiddo Adult, that migration is the default outcome.
 **$15.99/mo or $149/yr** (~22% annual discount, similar shape to
 the existing Family tier's 28% annual discount).
 
-Sits above Kiddo Family ($7.99). Frame as the natural graduation
+Sits above Kiddo Family ($6.99). Frame as the natural graduation
 ladder: kid grows up on Free Kid View → parent paid Plus or Family
 → kid takes ownership → kid graduates to Adult tier when they hit
 real income.
@@ -154,8 +154,8 @@ Adult tier has to feel like a continuation of that, not a pivot.
 | Tier | User | Price | Job-to-be-done |
 |---|---|---|---|
 | Free | Parent + Kid | $0/mo | "I want to start a fund for my child. Gifts in, no monthly fee." |
-| Kiddo+ | Parent | $4.99/mo per fund | "I want to add to my child's fund monthly + add my own letters + photos." |
-| Kiddo Family | Parent (multi-kid) | $7.99/mo household | "Plus, but for all my kids." |
+| Kiddo+ | Parent | $3.99/mo per fund | "I want to add to my child's fund monthly + add my own letters + photos." |
+| Kiddo Family | Parent (multi-kid) | $6.99/mo household | "Plus, but for all my kids." |
 | **Kiddo Adult (new)** | **Kid-owner age 18+** | **$15.99/mo** | **"I'm the owner now. Help me make adult-money decisions."** |
 
 The graduation moment is the Age-18 handoff. The Age18Welcome

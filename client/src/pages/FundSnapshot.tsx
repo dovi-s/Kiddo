@@ -250,7 +250,20 @@ export default function FundSnapshot() {
   // growth for IL/WI/CA/MS and other non-18 statutes — a ~20-30%
   // overstatement of the projected balance for those states). Audit
   // 2026-05-25 caught.
-  const fundMajorityAge = fund ? getMajorityAgeForState((fund as any).recipientState || "") : 18;
+  // Effective majority age. Prefer an explicit per-account election (the
+  // stored majorityAge field — e.g. a CA custodian electing 21, which CA
+  // UTMA permits) since that is the legal truth for THIS fund and is what
+  // Age18Plan / GiftSuccess already use. Fall back to the state statutory
+  // default only when no election was made (stored value is the schema
+  // default of 18), preserving the state-variance fix for funds that never
+  // set an explicit age. Without this, an elected-21 fund (every Dunphy
+  // demo fund) showed "Est. at 18" here while the rest of the app said 21.
+  const storedMajorityAge = Number((fund as any)?.majorityAge);
+  const fundMajorityAge = fund
+    ? (storedMajorityAge && storedMajorityAge !== 18
+        ? storedMajorityAge
+        : getMajorityAgeForState((fund as any).recipientState || ""))
+    : 18;
   const projectionAtMajority = useMemo(() => {
     if (!fund || !showProjection) return null;
     const birthdate = (fund as any).recipientBirthdate;

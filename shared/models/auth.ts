@@ -39,6 +39,14 @@ export const users = pgTable("users", {
   // PRODUCTION-INTENDED and content is curated; test accounts are
   // dev-only and get filtered from public surfaces. Defaults false.
   isDemoAccount: boolean("is_demo_account").notNull().default(false),
+  // Founding-member entitlement flag. NULL for everyone except the <=1,000
+  // founders who claimed their slot at launch. 'plus_founder' locks the $19/yr
+  // Plus price for life (and the Family path at $59/yr forever per the
+  // 2026-05-26 decision), surfaces the Founding Member badge, and flags the
+  // user into every future product's early-access cohort. Set by
+  // completeFounderClaim() in server/services/founderClaimAuth.ts. See
+  // project_founding_member_claim_flow_spec.md. Added by migration 0034.
+  founderTier: text("founder_tier"),
   kycStatus: text("kyc_status").default("none"),
   kycSubmittedAt: timestamp("kyc_submitted_at"),
   kycData: jsonb("kyc_data"),
@@ -571,6 +579,10 @@ export const foundingMembers = pgTable("founding_members", {
   // magic_link_tokens + password_resets); raw token in the email,
   // hash here. Cleared after redemption.
   claimToken: varchar("claim_token", { length: 64 }),
+  // 30-day TTL for the claim token (founders may act on the launch email days
+  // later — longer than magic-link's 15 min by design). Set when a token is
+  // issued/re-issued; checked on verify + complete. Added by migration 0034.
+  claimTokenExpiresAt: timestamp("claim_token_expires_at"),
   claimedAt: timestamp("claimed_at"),
   claimedUserId: varchar("claimed_user_id").references(() => users.id, { onDelete: "set null" }),
   // Gifted-slot tracking. When a gifter sponsors a Founder slot

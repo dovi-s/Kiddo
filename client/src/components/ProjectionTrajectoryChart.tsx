@@ -21,8 +21,8 @@
 // but for a single-line projection without scrub interaction the
 // Recharts overhead (axes, tooltip, motion, theme) is excessive.
 // Handrolling 80 lines of SVG keeps the chart at calm-register
-// minimum and matches the CommunityCompoundingChart discipline
-// (handrolled SVG, no library, no axis labels).
+// minimum and follows the handrolled-SVG discipline
+// (no chart library, no axis labels).
 //
 // The math comes from the parent's projectFundValue() helper via
 // the `points` prop — the page computes one cumulative projection

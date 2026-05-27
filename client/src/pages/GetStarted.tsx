@@ -1033,12 +1033,15 @@ export default function GetStarted() {
                   </motion.div>
                 </div>
               </AnimatedBlock>
-              {/* Inline state picker — optional. Empty default means age 18
-                  (federal UTMA default, correct for ~85% of US states). When
-                  the parent selects a state, the projection numbers + the
-                  "by the time {kid} is N" copy + the fund-creation payload
-                  all recompute. Native <select> for minimal-friction
-                  picker — no popover overhead, mobile-keyboard-native. */}
+              {/* Inline state picker — REQUIRED for child funds. The state
+                  sets the UTMA age of majority (18 in most states, 19–21 in
+                  several), which anchors the legal handoff date, the at-18
+                  worker, the KidView countdown and the claim gate. Defaulting
+                  a missing state to 18 is wrong by up to 3 years in PA/NY/TX,
+                  so we require it rather than guess (matches AddFundSheet).
+                  Selecting recomputes the projection numbers + the "by the
+                  time {kid} is N" copy + the fund-creation payload. Native
+                  <select> for minimal-friction, mobile-keyboard-native pick. */}
               {accountType === "child" && (
                 <AnimatedBlock className="mt-4">
                   <div className="rounded-2xl border border-border bg-card px-4 py-3">
@@ -1052,7 +1055,7 @@ export default function GetStarted() {
                       className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       data-testid="select-recipient-state"
                     >
-                      <option value="">Select a state (optional). Defaults to age 18 majority.</option>
+                      <option value="">Select your state</option>
                       {US_STATES.map((s) => (
                         <option key={s.code} value={s.code}>{s.name}</option>
                       ))}
@@ -1060,13 +1063,13 @@ export default function GetStarted() {
                     <p className="mt-1.5 text-[10px] leading-snug text-muted-foreground/80">
                       {recipientState
                         ? `In your state, UTMA control transfers to ${displayName} at age ${effectiveMajorityAge}. Projection updated.`
-                        : "UTMA majority is 18 in most states. A few are 19, 20, or 21. Pick yours to personalize the math."}
+                        : "We need this to get the handoff date right. UTMA control transfers at 18 in most states, 19 to 21 in others."}
                     </p>
                   </div>
                 </AnimatedBlock>
               )}
               {isLastStep && submitError && <div className="mt-4 rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{submitError}</div>}
-              <Dock primary={<Button onClick={() => void handleContinue()} disabled={creating} className="h-14 w-full rounded-2xl text-base btn-premium" data-testid="button-projection-continue">{isLastStep ? (creating ? "Creating fund..." : "Create my fund") : "This is why I'm starting"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>} />
+              <Dock primary={<Button onClick={() => void handleContinue()} disabled={creating || (accountType === "child" && !recipientState)} className="h-14 w-full rounded-2xl text-base btn-premium" data-testid="button-projection-continue">{isLastStep ? (creating ? "Creating fund..." : "Create my fund") : "This is why I'm starting"}{!creating && <ArrowRight className="ml-2 h-5 w-5" />}</Button>} />
             </div>
           </Shell>
         )}

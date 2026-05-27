@@ -45,6 +45,7 @@ const Login = lazy(() => import("@/pages/Login"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const AuthMagic = lazy(() => import("@/pages/AuthMagic"));
+const FounderClaim = lazy(() => import("@/pages/FounderClaim"));
 const ConfirmEmailChange = lazy(() => import("@/pages/ConfirmEmailChange"));
 const CancelEmailChange = lazy(() => import("@/pages/CancelEmailChange"));
 const EventCreate = lazy(() => import("@/pages/EventCreate"));
@@ -137,6 +138,7 @@ function isPublicGiftRoute(path: string): boolean {
     "transition",
     "updates",
     "gifter",
+    "my-gifts",
     "personal-funds",
     "contact",
     "age-18",
@@ -164,6 +166,24 @@ function isPublicGiftRoute(path: string): boolean {
     "welcome-at-18",
     "give-a-gift",
     "your-story",
+    // 2026-05-26 sweep: a link audit found ten more registered top-level
+    // routes that had drifted out of this set, each firing a spurious
+    // /api/public/funds/<seg> 404 prefetch on every visit (same class as
+    // the /my-gifts miss). hideGlobalNav stays net-neutral for these —
+    // marketing pages keep hiding via isMarketingPage, /feedback/pmf +
+    // /founder-claim/ via their explicit clauses, and the auth/landing
+    // pages below get explicit hideGlobalNav entries in the same sweep.
+    "auth",
+    "reset-password",
+    "verify-email",
+    "confirm-email-change",
+    "cancel-email-change",
+    "founding-members",
+    "robux-vs-utma",
+    "trump-account-vs-utma",
+    "founder-claim",
+    "feedback",
+    "sponsor-success",
   ]);
 
   if (segments.length === 0) return false;
@@ -733,7 +753,6 @@ function Router() {
   return (
     <>
       <ScrollToTop />
-      <DemoBanner />
       {/* id="main-content" is the skip-to-content link target (defined
           on the App shell above). tabIndex={-1} lets the anchor jump
           focus here without making the wrapper itself part of the tab
@@ -747,6 +766,7 @@ function Router() {
           <Route path="/reset-password"><ResetPassword /></Route>
           <Route path="/verify-email"><VerifyEmail /></Route>
           <Route path="/auth/magic"><AuthMagic /></Route>
+          <Route path="/founder-claim/:token"><FounderClaim /></Route>
           <Route path="/confirm-email-change"><ConfirmEmailChange /></Route>
           <Route path="/cancel-email-change"><CancelEmailChange /></Route>
           <Route path="/demo"><Demo /></Route>
@@ -882,10 +902,22 @@ function App() {
     // the 2-5 minute flow.
     location === "/get-started" ||
     location === "/feedback/pmf" ||
+    location.startsWith("/founder-claim/") ||
     location.startsWith("/kid/") ||
     location.startsWith("/updates/share/") ||
     location.startsWith("/updates/unsubscribe/") ||
     (location.startsWith("/transition/") && !location.startsWith("/transition/fund/")) ||
+    // Auth + post-action landing pages. These previously hid the global
+    // nav only by accident — isPublicGiftRoute mis-classified them as
+    // gift pages (now fixed via the reserved-set sweep above). Listed
+    // explicitly here so the chrome-hiding is intentional, not a
+    // side-effect, and stays net-neutral after that fix. Added 2026-05-26.
+    location === "/reset-password" ||
+    location === "/verify-email" ||
+    location === "/confirm-email-change" ||
+    location === "/cancel-email-change" ||
+    location === "/sponsor-success" ||
+    location.startsWith("/auth/") ||
     isMarketingPage ||
     isPreview ||
     isGiftPage;
@@ -917,6 +949,13 @@ function App() {
               <SeoManager />
               <Toaster />
               {!hideGlobalNav && <DesktopSidebar />}
+              {/* Demo banner lives at the shell (not inside Router) so its
+                  desktop left-offset can mirror the sidebar's presence via the
+                  SAME hideGlobalNav flag — no second source of truth. It paints
+                  over the 264px fixed sidebar logo otherwise (later in the DOM
+                  at equal z-50). Offset only when the sidebar renders; full-
+                  width on /admin, /gifter, /my-gifts, /kid/*, and on mobile. */}
+              <DemoBanner sidebarOffset={!hideGlobalNav} />
               <Router />
               {!hideGlobalNav && <MobileNav />}
               {/* Global share modal — listens for `kiddo:open-share-modal`

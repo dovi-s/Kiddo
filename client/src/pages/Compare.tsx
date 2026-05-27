@@ -167,7 +167,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     slug: "acorns-early",
     metaTitle: "Acorns Early vs Kiddo | Micro-investing vs investment gifting",
     metaDescription:
-      "Acorns invented micro-investing. Brilliant. But round-ups won't change your child's life. Kiddo invented investment gifting. Here is the honest difference.",
+      "Acorns made round-ups famous, but spare change won't change your child's life. Kiddo does something different: investment gifting. Here's the honest comparison.",
     heroTitle: "Acorns is brilliant. Round-ups are clever. But spare change won't change Emma's life.",
     heroBody: [
       "Acorns created micro-investing. Genuinely category-defining. Every coffee, every Uber, every grocery run quietly building a portfolio in the background. That is elegant.",
@@ -747,7 +747,7 @@ function ComparisonHub() {
   usePageSeo({
     title: "Investment gifting vs the alternatives | Kiddo",
     description:
-      "Acorns created micro-investing. Greenlight owns spending. Nobody built investment gifting, until Kiddo. Honest comparisons with EarlyBird, Acorns Early, Greenlight, 529 plans, and savings accounts.",
+      "Acorns does round-ups, Greenlight does spending, 529s do education. None of them do investment gifting the way Kiddo does. Honest comparisons with EarlyBird, Acorns Early, Greenlight, 529 plans, and savings accounts.",
     ogType: "website",
   });
 
@@ -757,13 +757,13 @@ function ComparisonHub() {
         <div className="mx-auto max-w-5xl px-4 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Compare</p>
           <h1 className="mt-4 font-heading text-4xl md:text-6xl font-bold tracking-tight text-foreground">
-            Nobody built investment gifting. Until now.
+            Investment gifting didn't exist until we built it.
           </h1>
           <p className="mx-auto mt-6 max-w-3xl text-lg leading-relaxed text-muted-foreground">
             Acorns created micro-investing. Greenlight owns spending. 529s handle education. None of them built what comes next: a shareable link that turns every birthday, holiday, and baby shower into a real investment for your child.
           </p>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
-            That is investment gifting. That is Kiddo. Here is the honest comparison.
+            That's what we mean by investment gifting. Here's how it stacks up against everything it gets confused with.
           </p>
         </div>
       </section>
@@ -947,7 +947,7 @@ function ComparisonHub() {
               Gifts that last. Not just spare change.
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-              The $50 grandma puts in a birthday card disappears in three days. The $50 she sends through Kiddo could be $134 when your child turns 18. That is not micro-investing. That is not a savings account. That is investment gifting. And no one else has built it.
+              The $50 grandma puts in a birthday card disappears in three days. The $50 she sends through Kiddo could be $134 when your child turns 18. It's invested in real stock, given as a gift, with no account for her to open. That last bit is the part nobody else has actually built.
             </p>
             <p className="mx-auto mt-3 max-w-2xl text-sm text-muted-foreground">
               No account needed to give. No gift card to redeem. No app to download. Just a link and a gift that grows.

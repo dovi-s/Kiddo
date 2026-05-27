@@ -131,7 +131,6 @@ import { getPronouns } from "@/lib/pronouns";
 import { getDeepLinkHighlightCardStyle, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FundTabs } from "@/components/layout/FundTabs";
-import { CommunityCompoundingChart } from "@/components/CommunityCompoundingChart";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { useRealtimeEvents } from "@/hooks/use-realtime-events";
 import { MilestoneMoment } from "@/components/MilestoneMoment";
@@ -1528,28 +1527,6 @@ export default function Dashboard() {
     oneTimePaymentMethod === "bank"
       ? Math.max(0, oneTimeCardLikeFee - oneTimeSelectedEstimate.processingFee)
       : 0;
-
-  // Community chart data — the visual self-portrait of who built
-  // this fund. The chart component self-hides with <2 gifters or <2
-  // events; we still fetch eagerly because that's the most common
-  // case for funds past the first month and the payload is small.
-  // Shipped 2026-05-26 alongside the FundTabs surface. Shared
-  // helper at server/lib/communityChartData.ts is the single source
-  // of truth between this surface and the kid-view consumer.
-  const { data: communityChartData } = useQuery<{
-    fundStartedAt: string | null;
-    totalContributors: number;
-    series: Array<{ label: string; totalUsd: number; points: Array<{ at: string; cumulative: number }> }>;
-  }>({
-    queryKey: ["/api/funds", selectedFundId, "community"],
-    queryFn: async () => {
-      const res = await fetch(`/api/funds/${encodeURIComponent(selectedFundId)}/community`, { credentials: "include" });
-      if (!res.ok) return { fundStartedAt: null, totalContributors: 0, series: [] };
-      return res.json();
-    },
-    enabled: !!user && !!selectedFundId,
-    staleTime: 60_000,
-  });
 
   const { data: inboxData } = useQuery<{ items: Array<{ id: string; tone: "info" | "success" | "warning"; title: string; description: string; ctaLabel: string | null; ctaHref: string | null }> }>({
     queryKey: ["/api/inbox", selectedFundId],
@@ -3199,27 +3176,28 @@ export default function Dashboard() {
   // (Age18Plan, Projection page, smart nudges) — one number, one
   // disclaimer line everywhere.
   const heroProjectedAt65 = useMemo(() => {
-    const annualRate = 0.07;
-    const monthRate = annualRate / 12;
-    const yearsTo18 = age18Transition
-      ? Math.max(0, age18Transition.daysUntil18 / 365.25)
-      : 0;
-    const currentAge = age18Transition ? Math.max(0, 18 - yearsTo18) : 0;
+    // `daysUntil18` is days-to-MAJORITY (21 in CA), so derive current age
+    // from the fund's actual majorityAge — never a hardcoded 18, which
+    // would mis-age every 21-state kid by 3 years and inflate the horizon.
+    const yearsToMajority = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
+    const majorityAge = age18Transition?.majorityAge || 18;
+    const currentAge = age18Transition ? Math.max(0, majorityAge - yearsToMajority) : 0;
     const yearsTo65 = Math.max(0, 65 - currentAge);
     const activeMonthly = sumMonthlyEquivalent(
       (parentContributions as any[]).filter(
         (c) => String(c?.status || "").toLowerCase() === "active",
       ),
     );
-    const phase1Months = Math.round(Math.min(yearsTo18, yearsTo65) * 12);
-    const phase2Months = Math.max(0, Math.round((yearsTo65 - yearsTo18) * 12));
-    const phase1Lump = totalValue * Math.pow(1 + monthRate, phase1Months);
-    const phase1Annuity =
-      activeMonthly > 0 && monthRate > 0 && phase1Months > 0
-        ? activeMonthly * ((Math.pow(1 + monthRate, phase1Months) - 1) / monthRate)
-        : 0;
-    const valueAt18 = phase1Lump + phase1Annuity;
-    return Math.max(0, Math.round(valueAt18 * Math.pow(1 + monthRate, phase2Months)));
+    // Canonical projection (7% net the 0.10% AUM fee, effective monthly
+    // compounding, contributions capped at the majority window). Same
+    // function every other surface uses, so the at-65 number agrees with
+    // the Projection page + the at-majority card instead of overstating.
+    return projectFundValue({
+      startingValue: totalValue,
+      monthlyContribution: activeMonthly,
+      yearsAhead: yearsTo65,
+      contributionYears: yearsToMajority,
+    });
   }, [totalValue, age18Transition, parentContributions]);
 
   const {
@@ -3353,7 +3331,7 @@ export default function Dashboard() {
       // uses via shared/projection.ts.
       const monthsToReach = (target: number, monthly: number): number | null => {
         if (!target || target <= totalValue) return 0;
-        const monthlyRate = (0.07 - 0.001) / 12; // 7% gross minus 0.10% AUM fee
+        const monthlyRate = Math.pow(1 + (0.07 - 0.001), 1 / 12) - 1; // 7% net 0.10% AUM fee, effective monthly
         let balance = totalValue;
         for (let m = 1; m <= 120; m += 1) {
           balance = balance * (1 + monthlyRate) + monthly;
@@ -7146,7 +7124,11 @@ export default function Dashboard() {
                             if (canCustomize) {
                               setLocation("/settings?tab=money");
                             } else {
-                              setLocation("/upgrade");
+                              // "/upgrade" is not a registered route — it fell
+                              // through to the /:fund catch-all and 404'd as an
+                              // "outdated gift link." The canonical plan/upgrade
+                              // surface is the Account "Plan & billing" tab.
+                              setLocation("/account?tab=plan");
                             }
                           };
 
@@ -7351,30 +7333,6 @@ export default function Dashboard() {
                 );
               })()}
             </motion.section>
-
-            {/* Community Compounding Chart — visual self-portrait of
-                who built this fund. Each gifter renders as a colored
-                band on a stacked area chart; bands grow over time as
-                gifts arrive. The chart component self-hides when
-                there are fewer than 2 gifters or fewer than 2 events
-                (no chart before there's a community to show). Shared
-                with KidView via the computeCommunityChartData helper.
-                Shipped 2026-05-26 — was previously kid-view-only.
-                Surfacing it on the parent Dashboard means the gifter
-                loop's visual asset is visible where the parent spends
-                the most time, not just where the kid sees it. */}
-            {communityChartData && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: 0.015 }}
-              >
-                <CommunityCompoundingChart
-                  data={communityChartData}
-                  childFirstName={recipientFirstNameDisplay}
-                />
-              </motion.div>
-            )}
 
             {/* Who loves [name] */}
             {gifterRoster.length > 0 && (() => {
@@ -8068,12 +8026,14 @@ export default function Dashboard() {
                   // NOT extrapolate $25/month past age 18 — the parent loses
                   // contribution control at majority transfer on a UTMA.
                   const yearsLeft = (age18Transition?.daysUntil18 ?? 0) / 365.25;
-                  const r_m = (0.07 - KIDDO_AUM_FEE_RATE) / 12;
-                  const n = Math.max(0, yearsLeft * 12);
-                  const gf = Math.pow(1 + r_m, n);
                   const monthlyExample = 25;
-                  const annuityPart = r_m > 0 && n > 0 ? monthlyExample * (gf - 1) / r_m : 0;
-                  const projectedAddedValue = Math.max(0, annuityPart);
+                  // Canonical projection: value $25/mo adds over the contribution
+                  // window (fee netted, effective monthly) — same as every surface.
+                  const projectedAddedValue = projectFundValue({
+                    startingValue: 0,
+                    monthlyContribution: monthlyExample,
+                    yearsAhead: yearsLeft,
+                  });
                   // Possessive form — "Emma's" when name exists, otherwise the
                   // fund's pronoun setting (her / his / their). Was hardcoded
                   // "their"; now respects getPronouns.
@@ -9564,7 +9524,7 @@ export default function Dashboard() {
                                     ...recurringGifts.filter((rg) => String(rg.status || "").toLowerCase() === "active" && !!rg.stripeSubscriptionId),
                                   ]);
 
-                                  const r_m = 0.07 / 12;
+                                  const r_m = Math.pow(1 + (0.07 - KIDDO_AUM_FEE_RATE), 1 / 12) - 1; // net fee, effective monthly
                                   let monthsToGoal: number | null = null;
                                   if (M > 0.01) {
                                     // FV = T*(1+r)^n + M*((1+r)^n - 1)/r → solve for n
@@ -10011,20 +9971,13 @@ export default function Dashboard() {
                         // For at-majority itself, contribStopYears == years so
                         // phase 2 is a no-op and the math reduces to the
                         // original FV formula.
-                        const projectAt = (years: number, contribStopYears: number = years): number => {
-                          const r_m = 0.07 / 12;
-                          const stopYears = Math.max(0, Math.min(contribStopYears, years));
-                          const n_contrib = stopYears * 12;
-                          const n_postStop = Math.max(0, (years - stopYears) * 12);
-                          const gf_contrib = Math.pow(1 + r_m, n_contrib);
-                          const gf_postStop = Math.pow(1 + r_m, n_postStop);
-                          const compoundedBalance = totalValue * gf_contrib;
-                          const annuityPart = activeMonthlyContribution > 0
-                            ? activeMonthlyContribution * (gf_contrib - 1) / r_m
-                            : 0;
-                          const balanceAtStop = compoundedBalance + annuityPart;
-                          return balanceAtStop * gf_postStop;
-                        };
+                        const projectAt = (years: number, contribStopYears: number = years): number =>
+                          projectFundValue({
+                            startingValue: totalValue,
+                            monthlyContribution: activeMonthlyContribution,
+                            yearsAhead: years,
+                            contributionYears: contribStopYears,
+                          });
                         const projectedAtMajority = projectAt(yearsToMajority);
                         // Long-horizon view (an extra 12 years past majority) only shown when
                         // it adds contrast — skip when at-majority is already enormous or when
@@ -12413,15 +12366,12 @@ export default function Dashboard() {
             // Same 7% real-return assumption used everywhere (Age18Plan,
             // recurring projection, cancel-flow loss-aversion). One number,
             // one disclaimer line, no greenwashing.
-            const projectAtMajority = (start: number, years: number, monthlyContrib: number): number => {
-              if (years <= 0) return start;
-              const r = 0.07;
-              const grown = start * Math.pow(1 + r, years);
-              const months = years * 12;
-              const monthRate = r / 12;
-              const contribFV = monthlyContrib > 0 ? monthlyContrib * ((Math.pow(1 + monthRate, months) - 1) / monthRate) : 0;
-              return Math.round(grown + contribFV);
-            };
+            const projectAtMajority = (start: number, years: number, monthlyContrib: number): number =>
+              projectFundValue({
+                startingValue: start,
+                monthlyContribution: monthlyContrib,
+                yearsAhead: years,
+              });
             const futureWith = yearsLeft && yearsLeft > 0 ? projectAtMajority(totalValue, yearsLeft, monthly) : null;
             const futureWithout = yearsLeft && yearsLeft > 0 ? projectAtMajority(totalValue, yearsLeft, 0) : null;
             const delta = futureWith !== null && futureWithout !== null ? futureWith - futureWithout : null;
@@ -12697,10 +12647,9 @@ export default function Dashboard() {
                   // conservative (long-run S&P avg is ~10% nominal / ~7% real) and the
                   // disclaimer is non-negotiable: parents who later reconcile the projection
                   // against reality should never feel oversold. Honest losses, honest gains.
-                  const monthsTo18 = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 30.4375) : null;
-                  const r = 0.07 / 12;
-                  const fvOf = (m: number) => monthsTo18 && monthsTo18 > 0
-                    ? m * ((Math.pow(1 + r, monthsTo18) - 1) / r)
+                  const yearsTo18 = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 365.25) : null;
+                  const fvOf = (m: number) => yearsTo18 && yearsTo18 > 0
+                    ? projectFundValue({ startingValue: 0, monthlyContribution: m, yearsAhead: yearsTo18 })
                     : null;
                   const fv = fvOf(monthly);
                   const fmt0 = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n));
@@ -14080,10 +14029,9 @@ export default function Dashboard() {
               const cancelPeriodsPerYear = cancelFreq === "daily" ? 365 : cancelFreq === "weekly" ? 52 : cancelFreq === "yearly" ? 1 : 12;
               const cancelAnnualized = cancelAmt * cancelPeriodsPerYear;
               const cancelMonthly = cancelAmt * (cancelPeriodsPerYear / 12);
-              const cancelMonthsTo18 = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 30.4375) : null;
-              const cancelR = 0.07 / 12;
-              const cancelFv = cancelMonthsTo18 && cancelMonthsTo18 > 0
-                ? cancelMonthly * ((Math.pow(1 + cancelR, cancelMonthsTo18) - 1) / cancelR)
+              const cancelYearsTo18 = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 365.25) : null;
+              const cancelFv = cancelYearsTo18 && cancelYearsTo18 > 0
+                ? projectFundValue({ startingValue: 0, monthlyContribution: cancelMonthly, yearsAhead: cancelYearsTo18 })
                 : null;
               const cancelChildFirst = recipientFirstNameDisplay || "them";
               const cancelFmt0 = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n));

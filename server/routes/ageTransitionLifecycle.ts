@@ -191,11 +191,12 @@ export function registerAgeTransitionLifecycleRoutes(
             .status(400)
             .json({ error: "Add the child's birthdate before creating a preview link." });
         }
-        const milestone = getAgeMilestoneState(fund.recipientBirthdate);
+        const majorityAge = Number((fund as any).majorityAge) || 18;
+        const milestone = getAgeMilestoneState(fund.recipientBirthdate, majorityAge);
         if (!milestone.previewEligible) {
           return res
             .status(409)
-            .json({ error: "Preview links unlock during the year before the child turns 18." });
+            .json({ error: `Preview links unlock during the year before the child turns ${majorityAge}.` });
         }
 
         const record = await patchAgeTransitionRecord(fund.id, {
@@ -241,11 +242,12 @@ export function registerAgeTransitionLifecycleRoutes(
             .status(400)
             .json({ error: "Add the child's birthdate before creating an invite." });
         }
-        const milestone = getAgeMilestoneState(fund.recipientBirthdate);
+        const majorityAge = Number((fund as any).majorityAge) || 18;
+        const milestone = getAgeMilestoneState(fund.recipientBirthdate, majorityAge);
         if (!milestone.inviteEligible) {
           return res
             .status(409)
-            .json({ error: "Invite links unlock once the child reaches the age-18 milestone." });
+            .json({ error: `Invite links unlock once the child reaches the age of majority (${majorityAge}).` });
         }
 
         const existing = await getAgeTransitionRecord(fund.id);
@@ -319,11 +321,12 @@ export function registerAgeTransitionLifecycleRoutes(
         }
 
         const existing = await getAgeTransitionRecord(fund.id);
-        const milestone = getAgeMilestoneState(fund.recipientBirthdate);
+        const majorityAge = Number((fund as any).majorityAge) || 18;
+        const milestone = getAgeMilestoneState(fund.recipientBirthdate, majorityAge);
         if (!milestone.inviteEligible) {
           return res
             .status(409)
-            .json({ error: "The final handoff can only be requested once the age-18 milestone is reached." });
+            .json({ error: `The final handoff can only be requested once the age of majority (${majorityAge}) is reached.` });
         }
         if (!existing.childClaimedAt) {
           return res

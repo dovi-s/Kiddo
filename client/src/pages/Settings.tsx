@@ -44,7 +44,7 @@ import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transitio
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { PRONOUN_OPTIONS } from "@/lib/pronouns";
 import { toMonthlyEquivalent } from "@shared/recurring-math";
-import { getMajorityDate } from "@shared/utma";
+import { getMajorityDate, getMajorityAgeForState, US_STATES } from "@shared/utma";
 import { prefetchDashboard, prefetchMemoryBook, prefetchActivity, prefetchTaxDocuments, onIdle } from "@/lib/prefetch";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FundTabs } from "@/components/layout/FundTabs";
@@ -2546,6 +2546,10 @@ const [editFundName, setEditFundName] = useState("");
   const [editRecipientLastName, setEditRecipientLastName] = useState("");
   const [editRecipientBirthdate, setEditRecipientBirthdate] = useState("");
   const [editPronoun, setEditPronoun] = useState<string>("they");
+  // State of residence drives the UTMA age of majority (and thus the handoff
+  // date). Editable so a parent can fix a wrong/missing state; the server
+  // recomputes majorityAge from it on save (PATCH /api/funds/:id).
+  const [editRecipientState, setEditRecipientState] = useState("");
   const [savingFundEdit, setSavingFundEdit] = useState(false);
   const [selectedSettingsFundId, setSelectedSettingsFundId] = useState<string>(() => getActiveFundId() || "");
   const [settingsFundMenuOpen, setSettingsFundMenuOpen] = useState(false);
@@ -3643,6 +3647,7 @@ const [editFundName, setEditFundName] = useState("");
     setEditRecipientName(fund?.recipientFirstName || "");
     setEditRecipientLastName(fund?.recipientLastName || "");
     setEditPronoun(fund?.pronoun || "they");
+    setEditRecipientState(fund?.recipientState || "");
     const birth = fund?.recipientBirthdate ? new Date(fund.recipientBirthdate) : null;
     if (birth && !Number.isNaN(birth.getTime())) {
       setEditRecipientBirthdate(birth.toISOString().slice(0, 10));
@@ -3692,6 +3697,9 @@ const [editFundName, setEditFundName] = useState("");
           ? new Date(`${editRecipientBirthdate}T00:00:00.000Z`).toISOString()
           : null;
         payload.pronoun = editPronoun || "they";
+        // Send the state; the server recomputes majorityAge from it (empty =>
+        // null + federal default 18). Keeps state and majority age in lockstep.
+        payload.recipientState = editRecipientState || null;
       }
 
       const res = await fetch(`/api/funds/${editingFund.id}`, {
@@ -3832,7 +3840,12 @@ const [editFundName, setEditFundName] = useState("");
                about something that already happened). The Dashboard
                carries the canonical share entry; Settings doesn't need
                to be a redundant share entry once gifts are flowing. */}
-        {setup.percent < 100 ? (
+        {/* Demo accounts skip this whole setup block — the demo funds are
+            fully established (gifts already flowing) and steps like "link
+            withdrawals" can't be completed in the sandbox, so the nudge
+            would be a dead-end nag. Mirrors the Dashboard's existing
+            !isDemoAccount gate on the same nudge. Added 2026-05-26. */}
+        {!(user as any)?.isDemoAccount && (setup.percent < 100 ? (
           <SetupProgressNudge
             title="Finish the few things behind the gift link"
             subtitle="This is the quiet setup that lets gifts move cleanly."
@@ -3901,7 +3914,7 @@ const [editFundName, setEditFundName] = useState("");
               </div>
             </div>
           </SectionCard>
-        ) : null}
+        ) : null)}
 
         {/* Closed-fund banner — calm, action-bearing. Renders at the top
             of Settings whenever the active fund is closed. Single button
@@ -5292,6 +5305,25 @@ const [editFundName, setEditFundName] = useState("");
                             </button>
                           ))}
                         </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-foreground">State of residence</label>
+                        <select
+                          value={editRecipientState}
+                          onChange={(e) => setEditRecipientState(e.target.value)}
+                          className="w-full h-10 rounded-lg border border-border bg-background px-3 text-sm"
+                          data-testid="select-edit-recipient-state"
+                        >
+                          <option value="">Not set (defaults to age 18)</option>
+                          {US_STATES.map((s) => (
+                            <option key={s.code} value={s.code}>{s.name}</option>
+                          ))}
+                        </select>
+                        <p className="text-[11px] text-muted-foreground leading-snug">
+                          {editRecipientState
+                            ? `UTMA control transfers to ${childFirst || "them"} at age ${getMajorityAgeForState(editRecipientState)} in ${US_STATES.find((s) => s.code === editRecipientState)?.name || editRecipientState}.`
+                            : "Sets the age of majority for the handoff. Without it we use the federal default of 18, which is wrong in states like PA, NY, and TX (21)."}
+                        </p>
                       </div>
                     </>
                   )}
