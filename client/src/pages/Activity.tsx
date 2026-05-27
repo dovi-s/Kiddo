@@ -980,6 +980,25 @@ export default function Activity() {
     (r: any) => !activeFundIdForActivity || r.fundId === activeFundIdForActivity,
   );
 
+  // Fund value-history (snapshot series) for the active fund — the only honest
+  // source for the money summary's "Market growth" line. The activity feed has
+  // no "market grew $X" row (growth isn't an event), so without this that tile
+  // hard-coded $0 and read as "your investments are flat" even on a fund up
+  // 50%. Each point carries totalValue + principalBasis; (value − basis) is the
+  // unrealized market gain at that moment, so the gain delta across any window
+  // is the market growth during it, with contributions netted out cleanly.
+  // Placed here (before the auth early-returns below) to keep hook order stable.
+  const { data: fundHistory = [] } = useQuery<Array<{ snapshotDate: string; totalValue: string; principalBasis: string }>>({
+    queryKey: ["/api/funds", activeFundIdForActivity, "history"],
+    queryFn: async () => {
+      const res = await fetch(`/api/funds/${activeFundIdForActivity}/history`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: isAuthenticated && !authLoading && !!activeFundIdForActivity,
+    staleTime: 60_000,
+  });
+
   // Mutations for the Scheduled tab management surface. Endpoints already
   // existed (Dashboard uses them); Activity just hooks them up so parents
   // don't have to navigate elsewhere to pause/resume/cancel/top up a
@@ -1590,11 +1609,31 @@ export default function Activity() {
     return s + (n != null && n > 0 ? Math.abs(n) : 0);
   }, 0);
 
-  // Market growth: there's no per-day "market growth" activity row, so this
-  // can only be computed from price/holding deltas, not from the activity
-  // feed. Stays at $0 from this view; the Dashboard's "fund so far" card
-  // computes the real market-growth number from history snapshots.
-  const last30MarketGrowth = 0;
+  // Market growth over the selected window, from the fund's snapshot history
+  // (fundHistory above) — NOT the activity feed, which has no "growth" event.
+  // (value − basis) is the unrealized market gain at any point, so the change
+  // in that gain between the window's start and end is the market movement
+  // during it, with every contribution in the window netted out by the basis
+  // term. Works for "Last 30 days" and each year option; 0 when there isn't
+  // enough history to bound the window. Same methodology as the Dashboard
+  // "fund so far" card, just over the selected period instead of all-time.
+  const last30MarketGrowth = (() => {
+    if (!Array.isArray(fundHistory) || fundHistory.length < 2) return 0;
+    const pts = fundHistory
+      .map((p) => ({ ms: new Date(p.snapshotDate).getTime(), gain: parseFloat(p.totalValue) - parseFloat(p.principalBasis) }))
+      .filter((p) => Number.isFinite(p.ms) && Number.isFinite(p.gain))
+      .sort((a, b) => a.ms - b.ms);
+    if (pts.length < 2) return 0;
+    const { startMs, endMs } = summaryRange;
+    // Unrealized gain at the window's end (latest snapshot at/before endMs).
+    let endGain = pts[pts.length - 1].gain;
+    for (let i = pts.length - 1; i >= 0; i--) { if (pts[i].ms <= endMs) { endGain = pts[i].gain; break; } }
+    // ...and at the window's start (latest snapshot at/before startMs). If the
+    // window opens before any snapshot existed, gain started at 0 (no holdings).
+    let startGain = 0;
+    for (let i = pts.length - 1; i >= 0; i--) { if (pts[i].ms <= startMs) { startGain = pts[i].gain; break; } }
+    return endGain - startGain;
+  })();
 
   // Count enrichment for the 30-day summary cards. Dollars answer "how
   // much"; counts answer "from how many people" and "how many events." The
@@ -1907,16 +1946,16 @@ export default function Activity() {
                       : null,
                   },
                   {
-                    // Market growth can't be computed from the activity feed
-                    // (it has no per-day "growth" event). Year-mode users
-                    // care about realized PnL more than daily growth, so
-                    // hide the field under year mode where it would always
-                    // read $0 and lie. Dashboard's "fund so far" remains
-                    // the source of truth for true market growth.
+                    // Market growth over the selected window, computed from the
+                    // fund's snapshot history (last30MarketGrowth above): value
+                    // change minus contributions, i.e. pure market movement.
+                    // Sign handled manually (formatCurrency on the magnitude) to
+                    // match the Withdrawals tile and render a clean −$ in a down
+                    // window. Shown in both last30 and year modes.
                     label: "Market growth",
-                    value: `${last30MarketGrowth >= 0 ? "+" : ""}${formatCurrency(last30MarketGrowth)}`,
+                    value: `${last30MarketGrowth >= 0 ? "+" : "−"}${formatCurrency(Math.abs(last30MarketGrowth))}`,
                     tone: last30MarketGrowth >= 0 ? "positive" : "negative",
-                    meta: summaryRange.isYear ? "From dashboard's fund-so-far card" : null,
+                    meta: null,
                   },
                   // Year-mode-only rows. Subscription paid (Kiddo+ / Family
                   // billing total) and refunds received — both surface here
