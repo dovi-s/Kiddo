@@ -105,6 +105,49 @@ async function main() {
     } catch {
       console.log("  - public overview HTTP check skipped (dev server not reachable)");
     }
+
+    // --- 4. Mass-assignment: an owner cannot set server-managed columns via
+    //        PATCH /api/funds/:id (best-effort HTTP; uses the demo login).
+    //        Sends the fund's CURRENT name (no real mutation) plus a malicious
+    //        balance/cashBalance/status/drivewealthAccountId, then asserts none
+    //        of those server-managed columns changed. ---
+    try {
+      const base = "http://127.0.0.1:5000";
+      const loginRes = await fetch(`${base}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "phil@dunphyfamily.com", password: "dunphyfamily" }),
+      });
+      if (loginRes.ok) {
+        const cookie = (loginRes.headers as any).getSetCookie?.()?.join("; ")
+          || loginRes.headers.get("set-cookie")
+          || "";
+        const before = (await db.select().from(funds).where(eq(funds.id, fundA.id)))[0] as any;
+        await fetch(`${base}/api/funds/${fundA.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", Cookie: cookie },
+          body: JSON.stringify({
+            name: before.name, // unchanged — keeps the test non-mutating
+            balance: "999999.00",
+            cashBalance: "999999.00",
+            status: "active",
+            drivewealthAccountId: "dw_injected",
+          }),
+        });
+        const after = (await db.select().from(funds).where(eq(funds.id, fundA.id)))[0] as any;
+        ok(
+          "PATCH /api/funds ignores client balance/cashBalance/status/custody (mass-assignment blocked)",
+          String(after.balance) === String(before.balance)
+            && String(after.cashBalance) === String(before.cashBalance)
+            && after.status === before.status
+            && (after.drivewealthAccountId ?? null) === (before.drivewealthAccountId ?? null),
+        );
+      } else {
+        console.log(`  - mass-assignment HTTP check skipped (login status ${loginRes.status})`);
+      }
+    } catch {
+      console.log("  - mass-assignment HTTP check skipped (dev server not reachable)");
+    }
   } finally {
     for (const c of cleanup.reverse()) {
       try { await c(); } catch (err) { console.warn("cleanup step failed (non-fatal):", err); }
