@@ -829,7 +829,7 @@ export default function GiftSuccess() {
           >
             <Link href={`/${fundSlug || fundId}`}>
               <Button variant="outline" size="sm" className="rounded-full" data-testid="button-send-another">
-                Send {childFirstName ? `${childFirstName}` : "another gift"} again →
+                {childFirstName ? `Send ${childFirstName} another` : "Send another gift"} →
               </Button>
             </Link>
           </motion.div>
