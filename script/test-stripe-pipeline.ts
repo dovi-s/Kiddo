@@ -42,11 +42,19 @@ async function main() {
           -- gifter ever uses it, so excluding it scopes this data-integrity
           -- check to REAL data and makes it immune to intra-suite test pollution
           -- (e.g. the 'invested' gift dashboard-summary-refresh leaves behind).
+          -- Exclude recurring parent-contribution cycles: by design the
+          -- recurring worker (recurringContributionWorker) stamps a Memory
+          -- Book note ONCE on the first cycle of a schedule and never again
+          -- (writing one per cycle would create hundreds of identical entries
+          -- over 18 years). So a recurring cycle gift legitimately has no
+          -- memory entry — the "every gift has a memory entry" invariant only
+          -- holds for one-time / gifter gifts (parent_contribution_id IS NULL).
           SELECT COUNT(*)::int AS total
           FROM gifts g
           LEFT JOIN memory_entries m ON m.gift_id = g.id
           WHERE m.id IS NULL
             AND COALESCE(g.sender_email, '') NOT LIKE '%@example.com'
+            AND g.parent_contribution_id IS NULL
         ),
         gifts_without_thankyou AS (
           SELECT COUNT(*)::int AS total
