@@ -18,6 +18,7 @@ import { db, pool } from "../server/db";
 import { funds, gifts, fundCollaborators, users } from "../shared/schema";
 import { eq } from "drizzle-orm";
 import { storage } from "../server/storage";
+import { isReservedFundSlug } from "../shared/reserved-slugs";
 import crypto from "node:crypto";
 
 async function main() {
@@ -148,6 +149,17 @@ async function main() {
     } catch {
       console.log("  - mass-assignment HTTP check skipped (dev server not reachable)");
     }
+
+    // --- 5. Reserved-slug enforcement (unreachable-gift-link fix, 4fe7762).
+    //        Real fund slugs must never equal a reserved app/marketing route
+    //        (or the root-level gift link would be shadowed), and the shared
+    //        list must still classify routes correctly. Pure + read-only. ---
+    ok(`demo fund slugs are not reserved words (${fundA.slug}, ${fundB.slug})`,
+      !isReservedFundSlug(fundA.slug) && !isReservedFundSlug(fundB.slug));
+    ok("reserved list flags app/marketing routes (pricing/dashboard/login)",
+      isReservedFundSlug("pricing") && isReservedFundSlug("dashboard") && isReservedFundSlug("login"));
+    ok("reserved list does not flag normal fund slugs (haley-dunphy/emma-2)",
+      !isReservedFundSlug("haley-dunphy") && !isReservedFundSlug("emma-2"));
   } finally {
     for (const c of cleanup.reverse()) {
       try { await c(); } catch (err) { console.warn("cleanup step failed (non-fatal):", err); }
