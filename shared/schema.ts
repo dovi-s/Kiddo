@@ -184,6 +184,13 @@ export const events = pgTable("events", {
 }, (table) => [
   index("events_fund_id_idx").on(table.fundId),
   index("events_slug_idx").on(table.slug),
+  // At most ONE permanent ("Gift anytime") event per fund. ensurePermanentEventForFund
+  // does a non-atomic check-then-create, so concurrent fund accesses could
+  // otherwise each insert one (duplicate occasions). Partial unique index makes
+  // the race safe; the helper swallows the 23505 conflict.
+  uniqueIndex("events_one_permanent_per_fund")
+    .on(table.fundId)
+    .where(sql`${table.isPermanent} = true`),
 ]);
 
 export const eventsRelations = relations(events, ({ one, many }) => ({

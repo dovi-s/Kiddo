@@ -2185,15 +2185,24 @@ export async function registerRoutes(
       slug = `${base}-${i}`;
     }
 
-    await storage.createEvent({
-      fundId: fund.id,
-      userId,
-      name: "Gift anytime",
-      slug,
-      isPermanent: true,
-      status: "active",
-      eventType: "gift_anytime",
-    });
+    try {
+      await storage.createEvent({
+        fundId: fund.id,
+        userId,
+        name: "Gift anytime",
+        slug,
+        isPermanent: true,
+        status: "active",
+        eventType: "gift_anytime",
+      });
+    } catch (err: any) {
+      // The existence check above is not atomic: two concurrent fund
+      // accesses can both pass it and both insert, producing duplicate
+      // "Gift anytime" occasions. The events_one_permanent_per_fund partial
+      // unique index makes the race-loser's insert fail with 23505 —
+      // swallow that (the event now exists), rethrow anything else.
+      if (err?.code !== "23505") throw err;
+    }
   };
 
   const slugify = (value: string) =>
