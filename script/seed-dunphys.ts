@@ -169,9 +169,13 @@ const KIDS = [
       { ticker: "AAPL",  shares: 12.45, costBasis: 2245.00, currentValue: 2503.20, name: "Apple" },
       { ticker: "GOOGL", shares: 8.32,  costBasis: 1387.00, currentValue: 1498.40, name: "Google" },
       { ticker: "DIS",   shares: 9.12,  costBasis: 821.00,  currentValue: 894.16,  name: "Disney" },
-      { ticker: "VTI",   shares: 18.40, costBasis: 4250.00, currentValue: 5253.92, name: "Total Market" },
-      { ticker: "BND",   shares: 18.50, costBasis: 1320.00, currentValue: 1310.50, name: "Bonds" },
-      { ticker: "VXUS",  shares: 21.40, costBasis: 1280.00, currentValue: 1387.14, name: "International" },
+      // Conservative managed mix — matches MANAGED_STRATEGY_ALLOCATIONS.conservative
+      // EXACTLY: VTI 35 / VXUS 15 / VGT 10 / BND 40 (60% equity — steadier, but
+      // still growing, because the fund compounds well past the handoff).
+      { ticker: "VTI",   shares: 9.82,  costBasis: 2535.00, currentValue: 2800.00, name: "US Total Market" },
+      { ticker: "VXUS",  shares: 18.46, costBasis: 1085.00, currentValue: 1200.00, name: "International" },
+      { ticker: "VGT",   shares: 1.39,  costBasis: 725.00,  currentValue: 800.00,  name: "Tech" },
+      { ticker: "BND",   shares: 44.44, costBasis: 3300.00, currentValue: 3200.00, name: "Bonds" },
     ],
   },
   {
@@ -190,10 +194,12 @@ const KIDS = [
       { ticker: "AAPL",  shares: 4.20,  costBasis: 770.00,  currentValue: 844.20, name: "Apple" },
       { ticker: "GOOGL", shares: 3.10,  costBasis: 520.00,  currentValue: 558.40, name: "Google" },
       { ticker: "DIS",   shares: 6.50,  costBasis: 585.00,  currentValue: 637.00, name: "Disney" },
-      { ticker: "VTI",   shares: 10.20, costBasis: 2380.00, currentValue: 2912.04, name: "Total Market" },
-      { ticker: "BND",   shares: 8.50,  costBasis: 610.00,  currentValue: 602.05, name: "Bonds" },
-      { ticker: "VXUS",  shares: 12.40, costBasis: 740.00,  currentValue: 803.72, name: "International" },
-      { ticker: "VGT",   shares: 3.40,  costBasis: 1850.00, currentValue: 1947.32, name: "Tech" },
+      // Balanced managed mix — matches MANAGED_STRATEGY_ALLOCATIONS.balanced
+      // EXACTLY: VTI 40 / VXUS 20 / VGT 15 / BND 25 (75% equity, growth-leaning).
+      { ticker: "VTI",   shares: 8.42,  costBasis: 2175.00, currentValue: 2400.00, name: "US Total Market" },
+      { ticker: "VXUS",  shares: 18.46, costBasis: 1085.00, currentValue: 1200.00, name: "International" },
+      { ticker: "VGT",   shares: 1.57,  costBasis: 815.00,  currentValue: 900.00,  name: "Tech" },
+      { ticker: "BND",   shares: 20.83, costBasis: 1545.00, currentValue: 1500.00, name: "Bonds" },
     ],
   },
   {
@@ -213,8 +219,13 @@ const KIDS = [
       { ticker: "GOOGL", shares: 1.50,  costBasis: 252.00,  currentValue: 270.30, name: "Google" },
       { ticker: "DIS",   shares: 4.20,  costBasis: 378.00,  currentValue: 411.60, name: "Disney" },
       { ticker: "RBLX",  shares: 8.50,  costBasis: 425.00,  currentValue: 467.50, name: "Roblox" },
-      { ticker: "VTI",   shares: 4.80,  costBasis: 1120.00, currentValue: 1370.16, name: "Total Market" },
-      { ticker: "VGT",   shares: 1.20,  costBasis: 654.00,  currentValue: 687.36, name: "Tech" },
+      // Growth managed mix — matches MANAGED_STRATEGY_ALLOCATIONS.growth EXACTLY:
+      // VTI 55 / VXUS 25 / VGT 10 / BND 10 (90% equity — the up-and-to-the-right
+      // default for a lifelong horizon).
+      { ticker: "VTI",   shares: 3.86,  costBasis: 995.00,  currentValue: 1100.00, name: "US Total Market" },
+      { ticker: "VXUS",  shares: 7.69,  costBasis: 453.00,  currentValue: 500.00,  name: "International" },
+      { ticker: "VGT",   shares: 0.35,  costBasis: 181.00,  currentValue: 200.00,  name: "Tech" },
+      { ticker: "BND",   shares: 2.78,  costBasis: 206.00,  currentValue: 200.00,  name: "Bonds" },
     ],
   },
 ];
@@ -444,6 +455,35 @@ function giftsForKid(kid: { firstName: string; ageYears: number; birthdate: stri
       selectedTicker: undefined,
       message: `From Mom. ❤`,
       createdAt: N(Math.floor(agoMonths / 12), agoMonths % 12),
+    });
+  }
+
+  // A FRESH gift, a couple of days ago. Without this the newest activity is
+  // ~2 months old (Manny at N(0,2)) for EVERY kid, so the dashboard's "Last
+  // 30 days" summary reads all $0 and a living fund looks abandoned. This also
+  // gives the "a gift just came in" notification (client DemoGiftMoment) a
+  // REAL, top-of-feed entry that matches it — keyed to the same gifter /
+  // amount / ticker the toast announces for each child, so the moment is
+  // coherent the instant a prospect taps "View". Dated ~2 days back (not
+  // "now") so it sits robustly inside the 30-day window and reads "this week"
+  // even if a dev DB isn't reseeded for a day or two (prod reseeds nightly).
+  const recentGift: Record<string, { senderName: string; senderEmail: string; amount: number; ticker: string; message: string; hasAudio?: boolean }> = {
+    Haley: { senderName: "Gloria Pritchett", senderEmail: "gloria@dunphyfamily.com", amount: 75, ticker: "DIS", message: `Thinking of you today, mi amor. A little more for your future. Te amo. — Abuela`, hasAudio: true },
+    Alex: { senderName: "Jay Pritchett", senderEmail: "jay@dunphyfamily.com", amount: 250, ticker: "GOOGL", message: `Proud of you, Alex. Put this toward something that lasts. — Grandpa Jay` },
+    Luke: { senderName: "Manny Delgado", senderEmail: "manny@dunphyfamily.com", amount: 50, ticker: "RBLX", message: `Saw a stock I liked and thought of you, Luke. — Manny` },
+  };
+  const fresh = recentGift[kid.firstName];
+  if (fresh) {
+    const d = new Date();
+    d.setDate(d.getDate() - 2);
+    list.push({
+      senderName: fresh.senderName,
+      senderEmail: fresh.senderEmail,
+      amount: fresh.amount,
+      selectedTicker: fresh.ticker,
+      message: fresh.message,
+      hasAudio: fresh.hasAudio,
+      createdAt: d.toISOString(),
     });
   }
 
