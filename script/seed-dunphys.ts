@@ -1053,7 +1053,10 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
         senderName: "Mitchell Pritchett",
         senderEmail: "mitchell@dunphyfamily.com",
         amount: "100.00",
-        frequency: "annual",
+        // Canonical cadence value is "yearly" (maps to Stripe interval
+        // "year"); "annual" is non-canonical and breaks the gifter-
+        // dashboard edit dropdown + the /update endpoint validation.
+        frequency: "yearly",
         occasionType: "birthday",
         paymentSetupStatus: "active",
         status: "active",

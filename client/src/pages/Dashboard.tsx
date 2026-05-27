@@ -131,7 +131,6 @@ import { getPronouns } from "@/lib/pronouns";
 import { getDeepLinkHighlightCardStyle, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FundTabs } from "@/components/layout/FundTabs";
-import { CommunityCompoundingChart } from "@/components/CommunityCompoundingChart";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { useRealtimeEvents } from "@/hooks/use-realtime-events";
 import { MilestoneMoment } from "@/components/MilestoneMoment";
@@ -1528,28 +1527,6 @@ export default function Dashboard() {
     oneTimePaymentMethod === "bank"
       ? Math.max(0, oneTimeCardLikeFee - oneTimeSelectedEstimate.processingFee)
       : 0;
-
-  // Community chart data — the visual self-portrait of who built
-  // this fund. The chart component self-hides with <2 gifters or <2
-  // events; we still fetch eagerly because that's the most common
-  // case for funds past the first month and the payload is small.
-  // Shipped 2026-05-26 alongside the FundTabs surface. Shared
-  // helper at server/lib/communityChartData.ts is the single source
-  // of truth between this surface and the kid-view consumer.
-  const { data: communityChartData } = useQuery<{
-    fundStartedAt: string | null;
-    totalContributors: number;
-    series: Array<{ label: string; totalUsd: number; points: Array<{ at: string; cumulative: number }> }>;
-  }>({
-    queryKey: ["/api/funds", selectedFundId, "community"],
-    queryFn: async () => {
-      const res = await fetch(`/api/funds/${encodeURIComponent(selectedFundId)}/community`, { credentials: "include" });
-      if (!res.ok) return { fundStartedAt: null, totalContributors: 0, series: [] };
-      return res.json();
-    },
-    enabled: !!user && !!selectedFundId,
-    staleTime: 60_000,
-  });
 
   const { data: inboxData } = useQuery<{ items: Array<{ id: string; tone: "info" | "success" | "warning"; title: string; description: string; ctaLabel: string | null; ctaHref: string | null }> }>({
     queryKey: ["/api/inbox", selectedFundId],
@@ -3199,27 +3176,28 @@ export default function Dashboard() {
   // (Age18Plan, Projection page, smart nudges) — one number, one
   // disclaimer line everywhere.
   const heroProjectedAt65 = useMemo(() => {
-    const annualRate = 0.07;
-    const monthRate = annualRate / 12;
-    const yearsTo18 = age18Transition
-      ? Math.max(0, age18Transition.daysUntil18 / 365.25)
-      : 0;
-    const currentAge = age18Transition ? Math.max(0, 18 - yearsTo18) : 0;
+    // `daysUntil18` is days-to-MAJORITY (21 in CA), so derive current age
+    // from the fund's actual majorityAge — never a hardcoded 18, which
+    // would mis-age every 21-state kid by 3 years and inflate the horizon.
+    const yearsToMajority = age18Transition ? Math.max(0, age18Transition.daysUntil18 / 365.25) : 0;
+    const majorityAge = age18Transition?.majorityAge || 18;
+    const currentAge = age18Transition ? Math.max(0, majorityAge - yearsToMajority) : 0;
     const yearsTo65 = Math.max(0, 65 - currentAge);
     const activeMonthly = sumMonthlyEquivalent(
       (parentContributions as any[]).filter(
         (c) => String(c?.status || "").toLowerCase() === "active",
       ),
     );
-    const phase1Months = Math.round(Math.min(yearsTo18, yearsTo65) * 12);
-    const phase2Months = Math.max(0, Math.round((yearsTo65 - yearsTo18) * 12));
-    const phase1Lump = totalValue * Math.pow(1 + monthRate, phase1Months);
-    const phase1Annuity =
-      activeMonthly > 0 && monthRate > 0 && phase1Months > 0
-        ? activeMonthly * ((Math.pow(1 + monthRate, phase1Months) - 1) / monthRate)
-        : 0;
-    const valueAt18 = phase1Lump + phase1Annuity;
-    return Math.max(0, Math.round(valueAt18 * Math.pow(1 + monthRate, phase2Months)));
+    // Canonical projection (7% net the 0.10% AUM fee, effective monthly
+    // compounding, contributions capped at the majority window). Same
+    // function every other surface uses, so the at-65 number agrees with
+    // the Projection page + the at-majority card instead of overstating.
+    return projectFundValue({
+      startingValue: totalValue,
+      monthlyContribution: activeMonthly,
+      yearsAhead: yearsTo65,
+      contributionYears: yearsToMajority,
+    });
   }, [totalValue, age18Transition, parentContributions]);
 
   const {
@@ -7351,30 +7329,6 @@ export default function Dashboard() {
                 );
               })()}
             </motion.section>
-
-            {/* Community Compounding Chart — visual self-portrait of
-                who built this fund. Each gifter renders as a colored
-                band on a stacked area chart; bands grow over time as
-                gifts arrive. The chart component self-hides when
-                there are fewer than 2 gifters or fewer than 2 events
-                (no chart before there's a community to show). Shared
-                with KidView via the computeCommunityChartData helper.
-                Shipped 2026-05-26 — was previously kid-view-only.
-                Surfacing it on the parent Dashboard means the gifter
-                loop's visual asset is visible where the parent spends
-                the most time, not just where the kid sees it. */}
-            {communityChartData && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: 0.015 }}
-              >
-                <CommunityCompoundingChart
-                  data={communityChartData}
-                  childFirstName={recipientFirstNameDisplay}
-                />
-              </motion.div>
-            )}
 
             {/* Who loves [name] */}
             {gifterRoster.length > 0 && (() => {
@@ -12413,15 +12367,12 @@ export default function Dashboard() {
             // Same 7% real-return assumption used everywhere (Age18Plan,
             // recurring projection, cancel-flow loss-aversion). One number,
             // one disclaimer line, no greenwashing.
-            const projectAtMajority = (start: number, years: number, monthlyContrib: number): number => {
-              if (years <= 0) return start;
-              const r = 0.07;
-              const grown = start * Math.pow(1 + r, years);
-              const months = years * 12;
-              const monthRate = r / 12;
-              const contribFV = monthlyContrib > 0 ? monthlyContrib * ((Math.pow(1 + monthRate, months) - 1) / monthRate) : 0;
-              return Math.round(grown + contribFV);
-            };
+            const projectAtMajority = (start: number, years: number, monthlyContrib: number): number =>
+              projectFundValue({
+                startingValue: start,
+                monthlyContribution: monthlyContrib,
+                yearsAhead: years,
+              });
             const futureWith = yearsLeft && yearsLeft > 0 ? projectAtMajority(totalValue, yearsLeft, monthly) : null;
             const futureWithout = yearsLeft && yearsLeft > 0 ? projectAtMajority(totalValue, yearsLeft, 0) : null;
             const delta = futureWith !== null && futureWithout !== null ? futureWith - futureWithout : null;

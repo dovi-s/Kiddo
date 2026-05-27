@@ -136,6 +136,10 @@ export default function GiftSuccess() {
   const [fundNameState, setFundNameState] = useState(fundNameParam)
   const [fundSlug, setFundSlug] = useState(fundSlugParam)
   const [eventSlug, setEventSlug] = useState(eventSlugParam)
+  // The kid's photo — the emotional anchor (who did I just give to?).
+  // Resolved fast from the public-funds call below, with gift-summary
+  // as a backstop. Empty string = no photo on file → sprout fallback.
+  const [childPhotoUrl, setChildPhotoUrl] = useState("")
   const [hasMessage, setHasMessage] = useState(false)
   const [hasPhoto, setHasPhoto] = useState(false)
   const [hasVideo, setHasVideo] = useState(false)
@@ -253,6 +257,7 @@ export default function GiftSuccess() {
             if (parsedSummaryAmount) setAmount(parsedSummaryAmount)
             if (summary?.senderName) setSenderName(summary.senderName)
             if (summary?.fundName) setFundNameState(summary.fundName)
+            if (summary?.childPhotoUrl) setChildPhotoUrl(String(summary.childPhotoUrl))
             if (summary?.fundSlug) setFundSlug(summary.fundSlug)
             if (summary?.eventSlug) setEventSlug(summary.eventSlug)
             if (summary?.hasPhoto) setHasPhoto(true)
@@ -319,17 +324,24 @@ export default function GiftSuccess() {
 
   const [shareReady, setShareReady] = useState(!!fundSlugParam)
 
-  // Resolve fund slug immediately from fundId - don't wait for gift summary polling
+  // Resolve fund slug immediately from fundId - don't wait for gift summary
+  // polling. Also pulls the kid's photo + first name here (fast path) so the
+  // avatar + name render before the gift even finishes settling. Runs even
+  // when the slug arrived via URL param — the slug param alone doesn't carry
+  // the photo, and this is the one call that always has it. The public-funds
+  // endpoint resolves by UUID too, so passing fundId is fine.
   useEffect(() => {
-    if (fundSlugParam) { setShareReady(true); return }
+    if (fundSlugParam) setShareReady(true)
     if (!fundId) return
     fetch(`/api/public/funds/${encodeURIComponent(fundId)}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data?.fund?.slug) { setFundSlug(data.fund.slug); setShareReady(true) }
-        else setShareReady(false)
+        else if (!fundSlugParam) setShareReady(false)
+        if (data?.fund?.childPhotoUrl) setChildPhotoUrl(String(data.fund.childPhotoUrl))
+        if (!fundNameParam && data?.fund?.recipientFirstName) setFundNameState(String(data.fund.recipientFirstName))
       })
-      .catch(() => setShareReady(false))
+      .catch(() => { if (!fundSlugParam) setShareReady(false) })
   }, [fundId])
 
   useEffect(() => {
@@ -726,15 +738,35 @@ export default function GiftSuccess() {
           <div className="mt-1 text-xs font-medium text-muted-foreground">Gifts that last.</div>
         </motion.div>
 
-        {/* 🌱 Sprout - first thing they see */}
+        {/* Hero — the kid's face is the emotional anchor of the success
+            moment ("who did I give to?"). It matches the avatar the gifter
+            already saw on the gift page, so it adds no new exposure. When the
+            family has a photo, show it with a small 🌱 growth badge; when they
+            don't, fall back to the standalone sprout that has always anchored
+            this page. */}
         <motion.div
           className="mb-5 flex justify-center"
           initial={{ scale: 0.2, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.6, type: "spring", stiffness: 240, damping: 16 }}
-          aria-hidden="true"
         >
-          <span className="text-6xl select-none" style={{ filter: "drop-shadow(0 6px 16px rgba(39,74,56,0.22))" }}>🌱</span>
+          {childPhotoUrl ? (
+            <div className="relative">
+              <img
+                src={childPhotoUrl}
+                alt={childFirstName || "Their fund"}
+                className="h-24 w-24 rounded-full border-[3px] border-white object-cover shadow-xl"
+                style={{ filter: "drop-shadow(0 6px 16px rgba(39,74,56,0.18))" }}
+                data-testid="img-success-child-photo"
+              />
+              <span
+                className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-[hsl(var(--kiddo-evergreen)/0.12)] text-lg shadow-sm select-none"
+                aria-hidden="true"
+              >🌱</span>
+            </div>
+          ) : (
+            <span className="text-6xl select-none" aria-hidden="true" style={{ filter: "drop-shadow(0 6px 16px rgba(39,74,56,0.22))" }}>🌱</span>
+          )}
         </motion.div>
 
         {/* Headline — recurring vs one-time. Recurring setup gets a
@@ -786,6 +818,33 @@ export default function GiftSuccess() {
             ? `Settles into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days. Manage or cancel any time from your gifter dashboard.`
             : `Settles into ${childFirstName ? `${childFirstName}'s` : "their"} investments over the next 1 to 2 business days.`}
         </motion.p>
+
+        {/* Occasion chip — names WHAT this gift was for (birthday,
+            graduation, etc.). Only renders for goalless occasions: goal
+            occasions already surface their name in the goal-progress card
+            below, so showing a chip too would be redundant. Permanent
+            "Gift anytime" events return no eventInfo, so they don't trigger
+            this. Fills the gap where a plain birthday occasion left the
+            "what was this for?" question unanswered on the success page. */}
+        {eventInfo && eventInfo.name && (eventInfo.goalAmount === null || eventInfo.goalAmount <= 0) && (() => {
+          const occasionEmoji = eventInfo.eventType
+            ? EVENT_TYPE_EMOJI[String(eventInfo.eventType).toLowerCase()] || "🎁"
+            : "🎁"
+          return (
+            <motion.div
+              className="mb-6 flex justify-center"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.64, duration: 0.4 }}
+              data-testid="chip-success-occasion"
+            >
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-1.5 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
+                <span className="text-base leading-none" aria-hidden="true">{occasionEmoji}</span>
+                {eventInfo.name}
+              </span>
+            </motion.div>
+          )
+        })()}
 
         {/* Gifter dashboard CTA for recurring gifts (shipped 2026-05-23
             after user flagged: "theres gifter dashboards? wheres it

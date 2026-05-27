@@ -134,6 +134,10 @@ const INCLUDED_PAGE_FILES = new Set([
   // smaller token entry points. Together with the marketing-page
   // batch the entire user-facing page set is now lint-covered.
   path.normalize("client/src/pages/Claim.tsx"),
+  // Founder claim landing page (/founder-claim/:token) — added with the
+  // founding-member claim flow (2026-05-26). Renders user-facing welcome +
+  // benefits copy, so it joins the no-em-dash lint coverage.
+  path.normalize("client/src/pages/FounderClaim.tsx"),
   path.normalize("client/src/pages/EventCreate.tsx"),
   path.normalize("client/src/pages/InvitationAccept.tsx"),
   path.normalize("client/src/pages/GiftLookup.tsx"),

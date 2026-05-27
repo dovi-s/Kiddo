@@ -7,6 +7,7 @@ import { useSubscription } from "@/hooks/use-subscription";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
+import { FounderBadge } from "@/components/ui/founder-badge";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus, Loader2, Star } from "lucide-react";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -990,9 +991,14 @@ export default function Account() {
                         <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}>Cancel</Button>
                       </div>
                     ) : (
-                      <p className="text-sm font-semibold text-foreground" data-testid="text-profile-name">
-                        {displayName || <span className="italic text-muted-foreground">Not set</span>}
-                      </p>
+                      <>
+                        <p className="text-sm font-semibold text-foreground" data-testid="text-profile-name">
+                          {displayName || <span className="italic text-muted-foreground">Not set</span>}
+                        </p>
+                        {(user as any)?.founderTier && (
+                          <FounderBadge label="Founding Member" className="mt-1.5" />
+                        )}
+                      </>
                     )}
                   </div>
                   {!editingName && (

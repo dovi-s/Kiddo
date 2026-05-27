@@ -154,6 +154,11 @@ async function runChecks(api: APIRequestContext) {
       slug,
       accountType: "UTMA",
       status: "active",
+      // Non-draft UTMA creation requires the per-fund UTMA acknowledgment (the
+      // "legal floor" gate in POST /api/funds). The real client (AddFundSheet)
+      // sends this when the parent checks the box; the test must mirror it or
+      // fund creation 400s with "Per-fund UTMA acknowledgment is required".
+      utmaAcknowledgedAt: new Date().toISOString(),
       recipientFirstName: "Mia",
       recipientRelation: "parent",
       investmentStrategy: "auto_invest",

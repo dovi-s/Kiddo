@@ -58,6 +58,12 @@ import {
   issueGifterMagicLink,
   consumeMagicLinkToken,
 } from "./services/magicLinkAuth";
+import {
+  issueFounderClaimToken,
+  verifyFounderClaimToken,
+  completeFounderClaim,
+} from "./services/founderClaimAuth";
+import { buildFounderClaimEmail } from "./templates/founderClaim";
 import { z } from "zod";
 
 const emailSchema = z
@@ -1814,6 +1820,150 @@ export function setupAuth(app: Express) {
       });
     } catch (err: any) {
       console.error("[magic-link/verify] error:", err);
+      return res.status(500).json({ message: "Something went wrong. Try again." });
+    }
+  });
+
+  // ===== FOUNDING-MEMBER CLAIM FLOW =====
+  // Per project_founding_member_claim_flow_spec.md (Days 2-3); decisions locked
+  // 2026-05-26: founders claim PASSWORDLESS (magic-link-style), $19/yr Plus +
+  // $59/yr Family locked for life. Token mechanics live in
+  // ./services/founderClaimAuth (a sibling token type to magicLinkAuth — 32-byte
+  // raw token, SHA-256 hash in founding_members.claim_token, 30-day TTL,
+  // single-use, anti-enumeration). Three routes:
+  //   - request:  re-issue a claim link by email (Path B; rate-limited, 200 always)
+  //   - verify:   read-only validate a token -> founder info for the landing page
+  //   - complete: consume the token, create-or-link the user, establish session
+  const FOUNDER_CLAIM_GENERIC = "If you're a founding member, a claim link is on its way.";
+
+  app.post("/api/auth/founder-claim/request", async (req, res) => {
+    const parsed = forgotPasswordSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(200).json({ message: FOUNDER_CLAIM_GENERIC });
+    const { email } = parsed.data;
+    // Reuse the magic-link in-process limiter, namespaced so a founder + gifter
+    // request for the same address don't share a bucket. Soft-fail to 200.
+    const rate = checkMagicLinkRateLimit(`founder:${email}`);
+    if (!rate.allowed) {
+      console.warn("[founder-claim/request] rate-limit hit for", email, "retry in ms:", rate.retryAfterMs);
+      return res.status(200).json({ message: FOUNDER_CLAIM_GENERIC });
+    }
+    try {
+      const issued = await issueFounderClaimToken(email);
+      if (issued) {
+        try {
+          await sendEmail(
+            buildFounderClaimEmail({
+              to: issued.email,
+              claimUrl: issued.linkUrl,
+              firstName: issued.firstName,
+              position: issued.position,
+              intent: "reissue",
+            }),
+          );
+        } catch (sendErr: any) {
+          // Anti-enumeration: never surface send failures. The outbox fallback
+          // in sendEmail catches transient ESP errors; only catastrophic land here.
+          console.error("[founder-claim/request] send failed:", sendErr?.message || sendErr);
+        }
+      }
+    } catch (err: any) {
+      console.error("[founder-claim/request] issue failed:", err?.message || err);
+    }
+    return res.status(200).json({ message: FOUNDER_CLAIM_GENERIC });
+  });
+
+  // Read-only validate (the landing page renders "Welcome, founder #N"). Same
+  // generic 400 for expired / already-claimed / unknown — never reveal which.
+  app.post("/api/auth/founder-claim/verify", async (req, res) => {
+    const rawToken = String(req.body?.token || "").trim();
+    if (!rawToken) {
+      return res.status(400).json({ message: "This founder link has expired or was already claimed." });
+    }
+    try {
+      const founder = await verifyFounderClaimToken(rawToken);
+      if (!founder) {
+        return res.status(400).json({ message: "This founder link has expired or was already claimed." });
+      }
+      return res.status(200).json({
+        firstName: founder.firstName,
+        position: founder.position,
+        email: founder.email,
+        gifted: Boolean(founder.giftedBy),
+      });
+    } catch (err: any) {
+      console.error("[founder-claim/verify] error:", err?.message || err);
+      return res.status(500).json({ message: "Something went wrong. Try again." });
+    }
+  });
+
+  // Consume the token, create-or-link the user, sign in. The claim token is
+  // proof of email control (it was emailed to the founder address), so an
+  // existing account with that email is simply LINKED + signed in — no password
+  // step (founders are passwordless per the locked decision).
+  app.post("/api/auth/founder-claim/complete", async (req, res) => {
+    try {
+      const rawToken = String(req.body?.token || "").trim();
+      const founder = await verifyFounderClaimToken(rawToken);
+      if (!founder) {
+        return res.status(400).json({ message: "This founder link has expired or was already claimed." });
+      }
+
+      let user = await getUserByEmail(founder.email);
+      let created = false;
+      if (!user) {
+        // Passwordless founder account: set a random, unknowable placeholder
+        // hash (the founder never enters or learns it). They authenticate via
+        // this claim token now, and via magic-link / password-reset later. This
+        // keeps createUser + the local strategy unchanged.
+        const placeholderSecret = crypto.randomBytes(32).toString("hex");
+        const passwordHash = await bcrypt.hash(
+          placeholderSecret,
+          process.env.NODE_ENV === "production" ? 12 : 10,
+        );
+        user = await createUser({ email: founder.email, passwordHash, firstName: founder.firstName });
+        created = true;
+        try {
+          await storage.ensureSubscription(user.id);
+        } catch (subErr) {
+          console.error("[founder-claim/complete] ensureSubscription failed:", subErr);
+        }
+      }
+
+      // Atomically consume the token + stamp founderTier='plus_founder'. The
+      // service re-checks unclaimed+unexpired, so a double-submit can't double-claim.
+      const ok = await completeFounderClaim(rawToken, user.id);
+      if (!ok) {
+        return res.status(409).json({ message: "This founder slot was just claimed. If that wasn't you, contact support." });
+      }
+
+      // Re-fetch so req.login serializes the updated founderTier.
+      const [fresh] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
+      const sessionUser = fresh || user;
+      req.login(sessionUser, (err) => {
+        if (err) {
+          console.error("[founder-claim/complete] session failed:", err);
+          return res.status(500).json({ message: "Your account is claimed, but the session failed. Use the sign-in link on the login page." });
+        }
+        if (created) {
+          recordEvent({
+            ...eventCtxFromReq(req),
+            name: "signup",
+            userId: sessionUser.id,
+            source: "web",
+            props: { founder: true, founderPosition: founder.position },
+          });
+        }
+        const { passwordHash: _ph, kycData: _kd, ...safeUser } = sessionUser as any;
+        return respondAfterSessionSave(req, res, () => {
+          res.status(200).json({
+            ...safeUser,
+            isSuperAdmin: isSuperAdminEmail(sessionUser.email),
+            founder: { position: founder.position, claimed: true },
+          });
+        });
+      });
+    } catch (err: any) {
+      console.error("[founder-claim/complete] error:", err?.message || err);
       return res.status(500).json({ message: "Something went wrong. Try again." });
     }
   });

@@ -24,7 +24,14 @@ import { isDemoAppSurface } from "@/lib/routes";
 
 const SESSION_DISMISS_KEY = "kora:demo-banner-dismissed";
 
-export function DemoBanner() {
+// `sidebarOffset` mirrors the App shell's `!hideGlobalNav`: on desktop the
+// 264px DesktopSidebar is `fixed left-0 z-50`, and this banner is `sticky
+// top-0 z-50` rendered LATER in the DOM — so at equal z-index the banner
+// painted over the sidebar's logo (top-left). Offsetting the banner by the
+// sidebar width on surfaces that show the sidebar puts it in the content
+// column instead. Full-width (no offset) on mobile and on sidebar-less app
+// surfaces (/admin, /gifter, /my-gifts, /kid/*).
+export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean }) {
   const { user } = useAuth();
   const [location] = useLocation();
   const [dismissed, setDismissed] = useState(false);
@@ -66,7 +73,7 @@ export function DemoBanner() {
 
   return (
     <div
-      className="sticky top-0 z-50 border-b border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] backdrop-blur-sm"
+      className={`sticky top-0 z-50 border-b border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.06)] backdrop-blur-sm${sidebarOffset ? " md:ml-[264px]" : ""}`}
       data-testid="demo-banner"
       role="status"
       aria-live="polite"

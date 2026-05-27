@@ -61,7 +61,7 @@ rate ~4.5%. Bank-partner sweep spread ~4–5%.
 | 100,000 | $40M | $1.8M | $900k |
 | 1,000,000 | $400M | $18M | $9M |
 
-For context: Kiddo Family at $7.99/mo × 100k subscribers = $9.6M/yr.
+For context: Kiddo Family at $6.99/mo × 100k subscribers = $8.4M/yr.
 The cash-float line at 100k funds could be **equal to subscription
 revenue at half the rev-split**, with zero customer-acquisition cost.
 

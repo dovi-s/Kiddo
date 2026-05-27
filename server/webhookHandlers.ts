@@ -1276,6 +1276,13 @@ export class WebhookHandlers {
         description: 'Everything in Kiddo Family, plus 2 Occasion credits per year.',
       });
 
+      recordEvent({
+        name: "plan_purchased",
+        userId,
+        source: "webhook",
+        props: { plan: "legacy", billingInterval: "yearly" },
+      });
+
       try {
         const memberships = await storage.getFundMembershipsByUser(userId);
         const activeStarterMemberships = memberships.filter((m) => {
@@ -1365,6 +1372,13 @@ export class WebhookHandlers {
         type: 'subscription_started',
         title: 'Kiddo Family activated',
         description: 'Your Kiddo Family subscription is now active',
+      });
+
+      recordEvent({
+        name: "plan_purchased",
+        userId,
+        source: "webhook",
+        props: { plan: "family", billingInterval },
       });
 
       try {
@@ -1465,6 +1479,14 @@ export class WebhookHandlers {
         type: 'subscription_started',
         title: 'Kiddo+ activated',
         description: `Kiddo+ is now active for ${fund.name}.`,
+      });
+
+      recordEvent({
+        name: "plan_purchased",
+        userId,
+        fundId,
+        source: "webhook",
+        props: { plan: "starter", billingInterval },
       });
     }
   }

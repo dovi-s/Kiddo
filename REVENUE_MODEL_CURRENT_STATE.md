@@ -1,5 +1,12 @@
 # Revenue Model Current State
 
+> ⚠️ SUPERSEDED 2026-05-26 by `REVENUE_MODEL.md`. STALE — kept for history only.
+> It describes the PRE-pricing-v3 model: gifter contribution fees ($2 flat /
+> 1% over $200) and a large-gift fee that are all RETIRED (those constants are
+> `0` in `shared/monetization.ts` — **gifters never pay**), plus old prices
+> ("Kado+ $4.99 / Kado Family $12") and the old "Kado" name. Do not treat
+> anything below as current. Current truth: `REVENUE_MODEL.md`.
+
 Internal decision memo for Kado's revenue model.
 
 This document separates:

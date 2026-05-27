@@ -18,6 +18,10 @@
 // route is refactored to call the helper rather than computing
 // inline, eliminating drift risk between the two consumers.
 
+// Sender-identity test/dev-junk filter — shared with every other gift-
+// aggregating surface so the rule never drifts. See shared/test-content.ts.
+import { looksLikeTestSender } from "@shared/test-content";
+
 const COMMUNITY_TOP_N = 6;
 
 export type CommunitySeriesData = {
@@ -56,7 +60,12 @@ export function computeCommunityChartData(gifts: GiftLike[], fund: FundLike): Co
   // would lie about contributions that haven't actually landed yet.
   const eligibleGifts = gifts.filter((g) => {
     const s = String(g.status || "").toLowerCase();
-    return ["processing", "invested", "settled", "host_hold"].includes(s);
+    if (!["processing", "invested", "settled", "host_hold"].includes(s)) return false;
+    // Drop dev/test junk by sender identity. Anonymous gifts (empty name,
+    // or the "Someone who loves {child}" fallback) and real gifters are
+    // unaffected — the regex only matches standalone test tokens.
+    if (looksLikeTestSender(g.senderName, g.senderEmail)) return false;
+    return true;
   });
 
   // Aggregate by canonical identity. Three identity tiers exist:

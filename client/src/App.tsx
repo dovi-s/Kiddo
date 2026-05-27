@@ -45,6 +45,7 @@ const Login = lazy(() => import("@/pages/Login"));
 const ResetPassword = lazy(() => import("@/pages/ResetPassword"));
 const VerifyEmail = lazy(() => import("@/pages/VerifyEmail"));
 const AuthMagic = lazy(() => import("@/pages/AuthMagic"));
+const FounderClaim = lazy(() => import("@/pages/FounderClaim"));
 const ConfirmEmailChange = lazy(() => import("@/pages/ConfirmEmailChange"));
 const CancelEmailChange = lazy(() => import("@/pages/CancelEmailChange"));
 const EventCreate = lazy(() => import("@/pages/EventCreate"));
@@ -137,6 +138,7 @@ function isPublicGiftRoute(path: string): boolean {
     "transition",
     "updates",
     "gifter",
+    "my-gifts",
     "personal-funds",
     "contact",
     "age-18",
@@ -733,7 +735,6 @@ function Router() {
   return (
     <>
       <ScrollToTop />
-      <DemoBanner />
       {/* id="main-content" is the skip-to-content link target (defined
           on the App shell above). tabIndex={-1} lets the anchor jump
           focus here without making the wrapper itself part of the tab
@@ -747,6 +748,7 @@ function Router() {
           <Route path="/reset-password"><ResetPassword /></Route>
           <Route path="/verify-email"><VerifyEmail /></Route>
           <Route path="/auth/magic"><AuthMagic /></Route>
+          <Route path="/founder-claim/:token"><FounderClaim /></Route>
           <Route path="/confirm-email-change"><ConfirmEmailChange /></Route>
           <Route path="/cancel-email-change"><CancelEmailChange /></Route>
           <Route path="/demo"><Demo /></Route>
@@ -882,6 +884,7 @@ function App() {
     // the 2-5 minute flow.
     location === "/get-started" ||
     location === "/feedback/pmf" ||
+    location.startsWith("/founder-claim/") ||
     location.startsWith("/kid/") ||
     location.startsWith("/updates/share/") ||
     location.startsWith("/updates/unsubscribe/") ||
@@ -917,6 +920,13 @@ function App() {
               <SeoManager />
               <Toaster />
               {!hideGlobalNav && <DesktopSidebar />}
+              {/* Demo banner lives at the shell (not inside Router) so its
+                  desktop left-offset can mirror the sidebar's presence via the
+                  SAME hideGlobalNav flag — no second source of truth. It paints
+                  over the 264px fixed sidebar logo otherwise (later in the DOM
+                  at equal z-50). Offset only when the sidebar renders; full-
+                  width on /admin, /gifter, /my-gifts, /kid/*, and on mobile. */}
+              <DemoBanner sidebarOffset={!hideGlobalNav} />
               <Router />
               {!hideGlobalNav && <MobileNav />}
               {/* Global share modal — listens for `kiddo:open-share-modal`

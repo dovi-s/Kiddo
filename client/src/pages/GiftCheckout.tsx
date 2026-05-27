@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Building2, Camera, ChevronDown, CreditCard, Doll
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
+import { FounderBadge } from "@/components/ui/founder-badge";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { GoalCard } from "@/components/ui/premium-themes";
 import { RichText } from "@/components/ui/rich-text-editor";
@@ -174,6 +175,7 @@ interface PublicEventData {
       allowGifterCashGift?: boolean | string | number;
     };
     creatorFirstName?: string | null;
+    creatorIsFounder?: boolean;
     childPhotoUrl?: string | null;
     pronoun?: string | null;
     // Pricing-v3: gifter UI uses this to decide whether to show the
@@ -1710,7 +1712,10 @@ export default function GiftCheckout() {
                             </div>
                           )}
                           <div className="mt-4 hidden flex-wrap items-center gap-3 text-xs md:flex md:text-sm text-white/85">
-                            <span>{eventData.fund.creatorFirstName ? `Created by ${eventData.fund.creatorFirstName}` : `Created for ${recipientLooksLikeFund ? "this fund" : recipientName}`}</span>
+                            <span className="inline-flex items-center gap-2">
+                              <span>{eventData.fund.creatorFirstName ? `Created by ${eventData.fund.creatorFirstName}` : `Created for ${recipientLooksLikeFund ? "this fund" : recipientName}`}</span>
+                              {eventData.fund.creatorIsFounder && <FounderBadge tone="onDark" />}
+                            </span>
                             <span className="hidden md:inline">|</span>
                             <span>{uniqueGifterCount > 0 ? `${uniqueGifterCount} ${uniqueGifterCount === 1 ? "person has" : "people have"} gifted so far` : "Be the one who starts it."}</span>
                           </div>

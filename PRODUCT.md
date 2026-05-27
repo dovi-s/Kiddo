@@ -70,14 +70,15 @@ vibe-code this in an afternoon? If yes, it's not a moat.
 
 ## 4. The locked product matrix
 
-**Plans (locked 2026-05-08):**
+**Plans (prices locked 2026-05-23 pricing-v3; features reconciled
+2026-05-13 Kid View / Memory Book / Plus-audit locks):**
 
 | Plan | Price | Key features |
 |---|---|---|
-| Free | $0/mo | One fund, basic features, Kid View Lite, basic text Memory Book |
-| Kiddo+ | $4.99/mo or $39/yr | One fund, recurring investments, full Memory Book (photo/video/voice), Full Kid View, projections, occasion reminders, co-parent access |
-| Kiddo Family | $7.99/mo or $69/yr | Unlimited funds for unlimited kids, family dashboard, multi-child view |
-| Kiddo Legacy | $129/yr (annual only) | Family + advanced projections + annual report + premium timeline export + 2 Premium Occasion credits/yr + concierge onboarding |
+| Free | $0/mo | One fund, full Kid View, text Memory Book entries (gifters can always attach photo/video/voice), 1 active occasion at a time, one-time gifts only, gifter reminder system |
+| Kiddo+ | $3.99/mo or $29/yr | One fund. Recurring investments (for the parent AND any gifter to the fund), custom fund mix, parent-authored Memory Book media (photo/video/voice), co-parent access, 3 active occasions, priority support |
+| Kiddo Family | $6.99/mo or $59/yr | Everything in Plus / unlimited children / Kid View for every child / Memory Book for every child / one view for every fund in your household / unlimited occasions with premium features / recurring for every fund's gifters |
+| Kiddo Legacy | $129/yr (annual only) | **PULLED from public pricing 2026-05-12** (data model intact for existing subscribers). Honest bullets only: Everything in Family + 2 Occasion credits/yr. Re-introduce when premium Memory Book printing, multi-gen fund continuation, or real planning-scenario tooling actually ships |
 
 **Fee architecture (locked 2026-05-08):**
 
