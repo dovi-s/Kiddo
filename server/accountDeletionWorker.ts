@@ -79,7 +79,7 @@
 
 import { db } from "./db";
 import { eq, and, isNull, lt, sql } from "drizzle-orm";
-import { users, subscriptions, fundMemberships, transactions, auditLogs, memoryEntries } from "@shared/schema";
+import { users, subscriptions, fundMemberships, transactions, auditLogs, memoryEntries, funds, gifts } from "@shared/schema";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "account-deletion-worker";
@@ -212,6 +212,50 @@ async function anonymizeMemoryEntries(userId: string): Promise<number> {
 }
 
 /**
+ * Anonymize the gifter identity on gifts THIS user SENT (to any fund).
+ * Mirrors the Memory Book retention principle: the gift amount + message
+ * stay on the recipient kid's timeline, but the deleted sender's name and
+ * email are scrubbed. Matched by current senderEmail, so this MUST run
+ * BEFORE scrubUserRow rewrites the email. (Gifts from OTHER, still-active
+ * gifters are deliberately left untouched — they belong to the kid's
+ * timeline and weren't authored by the deleted user.)
+ */
+async function anonymizeGiftsSentBy(userId: string): Promise<number> {
+  const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1);
+  const email = String(u?.email || "").trim().toLowerCase();
+  if (!email) return 0;
+  const result = await db
+    .update(gifts)
+    .set({ senderName: "Former gifter", senderEmail: null })
+    .where(sql`lower(${gifts.senderEmail}) = ${email}`)
+    .returning({ id: gifts.id });
+  return result.length;
+}
+
+/**
+ * Scrub SSN / identity-verification data from funds still OWNED by this
+ * user (funds transferred to an accepted co-admin are no longer theirs and
+ * are skipped). Once the custodian's account is gone, the stored SSN has no
+ * retention purpose, so it should not linger. The child's name / birthdate /
+ * photo are intentionally LEFT in place: delete-vs-retain of a minor's
+ * identity on PARENTAL account deletion is a COPPA/retention policy decision
+ * for the team + counsel (and the kid-at-18 retention principle argues for
+ * keeping the timeline), so this scrub is deliberately scoped to SSN only.
+ */
+async function scrubSsnOnOwnedFunds(userId: string): Promise<number> {
+  const result = await db
+    .update(funds)
+    .set({
+      recipientSsnLast4: null,
+      recipientSsnFullEncrypted: null,
+      recipientSsnCollectedAt: null,
+    })
+    .where(eq(funds.userId, userId))
+    .returning({ id: funds.id });
+  return result.length;
+}
+
+/**
  * Apply the in-DB PII scrub for a single user. Anonymizes the user
  * row + stamps pii_scrubbed_at so the worker won't re-process. Each
  * field is set to a stable, non-PII placeholder; the email gets the
@@ -279,6 +323,21 @@ async function scrubOne(userId: string, log: LogFn): Promise<ScrubResult> {
     // before that stamp lands, the user falls back into the queue.
     log(`Memory anonymization failed for ${userId}: ${err?.message || err}`, WORKER_SOURCE);
   }
+  // Gifter-identity + SSN scrubs run BEFORE scrubUserRow (gift matching
+  // needs the still-live email). Each is independently try-wrapped so a
+  // failure re-queues the user (pii_scrubbed_at is stamped last).
+  let giftsAnonymized = 0;
+  let fundsSsnScrubbed = 0;
+  try {
+    giftsAnonymized = await anonymizeGiftsSentBy(userId);
+  } catch (err: any) {
+    log(`Gift sender anonymization failed for ${userId}: ${err?.message || err}`, WORKER_SOURCE);
+  }
+  try {
+    fundsSsnScrubbed = await scrubSsnOnOwnedFunds(userId);
+  } catch (err: any) {
+    log(`Fund SSN scrub failed for ${userId}: ${err?.message || err}`, WORKER_SOURCE);
+  }
   try {
     await scrubUserRow(userId);
   } catch (err: any) {
@@ -295,6 +354,8 @@ async function scrubOne(userId: string, log: LogFn): Promise<ScrubResult> {
         stripeCustomersDeleted: result.stripeCustomersDeleted,
         stripeCustomersFailed: result.stripeCustomersFailed,
         memoryEntriesAnonymized: result.memoryEntriesAnonymized,
+        giftsAnonymized,
+        fundsSsnScrubbed,
         scrubbedAt: new Date().toISOString(),
       }),
       ipAddress: null,

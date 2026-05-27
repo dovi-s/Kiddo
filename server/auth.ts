@@ -942,6 +942,16 @@ export function setupAuth(app: Express) {
       if (!validAccessToken || validAccessToken.shareToken !== shareToken) {
         return res.status(401).json({ message: "Unlock the Kid View first, then try again." });
       }
+      // Enforce access-token EXPIRY here too. This token authorizes a
+      // PERMANENT custodial ownership transfer (funds.userId reassignment
+      // below), so a stale/leaked token must not stay valid indefinitely.
+      // The /api/kid-view/:token/content route already expires tokens via
+      // validateKidViewAccessToken; this claim path previously skipped it,
+      // which (combined with PIN brute-force) was the riskiest part of the
+      // chain. Mirror the helper's 12h expiry semantics inline.
+      if (!validAccessToken.expiresAt || new Date(validAccessToken.expiresAt).getTime() < Date.now()) {
+        return res.status(401).json({ message: "That unlock has expired. Unlock the Kid View again, then try again." });
+      }
 
       const fund = await storageModule.getFund(fundEntry.fundId);
       if (!fund) {

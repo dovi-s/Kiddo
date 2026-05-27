@@ -533,6 +533,11 @@ const rateLimitRules: RateLimitRule[] = [
   { name: "stripe-webhook", methods: ["POST"], match: /^\/api\/stripe\/webhook$/, max: 300, windowMs: 10 * 60 * 1000 },
   { name: "referral-events", methods: ["POST"], match: /^\/api\/referrals\/events$/, max: 120, windowMs: 10 * 60 * 1000 },
   { name: "memory-create", methods: ["POST"], match: /^\/api\/funds\/[^/]+\/memory$/, max: 30, windowMs: 10 * 60 * 1000 },
+  // Kid-View PIN unlock: the share link is meant to be handed to the child,
+  // so anyone holding it could brute-force a short PIN (10k candidates for 4
+  // digits) and mint an access token that drives a permanent custodial
+  // ownership transfer at majority. Cap unlock attempts hard.
+  { name: "kid-view-unlock", methods: ["POST"], match: /^\/api\/kid-view\/[^/]+\/unlock$/, max: 8, windowMs: 15 * 60 * 1000 },
 ];
 
 const rateLimitStore = new Map<string, number[]>();
@@ -633,7 +638,13 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
+      // SECURITY: the response body routinely contains PII — children's
+      // first names + birthdates + photo URLs (dashboard-summary), gifter
+      // emails/messages, KYC echoes. safeJsonPreview does NO key redaction,
+      // so logging it in prod writes minors' data + third-party emails into
+      // stdout/log aggregation in plaintext (GDPR/CCPA/COPPA-relevant). Only
+      // attach the body preview in non-prod where logs are local + ephemeral.
+      if (capturedJsonResponse && process.env.NODE_ENV !== "production") {
         logLine += ` :: ${safeJsonPreview(capturedJsonResponse)}`;
       }
 

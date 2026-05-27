@@ -3233,6 +3233,25 @@ export async function registerRoutes(
       const userId = (req.user as any).id;
       const existingFunds = await storage.getFundsByUser(userId);
       const body = { ...req.body } as Record<string, unknown>;
+      // SECURITY (mass-assignment): insertFundSchema does not omit the
+      // server-managed financial/custody columns, so a client could create a
+      // fund pre-seeded with balance/cashBalance and status:"active" (KYC
+      // bypass), then withdraw the fabricated cash. Strip those columns so the
+      // schema defaults apply (balances→"0", status→"draft"); the KYC-approved
+      // branch below is the ONLY path to "active".
+      for (const k of [
+        "balance", "cashBalance", "pendingBalance", "totalGain", "gainPercent",
+        "totalContributed", "projectedValue", "drivewealthAccountId",
+        "transferredAt", "previousOwnerId", "contributorCount",
+      ]) {
+        delete (body as any)[k];
+      }
+      // The client may only REQUEST a "draft" fund; any other status (esp.
+      // "active") is ignored and falls back to the "draft" default. Preserves
+      // the draft-vs-real UTMA-ack logic below while closing the KYC bypass.
+      if (String(body.status || "").toLowerCase() !== "draft") {
+        delete (body as any).status;
+      }
       const desiredSlugSource =
         (typeof body.slug === "string" && body.slug.trim()) ||
         (typeof body.name === "string" && body.name.trim()) ||
@@ -3493,7 +3512,33 @@ export async function registerRoutes(
         }
       }
 
-      const updated = await storage.updateFund(req.params.id, req.body);
+      // SECURITY (mass-assignment): never pass req.body wholesale to
+      // updateFund. The owner check above only proves it's THEIR fund — it
+      // does not stop them writing server-managed columns. Wholesale spread
+      // let an owner set balance / cashBalance / status / drivewealthAccountId
+      // / transferredAt / previousOwnerId / recipientSsn* on their own fund,
+      // then withdraw the fabricated cash (withdrawal trusts fund.cashBalance)
+      // and flip a draft fund to active (KYC bypass). Allowlist ONLY the
+      // parent-editable profile/settings columns. Balances/status/custody are
+      // server-managed; strategy + SSN have their own gated endpoints.
+      const FUND_PATCH_ALLOWED = new Set<string>([
+        "name", "description",
+        "recipientFirstName", "recipientLastName", "recipientBirthdate",
+        "pronoun", "childPhotoUrl", "recipientState",
+        "successorCustodianName", "successorCustodianEmail", "successorCustodianRelation",
+      ]);
+      const sanitizedPatch: Record<string, any> = {};
+      for (const key of Object.keys(req.body || {})) {
+        if (FUND_PATCH_ALLOWED.has(key)) sanitizedPatch[key] = (req.body as any)[key];
+      }
+      // majorityAge is NEVER client-settable — it is derived from
+      // recipientState server-side in the block above. Re-apply ONLY that
+      // derived value (ignoring any client-supplied majorityAge, which would
+      // otherwise let a caller move the legal-control / handoff date).
+      if (Object.prototype.hasOwnProperty.call(req.body, 'recipientState')) {
+        sanitizedPatch.majorityAge = (req.body as any).majorityAge;
+      }
+      const updated = await storage.updateFund(req.params.id, sanitizedPatch);
 
       // Activity ledger — diff prior fund state vs. patch body to detect
       // meaningful state changes worth recording. Two buckets:
@@ -6866,17 +6911,17 @@ export async function registerRoutes(
         return res.status(404).json({ error: 'Fund not found' });
       }
       const fundGifts = await storage.getGiftsByFund(fund.id);
-      const totalContributed = fundGifts
-        .filter((g: any) => g.status === 'processing' || g.status === 'invested' || g.status === 'settled')
-        .reduce((sum: number, g: any) => sum + parseFloat(g.netAmount || g.amount || '0'), 0);
+      // SECURITY: this endpoint is UNAUTHENTICATED and keyed on the fund id,
+      // which is handed out via public gift links / OG redirects. Do NOT
+      // expose the account's dollar amounts (balance / totalGain /
+      // totalContributed) about a minor's account to anyone holding the
+      // shareable id — the sibling /api/public/funds/:slug deliberately omits
+      // them. Only the gift-count signal ("N people have given") is public.
       res.json({
         id: fund.id,
         name: fund.name,
         recipientFirstName: fund.recipientFirstName,
         accountType: fund.accountType,
-        balance: fund.balance,
-        totalGain: fund.totalGain,
-        totalContributed: totalContributed.toFixed(2),
         giftCount: fundGifts.length,
       });
     } catch (error) {
@@ -23057,7 +23102,9 @@ export async function registerRoutes(
         if (status === 'accepted') updateData.acceptedAt = new Date();
       }
 
-      const updated = await storage.updateCollaborator(req.params.id, updateData);
+      // Scope to req.params.fundId so an owner can only touch collaborator
+      // rows on the fund they own (prevents cross-tenant collaborator IDOR).
+      const updated = await storage.updateCollaborator(req.params.id, updateData, req.params.fundId);
       if (!updated) return res.status(404).json({ error: 'Collaborator not found' });
       res.json(updated);
       await writeAudit(req, 'collaborator_updated', 'fund', req.params.fundId, { collaboratorId: req.params.id, update: updateData });
@@ -23074,7 +23121,9 @@ export async function registerRoutes(
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
 
-      await storage.deleteCollaborator(req.params.id);
+      // Scope to req.params.fundId — owner can only delete a collaborator on
+      // their own fund, not another fund's row by raw id (IDOR fix).
+      await storage.deleteCollaborator(req.params.id, req.params.fundId);
       res.status(204).send();
       await writeAudit(req, 'collaborator_removed', 'fund', req.params.fundId, { collaboratorId: req.params.id });
     } catch (error) {

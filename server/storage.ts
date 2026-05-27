@@ -113,8 +113,8 @@ export interface IStorage {
 
   getCollaboratorsByFund(fundId: string): Promise<FundCollaborator[]>;
   createCollaborator(collaborator: InsertFundCollaborator): Promise<FundCollaborator>;
-  updateCollaborator(id: string, collaborator: Partial<InsertFundCollaborator>): Promise<FundCollaborator | undefined>;
-  deleteCollaborator(id: string): Promise<void>;
+  updateCollaborator(id: string, collaborator: Partial<InsertFundCollaborator>, fundId?: string): Promise<FundCollaborator | undefined>;
+  deleteCollaborator(id: string, fundId?: string): Promise<void>;
   // Resolve an accepted collaborator for the (fund, user) pair. Used by the
   // fund-auth middleware to decide if a non-owner can act on a fund.
   getCollaboratorForFundAndUser(fundId: string, userId: string): Promise<FundCollaborator | undefined>;
@@ -636,13 +636,24 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateCollaborator(id: string, collaborator: Partial<InsertFundCollaborator>): Promise<FundCollaborator | undefined> {
-    const [updated] = await db.update(fundCollaborators).set(collaborator).where(eq(fundCollaborators.id, id)).returning();
+  // `fundId`, when supplied, scopes the write to (id AND fundId). The
+  // owner-gated PATCH/DELETE collaborator endpoints MUST pass it — without
+  // it an owner of fund A could mutate/delete a collaborator row belonging
+  // to fund B by raw id (cross-tenant IDOR). Token/self-scoped invite flows
+  // that look the row up by token leave it undefined (already authorized).
+  async updateCollaborator(id: string, collaborator: Partial<InsertFundCollaborator>, fundId?: string): Promise<FundCollaborator | undefined> {
+    const whereClause = fundId
+      ? and(eq(fundCollaborators.id, id), eq(fundCollaborators.fundId, fundId))
+      : eq(fundCollaborators.id, id);
+    const [updated] = await db.update(fundCollaborators).set(collaborator).where(whereClause).returning();
     return updated;
   }
 
-  async deleteCollaborator(id: string): Promise<void> {
-    await db.delete(fundCollaborators).where(eq(fundCollaborators.id, id));
+  async deleteCollaborator(id: string, fundId?: string): Promise<void> {
+    const whereClause = fundId
+      ? and(eq(fundCollaborators.id, id), eq(fundCollaborators.fundId, fundId))
+      : eq(fundCollaborators.id, id);
+    await db.delete(fundCollaborators).where(whereClause);
   }
 
   async getCollaboratorForFundAndUser(fundId: string, userId: string): Promise<FundCollaborator | undefined> {

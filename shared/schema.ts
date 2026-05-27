@@ -311,6 +311,16 @@ export const gifts = pgTable("gifts", {
   index("gifts_event_id_idx").on(table.eventId),
   index("gifts_status_idx").on(table.status),
   index("gifts_parent_contribution_id_idx").on(table.parentContributionId),
+  // One gift row per Stripe PaymentIntent. Settlement has THREE entry points
+  // (the verified webhook + two unauthenticated session endpoints + the
+  // reconcile loop) that dedup by read-then-insert — a check-then-act race
+  // that can credit a fund twice for one payment (success-page poller racing
+  // the webhook). This DB-level partial-unique index makes the second insert
+  // fail, so the fund is credited exactly once. Partial (WHERE NOT NULL) so
+  // the many gifts with no PI (seed/cash/legacy) don't collide on NULL.
+  uniqueIndex("gifts_stripe_payment_intent_id_unique")
+    .on(table.stripePaymentIntentId)
+    .where(sql`${table.stripePaymentIntentId} IS NOT NULL`),
 ]);
 
 export const giftsRelations = relations(gifts, ({ one }) => ({

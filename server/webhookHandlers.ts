@@ -1734,11 +1734,50 @@ export class WebhookHandlers {
 
     if (paymentIntentId) {
       const gift = await storage.getGiftByPaymentIntent(paymentIntentId);
+      const refundAmount = ((charge.amount_refunded || 0) / 100);
       if (gift) {
+        const priorStatus = String(gift.status || '').toLowerCase();
         await storage.updateGift(gift.id, { status: 'refunded' });
+
+        // SECURITY / money integrity: reverse the fund credit on refund.
+        // Previously the gift was only flagged 'refunded' while its dollars
+        // stayed in fund.balance/cashBalance — so a settled-then-refunded gift
+        // (chargeback) left spendable money in a custodial account Kiddo no
+        // longer holds. Only reverse a gift that had actually been credited
+        // (invested/settled) and isn't already 'refunded' — the priorStatus
+        // guard prevents a redelivered charge.refunded webhook from
+        // double-debiting. Draw the refunded amount from balance first, then
+        // cash, so the fund's total holdable value drops by exactly the refund
+        // regardless of which bucket the gift landed in; clamp at 0.
+        // NOTE: holding SHARES are not yet reversed here — once DriveWealth
+        // settlement is live the true reversal is a custodian sell; until then
+        // `balance` (which drives withdrawals) is the figure that must not
+        // retain refunded money. Tracked for the custody-wiring work.
+        if (priorStatus === 'invested' || priorStatus === 'settled') {
+          try {
+            const fund = await storage.getFund(gift.fundId);
+            if (fund) {
+              const credited = Math.min(
+                parseFloat(String(gift.netAmount || gift.amount || '0')) || 0,
+                refundAmount > 0 ? refundAmount : Number.POSITIVE_INFINITY,
+              );
+              if (credited > 0) {
+                const curBalance = parseFloat(String(fund.balance || '0')) || 0;
+                const curCash = parseFloat(String((fund as any).cashBalance || '0')) || 0;
+                const fromBalance = Math.min(curBalance, credited);
+                const fromCash = Math.min(curCash, credited - fromBalance);
+                await storage.updateFund(fund.id, {
+                  balance: (curBalance - fromBalance).toFixed(2),
+                  cashBalance: (curCash - fromCash).toFixed(2),
+                });
+              }
+            }
+          } catch (reverseErr) {
+            console.error('[Webhook] Failed to reverse fund balance on refund:', gift.id, reverseErr);
+          }
+        }
       }
 
-      const refundAmount = ((charge.amount_refunded || 0) / 100);
       await storage.createTransaction({
         type: 'refund',
         stripePaymentIntentId: paymentIntentId,
