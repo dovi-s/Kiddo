@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey, getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
 import { db } from './db';
-import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships, recurringGifts } from '@shared/schema';
+import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships, recurringGifts, foundingMembers } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { captureError, sendOpsAlert } from './ops';
 import { recordEvent } from './analytics';
@@ -2142,40 +2142,116 @@ export class WebhookHandlers {
       ? session.payment_intent
       : session.payment_intent?.id || null;
 
-    // Append to founding-members.jsonl with the gift markers. Idempotency
-    // via Stripe session ID — webhook double-fire would re-add the
-    // same entry, so we check existing entries by stripe_session_id.
+    // ── Persist the gifted Founder slot ──────────────────────────────
+    // Source of truth is the `founding_members` DB table (same as direct
+    // signups), NOT the JSONL file. This is what makes the 1,000-cap
+    // actually bind on gifted slots: both cap checks (the direct-signup
+    // POST + the sponsor-founder checkout route) count this table, so a
+    // gifted slot is invisible to the cap only if it isn't written here.
+    // Previously this handler appended JSONL-only with NO cap check, so
+    // gifted slots could oversell without bound (see
+    // project_founder_cap_gift_path_oversell.md). The JSONL append is
+    // retained below purely as the forensic audit trail.
+    //
+    // CAP must match FOUNDING_MEMBERS_CAP in routes.ts:146 (single
+    // business constant; extract to a shared module in the Days 2-5 ship).
+    const FOUNDING_MEMBERS_CAP = 1000;
     const path = await import("path");
     const fs = await import("fs/promises");
     const FOUNDING_PATH = path.join(process.cwd(), ".local", "founding-members.jsonl");
 
-    let alreadyWritten = false;
-    let currentCount = 0;
-    try {
-      const text = await fs.readFile(FOUNDING_PATH, "utf8");
-      const lines = text.split("\n").filter((l) => l.trim());
-      currentCount = lines.length;
-      alreadyWritten = lines.some((line) => {
-        try {
-          const e = JSON.parse(line);
-          return e?.stripeSessionId === session.id;
-        } catch {
-          return false;
-        }
-      });
-    } catch (err: any) {
-      if (err?.code !== "ENOENT") throw err;
-    }
-    if (alreadyWritten) {
-      console.log(`[Webhook] sponsor_founder webhook double-fire skipped: session=${session.id}`);
+    // Idempotency on webhook double-fire: the gifted Stripe session id is
+    // unique per purchase. If a row already carries it, this gift was
+    // already processed (DB row + JSONL + emails) — bail.
+    const existingBySession = await db
+      .select({ position: foundingMembers.position })
+      .from(foundingMembers)
+      .where(eq(foundingMembers.giftedStripeSessionId, session.id))
+      .limit(1);
+    if (existingBySession.length > 0) {
+      console.log(`[Webhook] sponsor_founder webhook double-fire skipped (DB): session=${session.id}`);
       return;
     }
 
+    // Insert with the same atomic position pattern the direct-signup path
+    // uses: position = count + 1, retry on the position unique-index
+    // conflict, recount each attempt. Over-cap handling: the checkout
+    // route already refuses NEW gift checkouts past the cap, so the only
+    // way to land here over-cap is a race between concurrent already-PAID
+    // checkouts (bounded to single digits). We HONOR those — refunding a
+    // paid gift is worse UX than a tiny bounded overage — and alert ops.
+    // "Cap 1,000" becomes "1,000 ± small race overage", not the prior
+    // unbounded oversell.
+    let insertedRow: typeof foundingMembers.$inferSelect | null = null;
+    let overCapAtInsert = false;
+    let attempt = 0;
+    while (attempt < 4 && !insertedRow) {
+      attempt++;
+      const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(foundingMembers);
+      const currentCount = Number(count || 0);
+      overCapAtInsert = currentCount >= FOUNDING_MEMBERS_CAP;
+      try {
+        const [row] = await db
+          .insert(foundingMembers)
+          .values({
+            // recipientEmail is canonical so launch-time activation finds
+            // the recipient by their own email, not the sponsor's.
+            email: recipientEmail,
+            firstName: recipientName || recipientEmail,
+            position: currentCount + 1,
+            signupMessage: message || null,
+            sourceSurface: "founding-members-gifted",
+            giftedBy: sponsorEmail,
+            giftedStripeSessionId: session.id,
+          })
+          .returning();
+        insertedRow = row;
+      } catch (insertErr: any) {
+        const code = String(insertErr?.code || "");
+        const constraint = String(insertErr?.constraint || "");
+        if (code === "23505" && constraint.includes("position")) {
+          continue; // concurrent insert took this position — recount + retry
+        }
+        if (code === "23505" && constraint.includes("email")) {
+          // Recipient is already a Founder (prior direct signup or gift).
+          // The sponsor paid for a redundant slot — don't duplicate;
+          // surface to ops for manual resolution (refund or apply credit).
+          await sendOpsAlert({
+            severity: "warning",
+            title: "Gifted Founder slot paid but recipient is already a Founder",
+            message: `Sponsor ${sponsorEmail} paid for a Founder slot for ${recipientEmail}, but that email already holds a founding_members row. No duplicate created. Manual resolution needed (refund the sponsor or apply as credit).`,
+            context: { sponsorEmail, recipientEmail, stripeSessionId: session.id, stripePaymentIntentId: paymentIntentId },
+          }).catch(() => { /* alerting failure must not break the webhook */ });
+          console.warn(`[Webhook] sponsor_founder: recipient ${recipientEmail} already a founder; gift not duplicated (session=${session.id})`);
+          return;
+        }
+        throw insertErr;
+      }
+    }
+    if (!insertedRow) {
+      // Position-conflict storm (lost the race 4×). The gift is PAID, so
+      // we must not silently drop it — alert ops loudly for manual insert
+      // rather than leaving the sponsor charged with nothing recorded.
+      await sendOpsAlert({
+        severity: "critical",
+        title: "Gifted Founder slot insert failed after retries",
+        message: `Could not assign a position for a PAID gifted Founder slot after 4 attempts (position-conflict storm). Sponsor ${sponsorEmail} was charged; recipient ${recipientEmail} has NO founding_members row. Manual insert required.`,
+        context: { sponsorEmail, recipientEmail, stripeSessionId: session.id, stripePaymentIntentId: paymentIntentId },
+      }).catch(() => {});
+      console.error(`[Webhook] sponsor_founder insert failed after retries: session=${session.id}`);
+      return;
+    }
+    if (overCapAtInsert) {
+      await sendOpsAlert({
+        severity: "warning",
+        title: "Gifted Founder slot honored OVER the 1,000 cap",
+        message: `A paid gifted Founder slot landed at position ${insertedRow.position} (> ${FOUNDING_MEMBERS_CAP}) via a concurrent-checkout race. Honored rather than refunded. Sponsor ${sponsorEmail}, recipient ${recipientEmail}.`,
+        context: { position: insertedRow.position, sponsorEmail, recipientEmail, stripeSessionId: session.id },
+      }).catch(() => {});
+    }
+
+    // JSONL audit trail (forensic only; the DB row above is source of truth).
     const entry = {
-      // Use recipientEmail as the canonical email so launch-time
-      // activation finds the recipient by their own email (not the
-      // sponsor's). Direct-signup entries use `email`; this stays
-      // backward-compatible by also setting `email` to recipientEmail.
       email: recipientEmail,
       firstName: recipientName,
       sponsorEmail,
@@ -2184,15 +2260,18 @@ export class WebhookHandlers {
       recipientName,
       message: message || null,
       sourceSurface: "founding-members-gifted",
-      position: currentCount + 1,
+      position: insertedRow.position,
       tag: "founding-members-gifted",
       stripeSessionId: session.id,
       stripePaymentIntentId: paymentIntentId,
       createdAt: new Date().toISOString(),
     };
-
-    await fs.mkdir(path.dirname(FOUNDING_PATH), { recursive: true });
-    await fs.appendFile(FOUNDING_PATH, `${JSON.stringify(entry)}\n`, "utf8");
+    try {
+      await fs.mkdir(path.dirname(FOUNDING_PATH), { recursive: true });
+      await fs.appendFile(FOUNDING_PATH, `${JSON.stringify(entry)}\n`, "utf8");
+    } catch (auditErr) {
+      console.warn("[Webhook] sponsor_founder JSONL audit append failed (non-fatal):", auditErr);
+    }
     console.log(`[Webhook] sponsor_founder activated: position=${entry.position} sponsor=${sponsorEmail} recipient=${recipientEmail}`);
 
     // Analytics: completed Founder gift purchase. Same funnel-
