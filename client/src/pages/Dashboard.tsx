@@ -225,27 +225,32 @@ type FundHistoryPoint = {
 };
 
 const MANAGED_STRATEGY_ALLOCATIONS: Record<string, Array<{ ticker: string; name: string; weight: number }>> = {
-  // Three age-tiered defaults. The picker uses years-until-18 to recommend one:
-  //   10+ years → Growth (low bonds, lots of equity)
-  //   5-10 years → Balanced
-  //   under 5 years → Conservative (heavy bonds, capital preservation)
+  // RISK-PREFERENCE tiers, NOT a target-date age glide. Kiddo's thesis is that
+  // the fund compounds for the kid's whole life — the handoff routes into
+  // Roth/adult brokerage (kid-2.0), it is NOT a cash-out. So even a teen's
+  // fund has a ~60-year horizon, and every tier stays equity-dominant. Heavy
+  // age-based de-risking is target-date logic (right for a 529 spent at 18,
+  // wrong here). De-risking toward bonds belongs with an explicit spend goal
+  // (e.g. a College Fund), not the birthday. Bond gradient: 10 / 25 / 40.
   growth: [
-    { ticker: "VTI",  name: "US Total Market", weight: 50 },
+    { ticker: "VTI",  name: "US Total Market", weight: 55 },
     { ticker: "VXUS", name: "International",    weight: 25 },
-    { ticker: "BND",  name: "Bonds",            weight: 15 },
     { ticker: "VGT",  name: "Tech",             weight: 10 },
+    { ticker: "BND",  name: "Bonds",            weight: 10 },
   ],
   balanced: [
-    { ticker: "VTI",  name: "US Total Market", weight: 35 },
-    { ticker: "VXUS", name: "International",    weight: 15 },
-    { ticker: "BND",  name: "Bonds",            weight: 35 },
+    { ticker: "VTI",  name: "US Total Market", weight: 40 },
+    { ticker: "VXUS", name: "International",    weight: 20 },
     { ticker: "VGT",  name: "Tech",             weight: 15 },
+    { ticker: "BND",  name: "Bonds",            weight: 25 },
   ],
   conservative: [
-    { ticker: "VTI",  name: "US Total Market", weight: 30 },
-    { ticker: "BND",  name: "Bonds",            weight: 40 },
-    { ticker: "VXUS", name: "International",    weight: 20 },
+    // The most cautious tier — but still 60% equity, because the fund keeps
+    // compounding long past the handoff. Steadier ride, not capital wind-down.
+    { ticker: "VTI",  name: "US Total Market", weight: 35 },
+    { ticker: "VXUS", name: "International",    weight: 15 },
     { ticker: "VGT",  name: "Tech",             weight: 10 },
+    { ticker: "BND",  name: "Bonds",            weight: 40 },
   ],
 };
 
@@ -1038,6 +1043,7 @@ export default function Dashboard() {
   const search = useSearch();
   const searchParams = new URLSearchParams(search);
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount);
   const { data: subscription } = useSubscription();
   const queryClient = useQueryClient();
 
@@ -3561,6 +3567,9 @@ export default function Dashboard() {
         // precedence when they coincide (the origin is the better story).
         let milestone: number | null = null;
         for (const m of MONEY_CROSS_THRESHOLDS) {
+          // Skip the tiny crossings ($100/$500) — they fire right next to the
+          // first-gift dot and aren't meaningful moments. $1,000+ only.
+          if (m < 1000) continue;
           if (p.value >= m && prevChartValue < m && !crossedMilestones.has(m)) {
             milestone = m;
             crossedMilestones.add(m);
@@ -6416,6 +6425,23 @@ export default function Dashboard() {
                       </button>
                     )}
                   </div>
+                  {/* Demo-only loop nudge. The "Gifter page" pill above is the
+                      doorway to FEELING the product, but a prospect doesn't know
+                      that — it reads as a preview. Spell the loop out: go give as
+                      a gifter would, then come back and watch it land. Demo
+                      accounts only; a no-op for real parents (who know their own
+                      gift link). Pairs with DemoGiftMoment + the Memory Book
+                      live-entry to make the whole loop self-evident. */}
+                  {isDemoAccount && fundSlug && (
+                    <Link
+                      href={`/${fundSlug}`}
+                      onClick={() => haptic("selection")}
+                      className="mt-2 flex items-center justify-center gap-1.5 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-2.5 text-center text-xs font-medium leading-snug text-[hsl(var(--kiddo-evergreen))] transition hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] md:text-sm"
+                      data-testid="demo-try-gifting"
+                    >
+                      See it from a gifter's side — give {childFirst} a gift, then watch it land →
+                    </Link>
+                  )}
                 </motion.section>
               );
             })()}
@@ -6667,9 +6693,9 @@ export default function Dashboard() {
                 // there" close). Now factual + direct: what the mix
                 // does mechanically, no warmth-words.
                 { key: "strategy_band_11_13", minAge: 11, maxAge: 14, recommendKey: "balanced",
-                  toneline: "Balanced shifts about 40% from stocks into bonds. Less upside, less drawdown." },
+                  toneline: "Balanced moves about a quarter into bonds. A smoother ride, still mostly stocks." },
                 { key: "strategy_band_14_15", minAge: 14, maxAge: 16, recommendKey: "conservative",
-                  toneline: "Conservative is 70% bonds. Built for the last five years before handoff." },
+                  toneline: "Conservative leans toward bonds but stays mostly stocks. It keeps growing long after handoff." },
                 { key: "strategy_band_16_17", minAge: 16, maxAge: 18, recommendKey: "conservative",
                   toneline: "Conservative protects what's already there. You can change it back any time." },
               ];
