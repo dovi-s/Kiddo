@@ -67,6 +67,7 @@ import { getPublicEventGiftingAvailability, getPublicFundGiftingAvailability } f
 import { ADMIN_ASSET_UNIVERSE, getMarketQuote, startMarketQuoteCacheRefresher } from "./marketQuotes";
 import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftIntents, trustedDevices, passkeys, foundingMembers } from "@shared/schema";
 import { toMonthlyEquivalent, sumMonthlyEquivalent } from "@shared/recurring-math";
+import { isReservedFundSlug } from "@shared/reserved-slugs";
 import { KIDDO_AUM_FEE_BASIS_POINTS, KIDDO_AUM_FEE_RATE, KIDDO_GIFT_ADD_ONS, KIDDO_LEGACY_INCLUDED_OCCASION_CREDITS, KIDDO_LEGACY_YEARLY, KIDDO_OCCASION_TIERS, KIDDO_REVERSE_TRIAL_DAYS, KORA_DEFAULT_FAMILY_YEARLY, KORA_FAMILY_MONTHLY, KORA_FAMILY_YEARLY_OPTIONS, KORA_FREE_GIFT_FEE, KORA_LARGE_GIFT_FLAT_FEE, KORA_LARGE_GIFT_THRESHOLD, KORA_STARTER_MONTHLY, KORA_STARTER_YEARLY, MONETIZATION_TRIGGER_IDS, calculateKoraContributionFee, estimateAnnualAumFee, getGiftAddOn, getKiddoOccasionTier, type FundCoverageState, type RecommendationState } from "@shared/monetization";
 
 type InvestmentUniverseRow = {
@@ -2221,7 +2222,12 @@ export async function registerRoutes(
     let i = 1;
     while (true) {
       const existing = await storage.getFundBySlug(slug);
-      if (!existing || existing.id === currentFundId) return slug;
+      // Reject reserved slugs as well as fund collisions. A reserved slug
+      // (e.g. a fund named "Pricing" → "pricing") would be shadowed by the
+      // app/marketing route at that path, making the fund's gift link
+      // `kiddofund.com/<slug>` permanently unreachable. Treat reserved like a
+      // collision → fall through to the "-2" suffix (e.g. "pricing-2").
+      if (!isReservedFundSlug(slug) && (!existing || existing.id === currentFundId)) return slug;
       i += 1;
       slug = `${normalizedBase}-${i}`;
     }

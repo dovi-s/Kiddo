@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { MOTION } from "@/lib/motion";
 import { hasActiveDeepLink } from "@/lib/deep-link-highlight";
 import { normalizePath, isMarketingRoute } from "@/lib/routes";
+import { isReservedFundSlug } from "@shared/reserved-slugs";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { RealtimeProvider } from "@/lib/realtime-context";
@@ -109,85 +110,13 @@ const appLoadingMessages = [
 function isPublicGiftRoute(path: string): boolean {
   const pathname = normalizePath(path);
   const segments = pathname.split("/").filter(Boolean);
-  const reserved = new Set([
-    "login",
-    "get-started",
-    "onboard",
-    "activate",
-    "dashboard",
-    "account",
-    "settings",
-    "activity",
-    "events",
-    "event",
-    "send",
-    "claim",
-    "faq",
-    "how-it-works",
-    "about",
-    "legal",
-    "pricing",
-    "compare",
-    "blog",
-    "stories",
-    "security",
-    "admin",
-    "memory",
-    "gift",
-    "kid",
-    "transition",
-    "updates",
-    "gifter",
-    "my-gifts",
-    "personal-funds",
-    "contact",
-    "age-18",
-    "age-18-plan",
-    "projection",
-    "tax-documents",
-    // Routes added later. Originally this carve-out was framed as
-    // "authenticated routes added later," but the rule is broader:
-    // ANY new top-level path (public or authenticated) needs to be
-    // reserved here, or the fund-slug catch-all `/:fund` for gift
-    // checkout silently eats it. The page still renders correctly
-    // (Wouter's Switch picks the right route by exact match), but
-    // App.tsx's isGiftPage check returns true and fires a stale
-    // public-gift prefetch for the wrong slug, surfacing as a 404
-    // in the browser console. Audit + sweep 2026-05-14: seven
-    // additions had drifted out of sync; all caught and added below.
-    "funds",
-    "invitations",
-    "take-over",
-    "fund-snapshot",
-    "demo",
-    "profile",
-    "tools",
-    "fund",
-    "welcome-at-18",
-    "give-a-gift",
-    "your-story",
-    // 2026-05-26 sweep: a link audit found ten more registered top-level
-    // routes that had drifted out of this set, each firing a spurious
-    // /api/public/funds/<seg> 404 prefetch on every visit (same class as
-    // the /my-gifts miss). hideGlobalNav stays net-neutral for these —
-    // marketing pages keep hiding via isMarketingPage, /feedback/pmf +
-    // /founder-claim/ via their explicit clauses, and the auth/landing
-    // pages below get explicit hideGlobalNav entries in the same sweep.
-    "auth",
-    "reset-password",
-    "verify-email",
-    "confirm-email-change",
-    "cancel-email-change",
-    "founding-members",
-    "robux-vs-utma",
-    "trump-account-vs-utma",
-    "founder-claim",
-    "feedback",
-    "sponsor-success",
-  ]);
-
   if (segments.length === 0) return false;
-  if (reserved.has(segments[0])) return false;
+  // Reserved top-level segments (app / marketing / auth / tool routes) are
+  // never fund gift-slugs. Single source of truth in @shared/reserved-slugs,
+  // which the server ALSO enforces at slug-mint (generateUniqueFundSlug) so a
+  // fund can never be created with a slug that shadows a route — and so the
+  // two lists can't drift the way this hand-maintained Set historically did.
+  if (isReservedFundSlug(segments[0])) return false;
   return segments.length === 1 || segments.length === 2;
 }
 
