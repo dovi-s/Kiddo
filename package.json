@@ -20,6 +20,7 @@
         "test:dashboard-bundle-budget": "tsx script/test-dashboard-bundle-budget.ts",
         "test:gift-reconciliation-repair": "tsx script/test-gift-reconciliation-repair.ts",
         "test:founder-claim": "tsx script/test-founder-claim.ts",
+        "test:security-regression": "set NODE_OPTIONS=--use-system-ca&& tsx script/test-security-regression.ts",
         "test:market-quotes": "tsx script/test-market-quotes.ts",
         "test:ui:smoke": "tsx script/ui-smoke-playwright.ts",
         "test:mobile-gifter-logos": "node script/test-mobile-gifter-logos.cjs",
