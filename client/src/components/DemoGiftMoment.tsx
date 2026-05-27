@@ -44,16 +44,16 @@ export function DemoGiftMoment() {
   const { user } = useAuth();
   const { data: funds = [] } = useFunds();
   const [location, navigate] = useLocation();
-  const armedRef = useRef(false);
+  const timerRef = useRef<number | null>(null);
 
   const isDemo = Boolean((user as any)?.isDemoAccount);
   const onDashboard = location === "/dashboard" || location === "/";
 
   useEffect(() => {
-    if (!isDemo || !onDashboard || armedRef.current) return;
+    if (!isDemo || !onDashboard) return;
     if (typeof window === "undefined" || funds.length === 0) return;
     try {
-      if (window.sessionStorage.getItem(SESSION_KEY)) return;
+      if (window.sessionStorage.getItem(SESSION_KEY)) return; // already shown this session
     } catch {
       return; // sessionStorage blocked → skip rather than risk repeating
     }
@@ -66,13 +66,17 @@ export function DemoGiftMoment() {
     const g = DEMO_GIFTS[childRaw.toLowerCase()] || { sender: "Cameron Tucker", amount: "100", ticker: "DIS" };
     const where = TICKER_NAME[g.ticker] || "the diversified mix";
 
-    armedRef.current = true;
-    const timer = window.setTimeout(() => {
+    // Fire ~15s after the parent settles on the dashboard. If they wander off
+    // (e.g. tap "View gifter page") and come back before it fired, the timer
+    // simply re-arms — sessionStorage, set on fire, is the once-per-session
+    // guard, so it still shows exactly once per visit, never more.
+    timerRef.current = window.setTimeout(() => {
       try { window.sessionStorage.setItem(SESSION_KEY, "1"); } catch { /* ignore */ }
       haptic("success");
       toast({
         title: `${g.sender} added $${g.amount} to ${child}'s future 🌱`,
         description: `Going into ${where} — a new moment in ${child}'s Memory Book.`,
+        duration: 9000, // a delight beat needs time to read both lines + tap View (vs the 4.5s default)
         action: (
           <ToastAction
             altText={`View ${child}'s Memory Book`}
@@ -83,7 +87,12 @@ export function DemoGiftMoment() {
         ),
       });
     }, DELAY_MS);
-    return () => window.clearTimeout(timer);
+    return () => {
+      if (timerRef.current != null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDemo, onDashboard, funds.length]);
 
