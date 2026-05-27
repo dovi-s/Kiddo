@@ -1069,13 +1069,20 @@ export function setupAuth(app: Express) {
       }
 
       // Establish session as the new owner (mirror /api/auth/register).
-      req.login(user, (err) => {
-        if (err) {
+      // Regenerate first (session-fixation prevention) — this path takes
+      // ownership of a custodial fund, so a clean session id matters.
+      req.session.regenerate((regenErr) => {
+        if (regenErr) {
           return res.status(500).json({ message: "Account claimed, but session failed. Try logging in." });
         }
-        const { passwordHash: _ph, kycData: _kd, ...safeUser } = user!;
-        return respondAfterSessionSave(req, res, () => {
-          res.status(200).json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user!.email), claimedFundId: fund.id });
+        req.login(user, (err) => {
+          if (err) {
+            return res.status(500).json({ message: "Account claimed, but session failed. Try logging in." });
+          }
+          const { passwordHash: _ph, kycData: _kd, ...safeUser } = user!;
+          return respondAfterSessionSave(req, res, () => {
+            res.status(200).json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user!.email), claimedFundId: fund.id });
+          });
         });
       });
     } catch (error) {
@@ -1267,17 +1274,26 @@ export function setupAuth(app: Express) {
       });
 
       delete (req.session as any).oauth;
-      return req.login(user, (loginError) => {
-        if (loginError) {
-          console.error(`OAuth login error for ${provider}:`, loginError);
+      // Regenerate before establishing identity (session-fixation
+      // prevention). sessionOAuth (returnTo etc.) is already captured in a
+      // local, so the fresh session loses nothing we still need.
+      return req.session.regenerate((regenErr) => {
+        if (regenErr) {
+          console.error(`OAuth session regenerate error for ${provider}:`, regenErr);
           return res.redirect(getOAuthErrorRedirect(req, provider, "session_failed"));
         }
-        return req.session.save((saveError) => {
-          if (saveError) {
-            console.error(`OAuth session save error for ${provider}:`, saveError);
+        return req.login(user, (loginError) => {
+          if (loginError) {
+            console.error(`OAuth login error for ${provider}:`, loginError);
             return res.redirect(getOAuthErrorRedirect(req, provider, "session_failed"));
           }
-          return res.redirect(sessionOAuth.returnTo || "/dashboard");
+          return req.session.save((saveError) => {
+            if (saveError) {
+              console.error(`OAuth session save error for ${provider}:`, saveError);
+              return res.redirect(getOAuthErrorRedirect(req, provider, "session_failed"));
+            }
+            return res.redirect(sessionOAuth.returnTo || "/dashboard");
+          });
         });
       });
     } catch (error) {
@@ -1845,26 +1861,35 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Invalid or expired sign-in link." });
       }
       const user = userRows[0];
-      req.login(user, (err) => {
-        if (err) {
-          console.error("[magic-link/verify] session failed:", err);
+      // Regenerate before establishing identity (session-fixation
+      // prevention). Everything below uses locals (user, row), not pre-login
+      // session state.
+      req.session.regenerate((regenErr) => {
+        if (regenErr) {
+          console.error("[magic-link/verify] session regenerate failed:", regenErr);
           return res.status(500).json({ message: "Session could not be established. Try requesting a fresh link." });
         }
-        try {
-          db.insert(activities).values({
-            userId: user.id,
-            type: "magic_link_signin",
-            title: "Signed in via magic link",
-            description: `Intent: ${row.intent}. IP: ${req.ip || "unknown"}.`,
-            metadata: { intent: row.intent, ip: req.ip || null, userAgent: req.get("user-agent") || null } as any,
-          } as any).then(() => {}).catch((auditErr: any) => {
-            console.warn("[magic-link/verify] Could not write audit entry (non-fatal):", auditErr?.message);
-          });
-        } catch (auditErr: any) {
-          console.warn("[magic-link/verify] audit prep failed (non-fatal):", auditErr?.message);
-        }
-        const { passwordHash: _ph, kycData: _kd, ...safeUser } = user;
-        return res.status(200).json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email), intent: row.intent });
+        req.login(user, (err) => {
+          if (err) {
+            console.error("[magic-link/verify] session failed:", err);
+            return res.status(500).json({ message: "Session could not be established. Try requesting a fresh link." });
+          }
+          try {
+            db.insert(activities).values({
+              userId: user.id,
+              type: "magic_link_signin",
+              title: "Signed in via magic link",
+              description: `Intent: ${row.intent}. IP: ${req.ip || "unknown"}.`,
+              metadata: { intent: row.intent, ip: req.ip || null, userAgent: req.get("user-agent") || null } as any,
+            } as any).then(() => {}).catch((auditErr: any) => {
+              console.warn("[magic-link/verify] Could not write audit entry (non-fatal):", auditErr?.message);
+            });
+          } catch (auditErr: any) {
+            console.warn("[magic-link/verify] audit prep failed (non-fatal):", auditErr?.message);
+          }
+          const { passwordHash: _ph, kycData: _kd, ...safeUser } = user;
+          return res.status(200).json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email), intent: row.intent });
+        });
       });
     } catch (err: any) {
       console.error("[magic-link/verify] error:", err);
@@ -1987,26 +2012,34 @@ export function setupAuth(app: Express) {
       // Re-fetch so req.login serializes the updated founderTier.
       const [fresh] = await db.select().from(users).where(eq(users.id, user.id)).limit(1);
       const sessionUser = fresh || user;
-      req.login(sessionUser, (err) => {
-        if (err) {
-          console.error("[founder-claim/complete] session failed:", err);
+      // Regenerate before establishing identity (session-fixation
+      // prevention). Uses locals (sessionUser, founder, created) only.
+      req.session.regenerate((regenErr) => {
+        if (regenErr) {
+          console.error("[founder-claim/complete] session regenerate failed:", regenErr);
           return res.status(500).json({ message: "Your account is claimed, but the session failed. Use the sign-in link on the login page." });
         }
-        if (created) {
-          recordEvent({
-            ...eventCtxFromReq(req),
-            name: "signup",
-            userId: sessionUser.id,
-            source: "web",
-            props: { founder: true, founderPosition: founder.position },
-          });
-        }
-        const { passwordHash: _ph, kycData: _kd, ...safeUser } = sessionUser as any;
-        return respondAfterSessionSave(req, res, () => {
-          res.status(200).json({
-            ...safeUser,
-            isSuperAdmin: isSuperAdminEmail(sessionUser.email),
-            founder: { position: founder.position, claimed: true },
+        req.login(sessionUser, (err) => {
+          if (err) {
+            console.error("[founder-claim/complete] session failed:", err);
+            return res.status(500).json({ message: "Your account is claimed, but the session failed. Use the sign-in link on the login page." });
+          }
+          if (created) {
+            recordEvent({
+              ...eventCtxFromReq(req),
+              name: "signup",
+              userId: sessionUser.id,
+              source: "web",
+              props: { founder: true, founderPosition: founder.position },
+            });
+          }
+          const { passwordHash: _ph, kycData: _kd, ...safeUser } = sessionUser as any;
+          return respondAfterSessionSave(req, res, () => {
+            res.status(200).json({
+              ...safeUser,
+              isSuperAdmin: isSuperAdminEmail(sessionUser.email),
+              founder: { position: founder.position, claimed: true },
+            });
           });
         });
       });
