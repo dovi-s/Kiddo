@@ -6711,6 +6711,11 @@ export async function registerRoutes(
           creatorFirstName: creator?.firstName || null,
           creatorIsFounder: Boolean(creator?.founderTier),
           pronoun: fund.pronoun || null,
+          // Age of majority (18/19/21 per state) so the gift-checkout
+          // projection reads "when {child} turns {N}" with the real handoff
+          // age. Without it the client's fundMajorityAge falls back to 18 —
+          // wrong for CA's 21 (e.g. Haley showed "turns 18").
+          majorityAge: Number((fund as any).majorityAge) || 18,
           // Pricing-v3: tells the gifter UI whether to surface recurring
           // or the reminder-only path. NEVER exposed as the parent's
           // "plan status" — only as "this fund supports recurring or

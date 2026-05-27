@@ -1765,6 +1765,27 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                   {strategy.bestFor && (
                     <p className="text-[11px] text-muted-foreground/70 mt-0.5">{strategy.bestFor}</p>
                   )}
+                  {/* At-a-glance stocks/bonds split per option. The one
+                      number a parent actually weighs when choosing a mix
+                      (growth vs steadiness) — shown inline so every card
+                      self-describes without scrolling to the "Where gifts
+                      go" breakdown below, which only reflects the selected
+                      option. Bonds = the fixed-income sleeve (BND/BNDX/AGG);
+                      everything else is equities. Skipped for Custom (no
+                      preset allocation until the parent builds one). */}
+                  {strategy.allocations.length > 0 && (() => {
+                    const BOND_TICKERS = new Set(["BND", "BNDX", "AGG"]);
+                    const bonds = strategy.allocations.reduce(
+                      (sum, a) => sum + (BOND_TICKERS.has(String(a.ticker).toUpperCase()) ? a.weight : 0),
+                      0,
+                    );
+                    const stocks = Math.max(0, 100 - bonds);
+                    return (
+                      <p className="text-[11px] font-medium text-muted-foreground/80 mt-1 tabular-nums">
+                        {stocks}% stocks · {bonds}% bonds
+                      </p>
+                    );
+                  })()}
                 </div>
                 {selected === strategy.key && <Check size={16} className="text-primary flex-shrink-0" />}
               </div>

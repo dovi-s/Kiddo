@@ -3260,13 +3260,11 @@ export default function Dashboard() {
         })
       : null;
 
-    // Scenario 1: outperforming (9%+)
-    const oldest = fundHistory[fundHistory.length - 1];
-    const newest = fundHistory[0];
-    const principal = parseFloat(newest?.principalBasis || oldest?.principalBasis || "0");
-    const oneYearReturn = principal > 0 && totalValue > 0
-      ? ((totalValue - principal) / principal) * 100
-      : 0;
+    // Scenario 1: outperforming (9%+). Use the fund's actual gain % (gain ÷
+    // cost basis) — the same figure shown everywhere else on the dashboard.
+    // The prior snapshot-principalBasis ratio divided by a tiny early-basis
+    // denominator and produced absurd returns (e.g. 10041% / 1685.7%).
+    const oneYearReturn = displayGainPct;
     if (oneYearReturn >= 9 && currentProjection && doubledProjection && monthlyAmt > 0) {
       setSmartNudge({ scenario: "outperforming", returnPct: Math.round(oneYearReturn * 10) / 10, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
       localStorage.setItem(NUDGE_KEY, String(now));
@@ -6721,7 +6719,7 @@ export default function Dashboard() {
                     return next;
                   });
                   haptic("success");
-                  toast({ title: `${childFirst}'s mix updated`, description: `Switched to ${recommendedLabel}.` });
+                  toast({ title: `${childFirst}'s mix updated`, description: `New gifts and recurring now follow the ${recommendedLabel}. Current holdings are unchanged.` });
                   void queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
                   void queryClient.invalidateQueries({ queryKey: ["/api/funds", activeFundId, "dashboard-summary"] });
                 } catch (err) {
@@ -6753,6 +6751,16 @@ export default function Dashboard() {
                   </p>
                   <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
                     {activeBand.toneline}
+                  </p>
+                  {/* Say what the one-click switch actually DOES. Without this,
+                      "Switch to Conservative Mix →" reads like it might liquidate
+                      the kid's current holdings on tap — a real trust gap on an
+                      investment surface. It doesn't: strategy is a forward-looking
+                      target (new gifts + recurring follow it), existing holdings
+                      are untouched, and it's reversible. Stating that removes the
+                      "what did I just do?" moment. */}
+                  <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
+                    This changes where new gifts and recurring investments go. {childFirst}'s current holdings aren't sold, and you can switch back anytime in Settings.
                   </p>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Button
@@ -8636,7 +8644,15 @@ export default function Dashboard() {
                 const nowMs = Date.now();
                 const childAgeNow = childBirthdate ? Math.floor((nowMs - childBirthdate.getTime()) / (365.25 * 86400000)) : null;
                 const childFirstSug = (recipientFirstNameDisplay || "").trim() || "your child";
-                const ord = (n: number) => n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th";
+                const ord = (n: number) => {
+                  // Proper English ordinal: 11/12/13 are always "th"; otherwise
+                  // the ones digit decides. The old `n === 1/2/3` form returned
+                  // "th" for 21/22/23/31… (e.g. "21th Birthday").
+                  const t = n % 100;
+                  if (t >= 11 && t <= 13) return "th";
+                  const o = n % 10;
+                  return o === 1 ? "st" : o === 2 ? "nd" : o === 3 ? "rd" : "th";
+                };
 
                 // SugTile gains a sortMs field so we can rank by date proximity at
                 // the end. Most imminent dated event leads. Goal events (no date)

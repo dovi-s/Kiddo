@@ -110,14 +110,14 @@ const ACCOUNTS = [
     email: "phil@dunphyfamily.com",
     firstName: "Phil",
     lastName: "Dunphy",
-    preferredName: "Phil",
+    preferredName: "Dad",
     role: "parent" as const,
   },
   {
     email: "claire@dunphyfamily.com",
     firstName: "Claire",
     lastName: "Dunphy",
-    preferredName: "Claire",
+    preferredName: "Mom",
     role: "co-parent" as const,
   },
   { email: "jay@dunphyfamily.com",      firstName: "Jay",      lastName: "Pritchett", preferredName: "Jay",      role: "gifter" as const },
@@ -128,8 +128,9 @@ const ACCOUNTS = [
 ];
 
 // Three Dunphy kids. Ages locked relative to today so the demo always
-// reads "Haley is 18, Alex is 15, Luke is 13" regardless of when the
-// seed is run. Birthdates derived as `today - years - months_offset`.
+// reads "Haley is 20 (~30 days from CA majority age 21, for the handoff
+// demo), Alex is 15, Luke is 13" regardless of when the seed is run.
+// Birthdates derived as `today - years - months_offset`.
 // Per DUNPHY_DEMO_SPEC.md locked rule: Dunphys are LA-based →
 // California UTMA majority age = 21. Set on each fund.
 function birthdateForAge(years: number, monthsBack = 0): string {
@@ -151,6 +152,11 @@ const KIDS = [
     slug: "haley-dunphy",
     strategy: "conservative",
     description: "Haley is heading off to school. Her fund is the bridge.",
+    // Phil's recurring auto-invest. Paused — Haley is ~30 days from
+    // majority, so the schedule has naturally wound down (the worker
+    // also auto-pauses at handoff). It still carries years of realized
+    // history (see giftsForKid / seedKidFund).
+    recurring: { amount: 50, status: "paused" },
     holdings: [
       { ticker: "AAPL",  shares: 12.45, costBasis: 2245.00, currentValue: 2503.20, name: "Apple" },
       { ticker: "GOOGL", shares: 8.32,  costBasis: 1387.00, currentValue: 1498.40, name: "Google" },
@@ -171,6 +177,7 @@ const KIDS = [
     slug: "alex-dunphy",
     strategy: "balanced",
     description: "Alex is going to read every prospectus we send her. Set her up right.",
+    recurring: { amount: 50, status: "active" },
     holdings: [
       { ticker: "AAPL",  shares: 4.20,  costBasis: 770.00,  currentValue: 844.20, name: "Apple" },
       { ticker: "GOOGL", shares: 3.10,  costBasis: 520.00,  currentValue: 558.40, name: "Google" },
@@ -192,6 +199,7 @@ const KIDS = [
     slug: "luke-dunphy",
     strategy: "growth",
     description: "Luke's fund has the longest runway. Growth mix all the way.",
+    recurring: { amount: 75, status: "active" },
     holdings: [
       { ticker: "AAPL",  shares: 2.10,  costBasis: 385.00,  currentValue: 422.10, name: "Apple" },
       { ticker: "GOOGL", shares: 1.50,  costBasis: 252.00,  currentValue: 270.30, name: "Google" },
@@ -222,7 +230,7 @@ const KIDS = [
 //   • Claire (mom)     — occasional add note
 //
 // Output count target: Haley ≈ 50 gifts, Alex ≈ 30, Luke ≈ 22.
-function giftsForKid(kid: { firstName: string; ageYears: number; birthdate: string }) {
+function giftsForKid(kid: { firstName: string; ageYears: number; birthdate: string; recurringAmount: number; recurringPaused: boolean }) {
   const N = (yearsAgo: number, monthsAgo = 0): string => {
     const d = new Date();
     d.setFullYear(d.getFullYear() - yearsAgo);
@@ -264,6 +272,10 @@ function giftsForKid(kid: { firstName: string; ageYears: number; birthdate: stri
     message?: string;
     hasAudio?: boolean;
     createdAt: string;
+    // "recurring" marks a Phil auto-invest cycle so seedKidFund can link
+    // it to the parent_contribution + apply the production worker's
+    // memory-stamp-once rule. Absent on ordinary gifts.
+    kind?: "recurring";
   }> = [];
 
   const age = kid.ageYears;
@@ -381,17 +393,35 @@ function giftsForKid(kid: { firstName: string; ageYears: number; birthdate: stri
     }
   }
 
-  // Phil — quarterly monthly-add note. One per quarter going back
-  // 4 years feels lived-in without dominating the feed.
-  const quarters = Math.min(16, age * 2); // cap at 16 quarters / 4 years
-  for (let q = 0; q < quarters; q++) {
+  // Phil — the recurring auto-investor ("the parent who shows up every
+  // month"). Modeled EXACTLY as the production recurring worker writes a
+  // cycle (recurringContributionWorker.ts): one gift per monthly charge,
+  // at the schedule's amount, carrying the parent's recurring note as the
+  // message, linked to the schedule (parentContributionId stamped in
+  // seedKidFund). Mirroring prod is what makes this honest paper-trading:
+  //   • the recurring detail shows real cycles + a real total invested
+  //   • the dashboard breakdown counts them as "recurring investments"
+  //     (the row keys off parentContributionId), not "one-time additions"
+  //   • the balance absorbs them through the same gift-sizing every other
+  //     gift flows through — no desync
+  //   • exactly ONE (the first/oldest) becomes a Memory Book parent_note
+  //     in seedKidFund; the worker stamps memory once on the first cycle
+  //     and never again, so 3 years of auto-investing never floods the
+  //     timeline.
+  // 36 cycles ≈ 3 years of showing up. Active schedules ran through last
+  // month (next charge upcoming); the paused one (Haley, winding down near
+  // majority) stopped a few months back.
+  const recurringNote = `Every month, a little more for ${kid.firstName}. — Dad`;
+  const recurringStartOffset = kid.recurringPaused ? 3 : 1;
+  for (let i = 0; i < 36; i++) {
     list.push({
       senderName: "Phil Dunphy",
       senderEmail: "phil@dunphyfamily.com",
-      amount: 50,
+      amount: kid.recurringAmount,
       selectedTicker: undefined,
-      message: q === 0 ? "Monthly add from Dad." : q % 4 === 0 ? `Just keeping it going, ${kid.firstName}. — Dad` : "Monthly add from Dad.",
-      createdAt: N(0, q * 3 + 1),
+      message: recurringNote,
+      createdAt: N(0, recurringStartOffset + i),
+      kind: "recurring",
     });
   }
 
@@ -473,7 +503,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   // displayed per-holding gain reads positive (currentValue > costBasis).
   // Locked 2026-05-21 after the chart audit revealed underwater
   // funds for two of three demo kids.
-  const giftListForSizing = giftsForKid({ firstName: kid.firstName, ageYears: kid.ageYears, birthdate: kid.birthdate });
+  const giftListForSizing = giftsForKid({ firstName: kid.firstName, ageYears: kid.ageYears, birthdate: kid.birthdate, recurringAmount: kid.recurring.amount, recurringPaused: kid.recurring.status === "paused" });
   const giftSum = giftListForSizing.reduce((sum, g) => sum + g.amount, 0);
   // Backdate the fund's creation to just before its earliest gift. The
   // funds table defaults createdAt=now, but the seed's gifts span YEARS
@@ -501,9 +531,20 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   const rawHoldingsValueSum = kid.holdings.reduce((sum, h) => sum + h.currentValue, 0);
   const rawHoldingsBasisSum = kid.holdings.reduce((sum, h) => sum + h.costBasis, 0);
   const valueScale = rawHoldingsValueSum > 0 ? targetValue / rawHoldingsValueSum : 1;
-  // Basis scales at 92% of value scale so per-holding gain stays
-  // visibly positive even after rebalance.
-  const basisScale = valueScale * 0.92;
+  // Cost basis is tied to ACTUAL CONTRIBUTIONS, not a cosmetic fraction of
+  // value. sum(costBasis) === giftSum (every dollar contributed bought
+  // holdings; cashBalance is 0), so the holdings-based fund gain works out
+  // to exactly growthFactor − 1 (25% / 40% / 50%) — which MATCHES the
+  // contributions-vs-value "market growth" the dashboard breakdown shows.
+  // The old `valueScale * 0.92` heuristic floated cost basis ABOVE total
+  // contributions (e.g. Haley basis $16,178 > $13,325 ever contributed —
+  // impossible) and made the two growth readings disagree (23.5% vs 50%).
+  // Per-holding variety is preserved (each keeps its own value/basis ratio);
+  // they're just renormalized so the fund total is honest. As a bonus the
+  // historical basis line in generateHistoricalSnapshots becomes the real
+  // cumulative-contributions curve (basisScaleFactor → 1), so the chart's
+  // value line only dips below basis during genuine market drawdowns.
+  const basisScale = rawHoldingsBasisSum > 0 ? giftSum / rawHoldingsBasisSum : valueScale;
   // Build scaled holdings (used below for both DB insert + balance).
   const scaledHoldings = kid.holdings.map((h) => ({
     ...h,
@@ -591,9 +632,32 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   // MemoryBook.tsx filters specifically for "gift_message" + "milestone"
   // + "photo" + "note", so the old entries silently fell through and
   // the Memory Book read empty regardless of how many gifts existed.
-  const giftList = giftsForKid({ firstName: kid.firstName, ageYears: kid.ageYears, birthdate: kid.birthdate });
+  const giftList = giftsForKid({ firstName: kid.firstName, ageYears: kid.ageYears, birthdate: kid.birthdate, recurringAmount: kid.recurring.amount, recurringPaused: kid.recurring.status === "paused" });
   const sendersSeen = new Set<string>();
+
+  // Phil's recurring schedule (parent_contribution). Created BEFORE the
+  // gift loop so each monthly cycle can link back to it — exactly the
+  // shape the production worker leaves behind. totalContributed +
+  // lastRunDate are backfilled from the cycles after they're inserted.
+  const recurringPaused = kid.recurring.status === "paused";
+  const recurringChargeNote = giftList.find((g) => g.kind === "recurring")?.message ?? null;
+  const recurringNextRun = (() => { const d = new Date(); d.setDate(d.getDate() + 14); return d; })();
+  const [philContribution] = await db.insert(parentContributions).values({
+    fundId: fund.id,
+    userId: parentUserId,
+    amount: kid.recurring.amount.toFixed(2),
+    frequency: "monthly",
+    status: kid.recurring.status,
+    note: recurringChargeNote,
+    pauseReason: recurringPaused ? "user" : null,
+    pausedAt: recurringPaused ? new Date() : null,
+    nextRunDate: recurringPaused ? null : recurringNextRun,
+  } as any).returning();
+  let recurringTotal = 0;
+  let recurringLastDate: Date | null = null;
+  let recurringMemoryStamped = false;
   for (const g of giftList) {
+    const isRecurring = g.kind === "recurring";
     const giftAudioUrl = g.hasAudio ? gloriaAudioUrl : null;
     const giftRow: InsertGift = {
       fundId: fund.id,
@@ -605,15 +669,79 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
       message: g.message ?? null,
       selectedTicker: g.selectedTicker ?? null,
       audioUrl: giftAudioUrl,
+      // Recurring cycles link to Phil's schedule + carry the worker's
+      // source tag, exactly as recurringContributionWorker stamps them.
+      // parentContributionId is what moves them into the dashboard's
+      // "Your recurring investments" breakdown row (instead of "one-time").
+      parentContributionId: isRecurring ? philContribution.id : null,
+      source: isRecurring ? "recurring_worker" : null,
       createdAt: new Date(g.createdAt),
     } as any;
     const [insertedGift] = await db.insert(gifts).values(giftRow as any).returning();
     sendersSeen.add(g.senderEmail.toLowerCase());
 
-    // Mirror the webhook: one gift_message memory entry per gift, with
-    // the same audio/photo fields the production handler copies over.
-    // createdAt is set to match the gift so the Memory Book sort lands
-    // them in chronological order with the gift itself.
+    // Activity-ledger row, mirroring the "arrival" activity production
+    // writes in completeGiftPostPayment (webhookHandlers.ts:241):
+    // gift_received for gifters, parent_contribution for Phil's recurring
+    // cycles. Backdated to the gift date so the Activity tab reads as a
+    // real multi-year ledger instead of just "Fund created." The
+    // parentContributionId in metadata also lets the recurring schedule's
+    // History tab pick up every cycle. (We mirror only the arrival row,
+    // not the paired gift_invested row, to keep the demo feed from
+    // doubling every entry with a near-identical "invested across the
+    // mix" line — the arrival row is the legible ledger event.)
+    await db.insert(activities).values({
+      userId: parentUserId,
+      fundId: fund.id,
+      type: isRecurring ? "parent_contribution" : "gift_received",
+      title: isRecurring
+        ? `You contributed $${g.amount.toFixed(2)}`
+        : `Gift from ${g.senderName}`,
+      description: isRecurring
+        ? (g.selectedTicker ? `Investing into ${String(g.selectedTicker).toUpperCase()}` : "Investing across the diversified mix")
+        : (g.message ? `"${g.message}"` : "No note."),
+      amount: g.amount.toFixed(2),
+      metadata: JSON.stringify({
+        giftId: insertedGift.id,
+        ticker: g.selectedTicker || null,
+        message: g.message || null,
+        executionModel: isRecurring ? "auto_invest" : null,
+        senderEmail: g.senderEmail || null,
+        isParentContribution: isRecurring,
+        parentContributionId: isRecurring ? philContribution.id : null,
+      }),
+      createdAt: new Date(g.createdAt),
+    } as any);
+
+    if (isRecurring) {
+      // Money + schedule bookkeeping for the cycle. The Memory Book gets
+      // exactly ONE entry — a parent_note on the FIRST (oldest) cycle —
+      // mirroring the worker's "stamp once on first cycle, never again"
+      // rule (recurringContributionWorker.ts:235). Every later cycle is
+      // money-only, so 36 months of auto-investing never buries the
+      // timeline. giftList pushes Phil's cycles oldest-first, so the first
+      // one we hit IS the first cycle.
+      recurringTotal += g.amount;
+      const chargeDate = new Date(g.createdAt);
+      if (!recurringLastDate || chargeDate > recurringLastDate) recurringLastDate = chargeDate;
+      if (!recurringMemoryStamped && recurringChargeNote) {
+        await db.insert(memoryEntries).values({
+          fundId: fund.id,
+          giftId: insertedGift.id,
+          type: "parent_note",
+          content: recurringChargeNote,
+          authorRole: "parent",
+          authorName: g.senderName,
+          visibility: "kid_now",
+          createdAt: chargeDate,
+        } as any);
+        recurringMemoryStamped = true;
+      }
+      continue;
+    }
+
+    // Ordinary gifts: one gift_message memory entry each, mirroring the
+    // public-gift webhook (with the same audio/transcript fields).
     await db.insert(memoryEntries).values({
       fundId: fund.id,
       giftId: insertedGift.id,
@@ -633,6 +761,17 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
       createdAt: new Date(g.createdAt),
     } as any);
   }
+
+  // Backfill the schedule's realized totals from the cycles just written —
+  // the same fields the worker accumulates (totalContributed) and advances
+  // (lastRunDate). Now the recurring detail reads real history
+  // ("$X over N cycles · last {date} · next {date}") instead of $0.
+  await db.update(parentContributions)
+    .set({
+      totalContributed: recurringTotal.toFixed(2),
+      lastRunDate: recurringLastDate ?? null,
+    })
+    .where(eq(parentContributions.id, philContribution.id));
 
   // Update contributor count from unique senders.
   await db.update(funds)
@@ -1061,43 +1200,15 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
     console.log(`  collaborator: claire@dunphyfamily.com → co-parent on ${seededFundIds.length} fund(s)`);
   }
 
-  // 5. Seed Phil's recurring parent_contributions on the kids whose
-  //    runway justifies it. Haley's is paused (she's a month from
-  //    handoff — the recurring would naturally have wound down).
-  //    Alex + Luke active monthly. This is the "auto-invest" /
-  //    "Recurring investment" surface on the dashboard; without
-  //    these rows the demo shows "Set up recurring investments" CTA
-  //    for every fund, undercutting the "fully set up household"
-  //    showcase. Locked 2026-05-21 with the demo polish pass.
-  const recurringSchedule: Array<{ kidName: string; amount: number; status: "active" | "paused" }> = [
-    { kidName: "Haley", amount: 50, status: "paused" },
-    { kidName: "Alex",  amount: 50, status: "active" },
-    { kidName: "Luke",  amount: 75, status: "active" },
-  ];
-  for (let i = 0; i < KIDS.length; i++) {
-    const kid = KIDS[i];
-    const fundId = seededFundIds[i];
-    const cfg = recurringSchedule.find((s) => s.kidName === kid.firstName);
-    if (!cfg || !fundId) continue;
-    const nextRun = new Date();
-    nextRun.setDate(nextRun.getDate() + 14); // ~2 weeks out
-    await db.insert(parentContributions).values({
-      fundId,
-      userId: philId,
-      amount: cfg.amount.toFixed(2),
-      frequency: "monthly",
-      status: cfg.status,
-      pauseReason: cfg.status === "paused" ? "user" : null,
-      pausedAt: cfg.status === "paused" ? new Date() : null,
-      nextRunDate: cfg.status === "active" ? nextRun : null,
-      lastRunDate: (() => {
-        const d = new Date();
-        d.setDate(d.getDate() - 14);
-        return d;
-      })(),
-    } as any);
-  }
-  console.log(`  recurring (Phil): ${recurringSchedule.filter(r => r.status === "active").length} active, ${recurringSchedule.filter(r => r.status === "paused").length} paused`);
+  // 5. Phil's recurring parent_contributions are now seeded PER FUND
+  //    inside seedKidFund — each schedule is created with its realized
+  //    monthly-cycle history (linked gifts, totalContributed, lastRunDate)
+  //    so the recurring detail and the dashboard breakdown read real
+  //    paper-trading numbers instead of "$0 · never charged." Config
+  //    (amount + active/paused) lives on each KIDS entry's `recurring`.
+  //    Haley's is paused (winding down ~30 days from majority); Alex + Luke
+  //    active monthly. Moved out of this step 2026-05-27 with the
+  //    recurring-realism pass.
 
   // 6. Seed Mitchell's recurring_gifts (annual birthday AAPL gift).
   //    Mitchell is the locked "recurring uncle" persona per the spec.
