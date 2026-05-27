@@ -12181,7 +12181,10 @@ export async function registerRoutes(
       const safeFundId = String(req.params.fundId).replace(/[^a-zA-Z0-9_-]/g, "");
       const dir = path.resolve(process.cwd(), "uploads", "child-photos", safeFundId);
       await fs.mkdir(dir, { recursive: true });
-      const filename = `child-${Date.now()}.${parsed.ext}`;
+      // Unguessable filename. A timestamp-only name (`child-<Date.now()>`)
+      // under the publicly-served /uploads path is guessable per known
+      // fundId, exposing a minor's photo. A random UUID removes that.
+      const filename = `child-${crypto.randomUUID()}.${parsed.ext}`;
       const abs = path.join(dir, filename);
       await fs.writeFile(abs, parsed.buffer);
       const relUrl = `/uploads/child-photos/${safeFundId}/${filename}`;

@@ -604,6 +604,10 @@ async function getOrCreateOAuthUser(params: {
   provider: OAuthProvider;
   subject: string;
   email: string | null;
+  // Whether the OAuth provider attested the email is VERIFIED. Gates the
+  // "link this provider identity to a pre-existing password account by
+  // matching email" branch below — see the security note there.
+  emailVerified?: boolean;
   givenName?: string | null;
   familyName?: string | null;
 }) {
@@ -628,6 +632,16 @@ async function getOrCreateOAuthUser(params: {
   if (params.email) {
     const existingUser = await getUserByEmail(params.email);
     if (existingUser) {
+      // SECURITY: only auto-link a provider identity to a PRE-EXISTING
+      // (password) account when the provider VERIFIED the email. Otherwise a
+      // holder of an unverified provider account at this address could take
+      // over the matching Kiddo account by "signing in with Google/Apple."
+      // Google + Apple verify by default, so this only fails-closed on
+      // misconfigured/edge providers. The throw is caught by the OAuth
+      // callback handler, which redirects to the provider error page.
+      if (!params.emailVerified) {
+        throw new Error("oauth_email_unverified");
+      }
       await linkOAuthIdentity(existingUser.id, params.provider, params.subject);
       // Linking an existing email/password user to a Google/Apple
       // identity is the moment the email becomes provider-verified.
@@ -857,20 +871,28 @@ export function setupAuth(app: Express) {
       // Failures are logged inside issueVerificationEmail.
       void issueVerificationEmail({ userId: user.id, email, firstName: firstName ?? null });
 
-      req.login(user, (err) => {
-        if (err) {
+      // Regenerate the session before establishing identity (session-
+      // fixation prevention). Any pre-register state (e.g. referredBy) is
+      // already captured in locals above, so nothing is lost.
+      req.session.regenerate((regenErr) => {
+        if (regenErr) {
           return res.status(500).json({ message: "Failed to create session" });
         }
-        const { passwordHash: _, kycData: _kd, ...safeUser } = user;
-        recordEvent({
-          ...eventCtxFromReq(req),
-          name: "signup",
-          userId: user.id,
-          source: "web",
-          props: { hasReferral: !!referredBy },
-        });
-        return respondAfterSessionSave(req, res, () => {
-          res.status(201).json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email) });
+        req.login(user, (err) => {
+          if (err) {
+            return res.status(500).json({ message: "Failed to create session" });
+          }
+          const { passwordHash: _, kycData: _kd, ...safeUser } = user;
+          recordEvent({
+            ...eventCtxFromReq(req),
+            name: "signup",
+            userId: user.id,
+            source: "web",
+            props: { hasReferral: !!referredBy },
+          });
+          return respondAfterSessionSave(req, res, () => {
+            res.status(201).json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email) });
+          });
         });
       });
     } catch (error) {
@@ -1085,17 +1107,27 @@ export function setupAuth(app: Express) {
         }
         return res.status(401).json({ message: info?.message || "Invalid email or password" });
       }
-      req.login(user, (err) => {
-        if (err) {
+      // Regenerate the session BEFORE establishing identity to prevent
+      // session fixation — an attacker who planted a known session id in the
+      // victim's browser pre-login must not keep an authenticated session
+      // after the victim logs in. Nothing useful lives in the pre-login
+      // session on this endpoint, so regenerating loses nothing.
+      req.session.regenerate((regenErr) => {
+        if (regenErr) {
           return res.status(500).json({ message: "Failed to create session" });
         }
-        // Fire-and-forget new-device tracking. Sends an alert email
-        // when the fingerprint is novel for this user (after the
-        // first-ever login). Locked 2026-05-15.
-        void trackLoginDevice(user.id, req);
-        const { passwordHash: _, kycData: _kd, ...safeUser } = user;
-        return respondAfterSessionSave(req, res, () => {
-          res.json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email) });
+        req.login(user, (err) => {
+          if (err) {
+            return res.status(500).json({ message: "Failed to create session" });
+          }
+          // Fire-and-forget new-device tracking. Sends an alert email
+          // when the fingerprint is novel for this user (after the
+          // first-ever login). Locked 2026-05-15.
+          void trackLoginDevice(user.id, req);
+          const { passwordHash: _, kycData: _kd, ...safeUser } = user;
+          return respondAfterSessionSave(req, res, () => {
+            res.json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email) });
+          });
         });
       });
     })(req, res, next);
@@ -1191,6 +1223,10 @@ export function setupAuth(app: Express) {
 
       const claims = (tokens.claims() || {}) as Record<string, unknown>;
       let email = typeof claims.email === "string" ? claims.email.trim().toLowerCase() : null;
+      // Provider attestation that the email is verified. Google sends a
+      // boolean; Apple sends a string "true". Used to gate email-match
+      // account linking in getOrCreateOAuthUser.
+      let emailVerified = claims.email_verified === true || claims.email_verified === "true";
       const subject = String(claims.sub || "").trim();
       const givenName =
         typeof claims.given_name === "string"
@@ -1210,6 +1246,7 @@ export function setupAuth(app: Express) {
           const userInfo = await fetchUserInfo(issuer, tokens.access_token, subject);
           if (typeof userInfo.email === "string") {
             email = userInfo.email.trim().toLowerCase();
+            emailVerified = (userInfo as any).email_verified === true || (userInfo as any).email_verified === "true";
           }
         } catch (userInfoError) {
           console.warn("Google userinfo lookup failed:", userInfoError);
@@ -1224,6 +1261,7 @@ export function setupAuth(app: Express) {
         provider,
         subject,
         email,
+        emailVerified,
         givenName,
         familyName,
       });
@@ -1624,7 +1662,7 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Invalid or expired reset link." });
       }
       const resetRow = rows[0];
-      const passwordHash = await bcrypt.hash(password, 10);
+      const passwordHash = await bcrypt.hash(password, process.env.NODE_ENV === "production" ? 12 : 10);
       await db
         .update(users)
         .set({ passwordHash, updatedAt: new Date() })
