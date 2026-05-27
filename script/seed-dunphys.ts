@@ -31,6 +31,7 @@ import {
   holdings,
   memoryEntries,
   activities,
+  events,
   subscriptions,
   fundCollaborators,
   parentContributions,
@@ -39,7 +40,14 @@ import {
   type InsertGift,
   type InsertMemoryEntry,
 } from "../shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
+
+// English ordinal for "{N}th Birthday" occasion names.
+function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
 
 // Real-shape monthly returns for the past ~17 years. NOT exact
 // historical S&P 500 month-by-month — that would be a 200-row table
@@ -788,48 +796,9 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
       authorName: "Phil Dunphy",
       visibility: "kid_at_18",
     } as any);
-
-    // MilestoneMoment seed — Haley's fund crossed $5K when she was 12.
-    // Type "milestone" is rendered by MemoryBook.tsx as a celebration
-    // beat in the timeline. Anchored to ~9 years ago so it lands in
-    // the middle of the saga, not at the end. The kid-at-18 reader
-    // scrolls back and sees: "Wow, $5K crossed 9 years before I
-    // turned 21." That's the heirloom register the page is built for.
-    const fiveKMoment = (() => {
-      const d = new Date();
-      d.setFullYear(d.getFullYear() - 9);
-      d.setMonth(d.getMonth() - 2);
-      return d;
-    })();
-    await db.insert(memoryEntries).values({
-      fundId: fund.id,
-      content: `Haley's fund crossed $5,000. Started with $100. Grew through every birthday, every Christmas, every Disney visit from Uncle Cam.`,
-      type: "milestone",
-      authorRole: "parent",
-      authorName: "Phil Dunphy",
-      visibility: "kid_now",
-      createdAt: fiveKMoment,
-    } as any);
-
-    // A second milestone — $10K crossing about 4 years later. Two
-    // milestone beats in the timeline gives the kid scrolling back
-    // a sense of pace, not a one-off marker. Same MemoryBook filter
-    // catches both.
-    const tenKMoment = (() => {
-      const d = new Date();
-      d.setFullYear(d.getFullYear() - 5);
-      d.setMonth(d.getMonth() - 7);
-      return d;
-    })();
-    await db.insert(memoryEntries).values({
-      fundId: fund.id,
-      content: `Haley's fund crossed $10,000. Five years in. Half the runway done; the other half is just compounding.`,
-      type: "milestone",
-      authorRole: "parent",
-      authorName: "Phil Dunphy",
-      visibility: "kid_now",
-      createdAt: tenKMoment,
-    } as any);
+    // (Balance-crossing milestones are now seeded data-driven from the
+    // actual snapshot curve for EVERY kid — see seedMilestonesFromSnapshots
+    // after the history generation below — rather than hardcoded here.)
   }
 
   // Seed a creation activity. Dated to match the fund's backdated
@@ -845,6 +814,65 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
     createdAt: fundCreatedAt,
   } as any);
 
+  // ── Lived-in lifecycle: strategy evolution + real occasions ──
+  // Strategy evolution. A real UTMA shifts allocation as the child ages
+  // toward majority (the product itself nudges this). kid.strategy is the
+  // CURRENT/latest mix; backfill the earlier shifts as dated activity rows so
+  // the Activity timeline shows the fund being managed across the years
+  // (Growth → Balanced → Conservative).
+  const bday = new Date(kid.birthdate);
+  const atAge = (years: number) => { const d = new Date(bday); d.setFullYear(d.getFullYear() + years); return d; };
+  const STRATEGY_LABEL: Record<string, string> = { growth: "Growth Mix", balanced: "Steady & Balanced", conservative: "Conservative Mix" };
+  const STRATEGY_ORDER: Record<string, number> = { growth: 0, balanced: 1, conservative: 2 };
+  const currentOrder = STRATEGY_ORDER[kid.strategy] ?? 0;
+  for (const s of [{ at: 13, from: "growth", to: "balanced" }, { at: 16, from: "balanced", to: "conservative" }]) {
+    // Emit a shift only if the kid has reached that age AND their current
+    // strategy is at-or-past the shift's target (so the history leads to the
+    // present mix, not past it).
+    if (kid.ageYears >= s.at && currentOrder >= STRATEGY_ORDER[s.to]) {
+      await db.insert(activities).values({
+        userId: parentUserId,
+        fundId: fund.id,
+        type: "fund_strategy_changed",
+        title: "Strategy changed",
+        description: `${STRATEGY_LABEL[s.from]} → ${STRATEGY_LABEL[s.to]}`,
+        createdAt: atAge(s.at),
+        metadata: JSON.stringify({ from: s.from, to: s.to, reason: "age_band" }),
+      } as any);
+    }
+  }
+
+  // Real, active occasions beyond the implicit "gift anytime" grouping: an
+  // upcoming birthday, a long-horizon college-fund goal, and (for kids not
+  // yet past it) graduation. Forward-looking — historical gifts stay under
+  // "gift anytime"; these are the occasions the family is gifting toward now.
+  const occToday = new Date();
+  const nextBirthday = (() => {
+    const d = new Date(Date.UTC(occToday.getUTCFullYear(), bday.getUTCMonth(), bday.getUTCDate(), 12));
+    if (d.getTime() < occToday.getTime()) d.setUTCFullYear(d.getUTCFullYear() + 1);
+    return d;
+  })();
+  const nextBirthdayAge = nextBirthday.getUTCFullYear() - bday.getUTCFullYear();
+  const occasions: Array<{ name: string; slug: string; eventType: string; eventDate: Date | null; goalAmount: number | null }> = [
+    { name: `${kid.firstName}'s ${ordinal(nextBirthdayAge)} Birthday`, slug: `${kid.slug}-bday-${nextBirthday.getUTCFullYear()}`, eventType: "birthday", eventDate: nextBirthday, goalAmount: null },
+    { name: `${kid.firstName}'s College Fund`, slug: `${kid.slug}-college`, eventType: "general", eventDate: null, goalAmount: kid.ageYears >= 18 ? 30000 : 40000 },
+  ];
+  if (kid.ageYears < 18) {
+    occasions.push({ name: `${kid.firstName}'s Graduation`, slug: `${kid.slug}-graduation`, eventType: "graduation", eventDate: new Date(Date.UTC(bday.getUTCFullYear() + 18, 5, 1, 12)), goalAmount: null });
+  }
+  for (const o of occasions) {
+    await db.insert(events).values({
+      fundId: fund.id,
+      userId: parentUserId,
+      name: o.name,
+      slug: o.slug,
+      eventType: o.eventType,
+      eventDate: o.eventDate,
+      goalAmount: o.goalAmount != null ? o.goalAmount.toFixed(2) : null,
+      status: "active",
+    } as any);
+  }
+
   // Generate the historical balance curve. Walks month-by-month from
   // the first gift date to today, applying real-shape monthly returns
   // (smooth drift + hand-placed crisis-window dips) and stepping up
@@ -859,7 +887,46 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   // a multi-year story; without snapshots there's no story.
   await generateHistoricalSnapshots(fund.id, giftList, investedValue, costBasis);
 
+  // Balance-crossing milestones, data-driven from the curve just generated.
+  await seedMilestonesFromSnapshots(fund.id, kid.firstName);
+
   return fund.id;
+}
+
+// Stamp a "milestone" memory entry at the first date the fund's balance
+// crossed each $5K threshold — read straight off the generated snapshot curve
+// so the dates are accurate to the real shape, not hardcoded. MemoryBook
+// renders these as celebration beats; every kid gets the full "watch it grow"
+// ladder up to their current balance.
+async function seedMilestonesFromSnapshots(fundId: string, childFirst: string): Promise<void> {
+  const snaps = await db
+    .select()
+    .from(fundSnapshots)
+    .where(eq(fundSnapshots.fundId, fundId))
+    .orderBy(asc(fundSnapshots.snapshotDate));
+  if (snaps.length === 0) return;
+  const finalVal = parseFloat(String(snaps[snaps.length - 1].totalValue || "0"));
+  const note: Record<number, string> = {
+    5000: "Started small; grew through every birthday, holiday, and gift from the people who showed up.",
+    10000: "Five figures now — compounding doing the quiet work.",
+    15000: "Past the halfway mark; from here it's mostly the market.",
+    20000: "A real head start — the kind that changes the options in front of a kid.",
+    25000: "Two decades of showing up, compounded.",
+  };
+  for (const threshold of [5000, 10000, 15000, 20000, 25000]) {
+    if (finalVal < threshold) break;
+    const crossing = snaps.find((s) => parseFloat(String(s.totalValue || "0")) >= threshold);
+    if (!crossing) continue;
+    await db.insert(memoryEntries).values({
+      fundId,
+      content: `${childFirst}'s fund crossed $${threshold.toLocaleString("en-US")}. ${note[threshold] || ""}`.trim(),
+      type: "milestone",
+      authorRole: "parent",
+      authorName: "Phil Dunphy",
+      visibility: "kid_now",
+      createdAt: new Date(crossing.snapshotDate as any),
+    } as any);
+  }
 }
 
 // Generate monthly fund_snapshots from the first gift to today,

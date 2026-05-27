@@ -3548,9 +3548,25 @@ export default function Dashboard() {
       const firstGiftSender = earliestGift ? displayGifterName(earliestGift.senderName, (earliestGift as any).isAnonymous) : null;
       const firstGiftAmount = earliestGift ? parseFloat(earliestGift.netAmount || earliestGift.amount || "0") : 0;
       let firstNonZeroFound = false;
+      let prevChartValue = 0;
+      const crossedMilestones = new Set<number>();
       const rows = filtered.map((p) => {
         const isFirstNonZero = !firstNonZeroFound && p.value > 0;
         if (isFirstNonZero) firstNonZeroFound = true;
+        // Milestone-crossing marker: the highest threshold this point newly
+        // passes since the previous one. Deduped so each threshold flags at
+        // most once across the whole series, and a single big jump only flags
+        // its highest crossing. These are sparse journey beats ("Passed
+        // $1,000") — identity moments, NOT a dot per gift. First-gift takes
+        // precedence when they coincide (the origin is the better story).
+        let milestone: number | null = null;
+        for (const m of MONEY_CROSS_THRESHOLDS) {
+          if (p.value >= m && prevChartValue < m && !crossedMilestones.has(m)) {
+            milestone = m;
+            crossedMilestones.add(m);
+          }
+        }
+        prevChartValue = p.value;
         return {
           ts: p.ts,
           label: formatLabel(p.date),
@@ -3558,6 +3574,8 @@ export default function Dashboard() {
           value: p.value,
           event: isFirstNonZero
             ? { label: "First gift", detail: firstGiftSender && firstGiftAmount > 0 ? `${formatCurrency(firstGiftAmount)} from ${firstGiftSender}` : "" }
+            : milestone
+            ? { label: `Passed $${milestone.toLocaleString()}`, detail: "" }
             : undefined,
         };
       });
