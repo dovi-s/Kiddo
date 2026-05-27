@@ -195,7 +195,32 @@ export default function GiftSuccess() {
   } | null>(null)
   const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(typeof navigator !== "undefined" ? navigator.userAgent : "")
   const receiptQueuedRef = useRef(false)
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount)
+
+  // Demo loop closure: when the logged-in demo prospect "sends" a gift (it
+  // routes through demoSandbox → here with ?demo=1), stash what they sent so
+  // the dashboard can replay it as the parent-side "a gift just came in" beat
+  // (see client/src/components/DemoGiftMoment.tsx). Gated on isDemoAccount —
+  // an anonymous visitor gifting to a demo fund has no dashboard to return to,
+  // so there's nothing to close the loop for. sessionStorage so it's scoped to
+  // this browser session and consumed once.
+  useEffect(() => {
+    if (!isDemoGift || !isDemoAccount) return
+    try {
+      window.sessionStorage.setItem(
+        "kiddo.demo.pendingGift.v1",
+        JSON.stringify({
+          fundId,
+          senderName: senderNameParam,
+          amount: amountParam,
+          ticker: tickerParam,
+          isRecurring: isRecurringSetup,
+          ts: Date.now(),
+        }),
+      )
+    } catch { /* sessionStorage blocked — loop just won't fire, no harm */ }
+  }, [isDemoGift, isDemoAccount, fundId, senderNameParam, amountParam, tickerParam, isRecurringSetup])
 
   const parsePositiveAmount = (value: unknown): string | null => {
     const n = Number(value)
@@ -778,6 +803,25 @@ export default function GiftSuccess() {
               </Link>
             </p>
           </motion.div>
+        )}
+
+        {/* Demo loop-closer — only for the logged-in prospect (they came FROM
+            the dashboard to role-play sending this gift). Sends them back to
+            feel the parent-side "a gift just came in" beat for the gift they
+            just sent. The whole point of the demo is letting them feel both
+            sides of the gifter loop. */}
+        {isDemoGift && isDemoAccount && (
+          <motion.button
+            type="button"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.08 }}
+            onClick={() => { haptic("selection"); setLocation("/dashboard") }}
+            className="mb-6 flex w-full max-w-md items-center justify-center gap-1.5 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.30)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-3 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))] transition hover:bg-[hsl(var(--kiddo-evergreen)/0.12)]"
+            data-testid="demo-gift-back-to-dashboard"
+          >
+            ← Back to your dashboard to watch it land
+          </motion.button>
         )}
 
         {/* Logo */}

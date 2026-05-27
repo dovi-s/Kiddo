@@ -11343,8 +11343,17 @@ export async function registerRoutes(
       // Per server/demoSandbox.ts + DUNPHY_DEMO_SPEC.md Phase 2. Real
       // funds (the 99.99% case) fall through to the normal Stripe path.
       if (await isDemoFund(fundId)) {
+        // Carry the gifter's chosen name + stock through to the success page so
+        // the demo loop reads true: GiftSuccess shows them, and the parent-side
+        // "a gift just came in" beat (client DemoGiftMoment) replays the exact
+        // gift the prospect just role-played sending. Honors the anonymous toggle.
+        const demoName = isAnonymous ? "" : (typeof senderName === "string" ? senderName.trim() : "");
+        const demoTicker = executionModel === "pick" && typeof selectedTicker === "string" ? selectedTicker.trim() : "";
+        const demoQs = new URLSearchParams({ demo: "1", fundId: String(fundId), amount: String(amount || 0) });
+        if (demoName) demoQs.set("senderName", demoName);
+        if (demoTicker) demoQs.set("ticker", demoTicker);
         return res.json({
-          url: `${baseUrl}/gift/success?demo=1&fundId=${encodeURIComponent(fundId)}&amount=${encodeURIComponent(String(amount || 0))}`,
+          url: `${baseUrl}/gift/success?${demoQs.toString()}`,
           sessionId: `demo_${Date.now()}`,
           isDemo: true,
           message: "Demo mode. No card was charged.",
