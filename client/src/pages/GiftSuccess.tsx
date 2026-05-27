@@ -14,6 +14,7 @@ import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/
 import { toast } from "@/hooks/use-toast"
 import { buildTrackedGetStartedHref, trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition"
 import { useAuth } from "@/hooks/use-auth"
+import { recordDemoLiveGift } from "@/lib/demo-live-gifts"
 
 // Ticker → human-readable company name. Used to render "Nike" instead
 // of "NKE" alongside the brand mark from <StockLogo /> on the gift
@@ -199,14 +200,18 @@ export default function GiftSuccess() {
   const isDemoAccount = Boolean((user as any)?.isDemoAccount)
 
   // Demo loop closure: when the logged-in demo prospect "sends" a gift (it
-  // routes through demoSandbox → here with ?demo=1), stash what they sent so
-  // the dashboard can replay it as the parent-side "a gift just came in" beat
-  // (see client/src/components/DemoGiftMoment.tsx). Gated on isDemoAccount —
-  // an anonymous visitor gifting to a demo fund has no dashboard to return to,
-  // so there's nothing to close the loop for. sessionStorage so it's scoped to
-  // this browser session and consumed once.
+  // routes through demoSandbox → here with ?demo=1), close the loop two ways:
+  //   1. Stash it so the dashboard replays it as the parent-side "a gift just
+  //      came in" beat (see client/src/components/DemoGiftMoment.tsx).
+  //   2. Record it as a session-scoped live gift so it appears as a fresh
+  //      "just now" entry when they tap through to the Memory Book — they
+  //      watch the exact gift they sent land (see lib/demo-live-gifts.ts).
+  // Gated on isDemoAccount — an anonymous visitor gifting to a demo fund has
+  // no dashboard to return to, so there's nothing to close the loop for.
+  const demoLoopRecordedRef = useRef(false)
   useEffect(() => {
-    if (!isDemoGift || !isDemoAccount) return
+    if (!isDemoGift || !isDemoAccount || demoLoopRecordedRef.current) return
+    demoLoopRecordedRef.current = true
     try {
       window.sessionStorage.setItem(
         "kiddo.demo.pendingGift.v1",
@@ -220,7 +225,14 @@ export default function GiftSuccess() {
         }),
       )
     } catch { /* sessionStorage blocked — loop just won't fire, no harm */ }
-  }, [isDemoGift, isDemoAccount, fundId, senderNameParam, amountParam, tickerParam, isRecurringSetup])
+    recordDemoLiveGift({
+      fundId,
+      senderName: senderNameParam,
+      amount: amountParam,
+      ticker: tickerParam || undefined,
+      message: params.get("message") || undefined,
+    })
+  }, [isDemoGift, isDemoAccount, fundId, senderNameParam, amountParam, tickerParam, isRecurringSetup, params])
 
   const parsePositiveAmount = (value: unknown): string | null => {
     const n = Number(value)

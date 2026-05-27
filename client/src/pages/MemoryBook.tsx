@@ -68,6 +68,7 @@ import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { readDemoLiveGiftsForFund } from "@/lib/demo-live-gifts";
 import { useSubscription } from "@/hooks/use-subscription";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { getEmbedVideoUrl } from "@/lib/media";
@@ -441,6 +442,7 @@ export default function MemoryBook() {
   const search = useSearch();
   const queryClient = useQueryClient();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount);
   const { data: subscription } = useSubscription();
   // Honor OS reduced-motion. When set, the heavy slides + zooms in
   // this page become quiet opacity fades. Modal sheets stop sliding
@@ -745,18 +747,48 @@ export default function MemoryBook() {
     // alongside the DesktopSidebar.tsx:93 hardening during the
     // 2026-05-14 schema-DB-drift incident, same shape: API
     // failure -> undefined data -> iteration crash -> ErrorBoundary.
-    if (!Array.isArray(rawMemoryEntries) || rawMemoryEntries.length === 0) return [] as MemoryEntry[];
     const seenGiftIds = new Set<string>();
-    return rawMemoryEntries.filter((e) => {
-      const isGiftMessage = e?.type === "gift_message";
-      const giftId = (e as any)?.giftId ? String((e as any).giftId) : null;
-      if (isGiftMessage && giftId) {
-        if (seenGiftIds.has(giftId)) return false;
-        seenGiftIds.add(giftId);
-      }
-      return true;
-    });
-  }, [rawMemoryEntries]);
+    const base = (!Array.isArray(rawMemoryEntries) || rawMemoryEntries.length === 0)
+      ? ([] as MemoryEntry[])
+      : rawMemoryEntries.filter((e) => {
+          const isGiftMessage = e?.type === "gift_message";
+          const giftId = (e as any)?.giftId ? String((e as any).giftId) : null;
+          if (isGiftMessage && giftId) {
+            if (seenGiftIds.has(giftId)) return false;
+            seenGiftIds.add(giftId);
+          }
+          return true;
+        });
+    // Demo-only: surface the gift the prospect just role-played SENDING as a
+    // fresh "just now" entry so they watch it land (lib/demo-live-gifts.ts).
+    // Session-scoped, never persisted to the shared demo. giftId stays null so
+    // it skips the giftId-dedupe above and a now-dated createdAt floats it to
+    // the top of the timeline.
+    const liveDemo = readDemoLiveGiftsForFund(fundId, isDemoAccount).map((g, i): MemoryEntry => ({
+      id: `demo-live-${i}-${g.createdAt}`,
+      fundId: String(fundId),
+      giftId: null,
+      type: "gift_message",
+      content: g.message ?? null,
+      authorName: g.senderName,
+      authorPhotoUrl: null,
+      photoUrl: null,
+      videoUrl: null,
+      audioUrl: null,
+      visibility: "public",
+      createdAt: g.createdAt,
+      gift: {
+        senderName: g.senderName,
+        amount: String(g.amount),
+        message: g.message ?? null,
+        photoUrl: null,
+        createdAt: g.createdAt,
+        selectedTicker: g.ticker || null,
+        executionModel: g.ticker ? "pick" : "auto",
+      },
+    }));
+    return liveDemo.length ? [...liveDemo, ...base] : base;
+  }, [rawMemoryEntries, fundId, isDemoAccount]);
 
   const { data: fundData } = useQuery<{
     name: string;

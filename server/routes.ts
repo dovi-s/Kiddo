@@ -11349,9 +11349,11 @@ export async function registerRoutes(
         // gift the prospect just role-played sending. Honors the anonymous toggle.
         const demoName = isAnonymous ? "" : (typeof senderName === "string" ? senderName.trim() : "");
         const demoTicker = executionModel === "pick" && typeof selectedTicker === "string" ? selectedTicker.trim() : "";
+        const demoMessage = typeof message === "string" ? message.trim().slice(0, 140) : "";
         const demoQs = new URLSearchParams({ demo: "1", fundId: String(fundId), amount: String(amount || 0) });
         if (demoName) demoQs.set("senderName", demoName);
         if (demoTicker) demoQs.set("ticker", demoTicker);
+        if (demoMessage) demoQs.set("message", demoMessage);
         return res.json({
           url: `${baseUrl}/gift/success?${demoQs.toString()}`,
           sessionId: `demo_${Date.now()}`,
