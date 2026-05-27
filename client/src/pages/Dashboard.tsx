@@ -3331,7 +3331,7 @@ export default function Dashboard() {
       // uses via shared/projection.ts.
       const monthsToReach = (target: number, monthly: number): number | null => {
         if (!target || target <= totalValue) return 0;
-        const monthlyRate = (0.07 - 0.001) / 12; // 7% gross minus 0.10% AUM fee
+        const monthlyRate = Math.pow(1 + (0.07 - 0.001), 1 / 12) - 1; // 7% net 0.10% AUM fee, effective monthly
         let balance = totalValue;
         for (let m = 1; m <= 120; m += 1) {
           balance = balance * (1 + monthlyRate) + monthly;
@@ -7124,7 +7124,11 @@ export default function Dashboard() {
                             if (canCustomize) {
                               setLocation("/settings?tab=money");
                             } else {
-                              setLocation("/upgrade");
+                              // "/upgrade" is not a registered route — it fell
+                              // through to the /:fund catch-all and 404'd as an
+                              // "outdated gift link." The canonical plan/upgrade
+                              // surface is the Account "Plan & billing" tab.
+                              setLocation("/account?tab=plan");
                             }
                           };
 
@@ -8022,12 +8026,14 @@ export default function Dashboard() {
                   // NOT extrapolate $25/month past age 18 — the parent loses
                   // contribution control at majority transfer on a UTMA.
                   const yearsLeft = (age18Transition?.daysUntil18 ?? 0) / 365.25;
-                  const r_m = (0.07 - KIDDO_AUM_FEE_RATE) / 12;
-                  const n = Math.max(0, yearsLeft * 12);
-                  const gf = Math.pow(1 + r_m, n);
                   const monthlyExample = 25;
-                  const annuityPart = r_m > 0 && n > 0 ? monthlyExample * (gf - 1) / r_m : 0;
-                  const projectedAddedValue = Math.max(0, annuityPart);
+                  // Canonical projection: value $25/mo adds over the contribution
+                  // window (fee netted, effective monthly) — same as every surface.
+                  const projectedAddedValue = projectFundValue({
+                    startingValue: 0,
+                    monthlyContribution: monthlyExample,
+                    yearsAhead: yearsLeft,
+                  });
                   // Possessive form — "Emma's" when name exists, otherwise the
                   // fund's pronoun setting (her / his / their). Was hardcoded
                   // "their"; now respects getPronouns.
@@ -9518,7 +9524,7 @@ export default function Dashboard() {
                                     ...recurringGifts.filter((rg) => String(rg.status || "").toLowerCase() === "active" && !!rg.stripeSubscriptionId),
                                   ]);
 
-                                  const r_m = 0.07 / 12;
+                                  const r_m = Math.pow(1 + (0.07 - KIDDO_AUM_FEE_RATE), 1 / 12) - 1; // net fee, effective monthly
                                   let monthsToGoal: number | null = null;
                                   if (M > 0.01) {
                                     // FV = T*(1+r)^n + M*((1+r)^n - 1)/r → solve for n
@@ -9965,20 +9971,13 @@ export default function Dashboard() {
                         // For at-majority itself, contribStopYears == years so
                         // phase 2 is a no-op and the math reduces to the
                         // original FV formula.
-                        const projectAt = (years: number, contribStopYears: number = years): number => {
-                          const r_m = 0.07 / 12;
-                          const stopYears = Math.max(0, Math.min(contribStopYears, years));
-                          const n_contrib = stopYears * 12;
-                          const n_postStop = Math.max(0, (years - stopYears) * 12);
-                          const gf_contrib = Math.pow(1 + r_m, n_contrib);
-                          const gf_postStop = Math.pow(1 + r_m, n_postStop);
-                          const compoundedBalance = totalValue * gf_contrib;
-                          const annuityPart = activeMonthlyContribution > 0
-                            ? activeMonthlyContribution * (gf_contrib - 1) / r_m
-                            : 0;
-                          const balanceAtStop = compoundedBalance + annuityPart;
-                          return balanceAtStop * gf_postStop;
-                        };
+                        const projectAt = (years: number, contribStopYears: number = years): number =>
+                          projectFundValue({
+                            startingValue: totalValue,
+                            monthlyContribution: activeMonthlyContribution,
+                            yearsAhead: years,
+                            contributionYears: contribStopYears,
+                          });
                         const projectedAtMajority = projectAt(yearsToMajority);
                         // Long-horizon view (an extra 12 years past majority) only shown when
                         // it adds contrast — skip when at-majority is already enormous or when
@@ -12648,10 +12647,9 @@ export default function Dashboard() {
                   // conservative (long-run S&P avg is ~10% nominal / ~7% real) and the
                   // disclaimer is non-negotiable: parents who later reconcile the projection
                   // against reality should never feel oversold. Honest losses, honest gains.
-                  const monthsTo18 = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 30.4375) : null;
-                  const r = 0.07 / 12;
-                  const fvOf = (m: number) => monthsTo18 && monthsTo18 > 0
-                    ? m * ((Math.pow(1 + r, monthsTo18) - 1) / r)
+                  const yearsTo18 = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 365.25) : null;
+                  const fvOf = (m: number) => yearsTo18 && yearsTo18 > 0
+                    ? projectFundValue({ startingValue: 0, monthlyContribution: m, yearsAhead: yearsTo18 })
                     : null;
                   const fv = fvOf(monthly);
                   const fmt0 = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n));
@@ -14031,10 +14029,9 @@ export default function Dashboard() {
               const cancelPeriodsPerYear = cancelFreq === "daily" ? 365 : cancelFreq === "weekly" ? 52 : cancelFreq === "yearly" ? 1 : 12;
               const cancelAnnualized = cancelAmt * cancelPeriodsPerYear;
               const cancelMonthly = cancelAmt * (cancelPeriodsPerYear / 12);
-              const cancelMonthsTo18 = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 30.4375) : null;
-              const cancelR = 0.07 / 12;
-              const cancelFv = cancelMonthsTo18 && cancelMonthsTo18 > 0
-                ? cancelMonthly * ((Math.pow(1 + cancelR, cancelMonthsTo18) - 1) / cancelR)
+              const cancelYearsTo18 = age18Transition?.daysUntil18 ? Math.max(0, age18Transition.daysUntil18 / 365.25) : null;
+              const cancelFv = cancelYearsTo18 && cancelYearsTo18 > 0
+                ? projectFundValue({ startingValue: 0, monthlyContribution: cancelMonthly, yearsAhead: cancelYearsTo18 })
                 : null;
               const cancelChildFirst = recipientFirstNameDisplay || "them";
               const cancelFmt0 = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(n));

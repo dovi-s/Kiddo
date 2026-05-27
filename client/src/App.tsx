@@ -166,6 +166,24 @@ function isPublicGiftRoute(path: string): boolean {
     "welcome-at-18",
     "give-a-gift",
     "your-story",
+    // 2026-05-26 sweep: a link audit found ten more registered top-level
+    // routes that had drifted out of this set, each firing a spurious
+    // /api/public/funds/<seg> 404 prefetch on every visit (same class as
+    // the /my-gifts miss). hideGlobalNav stays net-neutral for these —
+    // marketing pages keep hiding via isMarketingPage, /feedback/pmf +
+    // /founder-claim/ via their explicit clauses, and the auth/landing
+    // pages below get explicit hideGlobalNav entries in the same sweep.
+    "auth",
+    "reset-password",
+    "verify-email",
+    "confirm-email-change",
+    "cancel-email-change",
+    "founding-members",
+    "robux-vs-utma",
+    "trump-account-vs-utma",
+    "founder-claim",
+    "feedback",
+    "sponsor-success",
   ]);
 
   if (segments.length === 0) return false;
@@ -889,6 +907,17 @@ function App() {
     location.startsWith("/updates/share/") ||
     location.startsWith("/updates/unsubscribe/") ||
     (location.startsWith("/transition/") && !location.startsWith("/transition/fund/")) ||
+    // Auth + post-action landing pages. These previously hid the global
+    // nav only by accident — isPublicGiftRoute mis-classified them as
+    // gift pages (now fixed via the reserved-set sweep above). Listed
+    // explicitly here so the chrome-hiding is intentional, not a
+    // side-effect, and stays net-neutral after that fix. Added 2026-05-26.
+    location === "/reset-password" ||
+    location === "/verify-email" ||
+    location === "/confirm-email-change" ||
+    location === "/cancel-email-change" ||
+    location === "/sponsor-success" ||
+    location.startsWith("/auth/") ||
     isMarketingPage ||
     isPreview ||
     isGiftPage;
