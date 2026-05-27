@@ -187,6 +187,7 @@ import { friendlyHoldingName } from "@/lib/ticker-names";
 
 const DashboardTrendChart = lazy(() => import("@/components/DashboardTrendChart"));
 import type { DashboardTrendPoint } from "@/components/DashboardTrendChart";
+import { trendYDomain } from "@/lib/trend-domain";
 const HoldingDetailSheet = lazy(() =>
   import("@/components/HoldingDetailSheet").then((module) => ({ default: module.HoldingDetailSheet })),
 );
@@ -6492,15 +6493,20 @@ export default function Dashboard() {
                       // Fix: anchor to the rightmost trendData point AND
                       // mirror the chart's exact YAxis domain function.
                       const lastValue = trendData[trendData.length - 1].value;
-                      const dataMax = Math.max(...trendData.map((d) => d.value), 0.01);
-                      // Mirrors DashboardTrendChart's YAxis domain function
-                      // EXACTLY — copy/paste of the same math so the dot's
-                      // coordinate space and the chart's coordinate space
-                      // can never drift apart again.
-                      const pad = Math.max(Math.abs(dataMax) * 0.12, 1);
-                      const domainMax = dataMax + pad;
+                      const values = trendData.map((d) => d.value);
+                      const dataMax = Math.max(...values, 0.01);
+                      const dataMin = Math.min(...values);
+                      // Calls DashboardTrendChart's exact YAxis domain function
+                      // (shared module, not a copy) so the dot's coordinate
+                      // space and the chart's can never drift apart again. The
+                      // domain now auto-scales (non-zero floor on short
+                      // windows), so the dot's vertical position is the value's
+                      // fraction of the FULL domain span, not just value/max.
+                      const [domainMin, domainMax] = trendYDomain([dataMin, dataMax]);
+                      const denom = domainMax - domainMin;
+                      const frac = denom > 0 ? (lastValue - domainMin) / denom : 0.5;
                       const CHART_H = 180, PLOT_TOP = 8, PLOT_H = 180 - 8 - 22;
-                      const dotTopPct = ((PLOT_TOP + (1 - lastValue / domainMax) * PLOT_H) / CHART_H) * 100;
+                      const dotTopPct = ((PLOT_TOP + (1 - frac) * PLOT_H) / CHART_H) * 100;
                       return (
                         <div className="pointer-events-none" style={{ position: "absolute", right: 6, top: `${dotTopPct}%`, transform: "translate(50%, -50%)", width: 9, height: 9, zIndex: 10 }}>
                           <span className="absolute inset-0 animate-ping rounded-full" style={{ background: "hsl(43, 85%, 50%)", opacity: 0.55 }} />

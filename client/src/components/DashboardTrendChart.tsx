@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { trendYDomain } from "@/lib/trend-domain";
 
 export type DashboardTrendPoint = {
   label: string;
@@ -236,11 +237,10 @@ export default function DashboardTrendChart({
           <XAxis dataKey="label" tickLine={false} axisLine={false} minTickGap={28} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
           <YAxis
             hide
-            domain={([_dataMin, dataMax]: [number, number]) => {
-              if (!Number.isFinite(dataMax)) return [0, 1];
-              const pad = Math.max(Math.abs(dataMax) * 0.12, 1);
-              return [0, dataMax + pad];
-            }}
+            // Auto-scale per window so short, low-variance ranges (1W/1M/YTD)
+            // fill the chart instead of pinning flat at the top of a zero-based
+            // axis. Shared with the live-dot math so they can't drift.
+            domain={trendYDomain}
           />
           <ChartTooltip
             content={<HoverTooltip />}
@@ -249,6 +249,11 @@ export default function DashboardTrendChart({
           <Area
             type="monotone"
             dataKey="value"
+            // Fill from the window's low (not 0) so the gradient fades within
+            // the visible band on auto-scaled short windows instead of mapping
+            // its 5%→95% fade over an off-screen $0 baseline (which renders as
+            // a flat solid wash). For long windows dataMin ≈ 0, so unchanged.
+            baseValue="dataMin"
             stroke="hsl(143, 64%, 41%)"
             fill="url(#greenGradient)"
             strokeWidth={2.5}
