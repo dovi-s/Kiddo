@@ -997,215 +997,125 @@ async function generateHistoricalSnapshots(
   const monthlyEnd = new Date(today.getFullYear(), today.getMonth(), 0); // last day of PREVIOUS month
   monthlyEnd.setDate(1); // snap back to month-start for the loop check below
 
-  // Walk months. For each month: apply that month's return to the
-  // running balance, then add any gifts whose createdAt falls inside
-  // this month.
-  const path: Array<{ date: Date; total: number; basis: number }> = [];
-  let balance = 0;
-  let basis = 0;
-  let giftIdx = 0;
-  const cursor = new Date(startDate);
-  while (cursor.getTime() <= monthlyEnd.getTime()) {
-    const year = cursor.getFullYear();
-    const month = cursor.getMonth();
-    // 1. Market return on existing balance (skip the very first month
-    //    since balance is still zero — market math is a no-op then).
-    if (balance > 0) {
-      const r = monthKeyToReturn(year, month);
-      balance = balance * (1 + r);
-    }
-    // 2. Add any gifts that landed inside this month.
-    while (
-      giftIdx < sortedGifts.length &&
-      (() => {
-        const g = sortedGifts[giftIdx];
-        const gd = new Date(g.createdAt);
-        return gd.getFullYear() === year && gd.getMonth() === month;
-      })()
-    ) {
-      const g = sortedGifts[giftIdx];
-      balance += g.amount;
-      basis += g.amount;
-      giftIdx += 1;
-    }
-    // 3. Snapshot at month-end (last day of this month, noon UTC
-    //    so timezone shifts can't push it into the next calendar
-    //    day in either direction). Was previously local 23:59
-    //    which crossed UTC midnight on systems east of UTC and
-    //    landed snapshots a day forward.
-    const snapshotDate = new Date(Date.UTC(year, month + 1, 0, 12, 0, 0));
-    path.push({ date: snapshotDate, total: balance, basis });
-    // Step to next month.
-    cursor.setMonth(cursor.getMonth() + 1);
+  // Value model: ONE calendar-driven market index shared by every fund, with
+  // each contribution compounding from its own date. The market % over any
+  // period is then identical across kids (only the lifetime total differs,
+  // because older funds compounded longer). This replaces the old "scale a
+  // gift-inclusive monthly path" approach, which smeared mid-month gifts across
+  // the interpolation, baked phantom growth onto just-arrived gifts, and let
+  // the per-fund market drift apart (one fund could show a negative 30-day
+  // market while another showed positive over the SAME period). Now:
+  //   value(t) = scale x sum over gifts landed by t of [gift x M(t) / M(date)]
+  //   basis(t) = (cumulative contributions by t) x finalCostBasis / total gifts
+  // so value = stepped contributions + compounding market, a gift adds ~its
+  // face value on its date (no phantom growth), and the market arc is uniform.
+
+  // Cumulative monthly market index from the first gift's month to now (M = 1
+  // at the start). Calendar-keyed, so it's the SAME curve for every fund.
+  const startMonthIdx = startDate.getFullYear() * 12 + startDate.getMonth();
+  const nowMonthIdx = today.getFullYear() * 12 + today.getMonth();
+  const indexByMonth = new Map<number, number>();
+  indexByMonth.set(startMonthIdx, 1);
+  let marketAcc = 1;
+  for (let m = startMonthIdx + 1; m <= nowMonthIdx; m++) {
+    marketAcc *= 1 + monthKeyToReturn(Math.floor(m / 12), m % 12);
+    indexByMonth.set(m, marketAcc);
   }
-  // Absorb any gifts that arrive in the current (not-yet-complete)
-  // month so the daily-loop interpolation has the correct balance
-  // running into today. Same logic as the monthly-loop body, just
-  // applied once for the current month before we exit the monthly
-  // phase.
-  {
-    const curYear = today.getFullYear();
-    const curMonth = today.getMonth();
-    if (balance > 0) {
-      const r = monthKeyToReturn(curYear, curMonth);
-      // Apply only the partial-month portion of the current month's
-      // return, prorated by days-elapsed/days-in-month.
-      const dim = new Date(curYear, curMonth + 1, 0).getDate();
-      const prorate = today.getDate() / dim;
-      balance = balance * (1 + r * prorate);
-    }
-    while (
-      giftIdx < sortedGifts.length &&
-      (() => {
-        const g = sortedGifts[giftIdx];
-        const gd = new Date(g.createdAt);
-        return gd.getFullYear() === curYear && gd.getMonth() === curMonth;
-      })()
-    ) {
-      const g = sortedGifts[giftIdx];
-      balance += g.amount;
-      basis += g.amount;
-      giftIdx += 1;
-    }
-    // Push a final "today" anchor on the monthly path so the
-    // interpolator has a right edge to interpolate against. It's
-    // also what the daily loop will hard-anchor to.
-    path.push({ date: new Date(today), total: balance, basis });
-  }
-
-  // Scale so the final path value lands on the seeded balance. Real
-  // market shape stays — just the magnitude reconciles to what the
-  // dashboard hero shows.
-  const finalPathValue = path[path.length - 1]?.total ?? 0;
-  const scale = finalPathValue > 0 ? finalInvestedValue / finalPathValue : 1;
-  const basisScale = path[path.length - 1]?.basis ?? 0;
-  const basisScaleFactor = basisScale > 0 ? finalCostBasis / basisScale : 1;
-
-  // Apply the scale to the monthly path values.
-  const scaledMonthly = path.map((p) => ({
-    date: p.date,
-    total: p.total * scale,
-    basis: p.basis * basisScaleFactor,
-  }));
-
-  // Basis correctness pass. basisScaleFactor's denominator (the monthly path's
-  // final raw basis) can disagree with the true total of all gift amounts on
-  // active-recurring funds, letting the scaled basis overshoot finalCostBasis —
-  // but a cost-basis line must be monotonic and end exactly at total
-  // contributions. Recompute every anchor's basis as a clean step function of
-  // real gift dates, scaled by finalCostBasis / (true total gifts): monotonic,
-  // never overshoots, lands exactly on finalCostBasis. interpAt below derives
-  // gain = total − basis from these corrected anchors and steps basis the same
-  // way between them, so a gift produces a real step-up on its date.
-  const totalRawGifts = sortedGifts.reduce((s, g) => s + g.amount, 0);
-  const steppedBasisAt = (t: number): number => {
-    if (totalRawGifts <= 0) return 0;
-    let rawCum = 0;
-    for (const g of sortedGifts) {
-      if (new Date(g.createdAt).getTime() <= t) rawCum += g.amount;
-      else break; // sortedGifts is ascending
-    }
-    return (rawCum / totalRawGifts) * finalCostBasis;
+  // Market index at any date, prorated linearly within its month.
+  const marketIndexAt = (d: Date): number => {
+    const mIdx = d.getFullYear() * 12 + d.getMonth();
+    if (mIdx <= startMonthIdx) return 1;
+    const prev = indexByMonth.get(mIdx - 1) ?? marketAcc;
+    const cur = indexByMonth.get(mIdx) ?? marketAcc;
+    const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return prev + (cur - prev) * ((d.getDate() - 1) / dim);
   };
-  for (const m of scaledMonthly) m.basis = steppedBasisAt(m.date.getTime());
 
-  // Resolution policy — each toggle on the dashboard chart (1W / 1M /
-  // YTD / 1Y / 5Y / ALL) reads from the same fund_snapshots series and
-  // filters by date. Monthly-only data leaves 1W with 1 point and 1M
-  // with 1-2 points, rendering as a flat line. Fix: ship snapshots at
-  // variable resolution depending on how recent the window is.
-  //   ALL / 5Y      → monthly (handled above)
-  //   YTD / 1Y      → weekly within the last 12 months
-  //   1M / 1W       → daily within the last 30 days
-  //
-  // The finer-resolution series interpolates between adjacent monthly
-  // anchors plus a tiny deterministic daily wobble (no Math.random —
-  // the curve reproduces identically on every reset). Locked
-  // 2026-05-21 alongside the historical-snapshot landing.
-  const allSnapshots: Array<{ date: Date; total: number; basis: number }> = [...scaledMonthly];
+  // Pre-resolve each gift's amount + the market index at its date (ascending).
+  const giftCompounding = sortedGifts.map((g) => {
+    const gd = new Date(g.createdAt);
+    return { t: gd.getTime(), amount: g.amount, idxAtGift: Math.max(marketIndexAt(gd), 1e-9) };
+  });
+  const totalRawGifts = giftCompounding.reduce((s, g) => s + g.amount, 0);
 
-  if (scaledMonthly.length >= 2) {
+  // Raw compounded value: each gift grows by the market-index ratio from its
+  // date to t. Raw cumulative basis: sum of gift face amounts landed by t.
+  const rawValueAt = (t: number): number => {
+    const mNow = marketIndexAt(new Date(t));
+    let v = 0;
+    for (const g of giftCompounding) {
+      if (g.t <= t) v += g.amount * (mNow / g.idxAtGift);
+      else break;
+    }
+    return v;
+  };
+  const rawBasisAt = (t: number): number => {
+    let c = 0;
+    for (const g of giftCompounding) {
+      if (g.t <= t) c += g.amount;
+      else break;
+    }
+    return c;
+  };
+
+  // Scale so today lands exactly on the seeded balance (one multiplier, so the
+  // market shape is preserved); basis scales independently to finalCostBasis.
+  const rawNow = rawValueAt(today.getTime());
+  const valueScale = rawNow > 0 ? finalInvestedValue / rawNow : 1;
+  const basisFactor = totalRawGifts > 0 ? finalCostBasis / totalRawGifts : 1;
+
+  // One snapshot at any date. Deterministic daily wobble (no Math.random, so it
+  // reproduces on every reset) applied to the GAIN only, so contributions never
+  // wobble and value stays >= basis whenever the fund is genuinely up.
+  const snapshotAt = (d: Date): { date: Date; total: number; basis: number } => {
+    const t = d.getTime();
+    const basis = rawBasisAt(t) * basisFactor;
+    const gain = rawValueAt(t) * valueScale - basis;
+    const dayIdx = Math.floor(t / 86_400_000);
+    const wobble = 0.004 * Math.sin(dayIdx * 0.41) + 0.0025 * Math.cos(dayIdx * 1.13);
+    return { date: new Date(d), total: basis + gain * (1 + wobble), basis };
+  };
+
+  // Variable resolution so each chart toggle has enough points: monthly
+  // month-ends for ALL/5Y, weekly within the last year for YTD/1Y, daily within
+  // the last 30 days for 1M/1W (monthly-only would leave 1W/1M as 1-2 flat
+  // points). Every tier comes from the SAME snapshotAt model, so they join
+  // seamlessly. Today is hard-anchored to the seeded balance so the chart's
+  // right edge equals the hero number with zero drift.
+  const allSnapshots: Array<{ date: Date; total: number; basis: number }> = [];
+
+  // Monthly month-end anchors (noon UTC so a timezone shift can't move the day).
+  {
+    const cursor = new Date(startDate);
+    while (cursor.getTime() <= monthlyEnd.getTime()) {
+      allSnapshots.push(snapshotAt(new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth() + 1, 0, 12, 0, 0))));
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+  }
+
+  {
     const now = new Date();
     const oneYearAgo = new Date(now); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
     const thirtyDaysAgo = new Date(now); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Helper: interpolate the scaled monthly path to any date in
-    // between the existing month-end anchors. Returns linear-interp
-    // value plus a tiny sin-based daily wobble (~±0.4% intraday).
-    const interpAt = (when: Date): { total: number; basis: number } => {
-      const t = when.getTime();
-      let before = scaledMonthly[0];
-      let after = scaledMonthly[scaledMonthly.length - 1];
-      for (let i = 0; i < scaledMonthly.length - 1; i++) {
-        if (scaledMonthly[i].date.getTime() <= t && scaledMonthly[i + 1].date.getTime() >= t) {
-          before = scaledMonthly[i];
-          after = scaledMonthly[i + 1];
-          break;
-        }
-      }
-      const span = after.date.getTime() - before.date.getTime();
-      const ratio = span > 0 ? (t - before.date.getTime()) / span : 0;
-      // Basis is a STEP function of actual contribution dates, NOT a linear
-      // ramp. Linearly interpolating basis between monthly anchors smears each
-      // gift across the whole month — so a gift that landed 2 days ago barely
-      // moves the 30-day basis delta and the value line never steps up on the
-      // day money actually arrived ("got $250 in gifts but only grew $86").
-      // Compute the true cumulative (scaled) basis at `when`, then interpolate
-      // only the GAIN (market component) smoothly: value = stepped
-      // contributions + smooth market, so a gift produces a real step-up on
-      // its date and the 30-day delta reflects it.
-      // Basis steps on real gift dates (shared steppedBasisAt, same function
-      // that corrected the anchors above) — monotonic, never overshoots,
-      // consistent with the anchors at their dates.
-      const basis = steppedBasisAt(t);
-      const beforeGain = before.total - before.basis;
-      const afterGain = after.total - after.basis;
-      const gain = beforeGain + (afterGain - beforeGain) * ratio;
-      // Daily wobble: deterministic, modest, doesn't shift the long arc. Tied
-      // to day-of-epoch so the same date always gets the same wobble across
-      // resets. Applied to the gain (market) only — contributions don't wobble,
-      // and this keeps value ≥ basis whenever the fund is genuinely up.
-      const dayIdx = Math.floor(t / 86_400_000);
-      const wobble =
-        0.004 * Math.sin(dayIdx * 0.41) +
-        0.0025 * Math.cos(dayIdx * 1.13);
-      return {
-        total: basis + gain * (1 + wobble),
-        basis,
-      };
-    };
-
-    // Weekly snapshots: every 7 days from 1 year ago up to 30 days
-    // ago. Don't extend past 30-days-ago because the daily loop
-    // below covers that.
-    const weeklyEnd = new Date(thirtyDaysAgo);
+    // Weekly: 1 year ago up to 30 days ago (the daily loop covers the rest).
     const weeklyCursor = new Date(oneYearAgo);
-    while (weeklyCursor.getTime() < weeklyEnd.getTime()) {
-      const { total, basis } = interpAt(weeklyCursor);
-      allSnapshots.push({ date: new Date(weeklyCursor), total, basis });
+    while (weeklyCursor.getTime() < thirtyDaysAgo.getTime()) {
+      if (weeklyCursor.getTime() >= startDate.getTime()) allSnapshots.push(snapshotAt(weeklyCursor));
       weeklyCursor.setDate(weeklyCursor.getDate() + 7);
     }
 
-    // Daily snapshots: every day from 30 days ago through today.
-    // Today's snapshot reuses the final scaled-monthly value exactly
-    // (so the chart's right edge is identical to the hero number).
+    // Daily: 30 days ago through today; today hard-anchored to the hero balance.
     const dailyCursor = new Date(thirtyDaysAgo);
     while (dailyCursor.getTime() <= now.getTime()) {
-      // Today: hard-anchor to the final value so chart-right ===
-      // hero number with zero drift.
       const isToday =
         dailyCursor.getFullYear() === now.getFullYear() &&
         dailyCursor.getMonth() === now.getMonth() &&
         dailyCursor.getDate() === now.getDate();
       if (isToday) {
-        allSnapshots.push({
-          date: new Date(now),
-          total: finalInvestedValue,
-          basis: finalCostBasis,
-        });
-      } else {
-        const { total, basis } = interpAt(dailyCursor);
-        allSnapshots.push({ date: new Date(dailyCursor), total, basis });
+        allSnapshots.push({ date: new Date(now), total: finalInvestedValue, basis: finalCostBasis });
+      } else if (dailyCursor.getTime() >= startDate.getTime()) {
+        allSnapshots.push(snapshotAt(dailyCursor));
       }
       dailyCursor.setDate(dailyCursor.getDate() + 1);
     }
