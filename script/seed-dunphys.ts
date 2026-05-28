@@ -37,6 +37,7 @@ import {
   parentContributions,
   recurringGifts,
   fundSnapshots,
+  thankYous,
   type InsertGift,
   type InsertMemoryEntry,
 } from "../shared/schema";
@@ -704,6 +705,11 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   let recurringTotal = 0;
   let recurringLastDate: Date | null = null;
   let recurringMemoryStamped = false;
+  // Collect external gifts so a realistic subset can be seeded as ALREADY-SENT
+  // thank-yous after the loop (so the demo shows the "Thanked" state, not only
+  // the auto-backfilled "awaiting" drafts). Phil's recurring cycles are excluded
+  // — the Memory Book renders those as "from you", never thankable.
+  const externalGifts: Array<{ giftId: string; senderName: string; senderEmail: string; amount: number; createdAt: Date }> = [];
   for (const g of giftList) {
     const isRecurring = g.kind === "recurring";
     const giftAudioUrl = g.hasAudio ? gloriaAudioUrl : null;
@@ -808,6 +814,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
         : null,
       createdAt: new Date(g.createdAt),
     } as any);
+    externalGifts.push({ giftId: insertedGift.id, senderName: g.senderName, senderEmail: g.senderEmail, amount: g.amount, createdAt: new Date(g.createdAt) });
   }
 
   // Backfill the schedule's realized totals from the cycles just written —
@@ -825,6 +832,34 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   await db.update(funds)
     .set({ contributorCount: sendersSeen.size })
     .where(eq(funds.id, fund.id));
+
+  // Seed ALREADY-SENT thank-yous for the external gifts, so a prospect sees the
+  // "Thanked" state in the Memory Book (the auto-backfill GET only ever creates
+  // "awaiting" drafts). Rule: thank every external gift older than ~60 days —
+  // i.e., an engaged parent who's caught up except the most recent couple
+  // months. The freshest gifts (incl. the just-arrived one) stay awaiting, so
+  // the actionable "thank now" prompt + composer also show at the top of the
+  // book. Self-gifts (Phil's recurring) were never collected, so they're
+  // untouched and render as "from you". Pronoun-correct; mirrors the Memory
+  // Book's own warm template.
+  const nowMs = Date.now();
+  const thankMinAgeMs = 60 * 24 * 60 * 60 * 1000;
+  for (const eg of externalGifts) {
+    const age = nowMs - eg.createdAt.getTime();
+    if (age < thankMinAgeMs) continue; // recent gifts stay awaiting (actionable)
+    const first = eg.senderName.split(" ")[0];
+    const amt = eg.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const willRead = kid.pronoun === "she" ? "she's" : kid.pronoun === "he" ? "he's" : "they're";
+    await db.insert(thankYous).values({
+      fundId: fund.id,
+      giftId: eg.giftId,
+      senderName: eg.senderName,
+      senderEmail: eg.senderEmail || null,
+      message: `Dear ${first},\n\nThank you so much for your $${amt} gift to ${kid.firstName}'s fund. It means more than you know: not just the investment itself, but the fact that you showed up for ${kid.firstName}'s future.\n\n${kid.firstName} will read this when ${willRead} 18.\n\nWith love,\nPhil`,
+      status: "sent",
+      sentAt: new Date(eg.createdAt.getTime() + 3 * 24 * 60 * 60 * 1000),
+    } as any);
+  }
 
   // Phil's at-18 letter — appears in Haley's fund only (closest to majority).
   if (kid.firstName === "Haley") {
