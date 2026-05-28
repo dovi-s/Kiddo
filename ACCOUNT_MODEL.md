@@ -135,11 +135,18 @@ cost). So:
 
 - **No hard signup minimum, ever.** The loop requires open access — grandma's $25
   must always land.
-- **A holding-tank investment threshold (e.g. $50–$100):** below it, gifts
-  accumulate in **pooled cash** — NO custodial brokerage account opened, no
-  per-account cost, no investing, no AUM, no RIA exposure. The fund still *exists*
-  in-product, the loop runs, the Memory Book works. At threshold, open the real
-  custodial account, invest, AUM begins.
+- **Holding-tank investment threshold = $50** (provisional — easy to tune; chosen
+  low enough that a single decent gift crosses it, high enough to keep dust
+  accounts off the custodian's per-account meter). Below it, gifts accumulate in
+  **pooled cash** — NO custodial brokerage account opened, no per-account cost, no
+  investing, no AUM, no RIA exposure. The fund still *exists* in-product, the loop
+  runs, the Memory Book works. At threshold, open the real custodial account,
+  invest, AUM begins.
+- **The threshold applies to FREE funds only.** A **paid** fund (parent on Plus /
+  Family) opens its custodial account immediately regardless of balance — the
+  subscription already covers the per-account servicing cost, so there's no
+  no-value-account problem to gate against. The holding tank exists to protect
+  margin on *free* dust funds; paid funds have paid for the seat.
 
 This one decision solves four problems at once: no-value-account servicing cost,
 loop friction (zero), AUM-collection deferral, and per-account custodian cost.
