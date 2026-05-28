@@ -1133,10 +1133,9 @@ const STRATEGIES = [
     expectedMean: 0.07,
     expectedSigma: 0.16,
     allocations: [
-      { ticker: "VTI", name: "Total Market Stocks", weight: 50, color: "#4F46E5" },
-      { ticker: "VXUS", name: "International Stocks", weight: 25, color: "#0EA5E9" },
-      { ticker: "BND", name: "Bonds", weight: 15, color: "#10B981" },
-      { ticker: "VGT", name: "Tech Stocks", weight: 10, color: "#F59E0B" },
+      { ticker: "VTI", name: "Total Market Stocks", weight: 62, color: "#4F46E5" },
+      { ticker: "VXUS", name: "International Stocks", weight: 28, color: "#0EA5E9" },
+      { ticker: "BND", name: "Bonds", weight: 10, color: "#10B981" },
     ],
   },
   {
@@ -1149,10 +1148,9 @@ const STRATEGIES = [
     expectedMean: 0.06,
     expectedSigma: 0.12,
     allocations: [
-      { ticker: "VTI", name: "Total Market Stocks", weight: 35, color: "#4F46E5" },
-      { ticker: "VXUS", name: "International Stocks", weight: 15, color: "#0EA5E9" },
-      { ticker: "BND", name: "Bonds", weight: 35, color: "#10B981" },
-      { ticker: "VGT", name: "Tech Stocks", weight: 15, color: "#F59E0B" },
+      { ticker: "VTI", name: "Total Market Stocks", weight: 50, color: "#4F46E5" },
+      { ticker: "VXUS", name: "International Stocks", weight: 25, color: "#0EA5E9" },
+      { ticker: "BND", name: "Bonds", weight: 25, color: "#10B981" },
     ],
   },
   {
@@ -1165,10 +1163,9 @@ const STRATEGIES = [
     expectedMean: 0.05,
     expectedSigma: 0.09,
     allocations: [
-      { ticker: "VTI", name: "Total Market Stocks", weight: 30, color: "#4F46E5" },
+      { ticker: "VTI", name: "Total Market Stocks", weight: 42, color: "#4F46E5" },
       { ticker: "BND", name: "Bonds", weight: 40, color: "#10B981" },
-      { ticker: "VXUS", name: "International Stocks", weight: 20, color: "#0EA5E9" },
-      { ticker: "VGT", name: "Tech Stocks", weight: 10, color: "#F59E0B" },
+      { ticker: "VXUS", name: "International Stocks", weight: 18, color: "#0EA5E9" },
     ],
   },
   {
@@ -1289,10 +1286,11 @@ const CUSTOM_ALLOCATION_OPTIONS = [
 ] as const;
 
 const DEFAULT_CUSTOM_ALLOCATION_ROWS = [
-  { ticker: "VTI", weight: 50 },
-  { ticker: "VXUS", weight: 25 },
-  { ticker: "BND", weight: 15 },
-  { ticker: "VGT", weight: 10 },
+  // Broad market-cap starting point (no pre-selected sector tilt). The user
+  // edits this freely; VGT and other tickers remain available to add by choice.
+  { ticker: "VTI", weight: 62 },
+  { ticker: "VXUS", weight: 28 },
+  { ticker: "BND", weight: 10 },
 ];
 
 const MAX_CUSTOM_HOLDINGS = 10;

@@ -171,9 +171,10 @@ const KIDS = [
       { ticker: "AAPL",  shares: 12.45, costBasis: 2245.00, currentValue: 2503.20, name: "Apple" },
       { ticker: "GOOGL", shares: 8.32,  costBasis: 1387.00, currentValue: 1498.40, name: "Google" },
       { ticker: "DIS",   shares: 9.12,  costBasis: 821.00,  currentValue: 894.16,  name: "Disney" },
-      // Conservative managed mix — matches MANAGED_STRATEGY_ALLOCATIONS.conservative
-      // EXACTLY: VTI 35 / VXUS 15 / VGT 10 / BND 40 (60% equity — steadier, but
-      // still growing, because the fund compounds well past the handoff).
+      // Legacy conservative-mix holdings, built over years BEFORE the 2026-05-28
+      // self-directed pivot dropped the VGT tech sleeve. Existing positions stay
+      // (realistic for a long-lived fund); NEW managed investments now follow the
+      // VGT-free conservative target (VTI 42 / VXUS 18 / BND 40, ~60% equity).
       { ticker: "VTI",   shares: 9.82,  costBasis: 2535.00, currentValue: 2800.00, name: "US Total Market" },
       { ticker: "VXUS",  shares: 18.46, costBasis: 1085.00, currentValue: 1200.00, name: "International" },
       { ticker: "VGT",   shares: 1.39,  costBasis: 725.00,  currentValue: 800.00,  name: "Tech" },
@@ -198,8 +199,8 @@ const KIDS = [
       { ticker: "AAPL",  shares: 4.20,  costBasis: 770.00,  currentValue: 844.20, name: "Apple" },
       { ticker: "GOOGL", shares: 3.10,  costBasis: 520.00,  currentValue: 558.40, name: "Google" },
       { ticker: "DIS",   shares: 6.50,  costBasis: 585.00,  currentValue: 637.00, name: "Disney" },
-      // Balanced managed mix — matches MANAGED_STRATEGY_ALLOCATIONS.balanced
-      // EXACTLY: VTI 40 / VXUS 20 / VGT 15 / BND 25 (75% equity, growth-leaning).
+      // Legacy balanced-mix holdings (pre-2026-05-28 pivot, included a VGT sleeve).
+      // New managed investments follow the VGT-free target: VTI 50 / VXUS 25 / BND 25.
       { ticker: "VTI",   shares: 8.42,  costBasis: 2175.00, currentValue: 2400.00, name: "US Total Market" },
       { ticker: "VXUS",  shares: 18.46, costBasis: 1085.00, currentValue: 1200.00, name: "International" },
       { ticker: "VGT",   shares: 1.57,  costBasis: 815.00,  currentValue: 900.00,  name: "Tech" },
@@ -223,9 +224,9 @@ const KIDS = [
       { ticker: "GOOGL", shares: 1.50,  costBasis: 252.00,  currentValue: 270.30, name: "Google" },
       { ticker: "DIS",   shares: 4.20,  costBasis: 378.00,  currentValue: 411.60, name: "Disney" },
       { ticker: "RBLX",  shares: 8.50,  costBasis: 425.00,  currentValue: 467.50, name: "Roblox" },
-      // Growth managed mix — matches MANAGED_STRATEGY_ALLOCATIONS.growth EXACTLY:
-      // VTI 55 / VXUS 25 / VGT 10 / BND 10 (90% equity — the up-and-to-the-right
-      // default for a lifelong horizon).
+      // Legacy growth-mix holdings (pre-2026-05-28 pivot, included a VGT sleeve).
+      // New managed investments follow the VGT-free target: VTI 62 / VXUS 28 / BND 10
+      // (~90% equity, the up-and-to-the-right default for a lifelong horizon).
       { ticker: "VTI",   shares: 3.86,  costBasis: 995.00,  currentValue: 1100.00, name: "US Total Market" },
       { ticker: "VXUS",  shares: 7.69,  costBasis: 453.00,  currentValue: 500.00,  name: "International" },
       { ticker: "VGT",   shares: 0.35,  costBasis: 181.00,  currentValue: 200.00,  name: "Tech" },

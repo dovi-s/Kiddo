@@ -116,7 +116,17 @@ either):
 - **VGT tech sector tilt** in all three baskets (the lawyer brief's hardest-to-
   defend line; competitor's fiduciary deliberately avoided sector bets).
   **REMOVED** → pure broad market-cap weighting (VTI + VXUS), bond gradient
-  (10/25/40) preserved.
+  (10/25/40) preserved. **Correction (same day):** the first commit removed VGT
+  only from the client `Dashboard` *display* constant — the actual server
+  allocation engine (`webhookHandlers.ts` `DEFAULT_AUTO_STRATEGIES` +
+  `getAutoInvestBasket`, `routes.ts` `autoStrategies`), the parent-facing
+  `Settings` mixes, `Admin`, and the custom-mix default all still carried the
+  tilt, so the pivot was cosmetic until completed. Now harmonized across EVERY
+  default-allocation surface to one VGT-free set matching the documented 90/75/60%
+  equity gradient (growth VTI .62/VXUS .28/BND .10, balanced .50/.25/.25,
+  conservative .42/.18/.40). VGT stays available only as an explicit user CUSTOM
+  pick. (This also fixed a pre-existing display-vs-engine drift: the server had
+  drifted to BND .15/.35 vs the documented .10/.25.)
 
 Still DEFERRED to the lawyer / a dedicated product pass (not changed unilaterally —
 debatable + invasive, and not the safe-direction slam-dunk the above two were):

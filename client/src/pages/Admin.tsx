@@ -1064,7 +1064,7 @@ export default function Admin() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const allowed: Tab[] = ["overview", "growth", "funnels", "access-review", "users", "funds", "assets", "config", "gifters", "gifts", "transactions", "audit", "moderation", "ops", "loops", "integrations"];
+    const allowed: Tab[] = ["overview", "growth", "funnels", "access-review", "users", "funds", "assets", "config", "gifters", "gifts", "transactions", "audit", "moderation", "ops", "loops", "integrations", "deliverability"];
     if (allowed.includes(queryTab as Tab)) {
       setActiveTab(queryTab as Tab);
     }
@@ -1900,12 +1900,12 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
                 {
                   key: "activeGiftingFundsPct",
                   label: "Active %",
-                  render: (v) => `${Number(v || 0).toFixed(2)}%`,
+                  render: (row) => `${Number(row?.activeGiftingFundsPct || 0).toFixed(2)}%`,
                 },
                 {
                   key: "medianDaysToFirstContribution",
                   label: "Median to 1st",
-                  render: (v) => `${Number(v || 0).toFixed(2)}d`,
+                  render: (row) => `${Number(row?.medianDaysToFirstContribution || 0).toFixed(2)}d`,
                 },
               ]}
               data={northStarCohorts}
@@ -1922,7 +1922,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
                 {
                   key: "pctOfEligibleFunds",
                   label: "% of Eligible",
-                  render: (v) => `${Number(v || 0).toFixed(2)}%`,
+                  render: (row) => `${Number(row?.pctOfEligibleFunds || 0).toFixed(2)}%`,
                 },
               ]}
               data={northStarLadder}
@@ -3274,9 +3274,9 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     ADBE: { name: "Adobe", type: "Stock", source: "stock_pick", enabled: true },
   };
   const DEFAULT_AUTO_STRATEGIES: Record<string, any> = {
-    growth: { label: "Growth Mix", allocations: { VTI: 0.5, VXUS: 0.25, BND: 0.15, VGT: 0.1 } },
-    balanced: { label: "Balanced Mix", allocations: { VTI: 0.35, VXUS: 0.15, BND: 0.35, VGT: 0.15 } },
-    conservative: { label: "Conservative Mix", allocations: { VTI: 0.30, BND: 0.40, VXUS: 0.20, VGT: 0.10 } },
+    growth: { label: "Growth Mix", allocations: { VTI: 0.62, VXUS: 0.28, BND: 0.10 } },
+    balanced: { label: "Balanced Mix", allocations: { VTI: 0.50, VXUS: 0.25, BND: 0.25 } },
+    conservative: { label: "Conservative Mix", allocations: { VTI: 0.42, VXUS: 0.18, BND: 0.40 } },
   };
   const queryClient = useQueryClient();
   const { data, isLoading, isError, error } = useQuery<any>({
@@ -3389,7 +3389,7 @@ function ConfigTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
     if (autoStrategies[key]) return;
     setAutoStrategies((prev) => ({
       ...prev,
-      [key]: { label: key, allocations: { VTI: 0.5, VXUS: 0.25, BND: 0.15, VGT: 0.1 } },
+      [key]: { label: key, allocations: { VTI: 0.62, VXUS: 0.28, BND: 0.10 } },
     }));
     setNewStrategy("");
     setDirty(true);

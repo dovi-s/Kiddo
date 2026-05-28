@@ -30,19 +30,25 @@ export class WebhookHandlers {
   // parent's own UI; no need to alert them about their own gift).
   private static readonly LARGE_GIFT_ALERT_THRESHOLD = 500;
 
+  // SELF-DIRECTED PIVOT (2026-05-28, ACCOUNT_MODEL.md section 2b): the default
+  // managed mixes are pure broad market-cap (VTI + VXUS) + bonds, with NO active
+  // sector tilt. The VGT tech sleeve was removed (the hardest allocation line to
+  // defend as non-advice); VGT stays available only as an explicit user CUSTOM
+  // pick, never a Kiddo-chosen default. Weights match the documented 90/75/60%
+  // equity gradient used client-side (Dashboard/Settings) and in the Dunphy seed.
   private static readonly DEFAULT_AUTO_STRATEGIES: Record<string, { label: string; allocations: Record<string, number> }> = {
     growth: {
       label: 'Growth Mix',
-      allocations: { VTI: 0.50, VXUS: 0.25, BND: 0.15, VGT: 0.10 },
+      allocations: { VTI: 0.62, VXUS: 0.28, BND: 0.10 },
     },
     balanced: {
       label: 'Balanced Mix',
-      allocations: { VTI: 0.35, VXUS: 0.15, BND: 0.35, VGT: 0.15 },
+      allocations: { VTI: 0.50, VXUS: 0.25, BND: 0.25 },
     },
-    // For children approaching 18 — heavy bonds, capital preservation tilt.
+    // For children approaching majority: heavier bonds, capital-preservation tilt.
     conservative: {
       label: 'Conservative Mix',
-      allocations: { VTI: 0.30, BND: 0.40, VXUS: 0.20, VGT: 0.10 },
+      allocations: { VTI: 0.42, VXUS: 0.18, BND: 0.40 },
     },
   };
 
@@ -422,11 +428,11 @@ export class WebhookHandlers {
   }
 
   private static getAutoInvestBasket() {
+    // Broad market-cap default (no sector tilt) — see DEFAULT_AUTO_STRATEGIES.growth.
     return [
-      { ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', weight: 0.50 },
-      { ticker: 'VXUS', name: 'Vanguard Total International Stock ETF', weight: 0.25 },
-      { ticker: 'BND', name: 'Vanguard Total Bond Market ETF', weight: 0.15 },
-      { ticker: 'VGT', name: 'Vanguard Information Technology ETF', weight: 0.10 },
+      { ticker: 'VTI', name: 'Vanguard Total Stock Market ETF', weight: 0.62 },
+      { ticker: 'VXUS', name: 'Vanguard Total International Stock ETF', weight: 0.28 },
+      { ticker: 'BND', name: 'Vanguard Total Bond Market ETF', weight: 0.10 },
     ];
   }
 

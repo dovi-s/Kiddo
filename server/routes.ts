@@ -98,32 +98,31 @@ const DEFAULT_INVESTMENT_CONFIG: InvestmentConfig = {
       { ...row, enabled: true },
     ]),
   ),
+  // Self-directed pivot (2026-05-28): VGT tech tilt removed from the defaults;
+  // pure broad market-cap (VTI + VXUS) + bonds. VGT stays a custom-only option.
   autoStrategies: {
     growth: {
       label: "Growth Mix",
       allocations: {
-        VTI: 0.50,
-        VXUS: 0.25,
-        BND: 0.15,
-        VGT: 0.10,
+        VTI: 0.62,
+        VXUS: 0.28,
+        BND: 0.10,
       },
     },
     balanced: {
       label: "Balanced Mix",
       allocations: {
-        VTI: 0.35,
-        VXUS: 0.15,
-        BND: 0.35,
-        VGT: 0.15,
+        VTI: 0.50,
+        VXUS: 0.25,
+        BND: 0.25,
       },
     },
     conservative: {
       label: "Conservative Mix",
       allocations: {
-        VTI: 0.30,
+        VTI: 0.42,
+        VXUS: 0.18,
         BND: 0.40,
-        VXUS: 0.20,
-        VGT: 0.10,
       },
     },
   },
@@ -16864,15 +16863,22 @@ export async function registerRoutes(
           GROUP BY v.fund_id, v.ip_address
         ),
         completions AS (
-          SELECT fund_id, COUNT(*)::int AS completed
-          FROM analytics_events
-          WHERE event_name = 'gift_completed' AND ${windowSql}
-          GROUP BY fund_id
+          -- Gate to the (fund_id, ip) visit cohort the same way starts is,
+          -- so completed can never exceed started/visits (the old version
+          -- counted ALL gift_completed per fund, producing >100% funnels).
+          SELECT s.fund_id, s.ip_address, MIN(gc.occurred_at) AS at_complete
+          FROM starts s
+          JOIN analytics_events gc
+            ON gc.event_name = 'gift_completed'
+            AND gc.fund_id = s.fund_id
+            AND gc.ip_address = s.ip_address
+            AND gc.occurred_at >= s.at_start
+          GROUP BY s.fund_id, s.ip_address
         )
         SELECT
           (SELECT COUNT(*) FROM visits)::int           AS unique_visits,
           (SELECT COUNT(*) FROM starts)::int           AS gifts_started,
-          (SELECT COALESCE(SUM(completed), 0) FROM completions)::int AS gifts_completed,
+          (SELECT COUNT(*) FROM completions)::int      AS gifts_completed,
           (SELECT COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (at_start - at_visit))/60.0), 0)
              FROM visits v JOIN starts s ON s.fund_id = v.fund_id AND s.ip_address = v.ip_address) AS p50_minutes_visit_to_start
       `);
@@ -16987,7 +16993,12 @@ export async function registerRoutes(
   // $0 KYC-activated shells).
   app.get('/api/admin/k-factor', isAdmin, async (_req: any, res) => {
     try {
-      const PAID = sql`status IN ('processing','settled','completed')`;
+      // "Real" gift = money committed. Gifts move pending → processing →
+      // invested/settled; 'invested' is the terminal state for the bulk of
+      // settled gifts, so it MUST be included or the k-factor goes blind to
+      // almost all real data (the demo set is ~all 'invested'). 'completed'
+      // kept as a harmless legacy alias.
+      const PAID = sql`status IN ('processing','settled','completed','invested')`;
 
       // Reach: gift volume + how many distinct funds/gifters it touched.
       const reachResult = await db.execute(sql`
@@ -17010,7 +17021,7 @@ export async function registerRoutes(
         WITH paid AS (
           SELECT LOWER(TRIM(g.sender_email)) AS ge, f.user_id AS gifted_owner
           FROM gifts g JOIN funds f ON f.id = g.fund_id
-          WHERE g.status IN ('processing','settled','completed')
+          WHERE g.status IN ('processing','settled','completed','invested')
             AND g.sender_email IS NOT NULL AND TRIM(g.sender_email) <> ''
         ),
         gifters AS (SELECT DISTINCT ge FROM paid),
@@ -17049,7 +17060,7 @@ export async function registerRoutes(
         WITH g AS (
           SELECT LOWER(TRIM(gi.sender_email)) AS ge, f.user_id AS owner
           FROM gifts gi JOIN funds f ON f.id = gi.fund_id
-          WHERE gi.status IN ('processing','settled','completed')
+          WHERE gi.status IN ('processing','settled','completed','invested')
             AND gi.sender_email IS NOT NULL AND TRIM(gi.sender_email) <> ''
         )
         SELECT COUNT(*)::int AS multi_fund_gifters FROM (
@@ -17069,7 +17080,7 @@ export async function registerRoutes(
           COUNT(DISTINCT LOWER(TRIM(gi.sender_email)))::int AS gifters,
           COUNT(DISTINCT gi.fund_id)::int AS funds
         FROM gifts gi JOIN events e ON e.id = gi.event_id
-        WHERE gi.status IN ('processing','settled','completed')
+        WHERE gi.status IN ('processing','settled','completed','invested')
           AND gi.sender_email IS NOT NULL AND TRIM(gi.sender_email) <> ''
         GROUP BY e.event_type
         ORDER BY gifters DESC

@@ -116,7 +116,7 @@ export const funds = pgTable("funds", {
   // Moved 2026-05-15 from a .gitignore'd .local/fund-strategy-overrides.json
   // file to this column. The file storage worked in dev but was wiped on
   // every container deploy in production, silently reverting parents'
-  // Custom mixes to the default {VTI 50%, VXUS 25%, BND 15%, VGT 10%} —
+  // Custom mixes to the default {VTI 62%, VXUS 28%, BND 10%} —
   // worst-case fund-execution bug. See migration 0020 + commit log.
   customAllocations: jsonb("custom_allocations"),
   isDiscoverable: boolean("is_discoverable").notNull().default(false),
