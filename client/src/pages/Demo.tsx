@@ -38,7 +38,7 @@ const ACCOUNTS: DemoAccount[] = [
     email: "phil@dunphyfamily.com",
     display: "Phil Dunphy",
     role: "parent",
-    oneLiner: "Parent dashboard, three kids' funds, Family-tier features unlocked. Start here.",
+    oneLiner: "Parent dashboard, Family tier. Three kids across the whole arc: Luke growing up, Alex weeks from the handoff, Haley already graduated to her own account. Start here.",
   },
   {
     email: "claire@dunphyfamily.com",
@@ -216,7 +216,7 @@ export default function Demo() {
           <section className="mx-auto mt-10 grid max-w-4xl gap-4">
             <h2 className="font-heading text-lg font-semibold text-foreground">Or start with Phil</h2>
             <p className="text-sm text-muted-foreground">
-              Three kids, three funds, Family-tier plan. The parent-side experience top to bottom.
+              Three kids at three life stages: Luke growing up and getting gifts, Alex weeks from taking ownership, Haley already graduated to her own adult account. The whole journey in one family.
             </p>
             {ACCOUNTS.filter((a) => a.role === "parent").map((account) => (
               <button
