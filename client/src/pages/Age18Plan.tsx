@@ -42,7 +42,7 @@ function buildChecklist(majorityAge: number) {
     {
       id: "investment-strategy",
       label: "Review the investment strategy",
-      detail: `Shift to a more conservative allocation as ${majorityAge} approaches. Less growth, more stability. Protect what was built.`,
+      detail: `You can review and adjust the mix anytime in Settings. Some families choose a steadier allocation as ${majorityAge} nears; whether to is entirely your call.`,
     },
     {
       id: "estate-docs",
@@ -1186,13 +1186,13 @@ export default function Age18Plan() {
             <li className="flex gap-2">
               <span className="text-foreground/40 shrink-0" aria-hidden>·</span>
               <p>
-                <span className="font-semibold text-foreground">Your Plus subscription for this fund ends.</span> Kiddo+ exists for parents managing custody. Once {childName} owns the fund, the subscription retires. {childName} does not pay it.
+                <span className="font-semibold text-foreground">Your Plus subscription for this fund ends.</span> Kiddo+ is for parents managing custody, so it retires once {childName} owns the fund. {childName} never inherits a bill. If {childName} later wants to actively manage it (auto-invest, recurring, or start a fund for a child of their own), Plus is there by choice, never forced.
               </p>
             </li>
             <li className="flex gap-2">
               <span className="text-foreground/40 shrink-0" aria-hidden>·</span>
               <p>
-                <span className="font-semibold text-foreground">Pricing simplifies to the 0.10% AUM line.</span> About 10 cents per $100 invested per year. That is the only ongoing charge after the handoff.
+                <span className="font-semibold text-foreground">Pricing simplifies to the 0.10% AUM line.</span> About 10 cents per $100 invested per year. By default it is the only ongoing charge after the handoff.
               </p>
             </li>
           </ul>
