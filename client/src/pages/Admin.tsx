@@ -2925,6 +2925,8 @@ function KFactorCard() {
   const k = data.kFactor || {};
   const reach = data.reach || {};
   const conv = data.conversion || {};
+  const gifter = data.gifterDriven || {};
+  const occasions = Array.isArray(data.byOccasion) ? data.byOccasion : [];
   const strict = Number(k.strict ?? 0);
   const broad = Number(k.broad ?? 0);
   const strong = strict >= 1;
@@ -2950,6 +2952,31 @@ function KFactorCard() {
           <KStat label="Gifter→funded parent" value={`${Number(conv.strictConversionPct ?? 0).toFixed(1)}%`} />
           <KStat label="Distinct gifters" value={fmtNum(Number(reach.distinctGifters ?? 0))} />
         </div>
+
+        <div className="mt-4 border-t border-border/50 pt-4">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Gifter-driven acquisition (the unpaid salesforce)</div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 text-xs">
+            <KStat label="Gifter-acquired parents" value={fmtNum(Number(gifter.acquiredParents ?? 0))} />
+            <KStat label="…that funded (full loop)" value={fmtNum(Number(gifter.acquiredParentsFunded ?? 0))} />
+            <KStat label="Multi-family gifters" value={fmtNum(Number(gifter.multiFundGifters ?? 0))} />
+          </div>
+        </div>
+
+        {occasions.length > 0 ? (
+          <div className="mt-4 border-t border-border/50 pt-4">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-2">Which occasions spin the loop (gifters per fund)</div>
+            <div className="space-y-1">
+              {occasions.map((o: any, i: number) => (
+                <div key={i} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="font-medium capitalize">{String(o.occasion || "unspecified").replace(/_/g, " ")}</span>
+                  <span className="font-mono text-muted-foreground">
+                    {Number(o.giftersPerFund ?? 0).toFixed(2)} gifters/fund · {fmtNum(Number(o.gifters ?? 0))} gifters · {fmtNum(Number(o.funds ?? 0))} funds
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

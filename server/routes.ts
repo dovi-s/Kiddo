@@ -17010,7 +17010,7 @@ export async function registerRoutes(
         WITH paid AS (
           SELECT LOWER(TRIM(g.sender_email)) AS ge, f.user_id AS gifted_owner
           FROM gifts g JOIN funds f ON f.id = g.fund_id
-          WHERE ${PAID}
+          WHERE g.status IN ('processing','settled','completed')
             AND g.sender_email IS NOT NULL AND TRIM(g.sender_email) <> ''
         ),
         gifters AS (SELECT DISTINCT ge FROM paid),
@@ -17032,8 +17032,54 @@ export async function registerRoutes(
           (SELECT COUNT(*) FROM gave_other x JOIN owned o ON o.ge = x.ge WHERE o.has_funded)::int AS strict_loop_funded
       `);
 
+      // Gifter-pushing: the gifter as an unpaid, trusted salesforce.
+      // (a) Gifter-ACQUIRED PARENTS — a /give-a-gift intent that nudged a parent
+      //     into CREATING a fund (status 'paired'), and stronger, into a FUNDED
+      //     gift (status 'completed'). The gifter did the parent acquisition.
+      // (b) MULTI-FUND GIFTERS — one gifter email giving across funds owned by
+      //     >1 different parent (the multi-grandkid / cross-family multiplier).
+      const gifterDrivenResult = await db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE status IN ('paired','completed'))::int AS acquired_parents,
+          COUNT(*) FILTER (WHERE status = 'completed')::int            AS acquired_parents_funded,
+          COUNT(*)::int                                                 AS total_intents
+        FROM gift_intents
+      `);
+      const multiFundResult = await db.execute(sql`
+        WITH g AS (
+          SELECT LOWER(TRIM(gi.sender_email)) AS ge, f.user_id AS owner
+          FROM gifts gi JOIN funds f ON f.id = gi.fund_id
+          WHERE gi.status IN ('processing','settled','completed')
+            AND gi.sender_email IS NOT NULL AND TRIM(gi.sender_email) <> ''
+        )
+        SELECT COUNT(*)::int AS multi_fund_gifters FROM (
+          SELECT ge FROM g GROUP BY ge HAVING COUNT(DISTINCT owner) > 1
+        ) s
+      `);
+
+      // Which occasions actually spin the loop — gifts + distinct gifters per
+      // occasion type (the "occasions spike gifters-per-fund" signal; a bar
+      // mitzvah floods one fund with peer-parent gifters). Covers gifts attached
+      // to an occasion (event_id set); direct fund-URL gifts carry no event_id
+      // and aren't occasion-attributable, so they're excluded here.
+      const occasionResult = await db.execute(sql`
+        SELECT
+          e.event_type AS occasion,
+          COUNT(*)::int AS gifts,
+          COUNT(DISTINCT LOWER(TRIM(gi.sender_email)))::int AS gifters,
+          COUNT(DISTINCT gi.fund_id)::int AS funds
+        FROM gifts gi JOIN events e ON e.id = gi.event_id
+        WHERE gi.status IN ('processing','settled','completed')
+          AND gi.sender_email IS NOT NULL AND TRIM(gi.sender_email) <> ''
+        GROUP BY e.event_type
+        ORDER BY gifters DESC
+        LIMIT 8
+      `);
+
       const reach: any = (reachResult.rows || [])[0] || {};
       const conv: any = (convResult.rows || [])[0] || {};
+      const gd: any = (gifterDrivenResult.rows || [])[0] || {};
+      const mf: any = (multiFundResult.rows || [])[0] || {};
       const n = (v: any) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
       const ratio = (num: number, den: number) => den > 0 ? Math.round((num / den) * 1000) / 1000 : 0;
       const rate = (num: number, den: number) => den > 0 ? Math.round((num / den) * 1000) / 10 : 0;
@@ -17077,6 +17123,19 @@ export async function registerRoutes(
             ? "≥1: self-sustaining (each fund spawns ≥1 new funded fund via the loop)"
             : "<1: loop does not yet compound — acquisition still needs an outside push",
         },
+        gifterDriven: {
+          acquiredParents: n(gd.acquired_parents),              // intents that nudged a parent to CREATE a fund
+          acquiredParentsFunded: n(gd.acquired_parents_funded), // ...and complete the gift (full loop)
+          totalIntents: n(gd.total_intents),
+          multiFundGifters: n(mf.multi_fund_gifters),           // one gifter, gifts across >1 family
+        },
+        byOccasion: (occasionResult.rows || []).map((r: any) => ({
+          occasion: String(r.occasion || "unspecified"),
+          gifts: n(r.gifts),
+          gifters: n(r.gifters),
+          funds: n(r.funds),
+          giftersPerFund: ratio(n(r.gifters), n(r.funds)),
+        })),
         caveats: [
           "Pre-launch volumes are tiny; treat as directional, not precise.",
           "Business-state can't strictly order 'gift before own fund'; broad conversion is generous. The fund_created event props (gaveToOthersFundBefore) in /api/admin/funnels order it correctly within a window.",
