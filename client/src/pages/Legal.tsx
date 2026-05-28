@@ -80,7 +80,7 @@ export default function Legal() {
               <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
                 <div>
                   <h3 className="font-medium text-foreground mb-2">1. What Kiddo Is</h3>
-                  <p>Kiddo is a technology platform that makes it easy to give stock investments as gifts. We are not a broker-dealer, investment adviser, or bank. When investing is live, brokerage and custody are handled by our broker-dealer partner, DriveWealth, LLC (a FINRA-registered broker-dealer and SIPC member), not by Kiddo.</p>
+                  <p>Kiddo is a technology platform that makes it easy to give stock investments as gifts. We are not a broker-dealer, investment adviser, or bank. When investing is live, brokerage and custody are handled by our broker-dealer partner (a FINRA-registered broker-dealer and SIPC member), not by Kiddo.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">2. Account Eligibility</h3>
@@ -104,7 +104,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">7. Account Closure</h3>
-                  <p>You may close your account at any time. Outstanding investments must be liquidated to cash before account closure, and cash is sent to your linked bank account via ACH. For brokerage-to-brokerage transfers of in-kind positions, please contact support; this may require direct coordination with DriveWealth (our broker-dealer custodian) and can take several weeks.</p>
+                  <p>You may close your account at any time. Outstanding investments must be liquidated to cash before account closure, and cash is sent to your linked bank account via ACH. For brokerage-to-brokerage transfers of in-kind positions, please contact support; this may require direct coordination with our broker-dealer partner and can take several weeks.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">8. Changes to Terms</h3>
@@ -130,11 +130,11 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Who We Share With</h3>
-                  <p>We share information with DriveWealth, LLC to open and manage brokerage accounts, Stripe to process payments, and other service providers that help us run the product. These may include identity-verification and KYC vendors, transactional email providers, analytics providers, cloud hosting or storage vendors, messaging providers, and customer support tools when those services are enabled. We do not sell or rent your personal information to third parties for their own marketing.</p>
+                  <p>We share information with our brokerage custodian to open and manage brokerage accounts, Stripe to process payments, and other service providers that help us run the product. These may include identity-verification and KYC vendors, transactional email providers, analytics providers, cloud hosting or storage vendors, messaging providers, and customer support tools when those services are enabled. We do not sell or rent your personal information to third parties for their own marketing.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Service Providers and Processors</h3>
-                  <p>Depending on which features are enabled, Kiddo may use processors or sub-processors for brokerage custody, payment processing, identity verification, bank linking, transactional email, analytics, messaging, push notifications, support, or storage. Our current stack prominently includes DriveWealth for custody and Stripe for payments. If we enable services such as Plaid, Postmark, SendGrid, Klaviyo, Mixpanel, Google Analytics, Firebase Cloud Messaging, Twilio, or Intercom, those providers will process limited data only for the services they support.</p>
+                  <p>Depending on which features are enabled, Kiddo may use processors or sub-processors for brokerage custody, payment processing, identity verification, bank linking, transactional email, analytics, messaging, push notifications, support, or storage. Our current stack prominently includes our brokerage custodian for custody and Stripe for payments. If we enable services such as Plaid, Postmark, SendGrid, Klaviyo, Mixpanel, Google Analytics, Firebase Cloud Messaging, Twilio, or Intercom, those providers will process limited data only for the services they support.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Children's Privacy</h3>
@@ -172,7 +172,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Brokerage Services</h3>
-                  <p>Securities are offered through our broker-dealer partner, DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. Once your investing account is open, clearing and custody are handled by DriveWealth. Kiddo provides the user experience and does not execute trades or hold customer assets.</p>
+                  <p>Securities are offered through our broker-dealer partner, a FINRA-registered broker-dealer and SIPC member. Once your investing account is open, clearing and custody are handled by our broker-dealer partner. Kiddo provides the user experience and does not execute trades or hold customer assets.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">SIPC Coverage</h3>
@@ -192,7 +192,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Regulatory Information</h3>
-                  <p>Check the background of DriveWealth, LLC on <a href="https://brokercheck.finra.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">FINRA's BrokerCheck</a>.</p>
+                  <p>Check the background of our broker-dealer partner on <a href="https://brokercheck.finra.org" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">FINRA's BrokerCheck</a>.</p>
                 </div>
               </div>
             </div>

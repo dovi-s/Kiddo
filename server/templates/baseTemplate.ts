@@ -159,7 +159,7 @@ export function renderKiddoEmail(input: KiddoEmailInput): { html: string } {
         <!-- Footer -->
         <tr><td style="text-align: center; padding: 24px 16px 8px 16px; font-family: ${FONT_STACK}; font-size: 11px; line-height: 1.6; color: rgba(26,23,16,0.4);">
           Kiddo, Inc. is a technology company, not a broker-dealer.
-          When investing is live, securities are offered through DriveWealth, LLC (member FINRA/SIPC).<br/>
+          When investing is live, securities are offered through our broker-dealer partner (Member FINRA/SIPC).<br/>
           <a href="mailto:${esc(supportEmail)}" style="color: rgba(26,23,16,0.45); text-decoration: underline;">${esc(supportEmail)}</a>
           &nbsp;·&nbsp;
           <a href="${esc(baseUrl)}/legal" style="color: rgba(26,23,16,0.45); text-decoration: underline;">Legal &amp; disclosures</a>

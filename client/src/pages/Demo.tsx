@@ -286,7 +286,7 @@ export default function Demo() {
                 Everything you see is illustrative. Dollar amounts, gifts, and holdings are seeded; no real money moved.
               </li>
               <li className="list-disc">
-                Try the full flow. Sending a gift, setting up recurring investments, exploring the Memory Book all work, but no card is charged and no DriveWealth order fires.
+                Try the full flow. Sending a gift, setting up recurring investments, exploring the Memory Book all work, but no card is charged and no brokerage order fires.
               </li>
               <li className="list-disc">
                 Demo state resets periodically. If something looks different from what you expected, that's why.

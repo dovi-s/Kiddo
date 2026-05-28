@@ -104,7 +104,7 @@ export default function UtmaByState() {
               <div>
                 <p className="font-heading text-lg font-bold text-foreground">Real brokerage. Real protection.</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  When investing is live, Kiddo funds are held at DriveWealth, LLC, a FINRA-registered broker-dealer. Eligible accounts are then SIPC-protected up to $500,000 against broker-dealer failure, not market loss. Investments may lose value. Not FDIC insured.
+                  When investing is live, Kiddo funds are held by our broker-dealer partner (Member FINRA/SIPC). Eligible accounts are then SIPC-protected up to $500,000 against broker-dealer failure, not market loss. Investments may lose value. Not FDIC insured.
                 </p>
               </div>
             </div>

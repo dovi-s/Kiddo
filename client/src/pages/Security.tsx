@@ -8,7 +8,7 @@ import { usePageSeo } from "@/lib/seo";
 export default function Security() {
   usePageSeo({
     title: "Kiddo Security | Your child's money is protected.",
-    description: "When investing is live, investments are held by DriveWealth, a FINRA-registered broker-dealer with SIPC coverage. Here is exactly how Kiddo protects your child's investments.",
+    description: "When investing is live, investments are held by our broker-dealer partner, a FINRA-registered broker-dealer with SIPC coverage. Here is exactly how Kiddo protects your child's investments.",
     ogType: "article",
   });
 
@@ -34,12 +34,12 @@ export default function Security() {
             {
               icon: Wallet,
               title: "We never hold your child&apos;s money. A regulated broker-custodian does.",
-              body: "Kiddo is the experience. Our broker-custodian partner, DriveWealth, LLC, holds the investments once your account is open.",
+              body: "Kiddo is the experience. Our broker-custodian partner holds the investments once your account is open.",
             },
             {
               icon: Shield,
               title: "What protects your child&apos;s fund",
-              body: "Once investing is live, SIPC coverage and FINRA oversight through DriveWealth, plus encrypted data handling and private fund links, sit underneath the product experience.",
+              body: "Once investing is live, SIPC coverage and FINRA oversight through our broker-dealer partner, plus encrypted data handling and private fund links, sit underneath the product experience.",
             },
             {
               icon: Lock,
@@ -75,7 +75,7 @@ export default function Security() {
 
             <h3 className="mt-10 font-heading text-2xl font-semibold text-foreground">Who regulates what</h3>
             <p className="mt-4 text-base leading-8 text-muted-foreground">
-              Kiddo is the technology layer, not a broker-dealer, investment adviser, or bank. DriveWealth, LLC is our broker-dealer and custodian partner. Stripe handles payment processing. Each layer has a distinct job.
+              Kiddo is the technology layer, not a broker-dealer, investment adviser, or bank. Our broker-dealer partner handles brokerage and custody. Stripe handles payment processing. Each layer has a distinct job.
             </p>
 
             {/* Canonical DriveWealth + SIPC disclosure. Same shape as
@@ -87,10 +87,10 @@ export default function Security() {
                 2026-05-23 overclaim audit. */}
             <div className="mt-6 rounded-2xl border border-border bg-muted/30 p-5 text-sm leading-7 text-muted-foreground">
               <p>
-                When investing is live, Kiddo funds are held at DriveWealth, LLC, a FINRA-registered broker-dealer and member of SIPC. Eligible accounts are then SIPC-protected up to $500,000 against brokerage failure. SIPC does not protect against market losses. Investments may lose value. Not FDIC insured, not bank guaranteed.
+                When investing is live, Kiddo funds are held by our broker-dealer partner (Member FINRA/SIPC). Eligible accounts are then SIPC-protected up to $500,000 against brokerage failure. SIPC does not protect against market losses. Investments may lose value. Not FDIC insured, not bank guaranteed.
               </p>
               <p className="mt-3">
-                Check the background of DriveWealth, LLC on{" "}
+                Check the background of our broker-dealer partner on{" "}
                 <a
                   href="https://brokercheck.finra.org"
                   target="_blank"

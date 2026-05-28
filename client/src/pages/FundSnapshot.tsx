@@ -599,7 +599,7 @@ export default function FundSnapshot() {
         <div className="snapshot-disclosure">
           <p className="snapshot-disclosure-title">{displayName}'s fund is invested in real markets.</p>
           <p className="snapshot-disclosure-body">
-            Once investing is live, every gift is invested in publicly-traded stocks at <strong>DriveWealth, LLC</strong>, member FINRA / SIPC.
+            Once investing is live, every gift is invested in publicly-traded stocks through <strong>our broker-dealer partner</strong>, Member FINRA / SIPC.
             {stateName && (
               <>
                 {" "}This is a Uniform Transfers to Minors Act (UTMA) custodial account registered in <strong>{stateName}</strong>.

@@ -142,7 +142,7 @@ export function TrustMicroStrip() {
           SIPC up to $500,000
         </span>
         <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
-        <span>DriveWealth, LLC · Member FINRA/SIPC</span>
+        <span>Our broker-dealer partner · Member FINRA/SIPC</span>
         <span className="h-1 w-1 rounded-full bg-muted-foreground/40" />
         <span>No hidden charges. Ever.</span>
       </div>

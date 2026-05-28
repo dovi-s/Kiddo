@@ -221,7 +221,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/security") {
     return {
       title: "Kiddo Security | Your child's money is protected.",
-      description: "When investing is live, investments are held by DriveWealth, a FINRA-registered broker-dealer with SIPC coverage. Here is exactly how Kiddo protects your child's investments.",
+      description: "When investing is live, investments are held by our broker-dealer partner, a FINRA-registered broker-dealer with SIPC coverage. Here is exactly how Kiddo protects your child's investments.",
       robots: "index, follow",
       ogType: "article",
     };
@@ -337,7 +337,7 @@ function getSeoForPath(path: string): SeoConfig {
     };
   }
   if (pathname.startsWith("/memory/")) return { ...genericPrivate, title: "Memory Book | Kiddo", description: "View your fund's shared memories and notes." };
-  if (pathname === "/tax-documents") return { ...genericPrivate, title: "Tax Documents | Kiddo", description: "Cost basis, unrealized gains, and the tax forms DriveWealth issues for your funds." };
+  if (pathname === "/tax-documents") return { ...genericPrivate, title: "Tax Documents | Kiddo", description: "Cost basis, unrealized gains, and the tax forms our broker-dealer partner issues for your funds." };
   if (pathname.startsWith("/fund/") && pathname.endsWith("/snapshot")) return { ...genericPrivate, title: "Fund snapshot | Kiddo", description: "Print-ready summary of your child's investment fund." };
   if (pathname === "/age-18-plan") return { ...genericPrivate, title: "At-18 Plan | Kiddo", description: "The handoff checklist for when your child turns 18." };
   // Default tab title before KidView page-level effect personalizes it to

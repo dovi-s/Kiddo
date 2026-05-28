@@ -121,7 +121,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     comparisonRows: [
       { label: "Status", competitor: "Acquired by Acorns; brand retired", kora: "Active and growing" },
       { label: "Monthly fee", competitor: "$3/mo per child (legacy)", kora: "Free to start. Kiddo+ is $3.99/mo or $29/yr." },
-      { label: "UTMA investment account", competitor: "Yes", kora: "Yes, via DriveWealth" },
+      { label: "UTMA investment account", competitor: "Yes", kora: "Yes, via our broker-dealer partner" },
       { label: "Gifting link for family", competitor: "Yes", kora: "Yes" },
       { label: "No account needed to give", competitor: "Yes", kora: "Yes" },
       { label: "Occasion pages", competitor: "Basic", kora: "Custom, with QR codes" },
@@ -189,7 +189,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       { label: "Memory Book", competitor: "No", kora: "Yes" },
       { label: "Auto round-up investing", competitor: "Yes", kora: "No" },
       { label: "Broader financial ecosystem", competitor: "Yes", kora: "No" },
-      { label: "UTMA custodial account", competitor: "Yes", kora: "Yes, via DriveWealth" },
+      { label: "UTMA custodial account", competitor: "Yes", kora: "Yes, via our broker-dealer partner" },
     ],
     sections: [
       {
@@ -454,7 +454,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       { label: "Sealed letter for the 18th birthday", competitor: "None", kora: "Yes. Text plus voice plus photo plus video, opened only at 18." },
       { label: "Age-18 handoff guidance", competitor: "Statutory only. Account flips to the kid; you figure out the rest.", kora: "Five-stage parent ramp from age 13 through 18, FAQ, checklist, projection, transition worker." },
       { label: "Kid-facing view", competitor: "None", kora: "Kid View on every plan. Age-aware copy from 5 to 17. Family covers every child." },
-      { label: "Brokerage", competitor: "Fidelity", kora: "DriveWealth (SIPC at launch)" },
+      { label: "Brokerage", competitor: "Fidelity", kora: "Our broker-dealer partner (SIPC at launch)" },
     ],
     sections: [
       {
@@ -499,7 +499,7 @@ const hubSnapshotRows: HubSnapshotRow[] = [
 const fullComparisonRows: FullComparisonRow[] = [
   {
     feature: "Account type",
-    kiddo: "UTMA custodial (via DriveWealth)",
+    kiddo: "UTMA custodial (via our broker-dealer partner)",
     earlybird: "UTMA custodial, shut down June 2025",
     acornsEarly: "UTMA custodial (via Acorns)",
     greenlight: "Debit card + savings",

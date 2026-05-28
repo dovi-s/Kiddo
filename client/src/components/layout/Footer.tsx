@@ -85,7 +85,7 @@ export function Footer() {
 
         <div className="mt-10 border-t border-border/50 pt-6 text-center">
           <p className="mx-auto max-w-3xl text-xs leading-relaxed text-muted-foreground">
-            When investing is live, investments are held by DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member — not by Kiddo. Investing involves risk, including possible loss of principal. Investments are not FDIC insured, not bank guaranteed, and may lose value. Past performance is not indicative of future results.
+            When investing is live, investments are held by our broker-dealer partner (Member FINRA/SIPC), not by Kiddo. Investing involves risk, including possible loss of principal. Investments are not FDIC insured, not bank guaranteed, and may lose value. Past performance is not indicative of future results.
           </p>
           {/* Simulated-content disclosure — FINRA Rule 2210 covers
               communications-with-the-public; marketing surfaces showing

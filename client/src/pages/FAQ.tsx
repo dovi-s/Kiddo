@@ -14,7 +14,7 @@ const faqItems = [
     answer: (
       <>
         Not yet. Kiddo is built around the US UTMA (Uniform Transfers to Minors Act) custodial structure,
-        and our brokerage partner (DriveWealth) serves US residents only. Tax documents like the 1099 also
+        and our brokerage partner serves US residents only. Tax documents like the 1099 also
         assume US tax filing. If you live outside the US and want a note when we open to your country,
         join the waitlist on the signup screen. No concrete date today.
       </>
@@ -196,9 +196,9 @@ const faqItems = [
     question: "Is my child's money safe?",
     answer: (
       <>
-        When investing is live, securities are held by our broker-dealer partner, DriveWealth, LLC, a FINRA-registered broker-dealer. Eligible brokerage
+        When investing is live, securities are held by our broker-dealer partner, a FINRA-registered broker-dealer. Eligible brokerage
         assets are then covered by SIPC up to $500,000 if the broker-dealer fails. Market prices can still
-        move up or down. Kiddo handles the product experience; DriveWealth holds the assets, not Kiddo. If you want the trust-focused version, read{" "}
+        move up or down. Kiddo handles the product experience; our broker-dealer partner holds the assets, not Kiddo. If you want the trust-focused version, read{" "}
         <Link href="/security" className="text-primary hover:underline">
           Security
         </Link>
@@ -212,7 +212,7 @@ const faqItems = [
     question: "What happens if Kiddo shuts down?",
     answer: (
       <>
-        Your child's investments are not Kiddo's assets. Once invested, they are held through our broker-dealer partner DriveWealth, separate from Kiddo. If Kiddo ever
+        Your child's investments are not Kiddo's assets. Once invested, they are held through our broker-dealer partner, separate from Kiddo. If Kiddo ever
         disappeared, the fund's underlying investments would still exist and would not
         disappear with the company. We break that down in more detail on the{" "}
         <Link href="/security" className="text-primary hover:underline">
@@ -587,7 +587,7 @@ export default function FAQ() {
                 <span>SIPC protection when live</span>
                 <span className="text-border">|</span>
                 <Shield className="h-3.5 w-3.5" />
-                <span>DriveWealth custody partner</span>
+                <span>Broker-dealer custody partner</span>
               </div>
             </motion.div>
 

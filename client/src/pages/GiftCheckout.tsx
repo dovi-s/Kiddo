@@ -1090,7 +1090,7 @@ export default function GiftCheckout() {
             : "Following the family's cash default";
   const provenanceName = recipientLooksLikeFund ? "this child's" : `${recipientName}'s`;
   const giftProvenance = `Invested in ${provenanceName} future with Kiddo.`;
-  const checkoutTrustLine = "DriveWealth, LLC is a registered broker-dealer, Member FINRA/SIPC. Once invested, eligible securities are protected up to $500,000 against brokerage failure. Not a protection against market losses. sipc.org";
+  const checkoutTrustLine = "Our broker-dealer partner is a registered broker-dealer, Member FINRA/SIPC. Once invested, eligible securities are protected up to $500,000 against brokerage failure. Not a protection against market losses. sipc.org";
   // Trust-line JSX variant with inline anchor links. Used in the
   // payment-step trust card + order-summary "Where the money goes"
   // card. Sophisticated gifters (Five Towns persona) verify custody
@@ -1102,15 +1102,7 @@ export default function GiftCheckout() {
   // (logs, copy reference, etc).
   const checkoutTrustLineJsx = (
     <>
-      <a
-        href="https://drivewealth.com"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-semibold text-[hsl(var(--kiddo-evergreen))] underline underline-offset-2 hover:text-[hsl(var(--kiddo-evergreen-deep))]"
-      >
-        DriveWealth, LLC
-      </a>
-      {" is a registered broker-dealer, Member FINRA/SIPC. Once invested, eligible securities are protected up to $500,000 against brokerage failure. Not a protection against market losses. "}
+      {"Our broker-dealer partner is a registered broker-dealer, Member FINRA/SIPC. Once invested, eligible securities are protected up to $500,000 against brokerage failure. Not a protection against market losses. "}
       <a
         href="https://www.sipc.org"
         target="_blank"
@@ -1545,7 +1537,7 @@ export default function GiftCheckout() {
                     {Number.isFinite(activeAmount) && activeAmount >= 500 && (
                       <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-3">
                         <p className="text-[12px] leading-relaxed text-foreground">
-                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner DriveWealth, LLC (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
+                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
                         </p>
                       </div>
                     )}
@@ -1944,7 +1936,7 @@ export default function GiftCheckout() {
                     {Number.isFinite(activeAmount) && activeAmount >= 500 && (
                       <div className="mt-3 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-3">
                         <p className="text-[12px] leading-relaxed text-foreground">
-                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner DriveWealth, LLC (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
+                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
                         </p>
                       </div>
                     )}

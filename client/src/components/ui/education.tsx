@@ -137,7 +137,7 @@ export const educationContent = {
   },
   sipc: {
     title: "What is SIPC protection?",
-    content: "Your fund is held through DriveWealth, the brokerage behind Kiddo. SIPC protection covers up to $500,000 if anything ever happens to the brokerage firm. It does not protect against market losses.",
+    content: "Your fund is held through our broker-dealer partner, the brokerage behind Kiddo. SIPC protection covers up to $500,000 if anything ever happens to the brokerage firm. It does not protect against market losses.",
   },
   fees: {
     title: "How do fees work?",

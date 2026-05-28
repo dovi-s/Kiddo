@@ -150,7 +150,7 @@ export default function About() {
             <h2 className="font-heading text-2xl md:text-3xl font-bold text-foreground mb-6 text-center">Your child's money is not sitting with us.</h2>
             <div className="space-y-6">
               {[
-                "When investing is live, investments are held through DriveWealth, LLC, a FINRA-registered broker-dealer — not by Kiddo.",
+                "When investing is live, investments are held through our broker-dealer partner (Member FINRA/SIPC), not by Kiddo.",
                 "Once your account is open, eligible securities carry SIPC protection up to $500,000 (broker-dealer failure, not market loss).",
                 "If Kiddo disappeared tomorrow, the underlying assets would not disappear with it.",
               ].map((line) => (

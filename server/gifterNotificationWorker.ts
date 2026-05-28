@@ -769,7 +769,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
     }
     details.push({ label: "Total charged", value: `$${total.toFixed(2)}` });
   }
-  details.push({ label: "Recipient", value: `${childName}'s UTMA · custody at DriveWealth, LLC once invested` });
+  details.push({ label: "Recipient", value: `${childName}'s UTMA · custody at our broker-dealer partner once invested` });
 
   // Plain-text version of the receipt block fixed-width alignment
   // for monospace viewers (some CPAs forward these to their inbox as
@@ -796,7 +796,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
   //       $18,000 for 2024, rising with inflation)
   // Kept brief; the gifter's CPA fills in the rest.
   const taxLine = amount >= 500
-    ? `Tax note: gifts to a UTMA are not deductible to the gifter and create no tax liability for you. ${childName}'s parent receives the annual 1099-DIV / 1099-B from DriveWealth. If your total gifts to ${childName} across the calendar year exceed the IRS annual gift-tax exclusion (\$18,000 for 2024, adjusted yearly), you may need to file Form 709. Your CPA can confirm.`
+    ? `Tax note: gifts to a UTMA are not deductible to the gifter and create no tax liability for you. ${childName}'s parent receives the annual 1099-DIV / 1099-B from our broker-dealer partner. If your total gifts to ${childName} across the calendar year exceed the IRS annual gift-tax exclusion (\$18,000 for 2024, adjusted yearly), you may need to file Form 709. Your CPA can confirm.`
     : "";
 
   return {
@@ -843,7 +843,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
       `Start a fund: ${startFundUrl}`,
       "",
       "Kiddo, Inc. is a technology company, not a broker-dealer.",
-      "When investing is live, securities are offered through DriveWealth, LLC (member FINRA/SIPC).",
+      "When investing is live, securities are offered through our broker-dealer partner (Member FINRA/SIPC).",
       "Keep this email for your records.",
       "",
       "The Kiddo team",

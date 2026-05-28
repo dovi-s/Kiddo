@@ -1608,7 +1608,7 @@ export default function Account() {
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                       Someone we can reach if we can't reach you. Used only for account
                       safety, identity confirmation, or suspected financial exploitation.
-                      Required for FINRA-regulated accounts via our broker DriveWealth.
+                      Required for FINRA-regulated accounts via our broker-dealer partner.
                     </p>
                   </div>
                 </div>
@@ -1720,7 +1720,7 @@ export default function Account() {
                 <div>
                   <p className="text-sm font-bold text-foreground">SIPC protection</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                    DriveWealth, LLC is a registered broker-dealer and member of FINRA/SIPC. Once your investing account is open, eligible securities are protected up to $500,000 against brokerage failure. This does not protect against market losses.
+                    Our broker-dealer partner is a registered broker-dealer and member of FINRA/SIPC. Once your investing account is open, eligible securities are protected up to $500,000 against brokerage failure. This does not protect against market losses.
                   </p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                     <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">sipc.org</a>

@@ -370,7 +370,7 @@ export default function Login() {
                 <span className="font-medium">256-bit SSL encryption</span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                When investing is live, brokerage services are provided by DriveWealth, member FINRA and SIPC.
+                When investing is live, brokerage services are provided by our broker-dealer partner, Member FINRA and SIPC.
               </p>
             </div>
           </div>

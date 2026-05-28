@@ -363,7 +363,7 @@ export default function TaxDocuments() {
             Tax documents{activeFund?.recipientFirstName ? ` · ${capFirst(activeFund.recipientFirstName)}` : ""}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-            Cost basis, unrealized gains, and — once investing is live — the tax forms DriveWealth issues for {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s fund` : "this fund"}.
+            Cost basis, unrealized gains, and — once investing is live — the tax forms our broker-dealer partner issues for {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s fund` : "this fund"}.
             {funds.length > 1 && " Switch funds from the sidebar."}
           </p>
         </div>
@@ -376,7 +376,7 @@ export default function TaxDocuments() {
             <div className="min-w-0">
               <p className="text-sm font-bold text-foreground">Tax information is not tax advice.</p>
               <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                UTMA accounts have unique tax implications including the kiddie tax. Numbers shown here are informational. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by DriveWealth, LLC each January for the prior tax year. Consult a qualified CPA before filing.
+                UTMA accounts have unique tax implications including the kiddie tax. Numbers shown here are informational. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing.
               </p>
             </div>
           </div>
@@ -450,7 +450,7 @@ export default function TaxDocuments() {
               <div className="min-w-0">
                 <p className="text-sm font-bold text-foreground">No tax forms for {yearFilter} yet</p>
                 <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                  Once investing is live, DriveWealth issues 1099-DIV (dividends &amp; distributions) and 1099-B (sales) the January after each tax year. Funds open part-way through a year may have nothing to report until the following January. Forms appear here automatically — no email needed.
+                  Once investing is live, our broker-dealer partner issues 1099-DIV (dividends &amp; distributions) and 1099-B (sales) the January after each tax year. Funds open part-way through a year may have nothing to report until the following January. Forms appear here automatically — no email needed.
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-2 max-w-md">
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
@@ -917,7 +917,7 @@ export default function TaxDocuments() {
                 </div>
               )}
               <p className="mt-3 text-[11px] text-muted-foreground/80 leading-relaxed">
-                Fees are estimated from the time-weighted average invested balance ($1/yr per $1,000 invested, or 0.10% annual). Once investing is live, realized gains and the DriveWealth-issued 1099 will be the authoritative numbers. Use this summary as the at-a-glance scan; reconcile against the per-sale and per-position tables below.
+                Fees are estimated from the time-weighted average invested balance ($1/yr per $1,000 invested, or 0.10% annual). Once investing is live, realized gains and the broker-dealer-issued 1099 will be the authoritative numbers. Use this summary as the at-a-glance scan; reconcile against the per-sale and per-position tables below.
               </p>
             </div>
           </section>
@@ -1032,9 +1032,9 @@ export default function TaxDocuments() {
               </div>
               <div className="min-w-0 space-y-3">
                 <div>
-                  <p className="text-sm font-bold text-foreground">DriveWealth, LLC · Member FINRA / SIPC</p>
+                  <p className="text-sm font-bold text-foreground">Our broker-dealer partner · Member FINRA / SIPC</p>
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                    When investing is live, {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your child's"} UTMA holds positions at DriveWealth, LLC — a US broker-dealer registered with the SEC, regulated by FINRA, and a member of SIPC. DriveWealth provides custody for the assets; Kiddo provides the front-end, the gifting flow, and the Memory Book. Same custody pattern Wealthfront, Acorns Early, and many other consumer investing apps use.
+                    When investing is live, {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your child's"} UTMA holds positions through our broker-dealer partner, a US broker-dealer registered with the SEC, regulated by FINRA, and a member of SIPC. Our broker-dealer partner provides custody for the assets; Kiddo provides the front-end, the gifting flow, and the Memory Book. Same custody pattern Wealthfront, Acorns Early, and many other consumer investing apps use.
                   </p>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2.5">
@@ -1047,7 +1047,7 @@ export default function TaxDocuments() {
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Segregated accounts</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      Once investing is live, customer assets are held separately from DriveWealth's own funds under SEC Rule 15c3-3. The shares are {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "the child's"}, not the broker's.
+                      Once investing is live, customer assets are held separately from our broker-dealer partner's own funds under SEC Rule 15c3-3. The shares are {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "the child's"}, not the broker's.
                     </p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
@@ -1064,10 +1064,10 @@ export default function TaxDocuments() {
                   </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
-                  Once investing is live, tax forms (1099-DIV, 1099-B) are issued by DriveWealth each January for the prior tax year. The cost basis shown above is computed by Kiddo from settled gift and contribution amounts; DriveWealth issues the authoritative figures on the 1099-B. Verify your CPA reconciles both before filing.
+                  Once investing is live, tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. The cost basis shown above is computed by Kiddo from settled gift and contribution amounts; our broker-dealer partner issues the authoritative figures on the 1099-B. Verify your CPA reconciles both before filing.
                 </p>
                 <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                  More on SIPC at <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">sipc.org</a>. More on DriveWealth at <a href="https://drivewealth.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">drivewealth.com</a>.
+                  More on SIPC at <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">sipc.org</a>.
                 </p>
               </div>
             </div>

@@ -88,3 +88,27 @@ insurance), and attribute to the broker-dealer.
 Make the §3 decision (or just decide "stay entity-agnostic for launch"). Then a
 single pass brings every §5 present-tense line onto the canonical conditional
 string. Doing it before the decision risks editing ~20 legal lines twice.
+
+## 7. STATUS — copy decision made + sweep DONE (2026-05-28)
+
+**Decision for launch:** stay **entity-agnostic** (§4 rule 2). No customer-facing
+surface names a custodian. The vendor decision (§3: Alpaca / DriveWealth / Apex)
+is **still open** and still gated by UTMA-verification-in-writing + the RIA/AUM
+lawyer memo + wiring — but copy no longer blocks on it.
+
+**Done this pass:** every rendered customer-facing custodian mention across web +
+mobile + email templates now reads "our broker-dealer partner (Member FINRA/SIPC)",
+conditional on "when investing is live." Includes the full §5 present-tense list,
+the doc-blessed conditional-but-named lines (Home/FAQ/Legal/GiftCheckout/Security/
+Compare/GiftSuccess/Settings/education/ux-foundations/trust strips), the email
+footer (baseTemplate) + gifter/year-end/tax-season emails, and the privacy-policy
+processor lines. Firm-specific external links (drivewealth.com, firm-named
+BrokerCheck) removed/genericized. `npm run check` + `mobile:check` green.
+
+**Remaining `DriveWealth` references are intentional:** code comments, the
+`driveWealthAccountSetup.ts` scaffold + its type names, and internal TODOs — none
+rendered to users. Verified by grep.
+
+**When the custodian IS locked + wired:** one find/replace of "our broker-dealer
+partner" → "[NAME], LLC (Member FINRA/SIPC)" across customer copy completes it.
+No re-editing churn — that's the whole point of going agnostic now.
