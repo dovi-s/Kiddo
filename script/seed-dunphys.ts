@@ -42,6 +42,8 @@ import {
   type InsertMemoryEntry,
 } from "../shared/schema";
 import { eq, and, asc } from "drizzle-orm";
+import { promises as fsp } from "node:fs";
+import path from "node:path";
 
 // English ordinal for "{N}th Birthday" occasion names.
 function ordinal(n: number): string {
@@ -527,6 +529,85 @@ async function upsertUser(account: typeof ACCOUNTS[number]): Promise<string> {
   return created.id;
 }
 
+// Gifter milestone-update opt-ins. The parent's "who's following along" surface
+// (GET /api/funds/:id/gifter-notifications) reads a FILE-based store at
+// .local/gifter-notifications.json (subscribersByFund[fundId][email]) — NOT the
+// DB — so the DB reseed alone leaves it empty ("0 gifters following"). Seed a
+// believable subset of opted-in gifters so the surface is lived-in. The engaged
+// grandparents + uncle opt in; Mitchell (set-and-forget), Manny (young), and
+// Claire (co-parent, sees everything) intentionally don't, so it reads as a
+// real subset, not "everyone". Merges into the file (preserves other funds'
+// entries); per-fund stats are computed from the gifts just inserted. Orphaned
+// entries for prior reseeds' fund IDs are harmless (queried only by live id).
+const OPT_IN_GIFTER_EMAILS = new Set([
+  "gloria@dunphyfamily.com",
+  "cameron@dunphyfamily.com",
+  "jay@dunphyfamily.com",
+]);
+const GIFTER_NOTIF_PATH = path.join(process.cwd(), ".local", "gifter-notifications.json");
+
+async function seedGifterNotifications(
+  fundId: string,
+  externalGifts: Array<{ senderName: string; senderEmail: string; amount: number; createdAt: Date }>,
+): Promise<number> {
+  const byEmail = new Map<string, { name: string; count: number; total: number; first: number; last: number }>();
+  for (const g of externalGifts) {
+    const email = g.senderEmail.toLowerCase();
+    if (!OPT_IN_GIFTER_EMAILS.has(email)) continue;
+    const t = g.createdAt.getTime();
+    const cur = byEmail.get(email);
+    if (cur) {
+      cur.count += 1; cur.total += g.amount;
+      cur.first = Math.min(cur.first, t); cur.last = Math.max(cur.last, t);
+    } else {
+      byEmail.set(email, { name: g.senderName, count: 1, total: g.amount, first: t, last: t });
+    }
+  }
+  if (byEmail.size === 0) return 0;
+
+  let store: { settingsByFund: Record<string, any>; subscribersByFund: Record<string, any>; memorySharesByToken: Record<string, any> } =
+    { settingsByFund: {}, subscribersByFund: {}, memorySharesByToken: {} };
+  try {
+    const parsed = JSON.parse(await fsp.readFile(GIFTER_NOTIF_PATH, "utf8"));
+    if (parsed && typeof parsed === "object") {
+      store.settingsByFund = parsed.settingsByFund || {};
+      store.subscribersByFund = parsed.subscribersByFund || {};
+      store.memorySharesByToken = parsed.memorySharesByToken || {};
+    }
+  } catch { /* no file yet → fresh store */ }
+
+  const subscribers: Record<string, any> = {};
+  for (const [email, s] of Array.from(byEmail.entries())) {
+    subscribers[email] = {
+      email,
+      name: s.name,
+      optedInAt: new Date(s.first).toISOString(), // opted in around their first gift
+      unsubscribed: false,
+      unsubscribedAt: null,
+      unsubscribeToken: `demo-unsub-${fundId}-${email.split("@")[0]}`,
+      contributionCount: s.count,
+      totalContributed: Number(s.total.toFixed(2)),
+      fundIds: [fundId],
+      lastGiftAt: new Date(s.last).toISOString(),
+      isAnonymous: false,
+    };
+  }
+  store.subscribersByFund[fundId] = subscribers;
+  store.settingsByFund[fundId] = store.settingsByFund[fundId] || {
+    birthdayReminders: true,
+    memoryBookSharing: true,
+    age18Notification: true,
+    giftConfirmations: true,
+    memoryBookSharesSentThisYear: 0,
+    memoryBookShareYear: new Date().getFullYear(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  await fsp.mkdir(path.dirname(GIFTER_NOTIF_PATH), { recursive: true });
+  await fsp.writeFile(GIFTER_NOTIF_PATH, JSON.stringify(store, null, 2), "utf8");
+  return byEmail.size;
+}
+
 async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Promise<string> {
   // Idempotent: if Phil already owns a fund with this slug, return its id.
   const [existing] = await db.select().from(funds).where(
@@ -861,6 +942,10 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
     } as any);
   }
 
+  // Gifter milestone-update opt-ins for the "who's following along" surface
+  // (file-based store; see seedGifterNotifications above).
+  await seedGifterNotifications(fund.id, externalGifts);
+
   // Phil's at-18 letter — appears in Haley's fund only (closest to majority).
   if (kid.firstName === "Haley") {
     await db.insert(memoryEntries).values({
@@ -874,6 +959,26 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
     // (Balance-crossing milestones are now seeded data-driven from the
     // actual snapshot curve for EVERY kid — see seedMilestonesFromSnapshots
     // after the history generation below — rather than hardcoded here.)
+  }
+
+  // Claire (co-parent) authored note. Phil owns the fund, but Claire is an
+  // accepted co-parent collaborator (wired in main()) — so the demo should show
+  // BOTH parents engaging, not just Phil. A parent_note authored by Claire puts
+  // a "from Mom" entry in the timeline next to Phil's, making the co-parent
+  // relationship lived-in (active author, not just a name on the access list).
+  // Dated ~4 months back so it sits naturally in the recent timeline.
+  {
+    const claireNoteDate = new Date();
+    claireNoteDate.setDate(claireNoteDate.getDate() - 120);
+    await db.insert(memoryEntries).values({
+      fundId: fund.id,
+      type: "parent_note",
+      content: `Watching you grow up, ${kid.firstName}. Every name in here is someone who loves you. I add my own notes too, so when you read this one day you'll know your mom was paying attention the whole time. — Mom`,
+      authorRole: "parent",
+      authorName: "Claire Dunphy",
+      visibility: "kid_now",
+      createdAt: claireNoteDate,
+    } as any);
   }
 
   // Seed a creation activity. Dated to match the fund's backdated
