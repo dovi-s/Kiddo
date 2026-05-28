@@ -80,7 +80,7 @@ export default function Legal() {
               <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
                 <div>
                   <h3 className="font-medium text-foreground mb-2">1. What Kiddo Is</h3>
-                  <p>Kiddo is a technology platform that makes it easy to give stock investments as gifts. We are not a broker-dealer, investment adviser, or bank. Brokerage services are provided by DriveWealth, LLC, a FINRA-registered broker-dealer and member of SIPC.</p>
+                  <p>Kiddo is a technology platform that makes it easy to give stock investments as gifts. We are not a broker-dealer, investment adviser, or bank. When investing is live, brokerage and custody are handled by our broker-dealer partner, DriveWealth, LLC (a FINRA-registered broker-dealer and SIPC member), not by Kiddo.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">2. Account Eligibility</h3>
@@ -142,7 +142,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Data Security</h3>
-                  <p>We use 256-bit SSL encryption, secure data storage, and follow industry best practices for data protection. Sensitive identity and payment information is transmitted only to the providers responsible for custody, payments, or identity verification and is not exposed publicly in the product experience.</p>
+                  <p>We use strong encryption in transit (TLS) and at rest, secure data storage, and follow industry best practices for data protection. Sensitive identity and payment information is transmitted only to the providers responsible for custody, payments, or identity verification and is not exposed publicly in the product experience.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Your Rights</h3>
@@ -168,15 +168,15 @@ export default function Legal() {
               <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
                 <div className="bg-primary/5 rounded-xl p-5 border border-primary/10">
                   <p className="font-medium text-foreground mb-2">Important Notice</p>
-                  <p>Kora Inc. is a technology company, not a broker-dealer, investment adviser, or bank. Kiddo does not provide investment advice or recommendations.</p>
+                  <p>Kiddo, Inc. is a technology company, not a broker-dealer, investment adviser, or bank. Kiddo does not provide investment advice or recommendations.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Brokerage Services</h3>
-                  <p>Securities are offered through DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. Clearing and custody services are provided by DriveWealth. Kiddo provides the user experience but does not execute trades or hold customer assets.</p>
+                  <p>Securities are offered through our broker-dealer partner, DriveWealth, LLC, a FINRA-registered broker-dealer and SIPC member. Once your investing account is open, clearing and custody are handled by DriveWealth. Kiddo provides the user experience and does not execute trades or hold customer assets.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">SIPC Coverage</h3>
-                  <p>Accounts are protected by SIPC up to $500,000 (including $250,000 for cash claims). SIPC protects against the loss of securities and cash in the event of a broker-dealer failure. SIPC does not protect against market losses.</p>
+                  <p>Once your investing account is open at our broker-dealer partner, eligible securities and cash are covered by SIPC up to $500,000 (including $250,000 for cash claims) in the event of a broker-dealer failure. SIPC does not protect against market losses.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Investment Risks</h3>

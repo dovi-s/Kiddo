@@ -555,6 +555,14 @@ export default function GifterDashboard() {
                   {isLoggingIn ? "Signing in..." : "I already have an account"}
                 </Button>
               </div>
+              {/* Magic-link gifters set up recurring with NO password, so a
+                  password form alone locks them out of their own dashboard (the
+                  one place to cancel a charge). Route them to /login, which has
+                  the passwordless "email me a sign-in link" flow; AuthMagic lands
+                  them back on /my-gifts after verify. */}
+              <p className="mt-3 text-center text-xs text-muted-foreground">
+                No password? <Link href="/login" className="font-medium text-primary hover:underline">Email me a sign-in link</Link>
+              </p>
               <p className="mt-4 text-xs text-muted-foreground">
                 We only use this account to help you come back to the funds you care about. It does not make you the owner of any child's investments.
               </p>

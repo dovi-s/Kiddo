@@ -180,7 +180,7 @@ export function buildGifterYearEndSummaryEmail(input: GifterYearEndSummaryInput)
     ``,
     `Tax note: gifts to UTMAs create no tax liability for you. The recipient's parent receives any 1099 from DriveWealth. If your total gifts to any one recipient this year exceeded the IRS annual gift-tax exclusion ($18,000 for 2024, adjusted yearly), Form 709 may apply. Your CPA can confirm.`,
     ``,
-    `Kora Inc. is a technology company, not a broker-dealer.`,
+    `Kiddo, Inc. is a technology company, not a broker-dealer.`,
     `Securities offered through DriveWealth, LLC (FINRA/SIPC).`,
     ``,
     `The Kiddo team`,

@@ -240,7 +240,9 @@ async function tick(log: LogFn): Promise<void> {
     const perRecipient = perRecipientByEmail.get(email) || [];
 
     const csvDownloadUrl = `${baseUrl}/api/gifter-account/gifts.csv?year=${year}`;
-    const dashboardUrl = `${baseUrl}/gifter`;
+    // Brandable first-person URL (alias of /gifter; both resolve to the
+    // gifter dashboard). This is what we surface in outbound copy/emails.
+    const dashboardUrl = `${baseUrl}/my-gifts`;
 
     const message = buildGifterYearEndSummaryEmail({
       to: email,

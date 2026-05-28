@@ -154,7 +154,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
         title: "Considering Acorns Early too?",
         body: [
           "Acorns acquired EarlyBird, so many displaced families are naturally comparing Kiddo with Acorns Early next.",
-          "What Kiddo brings back from EarlyBird is the easy multi-contributor giving experience: a shareable gift link, no account needed for the gifter, full Memory Book entries (note, photo, video, voice), occasion pages with QR codes for parties, and reminder emails that bring family back when birthdays and holidays come around. Recurring contributions are free across all plans (parents and gifters both). Plus is for the parent who wants to design the custom fund mix, switch strategy, and operate the portfolio. Not for the recurring mechanism itself.",
+          "What Kiddo brings back from EarlyBird is the easy multi-contributor giving experience: a shareable gift link, no account needed for the gifter, full Memory Book entries (note, photo, video, voice), occasion pages with QR codes for parties, and reminder emails that bring family back when birthdays and holidays come around. Recurring contributions unlock with Kiddo+ on the fund, and once a fund is Plus any gifter can set up recurring too (gifters never pay). Free funds get a reminder system instead. Plus also gives the parent the custom fund mix, strategy switching, and co-parent access.",
           "If what you want is a parent savings tool inside the wider Acorns ecosystem, that is a real option. If what you want is the gifting link, occasion pages, and full-media Memory Book that EarlyBird families loved, Kiddo is the closer fit.",
         ],
       },
@@ -168,7 +168,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     metaTitle: "Acorns Early vs Kiddo | Micro-investing vs investment gifting",
     metaDescription:
       "Acorns made round-ups famous, but spare change won't change your child's life. Kiddo does something different: investment gifting. Here's the honest comparison.",
-    heroTitle: "Acorns is brilliant. Round-ups are clever. But spare change won't change Emma's life.",
+    heroTitle: "Acorns made micro-investing famous. Kiddo is for the birthday money that actually moves the needle.",
     heroBody: [
       "Acorns created micro-investing. Genuinely category-defining. Every coffee, every Uber, every grocery run quietly building a portfolio in the background. That is elegant.",
       "But here is the honest math: the average round-up is about $0.50. At 30 transactions a month, that is $15 of micro-investment. At 7% annual returns over 18 years, you are looking at roughly $6,500. That is a nice bonus. Not a head start.",
@@ -393,7 +393,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       { label: "Primary use", competitor: "Short-term cash savings", kora: "Long-term investing" },
       { label: "Invests in real stocks", competitor: "No", kora: "Yes" },
       { label: "Family can gift easily", competitor: "No", kora: "Yes, via shareable link" },
-      { label: "FDIC / SIPC coverage", competitor: "FDIC", kora: "SIPC for securities" },
+      { label: "FDIC / SIPC coverage", competitor: "FDIC", kora: "SIPC at launch" },
       { label: "Risk of loss", competitor: "Very low", kora: "Yes" },
       { label: "Memory Book", competitor: "No", kora: "Yes" },
       { label: "Occasion pages", competitor: "No", kora: "Yes" },
@@ -454,7 +454,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
       { label: "Sealed letter for the 18th birthday", competitor: "None", kora: "Yes. Text plus voice plus photo plus video, opened only at 18." },
       { label: "Age-18 handoff guidance", competitor: "Statutory only. Account flips to the kid; you figure out the rest.", kora: "Five-stage parent ramp from age 13 through 18, FAQ, checklist, projection, transition worker." },
       { label: "Kid-facing view", competitor: "None", kora: "Kid View on every plan. Age-aware copy from 5 to 17. Family covers every child." },
-      { label: "Brokerage", competitor: "Fidelity", kora: "DriveWealth. SIPC-protected." },
+      { label: "Brokerage", competitor: "Fidelity", kora: "DriveWealth (SIPC at launch)" },
     ],
     sections: [
       {
@@ -790,7 +790,7 @@ function ComparisonHub() {
           <FadeIn className="grid gap-6 md:grid-cols-2">
             <div className="rounded-3xl border border-border bg-card p-8 shadow-premium-sm">
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">Micro-investing model</p>
-              <h3 className="mt-3 font-heading text-2xl font-bold text-foreground">Round-ups. Clever. But spare change is still spare change.</h3>
+              <h3 className="mt-3 font-heading text-2xl font-bold text-foreground">What round-ups actually add up to.</h3>
               <div className="mt-5 space-y-2 text-sm text-muted-foreground">
                 <div className="flex justify-between border-b border-border pb-2">
                   <span>Average round-up per transaction</span>

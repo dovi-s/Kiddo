@@ -307,7 +307,7 @@ export default function KidView() {
   const [annualGiftEstimate, setAnnualGiftEstimate] = useState(500);
   const [languageMode, setLanguageMode] = useState<KidLanguageMode>("younger");
 
-  const { data: meta, isLoading: metaLoading } = useQuery<KidViewMeta>({
+  const { data: meta, isLoading: metaLoading, isError: metaError } = useQuery<KidViewMeta>({
     queryKey: ["kid-view-meta", token],
     queryFn: async () => {
       const res = await fetch(`/api/kid-view/${token}/meta`);
@@ -660,6 +660,24 @@ export default function KidView() {
             <div className="h-3 w-3/4 rounded bg-muted/30 mb-2" />
             <div className="h-3 w-2/3 rounded bg-muted/30" />
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Invalid / expired / mistyped kid link: the meta query failed, so there is no
+  // fund behind this token. Without this branch the page falls through to the PIN
+  // pad and the child types PINs forever against a fund that doesn't exist. Tell
+  // them plainly, in kid-appropriate language, with a path forward.
+  if (metaError) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-emerald-50 via-white to-amber-50 px-4">
+        <div className="flex justify-center mb-8"><Logo /></div>
+        <div className="w-full max-w-[340px] text-center">
+          <h1 className="font-heading text-2xl font-bold text-foreground mb-2">This link isn't working</h1>
+          <p className="text-sm text-muted-foreground">
+            This fund link is expired or not quite right. Ask the grown-up who shared it to send you a fresh one.
+          </p>
         </div>
       </div>
     );

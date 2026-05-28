@@ -21,15 +21,11 @@ export function TrustFooter() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-[hsl(var(--kora-evergreen))]" />
-              <span>Assets protected by SIPC up to $500,000</span>
+              <span>When live, securities carry SIPC protection up to $500,000 (broker failure, not market loss)</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-[hsl(var(--kora-evergreen))]" />
-              <span>Securities held by DriveWealth, LLC</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Check className="h-4 w-4 text-[hsl(var(--kora-evergreen))]" />
-              <span>SEC registered investment advisor</span>
+              <span>Securities held at a regulated broker-dealer partner, not by Kiddo</span>
             </div>
           </div>
           <div className="flex items-center">

@@ -71,8 +71,8 @@ export default function AuthMagic() {
         haptic("success");
         toast({ title: "Signed in", description: "Taking you to your dashboard." });
         // Brief delay so the toast renders before nav. Intent maps:
-        //   gifter_welcome → /gifter (post-recurring landing).
-        //   gifter_relogin → /gifter (same landing; the welcome banner
+        //   gifter_welcome → /my-gifts (post-recurring landing).
+        //   gifter_relogin → /my-gifts (same landing; the welcome banner
         //                     specifically only renders for new-account
         //                     intent, so it's a no-op on re-login).
         setTimeout(() => {

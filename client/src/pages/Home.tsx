@@ -149,7 +149,7 @@ const BENTO_TILES: BentoTile[] = [
     icon: BookOpen,
     eyebrow: "For the kid at 18",
     title: "Memory Book",
-    body: "Every gift, every note, every photo and voice message. Not a transaction log. A story.",
+    body: "Every gift, every note, every photo and voice message, saved in the order they arrived.",
     modalLead:
       "Every gift becomes a Memory Book entry. Gifters can attach a note, photo, video, or voice message. Parents can add their own letters, milestones, and a sealed letter the kid only sees on their 18th birthday. The note IS the entry; the transaction is metadata.",
     modalDetails: [
@@ -332,17 +332,17 @@ const testimonials = [
   {
     quote:
       "I sent the link to our family group chat before Emma's birthday. By the end of the week, 14 people had gifted. Every single one of them is now invested in her future.",
-    attribution: "Sarah M., mother of two, Ohio",
+    attribution: "Illustrative: the family group-chat effect",
   },
   {
     quote:
       "My parents are in their 70s and not great with technology. They gifted my son through Kiddo in under a minute. I could not believe it.",
-    attribution: "James T., father, California",
+    attribution: "Illustrative: why grandparents find it easy",
   },
   {
     quote:
       "I used to give checks that I knew would just get deposited and forgotten. Now I give Disney stock. It feels completely different.",
-    attribution: "Linda K., grandmother, Florida",
+    attribution: "Illustrative: from forgettable checks to real stock",
   },
 ];
 
@@ -425,7 +425,7 @@ export default function Home() {
                 The fund and the book your kid opens at 18.
               </h1>
               <p className="mx-auto mb-8 max-w-3xl text-lg leading-relaxed text-muted-foreground md:text-xl" data-testid="text-hero-subheading">
-                A real investment account that grows with them, with letters, photos, and voice memos from the people who loved them. Set up in 2 minutes. Anyone can gift.
+                A real investment account that grows with them, holding the letters, photos, and voice memos from everyone who shows up for them. Set up in 2 minutes. Anyone can gift, no account needed.
               </p>
               <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Link href="/get-started">
@@ -443,7 +443,7 @@ export default function Home() {
                   appears as "10¢ per $100 invested" so the genuinely tiny
                   fee reads as genuinely tiny. Acorns hides fees; Kiddo
                   flaunts them. Trust is a moat with parents specifically. */}
-              <p className="mt-5 text-sm text-muted-foreground">Free to start. 10¢ per $100 invested per year. No platform fee on gifts.</p>
+              <p className="mt-5 text-sm text-muted-foreground">Free to start. 10¢ per $100 invested per year, or $1 a year per $1,000. No platform fee on gifts.</p>
               {/* Honest geographic scope. Kora is structurally US-only at
                   launch (UTMA + DriveWealth + 1099s). Surfacing this
                   before signup catches non-US visitors before they
@@ -516,7 +516,7 @@ export default function Home() {
                 Memory Book
               </div>
               <h2 className="mb-6 font-heading text-3xl font-bold tracking-normal text-foreground md:text-5xl">
-                Not a transaction log. A story.
+                The whole story, in the order it happened.
               </h2>
               <p className="mx-auto mb-4 max-w-2xl text-lg leading-relaxed text-muted-foreground">
                 Every gift, every note, every person who showed up for your child. Captured, in order, forever.
@@ -525,7 +525,7 @@ export default function Home() {
                 Grandma&apos;s Disney gift from the first birthday. The note from a college friend you hadn&apos;t spoken to in years. The $20 from someone who just wanted to be part of it.
               </p>
               <p className="mt-6 text-lg font-semibold text-foreground">
-                At 18, they don&apos;t just get a brokerage balance. They get proof that people loved them.
+                At 18, they don&apos;t just get a brokerage balance. They get proof of everyone who showed up for them.
               </p>
             </FadeIn>
 
@@ -609,7 +609,7 @@ export default function Home() {
                 },
                 {
                   icon: Shield,
-                  title: "3. Gifts get invested automatically.",
+                  title: "3. Every gift goes to their fund.",
                   desc: "Every gift follows the path you choose for your child's fund. Kiddo keeps the money movement clear and the gift experience simple.",
                 },
               ].map((item, index) => (
@@ -823,8 +823,8 @@ export default function Home() {
                 Your child&apos;s money is in safe hands.
               </h2>
               <div className="space-y-2 text-muted-foreground">
-                <p>Investments held by DriveWealth, LLC, a FINRA-registered broker-dealer.</p>
-                <p>SIPC insured up to $500,000 in securities.</p>
+                <p>When investing is live, securities are held by our broker-dealer partner, DriveWealth, LLC (FINRA member), not by Kiddo.</p>
+                <p>Once accounts are open, eligible securities carry SIPC protection up to $500,000 against broker-dealer failure, not market loss.</p>
                 <p>Encrypted in transit and at rest.</p>
                 <p>Private fund links. Not searchable. Not public.</p>
                 <p>Fees shown in full before every checkout.</p>

@@ -194,6 +194,10 @@ interface MemoryEntry {
     // renders compressed-by-default for these per Decision D
     // (project_gifter_recurring_restoration.md).
     recurringGiftId?: string | null;
+    // Parent's recurring auto-invest linkage. Truthy when this gift is a
+    // monthly parent auto-invest cycle (vs a gifter's recurring schedule or a
+    // one-time gift). Drives compression + self-thank-you suppression.
+    parentContributionId?: string | null;
   } | null;
 }
 
@@ -408,9 +412,18 @@ function deriveMemoryHeaderStats(
     if (["test", "testing", "qqqqq", "tstgin", "tstng", "tester"].includes(lc)) return true;
     return false;
   };
+  // A parent's recurring auto-invest (parentContributionId) shows up as one
+  // gift_message per monthly cycle. Count the SCHEDULE once, not each cycle, so
+  // the "N gifts" headline isn't inflated by ~36 identical contributions.
+  const recurringScheduleIds = new Set<string>();
   for (const entry of entries || []) {
     if (entry.type === "gift_message") {
-      giftCount += 1;
+      const pcId = (entry.gift as any)?.parentContributionId;
+      if (pcId) {
+        recurringScheduleIds.add(String(pcId));
+      } else {
+        giftCount += 1;
+      }
       const senderName = entry.gift?.senderName || "";
       if (isAnonName(senderName)) {
         people.add(`anon:${entry.id}`);
@@ -421,6 +434,7 @@ function deriveMemoryHeaderStats(
       people.add(entry.authorName.trim().toLowerCase());
     }
   }
+  giftCount += recurringScheduleIds.size;
   const fundValue =
     parseFloat(fundData?.balance || "0") +
     parseFloat(fundData?.pendingBalance || "0") +
@@ -1103,7 +1117,7 @@ export default function MemoryBook() {
       : "";
     switch (tone) {
       case "warm":
-        return `Dear ${name},\n\nThank you so much for your ${fmt} gift to ${child}'s fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for ${child}'s future.\n\n${child} will read this when they're 18.\n\nWith love,\n${ownerName}`;
+        return `Dear ${name},\n\nThank you so much for your ${fmt} gift to ${child}'s fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for ${child}'s future.\n\n${child} will read this one day.\n\nWith love,\n${ownerName}`;
       case "brief":
         return `Hi ${name},\n\nThank you for the ${fmt} gift to ${child}'s fund.${portfolioSentenceBrief} We really appreciate it!\n\nWith gratitude,\n${ownerName}`;
       case "formal":
@@ -1157,7 +1171,7 @@ export default function MemoryBook() {
     const name = titleCaseName(senderName) || senderName;
     switch (tone) {
       case "warm":
-        return `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one of them is a real investment ${child} will read about when they're 18. It means more than you know: not just the money but the fact that you keep showing up for ${child}.\n\nWith love,\n${ownerName}`;
+        return `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one of them is a real investment ${child} will read about one day. It means more than you know: not just the money but the fact that you keep showing up for ${child}.\n\nWith love,\n${ownerName}`;
       case "brief":
         return `Hi ${name},\n\nThank you for the ${count} gifts to ${child}'s fund (${fmtTotal} total). We really appreciate your generosity.\n\nWith gratitude,\n${ownerName}`;
       case "formal":
@@ -1738,18 +1752,44 @@ export default function MemoryBook() {
   // sentence the parent finishes — never a label-followed-by-
   // colon. So "First steps." not "First steps:" — the parent
   // continues the thought naturally.
-  const milestoneLibrary: Array<{ key: string; label: string; starter: string }> = useMemo(() => [
-    { key: "first-steps",       label: "First steps",      starter: "First steps. " },
-    { key: "first-word",        label: "First word",        starter: "First word. " },
-    { key: "first-tooth",       label: "First tooth",       starter: "First tooth came in. " },
-    { key: "lost-tooth",        label: "Lost first tooth",  starter: "Lost their first tooth. " },
-    { key: "first-day-school",  label: "First day of school", starter: "First day of school. " },
-    { key: "first-haircut",     label: "First haircut",     starter: "First haircut. " },
-    { key: "started-sport",     label: "Started a sport",   starter: "Started playing " },
-    { key: "first-sleepover",   label: "First sleepover",   starter: "First sleepover. " },
-    { key: "moved-home",        label: "Moved homes",       starter: "We moved. " },
-    { key: "new-sibling",       label: "Got a sibling",     starter: "Became a big " },
-  ], []);
+  // Child's current age, for age-appropriate moment prompts below.
+  const kidAgeForMoments = useMemo(() => {
+    const bd = fundData?.recipientBirthdate ? new Date(fundData.recipientBirthdate) : null;
+    if (!bd || Number.isNaN(bd.getTime())) return null;
+    return Math.floor((Date.now() - bd.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+  }, [fundData?.recipientBirthdate]);
+
+  // Age-aware moment prompts. Each is tagged with the typical age it happens; we
+  // surface the moments relevant to the child's life stage (already happened,
+  // most recent first) so a 20-year-old's parent sees "Graduation / First job,"
+  // not "First tooth." Unknown birthdate falls back to the early-childhood set.
+  const milestoneLibrary: Array<{ key: string; label: string; starter: string }> = useMemo(() => {
+    const ALL: Array<{ key: string; label: string; starter: string; age: number }> = [
+      { key: "first-steps",       label: "First steps",         starter: "First steps. ", age: 1 },
+      { key: "first-word",        label: "First word",          starter: "First word. ", age: 1 },
+      { key: "first-tooth",       label: "First tooth",         starter: "First tooth came in. ", age: 1 },
+      { key: "first-haircut",     label: "First haircut",       starter: "First haircut. ", age: 2 },
+      { key: "new-sibling",       label: "Got a sibling",       starter: "Became a big ", age: 4 },
+      { key: "first-day-school",  label: "First day of school", starter: "First day of school. ", age: 5 },
+      { key: "lost-tooth",        label: "Lost first tooth",    starter: "Lost their first tooth. ", age: 6 },
+      { key: "moved-home",        label: "Moved homes",         starter: "We moved. ", age: 6 },
+      { key: "started-sport",     label: "Started a sport",     starter: "Started playing ", age: 7 },
+      { key: "first-sleepover",   label: "First sleepover",      starter: "First sleepover. ", age: 8 },
+      { key: "learners-permit",   label: "Learner's permit",    starter: "Got their learner's permit. ", age: 15 },
+      { key: "first-job",         label: "First job",           starter: "Started their first job. ", age: 16 },
+      { key: "drivers-license",   label: "Driver's license",    starter: "Passed the driving test. ", age: 16 },
+      { key: "graduation",        label: "Graduation",          starter: "Graduated. ", age: 18 },
+      { key: "college-accept",    label: "College acceptance",  starter: "Got into ", age: 18 },
+      { key: "moved-out",         label: "Moved out",           starter: "Moved out on their own. ", age: 18 },
+    ];
+    const strip = ({ age: _age, ...m }: { key: string; label: string; starter: string; age: number }) => m;
+    if (kidAgeForMoments == null) return ALL.filter((m) => m.age <= 8).map(strip);
+    return ALL
+      .filter((m) => m.age <= kidAgeForMoments + 1)
+      .sort((a, b) => b.age - a.age)
+      .slice(0, 10)
+      .map(strip);
+  }, [kidAgeForMoments]);
 
   const openMilestoneComposer = (starter: string) => {
     setEditingEntry(null);
@@ -2219,9 +2259,18 @@ export default function MemoryBook() {
       if (n.toLowerCase() === "anonymous") return true;
       return false;
     };
+    const recurringScheduleIds = new Set<string>();
     for (const e of entries) {
       if (e.type === "gift_message") {
-        giftCount += 1;
+        // Count a parent's recurring auto-invest SCHEDULE once, not each cycle,
+        // so "N gifts" isn't inflated by ~36 identical contributions. giftTotal
+        // still sums every cycle's real dollars.
+        const pcId = (e.gift as any)?.parentContributionId;
+        if (pcId) {
+          recurringScheduleIds.add(String(pcId));
+        } else {
+          giftCount += 1;
+        }
         giftTotal += parseFloat(e.gift?.amount || "0");
         const senderName = e.gift?.senderName || "";
         if (isAnonName(senderName)) {
@@ -2235,6 +2284,7 @@ export default function MemoryBook() {
       if (e.photoUrl || e.gift?.photoUrl) photos += 1;
       if (e.videoUrl) videos += 1;
     }
+    giftCount += recurringScheduleIds.size;
     return {
       total: entries.length,
       people: people.size,
@@ -3218,7 +3268,7 @@ export default function MemoryBook() {
                 <div className="flex items-baseline justify-between gap-3 mb-1">
                   <p className="kiddo-section-label">Capture a moment</p>
                   <span className="text-[10.5px] uppercase tracking-wide text-muted-foreground/60">
-                    Saved for {childName || "them"} at 18
+                    Saved for {childName || "them"} at {fundMajorityAge}
                   </span>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground mb-3">
@@ -4346,9 +4396,17 @@ export default function MemoryBook() {
                         // photo, video, voice) escape compression — those
                         // months stand out within the stack as the moments
                         // grandma said something extra.
-                        const isRecurringCycle = !!(entry.gift as any)?.recurringGiftId;
+                        // A parent's recurring auto-invest (parentContributionId)
+                        // is also a recurring cycle. Unlike a gifter's monthly
+                        // note (a real per-month love letter that SHOULD escape
+                        // compression), a parent auto-invest carries only a
+                        // boilerplate "every month" note, so that note must NOT
+                        // exempt it from compression — otherwise 36 identical
+                        // cycles flood the timeline (the reported bug).
+                        const isParentRecurring = !!(entry.gift as any)?.parentContributionId;
+                        const isRecurringCycle = !!(entry.gift as any)?.recurringGiftId || isParentRecurring;
                         const hasAttachedContent =
-                          hasNote ||
+                          (hasNote && !isParentRecurring) ||
                           !!entry.gift?.photoUrl ||
                           !!(entry.gift as any)?.videoUrl ||
                           !!(entry.gift as any)?.audioUrl;
@@ -4924,6 +4982,12 @@ export default function MemoryBook() {
                           {/* Thank-you section */}
                           {isOwner && entry.giftId && (() => {
                             const ty = thankYouByGiftId.get(String(entry.giftId));
+                            // Never prompt the owner to thank their OWN
+                            // contributions (e.g. a parent's recurring
+                            // auto-invest). thankYouStateForGift returns "self"
+                            // when the gift's sender IS the fund owner. You
+                            // don't thank yourself.
+                            if (entry.gift && thankYouStateForGift(entry.gift) === "self") return null;
                             // Capitalize at the top so every downstream
                             // reference (button label, preview header,
                             // composer placeholder, draft text) shows the

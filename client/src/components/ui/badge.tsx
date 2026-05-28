@@ -20,7 +20,7 @@ const badgeVariants = cva(
           // Use shadow-xs; hover state is handled by hover-elevate.
           "border-transparent bg-destructive text-destructive-foreground shadow-xs",
           // Use the badge outline variable for border color.
-        outline: "text-foreground border [border-color:var(--badge-outline)]",
+        outline: "text-foreground border border-border",
       },
     },
     defaultVariants: {

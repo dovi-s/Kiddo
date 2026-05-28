@@ -842,7 +842,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
       `You just experienced what it's like to give a lasting investment gift. Set up a fund for someone you love and let your whole family show up for them the way you just showed up for ${childName}.`,
       `Start a fund: ${startFundUrl}`,
       "",
-      "Kora Inc. is a technology company, not a broker-dealer.",
+      "Kiddo, Inc. is a technology company, not a broker-dealer.",
       "Securities offered through DriveWealth, LLC (FINRA/SIPC).",
       "Keep this email for your records.",
       "",

@@ -13858,7 +13858,7 @@ export default function Dashboard() {
             // with the rewrite — the new prose variants don't reference
             // them. If pronouns become relevant again, grab them from
             // `childPronouns` inline at the use site.
-            const fmt = (n?: number) => n != null ? `~$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "";
+            const fmt = (n?: number) => n != null ? `~$${(Math.round(n / 100) * 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "";
             const fmtAmt = (n?: number) => n != null ? `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : "";
             // Per-scenario hero anchor. Without this the modal was a
             // wall of text with no visual signal of WHICH moment the
@@ -13928,11 +13928,11 @@ export default function Dashboard() {
                       </p>
                     )}
                     <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                      That's ahead of the 7% historical average. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
-                      {child} is projected to have about {fmt(smartNudge.currentProjection)} at {majorityAge}.
+                      Markets swing year to year, so we project ahead at the 7% long-run average, not this year's pace. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
+                      {child} is projected to have {fmt(smartNudge.currentProjection)} at {majorityAge}.
                       {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
                         <>
-                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to about {fmt(smartNudge.doubledProjection)}.
+                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to {fmt(smartNudge.doubledProjection)}.
                         </>
                       )}
                     </p>
@@ -13955,10 +13955,10 @@ export default function Dashboard() {
                     )}
                     <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
                       Compounding lives here. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
-                      {child} projects to about {fmt(smartNudge.currentProjection)} at {majorityAge}.
+                      {child} projects to {fmt(smartNudge.currentProjection)} at {majorityAge}.
                       {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
                         <>
-                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to about {fmt(smartNudge.doubledProjection)}.
+                          {" "}Bumping to {fmtAmt(smartNudge.doubledAmt)}/mo projects to {fmt(smartNudge.doubledProjection)}.
                         </>
                       )}
                     </p>

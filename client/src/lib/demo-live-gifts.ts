@@ -52,3 +52,40 @@ export function readDemoLiveGiftsForFund(fundId: string | null | undefined, enab
   if (!enabled || !fundId) return [];
   return readRaw().filter((g) => g.fundId === fundId);
 }
+
+type FundBalanceLike = {
+  id: string;
+  pendingBalance?: string | null;
+  contributorCount?: number | null;
+};
+
+/**
+ * Merge session-scoped live demo gifts into the funds list so a just-sent gift
+ * VISIBLY lands on the parent dashboard (not only in the Memory Book): the
+ * gift amount is added to the fund's pendingBalance (the dashboard hero total
+ * and the all-funds total both add pendingBalance, so the headline number
+ * ticks up) and contributorCount bumps. Returns NEW fund objects so it never
+ * mutates the TanStack query cache. No-op unless `enabled` (demo accounts only)
+ * and only for funds that have matching live gifts. Mirrors the Memory Book
+ * consumption in MemoryBook.tsx so both sides of the loop land consistently.
+ */
+export function applyDemoLiveGiftsToFunds<T extends FundBalanceLike>(funds: T[], enabled: boolean): T[] {
+  if (!enabled) return funds;
+  const live = readRaw();
+  if (live.length === 0) return funds;
+  return funds.map((fund) => {
+    const forFund = live.filter((g) => g.fundId === fund.id);
+    if (forFund.length === 0) return fund;
+    const added = forFund.reduce(
+      (sum, g) => sum + (parseFloat(String(g.amount).replace(/[^0-9.]/g, "")) || 0),
+      0,
+    );
+    if (added <= 0) return fund;
+    const prevPending = parseFloat(String(fund.pendingBalance ?? "0")) || 0;
+    return {
+      ...fund,
+      pendingBalance: (prevPending + added).toFixed(2),
+      contributorCount: (Number(fund.contributorCount ?? 0) || 0) + forFund.length,
+    };
+  });
+}

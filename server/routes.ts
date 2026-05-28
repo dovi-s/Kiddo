@@ -7074,6 +7074,11 @@ export async function registerRoutes(
                     // the Memory Book client so it can compress visual weight
                     // on monthly-cycle entries per Decision D (locked 2026-05-23).
                     recurringGiftId: (gift as any).recurringGiftId ?? null,
+                    // parentContributionId surfaces a PARENT's recurring
+                    // auto-invest (distinct from a gifter's recurring schedule)
+                    // so the Memory Book client can compress the monthly cycles
+                    // and suppress "Say thanks" on the owner's own gifts.
+                    parentContributionId: (gift as any).parentContributionId ?? null,
                   };
                 })()
               : null,
@@ -7128,6 +7133,12 @@ export async function registerRoutes(
               selectedTicker: rawTicker ?? inferredTicker,
               sharesAcquired: rawShares ?? inferredShares,
               priceAtPurchase: rawPrice,
+              // Backfilled gifts (no saved memory_entry) previously dropped the
+              // recurring linkage entirely, so a parent's 35 auto-invest cycles
+              // rendered as full repeated entries (timeline flood). Surface both
+              // recurring markers so the client compresses them.
+              recurringGiftId: (gift as any).recurringGiftId ?? null,
+              parentContributionId: (gift as any).parentContributionId ?? null,
             },
           };
         });
@@ -10064,6 +10075,14 @@ export async function registerRoutes(
   // Create gift (public, for gift givers)
   app.post('/api/public/gifts', async (req, res) => {
     try {
+      // SECURITY: real gifts are created only by the Stripe webhook after a
+      // confirmed payment. This unauthenticated create-gift endpoint exists for
+      // local test scripts only; allowing it in production would let anyone
+      // forge gift rows (arbitrary fundId/amount/status) that inflate a victim
+      // fund's pending balance + contributor count with no payment. Refuse in prod.
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(404).json({ error: 'Not found' });
+      }
       const data = insertGiftSchema.parse(req.body);
       const gift = await storage.createGift(data);
       res.status(201).json(gift);
@@ -12505,6 +12524,11 @@ export async function registerRoutes(
                     // the Memory Book client so it can compress visual weight
                     // on monthly-cycle entries per Decision D (locked 2026-05-23).
                     recurringGiftId: (gift as any).recurringGiftId ?? null,
+                    // parentContributionId surfaces a PARENT's recurring
+                    // auto-invest (distinct from a gifter's recurring schedule)
+                    // so the Memory Book client can compress the monthly cycles
+                    // and suppress "Say thanks" on the owner's own gifts.
+                    parentContributionId: (gift as any).parentContributionId ?? null,
                   };
                 })()
               : null,
@@ -12564,6 +12588,12 @@ export async function registerRoutes(
               selectedTicker: rawTicker ?? inferredTicker,
               sharesAcquired: rawShares ?? inferredShares,
               priceAtPurchase: rawPrice,
+              // Backfilled gifts (no saved memory_entry) previously dropped the
+              // recurring linkage entirely, so a parent's 35 auto-invest cycles
+              // rendered as full repeated entries (timeline flood). Surface both
+              // recurring markers so the client compresses them.
+              recurringGiftId: (gift as any).recurringGiftId ?? null,
+              parentContributionId: (gift as any).parentContributionId ?? null,
             },
           };
         });

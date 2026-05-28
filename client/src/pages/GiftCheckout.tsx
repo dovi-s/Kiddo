@@ -1545,7 +1545,7 @@ export default function GiftCheckout() {
                     {Number.isFinite(activeAmount) && activeAmount >= 500 && (
                       <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-3">
                         <p className="text-[12px] leading-relaxed text-foreground">
-                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. Assets are held by DriveWealth, LLC (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
+                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner DriveWealth, LLC (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
                         </p>
                       </div>
                     )}
@@ -1631,7 +1631,7 @@ export default function GiftCheckout() {
 
                   {/* Trust badges */}
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    {[{ icon: "🛡", label: "SIPC protected" }, { icon: "⚡", label: "60 seconds" }, { icon: "🎁", label: "Memory Book" }].map(({ icon, label }) => (
+                    {[{ icon: "🛡", label: "Regulated broker" }, { icon: "⚡", label: "60 seconds" }, { icon: "🎁", label: "Memory Book" }].map(({ icon, label }) => (
                       <div key={label} className="rounded-2xl border border-border bg-card px-2 py-3">
                         <p className="text-lg leading-none">{icon}</p>
                         <p className="mt-1 text-[11px] font-semibold text-muted-foreground">{label}</p>
@@ -1944,7 +1944,7 @@ export default function GiftCheckout() {
                     {Number.isFinite(activeAmount) && activeAmount >= 500 && (
                       <div className="mt-3 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-3">
                         <p className="text-[12px] leading-relaxed text-foreground">
-                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. Assets are held by DriveWealth, LLC (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
+                          <span className="font-semibold">Large gifts welcome.</span> {activeAmount >= 1000 ? "Gifts ≥ $1,000 settle the same way as smaller gifts, with a brief verification window. " : ""}No hidden maximum. When investing is live, assets are held by our broker-dealer partner DriveWealth, LLC (Member FINRA / SIPC) in {recipientLooksLikeFund ? "the child" : recipientName}'s UTMA custodial account.
                         </p>
                       </div>
                     )}
@@ -2203,7 +2203,7 @@ export default function GiftCheckout() {
                         ? "This gift lands in the fund for the family to invest later."
                         : familyDefaultMode === "stock"
                           ? `This gift follows the family's current choice: ${familyDefaultStock.name}.`
-                          : `This gift gets invested in real stocks automatically. The family set it up. Your gift follows their path.`}
+                          : `This gift follows the family's plan. Once investing is live, it buys real stocks in the child's name.`}
                   </p>
                   {activeAmount > 0 && (effectiveExecutionModel === "pick" || familyDefaultMode === "stock") && (() => {
                     const stock = effectiveExecutionModel === "pick"

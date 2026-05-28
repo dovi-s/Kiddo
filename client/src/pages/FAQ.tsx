@@ -196,9 +196,9 @@ const faqItems = [
     question: "Is my child's money safe?",
     answer: (
       <>
-        Investments are held by DriveWealth, LLC, a FINRA-registered broker-dealer. Eligible brokerage
-        assets are covered by SIPC up to $500,000 if the broker-dealer fails. Market prices can still
-        move up or down. Kiddo handles the product experience, but DriveWealth holds the assets. If you want the trust-focused version, read{" "}
+        When investing is live, securities are held by our broker-dealer partner, DriveWealth, LLC, a FINRA-registered broker-dealer. Eligible brokerage
+        assets are then covered by SIPC up to $500,000 if the broker-dealer fails. Market prices can still
+        move up or down. Kiddo handles the product experience; DriveWealth holds the assets, not Kiddo. If you want the trust-focused version, read{" "}
         <Link href="/security" className="text-primary hover:underline">
           Security
         </Link>
@@ -212,7 +212,7 @@ const faqItems = [
     question: "What happens if Kiddo shuts down?",
     answer: (
       <>
-        Your child's investments are not Kiddo's assets. They are held through DriveWealth. If Kiddo ever
+        Your child's investments are not Kiddo's assets. Once invested, they are held through our broker-dealer partner DriveWealth, separate from Kiddo. If Kiddo ever
         disappeared, the fund's underlying investments would still exist and would not
         disappear with the company. We break that down in more detail on the{" "}
         <Link href="/security" className="text-primary hover:underline">
@@ -240,7 +240,7 @@ const faqItems = [
         age-appropriate Kid View that grows with your child from age 5 to 17.
         <br />
         <br />
-        Gifts through Kiddo are invested automatically with notes saved permanently. Parents can run occasion
+        Gifts through Kiddo are invested automatically once investing is live, with notes saved permanently. Parents can run occasion
         pages for specific moments and share a fund link anyone can gift through in under a minute.{" "}
         <Link href="/compare/earlybird" className="text-primary hover:underline">
           See the full Kiddo vs EarlyBird comparison &rarr;
@@ -584,10 +584,10 @@ export default function FAQ() {
               </div>
               <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/70">
                 <Lock className="h-3.5 w-3.5" />
-                <span>SIPC protected</span>
+                <span>SIPC protection when live</span>
                 <span className="text-border">|</span>
                 <Shield className="h-3.5 w-3.5" />
-                <span>DriveWealth custody</span>
+                <span>DriveWealth custody partner</span>
               </div>
             </motion.div>
 

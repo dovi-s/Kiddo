@@ -32,7 +32,7 @@ function buildChecklist(majorityAge: number) {
     {
       id: "money-convo",
       label: "Have the money conversation",
-      detail: `Talk about what the fund is, why you built it, and what you hope they do with it. Start at 15 or 16 -- before the pressure of ${majorityAge} arrives.`,
+      detail: `Talk about what the fund is, why you built it, and what you hope they do with it. Start at 15 or 16, before the pressure of ${majorityAge} arrives.`,
     },
     {
       id: "tax-position",

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, lazy, Suspense, type ReactNode } from "react";
 import { Switch, Route, useLocation, useSearch } from "wouter";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, MotionConfig, useReducedMotion } from "framer-motion";
 import { MOTION } from "@/lib/motion";
 import { hasActiveDeepLink } from "@/lib/deep-link-highlight";
 import { normalizePath, isMarketingRoute } from "@/lib/routes";
@@ -852,7 +852,12 @@ function App() {
     isPreview ||
     isGiftPage;
 
+  // Global reduced-motion: MotionConfig reducedMotion="user" makes EVERY
+  // framer-motion component respect the OS prefers-reduced-motion setting
+  // (GiftSuccess cascade, marketing whileInView reveals, charts) without
+  // per-file guards. CSS-class animations are handled separately in index.css.
   return (
+    <MotionConfig reducedMotion="user">
     <QueryClientProvider client={queryClient}>
       <KoraProvider>
         {/* RealtimeProvider sits inside KoraProvider (which gives us
@@ -903,6 +908,7 @@ function App() {
         </RealtimeProvider>
       </KoraProvider>
     </QueryClientProvider>
+    </MotionConfig>
   );
 }
 

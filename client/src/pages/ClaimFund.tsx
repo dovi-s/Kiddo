@@ -218,7 +218,7 @@ export default function ClaimFund() {
               <div className="flex items-start gap-2.5">
                 <Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" strokeWidth={2.5} aria-hidden="true" />
                 <p className="text-sm text-foreground/85 leading-relaxed">
-                  <span className="font-semibold text-foreground">The only ongoing charge: 10 cents per $100 invested per year.</span> That's it. No subscription. No platform fee.
+                  <span className="font-semibold text-foreground">The only ongoing charge: 10 cents per $100 invested per year, or $1 a year per $1,000.</span> That's it. No subscription. No platform fee.
                 </p>
               </div>
             </motion.div>

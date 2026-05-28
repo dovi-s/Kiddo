@@ -33,13 +33,13 @@ export default function Security() {
           {[
             {
               icon: Wallet,
-              title: "We do not hold your child&apos;s money. DriveWealth does.",
-              body: "Kiddo is the experience. DriveWealth is the broker-custodian layer that holds the investments.",
+              title: "We never hold your child&apos;s money. A regulated broker-custodian does.",
+              body: "Kiddo is the experience. Our broker-custodian partner, DriveWealth, LLC, holds the investments once your account is open.",
             },
             {
               icon: Shield,
               title: "What protects your child&apos;s fund",
-              body: "SIPC coverage and FINRA oversight through DriveWealth, encrypted data handling, and private fund links sit underneath the product experience.",
+              body: "Once investing is live, SIPC coverage and FINRA oversight through DriveWealth, plus encrypted data handling and private fund links, sit underneath the product experience.",
             },
             {
               icon: Lock,
@@ -65,7 +65,7 @@ export default function Security() {
               What happens if Kiddo shuts down?
             </h2>
             <p className="mt-5 text-base leading-8 text-muted-foreground">
-              Your child&apos;s investments are not Kiddo&apos;s assets. They remain at the broker-custodian layer. If Kiddo disappeared tomorrow, the underlying assets would still exist.
+              Your child&apos;s investments are not Kiddo&apos;s assets. Once invested, they are held at the broker-custodian layer, separate from Kiddo. If Kiddo disappeared, those assets would still exist and you could move them to another broker.
             </p>
 
             <h3 className="mt-10 font-heading text-2xl font-semibold text-foreground">How we think about privacy</h3>
@@ -75,7 +75,7 @@ export default function Security() {
 
             <h3 className="mt-10 font-heading text-2xl font-semibold text-foreground">Who regulates what</h3>
             <p className="mt-4 text-base leading-8 text-muted-foreground">
-              Kiddo is the technology layer — not a broker-dealer, investment adviser, or bank. DriveWealth, LLC is the broker-dealer and custodian. Stripe handles payment processing. Each layer has a distinct job.
+              Kiddo is the technology layer, not a broker-dealer, investment adviser, or bank. DriveWealth, LLC is our broker-dealer and custodian partner. Stripe handles payment processing. Each layer has a distinct job.
             </p>
 
             {/* Canonical DriveWealth + SIPC disclosure. Same shape as
@@ -87,7 +87,7 @@ export default function Security() {
                 2026-05-23 overclaim audit. */}
             <div className="mt-6 rounded-2xl border border-border bg-muted/30 p-5 text-sm leading-7 text-muted-foreground">
               <p>
-                Kiddo funds are held at DriveWealth, LLC, a FINRA-registered broker-dealer and member of SIPC. Eligible accounts are SIPC-protected up to $500,000 against brokerage failure. SIPC does not protect against market losses. Investments may lose value. Not FDIC insured, not bank guaranteed.
+                When investing is live, Kiddo funds are held at DriveWealth, LLC, a FINRA-registered broker-dealer and member of SIPC. Eligible accounts are then SIPC-protected up to $500,000 against brokerage failure. SIPC does not protect against market losses. Investments may lose value. Not FDIC insured, not bank guaranteed.
               </p>
               <p className="mt-3">
                 Check the background of DriveWealth, LLC on{" "}

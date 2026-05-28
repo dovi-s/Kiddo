@@ -23,7 +23,7 @@
 //   - No marketing teaser quotes, no AI-slop sparkles, no rotating
 //     gradient backgrounds. Apple-Settings register applied to
 //     email, minimal chrome, content forward.
-//   - Footer carries the legal entity name (Kora Inc.), the support
+//   - Footer carries the legal entity name (Kiddo, Inc.), the support
 //     link, and the unsubscribe URL when caller provides one.
 //
 // API:
@@ -158,7 +158,7 @@ export function renderKiddoEmail(input: KiddoEmailInput): { html: string } {
 
         <!-- Footer -->
         <tr><td style="text-align: center; padding: 24px 16px 8px 16px; font-family: ${FONT_STACK}; font-size: 11px; line-height: 1.6; color: rgba(26,23,16,0.4);">
-          Kora Inc. is a technology company, not a broker-dealer.
+          Kiddo, Inc. is a technology company, not a broker-dealer.
           Securities offered through DriveWealth, LLC (FINRA/SIPC).<br/>
           <a href="mailto:${esc(supportEmail)}" style="color: rgba(26,23,16,0.45); text-decoration: underline;">${esc(supportEmail)}</a>
           &nbsp;·&nbsp;

@@ -91,7 +91,7 @@ export default function Demo() {
   const { login } = useAuth();
 
   // Generic demo login. After successful auth, parents go to
-  // /dashboard and gifters go to /gifter. The "Skip to Haley"
+  // /dashboard and gifters go to /my-gifts. The "Skip to Haley"
   // featured CTA below uses a specialized version that auto-selects
   // Haley's fund and lands on /age-18-plan.
   const handleLogin = async (email: string) => {
@@ -195,7 +195,7 @@ export default function Demo() {
                   Haley's a month from 21.
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  The full handoff page: the centerpiece projection slider, Phil's sealed letter, 17 voice memos from Gloria, 16 years of gifts. Land here first to see what Kiddo is for.
+                  The full handoff page: the centerpiece projection slider, Phil's sealed letter, years of voice memos from Gloria, and a fund built across her whole childhood. Land here first to see what Kiddo is for.
                 </p>
               </div>
               <button

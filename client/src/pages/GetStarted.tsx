@@ -49,6 +49,7 @@ import {
   yearsTo18,
 } from "@kora/utils";
 import { US_STATES, getMajorityAgeForState } from "@shared/utma";
+import { projectFundValue } from "@shared/projection";
 
 const DRAFT_KEY = "kiddo:get-started-v2";
 const PAGE = "mx-auto w-full max-w-lg";
@@ -277,8 +278,23 @@ export default function GetStarted() {
     : 15;
   const projection = getProjectionSnapshot(annualGift, years);
   const savings = projection.savings;
-  const invested = projection.invested;
-  const diff = projection.difference;
+  // Headline "Kiddo estimate" routed through the canonical projectFundValue
+  // (effective-monthly, two-phase, fee-netted) so it MATCHES the Dashboard /
+  // Projection / Age18 surfaces a parent revisits, instead of trailing them
+  // ~3% via the annual-compounding futureValue inside getProjectionSnapshot.
+  // yearsAhead = contributionYears = years (the parent funds the whole window
+  // remaining to majority; for a personal account years = 15). milestoneInvested
+  // below intentionally stays on projectContributionSeries — it's a different,
+  // from-age-1 chart model, not this remaining-window headline.
+  const invested = projectFundValue({
+    startingValue: 0,
+    monthlyContribution: annualGift / 12,
+    yearsAhead: years,
+    contributionYears: years,
+    annualReturnRate: 0.07,
+    netAumFee: true,
+  });
+  const diff = invested - savings;
 
   const milestoneInvested = useMemo(() => {
     // 0.001 = 0.10% Kiddo AUM annual fee netted out so the projection
@@ -442,6 +458,11 @@ export default function GetStarted() {
       if (typeof d.annualGift === "number") setAnnualGift(d.annualGift);
       if (d.investment) setInvestment(d.investment);
       if (d.ticker) setTicker(d.ticker);
+      if (d.lastName) setLastName(d.lastName);
+      if (d.occasion) setOccasion(d.occasion);
+      if (d.gifterAudience) setGifterAudience(d.gifterAudience);
+      if (d.recipientState) setRecipientState(d.recipientState);
+      if (d.country) setCountry(d.country);
     } catch {
       window.sessionStorage.removeItem(DRAFT_KEY);
     }
@@ -453,9 +474,9 @@ export default function GetStarted() {
       window.sessionStorage.removeItem(DRAFT_KEY);
       return;
     }
-    const draft: OnboardingDraft = { step, authMode, accountType, email, name, birthdate, annualGift, investment, ticker };
+    const draft: OnboardingDraft = { step, authMode, accountType, email, name, birthdate, annualGift, investment, ticker, lastName, occasion, gifterAudience, recipientState, country };
     window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [accountType, annualGift, authMode, birthdate, email, investment, name, step, ticker]);
+  }, [accountType, annualGift, authMode, birthdate, country, email, gifterAudience, investment, lastName, name, occasion, recipientState, step, ticker]);
 
   useEffect(() => {
     if (!projectionOptions.includes(projectionMilestone)) {

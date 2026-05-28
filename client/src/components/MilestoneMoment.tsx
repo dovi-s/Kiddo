@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 // Sprout (brand mark) replaces Sparkles 2026-05-12 — sparkle iconography is
 // banned per feedback_no_ai_slop.md (Robinhood-precedent territory for
 // celebratory imagery tied to investment activity). The milestone moment IS
@@ -163,16 +163,18 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, on
     }
   };
 
+  const reduceMotion = useReducedMotion();
+
   if (!milestone) return null;
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.94 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -12, scale: 0.96 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 20, scale: 0.94 }}
+          animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+          exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -12, scale: 0.96 }}
+          transition={reduceMotion ? { duration: 0.15 } : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           className="relative overflow-hidden rounded-2xl border border-[hsl(var(--kiddo-gold)/0.30)] bg-gradient-to-br from-[hsl(var(--kiddo-gold)/0.08)] to-[hsl(var(--kiddo-gold)/0.04)] p-5 shadow-premium"
           data-testid="card-milestone-moment"
         >
@@ -183,22 +185,24 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, on
               architecture level). Don't scale this up on bigger milestones. A bigger
               dollar crossed doesn't mean more particles; it means the same restraint
               on a larger emotional anchor. The MilestoneShareCard does the gravity. */}
-          <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                className="confetti-particle"
-                style={{
-                  left: `${10 + i * 11}%`,
-                  top: "60%",
-                  backgroundColor: i % 2 === 0
-                    ? "hsl(var(--kiddo-gold))"
-                    : "hsl(var(--kiddo-evergreen))",
-                  transform: `rotate(${i * 45}deg)`,
-                }}
-              />
-            ))}
-          </div>
+          {!reduceMotion && (
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="confetti-particle"
+                  style={{
+                    left: `${10 + i * 11}%`,
+                    top: "60%",
+                    backgroundColor: i % 2 === 0
+                      ? "hsl(var(--kiddo-gold))"
+                      : "hsl(var(--kiddo-evergreen))",
+                    transform: `rotate(${i * 45}deg)`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
 
           <button
             type="button"

@@ -2518,6 +2518,20 @@ export class WebhookHandlers {
       console.warn("[Webhook] recurring_gift_id lookup failed:", rgErr);
     }
 
+    // BUG FIX (2026-05-27): credit the fund the amount that ACTUALLY settles,
+    // not the gross invoice amount. Stripe deducts its card fee (~2.9% + $0.30)
+    // from each recurring charge, so recording the full amount_paid as net_amount
+    // booked money that never arrived, every cycle (over-crediting the fund's
+    // balance + contributor-weighted totals). Record net = gross minus the card
+    // fee so the fund's investable balance is honest.
+    //
+    // This is option B (platform model: gifter pays the round number, the fee
+    // comes out before investing). The promise-aligned option A — gifter covers
+    // the fee on top so the FULL gift lands, matching one-time gifts — needs the
+    // subscription PRICE + metadata changes (routes.ts) + Stripe-test
+    // verification, and is tracked as a follow-up in project_full_expert_audit_2026_05_27.md.
+    const recurringCardFee = Math.round((amountUsd * 0.029 + 0.30) * 100) / 100;
+    const recurringNetToFund = Math.max(0, Math.round((amountUsd - recurringCardFee) * 100) / 100);
     const [insertedGift] = await db.execute(sql`
       INSERT INTO gifts (
         fund_id, sender_name, sender_email, amount, net_amount, status,
@@ -2525,7 +2539,7 @@ export class WebhookHandlers {
         stripe_payment_intent_id, recurring_gift_id, created_at
       ) VALUES (
         ${fundId}, ${senderName}, ${senderEmail || null}, ${amountUsd.toFixed(2)},
-        ${amountUsd.toFixed(2)}, 'processing', ${message || null},
+        ${recurringNetToFund.toFixed(2)}, 'processing', ${message || null},
         ${selectedTicker || null}, ${executionModel}, ${isAnonymousFlag},
         ${invoice.payment_intent || null}, ${recurringGiftId},
         NOW()

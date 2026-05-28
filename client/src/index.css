@@ -1398,7 +1398,7 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.005em;
-  color: hsl(var(--kiddo-foreground));
+  color: hsl(var(--kiddo-ink));
 }
 
 .kiddo-tab-row {
@@ -2240,6 +2240,27 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
   border-radius: 2px;
   animation: confettiDrift 1.5s ease-out forwards;
   pointer-events: none;
+}
+
+/* Vestibular safety: these celebration + ambient keyframes live BELOW the
+   earlier prefers-reduced-motion guards, so they kept firing on the emotional-
+   peak surfaces (milestone, gift-success) even when the OS asked to reduce
+   motion. Silence the ambient loops to their resting state; hide the purely
+   decorative transient overlays (ring, confetti, paper plane). MilestoneMoment
+   also skips rendering the confetti in JS under reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .value-land,
+  .number-build,
+  .card-bob,
+  .heartbeat,
+  .live-badge-pulse {
+    animation: none !important;
+  }
+  .milestone-ring,
+  .confetti-particle,
+  .paper-plane-fly {
+    display: none !important;
+  }
 }
 
 /* --- Seeded confetti timing offsets --- */

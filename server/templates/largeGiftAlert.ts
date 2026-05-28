@@ -54,7 +54,7 @@ export function buildLargeGiftAlertEmail(input: LargeGiftAlertInput): EmailMessa
     ``,
     `That's above our 'heads up' threshold, so we wanted to surface it so you can keep track. Most large gifts are expected (a grandparent's inheritance distribution, a pooled baby-shower gift, a graduation envelope). If this one wasn't expected, write to support and we'll help you sort it out.`,
     ``,
-    `Either way, the money is safely in ${childFirstName}'s fund and being invested per your strategy.`,
+    `Either way, the gift is recorded in ${childFirstName}'s fund. Once investing is live, it follows the strategy you set.`,
   ].join("\n");
 
   const { html } = renderKiddoEmail({

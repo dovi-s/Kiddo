@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Fund, Event, Gift, Holding, InsertFund } from "@shared/schema";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@kora/api";
 import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { useAuth } from "@/hooks/use-auth";
+import { applyDemoLiveGiftsToFunds } from "@/lib/demo-live-gifts";
 
 export function useFunds() {
   // Gate the funds query on auth state. Logged-out visitors land on public
@@ -28,8 +30,9 @@ export function useFunds() {
   // we're trying to eliminate. isAuthChecked flips true only after the
   // auth query has fetched from the server, so downstream queries wait
   // for ground truth before firing.
-  const { isAuthenticated, isAuthChecked } = useAuth();
-  return useQuery<Fund[]>({
+  const { isAuthenticated, isAuthChecked, user } = useAuth();
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount);
+  const query = useQuery<Fund[]>({
     queryKey: ["/api/funds"],
     queryFn: async () => {
       const funds = await fetchFunds();
@@ -44,6 +47,16 @@ export function useFunds() {
     refetchOnMount: true,
     refetchOnWindowFocus: false,
   });
+  // Demo-only: merge the prospect's just-sent session gifts into the funds so a
+  // sent gift VISIBLY lands on the dashboard (pendingBalance feeds the hero +
+  // all-funds totals; contributorCount ticks up). Non-demo and no-gift cases
+  // are a no-op, and it never mutates the query cache. The Memory Book consumes
+  // the same session store (MemoryBook.tsx), so both sides of the loop land.
+  const data = useMemo(
+    () => applyDemoLiveGiftsToFunds(query.data ?? [], isDemoAccount),
+    [query.data, isDemoAccount],
+  );
+  return { ...query, data };
 }
 
 export function useFund(id: string | undefined) {

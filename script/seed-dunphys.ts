@@ -433,7 +433,7 @@ function giftsForKid(kid: { firstName: string; ageYears: number; birthdate: stri
   // 36 cycles ≈ 3 years of showing up. Active schedules ran through last
   // month (next charge upcoming); the paused one (Haley, winding down near
   // majority) stopped a few months back.
-  const recurringNote = `Every month, a little more for ${kid.firstName}. — Dad`;
+  const recurringNote = `Every month, a little more for ${kid.firstName}. From Dad.`;
   const recurringStartOffset = kid.recurringPaused ? 3 : 1;
   for (let i = 0; i < 36; i++) {
     list.push({
@@ -936,7 +936,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
       giftId: eg.giftId,
       senderName: eg.senderName,
       senderEmail: eg.senderEmail || null,
-      message: `Dear ${first},\n\nThank you so much for your $${amt} gift to ${kid.firstName}'s fund. It means more than you know: not just the investment itself, but the fact that you showed up for ${kid.firstName}'s future.\n\n${kid.firstName} will read this when ${willRead} 18.\n\nWith love,\nPhil`,
+      message: `Dear ${first},\n\nThank you so much for your $${amt} gift to ${kid.firstName}'s fund. It means more than you know: not just the investment itself, but the fact that you showed up for ${kid.firstName}'s future.\n\n${kid.firstName} will read this when ${willRead} ${kid.majorityAge}.\n\nWith love,\nPhil`,
       status: "sent",
       sentAt: new Date(eg.createdAt.getTime() + 3 * 24 * 60 * 60 * 1000),
     } as any);
@@ -1090,7 +1090,7 @@ async function seedMilestonesFromSnapshots(fundId: string, childFirst: string): 
     5000: "Started small; grew through every birthday, holiday, and gift from the people who showed up.",
     10000: "Five figures now — compounding doing the quiet work.",
     15000: "Past the halfway mark; from here it's mostly the market.",
-    20000: "A real head start — the kind that changes the options in front of a kid.",
+    20000: "A real head start. The kind that changes the options in front of a kid.",
     25000: "Two decades of showing up, compounded.",
   };
   for (const threshold of [5000, 10000, 15000, 20000, 25000]) {

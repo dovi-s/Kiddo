@@ -35,6 +35,11 @@ export type OnboardingDraft = {
   annualGift: number;
   investment: OnboardingInvestmentChoice;
   ticker: string;
+  lastName?: string;
+  occasion?: string;
+  gifterAudience?: string;
+  recipientState?: string;
+  country?: "US" | "OTHER" | "";
 };
 
 export type AuthProvidersStatus = {
