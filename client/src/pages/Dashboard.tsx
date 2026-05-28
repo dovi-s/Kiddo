@@ -2087,17 +2087,19 @@ export default function Dashboard() {
   const [demoBeat, setDemoBeat] = useState<{ id: number; amount: number } | null>(null);
   useEffect(() => {
     if (!activeFundId) return;
-    // globalThis-qualified DOM types: this file has a local `Event` type (the
-    // occasion model), which shadows the DOM Event/EventListener.
-    const handler = (e: globalThis.Event) => {
-      const detail = (e as globalThis.CustomEvent).detail || {};
+    // This file has a local `Event` type (the occasion model) that shadows the
+    // DOM Event, and globalThis.Event didn't resolve cleanly here. Since this is
+    // a demo-only visual signal, type the handler param as `any` and drop the
+    // casts — `(e: any) => void` is assignable to addEventListener's listener.
+    const handler = (e: any) => {
+      const detail = (e && e.detail) || {};
       if (String(detail.fundId) !== String(activeFundId)) return;
       const amount = Number(detail.amount);
       if (!Number.isFinite(amount) || amount <= 0) return;
       setDemoBeat({ id: Date.now(), amount });
     };
-    window.addEventListener("kiddo:demo-gift-landed", handler as globalThis.EventListener);
-    return () => window.removeEventListener("kiddo:demo-gift-landed", handler as globalThis.EventListener);
+    window.addEventListener("kiddo:demo-gift-landed", handler);
+    return () => window.removeEventListener("kiddo:demo-gift-landed", handler);
   }, [activeFundId]);
 
   // Chart-scrub state (Revolut-style tactile chart). When the parent
