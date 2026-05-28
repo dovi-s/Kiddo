@@ -45,7 +45,27 @@ const uploadsPath = path.resolve(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsPath)) {
   fs.mkdirSync(uploadsPath, { recursive: true });
 }
-app.use("/uploads", express.static(uploadsPath));
+// SECURITY (PII): /uploads (local-disk dev/fallback path) holds children's
+// Memory Book media, child hero photos, and gift media. Some of it is
+// INTENTIONALLY public — the child hero photo on the public gift landing page,
+// gift media on public success/claim pages, and media embedded in emails (email
+// clients can't carry a session cookie). So this path canNOT sit behind
+// isAuthenticated without breaking the public gifter loop. The real protection
+// is the private-bucket + short-lived signed-URL read path in objectStorage.ts
+// (the durable-storage workstream; not yet wired). Until that ships, harden the
+// public static handler so kids' media is at least not search-indexed and its
+// URLs don't leak via Referer headers.
+app.use(
+  "/uploads",
+  express.static(uploadsPath, {
+    index: false,
+    setHeaders: (res) => {
+      res.setHeader("X-Robots-Tag", "noindex, noimageindex, nofollow");
+      res.setHeader("Referrer-Policy", "no-referrer");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+    },
+  })
+);
 
 // Local/dev environments behind corporate proxies often present self-signed/intercepted certs.
 // Keep TLS secure by default; allow insecure TLS only when explicitly opted in for local debugging.
