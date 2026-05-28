@@ -108,6 +108,12 @@ export function DemoGiftMoment() {
               </ToastAction>
             ),
           });
+          // Presentational hero-roll signal (Dashboard listens). Only for a
+          // real landed amount — a recurring "on its way" hasn't landed, so it
+          // shouldn't roll the hero. No data mutated.
+          if (!isRecurring) {
+            window.dispatchEvent(new CustomEvent("kiddo:demo-gift-landed", { detail: { fundId: fund.id, amount: Number(amount) } }));
+          }
         }, JUST_SENT_DELAY_MS);
         return clear;
       }
@@ -146,6 +152,9 @@ export function DemoGiftMoment() {
           </ToastAction>
         ),
       });
+      // Presentational hero-roll signal — Dashboard rolls the hero up by this
+      // amount, synced to the toast. No data mutated.
+      window.dispatchEvent(new CustomEvent("kiddo:demo-gift-landed", { detail: { fundId: fund.id, amount: Number(g.amount) } }));
     }, DELAY_MS);
     return clear;
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -132,6 +132,7 @@ import { getDeepLinkHighlightCardStyle, HIGHLIGHT_HOLD_MS } from "@/lib/deep-lin
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FundTabs } from "@/components/layout/FundTabs";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
+import { useCountUp } from "@/hooks/use-count-up";
 import { useRealtimeEvents } from "@/hooks/use-realtime-events";
 import { MilestoneMoment } from "@/components/MilestoneMoment";
 import { toast } from "@/hooks/use-toast";
@@ -868,6 +869,22 @@ function formatCurrency(value: number): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+// Presentational-only hero roll for the Dunphy demo's "gift just landed" beat.
+// DemoGiftMoment's gift is a no-op toast (the $ is already baked into the seeded
+// balance), so the normal hero count-up has nothing to animate. This rolls the
+// hero from (balance − giftAmount) up to the real seeded balance, synced to the
+// toast, so the prospect FEELS the money land — and it ends exactly on the real
+// number, so there's zero data drift. Mounted fresh per beat (keyed) so
+// useCountUp's initial display starts at `fromValue` and eases up to `toValue`.
+function DemoHeroRoll({ fromValue, toValue, durationMs = 1400, onDone }: { fromValue: number; toValue: number; durationMs?: number; onDone: () => void }) {
+  const { value } = useCountUp({ from: fromValue, to: toValue, duration: durationMs });
+  useEffect(() => {
+    const t = window.setTimeout(onDone, durationMs + 300);
+    return () => window.clearTimeout(t);
+  }, [onDone, durationMs]);
+  return <>{formatCurrency(value)}</>;
 }
 
 // Friendlier money formatter for action labels and warm-context UI: drops the
@@ -2061,6 +2078,27 @@ export default function Dashboard() {
     // anchor rules" — hero balances are the slowest tier in the ladder.
     duration: 1200,
   });
+
+  // Demo "gift just landed" hero roll. DemoGiftMoment (the toast) dispatches a
+  // presentational signal when its beat fires; we roll the hero from
+  // (balance − amount) up to the real seeded balance so the gift is FELT on the
+  // hero, not just announced in a toast. No data mutation — purely visual, ends
+  // on the real number. Only fires for the fund currently being viewed.
+  const [demoBeat, setDemoBeat] = useState<{ id: number; amount: number } | null>(null);
+  useEffect(() => {
+    if (!activeFundId) return;
+    // globalThis-qualified DOM types: this file has a local `Event` type (the
+    // occasion model), which shadows the DOM Event/EventListener.
+    const handler = (e: globalThis.Event) => {
+      const detail = (e as globalThis.CustomEvent).detail || {};
+      if (String(detail.fundId) !== String(activeFundId)) return;
+      const amount = Number(detail.amount);
+      if (!Number.isFinite(amount) || amount <= 0) return;
+      setDemoBeat({ id: Date.now(), amount });
+    };
+    window.addEventListener("kiddo:demo-gift-landed", handler as globalThis.EventListener);
+    return () => window.removeEventListener("kiddo:demo-gift-landed", handler as globalThis.EventListener);
+  }, [activeFundId]);
 
   // Chart-scrub state (Revolut-style tactile chart). When the parent
   // hovers or finger-drags across the trend chart, this holds the
@@ -5402,17 +5440,21 @@ export default function Dashboard() {
                           // blink-and-miss. Count-up duration bumped to 1200ms
                           // 2026-05-12 (was 900ms default) — hero balance is the
                           // focal element on the duration ladder.
-                          color: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash) ? "hsl(var(--kiddo-gold-light))" : "white",
+                          color: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash || !!demoBeat) ? "hsl(var(--kiddo-gold-light))" : "white",
                           letterSpacing: "-1.5px",
                           lineHeight: 1,
                           marginBottom: 4,
-                          filter: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash) ? "drop-shadow(0 0 18px hsl(var(--kiddo-gold) / 0.35))" : "none",
+                          filter: !isScrubbing && ((balanceAnimating && showFresheningCue) || newGiftFlash || !!demoBeat) ? "drop-shadow(0 0 18px hsl(var(--kiddo-gold) / 0.35))" : "none",
                           transition: "color 0.55s ease, filter 0.55s ease",
                         }}
                         data-testid="text-total-balance"
-                        aria-live={isScrubbing || balanceAnimating ? "off" : "polite"}
+                        aria-live={isScrubbing || balanceAnimating || !!demoBeat ? "off" : "polite"}
                       >
-                        {formatCurrency(isScrubbing ? scrubbedTrendPoint!.value : displayHeroBalance)}
+                        {isScrubbing
+                          ? formatCurrency(scrubbedTrendPoint!.value)
+                          : demoBeat
+                            ? <DemoHeroRoll key={demoBeat.id} fromValue={Math.max(0, rawTotalValue - demoBeat.amount)} toValue={rawTotalValue} onDone={() => setDemoBeat(null)} />
+                            : formatCurrency(displayHeroBalance)}
                       </motion.div>
 
                       {/* Hero gain pill removed — the +$X all-time gain (and its
