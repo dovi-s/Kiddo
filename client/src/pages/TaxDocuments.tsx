@@ -363,7 +363,7 @@ export default function TaxDocuments() {
             Tax documents{activeFund?.recipientFirstName ? ` · ${capFirst(activeFund.recipientFirstName)}` : ""}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-            Cost basis, unrealized gains, and the tax forms DriveWealth issues for {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s fund` : "this fund"}.
+            Cost basis, unrealized gains, and — once investing is live — the tax forms DriveWealth issues for {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s fund` : "this fund"}.
             {funds.length > 1 && " Switch funds from the sidebar."}
           </p>
         </div>
@@ -917,7 +917,7 @@ export default function TaxDocuments() {
                 </div>
               )}
               <p className="mt-3 text-[11px] text-muted-foreground/80 leading-relaxed">
-                Fees are estimated from the time-weighted average invested balance ($1/yr per $1,000 invested, or 0.10% annual). Realized gains and DriveWealth-issued 1099 numbers are authoritative. Use this summary as the at-a-glance scan; reconcile against the per-sale and per-position tables below.
+                Fees are estimated from the time-weighted average invested balance ($1/yr per $1,000 invested, or 0.10% annual). Once investing is live, realized gains and the DriveWealth-issued 1099 will be the authoritative numbers. Use this summary as the at-a-glance scan; reconcile against the per-sale and per-position tables below.
               </p>
             </div>
           </section>
