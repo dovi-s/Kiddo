@@ -11354,6 +11354,11 @@ export async function registerRoutes(
         if (demoName) demoQs.set("senderName", demoName);
         if (demoTicker) demoQs.set("ticker", demoTicker);
         if (demoMessage) demoQs.set("message", demoMessage);
+        // Carry which media the gifter attached at checkout so the success page
+        // reflects it instead of re-prompting "add a photo/video/voice".
+        if (photoUrl) demoQs.set("hasPhoto", "1");
+        if (videoUrl) demoQs.set("hasVideo", "1");
+        if (audioUrl) demoQs.set("hasAudio", "1");
         return res.json({
           url: `${baseUrl}/gift/success?${demoQs.toString()}`,
           sessionId: `demo_${Date.now()}`,

@@ -234,6 +234,19 @@ export default function GiftSuccess() {
     })
   }, [isDemoGift, isDemoAccount, fundId, senderNameParam, amountParam, tickerParam, isRecurringSetup, params])
 
+  // Demo gifts carry no Stripe session_id, so the gift-summary fetch above is
+  // skipped — derive "already added at checkout" state from the demo redirect
+  // params instead, so the success page reflects what the gifter added (and
+  // doesn't re-prompt for a note/media they already attached).
+  useEffect(() => {
+    if (!isDemoGift) return
+    if ((params.get("message") || "").trim()) setHasMessage(true)
+    if (params.get("hasPhoto") === "1") setHasPhoto(true)
+    if (params.get("hasVideo") === "1") setHasVideo(true)
+    if (params.get("hasAudio") === "1") setHasAudio(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDemoGift, searchString])
+
   const parsePositiveAmount = (value: unknown): string | null => {
     const n = Number(value)
     if (!Number.isFinite(n) || n <= 0) return null
@@ -308,6 +321,12 @@ export default function GiftSuccess() {
             if (summary?.hasPhoto) setHasPhoto(true)
             if (summary?.hasVideo) setHasVideo(true)
             if (summary?.hasAudio) setHasAudio(true)
+            // The summary returns the note TEXT (not a boolean), and the
+            // composer below keys off hasMessage. Flip it when a note exists so
+            // the page confirms "your note is in the Memory Book" instead of
+            // re-prompting "write something" for a note the gifter already
+            // wrote at checkout.
+            if (summary?.message && String(summary.message).trim()) setHasMessage(true)
             if (typeof summary?.isAnonymous === "boolean") setIsAnonymous(summary.isAnonymous)
             if (typeof summary?.yearsUntil18 === "number" && summary.yearsUntil18 >= 0) {
               setYearsUntil18(summary.yearsUntil18)
@@ -1602,8 +1621,11 @@ export default function GiftSuccess() {
           <p className="text-center text-xs text-muted-foreground mt-3">Free to start. No credit card required.</p>
         </motion.div>
 
-        {/* Recurring nudge */}
-        {showRecurringNudge && (
+        {/* Recurring / "remind me to gift again" nudge — ONLY for one-time
+            gifters. Suppressed when the gifter just set up recurring
+            (isRecurringSetup): nudging someone who already automated a monthly
+            gift to "set a reminder to gift again" is contradictory. */}
+        {showRecurringNudge && !isRecurringSetup && (
           <motion.div
             className="w-full mb-8"
             initial={{ opacity: 0, y: 20 }}
@@ -1660,7 +1682,7 @@ export default function GiftSuccess() {
               the brokerage-failure-vs-market-loss distinction explicitly
               (was implicit in "Investing can go up or down" — too soft). */}
           <p className="text-[10px] text-muted-foreground/60 text-center px-4">
-            Real stocks, real accounts. Assets held by DriveWealth, LLC (Member FINRA/SIPC). SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.
+            Real stocks, real accounts. When investing is live, assets are held by our broker-dealer partner DriveWealth, LLC (Member FINRA/SIPC), with SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.
           </p>
         </motion.div>
 
