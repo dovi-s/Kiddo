@@ -91,7 +91,7 @@ const plans: readonly Plan[] = [
       "Gifter reminder system (birthday and repeat-gift reminders)",
       "Text Memory Book entries (gifters can always attach photos, videos, and voice)",
       "Kid View. Your child sees what they own and how their fund grows",
-      "SIPC-insured investments via DriveWealth",
+      "SIPC-protected investments via DriveWealth (at launch)",
       "$1/year per $1,000 invested (only on invested assets)",
     ],
     note: "No credit card. No commitment.",

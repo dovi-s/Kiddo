@@ -1090,7 +1090,7 @@ export default function GiftCheckout() {
             : "Following the family's cash default";
   const provenanceName = recipientLooksLikeFund ? "this child's" : `${recipientName}'s`;
   const giftProvenance = `Invested in ${provenanceName} future with Kiddo.`;
-  const checkoutTrustLine = "DriveWealth, LLC is a registered broker-dealer, Member FINRA/SIPC. Securities protected up to $500,000 against brokerage failure. Not a protection against market losses. sipc.org";
+  const checkoutTrustLine = "DriveWealth, LLC is a registered broker-dealer, Member FINRA/SIPC. Once invested, eligible securities are protected up to $500,000 against brokerage failure. Not a protection against market losses. sipc.org";
   // Trust-line JSX variant with inline anchor links. Used in the
   // payment-step trust card + order-summary "Where the money goes"
   // card. Sophisticated gifters (Five Towns persona) verify custody
@@ -1110,7 +1110,7 @@ export default function GiftCheckout() {
       >
         DriveWealth, LLC
       </a>
-      {" is a registered broker-dealer, Member FINRA/SIPC. Securities protected up to $500,000 against brokerage failure. Not a protection against market losses. "}
+      {" is a registered broker-dealer, Member FINRA/SIPC. Once invested, eligible securities are protected up to $500,000 against brokerage failure. Not a protection against market losses. "}
       <a
         href="https://www.sipc.org"
         target="_blank"

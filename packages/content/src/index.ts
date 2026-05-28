@@ -10,14 +10,14 @@ export const brandTruths = {
   gifterHook: "Give $50 that's still there in 18 years.",
   subhead: "A real investment account that grows with them, with letters and photos from the people who loved them. Set up in 2 minutes. Anyone can gift.",
   speed: "60 seconds. No account needed.",
-  trust: "Assets are held by our regulated brokerage custodian.",
+  trust: "When investing is live, assets are held by our regulated brokerage custodian.",
   longTermExample: "$9,000 in gifts could become much more over time. Investing involves risk and is not guaranteed.",
 } as const;
 
 export const kiddoLoopCopy = {
   enemy: "Cash gifts disappear. Kiddo gifts last.",
   giftProvenance: (childName: string) => `Invested in ${childName}'s future with Kiddo.`,
-  trustCustodian: "Your child's fund is held by our regulated brokerage custodian.",
+  trustCustodian: "When investing is live, your child's fund is held by our regulated brokerage custodian.",
   sipcPlainLanguage: "SIPC protects against brokerage failure, not market losses.",
   irrevocableGift: "Once a gift reaches a child's fund, it generally belongs to the child and cannot be taken back by the giver.",
   noAccountFast: "No app. No account. Usually under a minute.",

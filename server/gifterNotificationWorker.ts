@@ -769,7 +769,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
     }
     details.push({ label: "Total charged", value: `$${total.toFixed(2)}` });
   }
-  details.push({ label: "Recipient", value: `${childName}'s UTMA · custody at DriveWealth, LLC` });
+  details.push({ label: "Recipient", value: `${childName}'s UTMA · custody at DriveWealth, LLC once invested` });
 
   // Plain-text version of the receipt block fixed-width alignment
   // for monospace viewers (some CPAs forward these to their inbox as
@@ -843,7 +843,7 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
       `Start a fund: ${startFundUrl}`,
       "",
       "Kiddo, Inc. is a technology company, not a broker-dealer.",
-      "Securities offered through DriveWealth, LLC (FINRA/SIPC).",
+      "When investing is live, securities are offered through DriveWealth, LLC (member FINRA/SIPC).",
       "Keep this email for your records.",
       "",
       "The Kiddo team",

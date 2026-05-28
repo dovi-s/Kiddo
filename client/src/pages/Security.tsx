@@ -8,7 +8,7 @@ import { usePageSeo } from "@/lib/seo";
 export default function Security() {
   usePageSeo({
     title: "Kiddo Security | Your child's money is protected.",
-    description: "Investments held by DriveWealth, a FINRA-registered broker-dealer with SIPC coverage. Here is exactly how Kiddo protects your child's investments.",
+    description: "When investing is live, investments are held by DriveWealth, a FINRA-registered broker-dealer with SIPC coverage. Here is exactly how Kiddo protects your child's investments.",
     ogType: "article",
   });
 

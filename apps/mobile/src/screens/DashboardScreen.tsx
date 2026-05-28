@@ -481,7 +481,7 @@ function GiftTab({
 
           <View style={styles.giftTrustStrip}>
             <Ionicons name="shield-checkmark-outline" size={14} color="#5E675F" style={{ marginRight: 6 }} />
-            <Text style={styles.giftTrustText}>Money is held through DriveWealth. SIPC protects against brokerage failure, not market losses.</Text>
+            <Text style={styles.giftTrustText}>Once invested, money is held through DriveWealth. SIPC protects against brokerage failure, not market losses.</Text>
           </View>
 
           <Section title="Recent gifts">
@@ -589,7 +589,7 @@ function GrowthTab({
             />
             <View style={styles.growthTrustBox}>
               <Text style={styles.growthTrustText}>
-                Held through DriveWealth. SIPC protects against brokerage failure, not market losses.
+                Once invested, held through DriveWealth. SIPC protects against brokerage failure, not market losses.
               </Text>
             </View>
             <Pressable onPress={() => onSelectFund(activeFund)} style={styles.primaryBtn}>

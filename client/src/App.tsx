@@ -221,7 +221,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/security") {
     return {
       title: "Kiddo Security | Your child's money is protected.",
-      description: "Investments held by DriveWealth, a FINRA-registered broker-dealer with SIPC coverage. Here is exactly how Kiddo protects your child's investments.",
+      description: "When investing is live, investments are held by DriveWealth, a FINRA-registered broker-dealer with SIPC coverage. Here is exactly how Kiddo protects your child's investments.",
       robots: "index, follow",
       ogType: "article",
     };

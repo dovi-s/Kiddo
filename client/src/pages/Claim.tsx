@@ -332,7 +332,7 @@ export default function Claim() {
                       <ChevronRight size={18} />
                     </button>
                     <p className="text-center text-xs text-muted-foreground mt-4">
-                      Protected by SIPC
+                      SIPC protection when investing is live
                     </p>
                   </div>
                 )}

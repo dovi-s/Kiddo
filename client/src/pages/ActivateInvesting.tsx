@@ -619,8 +619,8 @@ export default function ActivateInvesting() {
                     <Shield size={20} className="text-primary" />
                   </div>
                   <div>
-                    <p className="font-medium text-foreground text-sm">Protected by SIPC up to $500,000</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Your investments are safeguarded</p>
+                    <p className="font-medium text-foreground text-sm">SIPC protection up to $500,000</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Once your account is open, your investments are safeguarded against brokerage failure</p>
                   </div>
                 </div>
               </div>
@@ -1428,7 +1428,7 @@ export default function ActivateInvesting() {
                 </span>
               </label>
               <p className="text-[11px] text-muted-foreground -mt-2">
-                Investment accounts are SIPC protected up to $500,000 at the brokerage custodian. This does not protect against market losses.
+                Once your account is open, investment accounts are SIPC protected up to $500,000 at the brokerage custodian. This does not protect against market losses.
               </p>
 
               <Button

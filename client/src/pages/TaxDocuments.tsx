@@ -376,7 +376,7 @@ export default function TaxDocuments() {
             <div className="min-w-0">
               <p className="text-sm font-bold text-foreground">Tax information is not tax advice.</p>
               <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                UTMA accounts have unique tax implications including the kiddie tax. Numbers shown here are informational. Official tax forms (1099-DIV, 1099-B) are issued by DriveWealth, LLC each January for the prior tax year. Consult a qualified CPA before filing.
+                UTMA accounts have unique tax implications including the kiddie tax. Numbers shown here are informational. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by DriveWealth, LLC each January for the prior tax year. Consult a qualified CPA before filing.
               </p>
             </div>
           </div>
@@ -450,7 +450,7 @@ export default function TaxDocuments() {
               <div className="min-w-0">
                 <p className="text-sm font-bold text-foreground">No tax forms for {yearFilter} yet</p>
                 <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                  DriveWealth issues 1099-DIV (dividends &amp; distributions) and 1099-B (sales) the January after each tax year. Funds open part-way through a year may have nothing to report until the following January. Forms appear here automatically — no email needed.
+                  Once investing is live, DriveWealth issues 1099-DIV (dividends &amp; distributions) and 1099-B (sales) the January after each tax year. Funds open part-way through a year may have nothing to report until the following January. Forms appear here automatically — no email needed.
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-2 max-w-md">
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
@@ -1034,7 +1034,7 @@ export default function TaxDocuments() {
                 <div>
                   <p className="text-sm font-bold text-foreground">DriveWealth, LLC · Member FINRA / SIPC</p>
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                    {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "Your child's"} UTMA holds positions at DriveWealth, LLC — a US broker-dealer registered with the SEC, regulated by FINRA, and a member of SIPC. DriveWealth provides custody for the assets; Kiddo provides the front-end, the gifting flow, and the Memory Book. Same custody pattern Wealthfront, Acorns Early, and many other consumer investing apps use.
+                    When investing is live, {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your child's"} UTMA holds positions at DriveWealth, LLC — a US broker-dealer registered with the SEC, regulated by FINRA, and a member of SIPC. DriveWealth provides custody for the assets; Kiddo provides the front-end, the gifting flow, and the Memory Book. Same custody pattern Wealthfront, Acorns Early, and many other consumer investing apps use.
                   </p>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2.5">
@@ -1047,7 +1047,7 @@ export default function TaxDocuments() {
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Segregated accounts</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      Customer assets are held separately from DriveWealth's own funds under SEC Rule 15c3-3. The shares are {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "the child's"}, not the broker's.
+                      Once investing is live, customer assets are held separately from DriveWealth's own funds under SEC Rule 15c3-3. The shares are {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "the child's"}, not the broker's.
                     </p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
@@ -1064,7 +1064,7 @@ export default function TaxDocuments() {
                   </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
-                  Tax forms (1099-DIV, 1099-B) are issued by DriveWealth each January for the prior tax year. The cost basis shown above is computed by Kiddo from settled gift and contribution amounts; DriveWealth issues the authoritative figures on the 1099-B. Verify your CPA reconciles both before filing.
+                  Once investing is live, tax forms (1099-DIV, 1099-B) are issued by DriveWealth each January for the prior tax year. The cost basis shown above is computed by Kiddo from settled gift and contribution amounts; DriveWealth issues the authoritative figures on the 1099-B. Verify your CPA reconciles both before filing.
                 </p>
                 <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
                   More on SIPC at <a href="https://www.sipc.org" target="_blank" rel="noopener noreferrer" className="font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">sipc.org</a>. More on DriveWealth at <a href="https://drivewealth.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-[hsl(var(--kiddo-evergreen))] hover:underline">drivewealth.com</a>.
