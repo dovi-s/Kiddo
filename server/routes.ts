@@ -18799,13 +18799,17 @@ export async function registerRoutes(
           -- Exclude demo + test-pollution accounts so this reconciliation
           -- reflects REAL customer money, not seeded demo drift (which is
           -- expected and would otherwise show permanently red). Production has
-          -- no such accounts, so this is a no-op there. Canonical flags:
-          -- users.is_demo_account (illustrative seeds) / is_test_user (QA).
+          -- no such accounts, so this is a no-op there. "Test" = the canonical
+          -- flags users.is_demo_account (illustrative seeds) / is_test_user
+          -- (QA), PLUS @example.com (RFC-2606 reserved test domain) — the same
+          -- definition the demote-test-admins script uses, so the two surfaces
+          -- agree on what counts as a real account.
           SELECT f.id
           FROM funds f
           JOIN users u ON u.id = f.user_id
           WHERE COALESCE(u.is_demo_account, false) = false
             AND COALESCE(u.is_test_user, false) = false
+            AND LOWER(COALESCE(u.email, '')) NOT LIKE '%@example.com'
         ),
         valid_gifts AS (
           SELECT *
@@ -18861,6 +18865,10 @@ export async function registerRoutes(
             COUNT(*) FILTER (WHERE t.type = 'gift' AND t.status = 'completed')::int AS tx_count
           FROM transactions t
           LEFT JOIN gifts g ON (g.id = t.gift_id OR (t.gift_id IS NULL AND g.stripe_payment_intent_id = t.stripe_payment_intent_id))
+          -- Scope gift transactions to the same real-fund set as gifts_rollup
+          -- so the two sides compare apples-to-apples (non-gift / non-completed
+          -- rows are zeroed by the CASEs anyway, so keeping them is harmless).
+          WHERE t.type <> 'gift' OR t.status <> 'completed' OR g.fund_id IN (SELECT id FROM real_funds)
         ),
         tx_without_gift AS (
           SELECT COUNT(*)::int AS total

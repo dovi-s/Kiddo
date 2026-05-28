@@ -18,8 +18,16 @@ import { sql } from "drizzle-orm";
 
 const apply = process.argv.includes("--apply");
 
+// Operator accounts that must NEVER be demoted, even if they carry an
+// is_test_user / is_demo_account flag (e.g. the founder's own login flagged as
+// a test user to keep their messy test data out of metrics). Without this
+// guard, flagging your own account as test would make it demotable here and a
+// re-run would lock you out of admin.
+const KEEP_ADMINS = ["dovisherman@gmail.com"].map((e) => e.toLowerCase());
+
 const MATCH = sql`
   is_admin = true
+  AND LOWER(email) NOT IN (${sql.join(KEEP_ADMINS.map((e) => sql`${e}`), sql`, `)})
   AND (
     is_test_user = true
     OR is_demo_account = true
