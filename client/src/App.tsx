@@ -68,6 +68,7 @@ const Stories = lazy(() => import("@/pages/Stories"));
 const StoryPage = lazy(() => import("@/pages/StoryPage"));
 const Compare = lazy(() => import("@/pages/Compare"));
 const Demo = lazy(() => import("@/pages/Demo"));
+const P2PDemo = lazy(() => import("@/pages/P2PDemo"));
 const Security = lazy(() => import("@/pages/Security"));
 const Age18 = lazy(() => import("@/pages/Age18"));
 const Age18Plan = lazy(() => import("@/pages/Age18Plan"));
@@ -700,6 +701,7 @@ function Router() {
           <Route path="/confirm-email-change"><ConfirmEmailChange /></Route>
           <Route path="/cancel-email-change"><CancelEmailChange /></Route>
           <Route path="/demo"><Demo /></Route>
+          <Route path="/p2p-preview"><P2PDemo /></Route>
           <Route path="/get-started"><GetStarted /></Route>
           <Route path="/onboard"><Onboard /></Route>
           <Route path="/activate"><ProtectedRoute><ActivateInvesting /></ProtectedRoute></Route>
