@@ -7913,7 +7913,30 @@ export async function registerRoutes(
         });
       }
 
-      const decision = getKycDecision({ personal, identity });
+      let decision = getKycDecision({ personal, identity });
+
+      // No real KYC provider or custodian is wired yet (see
+      // CUSTODIAN_SOURCE_OF_TRUTH.md — DriveWealth/Alpaca is a scaffold stub).
+      // getKycDecision is a FORMAT check, not an identity check. Auto-"approving"
+      // a real user off it — flipping their fund to "active and investing" and
+      // telling them "your identity has been verified" — is a false statement of
+      // fact and a launch blocker. Fail CLOSED in production for real users:
+      // downgrade auto-approve to manual review (gifts still arrive; nothing
+      // claims to be verified). Demo walkthroughs and an explicit testing flag
+      // keep the auto-approve path so the flow stays walkable.
+      if (
+        decision.status === "approved" &&
+        process.env.NODE_ENV === "production" &&
+        process.env.ENABLE_KYC_AUTO_APPROVE !== "1" &&
+        !(await isDemoUser(userId))
+      ) {
+        decision = {
+          status: "pending" as const,
+          message:
+            "Your details look good. Your account needs a quick manual review before investing goes live — gifts can still arrive while we finish.",
+          reason: "manual_review_required",
+        };
+      }
 
       // Persist the failure reason + message alongside the submitted
       // kycData so the kyc_action_required action item can surface a
