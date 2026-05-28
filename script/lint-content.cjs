@@ -239,6 +239,28 @@ function lintSegment(segment) {
     }
   }
 
+  // Present-tense custody/SIPC claim with NO "not yet live" conditional. Custody
+  // is a scaffold stub (CUSTODIAN_SOURCE_OF_TRUTH.md §4), so copy must never assert
+  // that a fund IS held or IS protected today — it must read "when investing is
+  // live" / "once invested". The name guard above can't catch tense; this does.
+  // (Twice missed by the entity-agnostic sweep: ux-foundations + education.)
+  const custodyContext = /broker-dealer|brokerage|custod|sipc/i.test(segment);
+  const assertsLiveCustody =
+    custodyContext &&
+    (/\b(is|are)\s+held\b/i.test(segment) ||
+      /\b(is|are)\s+(sipc[- ]?protected|protected up to)/i.test(segment) ||
+      /\bsipc protection covers\b/i.test(segment));
+  const hasLiveConditional =
+    normalized.includes("when investing is live") ||
+    normalized.includes("once invested") ||
+    normalized.includes("when invested") ||
+    normalized.includes("once your"); // "once your (investing) account is open"
+  if (assertsLiveCustody && !hasLiveConditional) {
+    issues.push(
+      'Present-tense custody/SIPC claim — must be conditional ("when investing is live" / "once invested") until custody is wired (CUSTODIAN_SOURCE_OF_TRUTH.md §4)',
+    );
+  }
+
   for (const phrase of BANNED_PHRASES) {
     if (normalized.includes(phrase)) issues.push(`Banned phrase "${phrase}"`);
   }
