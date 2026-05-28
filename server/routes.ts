@@ -16964,6 +16964,131 @@ export async function registerRoutes(
     }
   });
 
+  // k-factor — the one number that decides whether this is a compounding
+  // business or EarlyBird in nicer clothes. Read from BUSINESS STATE
+  // (gifts/funds tables), all-time, which is the truthful denominator —
+  // it doesn't depend on every legacy path having fired the right
+  // analytics event. The event-store, window-scoped counterpart lives in
+  // /api/admin/funnels (loopConversion). Both are intentional.
+  //
+  // The viral identity used here:
+  //   k ≈ (distinct gifters per fund) × (gifter → funded-parent conversion)
+  // i.e. "how many NEW funded funds does each existing fund spawn, via the
+  // gifters it exposes to Kiddo." k ≥ 1 ⇒ self-sustaining growth.
+  //
+  // Two conversion strengths are reported:
+  //   - broad:  a gifter who later owns a funded fund of their own
+  //   - strict: a gifter who gave to ANOTHER family's fund first, then
+  //             came back and opened a funded fund (the true loop firing)
+  // The strict number is the headline; the broad number is a soft upper
+  // bound. CAVEAT: business-state can't perfectly order "gift before own
+  // fund" the way the fund_created event props do, so treat broad as
+  // generous. A "funded" fund = balance + pending + cash > 0 (excludes the
+  // $0 KYC-activated shells).
+  app.get('/api/admin/k-factor', isAdmin, async (_req: any, res) => {
+    try {
+      const PAID = sql`status IN ('processing','settled','completed')`;
+
+      // Reach: gift volume + how many distinct funds/gifters it touched.
+      const reachResult = await db.execute(sql`
+        WITH paid AS (
+          SELECT fund_id, LOWER(TRIM(sender_email)) AS ge
+          FROM gifts
+          WHERE ${PAID}
+            AND sender_email IS NOT NULL AND TRIM(sender_email) <> ''
+        )
+        SELECT
+          COUNT(*)::int                  AS total_gifts,
+          COUNT(DISTINCT fund_id)::int   AS funds_with_gifts,
+          COUNT(DISTINCT ge)::int        AS distinct_gifters
+        FROM paid
+      `);
+
+      // Conversion: of distinct gifters, how many became (funded) parents,
+      // and how many did so AFTER giving to another family (the true loop).
+      const convResult = await db.execute(sql`
+        WITH paid AS (
+          SELECT LOWER(TRIM(g.sender_email)) AS ge, f.user_id AS gifted_owner
+          FROM gifts g JOIN funds f ON f.id = g.fund_id
+          WHERE ${PAID}
+            AND g.sender_email IS NOT NULL AND TRIM(g.sender_email) <> ''
+        ),
+        gifters AS (SELECT DISTINCT ge FROM paid),
+        owned AS (
+          SELECT LOWER(TRIM(u.email)) AS ge,
+                 bool_or((f.balance + f.pending_balance + f.cash_balance) > 0) AS has_funded
+          FROM users u JOIN funds f ON f.user_id = u.id
+          GROUP BY LOWER(TRIM(u.email))
+        ),
+        gave_other AS (
+          SELECT DISTINCT p.ge
+          FROM paid p JOIN users u ON LOWER(TRIM(u.email)) = p.ge
+          WHERE p.gifted_owner <> u.id
+        )
+        SELECT
+          (SELECT COUNT(*) FROM gifters)::int AS distinct_gifters,
+          (SELECT COUNT(*) FROM gifters g JOIN owned o ON o.ge = g.ge)::int AS gifters_own_fund,
+          (SELECT COUNT(*) FROM gifters g JOIN owned o ON o.ge = g.ge WHERE o.has_funded)::int AS gifters_own_funded,
+          (SELECT COUNT(*) FROM gave_other x JOIN owned o ON o.ge = x.ge WHERE o.has_funded)::int AS strict_loop_funded
+      `);
+
+      const reach: any = (reachResult.rows || [])[0] || {};
+      const conv: any = (convResult.rows || [])[0] || {};
+      const n = (v: any) => { const x = Number(v); return Number.isFinite(x) ? x : 0; };
+      const ratio = (num: number, den: number) => den > 0 ? Math.round((num / den) * 1000) / 1000 : 0;
+      const rate = (num: number, den: number) => den > 0 ? Math.round((num / den) * 1000) / 10 : 0;
+
+      const totalGifts = n(reach.total_gifts);
+      const fundsWithGifts = n(reach.funds_with_gifts);
+      const distinctGifters = n(reach.distinct_gifters);
+      const giftsPerFund = ratio(totalGifts, fundsWithGifts);
+      const giftersPerFund = ratio(distinctGifters, fundsWithGifts);
+
+      const broadConverted = n(conv.gifters_own_funded);
+      const strictConverted = n(conv.strict_loop_funded);
+      const broadConvRate = ratio(broadConverted, distinctGifters);   // 0..1
+      const strictConvRate = ratio(strictConverted, distinctGifters); // 0..1
+
+      const kBroad = Math.round(giftersPerFund * broadConvRate * 1000) / 1000;
+      const kStrict = Math.round(giftersPerFund * strictConvRate * 1000) / 1000;
+
+      return res.json({
+        basis: "all-time, business-state (gifts/funds). Windowed event-store loop conversion: /api/admin/funnels",
+        reach: {
+          totalGifts,
+          fundsWithGifts,
+          distinctGifters,
+          giftsPerFund,        // gifts ÷ funds that received ≥1 gift
+          giftersPerFund,      // distinct gifters ÷ funds with gifts (the "exposures" term)
+        },
+        conversion: {
+          distinctGifters,
+          giftersWhoOwnFund: n(conv.gifters_own_fund),
+          giftersWhoOwnFundedFund: broadConverted,
+          strictLoopFunded: strictConverted, // gave to another family, then opened a funded fund
+          broadConversionPct: rate(broadConverted, distinctGifters),
+          strictConversionPct: rate(strictConverted, distinctGifters),
+        },
+        kFactor: {
+          formula: "k ≈ giftersPerFund × gifterToFundedParentConversion",
+          strict: kStrict, // headline — the true loop
+          broad: kBroad,   // soft upper bound
+          interpretation: kStrict >= 1
+            ? "≥1: self-sustaining (each fund spawns ≥1 new funded fund via the loop)"
+            : "<1: loop does not yet compound — acquisition still needs an outside push",
+        },
+        caveats: [
+          "Pre-launch volumes are tiny; treat as directional, not precise.",
+          "Business-state can't strictly order 'gift before own fund'; broad conversion is generous. The fund_created event props (gaveToOthersFundBefore) in /api/admin/funnels order it correctly within a window.",
+          "A fund counts as funded when balance+pending+cash > 0, excluding $0 KYC-activated shells.",
+        ],
+      });
+    } catch (error) {
+      console.error("admin k-factor error", error);
+      return res.status(500).json({ error: "Failed to load k-factor" });
+    }
+  });
+
   // Quarterly access review surface — see policies/access-control.md §5.
   // Lists every user with admin or super-admin privileges along with
   // their last activity. The "needsReview" flag fires when a privileged

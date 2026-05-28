@@ -196,6 +196,56 @@ export class WebhookHandlers {
       console.warn("[Webhook] large-gift alert failed (non-fatal):", alertErr);
     }
 
+    // Per-gift "your gift just landed" email to the parent. This is the
+    // loop-closure pull: the gift-arrival moment is the highest-intent
+    // reason to bring the parent (and through them, the kid) back to the
+    // fund. A websocket ping (below) only reaches a parent already in the
+    // app; this reaches the rest. Fires only for NON-parent gifts BELOW
+    // the large-gift threshold — large gifts already get the verification
+    // heads-up above, and we never want two emails for one gift.
+    // Best-effort: any failure logs but never blocks the pipeline.
+    // Demo/test guard: skip obviously-synthetic recipient domains so a
+    // seeding pass that routes through this handler can't fan out mail.
+    try {
+      const giftAmount = parseFloat(gift.amount || "0");
+      const isParent = String(metadata?.isParentContribution || "").toLowerCase() === "true";
+      const belowAlert = !(Number.isFinite(giftAmount) && giftAmount >= this.LARGE_GIFT_ALERT_THRESHOLD);
+      if (!isParent && belowAlert) {
+        const [{ buildGiftReceivedEmail }, { sendEmail }, { db }, { users }, { eq }] = await Promise.all([
+          import("./templates/giftReceived"),
+          import("./emailDelivery"),
+          import("./db"),
+          import("@shared/schema"),
+          import("drizzle-orm"),
+        ]);
+        const parentRows = await db
+          .select({ email: users.email, firstName: users.firstName })
+          .from(users)
+          .where(eq(users.id, fund.userId))
+          .limit(1);
+        const parentEmail = parentRows[0]?.email;
+        const isSyntheticRecipient = !!parentEmail && /@(example\.(com|org|net)|[^@]*\.(test|invalid|local))$/i.test(parentEmail);
+        if (parentEmail && !isSyntheticRecipient) {
+          const baseUrl =
+            process.env.APP_BASE_URL ||
+            process.env.PUBLIC_APP_URL ||
+            "https://kiddofund.com";
+          const dashboardUrl = `${baseUrl.replace(/\/+$/, "")}/dashboard?fund=${encodeURIComponent(fund.id)}`;
+          await sendEmail(buildGiftReceivedEmail({
+            to: parentEmail,
+            parentFirstName: parentRows[0]?.firstName ?? null,
+            childFirstName: fund.recipientFirstName || "your child",
+            gifterName: gift.senderName || null,
+            amountUsd: Number.isFinite(giftAmount) ? giftAmount : 0,
+            hasNote: !!(gift.message && String(gift.message).trim()),
+            dashboardUrl,
+          }));
+        }
+      }
+    } catch (giftEmailErr) {
+      console.warn("[Webhook] per-gift parent email failed (non-fatal):", giftEmailErr);
+    }
+
     // Update the gifter-notification subscriber record's per-gifter counts
     // when the sender is opted in. The fund's aggregate contributorCount
     // got bumped above; the matching subscriber record's contributionCount

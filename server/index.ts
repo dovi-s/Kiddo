@@ -38,6 +38,7 @@ import { inArray, sql } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
 import net from "net";
+import { checkRateLimit } from "./rateLimiter";
 
 const app = express();
 const httpServer = createServer(app);
@@ -59,10 +60,23 @@ app.use(
   "/uploads",
   express.static(uploadsPath, {
     index: false,
+    // dotfiles "deny" (vs the default "ignore") returns 403 rather than 404
+    // for any "/uploads/.something" request — no accidental serving of a
+    // stray .env / .git artifact that lands in the dir.
+    dotfiles: "deny",
     setHeaders: (res) => {
       res.setHeader("X-Robots-Tag", "noindex, noimageindex, nofollow");
       res.setHeader("Referrer-Policy", "no-referrer");
       res.setHeader("X-Content-Type-Options", "nosniff");
+      // Defense-in-depth against same-origin XSS from served content. Uploads
+      // are already restricted to raster/AV MIME types at the upload boundary
+      // (no SVG/HTML; ext derived from validated MIME), but if anything ever
+      // slips through, this CSP sandboxes the response when it's navigated to
+      // DIRECTLY as a document (no scripts, opaque origin). It does NOT affect
+      // <img>/<video>/<audio> embedding — CSP on a subresource response is
+      // ignored for rendering — so the public gifter loop, email media, and
+      // Kid View are unaffected.
+      res.setHeader("Content-Security-Policy", "default-src 'none'; sandbox; frame-ancestors 'none'");
     },
   })
 );
@@ -560,8 +574,12 @@ const rateLimitRules: RateLimitRule[] = [
   { name: "kid-view-unlock", methods: ["POST"], match: /^\/api\/kid-view\/[^/]+\/unlock$/, max: 8, windowMs: 15 * 60 * 1000 },
 ];
 
-const rateLimitStore = new Map<string, number[]>();
-app.use((req, res, next) => {
+// Durable (cross-instance) rate limiter — see server/rateLimiter.ts. Backed by
+// Postgres so a multi-instance deploy shares one window instead of N; fails
+// OPEN to an in-memory fallback if the DB is unavailable, so a DB hiccup never
+// blocks auth/checkout. Middleware is async; on any limiter error we let the
+// request through rather than risk locking users out.
+app.use(async (req, res, next) => {
   const rule = rateLimitRules.find((r) => {
     if (r.methods && !r.methods.includes(req.method.toUpperCase())) return false;
     return r.match.test(req.path);
@@ -570,18 +588,16 @@ app.use((req, res, next) => {
 
   const ip = req.ip || req.socket.remoteAddress || "unknown";
   const key = `${rule.name}:${req.method}:${ip}`;
-  const now = Date.now();
-  const windowStart = now - rule.windowMs;
-  const hits = (rateLimitStore.get(key) || []).filter((ts) => ts > windowStart);
-
-  if (hits.length >= rule.max) {
-    return res.status(429).json({
-      error: "Too many requests. Please try again shortly.",
-    });
+  try {
+    const allowed = await checkRateLimit(key, rule.max, rule.windowMs);
+    if (!allowed) {
+      return res.status(429).json({
+        error: "Too many requests. Please try again shortly.",
+      });
+    }
+  } catch {
+    // Never block the request path on a limiter failure.
   }
-
-  hits.push(now);
-  rateLimitStore.set(key, hits);
   next();
 });
 
