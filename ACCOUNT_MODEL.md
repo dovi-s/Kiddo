@@ -185,6 +185,24 @@ assets — not literally the parent's custodial account record). But the *produc
 experience* is continuous: same app, same identity, same Memory Book. New legal
 account; continuous product soul.
 
+**Parents are custodians ONLY — no parent self-investing account (DECIDED 2026-05-28).**
+A parent who signs up today (an adult who was never a Kiddo kid) is a *custodian* of
+their kids' UTMAs — they do NOT get a personal individual investing fund. This is a
+positioning moat, not a missing feature:
+- Letting parents invest for themselves would turn Kiddo into Acorns (an adult app
+  with a kids' feature) — a commodity adult-brokerage surface where we have zero edge
+  (no Memory Book, no gifter loop). Kiddo's bet is the inverse: own the KID
+  relationship; the adult customer arrives later, as the grown-up kid (kid-2.0).
+- The individual/adult account is the **graduation prize** (the 18 handoff). If every
+  parent had one on day one, it stops being the special moment — the scarcity is the story.
+- A "parent who also holds an individual account" exists ONLY via (a) they grew up on
+  Kiddo and later became a parent (the loop closing — one login, both modes), or (b)
+  P2P receipt (an adult, who happens to be a parent, gets sent stock and needs somewhere
+  for it to land — the future P2P expansion). Never as a default parent feature.
+- Pitch implication: the "adult / household opportunity" is the **graduated kid** (+ P2P
+  + future Roth/banking), NOT parents investing for themselves. In the demo, Haley (past
+  21) IS the adult account; Phil stays a custodian. Don't give Phil his own fund.
+
 ---
 
 ## 5. The majority handoff — DECIDED (revises a locked rule)
