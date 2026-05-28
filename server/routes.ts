@@ -18883,9 +18883,15 @@ export async function registerRoutes(
           WHERE fund_id IN (SELECT id FROM real_funds)
         ),
         pending_gift_rollup AS (
+          -- funds.pendingBalance is credited when a gift is PAID but NOT YET
+          -- invested (status 'processing'); 'pending' = unpaid and never
+          -- credits it. Comparing against 'pending' produced a false red (e.g.
+          -- $400 of processing gifts backing a $400 pending balance read as a
+          -- $400 discrepancy). Match the status that actually credits the
+          -- balance.
           SELECT COALESCE(SUM(CAST(net_amount AS numeric)), 0) AS pending_net
           FROM gifts
-          WHERE status = 'pending'
+          WHERE status = 'processing'
             AND fund_id IN (SELECT id FROM real_funds)
         )
         SELECT
@@ -18960,11 +18966,11 @@ export async function registerRoutes(
           label: "Pending Gifts vs Pending Balances",
           status: pendingStatus,
           leftLabel: "Funds Pending",
-          rightLabel: "Pending Gift Net",
+          rightLabel: "Processing Gift Net",
           left: fundsPending,
           right: pendingGiftNet,
           delta: pendingDelta,
-          note: "Expected near-zero delta",
+          note: "Pending balance should equal paid-but-not-yet-invested (processing) gifts.",
         },
       ];
 
