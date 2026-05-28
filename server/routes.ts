@@ -18795,10 +18795,23 @@ export async function registerRoutes(
   app.get('/api/admin/data-integrity', isAdmin, async (req: any, res) => {
     try {
       const result = await db.execute(sql`
-        WITH valid_gifts AS (
+        WITH real_funds AS (
+          -- Exclude demo + test-pollution accounts so this reconciliation
+          -- reflects REAL customer money, not seeded demo drift (which is
+          -- expected and would otherwise show permanently red). Production has
+          -- no such accounts, so this is a no-op there. Canonical flags:
+          -- users.is_demo_account (illustrative seeds) / is_test_user (QA).
+          SELECT f.id
+          FROM funds f
+          JOIN users u ON u.id = f.user_id
+          WHERE COALESCE(u.is_demo_account, false) = false
+            AND COALESCE(u.is_test_user, false) = false
+        ),
+        valid_gifts AS (
           SELECT *
           FROM gifts
           WHERE status NOT IN ('failed', 'refunded', 'canceled')
+            AND fund_id IN (SELECT id FROM real_funds)
         ),
         gifts_rollup AS (
           SELECT
@@ -18862,15 +18875,18 @@ export async function registerRoutes(
             COALESCE(SUM(CAST(balance AS numeric)), 0) AS invested,
             COALESCE(SUM(CAST(pending_balance AS numeric)), 0) AS pending
           FROM funds
+          WHERE id IN (SELECT id FROM real_funds)
         ),
         holdings_rollup AS (
           SELECT COALESCE(SUM(CAST(current_value AS numeric)), 0) AS value
           FROM holdings
+          WHERE fund_id IN (SELECT id FROM real_funds)
         ),
         pending_gift_rollup AS (
           SELECT COALESCE(SUM(CAST(net_amount AS numeric)), 0) AS pending_net
           FROM gifts
           WHERE status = 'pending'
+            AND fund_id IN (SELECT id FROM real_funds)
         )
         SELECT
           (SELECT row_to_json(gifts_rollup) FROM gifts_rollup) AS gifts_rollup,
@@ -18961,6 +18977,7 @@ export async function registerRoutes(
       const payload = {
         checks,
         overallStatus,
+        scope: "Reconciliation excludes demo + test accounts (real customer money only).",
         computedAt: Date.now(),
       };
 
