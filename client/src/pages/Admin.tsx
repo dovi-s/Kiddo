@@ -2873,6 +2873,8 @@ function FunnelsTab() {
         </div>
       </div>
 
+      <KFactorCard />
+
       <FunnelCard
         title="Parent activation"
         subtitle="Signup to first received gift on the parent's first fund."
@@ -2900,6 +2902,64 @@ function FunnelsTab() {
         numbers will look thin until traffic re-accumulates. The {windowDays === 0 ? "all-time" : `last ${windowDays}d`} window
         is honest, not adjusted.
       </div>
+    </div>
+  );
+}
+
+// The gifter-loop k-factor — the single number that decides whether acquisition
+// compounds (≥1 = self-sustaining) or whether we're EarlyBird in nicer clothes.
+// Business-state, all-time, from /api/admin/k-factor (independent of the window
+// toggle above). See the endpoint's caveats: pre-launch volumes are tiny, treat
+// as directional.
+function KFactorCard() {
+  const { data, isLoading, isError } = useQuery<any>({
+    queryKey: ["/api/admin/k-factor"],
+    queryFn: async () => fetchAdminJson(`/api/admin/k-factor`),
+    refetchInterval: 60_000,
+    retry: 1,
+  });
+  if (isLoading) {
+    return <div className="bg-card rounded-xl border border-border/50 px-4 py-6 text-center text-xs text-muted-foreground">Loading k-factor…</div>;
+  }
+  if (isError || !data) return null;
+  const k = data.kFactor || {};
+  const reach = data.reach || {};
+  const conv = data.conversion || {};
+  const strict = Number(k.strict ?? 0);
+  const broad = Number(k.broad ?? 0);
+  const strong = strict >= 1;
+  return (
+    <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+      <div className="px-4 py-3 border-b border-border/50">
+        <h3 className="text-sm font-semibold">Gifter-loop k-factor</h3>
+        <p className="mt-1 text-xs text-muted-foreground">
+          All-time, business-state (gifts/funds). The number that decides whether acquisition compounds. {k.formula}
+        </p>
+      </div>
+      <div className="p-4">
+        <div className="flex items-end gap-3">
+          <div className={`font-mono text-4xl font-bold ${strong ? "text-emerald-600" : "text-foreground"}`}>{strict.toFixed(2)}</div>
+          <div className="pb-1 text-xs text-muted-foreground">strict k (true loop) · broad k {broad.toFixed(2)}</div>
+        </div>
+        {k.interpretation ? (
+          <p className={`mt-2 text-xs ${strong ? "text-emerald-700" : "text-amber-700"}`}>{k.interpretation}</p>
+        ) : null}
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 text-xs">
+          <KStat label="Gifts / fund" value={Number(reach.giftsPerFund ?? 0).toFixed(2)} />
+          <KStat label="Gifters / fund" value={Number(reach.giftersPerFund ?? 0).toFixed(2)} />
+          <KStat label="Gifter→funded parent" value={`${Number(conv.strictConversionPct ?? 0).toFixed(1)}%`} />
+          <KStat label="Distinct gifters" value={fmtNum(Number(reach.distinctGifters ?? 0))} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function KStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-muted/10 px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-0.5 font-mono text-sm">{value}</div>
     </div>
   );
 }

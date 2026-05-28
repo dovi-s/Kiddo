@@ -227,6 +227,18 @@ function lintSegment(segment) {
   // we don't ban because it's a common code pattern (CLI flags, etc.).
   if (segment.includes("—")) issues.push("Em-dash (—) in user-facing copy");
 
+  // Hard-named custodian in customer-facing copy. Per CUSTODIAN_SOURCE_OF_TRUTH.md
+  // §4: until a custodian is locked AND wired, copy stays entity-agnostic ("our
+  // broker-dealer partner, Member FINRA/SIPC"). Naming DriveWealth/Alpaca asserts
+  // a vendor that isn't decided and creates re-edit churn. Comments are stripped
+  // above, so this only catches RENDERED copy. When a custodian is finally locked
+  // (see CUSTODIAN_SOURCE_OF_TRUTH §7), remove this rule and use the real name.
+  for (const vendor of ["drivewealth", "alpaca"]) {
+    if (normalized.includes(vendor)) {
+      issues.push(`Hard-named custodian "${vendor}" in customer copy — use "our broker-dealer partner" (CUSTODIAN_SOURCE_OF_TRUTH.md §4)`);
+    }
+  }
+
   for (const phrase of BANNED_PHRASES) {
     if (normalized.includes(phrase)) issues.push(`Banned phrase "${phrase}"`);
   }
