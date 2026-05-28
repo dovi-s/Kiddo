@@ -210,18 +210,34 @@ Direct answers to the recurring questions:
 
 ---
 
-## 6. P2P "cash or Disney stock" — NORTH STAR (deferred)
+## 6. P2P "cash or Disney stock" — SPLIT (revised 2026-05-28)
 
 The dinner-debt mechanic ("want that $30 in cash or Disney stock?" → claim link →
-Claim Tank account → "turn it into a head start for your own kid") is the gifting
-loop escaping childhood into everyday adult life. Strategically right; keep it as
-North Star.
+account → "turn it into a head start for your own kid") is the gifting loop escaping
+childhood into everyday adult life. On reflection it is **not one monolithic
+licensing-gated beast** — it splits cleanly, and only half is heavy:
 
-**But it is a regulated beast, not a sprint:** P2P money/stock transfer + a Claim
-Tank that holds strangers' funds = **money-transmission licensing** (state-by-state
-MTLs) and/or a bank/BD partner — months-to-years of regulatory processing regardless
-of build speed. **Do not let it touch launch scope.** Vision yes; roadmap far after
-custody is even live.
+- **STOCK leg — gift stock to another adult.** Structurally this is the gift flow
+  Kiddo *already ships*, just pointed at an adult recipient instead of a kid's UTMA:
+  money in via Stripe → buys securities in the recipient's brokerage account.
+  Gifting securities into a brokerage account is a brokerage funding/purchase, **NOT
+  money transmission** (same regulatory posture as today's gifts — confirm with the
+  same counsel). So this leg is gated on the **same live-custody clock as everything
+  else** (it needs adult recipient accounts to exist), NOT on a separate licensing
+  project. **Promote from "far North Star" → "fast-follow once custody is live."**
+- **CASH leg — let the recipient take the $30 as withdrawable cash.** This moves
+  money person-to-person *out* of the securities ecosystem → **money transmission**
+  (state MTLs) or a licensed partner (Stripe Treasury/Connect, Dwolla, a bank).
+  Months-to-years, expensive. The genuinely deferred, licensed piece. It is also the
+  leg that makes the mechanic a true Venmo-settling behavior — the *choice* is the
+  magic — so **the viral payoff and the regulatory wall are the same leg.**
+
+**Net:** build neither now, but they are not the same size. When custody lands, the
+stock leg is a cheap fast-follow, not a new regulatory program; the cash leg is the
+licensed long-pole. Engineering speed shortens neither clock (stock waits on custody,
+cash waits on licensing) — it only means we're ready the instant either clears.
+Building the UI shell earlier is worth it ONLY as a demo/fundraising prototype (it
+can't connect to a real backend pre-custody).
 
 ---
 
