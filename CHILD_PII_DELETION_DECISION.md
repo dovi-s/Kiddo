@@ -83,6 +83,29 @@ not a data purge:
   owner deletion; a parent-facing "also delete my child's data" toggle wired to
   the Option-A scrub; copy explaining what's retained and why.
 
+## DECISION (2026-05-28): C is the destination; B stays live until counsel signs off
+
+Picked **Option C** as the target end-state. **No code change now** — and that is the
+correct outcome, not a punt, for two reasons discovered while scoping the build:
+
+1. **B is already implemented AND explicitly promised to users.** The deletion flow
+   (`server/auth.ts` `POST /api/account/delete`) sends a confirmation email that states:
+   *"What stays: The Memory Book for any kid's fund you set up. **It belongs to the kid.**"*
+   So retention is a communicated commitment with the right UTMA-property rationale, not
+   just a silent default. Shipping a "delete the child's Memory Book" path would
+   contradict a promise we actively make to every deleting user.
+2. **C's opt-in delete path is NOT a free pre-counsel build.** Deleting a *minor's*
+   Memory Book (the child's property + every gifter's contribution) on the *parent's*
+   request raises the exact whose-property question this doc sends to counsel (Q1–Q4):
+   can a resigning custodian erase a minor's property record? Until counsel answers,
+   honoring such a request is legally murky, irreversible, and against the live promise.
+
+**So:** B remains the live behavior (retain child record + Memory Book; scrub the
+departing parent's PII + SSN — already shipped). C's additions (the dormant
+"awaiting-successor-custodian" fund state AND the explicit child-data-deletion path)
+are BOTH gated on the counsel memo. When counsel signs off, the implementation is
+small and isolated (a fund status + a worker scrub branch + a deletion-flow opt-in).
+
 ## Recommendation
 
 **Option C**, with **B as the safe interim** until counsel signs off — i.e. keep
