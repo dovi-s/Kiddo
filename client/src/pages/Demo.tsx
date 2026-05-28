@@ -115,17 +115,19 @@ export default function Demo() {
     }
   };
 
-  // Featured-walkthrough shortcut: log in as Phil, auto-select
-  // Haley's fund as the active fund, land on /age-18-plan.
-  const HALEY_FEATURED_EMAIL = "phil@dunphyfamily.com";
-  const HALEY_SLUG = "haley-dunphy";
-  const handleHaleyShortcut = async () => {
-    setLoadingEmail(HALEY_FEATURED_EMAIL);
+  // Featured-walkthrough shortcut: log in as Phil, auto-select the
+  // approaching-handoff fund (Alex, ~30 days from majority) as the active
+  // fund, land on /age-18-plan. (Haley is now PAST majority — her fund is the
+  // graduated adult-account demo, reachable from the dashboard/Kid View.)
+  const FEATURED_EMAIL = "phil@dunphyfamily.com";
+  const FEATURED_SLUG = "alex-dunphy";
+  const handleFeaturedShortcut = async () => {
+    setLoadingEmail(FEATURED_EMAIL);
     haptic("selection");
     try {
-      await login({ email: HALEY_FEATURED_EMAIL, password: DEMO_PASSWORD });
+      await login({ email: FEATURED_EMAIL, password: DEMO_PASSWORD });
       // After login (which cleared the previous user's caches), fetch
-      // Phil's funds fresh from server and locate Haley by slug.
+      // Phil's funds fresh from server and locate the featured fund by slug.
       const fundsRes = await fetch("/api/funds", { credentials: "include" });
       if (!fundsRes.ok) {
         haptic("success");
@@ -133,15 +135,15 @@ export default function Demo() {
         return;
       }
       const funds = await fundsRes.json().catch(() => []) as Array<{ id: string; slug?: string | null }>;
-      const haley = funds.find((f) => String(f.slug || "").toLowerCase() === HALEY_SLUG);
-      if (haley?.id) {
-        setActiveFundId(haley.id);
+      const featured = funds.find((f) => String(f.slug || "").toLowerCase() === FEATURED_SLUG);
+      if (featured?.id) {
+        setActiveFundId(featured.id);
         haptic("success");
         // Route is /age-18-plan (with dashes) per App.tsx. Navigating to
         // /age18-plan fell through to the public /:fund catch-all, which
         // tried to resolve a fund slug "age18-plan", 404'd, and rendered
         // the "this gift link is outdated" page. Fixed 2026-05-26.
-        setLocation(`/age-18-plan?fund=${haley.id}`);
+        setLocation(`/age-18-plan?fund=${featured.id}`);
       } else {
         haptic("success");
         setLocation("/dashboard");
@@ -192,20 +194,20 @@ export default function Demo() {
                   </p>
                 </div>
                 <h2 className="font-heading text-xl font-bold text-foreground sm:text-2xl">
-                  Haley's a month from 21.
+                  Alex is weeks from 21.
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  The full handoff page: the centerpiece projection slider, Phil's sealed letter, years of voice memos from Gloria, and a fund built across her whole childhood. Land here first to see what Kiddo is for.
+                  The full handoff page: the centerpiece projection slider, Phil's sealed letter, years of voice memos from Gloria, and a fund built across her whole childhood. Land here first to see what Kiddo is for. (Her big sister Haley already turned 21. See the graduated account from Phil's dashboard.)
                 </p>
               </div>
               <button
                 type="button"
-                onClick={handleHaleyShortcut}
-                disabled={loadingEmail === HALEY_FEATURED_EMAIL}
+                onClick={handleFeaturedShortcut}
+                disabled={loadingEmail === FEATURED_EMAIL}
                 className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-[hsl(var(--kiddo-evergreen))] px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                data-testid="demo-haley-shortcut"
+                data-testid="demo-featured-shortcut"
               >
-                {loadingEmail === HALEY_FEATURED_EMAIL ? "Opening…" : "Open Haley's plan"}
+                {loadingEmail === FEATURED_EMAIL ? "Opening…" : "Open Alex's plan"}
                 <ArrowRight size={14} />
               </button>
             </div>

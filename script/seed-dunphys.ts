@@ -157,16 +157,15 @@ const KIDS = [
     lastName: "Dunphy",
     pronoun: "she",
     majorityAge: 21,
-    ageYears: 20, // ~30 days from age 21 (handoff demo); used by giftsForKid to scale history
-    birthdate: birthdateForAge(20, 11), // ~30 days from age 21 (handoff demo)
+    ageYears: 21, // PAST CA majority (21) — the graduated adult-account demo
+    birthdate: birthdateForAge(21, 4), // ~21y4m, comfortably past majority
     state: "CA",
     slug: "haley-dunphy",
     strategy: "conservative",
-    description: "Haley is heading off to school. Her fund is the bridge.",
-    // Phil's recurring auto-invest. Paused — Haley is ~30 days from
-    // majority, so the schedule has naturally wound down (the worker
-    // also auto-pauses at handoff). It still carries years of realized
-    // history (see giftsForKid / seedKidFund).
+    description: "Haley turned 21. The fund is hers now. This is what graduating looks like.",
+    // Recurring ended at the handoff: the parent's auto-invest stops once
+    // ownership transfers. The fund still carries its full realized history
+    // (see giftsForKid / seedKidFund); Haley controls it from here.
     recurring: { amount: 50, status: "paused" },
     holdings: [
       { ticker: "AAPL",  shares: 12.45, costBasis: 2245.00, currentValue: 2503.20, name: "Apple" },
@@ -186,13 +185,15 @@ const KIDS = [
     lastName: "Dunphy",
     pronoun: "she",
     majorityAge: 21,
-    ageYears: 15,
-    birthdate: birthdateForAge(15, 3),
+    ageYears: 20, // ~30 days from CA majority (21) — the approaching-handoff demo
+    birthdate: birthdateForAge(20, 11), // ~30 days from age 21 (handoff demo)
     state: "CA",
     slug: "alex-dunphy",
     strategy: "balanced",
-    description: "Alex is going to read every prospectus we send her. Set her up right.",
-    recurring: { amount: 50, status: "active" },
+    description: "Alex is weeks from 21. This is where the handoff begins.",
+    // Recurring winds down as the handoff nears (the worker auto-pauses near
+    // majority); the fund still carries years of realized history.
+    recurring: { amount: 50, status: "paused" },
     holdings: [
       { ticker: "AAPL",  shares: 4.20,  costBasis: 770.00,  currentValue: 844.20, name: "Apple" },
       { ticker: "GOOGL", shares: 3.10,  costBasis: 520.00,  currentValue: 558.40, name: "Google" },
@@ -654,9 +655,9 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   // One day before the first gift — the fund exists, THEN gifts arrive.
   const fundCreatedAt = new Date(earliestGiftMs - 24 * 60 * 60 * 1000);
   const growthFactor =
-    kid.firstName === "Haley" ? 1.50
-    : kid.firstName === "Alex" ? 1.40
-    : 1.25;
+    kid.firstName === "Haley" ? 1.55   // graduated: the longest, fullest history
+    : kid.firstName === "Alex" ? 1.50  // near majority: mature, well-grown fund
+    : 1.25;                            // Luke: younger, shorter runway so far
   const targetValue = giftSum * growthFactor;
   const rawHoldingsValueSum = kid.holdings.reduce((sum, h) => sum + h.currentValue, 0);
   const rawHoldingsBasisSum = kid.holdings.reduce((sum, h) => sum + h.costBasis, 0);
@@ -946,11 +947,14 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   // (file-based store; see seedGifterNotifications above).
   await seedGifterNotifications(fund.id, externalGifts);
 
-  // Phil's at-18 letter — appears in Haley's fund only (closest to majority).
-  if (kid.firstName === "Haley") {
+  // Phil's sealed "for when this becomes yours" letter — seeded for the two
+  // older kids: Alex (approaching majority, so it shows SEALED in the handoff
+  // demo) and Haley (past majority, so it shows UNLOCKED in her adult-account
+  // view). Luke is too young to need one yet.
+  if (kid.firstName === "Haley" || kid.firstName === "Alex") {
     await db.insert(memoryEntries).values({
       fundId: fund.id,
-      content: `Haley. The day you read this is the day this is yours. We started this fund when you were small because we knew this moment was coming. Not the money — the moment. You owning something we built together over years. Whatever you do with it, do it on purpose. We love you. — Dad`,
+      content: `${kid.firstName}. The day you read this is the day this is yours. We started this fund when you were small because we knew this moment was coming. Not the money, the moment: you owning something we built together over years. Whatever you do with it, do it on purpose. We love you. Always, Dad`,
       type: "parent_letter",
       authorRole: "parent",
       authorName: "Phil Dunphy",

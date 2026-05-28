@@ -1027,6 +1027,22 @@ export default function KidView() {
               >
                 Claim your account →
               </a>
+              {/* P2P concept-preview entry. The adult-life surface for the
+                  gifter loop ("send a friend cash or stock"). Post-majority
+                  is exactly where P2P lives: now that the fund is yours, you
+                  can pay it forward. Links to the FENCED /p2p-preview concept
+                  page, which states plainly it is not a live feature and moves
+                  no real money. Labeled "Preview" so it never reads as a live
+                  payment button (per ACCOUNT_MODEL.md section 6). */}
+              <div className="mt-4">
+                <a
+                  href="/p2p-preview"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-[hsl(var(--kiddo-gold-ink))]/75 underline-offset-4 hover:text-[hsl(var(--kiddo-gold-ink))] hover:underline transition-colors"
+                  data-testid="kid-view-p2p-preview"
+                >
+                  Preview: send a friend cash or stock →
+                </a>
+              </div>
             </section>
           );
         })()}
