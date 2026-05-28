@@ -1372,71 +1372,67 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const isSuperAdmin = isSuperAdminUser(user as any);
+  // Overview panels are all-time aggregates; they do NOT need second-by-second
+  // freshness. Auto-polling (15-60s) + refetchOnWindowFocus across 13 panels
+  // meant ~13 background round-trips on a loop AND a full re-fetch on every
+  // alt-tab — each writing an admin_*_viewed audit row, spamming audit_logs.
+  // De-polled 2026-05-28: fetch on mount, otherwise rely on the top-nav
+  // Refresh button. (Live ops surfaces that DO need freshness — Ops SSE,
+  // worker queues — poll on their own tabs, unchanged.)
   const { data, isLoading, isError, error } = useQuery<any>({
     queryKey: ["/api/admin/overview"],
     queryFn: async () => fetchAdminJson("/api/admin/overview"),
-    refetchInterval: 15000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: health, isLoading: healthLoading } = useQuery<any>({
     queryKey: ["/api/health?deep=1"],
     queryFn: async () => fetchAdminJson("/api/health?deep=1"),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: webhookEvents = [], isLoading: webhookLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/webhooks?limit=50"],
     queryFn: async () => fetchAdminJson("/api/admin/webhooks?limit=50"),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: stripeDiag, isLoading: stripeDiagLoading } = useQuery<any>({
     queryKey: ["/api/admin/stripe-diagnostics?windowHours=24"],
     queryFn: async () => fetchAdminJson("/api/admin/stripe-diagnostics?windowHours=24"),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: stripeLive, isLoading: stripeLiveLoading } = useQuery<any>({
     queryKey: ["/api/admin/stripe/live-health"],
     queryFn: async () => fetchAdminJson("/api/admin/stripe/live-health"),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: dataIntegrity, isLoading: dataIntegrityLoading, isError: dataIntegrityError, error: dataIntegrityErrorObj } = useQuery<any>({
     queryKey: ["/api/admin/data-integrity"],
     queryFn: async () => fetchAdminJson("/api/admin/data-integrity"),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: topGifters = [], isLoading: topGiftersLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/gifters?limit=10"],
     queryFn: async () => fetchAdminJson("/api/admin/gifters?limit=10"),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: allGifters = [], isLoading: allGiftersLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/gifters?limit=500"],
     queryFn: async () => fetchAdminJson("/api/admin/gifters?limit=500"),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: checkoutDiag, isLoading: checkoutDiagLoading } = useQuery<any>({
     queryKey: ["/api/admin/checkout-diagnostics?windowHours=168"],
     queryFn: async () => fetchAdminJson("/api/admin/checkout-diagnostics?windowHours=168"),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: growthCohorts, isLoading: growthCohortsLoading } = useQuery<any>({
     queryKey: ["/api/admin/growth-cohorts?weeks=12"],
     queryFn: async () => fetchAdminJson("/api/admin/growth-cohorts?weeks=12"),
-    refetchInterval: 60000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: northStar, isLoading: northStarLoading } = useQuery<any>({
     queryKey: ["/api/admin/north-star"],
     queryFn: async () => fetchAdminJson("/api/admin/north-star"),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   // PMF survey aggregation. The Sean Ellis 40% threshold sits
   // alongside the North Star section as the second quantitative
@@ -1447,14 +1443,12 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
   const { data: pmfSurvey, isLoading: pmfSurveyLoading } = useQuery<any>({
     queryKey: ["/api/admin/pmf-survey"],
     queryFn: async () => fetchAdminJson("/api/admin/pmf-survey"),
-    refetchInterval: 60000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const { data: pendingGifts = [], isLoading: pendingGiftsLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/pending-gifts"],
     queryFn: async () => fetchAdminJson("/api/admin/pending-gifts"),
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: false,
   });
   const repairMutation = useMutation({
     mutationFn: async (apply: boolean) => {
