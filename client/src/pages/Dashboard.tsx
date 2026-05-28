@@ -233,24 +233,29 @@ const MANAGED_STRATEGY_ALLOCATIONS: Record<string, Array<{ ticker: string; name:
   // age-based de-risking is target-date logic (right for a 529 spent at 18,
   // wrong here). De-risking toward bonds belongs with an explicit spend goal
   // (e.g. a College Fund), not the birthday. Bond gradient: 10 / 25 / 40.
+  //
+  // SELF-DIRECTED PIVOT (2026-05-28, ACCOUNT_MODEL.md §2b): dropped the VGT tech
+  // sector tilt in favor of pure broad market-cap weighting (VTI + VXUS). An
+  // active sector bet in a default basket is the single hardest allocation line
+  // to defend as NON-advice (it's "making a bet on one sector," which reads as a
+  // recommendation/management decision); broad market-cap weight is the
+  // defensible self-directed posture. The bet's old weight is redistributed into
+  // the broad-market sleeves at the same US:International ratio.
   growth: [
-    { ticker: "VTI",  name: "US Total Market", weight: 55 },
-    { ticker: "VXUS", name: "International",    weight: 25 },
-    { ticker: "VGT",  name: "Tech",             weight: 10 },
+    { ticker: "VTI",  name: "US Total Market", weight: 62 },
+    { ticker: "VXUS", name: "International",    weight: 28 },
     { ticker: "BND",  name: "Bonds",            weight: 10 },
   ],
   balanced: [
-    { ticker: "VTI",  name: "US Total Market", weight: 40 },
-    { ticker: "VXUS", name: "International",    weight: 20 },
-    { ticker: "VGT",  name: "Tech",             weight: 15 },
+    { ticker: "VTI",  name: "US Total Market", weight: 50 },
+    { ticker: "VXUS", name: "International",    weight: 25 },
     { ticker: "BND",  name: "Bonds",            weight: 25 },
   ],
   conservative: [
     // The most cautious tier — but still 60% equity, because the fund keeps
     // compounding long past the handoff. Steadier ride, not capital wind-down.
-    { ticker: "VTI",  name: "US Total Market", weight: 35 },
-    { ticker: "VXUS", name: "International",    weight: 15 },
-    { ticker: "VGT",  name: "Tech",             weight: 10 },
+    { ticker: "VTI",  name: "US Total Market", weight: 42 },
+    { ticker: "VXUS", name: "International",    weight: 18 },
     { ticker: "BND",  name: "Bonds",            weight: 40 },
   ],
 };
@@ -6682,6 +6687,21 @@ export default function Dashboard() {
                 for that band). Push/email surfaces are deliberately held; this is the
                 in-app banner only for now. */}
             {(() => {
+              // SELF-DIRECTED PIVOT (2026-05-28, ACCOUNT_MODEL.md §2b): this
+              // age-band nudge RECOMMENDED a specific allocation based on the
+              // child's age ("{kid} is 15. Most funds shift to the Conservative
+              // Mix around this age") and offered a one-tap switch to that pick.
+              // That is the clearest "investment advice based on the client's
+              // circumstances" surface in the product — it pushes Kiddo toward
+              // investment-adviser (RIA) status. Disabled pending the RIA memo's
+              // blessing (lawyer brief Q8). The code is left intact behind this
+              // flag so it can be re-enabled in one line if counsel confirms a
+              // recommendation surface is permissible. Parents still pick any
+              // mix themselves from the neutral menu in Settings — that's the
+              // self-directed posture we're preserving.
+              const STRATEGY_NUDGE_ENABLED: boolean = false;
+              if (!STRATEGY_NUDGE_ENABLED) return null;
+
               const birthdateRaw = (activeFund as any)?.recipientBirthdate;
               if (!birthdateRaw || !activeFundId) return null;
               const bd = new Date(birthdateRaw);
