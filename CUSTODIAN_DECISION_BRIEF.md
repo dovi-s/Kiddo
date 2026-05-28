@@ -90,6 +90,15 @@ Copy-paste these; the answers decide it:
    separate vendor.)
 10. Onboarding requirements for an early-stage company (entity docs, capital,
     compliance program, timeline to go live).
+11. **Internal account-to-account transfers (gates P2P).** Can you journal cash AND
+    fractional positions **between two customer accounts** on your platform (an
+    internal book transfer, not an external/ACATS move)? This is what lets the P2P
+    "cash or stock" feature stay inside the brokerage ecosystem — an internal
+    transfer, NOT money transmission (see ACCOUNT_MODEL.md §6a). If yes, P2P is a
+    clean custody-gated fast-follow with no money-transmitter license needed for the
+    in-ecosystem path; if no, P2P gets materially harder. Also: do you provide a
+    standard customer-initiated **ACH withdrawal to a linked bank** (for the
+    "take it as cash to my bank" option) so we don't build money movement ourselves?
 
 ## Decision framework
 

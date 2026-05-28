@@ -237,7 +237,35 @@ stock leg is a cheap fast-follow, not a new regulatory program; the cash leg is 
 licensed long-pole. Engineering speed shortens neither clock (stock waits on custody,
 cash waits on licensing) — it only means we're ready the instant either clears.
 Building the UI shell earlier is worth it ONLY as a demo/fundraising prototype (it
-can't connect to a real backend pre-custody).
+can't connect to a real backend pre-custody). **A pitch mock ships at `/p2p-preview`
+(client-side only, fully fenced) — commit `7a1da82`.**
+
+### 6a. The account-to-account model — the design that routes around the MTL gate (2026-05-28)
+The cash-leg licensing problem largely *evaporates* if value stays **inside the
+platform**, account-to-account, instead of cashing out to an external bank:
+
+- **Account → account = an internal book transfer / securities journal** between two
+  customers of the same broker-dealer. That's a normal brokerage operation, **NOT
+  money transmission.** The MTL trigger comes from sending money to *external*
+  parties/locations, not from journaling cash/positions between two on-platform
+  accounts. Keep it in the ecosystem and the cash-leg landmine mostly disappears.
+- **Recipient onboards at claim (Cash-App-exact) — do NOT require a pre-existing
+  account.** Send to anyone (phone/email); existing user → credits their account; new
+  person → the send IS the invite and they sign up to claim. The recipient always
+  ends with an account, but it's created *at claim* — which preserves the acquisition
+  loop that is the entire strategic point. (Requiring accounts on both ends up front
+  = clean plumbing serving almost nobody.)
+- **"Cash" reframed to stay in-ecosystem:** "cash" = an *uninvested balance held in
+  their Kiddo account* (fine — brokerages hold cash). "Withdraw to my bank" = a
+  *separate, standard brokerage ACH withdrawal the custodian already provides*, not a
+  money-transmitter we build. So both halves of "cash or stock" live inside the
+  account; only the external withdrawal rides the custodian's existing rails.
+- **The gate that does NOT go away:** live custody — both ends need real brokerage
+  accounts, and the custodian must support **internal transfers/journals of cash and
+  fractional positions between two customer accounts.** Added as a custodian-selection
+  question (`CUSTODIAN_DECISION_BRIEF.md`). Under this model P2P is a clean
+  custody-gated fast-follow with NO separate licensing program for the in-ecosystem
+  path.
 
 ---
 
