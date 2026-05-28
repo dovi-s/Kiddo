@@ -13578,7 +13578,13 @@ export async function registerRoutes(
           }
         } catch { /* non-fatal */ }
       }
-      if (thankYou.senderEmail) {
+      // Demo funds: the status flip already landed and the mailto fallback
+      // below still returns, so the UI confirms "sent" — but DON'T enqueue a
+      // real email. Demo gifters are illustrative (@dunphyfamily.com) and would
+      // just bounce. Per server/demoSandbox.ts, demo actions complete the flow
+      // without touching real rails.
+      const isDemoThankYou = await isDemoFund(req.params.fundId);
+      if (thankYou.senderEmail && !isDemoThankYou) {
         try {
           await enqueueParentThankYou({
             fundId: req.params.fundId,
@@ -13738,21 +13744,27 @@ export async function registerRoutes(
         || "your child";
       const senderNameOnRow = unsentRows[0]?.senderName || null;
 
-      try {
-        await enqueueParentThankYou({
-          fundId: req.params.fundId,
-          gifterEmail: recipientEmail,
-          gifterName: isAnonymous ? null : senderNameOnRow,
-          childName: childFirstName,
-          parentMessage: message,
-          parentName: isAnonymous ? null : parentDisplayName,
-          giftAmount: giftAmountTotal,
-          isAnonymous,
-        });
-      } catch (enqueueErr) {
-        // Logging-only: the rows are already marked sent and the mailto
-        // fallback works. Same posture as the per-gift endpoint.
-        console.error('Failed to enqueue bulk parent thank-you email:', enqueueErr);
+      // Demo funds: rows are flipped to sent + the mailto fallback returns, but
+      // skip the real email (illustrative @dunphyfamily.com gifters would just
+      // bounce). Same demo-safe posture as the per-gift send + demoSandbox.
+      const isDemoBulkThankYou = await isDemoFund(req.params.fundId);
+      if (!isDemoBulkThankYou) {
+        try {
+          await enqueueParentThankYou({
+            fundId: req.params.fundId,
+            gifterEmail: recipientEmail,
+            gifterName: isAnonymous ? null : senderNameOnRow,
+            childName: childFirstName,
+            parentMessage: message,
+            parentName: isAnonymous ? null : parentDisplayName,
+            giftAmount: giftAmountTotal,
+            isAnonymous,
+          });
+        } catch (enqueueErr) {
+          // Logging-only: the rows are already marked sent and the mailto
+          // fallback works. Same posture as the per-gift endpoint.
+          console.error('Failed to enqueue bulk parent thank-you email:', enqueueErr);
+        }
       }
 
       const subject = `Thank you for your gifts to ${fund.name}`;
