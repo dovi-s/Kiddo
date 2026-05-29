@@ -116,10 +116,23 @@ charged" softness is costing real gifts.
    store the id + `paymentStatus`. Return a `clientSecret` so `GiveAGift.tsx` can
    confirm the card inline. Keep the existing nudge email (reword: "your card is
    saved / your gift is reserved" per option).
-3. **Client** (`GiveAGift.tsx`): add the Stripe card element + confirm step
-   (mirror `GiftCheckout.tsx`'s existing Stripe wiring). The "intent" submit now
-   collects a card. Preserve the no-card path ONLY as an explicit "just remind me"
-   fallback if desired.
+3. **Client** (`GiveAGift.tsx`): collect the card. **⚠️ ARCHITECTURE CORRECTION
+   (verified 2026-05-29): the client uses NO Stripe Elements** — there is no
+   `@stripe/stripe-js` / `@stripe/react-stripe-js` dependency (only the server
+   `stripe` SDK), and `GiftCheckout.tsx` captures cards by **redirecting to
+   hosted Stripe Checkout**, not an embedded field. So do NOT build embedded
+   Elements (that would add new deps + a pattern foreign to this codebase).
+   Instead use **Stripe Checkout in `mode: 'setup'`**: server creates a setup-mode
+   Checkout Session, returns its `url`, client redirects (mirrors the existing
+   gift/subscription checkout pattern). On completion, capture the session's
+   `setup_intent` via a `checkout.session.completed` branch (new type e.g.
+   `gifter_card_setup`) and store it as `stripeSetupIntentId` +
+   `paymentStatus='setup_confirmed'` on the gift_intent. **This revises step 2's
+   server code**: replace the bare `createGifterSetupIntent` with a setup-mode
+   Checkout Session creator; the settlement (step 4 / increment 2) is unaffected —
+   it just retrieves and charges whatever confirmed SetupIntent exists. Show the
+   point-of-charge disclosure on the GiveAGift page BEFORE the redirect. Preserve
+   the no-card "just remind me" path as an explicit fallback.
 4. **Settlement at pairing** (`routes.ts:3402-3453`, inside the existing
    `for (const intent of matchingIntents)` loop): after `status='paired'`, settle
    the held payment — B: `capture()`; C: off-session charge — then run the
