@@ -100,6 +100,9 @@ export function MobileNav() {
   if (shouldHidePrimaryNav(location)) return null;
 
   const activeFund = (storedFundId && funds.find((f) => f.id === storedFundId)) || funds[0] || null;
+  // Post-handoff adult owner: the Home tab shows the generic "Home", not their own first
+  // name (the tight 5-tab rail has no room for "Your Fund" without wrapping).
+  const isOwnerMode = Boolean((activeFund as any)?.transferredAt && (activeFund as any)?.accessRole === "owner");
   const shareUrl = activeFund ? `${window.location.origin}/${activeFund.slug}` : "";
   const memoryHref = activeFund ? `/memory/${activeFund.id}` : "/memory";
   // Scope detection — same module as AppHeader / DesktopSidebar so
@@ -129,7 +132,7 @@ export function MobileNav() {
       // is misleading anywhere the user isn't actually inside that
       // kid's surface — fund context shouldn't reach into the nav
       // labels on user-scoped pages.
-      label: suppressFundChrome ? "Home" : (capFirst(activeFund?.recipientFirstName) || "Home"),
+      label: suppressFundChrome || isOwnerMode ? "Home" : (capFirst(activeFund?.recipientFirstName) || "Home"),
     },
     { href: memoryHref, icon: BookOpen, label: "Memory" },
     // MobileNav stays tight "Share" — five tabs across the rail can't

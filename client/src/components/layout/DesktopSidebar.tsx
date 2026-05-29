@@ -136,6 +136,9 @@ export function DesktopSidebar() {
   const sidebarMemoryUnread = useMemoryUnreadCount(activeFund?.id);
 
   const childName = capFirst(activeFund?.recipientFirstName) || null;
+  // Post-handoff adult owner: flips sidebar fund labels to "Your Fund"/"your" and hides
+  // Kid View (a custodian->child feature that doesn't apply once the owner IS the adult).
+  const isOwnerMode = Boolean((activeFund as any)?.transferredAt && (activeFund as any)?.accessRole === "owner");
   const fundSlug = (activeFund as any)?.slug || null;
 
   // Share the SAME query key as Dashboard (no "-sidebar" suffix) so any
@@ -251,7 +254,7 @@ export function DesktopSidebar() {
       // the chrome-scope-tier rollout — DesktopSidebar was missed.
       // Clicking still drills into the last-active fund's
       // Dashboard.
-      label: suppressFundChrome ? "Home" : (capFirst(activeFund?.recipientFirstName) || "Home"),
+      label: suppressFundChrome ? "Home" : (isOwnerMode ? "Your Fund" : capFirst(activeFund?.recipientFirstName) || "Home"),
       // isActive is ONLY true on /dashboard itself. /age-18-plan was
       // previously included here to visually mark "you're inside
       // Emma's section" while on the age-18-plan sub-page, but that
@@ -307,9 +310,11 @@ export function DesktopSidebar() {
       // verb-action. See feedback_share_vs_gift_distinction.md.
       label: copiedLink
         ? "Copied!"
-        : activeFund.recipientFirstName
-          ? `Share ${capFirst(activeFund.recipientFirstName)}'s link`
-          : "Share gift link",
+        : isOwnerMode
+          ? "Share your link"
+          : activeFund.recipientFirstName
+            ? `Share ${capFirst(activeFund.recipientFirstName)}'s link`
+            : "Share gift link",
       onClick: handleShareLink,
       href: null,
     },
@@ -326,7 +331,7 @@ export function DesktopSidebar() {
       external: false,
       onClick: null,
     },
-    activeFund?.id && {
+    activeFund?.id && !isOwnerMode && {
       id: "kid-view",
       label: childName ? `${childName}'s View` : "Kid's View",
       href: null,
@@ -470,9 +475,11 @@ export function DesktopSidebar() {
               <div className="truncate text-[13px] font-bold text-foreground" style={{ lineHeight: 1.2 }}>
                 {isFundsOverview
                   ? "Your funds"
-                  : activeFund.recipientFirstName
-                    ? `${capFirst(activeFund.recipientFirstName)}'s Fund`
-                    : activeFund.name || "Fund"}
+                  : isOwnerMode
+                    ? "Your Fund"
+                    : activeFund.recipientFirstName
+                      ? `${capFirst(activeFund.recipientFirstName)}'s Fund`
+                      : activeFund.name || "Fund"}
               </div>
               <div className="text-[11.5px] text-muted-foreground mt-px tabular-nums">
                 {isFundsOverview
