@@ -54,9 +54,14 @@ video, voice, and the Memory Book. Verified controls:
 - Fund mutations (incl. SSN) gated to owner/co-admin; viewers blocked.
 
 Gaps (gated — not codeable here):
-- **`/uploads` → signed URLs** — kids' media is still served from
-  public-but-unguessable URLs; the signed-URL flip is built + dormant, gated on
-  Supabase Storage creds. This is the top open child-data item.
+- **`/uploads` → private signed URLs** — kids' media still lands on local disk
+  (served via `/uploads`). NOT a current exposure: the Supabase bucket scaffold
+  is **fail-closed private**, and the signing helper (`getSignedUrl` /
+  `resolveMediaUrl` in `objectStorage.ts`) is built. What's NOT done is the
+  wiring — upload routes storing the object *ref* + read routes signing on
+  serve — which is a spec'd ~1–2 day build, correctly gated on storage creds so
+  the signing branch is testable (not blind-shipped). See
+  `STORAGE_DURABILITY_SPEC.md`. Top open child-data item.
 - **Child-PII deletion (Option C)** — decided, partially built, counsel-gated.
 - **COPPA / state children's-privacy** — the parent-provides-it + PIN-gated
   model narrows COPPA's "collected from a child" trigger, but applicability and
