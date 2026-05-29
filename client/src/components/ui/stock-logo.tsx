@@ -6,9 +6,14 @@ interface StockLogoProps {
   symbol?: string | null;
   size?: number;
   className?: string;
+  // When false, the no-logo fallback renders just the ticker's first initial
+  // instead of the full ticker text. Use it where a ticker LABEL already sits
+  // beside the logo (e.g. Activity's "Spread across" pills) so a logo-less ETF
+  // doesn't read as a doubled "VTI VTI". Defaults true (full-ticker fallback).
+  fallbackText?: boolean;
 }
 
-export function StockLogo({ ticker, symbol, size = 36, className }: StockLogoProps) {
+export function StockLogo({ ticker, symbol, size = 36, className, fallbackText = true }: StockLogoProps) {
   const [failed, setFailed] = useState(false);
   const upper = String(ticker || symbol || "STK").trim().toUpperCase() || "STK";
   const src = `https://assets.parqet.com/logos/symbol/${upper}?format=jpg`;
@@ -37,7 +42,7 @@ export function StockLogo({ ticker, symbol, size = 36, className }: StockLogoPro
           style={{ fontSize: size <= 28 ? 9 : size <= 36 ? 10 : 12 }}
           className="leading-none text-center px-0.5"
         >
-          {upper.length > 4 ? upper.slice(0, 4) : upper}
+          {fallbackText ? (upper.length > 4 ? upper.slice(0, 4) : upper) : upper.slice(0, 1)}
         </span>
       </div>
     );

@@ -3074,7 +3074,7 @@ export default function Activity() {
                                           feed scannable.) */}
                                       {tickers.map((t) => (
                                         <span key={t} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                                          <StockLogo ticker={t} size={16} />
+                                          <StockLogo ticker={t} size={16} fallbackText={false} />
                                           <span
                                             style={{
                                               fontSize: 10, fontWeight: 800, borderRadius: 6, padding: "3px 8px",
