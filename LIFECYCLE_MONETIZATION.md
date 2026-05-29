@@ -62,6 +62,20 @@ inheritance) **and** pay Plus/Family for their kid's custodial fund. Two fund
 types, two mechanisms, no conflict: the subscription covers the *custodial* funds
 they manage; AUM runs on every balance, including their own.
 
+## How you get an adult account: graduation ONLY (locked 2026-05-29)
+
+A self-directed adult account exists **only** as a custodial fund that crossed
+majority (`funds.transferredAt` set). **Kiddo does not offer direct adult
+signup**, and shouldn't — a stand-alone adult brokerage competes with
+Robinhood/Schwab/Fidelity where Kiddo has zero edge. Every Kiddo advantage (the
+gifter loop, the relationship, the Memory Book, "for kids") lives in the
+custodial/kid lifecycle. The adult account is the **tail of that lifecycle** — it
+exists to *retain* the graduate (AUM + them becoming a parent), not to *acquire*
+random adults. This is also the current code reality: there is no "open a
+self-directed account for yourself" path; adult accounts only arise via the
+handoff. **Do not wire a direct-adult-signup path.** Revisit only with a
+deliberate strategic reason, and skeptically.
+
 ## The adult charge, answered directly
 
 - **Do we charge the adult an upgrade for recurring?** No. Recurring on a
