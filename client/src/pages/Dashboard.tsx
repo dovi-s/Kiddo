@@ -6571,14 +6571,14 @@ export default function Dashboard() {
                       accounts only; a no-op for real parents (who know their own
                       gift link). Pairs with DemoGiftMoment + the Memory Book
                       live-entry to make the whole loop self-evident. */}
-                  {isDemoAccount && fundSlug && (
+                  {isDemoAccount && fundSlug && !isOwnerMode && (
                     <Link
                       href={`/${fundSlug}`}
                       onClick={() => haptic("selection")}
                       className="mt-2 flex items-center justify-center gap-1.5 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-2.5 text-center text-xs font-medium leading-snug text-[hsl(var(--kiddo-evergreen))] transition hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] md:text-sm"
                       data-testid="demo-try-gifting"
                     >
-                      See it from a gifter's side — give {childFirst} a gift, then watch it land →
+                      See it from a gifter's side: give {childFirst} a gift, then watch it land →
                     </Link>
                   )}
                 </motion.section>
@@ -8058,9 +8058,11 @@ export default function Dashboard() {
                   belongs to them. "Story" is intentional: these contributions get
                   stamped into the Memory Book as love letters, not just transactions. */}
               <p className="kiddo-section-label" data-testid="text-your-part-title">
-                {recipientFirstNameDisplay
-                  ? `Your part of ${recipientFirstNameDisplay}${recipientFirstNameDisplay.endsWith("s") ? "'" : "'s"} story`
-                  : "Your part of their story"}
+                {isOwnerMode
+                  ? "Contributions to your fund"
+                  : recipientFirstNameDisplay
+                    ? `Your part of ${recipientFirstNameDisplay}${recipientFirstNameDisplay.endsWith("s") ? "'" : "'s"} story`
+                    : "Your part of their story"}
               </p>
 
               {/* Layout mirrors "What Emma owns" → Chosen with love / Managed mix:
