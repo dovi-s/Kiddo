@@ -4213,6 +4213,28 @@ const [editFundName, setEditFundName] = useState("");
                 ) : null}
               </div>
             </SectionCard>
+
+            {/* Gifter Memory Book moderation. Lives on the Gifts tab with the
+                other gifter-content controls (gift-page visibility + "what
+                people can do") rather than Notifications, because it gates what
+                gifters may put in the Memory Book (a content control, not an
+                email/reminder preference). Moved 2026-05-28. Header restyled to
+                the kiddo-section-label convention so it reads native next to
+                "Gift page" and "What people can do". */}
+            <SectionCard>
+              <div className="p-5">
+                <p className="kiddo-section-label mb-1">Memory Book entries from gifters</p>
+                <p className="text-[11px] text-muted-foreground mb-4">Default: instant. Your gift link is private, and you can delete any entry anytime.</p>
+                <NotificationSwitchRow
+                  title="Require my approval first"
+                  body="When on, gifter notes, photos, video, and voice land in a pending tray on your Memory Book until you approve them. Most parents leave this off so notes appear in real time as gifters add them."
+                  checked={Boolean((primaryFund as any)?.gifterMemoryModeration)}
+                  disabled={!primaryFund?.id || updateMemoryModeration.isPending}
+                  onCheckedChange={(checked) => updateMemoryModeration.mutate(checked)}
+                  testId="row-memory-moderation"
+                />
+              </div>
+            </SectionCard>
           </motion.div>
         )}
 
@@ -4703,25 +4725,6 @@ const [editFundName, setEditFundName] = useState("");
                     </div>
                   ))}
                 </div>
-              </div>
-            </SectionCard>
-
-            <SectionCard>
-              <div className="p-5">
-                <div className="mb-3">
-                  <h2 className="text-base font-bold text-foreground">Memory Book entries from gifters</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Default: instant. Your gift link is private, and you can delete any entry anytime.
-                  </p>
-                </div>
-                <NotificationSwitchRow
-                  title="Require my approval first"
-                  body="When on, gifter notes, photos, video, and voice land in a pending tray on your Memory Book until you approve them. Most parents leave this off so notes appear in real time as gifters add them."
-                  checked={Boolean((primaryFund as any)?.gifterMemoryModeration)}
-                  disabled={!primaryFund?.id || updateMemoryModeration.isPending}
-                  onCheckedChange={(checked) => updateMemoryModeration.mutate(checked)}
-                  testId="row-memory-moderation"
-                />
               </div>
             </SectionCard>
 
