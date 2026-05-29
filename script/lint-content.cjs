@@ -46,6 +46,11 @@ const CONTENT_ROOTS = [
   "client/src/content",
   "client/src/pages",
   "client/src/components/ui/share-kit.tsx",
+  // shared/ is walked so the INCLUDED_SHARED_FILES allowlist below can
+  // catch customer-facing copy that lives in shared modules (email
+  // preference labels, gift-lesson explainers). shouldScan filters to
+  // just the allowlisted files; the rest of shared/ is skipped.
+  "shared",
 ];
 
 const INCLUDED_PAGE_FILES = new Set([
@@ -163,11 +168,32 @@ const INCLUDED_COMPONENT_FILES = new Set([
   path.normalize("client/src/components/FeatureWallModal.tsx"),
 ]);
 
+// shared/ files that carry CUSTOMER-FACING copy (rendered labels,
+// descriptions, kid-facing explainers). Added 2026-05-28 after a
+// hard-named "DriveWealth" leaked into the tax-prep email-preference
+// description (shared/emailPreferences.ts) and em-dashes leaked into
+// kid-facing gift-lesson explainers (shared/gift-lessons.ts) — both
+// invisible to the old scan because shared/ was never walked.
+// DELIBERATELY EXCLUDED: schema.ts (the `drivewealth_account_id`
+// column is a legit persisted reference, not copy) and
+// platformReadiness.ts (admin-only readiness labels legitimately name
+// the vendor they probe). Those would false-positive the custodian
+// rule. Only files whose string literals are user-visible prose belong
+// here.
+const INCLUDED_SHARED_FILES = new Set([
+  path.normalize("shared/emailPreferences.ts"),
+  path.normalize("shared/gift-lessons.ts"),
+  path.normalize("shared/milestones.ts"),
+]);
+
+const SHARED_ROOT = path.normalize("shared");
+
 function shouldScan(filePath) {
   const normalized = path.normalize(filePath);
   if (normalized.endsWith(".md")) return true;
   if (normalized.endsWith(path.normalize("client/src/components/ui/share-kit.tsx"))) return true;
   if (INCLUDED_COMPONENT_FILES.has(normalized)) return true;
+  if (INCLUDED_SHARED_FILES.has(normalized)) return true;
   return INCLUDED_PAGE_FILES.has(normalized);
 }
 

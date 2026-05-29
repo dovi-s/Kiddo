@@ -108,7 +108,7 @@ export const GIFT_LESSONS: Record<GiftLessonId, GiftLesson> = {
     gifterDescription: "A basket of many companies in a single pick.",
     kidLabel: "What an ETF is",
     kidExplainer:
-      "Instead of picking one company, you own a small piece of hundreds at once. That's an ETF — one purchase, lots of ownership, automatic diversification.",
+      "Instead of picking one company, you own a small piece of hundreds at once. That's an ETF: one purchase, lots of ownership, automatic diversification.",
     emoji: "🧩",
     category: "concept",
   },
@@ -118,7 +118,7 @@ export const GIFT_LESSONS: Record<GiftLessonId, GiftLesson> = {
     gifterDescription: "The slow, boring magic of holding for years.",
     kidLabel: "Why patience matters",
     kidExplainer:
-      "The market goes up and down all the time. The people who make money aren't the ones who guess right — they're the ones who hold for many years and let the company actually grow. Boring is the strategy.",
+      "The market goes up and down all the time. The people who make money aren't the ones who guess right. They're the ones who hold for many years and let the company actually grow. Boring is the strategy.",
     emoji: "⏳",
     category: "wisdom",
   },
@@ -128,7 +128,7 @@ export const GIFT_LESSONS: Record<GiftLessonId, GiftLesson> = {
     gifterDescription: "Picking a company because it means something to you.",
     kidLabel: "Owning what you love",
     kidExplainer:
-      "When you own a piece of a company you actually use — Disney, Apple, Nike, whatever it is — investing stops feeling abstract. You can see your investment in the world. That's a different relationship to money.",
+      "When you own a piece of a company you actually use, like Disney, Apple, or Nike, investing stops feeling abstract. You can see your investment in the world. That's a different relationship to money.",
     emoji: "💚",
     category: "wisdom",
   },
