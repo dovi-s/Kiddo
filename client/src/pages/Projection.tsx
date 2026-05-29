@@ -69,6 +69,14 @@ function useCountUp(target: number, duration = 420): number {
 // is to make age feel personal ("when she's 30") rather than abstract ("13 years from now").
 const MILESTONE_AGES = [18, 21, 25, 30, 40, 50, 65] as const;
 
+// On load, the slider opens on the first milestone at least this many years
+// beyond the child's current age — far enough that compounding shows a real
+// curve and an inspiring number, instead of the near-flat nearest milestone.
+// A newborn opens on 18 (the handoff); a 17-year-old opens on 30 ("what grows
+// past 18 is pure compound"). ~10y ≈ a doubling at 7%, so the curve always
+// reads as growth.
+const MIN_DEFAULT_HORIZON_YEARS = 10;
+
 const RETURN_RATES = [
   { id: "conservative", label: "Conservative", rate: 0.05, sub: "5% / yr" },
   { id: "moderate", label: "Moderate", rate: 0.07, sub: "7% / yr" },
@@ -227,19 +235,21 @@ export default function Projection() {
     [currentAge],
   );
 
-  // Slider index into visibleMilestones. Default to the LAST one (age 65 for kids) — the
-  // emotional anchor per the user spec ("the number that makes parents put their phone
-  // down and stare at the ceiling").
+  // Slider index into visibleMilestones.
   const [milestoneIdx, setMilestoneIdx] = useState<number>(0);
+  // On load (and on fund switch), open on the first milestone that's a real
+  // compounding horizon — at least MIN_DEFAULT_HORIZON_YEARS beyond the child's
+  // current age — so the page opens on an inspiring number with an actual growth
+  // curve, not the near-flat nearest milestone (a 17-year-old's "+$84 at 18").
+  // Newborn → 18 (the handoff); 17-year-old → 30. After that the parent's drags
+  // own the slider: currentAge is stable within a fund, so this only re-fires on
+  // a real age/fund change, never on a drag. Falls back to the furthest
+  // milestone when none is far enough out (e.g. an adult-owned fund near 65).
   useEffect(() => {
     if (visibleMilestones.length === 0) return;
-    setMilestoneIdx((prev) =>
-      prev >= visibleMilestones.length || prev < 0 ? visibleMilestones.length - 1 : prev,
-    );
-    // Run once when milestones first become non-empty so the slider lands on age 65.
-    // After that the parent's drags own it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleMilestones.length]);
+    const smart = visibleMilestones.findIndex((a) => a - currentAge >= MIN_DEFAULT_HORIZON_YEARS);
+    setMilestoneIdx(smart === -1 ? visibleMilestones.length - 1 : smart);
+  }, [visibleMilestones, currentAge]);
 
   // Seed from `activeMonthly` once schedules load. The page entry has to MATCH
   // the dashboard hero's number, otherwise the parent taps "$165k at 65" on the
