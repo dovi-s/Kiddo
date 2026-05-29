@@ -4870,7 +4870,7 @@ export default function Dashboard() {
                     </p>
                     <h2 className="mt-1 font-heading text-xl md:text-2xl font-semibold text-foreground leading-tight">
                       {isAnonymousGift
-                        ? <>Someone believed in {childFirstName}&apos;s future.</>
+                        ? <>Someone believed in {isOwnerMode ? "your" : `${childFirstName}'s`} future.</>
                         : senderFirstName
                           ? <>{senderFirstName} just made it real.</>
                           : <>Someone just made it real.</>}
@@ -5669,7 +5669,7 @@ export default function Dashboard() {
                                       {heroGiftIdx === 0 ? "Latest gift" : "Recent gift"}
                                     </p>
                                     <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgba(255,255,255,0.88)", lineHeight: 1.35 }}>
-                                      {displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added {formatCurrency(amt)} to {recipientFirstNameDisplay || "the fund"}'s future.
+                                      {displayGifterName(g?.senderName, (g as any)?.isAnonymous)} added {formatCurrency(amt)} to {isOwnerMode ? "your" : `${recipientFirstNameDisplay || "the fund"}'s`} future.
                                     </p>
                                     {/* Status pills (✓ Thanked / ⏳ Awaiting thanks / ✨ From you /
                                         🌱 Settling / No thanks yet) intentionally dropped from the
@@ -7566,7 +7566,7 @@ export default function Dashboard() {
                   className="space-y-3"
                 >
                   <p className="kiddo-section-label">
-                    {childName ? `Who loves ${childName}` : "People who love them"}
+                    {isOwnerMode ? "Who loves you" : childName ? `Who loves ${childName}` : "People who love them"}
                   </p>
                   <div
                     style={{
@@ -7976,9 +7976,11 @@ export default function Dashboard() {
                         const anonCount = anonEntry?.giftCount ?? 0;
                         const peopleCount = namedCount + anonCount;
                         if (peopleCount === 0) return null;
-                        const peopleLabel = peopleCount === 1
-                          ? `1 person loves ${childName || "them"}`
-                          : `${peopleCount} people love ${childName || "them"}`;
+                        const peopleLabel = isOwnerMode
+                          ? (peopleCount === 1 ? "1 person loves you" : `${peopleCount} people love you`)
+                          : peopleCount === 1
+                            ? `1 person loves ${childName || "them"}`
+                            : `${peopleCount} people love ${childName || "them"}`;
                         const breakdown = (() => {
                           if (namedCount > 0 && anonCount > 0) {
                             return `${namedCount} named, ${anonCount} anonymous`;
@@ -8821,9 +8823,11 @@ export default function Dashboard() {
               {/* ── Section header ── */}
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:2 }}>
                 <span className="kiddo-section-label">
-                  {recipientFirstNameDisplay
-                    ? `${recipientFirstNameDisplay}'s Occasions and Goals`
-                    : "Occasions and Goals"}
+                  {isOwnerMode
+                    ? "Your Occasions and Goals"
+                    : recipientFirstNameDisplay
+                      ? `${recipientFirstNameDisplay}'s Occasions and Goals`
+                      : "Occasions and Goals"}
                 </span>
                 {!isReadOnlyFund && (
                   <button
