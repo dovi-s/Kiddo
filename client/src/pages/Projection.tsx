@@ -374,6 +374,13 @@ export default function Projection() {
   const she = childPronouns.subject; // he / she / they
   const her = childPronouns.possAdj; // his / her / their
   const possessive = `${childName}${childName.endsWith("s") ? "'" : "'s"}`;
+  // Owner mode: the post-handoff recipient viewing their OWN fund — transferred AND
+  // they are the current owner. This distinguishes the graduated adult (Haley) from
+  // a previous-owner parent (accessRole 'previous_owner') and from a pre-handoff
+  // parent (no transferredAt). Flips OWNER-FACING copy to second person ("Your");
+  // AUDIENCE-facing copy (share titles, gift links) deliberately stays third-person
+  // ("{name}'s") because that's what the people she shares with should see.
+  const isOwnerMode = Boolean((activeFund as any)?.transferredAt) && (activeFund as any)?.accessRole === "owner";
 
   const fundSlug = (activeFund as any)?.slug;
   const handleShare = async () => {
@@ -475,7 +482,7 @@ ${shareUrl}`;
             emotion. */}
         <div>
           <h1 className="font-heading text-2xl sm:text-3xl font-bold text-foreground">
-            {possessive} Potential
+            {isOwnerMode ? "Your" : possessive} Potential
           </h1>
           <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
             Drag the age slider to explore projected values. The number updates as you move.
