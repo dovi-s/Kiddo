@@ -77,11 +77,14 @@ const PROMPT_COPY: Record<PlusUpgradePromptKind, PromptCopy> = {
   },
   "projection-3rd-view": {
     headline: "Want to customize the mix?",
-    body: "Plus parents pick their own ETFs and switch strategies between conservative, balanced, and growth. Free uses the diversified default. Same projection math; different allocations.",
+    body: "Plus lets you pick your own ETFs and switch strategies between conservative, balanced, and growth. Free uses the diversified default. Same projection math; different allocations.",
     icon: TrendingUp,
     modalTitle: (childName) => `Design what ${childName}'s fund grows into.`,
     modalBody: (childName) =>
-      `Free funds invest in the diversified default mix that drives the projection above. Plus parents pick their own ETFs and weights, and switch strategies (conservative, balanced, growth) as ${childName} gets closer to majority. Same long-horizon math; your call on the allocation.`,
+      // Viewer-agnostic ("you", not "parents") + no "approaching majority" clause:
+      // this prompt fires on the projection page, which BOTH parents (minor's fund)
+      // and post-handoff adult owners see. "Plus lets you..." is correct for either.
+      `Free funds invest in the diversified default mix that drives the projection above. Plus lets you pick your own ETFs and weights, and switch strategies (conservative, balanced, growth). Same long-horizon math; your call on the allocation.`,
   },
   "thirty-day-anniversary": {
     headline: "You've committed for a month.",
