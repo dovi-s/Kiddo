@@ -2439,6 +2439,11 @@ export default function MemoryBook() {
     return `${n}th`;
   })();
   const isOwner = isAuthenticated && !!user && !!fundData && String(fundData.userId) === String(user.id);
+  // Post-handoff adult OWNER (not a pre-handoff parent, not a previous-owner parent):
+  // the fund was transferred and the current viewer holds the owner role. The Memory
+  // Book is now THEIRS, so it reads "Your Memory Book / Your Story", not "Haley's".
+  // Same isOwnerMode signal used across Dashboard/Projection/AppHeader. 2026-05-29.
+  const isOwnerMode = (fundData as any)?.accessRole === "owner" && !!(fundData as any)?.transferredAt;
   const fundValue =
     parseFloat(fundData?.balance || "0") +
     parseFloat(fundData?.pendingBalance || "0") +
@@ -2696,7 +2701,7 @@ export default function MemoryBook() {
                   the Dashboard hero proved out: don't try, just be
                   the number. */}
               <div style={{ fontSize: 11, color: "rgba(255,255,255,0.48)", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 14 }} data-testid="text-fund-name">
-                {childName ? `${childName}'s` : "Fund"} Memory Book
+                {isOwnerMode ? "Your" : childName ? `${childName}'s` : "Fund"} Memory Book
               </div>
 
               <div style={{ marginBottom: 22 }} data-testid="memory-hero-number">
@@ -5825,7 +5830,7 @@ export default function MemoryBook() {
                   <div className="rounded-2xl border border-border bg-muted/40 p-4 space-y-3">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Email preview</p>
                     <p className="text-sm font-semibold text-foreground">
-                      An update from {childName ? `${childName}'s` : "their"} Memory Book
+                      An update from {isOwnerMode ? "your" : childName ? `${childName}'s` : "their"} Memory Book
                     </p>
                     {sharePhotoUrl.trim() && (
                       <img
@@ -6455,7 +6460,7 @@ export default function MemoryBook() {
               transition={{ duration: DUR_SLOW, ease: EASE_STANDARD }}
               role="dialog"
               aria-modal="true"
-              aria-label={`${childName ? `${childName}'s` : ""} Memory Book, book view`}
+              aria-label={`${isOwnerMode ? "Your" : childName ? `${childName}'s` : ""} Memory Book, book view`}
               data-testid="memory-book-view"
               style={{
                 position: "fixed", inset: 0, zIndex: 90,
@@ -6573,7 +6578,7 @@ export default function MemoryBook() {
                           A Memory Book
                         </p>
                         <h2 className="font-heading" style={{ fontSize: 36, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.15, marginBottom: 14, letterSpacing: "-0.01em" }}>
-                          {childName ? `${childName}'s Story` : "Their Story"}
+                          {isOwnerMode ? "Your Story" : childName ? `${childName}'s Story` : "Their Story"}
                         </h2>
                         <p className="font-serif italic" style={{ fontSize: 16, color: "rgba(26,23,16,0.65)", lineHeight: 1.6, marginBottom: 28, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                           Every gift has a story.
@@ -6817,7 +6822,7 @@ export default function MemoryBook() {
                           To be continued
                         </p>
                         <h3 className="font-heading" style={{ fontSize: 24, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.25, marginBottom: 14, letterSpacing: "-0.01em" }}>
-                          {childName ? `${childName}'s story is still being written.` : "This story is still being written."}
+                          {isOwnerMode ? "Your story is still being written." : childName ? `${childName}'s story is still being written.` : "This story is still being written."}
                         </h3>
                         <p className="font-serif italic" style={{ fontSize: 14.5, color: "rgba(26,23,16,0.62)", lineHeight: 1.6, marginBottom: 26, maxWidth: 380, marginLeft: "auto", marginRight: "auto" }}>
                           Every gift, every note, every milestone
