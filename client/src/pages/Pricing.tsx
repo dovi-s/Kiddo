@@ -574,7 +574,7 @@ export default function Pricing() {
             <p className="mx-auto max-w-2xl text-lg italic text-foreground">
               &quot;I upgraded to Kiddo+ after the first month. The Memory Book with photos and voice memos was what sold me. My daughter is going to read this stuff at 18.&quot;
             </p>
-            <p className="mt-4 text-sm text-muted-foreground">Rachel D., mother of one, Texas</p>
+            <p className="mt-4 text-sm text-muted-foreground">Illustrative: why parents upgrade to Kiddo+</p>
           </FadeIn>
         </div>
       </section>
