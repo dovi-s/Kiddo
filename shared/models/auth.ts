@@ -50,6 +50,15 @@ export const users = pgTable("users", {
   kycStatus: text("kyc_status").default("none"),
   kycSubmittedAt: timestamp("kyc_submitted_at"),
   kycData: jsonb("kyc_data"),
+  // Two-factor authentication (TOTP, RFC 6238) — opt-in per parent account.
+  // `totpPendingSecret` holds the unconfirmed base32 secret during setup;
+  // it's promoted to `totpSecret` only once the user verifies a live code.
+  // `totpEnabled` gates the login second factor. Backup codes are stored
+  // bcrypt-hashed and single-use. Added by migration 0039. See server/totp.ts.
+  totpEnabled: boolean("totp_enabled").default(false),
+  totpSecret: text("totp_secret"),
+  totpPendingSecret: text("totp_pending_secret"),
+  totpBackupCodes: jsonb("totp_backup_codes"),
   // Account deletion (App Store 5.1.1(v) compliance). When the user
   // initiates in-app deletion: sessions invalidated immediately, Stripe
   // subscriptions canceled immediately, deletedAt set. PII anonymization

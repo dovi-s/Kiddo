@@ -40,6 +40,7 @@ import { recordEvent, eventCtxFromReq } from "./analytics";
 import { uploadMemoryFile } from "./objectStorage";
 import { scanImageBuffer } from "./contentScanner";
 import { remapOAuthIdentitiesForUser } from "./oauthIdentityStore";
+import { generateTotpSecret, buildOtpauthUri, verifyTotp, generateBackupCodes, hashBackupCodes, findBackupCodeMatch } from "./totp";
 import { deriveActionItemsForUser } from "./actionItems";
 import { DEFAULT_SNOOZE_HOURS, isSnoozable, type ActionItemType } from "@shared/action-items";
 import {
@@ -7833,6 +7834,94 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error activating fund:', error);
       res.status(500).json({ error: 'Failed to activate fund' });
+    }
+  });
+
+  // ===== TWO-FACTOR AUTH (TOTP) — account management =====
+  // Opt-in per parent account. These endpoints manage ENROLLMENT only. The
+  // login-time second-factor gate is enforced separately in the auth flow;
+  // until that's wired, these are inert infrastructure (no UI calls them yet)
+  // and non-enrolled users are unaffected (totpEnabled defaults false).
+  // TOTP is RFC 6238, dependency-free, pinned to the RFC test vectors — see
+  // server/totp.ts + scripts/verify-totp.ts.
+  app.get('/api/auth/2fa/status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const [row] = await db.select({ enabled: users.totpEnabled }).from(users).where(eq(users.id, userId)).limit(1);
+      res.json({ enabled: Boolean(row?.enabled) });
+    } catch (e) {
+      console.error('[2fa] status error:', e);
+      res.status(500).json({ error: 'Could not load 2FA status' });
+    }
+  });
+
+  // Begin enrollment: mint a PENDING secret + return the otpauth URI for the
+  // authenticator app. Does NOT enable 2FA — that requires verifying a code.
+  app.post('/api/auth/2fa/setup', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const [u] = await db.select({ email: users.email, enabled: users.totpEnabled }).from(users).where(eq(users.id, userId)).limit(1);
+      if (u?.enabled) return res.status(400).json({ error: 'Two-factor is already on. Turn it off first to re-enroll.' });
+      const secret = generateTotpSecret();
+      await db.update(users).set({ totpPendingSecret: secret, updatedAt: new Date() }).where(eq(users.id, userId));
+      res.json({ secret, otpauthUri: buildOtpauthUri(u?.email || 'account', secret) });
+    } catch (e) {
+      console.error('[2fa] setup error:', e);
+      res.status(500).json({ error: 'Could not start 2FA setup' });
+    }
+  });
+
+  // Confirm enrollment: verify a live code against the pending secret. On
+  // success, promote it, enable 2FA, and return one-time backup codes (shown
+  // to the user once; stored only as bcrypt hashes).
+  app.post('/api/auth/2fa/enable', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const code = String(req.body?.code || '');
+      const [u] = await db.select({ pending: users.totpPendingSecret, enabled: users.totpEnabled }).from(users).where(eq(users.id, userId)).limit(1);
+      if (u?.enabled) return res.status(400).json({ error: 'Two-factor is already on.' });
+      if (!u?.pending) return res.status(400).json({ error: 'Start setup first.' });
+      if (!verifyTotp(u.pending, code)) return res.status(400).json({ error: 'That code did not match. Check your authenticator and try again.' });
+      const backupCodes = generateBackupCodes();
+      const hashed = await hashBackupCodes(backupCodes);
+      await db.update(users).set({
+        totpSecret: u.pending,
+        totpPendingSecret: null,
+        totpEnabled: true,
+        totpBackupCodes: hashed,
+        updatedAt: new Date(),
+      }).where(eq(users.id, userId));
+      await writeAudit(req, 'totp_enabled', 'user', userId);
+      res.json({ enabled: true, backupCodes });
+    } catch (e) {
+      console.error('[2fa] enable error:', e);
+      res.status(500).json({ error: 'Could not enable 2FA' });
+    }
+  });
+
+  // Turn off 2FA. Requires proof of possession: a current TOTP code OR an
+  // unused backup code.
+  app.post('/api/auth/2fa/disable', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const code = String(req.body?.code || '');
+      const [u] = await db.select({ secret: users.totpSecret, enabled: users.totpEnabled, backup: users.totpBackupCodes }).from(users).where(eq(users.id, userId)).limit(1);
+      if (!u?.enabled || !u?.secret) return res.status(400).json({ error: 'Two-factor is not on.' });
+      const hashes = Array.isArray(u.backup) ? (u.backup as string[]) : [];
+      const codeOk = verifyTotp(u.secret, code) || (await findBackupCodeMatch(code, hashes)) >= 0;
+      if (!codeOk) return res.status(400).json({ error: 'Enter a valid code from your authenticator or a backup code.' });
+      await db.update(users).set({
+        totpSecret: null,
+        totpPendingSecret: null,
+        totpEnabled: false,
+        totpBackupCodes: null,
+        updatedAt: new Date(),
+      }).where(eq(users.id, userId));
+      await writeAudit(req, 'totp_disabled', 'user', userId);
+      res.json({ enabled: false });
+    } catch (e) {
+      console.error('[2fa] disable error:', e);
+      res.status(500).json({ error: 'Could not disable 2FA' });
     }
   });
 
