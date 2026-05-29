@@ -126,10 +126,16 @@ export function registerOGMiddleware(app: Express) {
 
       res.setHeader("Content-Type", "text/html; charset=utf-8");
       res.setHeader("Cache-Control", "public, max-age=300");
+      // A child's fund/gift page is PRIVATE — its OG title carries the child's
+      // first name. It's meant to be shared via a private link, never crawled
+      // into a search index. Belt-and-suspenders: header + meta. (This branch
+      // only ever serves real fund slugs, so it can't de-index marketing.)
+      res.setHeader("X-Robots-Tag", "noindex, nofollow");
       res.send(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="robots" content="noindex, nofollow" />
   <title>${escHtml(title)}</title>
   <meta property="og:title" content="${escHtml(title)}" />
   <meta property="og:description" content="${escHtml(desc)}" />

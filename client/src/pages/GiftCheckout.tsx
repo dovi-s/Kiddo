@@ -10,6 +10,7 @@ import { StockLogo } from "@/components/ui/stock-logo";
 import { GoalCard } from "@/components/ui/premium-themes";
 import { RichText } from "@/components/ui/rich-text-editor";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
+import { usePageSeo } from "@/lib/seo";
 import { ThinkingOrb } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
@@ -284,6 +285,14 @@ export default function GiftCheckout() {
   const searchString = useSearch();
   const [step, setStep] = useState<GiftStep>("landing");
   useScrollResetOnChange(step);
+  // A child's gift page is private — keep it OUT of search indexes (it carries
+  // the child's name). Shared via a private link, never crawled. Mirrors the
+  // X-Robots-Tag + meta the og middleware sets for the scraper-facing variant.
+  usePageSeo({
+    title: "Send a gift that grows | Kiddo",
+    description: "Give a child a real investment gift in under a minute. No account needed.",
+    robots: "noindex, nofollow",
+  });
   const [selectedAmount, setSelectedAmount] = useState(50);
   const [showCustom, setShowCustom] = useState(false);
   const [customAmount, setCustomAmount] = useState("");
