@@ -472,6 +472,10 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
   // First-sell tax explainer state. Mirrors Dashboard.tsx's pattern.
   // Per AGE_18_HANDOFF_SPEC.md bucket 2.
   const [sellTaxExplainer, setSellTaxExplainer] = useState<FirstSellTaxExplainerPayload | null>(null);
+  // Post-handoff adult owner: the UTMA has terminated at majority, so the money is
+  // theirs outright — the "for the child's benefit" custodial restriction no longer
+  // applies, and the fund reads as "your fund", not "{child}'s fund". 2026-05-29.
+  const isOwnerMode = (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
 
   const handleSell = async (opts: { confirmTaxExplainer?: boolean } = {}) => {
     setSelling(true);
@@ -520,7 +524,7 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
               <TrendingDown size={24} className="text-primary" />
             </div>
             <h2 className="font-heading text-xl font-semibold text-foreground">Move {holding.ticker} to cash</h2>
-            <p className="text-sm text-muted-foreground">The money stays inside {fund?.recipientFirstName || "your child"}'s fund after settlement.</p>
+            <p className="text-sm text-muted-foreground">The money stays inside {isOwnerMode ? "your" : `${fund?.recipientFirstName || "your child"}'s`} fund after settlement.</p>
           </div>
 
           <div className="bg-muted/30 rounded-xl p-4 space-y-2">
@@ -573,7 +577,7 @@ function SellHoldingSheet({ open, onClose, holding, fund, onSuccess }: {
 
           <div className="bg-amber-50 rounded-xl border border-amber-200/50 p-3">
             <p className="text-xs text-amber-800">
-              {fund.accountType === "UTMA"
+              {fund.accountType === "UTMA" && !isOwnerMode
                 ? "For a child's fund, cash must still be used for the child's benefit."
                 : "Cash becomes available in your fund after settlement, usually 1 to 2 business days."}
             </p>
@@ -771,7 +775,9 @@ function WithdrawSheet({ open, onClose, fund, bankAccounts, bankAccountsLoading 
 
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
             <p className="text-xs leading-relaxed text-amber-800">
-              For a child's fund, money already belongs to the child. Moving cash to your bank should be for their benefit.
+              {(fund as any)?.accessRole === "owner" && (fund as any)?.transferredAt
+                ? "This account is yours now. Move cash to your linked bank anytime; it usually lands in 1 to 2 business days."
+                : "For a child's fund, money already belongs to the child. Moving cash to your bank should be for their benefit."}
             </p>
           </div>
 
