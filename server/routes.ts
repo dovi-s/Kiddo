@@ -144,15 +144,11 @@ export async function registerRoutes(
   // project_pricing_v3_pricing_levels.md.
   const FOUNDING_MEMBERS_WAITLIST_PATH = path.join(process.cwd(), ".local", "founding-members.jsonl");
   const FOUNDING_MEMBERS_CAP = 1000;
-  // PMF survey responses (Sean Ellis test). One row per response —
-  // dedupe is at the per-email level: a user's most recent response
-  // wins. The admin aggregation endpoint filters to latest-per-email
-  // before computing percentages. JSONL append-only mirrors the rest
-  // of our waitlist-style storage so we can ship without a migration;
-  // graduates to a real table when the trigger-automation workstream
-  // ships (locked in project_launch_wedge_and_creator_distribution.md
-  // as a launch must-have).
-  const PMF_SURVEY_RESPONSES_PATH = path.join(process.cwd(), ".local", "pmf-survey-responses.jsonl");
+  // PMF survey responses (Sean Ellis test). One row per response in the
+  // pmf_survey_responses table (migration 0038 — was an ephemeral JSONL that
+  // didn't survive redeploys). Dedupe is per-email at read time: a user's most
+  // recent response wins (the admin aggregation filters latest-per-email before
+  // computing percentages).
   const PMF_RESPONSE_VALUES = new Set(["vd", "sd", "nd"]);
   const PMF_RESPONSE_LABEL: Record<string, string> = {
     vd: "very_disappointed",
@@ -1412,18 +1408,13 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid response value." });
       }
 
-      const entry = {
-        email,
-        response: responseCode,
-        responseLabel: PMF_RESPONSE_LABEL[responseCode],
-        note: note || null,
-        ip: (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.socket?.remoteAddress || null,
-        createdAt: new Date().toISOString(),
-        tag: "pmf-survey-response",
-      };
-
-      await fs.mkdir(path.dirname(PMF_SURVEY_RESPONSES_PATH), { recursive: true });
-      await fs.appendFile(PMF_SURVEY_RESPONSES_PATH, `${JSON.stringify(entry)}\n`, "utf8");
+      const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.socket?.remoteAddress || null;
+      // Durable DB store (migration 0038) — was an ephemeral .local/*.jsonl that
+      // vanished on redeploy. See pmf_survey_responses.
+      await db.execute(sql`
+        INSERT INTO pmf_survey_responses (email, response, response_label, note, ip)
+        VALUES (${email}, ${responseCode}, ${PMF_RESPONSE_LABEL[responseCode]}, ${note || null}, ${ip})
+      `);
 
       // Analytics event mirror. Fires for both response-only and
       // response+note submissions; the props.hasNote flag lets the
@@ -1466,91 +1457,65 @@ export async function registerRoutes(
   //     can pull it when a specific reply needs follow-up.)
   app.get("/api/admin/pmf-survey", isAdmin, async (_req, res) => {
     try {
-      let text = "";
-      try {
-        text = await fs.readFile(PMF_SURVEY_RESPONSES_PATH, "utf8");
-      } catch (err: any) {
-        if (err?.code === "ENOENT") {
-          return res.json({
-            totalResponses: 0,
-            uniqueRespondents: 0,
-            veryDisappointed: 0,
-            somewhatDisappointed: 0,
-            notDisappointed: 0,
-            veryDisappointedPct: 0,
-            healthStatus: "no_data",
-            recentNotes: [],
-          });
-        }
-        throw err;
-      }
+      // Aggregate from Postgres (migration 0038). Latest response per email
+      // wins (DISTINCT ON … ORDER BY created_at DESC); recent notes scanned
+      // separately. Redaction of the email for the admin tile is unchanged.
+      const [countsRes, totalRes, notesRes] = await Promise.all([
+        db.execute(sql`
+          WITH latest AS (
+            SELECT DISTINCT ON (LOWER(email)) response
+            FROM pmf_survey_responses
+            WHERE email IS NOT NULL AND TRIM(email) <> ''
+            ORDER BY LOWER(email), created_at DESC
+          )
+          SELECT
+            COUNT(*) FILTER (WHERE response = 'vd')::int AS vd,
+            COUNT(*) FILTER (WHERE response = 'sd')::int AS sd,
+            COUNT(*) FILTER (WHERE response = 'nd')::int AS nd
+          FROM latest
+        `),
+        db.execute(sql`SELECT COUNT(*)::int AS n FROM pmf_survey_responses`),
+        db.execute(sql`
+          SELECT email, response, note, created_at
+          FROM pmf_survey_responses
+          WHERE note IS NOT NULL AND TRIM(note) <> ''
+          ORDER BY created_at DESC
+          LIMIT 25
+        `),
+      ]);
 
-      const lines = text.split("\n").filter((l) => l.trim());
-      const latestByEmail = new Map<string, any>();
-      const notesWithEmails: Array<{ email: string; response: string; note: string; createdAt: string }> = [];
-
-      for (const line of lines) {
-        try {
-          const row = JSON.parse(line);
-          const email = String(row?.email || "").toLowerCase();
-          if (!email) continue;
-          // Update latest-per-email by createdAt comparison.
-          const prior = latestByEmail.get(email);
-          if (!prior || String(row.createdAt) > String(prior.createdAt)) {
-            latestByEmail.set(email, row);
-          }
-          if (row.note && String(row.note).trim()) {
-            notesWithEmails.push({
-              email,
-              response: String(row.response || ""),
-              note: String(row.note),
-              createdAt: String(row.createdAt || ""),
-            });
-          }
-        } catch {
-          // Unparseable line, skip
-        }
-      }
-
-      let vd = 0;
-      let sd = 0;
-      let nd = 0;
-      for (const row of Array.from(latestByEmail.values())) {
-        if (row.response === "vd") vd++;
-        else if (row.response === "sd") sd++;
-        else if (row.response === "nd") nd++;
-      }
+      const counts: any = countsRes.rows[0] || {};
+      const vd = Number(counts.vd || 0);
+      const sd = Number(counts.sd || 0);
+      const nd = Number(counts.nd || 0);
       const uniqueRespondents = vd + sd + nd;
+      const totalResponses = Number((totalRes.rows[0] as any)?.n || 0);
       const vdPct = uniqueRespondents > 0 ? Number(((vd / uniqueRespondents) * 100).toFixed(2)) : 0;
-      const healthStatus = uniqueRespondents < 10
-        ? "insufficient_sample"
-        : vdPct >= 40
-          ? "green"
-          : vdPct >= 30
-            ? "yellow"
-            : "red";
+      const healthStatus = uniqueRespondents === 0
+        ? "no_data"
+        : uniqueRespondents < 10
+          ? "insufficient_sample"
+          : vdPct >= 40
+            ? "green"
+            : vdPct >= 30
+              ? "yellow"
+              : "red";
 
-      // Sort notes newest-first, redact email for the admin tile
-      // (full email available in the JSONL on disk for follow-up).
-      const recentNotes = notesWithEmails
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        .slice(0, 25)
-        .map((n) => {
-          const [local, domain] = n.email.split("@");
-          const redacted = local && domain
-            ? `${local.charAt(0)}***@${domain}`
-            : n.email;
-          return {
-            emailRedacted: redacted,
-            response: n.response,
-            responseLabel: PMF_RESPONSE_LABEL[n.response] || n.response,
-            note: n.note,
-            createdAt: n.createdAt,
-          };
-        });
+      const recentNotes = (notesRes.rows as any[]).map((n: any) => {
+        const email = String(n.email || "").toLowerCase();
+        const [local, domain] = email.split("@");
+        const redacted = local && domain ? `${local.charAt(0)}***@${domain}` : email;
+        return {
+          emailRedacted: redacted,
+          response: String(n.response || ""),
+          responseLabel: PMF_RESPONSE_LABEL[String(n.response || "")] || String(n.response || ""),
+          note: String(n.note || ""),
+          createdAt: n.created_at instanceof Date ? n.created_at.toISOString() : String(n.created_at || ""),
+        };
+      });
 
       return res.json({
-        totalResponses: lines.length,
+        totalResponses,
         uniqueRespondents,
         veryDisappointed: vd,
         somewhatDisappointed: sd,
