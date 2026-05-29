@@ -90,78 +90,6 @@ export function SparkleCluster({
   );
 }
 
-export function SparkleBurst({
-  active = false,
-  onComplete,
-  className = "",
-}: {
-  active?: boolean;
-  onComplete?: () => void;
-  className?: string;
-}) {
-  const particles = useMemo(() => {
-    return Array.from({ length: 12 }, (_, i) => {
-      const angle = (i / 12) * Math.PI * 2;
-      const distance = 30 + Math.random() * 50;
-      return {
-        id: i,
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        size: 6 + Math.random() * 10,
-        delay: Math.random() * 0.15,
-        color: [GEMINI_COLORS.gold, GEMINI_COLORS.evergreen, GEMINI_COLORS.teal, GEMINI_COLORS.goldLight][i % 4],
-      };
-    });
-  }, []);
-
-  return (
-    <AnimatePresence onExitComplete={onComplete}>
-      {active && (
-        <div className={`absolute inset-0 pointer-events-none flex items-center justify-center ${className}`}>
-          {particles.map((p) => (
-            <motion.div
-              key={p.id}
-              className="absolute"
-              initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
-              animate={{
-                x: p.x,
-                y: p.y,
-                scale: [0, 1.5, 0.8],
-                opacity: [1, 1, 0],
-              }}
-              exit={{ opacity: 0, scale: 0 }}
-              transition={{
-                duration: 0.7,
-                delay: p.delay,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-            >
-              <svg width={p.size} height={p.size} viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"
-                  fill={p.color}
-                />
-              </svg>
-            </motion.div>
-          ))}
-          <motion.div
-            className="absolute rounded-full"
-            style={{
-              width: 80,
-              height: 80,
-              background: `radial-gradient(circle, ${GEMINI_COLORS.gold}40, transparent 70%)`,
-              filter: "blur(10px)",
-            }}
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: [0, 2, 2.5], opacity: [0, 0.6, 0] }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-          />
-        </div>
-      )}
-    </AnimatePresence>
-  );
-}
-
 export function SpectrumWave({
   width = 200,
   height = 40,
@@ -682,10 +610,9 @@ export function SuccessState({
             <motion.path d="M5 12l5 5L19 7" />
           </motion.svg>
         </motion.div>
-        {/* SparkleBurst render removed — sparkle iconography/effects banned per
-            feedback_iconography_consistency.md ("never re-introduce"). The
-            spring-animated Check carries the success moment. The SparkleBurst
-            function below is now unrendered dead code, flagged for a dead-code pass. */}
+        {/* SparkleBurst removed entirely (render + function). Sparkle
+            iconography is banned per feedback_iconography_consistency.md
+            ("never re-introduce"); the spring-animated Check carries the moment. */}
       </div>
       <div className="text-center space-y-1.5">
         <GradientText className="text-lg font-semibold">{message}</GradientText>

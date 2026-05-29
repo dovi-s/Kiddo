@@ -163,34 +163,7 @@ export function ContributorBubbles({
   );
 }
 
-export function GiftPulse({ amount }: { amount: number }) {
-  return (
-    <motion.div
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      className="relative"
-    >
-      <motion.div
-        className="absolute inset-0 rounded-full bg-success/20"
-        animate={{
-          scale: [1, 1.5, 1],
-          opacity: [0.5, 0, 0.5],
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      />
-      <div className="relative flex items-center gap-2 px-4 py-2 bg-success rounded-full text-success-foreground text-sm font-medium shadow-lg shadow-success/30">
-        <Sprout className="w-4 h-4" />
-        <span>+${amount}</span>
-      </div>
-    </motion.div>
-  );
-}
-
-export function InvestmentReveal({ 
+export function InvestmentReveal({
   amount,
   stockSymbol = "VTI",
   stockName = "Total US Market",

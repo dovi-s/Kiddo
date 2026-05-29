@@ -342,7 +342,7 @@ for (const file of files) {
 // ban regressed ~16 times across the codebase because it lived only in a memo, never
 // in the build. Comments are stripped (so the in-code "banned per..." notes don't
 // trip it); \b word boundaries mean SparkleBurst / showSparkles don't false-match.
-const BANNED_ICONS = ["Sparkles", "Wand2"];
+const BANNED_ICONS = ["Sparkles", "SparkleBurst", "Wand2"];
 (function scanForBannedIcons(dir) {
   for (const entry of readdirSync(dir)) {
     const full = path.join(dir, entry);
