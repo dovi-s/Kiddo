@@ -1359,7 +1359,7 @@ export default function Account() {
                       <p className="mt-1 text-xs text-muted-foreground">or ${KORA_STARTER_YEARLY}/year</p>
                       <p className="mt-4 text-sm leading-relaxed text-muted-foreground">For one child, done right. Make this feel real every month.</p>
                       <div className="mt-5 space-y-2 text-sm text-muted-foreground">
-                        {["One child fund. Move to Family if you add a second.", "Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Custom fund mix (pick your own stocks)", "Co-parent access and priority support"].map((item) => (
+                        {["One child fund. Move to Family if you add a second.", "Recurring investments for one child fund", "Add your own photos, videos, and voice to Memory Book entries", "Custom fund mix (pick your own stocks)", "Co-parent access and priority support", "$1/year per $1,000 invested (only on invested assets)"].map((item) => (
                           <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-ink))]" />{item}</p>
                         ))}
                       </div>
@@ -1410,7 +1410,7 @@ export default function Account() {
                             both Plus AND Family have them — the
                             suffix made it sound like Family adds
                             features Plus lacks). */}
-                        {["Unlimited funds, every child", "Memory Book for every child", "Unlimited occasions", "Kid View for every child", "One view for every fund in your household"].map((item) => (
+                        {["Unlimited funds, every child", "Memory Book for every child", "Unlimited occasions", "Kid View for every child", "One view for every fund in your household", "$1/year per $1,000 invested (only on invested assets)"].map((item) => (
                           <p key={item} className="flex items-start gap-2"><Check size={14} className="mt-0.5 shrink-0 text-[hsl(var(--kiddo-gold-light))]" />{item}</p>
                         ))}
                       </div>
