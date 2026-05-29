@@ -386,17 +386,18 @@ export default function Age18Welcome() {
             <div className="space-y-4">
               <TaxConcept
                 title="Long-term gains are taxed gently."
-                body="Anything you've held over a year gets long-term capital gains rates: 0%, 15%, or 20% depending on your total income. Most college students hit 0%."
+                body="Anything you've held over a year gets long-term capital-gains rates: 0%, 15%, or 20%, depending on your income."
               />
               <TaxConcept
-                title="The kiddie tax is over."
-                body="That special rate that applied while you were a kid no longer applies. You file your own taxes now. We send you a 1099 every January telling you exactly what to put down."
+                title="The kiddie tax may not be over yet."
+                body="If you're under 19, or a full-time student under 24 whose parents still cover most of your support, larger investment gains can still be taxed at their rate, not yours. Once that stops applying, you're fully on your own rates. Either way, you file your own taxes now, and we send a 1099 every January with the numbers."
               />
               <TaxConcept
                 title="Low-income years are sell-friendly years."
-                body="Sell while you're a student earning $0–$10k → likely 0% federal tax on gains. Sell at 30 earning $80k → 15%. The same sale, very different bill. Timing matters."
+                body="Once you're on your own tax rates, selling in a low-earning year can mean 0% on long-term gains; selling at 30 earning $80k might be 15%. The same sale, very different bill. Timing matters."
               />
             </div>
+            <p className="mt-3 text-xs text-muted-foreground">General information, not tax advice. A CPA can confirm what applies to you.</p>
             <Continue onClick={() => setScreen(4)}>Got it.</Continue>
           </ScreenShell>
         )}
