@@ -47,6 +47,10 @@ export default function GiveAGift() {
   // P0-1 capture-at-intent (Option C): return from the hosted setup-Checkout.
   // ?setup=done → card saved; ?setup=cancelled → they backed out (stay on form).
   const [cardSaved, setCardSaved] = useState(false);
+  // When capture-at-intent is on, the server returns a hosted-Checkout URL. We
+  // show the point-of-charge disclosure + affirmative consent BEFORE redirecting
+  // (per the advisory panel's required floor). Copy here is PENDING COUNSEL.
+  const [pendingCapture, setPendingCapture] = useState<{ url: string; amount: number; kidFirstName: string } | null>(null);
 
   const [gifterName, setGifterName] = useState("");
   const [gifterEmail, setGifterEmail] = useState("");
@@ -103,7 +107,9 @@ export default function GiveAGift() {
       // gifter can save their card. Absent → warm-promise confirmation, as before.
       if (data.captureCheckoutUrl) {
         haptic("success");
-        window.location.href = data.captureCheckoutUrl as string;
+        // Show the point-of-charge disclosure + affirmative consent before the
+        // redirect, rather than bouncing straight to Stripe.
+        setPendingCapture({ url: data.captureCheckoutUrl as string, amount: finalAmount, kidFirstName: kidFirstName.trim() });
         return;
       }
       haptic("success");
@@ -119,6 +125,53 @@ export default function GiveAGift() {
       setSubmitting(false);
     }
   };
+
+  // P0-1 capture-at-intent (Option C) point-of-charge disclosure, shown BEFORE
+  // the redirect to Stripe's hosted card-save page, with affirmative consent.
+  // Meets the advisory panel's §5 floor. ALL COPY HERE IS PENDING COUNSEL
+  // (LAWYER_Q gate #3) before GIFTER_CAPTURE_AT_INTENT is enabled.
+  if (pendingCapture) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Nav />
+        <main className="px-4 pb-20 pt-24 md:pb-28 md:pt-32">
+          <div className="mx-auto max-w-2xl">
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="space-y-6"
+            >
+              <h1 className="font-heading text-2xl md:text-3xl font-bold tracking-tight text-center">
+                Before you save your card
+              </h1>
+              <div className="rounded-2xl border border-border bg-card p-5 text-left text-sm text-foreground/80 leading-relaxed space-y-2">
+                <p><span className="font-semibold text-foreground">Your card will be saved now and charged later — not today.</span></p>
+                <ul className="list-disc pl-5 space-y-1.5">
+                  <li>We securely save your card now. <span className="font-semibold">You will not be charged today.</span></li>
+                  <li>Your card is charged <span className="font-semibold">${pendingCapture.amount.toFixed(2)}</span> when {pendingCapture.kidFirstName}'s parent creates the fund — the moment your gift can actually be invested.</li>
+                  <li><span className="font-semibold">If no fund is ever created, your card is never charged</span>, and we delete your saved card after 60 days.</li>
+                  <li>If a charge doesn't go through (e.g. expired card), we'll email you and try again over the next 30 days. Your gift isn't complete until the charge succeeds.</li>
+                  <li>This is a <span className="font-semibold">one-time charge</span> for this gift — not a subscription.</li>
+                </ul>
+                <p className="text-xs text-muted-foreground pt-1">By continuing, you authorize this future one-time charge to your saved card.</p>
+              </div>
+              <div className="flex flex-col gap-3 max-w-xs mx-auto">
+                <Button className="w-full" size="lg" onClick={() => { window.location.href = pendingCapture.url; }}>
+                  Continue to save my card
+                  <ArrowRight size={16} className="ml-2" />
+                </Button>
+                <Button variant="ghost" className="w-full" onClick={() => setPendingCapture(null)}>
+                  Go back
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   // P0-1 capture-at-intent (Option C) return screen: the gifter saved a card on
   // the hosted page. NOTE: final wording here + the point-of-charge disclosure

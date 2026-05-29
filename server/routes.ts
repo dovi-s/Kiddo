@@ -3436,6 +3436,8 @@ export async function registerRoutes(
                     paymentMethodId: String(pmId),
                     amountCents: Math.round(parseFloat(String(intent.amount)) * 100),
                     metadata: { kind: "gifter_capture_settlement", giftIntentId: intent.id, fundId: fund.id },
+                    // Idempotency: one charge per intent even if settlement retries.
+                    idempotencyKey: `gifter-settle-${intent.id}`,
                   });
                   if (pi.status === "succeeded") {
                     // Gifter pledged `amount`; we charge exactly that and net all
