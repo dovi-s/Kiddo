@@ -608,7 +608,7 @@ export default function FundSnapshot() {
             )}
           </p>
           <p className="snapshot-disclosure-footer">
-            SIPC coverage up to $500,000 per account. Securities are not FDIC insured. Investments may lose value. Past performance does not guarantee future returns. Custodian: {ownerName || "Parent / Guardian"}.
+            SIPC coverage up to $500,000 per account. Securities are not FDIC insured. Investments may lose value. Any projection assumes a 7% average annual return, net of Kiddo's annual fee, and is an estimate, not a guarantee. Past performance does not guarantee future returns. Custodian: {ownerName || "Parent / Guardian"}.
           </p>
         </div>
 
