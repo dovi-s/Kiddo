@@ -48,6 +48,15 @@ explicitly, deliberately chosen a no-charge reminder), and there is a state
 machine: `captured → invested-on-fund-creation` OR `captured → auto-refunded
 after N days`.
 
+**Implementation-ready:** the full 3-way build spec (auth-hold / charge-and-hold /
+vault-and-charge-later) with schema deltas, the settlement hook at the pairing
+point (`routes.ts:3402`), the expiry/dunning worker, edge cases, and a
+lawyer-answer→which-option decision matrix is in `P0-1_SPEC_CAPTURE_AT_INTENT.md`.
+The moment counsel answers `LAWYER_Q_HOLDING_GIFT_FUNDS.md`, building is
+mechanical. Default recommendation: **Option C (vault-and-charge-later)** — no
+funds held, lightest legal dependency — unless the lawyer affirmatively clears
+holding funds, then **Option B** for best conversion.
+
 ---
 
 ## P0-2 — Custody + legal live
