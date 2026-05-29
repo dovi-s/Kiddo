@@ -27,6 +27,14 @@ interface ShareModalProps {
   // hasn't installed). Auth-required at the destination; the parent
   // prints/PDFs and shares the file rather than the URL.
   snapshotHref?: string;
+  // True once the fund has transferred to the recipient at majority
+  // (fund.transferredAt set). Post-handoff the fund is the now-adult's own
+  // account, so the "for kids" brand line on the exported share assets is
+  // wrong; everything else here is already name-personalized + age-neutral.
+  // Defaults false → the kid framing is preserved for the overwhelming
+  // (still-a-minor) case. Per the kid-2.0 retention thesis the fund stays
+  // share-able after handoff; only the copy adapts.
+  recipientIsOwner?: boolean;
 }
 
 const themeGradients: Record<string, string> = {
@@ -417,7 +425,14 @@ function SocialBtn({
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-export function ShareModal({ open, onClose, pages, recipientName, giftCode, snapshotHref }: ShareModalProps) {
+export function ShareModal({ open, onClose, pages, recipientName, giftCode, snapshotHref, recipientIsOwner }: ShareModalProps) {
+  // Brand line for the exported assets (story card + print flyer). Drops
+  // "for kids" once the fund is the recipient's own post-handoff account,
+  // where that claim is no longer true; keeps the emotional "from the people
+  // who love them" core in both cases.
+  const brandTagline = recipientIsOwner
+    ? "Real investments, from the people who love them."
+    : "Real investments for kids, from people who love them.";
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [view, setView] = useState<"main" | "email">("main");
   const [copied, setCopied] = useState(false);
@@ -590,7 +605,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
       // Bottom line
       ctx.font = `400 34px ${font}`;
       ctx.fillStyle = "rgba(255,255,255,0.30)";
-      ctx.fillText("Real investments for kids, from people who love them.", 540, 1790);
+      ctx.fillText(brandTagline, 540, 1790);
 
       const dataUrl = canvas.toDataURL("image/png");
 
@@ -686,7 +701,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
     </div>
     <div class="footer">
       <span class="footer-logo">Kiddo</span>
-      <span class="footer-tag">Real investments for kids, from people who love them.</span>
+      <span class="footer-tag">${brandTagline}</span>
     </div>
   </div>
   <script>window.onload = () => { window.print(); };<\/script>

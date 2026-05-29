@@ -5601,6 +5601,7 @@ const [editFundName, setEditFundName] = useState("");
           pages={sharePages}
           recipientName={recipientFirstNameDisplay || primaryFund?.name || "your child"}
           giftCode={shareSummary?.giftCode ?? undefined}
+          recipientIsOwner={Boolean((primaryFund as any)?.transferredAt)}
         />
       )}
 

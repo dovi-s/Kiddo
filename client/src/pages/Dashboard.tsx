@@ -437,8 +437,10 @@ function StrategyIcon({
 // inside the StrategyIcon container instead — stacking the emoji inline AND in the icon
 // reads as redundant in the parent register. The emoji is still the source of truth via
 // strategyEmoji() for that icon container; just don't double it up in the label.
-function strategyLabelFor(strategyKey: string | null | undefined, childFirstName?: string | null): string {
+function strategyLabelFor(strategyKey: string | null | undefined, childFirstName?: string | null, ownerMode = false): string {
   const name = friendlyStrategyName(strategyKey);
+  // Owner mode: the post-handoff adult owns the fund, so "Your {strategy}", not "{kid}'s".
+  if (ownerMode) return `Your ${name}`;
   const possessive = childFirstName
     ? `${childFirstName}${childFirstName.endsWith("s") ? "'" : "'s"} `
     : "";
@@ -452,7 +454,10 @@ function strategyLabelFor(strategyKey: string | null | undefined, childFirstName
 // preset is still surfaced — just not entangled with identity. Locked
 // memory rule: never use "auto-invest" in user-facing copy. Falls back
 // gracefully when no kid name is available.
-function mixIdentityFor(childFirstName?: string | null): string {
+function mixIdentityFor(childFirstName?: string | null, ownerMode = false): string {
+  // Owner mode: the post-handoff adult owns it → "your mix" (callers capFirst it to
+  // "Your mix" for headers; lowercase reads naturally mid-sentence).
+  if (ownerMode) return "your mix";
   if (!childFirstName) return "the mix";
   const possessive = `${childFirstName}${childFirstName.endsWith("s") ? "'" : "'s"} `;
   return `${possessive}mix`;
@@ -2424,7 +2429,7 @@ export default function Dashboard() {
     const labelParts: string[] = [];
     if (otherInManaged.length > 0) {
       const childFirst = recipientFirstNameDisplay?.trim();
-      labelParts.push(childFirst ? `${childFirst}'s mix` : "Managed mix");
+      labelParts.push(childFirst ? (isOwnerMode ? "your mix" : `${childFirst}'s mix`) : "Managed mix");
     }
     labelParts.push(...otherInChosen);
     const nowInLabel = labelParts.length > 0 ? labelParts.join(" · ") : null;
@@ -4808,7 +4813,7 @@ export default function Dashboard() {
           const destinationLabel = ticker
             ? ticker
             : execModel === "auto" || execModel === "family" || execModel === "auto_invest"
-              ? `${childFirstName}'s mix`
+              ? (isOwnerMode ? "your mix" : `${childFirstName}'s mix`)
               : null;
           // Project to majority age via canonical helper.
           const childBirthdate = (activeFund as any)?.recipientBirthdate as string | null | undefined;
@@ -7496,7 +7501,7 @@ export default function Dashboard() {
                                         // Sentence-case the warm form so
                                         // "Emma's mix" reads as a header
                                         // even when the kid name is missing.
-                                        const raw = mixIdentityFor(recipientFirstNameDisplay);
+                                        const raw = mixIdentityFor(recipientFirstNameDisplay, isOwnerMode);
                                         return raw.charAt(0).toUpperCase() + raw.slice(1);
                                       })()}
                                       <span className="ml-1.5 font-normal text-muted-foreground/70">
@@ -8414,7 +8419,7 @@ export default function Dashboard() {
                             // own identity.
                             const targetLabel = pickMeta
                               ? pickMeta.name
-                              : capFirst(mixIdentityFor(recipientFirstNameDisplay));
+                              : capFirst(mixIdentityFor(recipientFirstNameDisplay, isOwnerMode));
                             // 4-second glow ring when this row matches the
                             // ticker that the duplicate-recurring nudge just
                             // pointed at. Gives the parent immediate visual
@@ -10649,6 +10654,7 @@ export default function Dashboard() {
           recipientName={recipientFirstNameDisplay || activeFund?.name || "your child"}
           giftCode={giftCodeData ?? undefined}
           snapshotHref={activeFund?.id ? `/fund/${activeFund.id}/snapshot` : undefined}
+          recipientIsOwner={Boolean((activeFund as any)?.transferredAt)}
         />
       )}
 
@@ -10659,6 +10665,7 @@ export default function Dashboard() {
           pages={eventShareTarget}
           recipientName={recipientFirstNameDisplay || activeFund?.name || "your child"}
           giftCode={giftCodeData ?? undefined}
+          recipientIsOwner={Boolean((activeFund as any)?.transferredAt)}
         />
       )}
 
@@ -11137,7 +11144,7 @@ export default function Dashboard() {
                         ? `${quotedAutoInvestStocks.find(s => s.symbol === oneTimeTicker)?.name ?? oneTimeTicker} (${oneTimeTicker})`
                         : oneTimeExecutionModel === "cash"
                           ? "Cash (invest later)"
-                          : capFirst(mixIdentityFor(recipientFirstNameDisplay))}
+                          : capFirst(mixIdentityFor(recipientFirstNameDisplay, isOwnerMode))}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -11453,7 +11460,7 @@ export default function Dashboard() {
                     const gHoldingName = gTicker
                       ? friendlyHoldingName(gTicker, holdings.find(h => h.ticker === gTicker)?.name)
                       : null;
-                    const childMixLabel = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s mix` : "Recurring mix";
+                    const childMixLabel = isOwnerMode ? "your mix" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s mix` : "Recurring mix";
                     const investLabel = gTicker ? gTicker.toUpperCase() : childMixLabel;
                     const sharesAcquired = (g as any).sharesAcquired ? parseFloat(String((g as any).sharesAcquired)) : null;
                     const giftDate = new Date(String(g.createdAt || Date.now()));
@@ -11860,9 +11867,11 @@ export default function Dashboard() {
                     // "Family mix" was internal language. Show the child's mix instead so
                     // the row reads warmly ("Emma's mix"). Falls back to "Recurring mix"
                     // when there's no name on file (avoids the locked "auto-invest" word).
-                    const childMixLabel = recipientFirstNameDisplay
-                      ? `${recipientFirstNameDisplay}'s mix`
-                      : "Recurring mix";
+                    const childMixLabel = isOwnerMode
+                      ? "your mix"
+                      : recipientFirstNameDisplay
+                        ? `${recipientFirstNameDisplay}'s mix`
+                        : "Recurring mix";
                     const investLabel = gTicker
                       ? gTicker.toUpperCase()
                       : (gExecModel && String(gExecModel).toLowerCase().includes("family") ? childMixLabel : childMixLabel);
@@ -12368,7 +12377,7 @@ export default function Dashboard() {
           ownerEmail={user?.email || null}
           isReadOnly={isReadOnlyFund}
           isManagedMix={selectedHolding ? managedStrategyTickerSet.has(String(selectedHolding.ticker || "").toUpperCase()) : false}
-          strategyLabel={strategyLabelFor((activeFund as any)?.investmentStrategy, recipientFirstNameDisplay)}
+          strategyLabel={strategyLabelFor((activeFund as any)?.investmentStrategy, recipientFirstNameDisplay, isOwnerMode)}
           onAddToStrategy={() => {
             // Managed-mix add: spread across all strategy ETFs per ratio.
             // executionModel "auto" tells the contribute pipeline to honor
@@ -14253,7 +14262,7 @@ export default function Dashboard() {
               : null;
             const targetLabel = sheetPickMeta
               ? sheetPickMeta.name
-              : strategyLabelFor((activeFund as any)?.investmentStrategy, recipientFirstNameDisplay);
+              : strategyLabelFor((activeFund as any)?.investmentStrategy, recipientFirstNameDisplay, isOwnerMode);
 
             if (listActionConfirmCancel) {
               // Loss-aversion diff: cancelling a recurring schedule is silent —

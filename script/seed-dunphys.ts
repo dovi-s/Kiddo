@@ -1047,9 +1047,14 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
     return d;
   })();
   const nextBirthdayAge = nextBirthday.getUTCFullYear() - bday.getUTCFullYear();
+  // Post-handoff (graduated) kids own a self-directed account now, so a
+  // "College Fund" general page reads as stale (and Kiddo isn't college-
+  // restricted regardless). Name their general page "{name}'s Fund"; pre-
+  // majority kids keep the familiar "College Fund" framing gifters relate to.
+  const isGraduated = kid.ageYears >= kid.majorityAge;
   const occasions: Array<{ name: string; slug: string; eventType: string; eventDate: Date | null; goalAmount: number | null }> = [
     { name: `${kid.firstName}'s ${ordinal(nextBirthdayAge)} Birthday`, slug: `${kid.slug}-bday-${nextBirthday.getUTCFullYear()}`, eventType: "birthday", eventDate: nextBirthday, goalAmount: null },
-    { name: `${kid.firstName}'s College Fund`, slug: `${kid.slug}-college`, eventType: "general", eventDate: null, goalAmount: kid.ageYears >= 18 ? 30000 : 40000 },
+    { name: isGraduated ? `${kid.firstName}'s Fund` : `${kid.firstName}'s College Fund`, slug: isGraduated ? `${kid.slug}-fund` : `${kid.slug}-college`, eventType: "general", eventDate: null, goalAmount: kid.ageYears >= 18 ? 30000 : 40000 },
   ];
   if (kid.ageYears < 18) {
     occasions.push({ name: `${kid.firstName}'s Graduation`, slug: `${kid.slug}-graduation`, eventType: "graduation", eventDate: new Date(Date.UTC(bday.getUTCFullYear() + 18, 5, 1, 12)), goalAmount: null });

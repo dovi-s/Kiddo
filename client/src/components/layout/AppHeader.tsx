@@ -683,6 +683,7 @@ export function AppHeader() {
           pages={headerSharePages}
           recipientName={capFirst(activeFund?.recipientFirstName) || activeFund?.name || "your child"}
           snapshotHref={activeFund?.id ? `/fund/${activeFund.id}/snapshot` : undefined}
+          recipientIsOwner={Boolean((activeFund as any)?.transferredAt)}
         />
       )}
     </>

@@ -125,6 +125,7 @@ export function GlobalShareModal() {
       recipientName={capFirst(activeFund?.recipientFirstName) || activeFund?.name || "your child"}
       giftCode={giftCodeData ?? undefined}
       snapshotHref={activeFund?.id ? `/fund/${activeFund.id}/snapshot` : undefined}
+      recipientIsOwner={Boolean((activeFund as any)?.transferredAt)}
     />
   );
 }
