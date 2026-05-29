@@ -1,7 +1,7 @@
 // Trump Account vs UTMA satellite comparison. Pre-signup SEO destination.
 //
 // Strategic context: per project_trump_accounts_strategy.md. The federal
-// "Trump Accounts" (2025 Working Families Tax Cuts law) open for contributions
+// "Trump Accounts" (created by the 2025 One Big Beautiful Bill Act) open for contributions
 // July 4, 2026. Parents of 2025–2028 newborns get a $1,000 federal seed and
 // are about to Google "Trump Account vs UTMA / what can it invest in / can
 // grandparents add money." This page catches that intent with a no-signup,
@@ -327,7 +327,7 @@ export default function TrumpAccountVsUtma() {
               <span className="font-semibold text-foreground">A UTMA isn't a gimmick.</span> It's a custodial brokerage account in your kid's name, held by a real broker-dealer partner (Member FINRA/SIPC). At majority age (18 in most states, 21 in a few), the kid gets full ownership.
             </p>
             <p className="text-xs text-muted-foreground/70">
-              Projections assume 7% average annual return net of Kiddo's annual fee ($1/yr per $1,000 invested), compounded monthly; the federal column includes the $1,000 seed and the $5,000/yr cap. Federal account rules per the 2025 Working Families Tax Cuts law, current as of May 2026 and subject to change — verify before relying. Illustrative, not a guarantee. Markets are unpredictable.
+              Projections assume 7% average annual return net of Kiddo's annual fee ($1/yr per $1,000 invested), compounded monthly; the federal column includes the $1,000 seed and the $5,000/yr cap. Federal account rules per the 2025 One Big Beautiful Bill Act, current as of May 2026 and subject to change — verify before relying. Illustrative, not a guarantee. Markets are unpredictable.
             </p>
           </section>
 
