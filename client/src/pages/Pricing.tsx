@@ -213,7 +213,7 @@ const pricingFaqs = [
   },
   {
     question: "What happens to my fund if I downgrade?",
-    answer: "Your fund stays active and your investments stay invested. Plus features pause: custom fund mix, strategy switching, adding new photos and videos to Memory Book entries, co-parent invites, and the ability to create new recurring contributions on the fund. Existing recurring contributions you have already set up continue running. Existing gifter recurring relationships continue too. We never cancel an existing recurring relationship on plan downgrade. Everything you have already added stays. Your kid's money never leaves the fund.",
+    answer: "Your fund stays active and your investments stay invested. The Plus tools pause: custom fund mix, strategy switching, adding new photos and videos to Memory Book entries, co-parent invites, and recurring investments. Your own recurring pauses, and you can't start a new one until you resubscribe. Recurring gifts a family member set up on their own card keep running, since that's their commitment, not yours. Everything already in the fund stays, and your kid's money never leaves it.",
   },
   {
     question: "Is there a platform fee on gifts?",
