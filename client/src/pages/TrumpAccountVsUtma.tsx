@@ -153,7 +153,7 @@ export default function TrumpAccountVsUtma() {
               Trump Account or UTMA for your kid? You can have <GradientText>both</GradientText>.
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              The new federal accounts are a solid retirement head-start — take the free $1,000. But they can only hold index funds, they cap what your family can give, and your kid can't touch the money until they're nearly 60. Here's what each one is actually for.
+              The new federal accounts are a solid retirement head-start — take the free $1,000. But they can only hold index funds, they cap what your family can give, and your kid can't touch the money without a penalty until they're nearly 60. Here's what each one is actually for.
             </p>
           </div>
 
@@ -272,7 +272,7 @@ export default function TrumpAccountVsUtma() {
                 </>
               ) : (
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  On paper the federal account may even edge ahead here — it starts with a free $1,000. But that money is locked until 59½ and can only hold index funds. The UTMA's {formatMoney(kiddoAt18)} is <span className="font-semibold text-foreground">liquid at 18</span> and can hold the companies your kid actually loves. Different jobs.
+                  On paper the federal account may even edge ahead here — it starts with a free $1,000. But that money carries an early-withdrawal penalty before 59½ and can only hold index funds. The UTMA's {formatMoney(kiddoAt18)} is <span className="font-semibold text-foreground">liquid at 18</span> and can hold the companies your kid actually loves. Different jobs.
                 </p>
               )}
             </section>
@@ -321,7 +321,7 @@ export default function TrumpAccountVsUtma() {
               <span className="font-semibold text-foreground">This isn't a knock on the federal account.</span> For a tax-deferred retirement floor it's genuinely good — and the free $1,000 is free money. Take it.
             </p>
             <p>
-              But it's <span className="text-foreground">retirement plumbing</span>: index-only, capped at $5,000/yr, and locked until 59½. A Kiddo fund does the other job — the companies your kid actually recognizes, gifts from everyone who loves them with no ceiling, and money that's <span className="font-semibold text-foreground">truly theirs at 18</span>. Most families will want both.
+              But it's <span className="text-foreground">retirement plumbing</span>: index-only, capped at $5,000/yr, and penalized if withdrawn before 59½. A Kiddo fund does the other job — the companies your kid actually recognizes, gifts from everyone who loves them with no ceiling, and money that's <span className="font-semibold text-foreground">truly theirs at 18</span>. Most families will want both.
             </p>
             <p>
               <span className="font-semibold text-foreground">A UTMA isn't a gimmick.</span> It's a custodial brokerage account in your kid's name, held by a real broker-dealer partner (Member FINRA/SIPC). At majority age (18 in most states, 21 in a few), the kid gets full ownership.
@@ -363,7 +363,7 @@ export default function TrumpAccountVsUtma() {
             </h3>
             <div>
               <p className="font-semibold text-foreground">Can I have both a Trump Account and a UTMA?</p>
-              <p className="mt-1">Yes — and most families should. They do different jobs: the federal account is a tax-deferred retirement head-start your kid can't touch until 59½, and a UTMA is money that becomes fully theirs at 18, in companies they recognize. One is a floor; the other is a head start they'll actually feel.</p>
+              <p className="mt-1">Yes — and most families should. They do different jobs: the federal account is a tax-deferred retirement head-start your kid can't touch without a penalty until 59½, and a UTMA is money that becomes fully theirs at 18, in companies they recognize. One is a floor; the other is a head start they'll actually feel.</p>
             </div>
             <div>
               <p className="font-semibold text-foreground">Can grandparents add money to a Trump Account?</p>
