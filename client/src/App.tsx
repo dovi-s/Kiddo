@@ -69,6 +69,7 @@ const StoryPage = lazy(() => import("@/pages/StoryPage"));
 const Compare = lazy(() => import("@/pages/Compare"));
 const Demo = lazy(() => import("@/pages/Demo"));
 const P2PDemo = lazy(() => import("@/pages/P2PDemo"));
+const Partners = lazy(() => import("@/pages/Partners"));
 const Security = lazy(() => import("@/pages/Security"));
 const Age18 = lazy(() => import("@/pages/Age18"));
 const Age18Plan = lazy(() => import("@/pages/Age18Plan"));
@@ -720,6 +721,9 @@ function Router() {
           <Route path="/account"><ProtectedRoute><Account /></ProtectedRoute></Route>
           <Route path="/faq"><FAQ /></Route>
           <Route path="/how-it-works"><HowItWorks /></Route>
+          {/* Orphan/unlisted partner pitch page — noindex, NOT in nav/footer/pricing.
+              Send the URL directly to a hospital / registry / school / employer contact. */}
+          <Route path="/partners"><Partners /></Route>
           <Route path="/tools/at-18-calculator"><CalculatorAt18 /></Route>
           <Route path="/tools/robux-vs-utma"><RobuxVsUtma /></Route>
           {/* /robux-vs-utma alias — satellite SEO destinations sometimes
