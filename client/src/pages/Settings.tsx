@@ -5122,22 +5122,22 @@ const [editFundName, setEditFundName] = useState("");
                 ];
                 return (
                   <>
-                    <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-3.5">
+                    <div className="rounded-xl border border-[hsl(var(--kiddo-gold)/0.4)] bg-[hsl(var(--kiddo-gold)/0.06)] px-4 py-3.5">
                       <div className="flex items-center gap-2">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.14)]">
-                          <Check className="h-3 w-3 text-[hsl(var(--kiddo-evergreen))]" />
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--kiddo-gold)/0.18)]">
+                          <Check className="h-3 w-3 text-[hsl(var(--kiddo-gold-ink))]" />
                         </span>
-                        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[hsl(var(--kiddo-evergreen))]">What stays</p>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[hsl(var(--kiddo-gold-ink))]">What stays</p>
                       </div>
                       <ul className="mt-3 space-y-2.5">
                         {stays.map(([lead, detail]) => (
                           <li key={lead} className="flex items-start gap-2.5 text-sm leading-snug">
-                            <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
+                            <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-[hsl(var(--kiddo-gold-ink))]" />
                             <span><span className="font-semibold text-foreground">{lead}</span> <span className="text-muted-foreground">{detail}</span></span>
                           </li>
                         ))}
                       </ul>
-                      <p className="mt-3 border-t border-[hsl(var(--kiddo-evergreen)/0.15)] pt-2.5 text-xs leading-relaxed text-muted-foreground">
+                      <p className="mt-3 border-t border-[hsl(var(--kiddo-gold)/0.2)] pt-2.5 text-xs leading-relaxed text-muted-foreground">
                         The annual fee ($1/yr per $1,000 invested) still applies to invested balance until you withdraw.
                       </p>
                     </div>
