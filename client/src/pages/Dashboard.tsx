@@ -6110,7 +6110,7 @@ export default function Dashboard() {
                               love them' for Emma's fund). Per the 2026-05-13
                               audit. Falls back to 'your child' when no first
                               name is present (e.g. brand-new fund). */}
-                          Gifts from people who love {childFirst}
+                          Gifts from people who love {isOwnerMode ? "you" : childFirst}
                         </span>
                         <span className="inline-flex items-center gap-1.5">
                           <span className="text-sm font-semibold text-foreground tabular-nums">
