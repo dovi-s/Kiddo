@@ -1414,12 +1414,11 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
     queryFn: async () => fetchAdminJson("/api/admin/data-integrity"),
     refetchOnWindowFocus: false,
   });
-  const { data: topGifters = [], isLoading: topGiftersLoading } = useQuery<any[]>({
-    queryKey: ["/api/admin/gifters?limit=10"],
-    queryFn: async () => fetchAdminJson("/api/admin/gifters?limit=10"),
-    refetchOnWindowFocus: false,
-  });
-  const { data: allGifters = [], isLoading: allGiftersLoading } = useQuery<any[]>({
+  // Gifter LTV + Top Gifters PANELS were cut from Overview (they duplicated the
+  // dedicated Gifters tab); Overview links to that tab instead. The aggregate
+  // gifter list is still fetched once for the PLG "repeat gifter" retention
+  // metric below — cheap at current scale; revisit if the gifter count explodes.
+  const { data: allGifters = [] } = useQuery<any[]>({
     queryKey: ["/api/admin/gifters?limit=500"],
     queryFn: async () => fetchAdminJson("/api/admin/gifters?limit=500"),
     refetchOnWindowFocus: false,
@@ -1542,15 +1541,10 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
   const checkoutGiftsTotal = Number(checkoutDiag?.giftsTotal || 0);
   const checkoutGiftsInvested = Number(checkoutDiag?.giftsInvested || 0);
   const investmentsFromCheckoutPct = checkoutCompletes > 0 ? (checkoutGiftsInvested / checkoutCompletes) * 100 : 0;
+  // Repeat-gifter rate still feeds the PLG "Marketing-led · Retention" row.
   const repeatGifters = allGiftersRows.filter((x: any) => Number(x.gift_count || 0) > 1).length;
   const totalGiftersCount = allGiftersRows.length;
   const repeatGifterRate = totalGiftersCount > 0 ? (repeatGifters / totalGiftersCount) * 100 : 0;
-  const avgGiftsPerGifter = totalGiftersCount > 0
-    ? allGiftersRows.reduce((sum: number, x: any) => sum + Number(x.gift_count || 0), 0) / totalGiftersCount
-    : 0;
-  const avgGrossPerGifter = totalGiftersCount > 0
-    ? allGiftersRows.reduce((sum: number, x: any) => sum + Number(x.gross_amount || 0), 0) / totalGiftersCount
-    : 0;
   const chargedFromOverview = toNumSafe(g.total_charged_volume);
   const chargedFromIntegrity = Math.max(toNumSafe(integrityGiftCheck?.left), toNumSafe(integrityGiftCheck?.right));
   const chargedForDisplay = chargedFromOverview > 0.009 ? chargedFromOverview : chargedFromIntegrity;
@@ -2461,47 +2455,18 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
       </section>
 
       <section>
-        <h2 className="font-heading text-lg font-semibold mb-4 flex items-center gap-2">
-          <Users size={18} />
-          Gifter LTV Snapshot
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard label="Total Gifters" value={allGiftersLoading ? "..." : fmtNum(totalGiftersCount)} icon={Users} color="blue" onClick={() => goTab("gifters")} />
-          <StatCard label="Repeat Gifters" value={allGiftersLoading ? "..." : fmtNum(repeatGifters)} icon={Gift} color="green" sub={`${repeatGifterRate.toFixed(2)}% repeat`} onClick={() => goTab("gifters")} />
-          <StatCard label="Avg Gifts / Gifter" value={allGiftersLoading ? "..." : avgGiftsPerGifter.toFixed(2)} icon={TrendingUp} color="purple" onClick={() => goTab("gifters")} />
-          <StatCard label="Avg Gross / Gifter" value={allGiftersLoading ? "..." : fmt(avgGrossPerGifter)} icon={CreditCard} color="amber" onClick={() => goTab("gifters")} />
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-heading text-lg font-semibold flex items-center gap-2" data-testid="heading-top-gifters">
-            <Users size={18} />
-            Top Gifters
-          </h2>
-          <button
-            onClick={() => goTab("gifters")}
-            className="text-xs text-primary hover:underline"
-            data-testid="button-view-all-gifters"
-          >
-            View all gifters
-          </button>
-        </div>
-        <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
-          <SortableTable
-            columns={[
-              { key: "sender_name", label: "Name", render: (r: any) => <button className="font-medium text-primary hover:underline" onClick={() => goTab("gifters", { senderEmail: String(r.sender_email || ""), senderName: String(r.sender_name || "") })}>{r.sender_name}</button> },
-              { key: "sender_email", label: "Email", render: (r: any) => <span className="text-xs text-muted-foreground">{r.sender_email}</span> },
-              { key: "gift_count", label: "Gifts", align: "right", render: (r: any) => fmtNum(r.gift_count) },
-              { key: "distinct_funds", label: "Funds", align: "right", render: (r: any) => fmtNum(r.distinct_funds) },
-              { key: "gross_amount", label: "Gross", align: "right", render: (r: any) => fmt(r.gross_amount) },
-              { key: "net_amount", label: "Net", align: "right", render: (r: any) => fmt(r.net_amount) },
-              { key: "last_gift_at", label: "Last Gift", render: (r: any) => fmtDateTime(r.last_gift_at) },
-            ]}
-            data={topGiftersLoading ? [] : topGifters}
-            defaultSort="gross_amount"
-          />
-        </div>
+        {/* Gifter LTV + Top Gifters cut from Overview (2026-05-28) — they
+            duplicated the dedicated Gifters tab. One linking tile instead. */}
+        <button
+          onClick={() => goTab("gifters")}
+          className="w-full bg-card rounded-xl border border-border/50 p-4 flex items-center justify-between gap-3 text-left hover:border-foreground/30 transition-colors"
+          data-testid="button-view-all-gifters"
+        >
+          <span className="flex items-center gap-2 font-heading text-lg font-semibold">
+            <Users size={18} /> Gifters
+          </span>
+          <span className="text-xs text-primary">LTV, top gifters, repeat rate &mdash; view all &rarr;</span>
+        </button>
       </section>
 
       <section>
