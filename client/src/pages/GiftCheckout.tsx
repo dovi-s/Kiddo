@@ -1695,7 +1695,7 @@ export default function GiftCheckout() {
                           <p className="mt-3 max-w-2xl text-base font-semibold text-white/90">No account needed. Takes 60 seconds.</p>
                           <div className="mt-4 grid grid-cols-3 gap-2 text-xs text-white" data-testid="grid-gift-first-answers">
                             <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">🌱</span><p className="mt-1 font-semibold">Invested</p></div>
-                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">🔒</span><p className="mt-1 font-semibold">Protected</p></div>
+                            <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">🔒</span><p className="mt-1 font-semibold">Secure</p></div>
                             <div className="rounded-2xl bg-white/15 px-3 py-2.5 backdrop-blur-sm text-center"><span className="text-lg leading-none">⚡</span><p className="mt-1 font-semibold">60 seconds</p></div>
                           </div>
                           {eventData.event.name && eventData.event.name !== "Gift anytime" && !eventData.event.isPermanent && (
@@ -2373,7 +2373,7 @@ export default function GiftCheckout() {
                     <label className="text-sm font-medium text-foreground">
                       Leave a note for {recipientLooksLikeFund ? "their" : `${recipientName}'s`} Memory Book
                     </label>
-                    <p className="mt-1 text-xs text-muted-foreground">They'll read it when they're 18. Optional, but the ones who write something always say they're glad they did.</p>
+                    <p className="mt-1 text-xs text-muted-foreground">They'll read it when they're 18. Optional, but a note now becomes something they keep for life.</p>
                     <div className="mt-2 rounded-2xl border border-amber-200/60 bg-amber-50/40 p-3">
                       <textarea
                         value={message}

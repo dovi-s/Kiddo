@@ -725,7 +725,7 @@ function ComparisonDetail({ page }: { page: ComparisonPage }) {
             <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
               <Link href="/get-started">
                 <Button size="lg" data-testid={`button-compare-${page.slug}-footer`}>
-                  Start your child's fund
+                  {page.ctaLabel}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
