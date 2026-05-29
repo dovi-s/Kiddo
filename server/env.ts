@@ -57,9 +57,16 @@ export function loadEnv() {
   stripEmptyEnvValues([...CORE_ENV_KEYS, ...OPTIONAL_RUNTIME_KEYS]);
   if (isPlaceholderSessionSecret(process.env.SESSION_SECRET)) delete process.env.SESSION_SECRET;
 
-  // Corporate proxies/SSL interception can break local TLS chains.
-  // In local development only, default to permissive TLS toggles unless explicitly set.
-  if (process.env.NODE_ENV !== "production") {
+  // Corporate proxies/SSL interception can break local TLS chains, so LOCAL dev
+  // defaults to permissive TLS toggles. SECURITY (security-audit 2026-05-28): scope
+  // this to genuine local dev (NODE_ENV development/test or unset) — NOT every
+  // non-production value. A network-reachable staging deployed with
+  // NODE_ENV=staging would otherwise inherit insecure TLS (a MITM surface incl.
+  // Stripe traffic). Production is already hard-guarded in index.ts; this closes
+  // the mislabeled-staging gap while leaving local dev untouched.
+  const nodeEnv = process.env.NODE_ENV;
+  const isLocalDev = nodeEnv === "development" || nodeEnv === "test" || !nodeEnv;
+  if (isLocalDev) {
     if (!process.env.ALLOW_INSECURE_DEV_TLS) {
       process.env.ALLOW_INSECURE_DEV_TLS = "1";
     }

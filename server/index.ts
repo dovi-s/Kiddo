@@ -428,10 +428,38 @@ app.post(
 // Allow cross-origin requests from the Expo/React Native dev client in development.
 // In production the mobile app calls the same origin and this is skipped.
 if (process.env.NODE_ENV !== "production") {
+  // Dev CORS. SECURITY (security-audit 2026-05-28): previously this reflected ANY
+  // Origin back WITH Access-Control-Allow-Credentials:true — so a malicious site
+  // could make authenticated cross-origin requests against a network-reachable
+  // dev/staging server and exfiltrate session-scoped data. Now we only allow the
+  // local web client + Expo dev client (localhost, private-LAN IPs for on-device
+  // testing, exp://), plus anything explicitly listed in DEV_ALLOWED_ORIGINS
+  // (comma-separated — add your Expo tunnel / ngrok URL here if you use one).
+  const extraOrigins = String(process.env.DEV_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const isAllowedDevOrigin = (origin: string | undefined): boolean => {
+    if (!origin) return false;
+    if (extraOrigins.includes(origin)) return true;
+    if (/^exp:\/\//i.test(origin)) return true;
+    try {
+      const host = new URL(origin).hostname;
+      if (host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host === "::1") return true;
+      // Private LAN ranges (Expo device-on-LAN testing against the dev server).
+      if (/^10\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) return true;
+    } catch {
+      /* malformed Origin — deny */
+    }
+    return false;
+  };
   app.use((req, res, next) => {
-    const origin = req.headers.origin || "*";
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Access-Control-Allow-Credentials", "true");
+    const origin = req.headers.origin;
+    if (isAllowedDevOrigin(origin)) {
+      res.header("Access-Control-Allow-Origin", origin as string);
+      res.header("Access-Control-Allow-Credentials", "true");
+      res.header("Vary", "Origin");
+    }
     res.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
     res.header("Access-Control-Allow-Headers", "Content-Type,Authorization,Cookie,X-Requested-With");
     if (req.method === "OPTIONS") {

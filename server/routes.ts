@@ -7303,9 +7303,14 @@ export async function registerRoutes(
           giftCount: giftsForFund.length,
           contributorCount,
         },
+        // PII minimization on this token-gated, UNAUTHENTICATED endpoint
+        // (security-audit 2026-05-28): the parent's email is not used by the
+        // claim/preview screen, so it is no longer exposed to token holders.
+        // recipientBirthdate (above) is retained because the screen computes the
+        // majority countdown from it; if exact-DOB exposure must also go, the
+        // follow-up is gating this endpoint to a verified recipient.
         parent: {
           firstName: parent?.firstName || null,
-          email: parent?.email || null,
           message: nextRecord.parentMessage,
         },
         child: {
