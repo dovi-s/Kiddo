@@ -980,6 +980,17 @@ export default function Activity() {
     (r: any) => !activeFundIdForActivity || r.fundId === activeFundIdForActivity,
   );
 
+  // Same per-fund scoping for the "Needs your attention" cards. The
+  // /api/me/action-items endpoint is intentionally cross-fund (it feeds
+  // the global bell badge too), so without this filter a sibling/test
+  // fund's todo (e.g. "sssss's Fund needs an SSN") surfaces on Emma's
+  // fund-scoped Activity page. The bell badge + Dashboard still show the
+  // full cross-fund list; only this per-fund surface narrows to the
+  // active fund. Mirrors the scheduled-rows fix directly above.
+  const scopedActionItems = actionItems.filter(
+    (item) => !activeFundIdForActivity || item.fundId === activeFundIdForActivity,
+  );
+
   // Fund value-history (snapshot series) for the active fund — the only honest
   // source for the money summary's "Market growth" line. The activity feed has
   // no "market grew $X" row (growth isn't an event), so without this that tile
@@ -1783,7 +1794,7 @@ export default function Activity() {
             todos: the parent shouldn't have to switch tabs to find
             them, and the items persist through tab switches. Each
             card has a Fix CTA + Remind tomorrow snooze. */}
-        {actionItems.length > 0 && (
+        {scopedActionItems.length > 0 && (
           <div className="mb-5">
             {/* maxVisible=2 added 2026-05-19 — Activity is a feed, not
                 a todo list. An unbounded "verify identity + set up
@@ -1792,7 +1803,7 @@ export default function Activity() {
                 items; everything else rolls into "N more in your
                 inbox" linking to the notifications panel where the
                 full list lives. */}
-            <ActionItemList items={actionItems} heading="Needs your attention" maxVisible={2} />
+            <ActionItemList items={scopedActionItems} heading="Needs your attention" maxVisible={2} />
           </div>
         )}
 
