@@ -130,6 +130,11 @@ const INCLUDED_PAGE_FILES = new Set([
   path.normalize("client/src/pages/Legal.tsx"),
   path.normalize("client/src/pages/Demo.tsx"),
   path.normalize("client/src/pages/RobuxVsUtma.tsx"),
+  // 2026-05-29: added with the satellite em-dash sweep. These two comparison/
+  // calculator pages were never in the scan, so em-dashes accumulated in rendered
+  // copy. Now linted so they can't recur.
+  path.normalize("client/src/pages/TrumpAccountVsUtma.tsx"),
+  path.normalize("client/src/pages/CalculatorAt18.tsx"),
   path.normalize("client/src/pages/UtmaByState.tsx"),
   path.normalize("client/src/pages/UtmaByStateIndex.tsx"),
   path.normalize("client/src/pages/BlogPost.tsx"),

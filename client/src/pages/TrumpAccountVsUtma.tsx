@@ -69,19 +69,19 @@ const COMPARE_ROWS: CompareRow[] = [
   {
     dimension: "What it can hold",
     trump: "Index funds only (S&P 500–type)",
-    kiddo: "Real companies your kid knows — Disney, Roblox, Apple",
+    kiddo: "Real companies your kid knows: Disney, Roblox, Apple",
     winner: "kiddo",
   },
   {
     dimension: "Annual contribution cap",
     trump: "$5,000/yr (everyone combined)",
-    kiddo: "No cap — the whole family can give",
+    kiddo: "No cap, so the whole family can give",
     winner: "kiddo",
   },
   {
     dimension: "What happens at 18",
-    trump: "Becomes a retirement IRA — 10% penalty on withdrawals before 59½",
-    kiddo: "Fully theirs — liquid, no restrictions",
+    trump: "Becomes a retirement IRA, with a 10% penalty on withdrawals before 59½",
+    kiddo: "Fully theirs: liquid, no restrictions",
     winner: "kiddo",
   },
   {
@@ -93,7 +93,7 @@ const COMPARE_ROWS: CompareRow[] = [
   {
     dimension: "Federal $1,000 seed",
     trump: "Yes, for kids born 2025–2028",
-    kiddo: "No — but no cap to offset it",
+    kiddo: "No, but no cap to offset it",
     winner: "trump",
   },
   {
@@ -153,7 +153,7 @@ export default function TrumpAccountVsUtma() {
               Trump Account or UTMA for your kid? You can have <GradientText>both</GradientText>.
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              The new federal accounts are a solid retirement head-start — take the free $1,000. But they can only hold index funds, they cap what your family can give, and your kid can't touch the money without a penalty until they're nearly 60. Here's what each one is actually for.
+              The new federal accounts are a solid retirement head-start. Take the free $1,000. But they can only hold index funds, they cap what your family can give, and your kid can't touch the money without a penalty until they're nearly 60. Here's what each one is actually for.
             </p>
           </div>
 
@@ -188,7 +188,7 @@ export default function TrumpAccountVsUtma() {
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {overCap
-                    ? `Past $5,000/yr, only the UTMA can hold it — the federal account caps everyone's combined gifts at $5,000.`
+                    ? `Past $5,000/yr, only the UTMA can hold it. The federal account caps everyone's combined gifts at $5,000.`
                     : `A federal account caps everyone's combined gifts at $5,000/yr. A UTMA has no ceiling.`}
                 </p>
               </div>
@@ -233,7 +233,7 @@ export default function TrumpAccountVsUtma() {
                 {formatMoney(trumpAt18)}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Includes the free $1,000 seed, capped at $5,000/yr, index funds only. But at 18 it's locked retirement money — your kid can't touch it without penalty until 59½.
+                Includes the free $1,000 seed, capped at $5,000/yr, index funds only. But at 18 it's locked retirement money, and your kid can't touch it without penalty until 59½.
               </p>
             </div>
 
@@ -247,7 +247,7 @@ export default function TrumpAccountVsUtma() {
                 {formatMoney(kiddoAt18)}
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Same dollars, in real companies your kid recognizes. Theirs the day they turn 18 — enough for {whatThisCouldBecome(kiddoAt18)}.
+                Same dollars, in real companies your kid recognizes. Theirs the day they turn 18, enough for {whatThisCouldBecome(kiddoAt18)}.
               </p>
             </div>
           </section>
@@ -267,12 +267,12 @@ export default function TrumpAccountVsUtma() {
                     +{formatMoney(capDelta)}
                   </p>
                   <p className="mt-1.5 text-sm text-muted-foreground">
-                    Past the $5,000 cap, only the UTMA keeps growing with your family's gifts. That's the gap — and it's still theirs at 18, in companies they chose.
+                    Past the $5,000 cap, only the UTMA keeps growing with your family's gifts. That's the gap, and it's still theirs at 18, in companies they chose.
                   </p>
                 </>
               ) : (
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  On paper the federal account may even edge ahead here — it starts with a free $1,000. But that money carries an early-withdrawal penalty before 59½ and can only hold index funds. The UTMA's {formatMoney(kiddoAt18)} is <span className="font-semibold text-foreground">liquid at 18</span> and can hold the companies your kid actually loves. Different jobs.
+                  On paper the federal account may even edge ahead here: it starts with a free $1,000. But that money carries an early-withdrawal penalty before 59½ and can only hold index funds. The UTMA's {formatMoney(kiddoAt18)} is <span className="font-semibold text-foreground">liquid at 18</span> and can hold the companies your kid actually loves. Different jobs.
                 </p>
               )}
             </section>
@@ -318,16 +318,16 @@ export default function TrumpAccountVsUtma() {
           {/* Honest framing — complement, not compete */}
           <section className="mx-auto mt-10 max-w-2xl space-y-4 text-sm leading-relaxed text-muted-foreground">
             <p>
-              <span className="font-semibold text-foreground">This isn't a knock on the federal account.</span> For a tax-deferred retirement floor it's genuinely good — and the free $1,000 is free money. Take it.
+              <span className="font-semibold text-foreground">This isn't a knock on the federal account.</span> For a tax-deferred retirement floor it's genuinely good, and the free $1,000 is free money. Take it.
             </p>
             <p>
-              But it's <span className="text-foreground">retirement plumbing</span>: index-only, capped at $5,000/yr, and penalized if withdrawn before 59½. A Kiddo fund does the other job — the companies your kid actually recognizes, gifts from everyone who loves them with no ceiling, and money that's <span className="font-semibold text-foreground">truly theirs at 18</span>. Most families will want both.
+              But it's <span className="text-foreground">retirement plumbing</span>: index-only, capped at $5,000/yr, and penalized if withdrawn before 59½. A Kiddo fund does the other job: the companies your kid actually recognizes, gifts from everyone who loves them with no ceiling, and money that's <span className="font-semibold text-foreground">truly theirs at 18</span>. Most families will want both.
             </p>
             <p>
               <span className="font-semibold text-foreground">A UTMA isn't a gimmick.</span> It's a custodial brokerage account in your kid's name, held by a real broker-dealer partner (Member FINRA/SIPC). At majority age (18 in most states, 21 in a few), the kid gets full ownership.
             </p>
             <p className="text-xs text-muted-foreground/70">
-              Projections assume 7% average annual return net of Kiddo's annual fee ($1/yr per $1,000 invested), compounded monthly; the federal column includes the $1,000 seed and the $5,000/yr cap. Federal account rules per the 2025 One Big Beautiful Bill Act, current as of May 2026 and subject to change — verify before relying. Illustrative, not a guarantee. Markets are unpredictable.
+              Projections assume 7% average annual return net of Kiddo's annual fee ($1/yr per $1,000 invested), compounded monthly; the federal column includes the $1,000 seed and the $5,000/yr cap. Federal account rules per the 2025 One Big Beautiful Bill Act, current as of May 2026 and subject to change. Verify before relying. Illustrative, not a guarantee. Markets are unpredictable.
             </p>
           </section>
 
@@ -337,7 +337,7 @@ export default function TrumpAccountVsUtma() {
               Start the fund that's actually theirs at 18.
             </h2>
             <p className="mt-3 text-sm text-muted-foreground">
-              Free to start. Anyone in your family can send lasting gifts in under a minute — no cap, no card required.
+              Free to start. Anyone in your family can send lasting gifts in under a minute. No cap, no card required.
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
               <Link href="/get-started">
@@ -363,15 +363,15 @@ export default function TrumpAccountVsUtma() {
             </h3>
             <div>
               <p className="font-semibold text-foreground">Can I have both a Trump Account and a UTMA?</p>
-              <p className="mt-1">Yes — and most families should. They do different jobs: the federal account is a tax-deferred retirement head-start your kid can't touch without a penalty until 59½, and a UTMA is money that becomes fully theirs at 18, in companies they recognize. One is a floor; the other is a head start they'll actually feel.</p>
+              <p className="mt-1">Yes, and most families should. They do different jobs: the federal account is a tax-deferred retirement head-start your kid can't touch without a penalty until 59½, and a UTMA is money that becomes fully theirs at 18, in companies they recognize. One is a floor; the other is a head start they'll actually feel.</p>
             </div>
             <div>
               <p className="font-semibold text-foreground">Can grandparents add money to a Trump Account?</p>
-              <p className="mt-1">Yes, starting July 4, 2026 — but everyone's contributions share one $5,000/yr cap per child, including the parents. A Kiddo UTMA has no cap, so the whole family can give freely, and each gift can carry a photo, voice note, or letter the kid keeps.</p>
+              <p className="mt-1">Yes, starting July 4, 2026, but everyone's contributions share one $5,000/yr cap per child, including the parents. A Kiddo UTMA has no cap, so the whole family can give freely, and each gift can carry a photo, voice note, or letter the kid keeps.</p>
             </div>
             <div>
               <p className="font-semibold text-foreground">Can my kid pick their own stocks in a Trump Account?</p>
-              <p className="mt-1">No — federal accounts can only hold low-cost index funds that track the S&P 500 or a broad US-equity index. If you want your kid to own the company they actually love — Disney, Roblox, Apple — that's a UTMA. Watching a company you recognize grow is most of what makes a kid care about investing at all.</p>
+              <p className="mt-1">No. Federal accounts can only hold low-cost index funds that track the S&P 500 or a broad US-equity index. If you want your kid to own the company they actually love (Disney, Roblox, Apple), that's a UTMA. Watching a company you recognize grow is most of what makes a kid care about investing at all.</p>
             </div>
           </section>
         </div>

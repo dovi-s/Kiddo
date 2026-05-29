@@ -277,7 +277,7 @@ export default function CalculatorAt18() {
                     className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
                     data-testid="select-state-majority"
                   >
-                    <option value="">— Most states (18) —</option>
+                    <option value="">Most states (18)</option>
                     {US_STATES.map((s) => {
                       const age = getMajorityAgeForState(s.code);
                       return (
@@ -291,7 +291,7 @@ export default function CalculatorAt18() {
                   <p className="mt-1.5 text-[11px] text-muted-foreground">
                     {selectedState
                       ? `In ${US_STATES.find((s) => s.code === selectedState)?.name || "this state"}, the UTMA custodian's control transfers at age ${majorityAge}.`
-                      : "Most states use 18. A few extend custodianship to 19, 20, or 21 — pick yours for accurate math."}
+                      : "Most states use 18. A few extend custodianship to 19, 20, or 21. Pick yours for accurate math."}
                   </p>
                 </div>
               </div>
