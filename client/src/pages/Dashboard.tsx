@@ -1947,6 +1947,11 @@ export default function Dashboard() {
       : 'owner';
   const isViewerOnly = activeFundAccessRole === 'viewer';
   const isPreviousOwner = activeFundAccessRole === 'previous_owner';
+  // Owner mode: the post-handoff recipient now owns the fund (transferred AND they're
+  // the current owner). Drives the "Start a fund for someone you love" doorway (the
+  // loop's second turn). Distinct from isPreviousOwner (the parent who handed it off);
+  // the two are mutually exclusive. Same signal as AppHeader / Projection.
+  const isOwnerMode = activeFundAccessRole === 'owner' && Boolean((activeFund as any)?.transferredAt);
   // Read-only union: viewers AND previous owners (post-handoff parents)
   // both lose write capabilities. Used to gate every CTA that would
   // mutate fund state — Share / Add Gift / Recurring Investments /
@@ -5826,6 +5831,36 @@ export default function Dashboard() {
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                       The name on the paperwork is {recipientFirstNameDisplay || "theirs"} now, but the part you built doesn't change hands. Every gift you gathered and every note in the Memory Book is the reason today exists. When you're ready, there may be someone else whose future you want to start. You already know how.
                     </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* The loop's second turn — post-handoff ADULT OWNER only (isOwnerMode).
+                The person who lived the whole 18-year arc is the warmest possible next
+                custodian; this is the doorway to starting a fund for THEIR kid (the
+                same Family-tier funnel — the loop closes generationally). Calm and
+                optional, never a paywall — the agency lines in YourStory/Age18Welcome
+                plant the intent; this is the door. Mutually exclusive with the
+                previous-owner card above. */}
+            {isOwnerMode && (
+              <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-gold)/0.30)] bg-[hsl(var(--kiddo-gold)/0.06)] p-5" data-testid="card-start-a-fund-doorway">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold)/0.15)] text-[hsl(var(--kiddo-gold-ink))]">
+                    <Sprout size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-heading text-base font-semibold text-foreground">Start one for someone you love</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      Someone started this for you before you could ask. When there's a kid whose future you want to show up for, you already know how it goes: quietly, early, and for years.
+                    </p>
+                    <Link
+                      href="/get-started"
+                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--kiddo-gold-ink))] hover:opacity-75"
+                      data-testid="link-start-a-fund-doorway"
+                    >
+                      Start a fund →
+                    </Link>
                   </div>
                 </div>
               </div>
