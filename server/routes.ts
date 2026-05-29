@@ -3889,7 +3889,7 @@ export async function registerRoutes(
         WITH active AS (
           SELECT
             COUNT(*)::int AS fund_count,
-            MIN(EXTRACT(YEAR FROM f.recipient_birthdate))::int + 18 AS earliest_claim_year
+            ROUND(AVG(GREATEST(0, COALESCE(f.majority_age, 18) - EXTRACT(YEAR FROM AGE(NOW(), f.recipient_birthdate)))))::int AS avg_years_to_claim
           FROM funds f
           JOIN users u ON u.id = f.user_id
           WHERE COALESCE(f.status, 'draft') NOT IN ('draft', 'archived', 'deleted')
@@ -3917,7 +3917,7 @@ export async function registerRoutes(
         )
         SELECT
           a.fund_count,
-          a.earliest_claim_year,
+          a.avg_years_to_claim,
           gt.total_gifted,
           gt.unique_gifters
         FROM active a, gift_totals gt
@@ -3927,22 +3927,19 @@ export async function registerRoutes(
       const fundCount = Number(row.fund_count || 0);
       const totalGifted = Number(row.total_gifted || 0);
       const uniqueGifters = Number(row.unique_gifters || 0);
-      // Earliest claim year — for a fund created today for a newborn,
-      // claim is 18 years out. Floor at current_year + 1 so we never
-      // surface a year that's already passed (which would happen if a
-      // pre-claim adult fund existed in test data).
-      const currentYear = new Date().getFullYear();
-      const rawClaimYear = row.earliest_claim_year ? Number(row.earliest_claim_year) : null;
-      const earliestClaimYear = rawClaimYear && rawClaimYear > currentYear
-        ? rawClaimYear
-        : currentYear + 1;
+      // Average runway: years until each fund reaches its owner at majority,
+      // using the per-fund majority age (18/19/21). This reinforces the "real
+      // horizons" framing far better than the old "earliest unlock year," which
+      // surfaced a near-future date that made the long horizon look short.
+      const rawAvg = row.avg_years_to_claim != null ? Number(row.avg_years_to_claim) : null;
+      const avgYearsToClaim = rawAvg && rawAvg > 0 ? Math.round(rawAvg) : null;
 
       res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=600");
       res.json({
         fundCount,
         totalGifted,
         uniqueGifters,
-        earliestClaimYear,
+        avgYearsToClaim,
       });
     } catch (error) {
       console.error("public marketing-stats error", error);

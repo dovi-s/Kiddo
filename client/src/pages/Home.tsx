@@ -22,7 +22,7 @@ type MarketingStats = {
   fundCount: number;
   totalGifted: number;
   uniqueGifters: number;
-  earliestClaimYear: number | null;
+  avgYearsToClaim: number | null;
 };
 
 const SECTION_MAX = "max-w-6xl mx-auto px-4";
@@ -62,7 +62,7 @@ function SignatureTrustCounter() {
 
   if (isError || !data) return null;
 
-  const { fundCount, totalGifted, uniqueGifters, earliestClaimYear } = data;
+  const { fundCount, totalGifted, uniqueGifters, avgYearsToClaim } = data;
 
   const formatMoney = (n: number) => {
     if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
@@ -85,7 +85,7 @@ function SignatureTrustCounter() {
               </div>
               <div className="text-center">
                 <div className="font-heading text-3xl font-bold text-foreground md:text-4xl">{formatMoney(totalGifted)}</div>
-                <p className="mt-1 text-xs text-muted-foreground">gifted by family and friends, fully invested</p>
+                <p className="mt-1 text-xs text-muted-foreground">gifted by family and friends, ready to invest</p>
               </div>
               <div className="text-center">
                 <div className="font-heading text-3xl font-bold text-foreground md:text-4xl">{uniqueGifters.toLocaleString()}</div>
@@ -93,9 +93,9 @@ function SignatureTrustCounter() {
               </div>
               <div className="text-center">
                 <div className="font-heading text-3xl font-bold text-foreground md:text-4xl">
-                  {earliestClaimYear || "—"}
+                  {avgYearsToClaim ? `${avgYearsToClaim} yrs` : "—"}
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">earliest year a Kiddo fund unlocks for the kid who owns it</p>
+                <p className="mt-1 text-xs text-muted-foreground">on average until a fund reaches the kid who owns it</p>
               </div>
             </div>
             <p className="mt-6 text-center text-xs text-muted-foreground">
@@ -476,9 +476,11 @@ export default function Home() {
         {/* Signature trust counter — the "only Kora could show this"
             stat. Kid-at-18 framing makes scale legible without vanity:
             "X funds growing toward their owner's 18th birthday" reads
-            as durability, not user-count theater. Earliest-claim-year is
-            the moat surface — nobody else holds custodial UTMA funds
-            with this 18-year horizon. Numbers stay honest at every
+            as durability, not user-count theater. Average-runway (years
+            until each fund reaches its owner) is the moat surface — nobody
+            else holds custodial UTMA funds with this long a horizon, and a
+            big runway number sells durability where the old "earliest unlock
+            year" accidentally made the horizon look short. Numbers stay honest at every
             scale; if real numbers are small today, the framing leans on
             durability ("growing toward their 18th birthday") not size.
             Stripe's GDP counter is the precedent (only-Stripe data,
