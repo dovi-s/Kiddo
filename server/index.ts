@@ -368,6 +368,11 @@ app.get("/api/status", async (_req, res) => {
     timestamp: Date.now(),
     version: process.env.APP_VERSION || "dev",
     summary,
+    // SECURITY (security-audit 2026-05-28): this endpoint is PUBLIC/unauthenticated,
+    // so it must NOT enumerate env-var NAMES (architectural reconnaissance — reveals
+    // which integrations are wired). `configured` (boolean) is enough for uptime /
+    // public readiness. The admin diagnostics panel reads the full per-var detail from
+    // the AUTHED /api/admin/integrations endpoint, so dropping envVars here is safe.
     checks: checks.map((check) => ({
       id: check.id,
       label: check.label,
@@ -375,7 +380,6 @@ app.get("/api/status", async (_req, res) => {
       status: check.status,
       requiredForLaunch: check.requiredForLaunch,
       configured: check.configured,
-      envVars: check.envVars,
       detail: check.detail,
     })),
   });
