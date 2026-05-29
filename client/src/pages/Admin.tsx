@@ -239,8 +239,15 @@ function SortableTable({ columns, data, defaultSort }: {
     if (aVal == null && bVal == null) return 0;
     if (aVal == null) return 1;
     if (bVal == null) return -1;
-    const cmp = typeof aVal === "number"
-      ? aVal - bVal
+    // Money/numeric columns arrive from Postgres as STRINGS (pg numeric -> JS
+    // string), so a raw localeCompare sorted them lexicographically ("9" > "100"
+    // > "1000") — wrong for the gifters gross/net default sort, user total_value,
+    // and fund balances. Compare as numbers when BOTH sides parse cleanly; else
+    // fall back to text (names, dates, etc.).
+    const aNum = typeof aVal === "number" ? aVal : (String(aVal).trim() !== "" ? Number(aVal) : NaN);
+    const bNum = typeof bVal === "number" ? bVal : (String(bVal).trim() !== "" ? Number(bVal) : NaN);
+    const cmp = (Number.isFinite(aNum) && Number.isFinite(bNum))
+      ? aNum - bNum
       : String(aVal).localeCompare(String(bVal));
     return sortDir === "asc" ? cmp : -cmp;
   });
@@ -5468,7 +5475,12 @@ function ModerationTab() {
 
   const deleteMemoryMutation = useMutation({
     mutationFn: async (id: string) => {
-      const reason = window.prompt("Reason for deletion (logged to audit):") || "";
+      const reason = window.prompt("Reason for deletion (logged to audit):");
+      // window.prompt returns null on Cancel/Escape; the old `|| ""` swallowed
+      // that and deleted anyway. Abort on cancel, and require a real reason since
+      // this is an audit-logged destructive delete.
+      if (reason === null) return;
+      if (!reason.trim()) { window.alert("A reason is required for the audit log."); return; }
       const res = await fetch(`/api/admin/memory/${encodeURIComponent(id)}`, {
         method: "DELETE",
         credentials: "include",
@@ -6117,7 +6129,10 @@ function IntegrationsTab() {
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery<{ integrations: any[] }>({
     queryKey: ["/api/admin/integrations"],
     queryFn: async () => fetchAdminJson("/api/admin/integrations"),
-    refetchInterval: 60000,
+    // No refetchInterval: this endpoint makes a LIVE Stripe balance.retrieve() +
+    // DB ping per call. A 60s loop while the tab sits open burned Stripe rate
+    // limit on a health probe. Fetches on mount; use the manual refresh button.
+    staleTime: 60000,
   });
   const integrations = asArray<any>(data?.integrations);
   const grouped = integrations.reduce((acc, integ) => {

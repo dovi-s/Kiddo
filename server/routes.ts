@@ -15550,7 +15550,7 @@ export async function registerRoutes(
           COUNT(CASE WHEN status = 'draft' THEN 1 END)::int AS draft_funds,
           COALESCE(SUM(CAST(balance AS numeric)), 0) AS total_invested,
           COALESCE(SUM(CAST(pending_balance AS numeric)), 0) AS total_pending,
-          COALESCE(SUM(CAST(balance AS numeric) + CAST(pending_balance AS numeric)), 0) AS total_aum,
+          COALESCE(SUM(CAST(balance AS numeric) + CAST(pending_balance AS numeric) + CAST(COALESCE(cash_balance, '0') AS numeric)), 0) AS total_aum,
           COUNT(CASE WHEN account_type = 'UTMA' THEN 1 END)::int AS utma_funds,
           COUNT(CASE WHEN account_type != 'UTMA' THEN 1 END)::int AS personal_funds
         FROM funds
@@ -15649,7 +15649,7 @@ export async function registerRoutes(
               ELSE 'unknown'
             END AS channel
           FROM transactions
-          WHERE type IN ('gift', 'family_plan', 'event_pass', 'subscription_renewal')
+          WHERE type IN ('gift', 'starter_plan', 'family_plan', 'event_pass', 'subscription_renewal')
         )
         SELECT
           channel,
@@ -15678,7 +15678,7 @@ export async function registerRoutes(
         ? Number(process.env.GOOGLE_PLAY_FEE_RATE)
         : 0.15;
       const processingPassthroughCollected = parseFloat(String(giftStats.total_processing_fees || '0'));
-      const appStoreTypes = new Set(["family_plan", "event_pass", "subscription_renewal"]);
+      const appStoreTypes = new Set(["starter_plan", "family_plan", "event_pass", "subscription_renewal"]);
       const appleIapGross = channelRows
         .filter((row: any) => String(row.channel || "") === "apple_iap" && appStoreTypes.has(String(row.type || "")))
         .reduce((sum: number, row: any) => sum + Number(row.completed_gross || 0), 0);
@@ -17152,6 +17152,17 @@ export async function registerRoutes(
     try {
       const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
 
+      // Resolve super-admins the SAME way the real authz path does (auth.ts ->
+      // adminAccess): DEFAULT_SUPER_ADMIN_EMAILS + SUPER_ADMIN_EMAILS env, NOT
+      // env-only. Otherwise a super-admin-by-email whose DB is_admin row is false
+      // is invisible here and totalSuperAdminAccounts can read 0 while a
+      // super-admin is fully active — the opposite of what this review guarantees.
+      const superAdminEmails = getConfiguredSuperAdminEmails(process.env.SUPER_ADMIN_EMAILS);
+      const superEmailList = Array.from(superAdminEmails);
+      const superEmailInClause = superEmailList.length
+        ? sql`OR LOWER(TRIM(u.email)) IN (${sql.join(superEmailList.map((e) => sql`${e}`), sql`, `)})`
+        : sql``;
+
       const adminUsersResult = await db.execute(sql`
         WITH admin_users AS (
           SELECT
@@ -17179,27 +17190,12 @@ export async function registerRoutes(
                 AND al.created_at >= ${ninetyDaysAgo.toISOString()}
             ) AS actions_90d
           FROM users u
-          WHERE u.is_admin = true
+          WHERE u.is_admin = true ${superEmailInClause}
         )
         SELECT *
         FROM admin_users
         ORDER BY last_action_at DESC NULLS LAST, created_at DESC
       `);
-
-      const superAdminEmails = (() => {
-        try {
-          // Avoid throwing if the env-resolution helper isn't available
-          // (older deploys pre-isAdmin-allowlist still work).
-          // Mirrors the pattern in server/auth.ts isSuperAdminEmail().
-          const fromEnv = String(process.env.SUPER_ADMIN_EMAILS || "")
-            .split(",")
-            .map((s) => s.trim().toLowerCase())
-            .filter(Boolean);
-          return new Set(fromEnv);
-        } catch {
-          return new Set<string>();
-        }
-      })();
 
       const rows = (adminUsersResult.rows || []).map((row: any) => {
         const email = String(row.email || "").trim().toLowerCase();
@@ -17305,12 +17301,13 @@ export async function registerRoutes(
           (SELECT COUNT(*)::int FROM funds f WHERE f.user_id = u.id) AS fund_count,
           (SELECT COUNT(*)::int FROM fund_memberships fm WHERE fm.user_id = u.id AND fm.plan = 'starter' AND fm.status IN ('active','canceled')) AS starter_fund_count,
           (SELECT COUNT(*)::int FROM funds f WHERE f.user_id = u.id AND f.account_type = 'UTMA') AS utma_count,
-          (SELECT COALESCE(SUM(CAST(f.balance AS numeric) + CAST(f.pending_balance AS numeric)), 0) FROM funds f WHERE f.user_id = u.id) AS total_value,
+          (SELECT COALESCE(SUM(CAST(f.balance AS numeric) + CAST(f.pending_balance AS numeric) + CAST(COALESCE(f.cash_balance, '0') AS numeric)), 0) FROM funds f WHERE f.user_id = u.id) AS total_value,
           (SELECT COUNT(*)::int FROM bank_accounts ba WHERE ba.user_id = u.id AND ba.status = 'active') AS bank_accounts,
           (SELECT COUNT(*)::int FROM gifts g JOIN funds f2 ON g.fund_id = f2.id WHERE f2.user_id = u.id) AS gifts_received
         FROM users u
         LEFT JOIN subscriptions s ON s.user_id = u.id AND s.plan = 'family'
         ORDER BY u.created_at DESC
+        LIMIT 500
       `);
       void writeAudit(req, 'admin_users_viewed', 'users').catch((auditErr) => {
         console.error('admin/users audit log failed:', auditErr);
@@ -18393,6 +18390,7 @@ export async function registerRoutes(
           FROM funds f
           JOIN users u ON f.user_id = u.id
           ORDER BY f.created_at DESC
+          LIMIT 500
         `);
         rows = (allFundsResult.rows as any[]) || [];
       } catch (primaryErr: any) {
@@ -19376,6 +19374,10 @@ export async function registerRoutes(
           MAX(g.created_at) AS last_gift_at,
           MIN(g.created_at) AS first_gift_at
         FROM gifts g
+        -- Match the Overview "real gifts" convention: exclude failed/refunded/
+        -- canceled so per-gifter gift_count, gross, and net don't get inflated by
+        -- gifts that never settled (the drill-down statusBreakdown still splits by status).
+        WHERE g.status NOT IN ('failed', 'refunded', 'canceled')
         GROUP BY 1, 2
         ORDER BY gross_amount DESC, gift_count DESC
         LIMIT ${limit}
@@ -20526,7 +20528,6 @@ export async function registerRoutes(
   // it falls into, and where the docs are. Lets an admin diagnose
   // "why isn't email working" without SSH'ing into the server.
   app.get('/api/admin/integrations', isAdmin, async (req: any, res) => {
-    console.log('[admin/integrations] handler entered');
     try {
     type EnvVarStatus = { name: string; set: boolean; required: boolean };
     type Integration = {
