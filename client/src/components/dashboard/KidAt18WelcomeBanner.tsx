@@ -117,7 +117,7 @@ export function KidAt18WelcomeBanner({
           <span className="font-semibold text-foreground">It's a custodial brokerage account.</span> There can be tax to consider the year you take ownership. Talk to a CPA before any big changes.
         </li>
         <li>
-          <span className="font-semibold text-foreground">This was your parent's view.</span> Same numbers, now yours. A few controls (gift links, recurring investments) were built for managing a child's fund, so you can ignore them.
+          <span className="font-semibold text-foreground">This was your parent's view.</span> Same numbers, the same fund. It's fully yours to run now.
         </li>
       </ul>
       {/* Link to the year-by-year retrospective. The kid's first

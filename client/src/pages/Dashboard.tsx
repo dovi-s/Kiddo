@@ -6524,11 +6524,18 @@ export default function Dashboard() {
                         <span className={lbl}>Gifter page</span>
                       </button>
                     )}
-                    {/* 3. {Child}'s view — preview from kid perspective */}
-                    <button type="button" onClick={() => { haptic("selection"); setKidViewConfigStep(kidViewSettings?.enabled ? "done" : "settings"); setKidViewConfigOpen(true); }} className={btn} data-testid="pill-kid-view">
-                      <span className={tile}><Smile size={14} className="md:hidden" strokeWidth={2} /><Smile size={18} className="hidden md:block" strokeWidth={2} /></span>
-                      <span className={`${lbl} w-full`}>{childFirst}'s view</span>
-                    </button>
+                    {/* 3. {Child}'s view — preview from kid perspective + set up
+                        the PIN'd Kid View link. Hidden in owner-mode: the
+                        post-handoff owner IS the (now-adult) kid, so "previewing
+                        their own kid view" / configuring a child link is
+                        nonsensical for them. (Share, gifter-page preview, and
+                        occasions stay — those remain valid post-handoff.) */}
+                    {!isOwnerMode && (
+                      <button type="button" onClick={() => { haptic("selection"); setKidViewConfigStep(kidViewSettings?.enabled ? "done" : "settings"); setKidViewConfigOpen(true); }} className={btn} data-testid="pill-kid-view">
+                        <span className={tile}><Smile size={14} className="md:hidden" strokeWidth={2} /><Smile size={18} className="hidden md:block" strokeWidth={2} /></span>
+                        <span className={`${lbl} w-full`}>{childFirst}'s view</span>
+                      </button>
+                    )}
                     {/* 4. Occasion — DYNAMIC: wouter <Link> for active occasion
                         nav (handles SPA routing + cmd/ctrl-click new-tab),
                         <button> fallback for the empty-state "create new
