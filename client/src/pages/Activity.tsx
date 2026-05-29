@@ -16,7 +16,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { EnlighteningReveal } from "@/components/ui/gemini";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
-import { useActivities } from "@/hooks/use-activities";
+import { useActivities, useFundActivities } from "@/hooks/use-activities";
 import { markNotificationsRead } from "@/components/NotificationsPanel";
 import { LOCAL_CACHE_KEYS, readLocalCache } from "@/lib/local-cache";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -856,11 +856,21 @@ export default function Activity() {
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
-  const { data: activities = [], isLoading: feedLoading, isError: feedError, refetch } = useActivities(
-    200,
-    isAuthenticated && !authLoading,
-    activeFundIdForActivity,
-  );
+  // A post-handoff OWNER's fund history lives under the PREVIOUS owner's userId, so the
+  // user-scoped /api/activities returns nothing for them (the rows aren't theirs) — which is
+  // why Haley's History reads "Nothing here yet" on a 16-year fund. When the active fund is
+  // one the viewer now owns (transferred), read the FUND-scoped feed instead so the full
+  // history — gifts, milestones, the handoff itself — shows. The Memory Book already carries
+  // over because it's fund-scoped; this gives Activity parity. (The general server fix is to
+  // make /api/activities fund-aware for owned funds; this is the collision-free client
+  // equivalent.) ownerModeFundIds is built above.
+  const activeFundIsOwned = !!activeFundIdForActivity && ownerModeFundIds.has(String(activeFundIdForActivity));
+  const userScopedFeed = useActivities(200, isAuthenticated && !authLoading && !activeFundIsOwned, activeFundIdForActivity);
+  const fundScopedFeed = useFundActivities(activeFundIsOwned ? activeFundIdForActivity : undefined, 200);
+  const activities = (activeFundIsOwned ? fundScopedFeed.data : userScopedFeed.data) ?? [];
+  const feedLoading = activeFundIsOwned ? fundScopedFeed.isLoading : userScopedFeed.isLoading;
+  const feedError = activeFundIsOwned ? fundScopedFeed.isError : userScopedFeed.isError;
+  const refetch = activeFundIsOwned ? fundScopedFeed.refetch : userScopedFeed.refetch;
 
   // Landing on the Activity page IS "I've seen the latest." Clears the
   // bottom-nav and sidebar Activity dot. Without this, the only way to
