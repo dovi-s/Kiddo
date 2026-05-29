@@ -2143,7 +2143,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
           <BarChart3 size={18} className="text-purple-600" />
           Unit Economics
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <StatCard
             label="Platform Revenue"
             value={fmt(ue.platformRevenue)}
@@ -2152,60 +2152,18 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             sub="Platform fee + subscriptions + premium events"
           />
           <StatCard
-            label="Store Fees (Est.)"
-            value={fmt(ueAppStore.estimatedStoreFees)}
-            icon={CreditCard}
-            color="red"
-            sub="Apple/Google estimated commissions"
-          />
-          <StatCard
-            label="Net After Store Fees"
-            value={fmt(ueAppStore.estimatedNetAfterStoreFees)}
-            icon={Wallet}
-            color="blue"
-            sub="Before infra/ops/custody costs"
-          />
-          <StatCard
             label="Contribution Margin"
             value={`${Number(ue.estimatedContributionMarginPct || 0).toFixed(2)}%`}
             icon={Activity}
             color={Number(ue.estimatedContributionMarginPct || 0) >= 60 ? "green" : Number(ue.estimatedContributionMarginPct || 0) >= 30 ? "amber" : "red"}
             sub="Estimated, channel-mapped"
           />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
-          <StatCard label="Apple IAP Gross" value={fmt(ueAppStore.appleIapGross)} icon={CreditCard} color="primary" sub={`${((Number(ueAppStore.appleFeeRate || 0)) * 100).toFixed(1)}% fee rate`} />
-          <StatCard label="Google Play Gross" value={fmt(ueAppStore.googlePlayGross)} icon={CreditCard} color="primary" sub={`${((Number(ueAppStore.googleFeeRate || 0)) * 100).toFixed(1)}% fee rate`} />
           <StatCard label="Processing (Pass-through)" value={fmt(ue.processingPassthroughCollected)} icon={Shield} color="amber" sub="Collected from payers, not Kiddo revenue" />
         </div>
-        <div className="bg-card rounded-xl border border-border/50 overflow-hidden mt-3">
-          <div className="px-3 py-2 border-b border-border/50 text-sm font-semibold">Revenue Channel Split</div>
-          <SortableTable
-            columns={[
-              { key: "channel", label: "Channel", render: (row: any) => <span className="font-medium">{row.channel}</span> },
-              { key: "gross", label: "Gross", align: "right", render: (row: any) => fmt(row.gross) },
-              { key: "txCount", label: "Tx", align: "right", render: (row: any) => fmtNum(row.txCount) },
-              {
-                key: "byType",
-                label: "Breakdown",
-                render: (row: any) => {
-                  const byType = row?.byType || {};
-                  const chunks = Object.entries(byType).map(([type, v]: [string, any]) => `${type}: ${fmt(v?.gross || 0)} (${fmtNum(v?.count || 0)})`);
-                  return chunks.length > 0 ? (
-                    <span className="text-xs text-muted-foreground">{chunks.join(" · ")}</span>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">-</span>
-                  );
-                },
-              },
-            ]}
-            data={ueChannels}
-            defaultSort="gross"
-          />
-        </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          Store fees are estimated from transaction channel tags. If channel is unknown or all checkout is Stripe/web, app-store fee impact may show as $0.
-        </p>
+        {/* App-store fee cards (Apple/Google IAP, Store Fees, Net-After-Store)
+            and the Revenue Channel Split table were cut 2026-05-28: all $0 /
+            single-channel until mobile IAP ships. Re-add from git when mobile
+            in-app purchases go live and the channel mix actually splits. */}
       </section>
 
       <div className="grid md:grid-cols-2 gap-6">
