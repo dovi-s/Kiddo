@@ -335,6 +335,34 @@ for (const file of files) {
   }
 }
 
+// ── Banned-icon guard (added 2026-05-29) ──
+// The Sparkles and Wand2 lucide icons are banned (feedback_iconography_consistency.md,
+// "never re-introduce"). The phrase lint above only scans the copy allowlist; this
+// scans ALL client TSX for the icon IDENTIFIERS so a re-introduction fails CI. The
+// ban regressed ~16 times across the codebase because it lived only in a memo, never
+// in the build. Comments are stripped (so the in-code "banned per..." notes don't
+// trip it); \b word boundaries mean SparkleBurst / showSparkles don't false-match.
+const BANNED_ICONS = ["Sparkles", "Wand2"];
+(function scanForBannedIcons(dir) {
+  for (const entry of readdirSync(dir)) {
+    const full = path.join(dir, entry);
+    if (statSync(full).isDirectory()) { scanForBannedIcons(full); continue; }
+    if (!/\.(tsx|ts|jsx|js)$/.test(full)) continue;
+    const codeOnly = readFileSync(full, "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|\s)\/\/[^\n]*/g, "$1");
+    for (const icon of BANNED_ICONS) {
+      if (new RegExp(`\\b${icon}\\b`).test(codeOnly)) {
+        allIssues.push({
+          file: full,
+          issue: `Banned icon "${icon}" — sparkle/wand iconography is AI-slop (feedback_iconography_consistency.md, "never re-introduce"). Use a semantic icon from the canonical map or drop it.`,
+          excerpt: "(icon identifier found in non-comment code)",
+        });
+      }
+    }
+  }
+})("client/src");
+
 if (allIssues.length) {
   for (const entry of allIssues) {
     console.error(`\n[content-lint] ${entry.file}`);
