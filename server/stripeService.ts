@@ -197,6 +197,27 @@ export class StripeService {
     });
   }
 
+  async retrieveSetupIntent(id: string): Promise<Stripe.SetupIntent> {
+    const stripe = await getUncachableStripeClient();
+    return await stripe.setupIntents.retrieve(id);
+  }
+
+  // Off-session charge of a previously-vaulted card (P0-1 Option C settlement at
+  // pairing). Throws on decline (StripeCardError) — callers must catch and fall
+  // back. Gated upstream by isGifterCaptureAtIntentEnabled().
+  async chargeGifterOffSession(params: { customerId: string; paymentMethodId: string; amountCents: number; metadata?: Record<string, string> }): Promise<Stripe.PaymentIntent> {
+    const stripe = await getUncachableStripeClient();
+    return await stripe.paymentIntents.create({
+      amount: params.amountCents,
+      currency: 'usd',
+      customer: params.customerId,
+      payment_method: params.paymentMethodId,
+      off_session: true,
+      confirm: true,
+      metadata: params.metadata,
+    });
+  }
+
   private getPaymentMethodTypes(preference?: PaymentMethodPreference): Stripe.Checkout.SessionCreateParams.PaymentMethodType[] {
     switch (preference) {
       case 'bank':
