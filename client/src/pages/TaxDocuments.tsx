@@ -1086,7 +1086,7 @@ export default function TaxDocuments() {
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Fees</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      Kiddo's annual fee ($1 per $1,000 invested, about $10/yr on a $10,000 fund) applies to invested assets only, not on cash or pending gifts. Prorated daily, deducted from invested balance. No trading commissions, no account fees.
+                      Kiddo's annual fee ($1 per $1,000 invested, about $10/yr on a $10,000 fund) applies to invested assets only, not on cash or pending gifts. Prorated daily, so you only pay for the days assets are invested. No trading commissions, no account fees.
                     </p>
                   </div>
                 </div>
