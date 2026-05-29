@@ -726,10 +726,10 @@ export default function Home() {
           <div className={SECTION_MAX}>
             <FadeIn className="mb-14 text-center">
               <h2 className="mb-4 font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">
-                What parents say after the first few gifts arrive.
+                How the first few gifts tend to go.
               </h2>
               <p className="mx-auto max-w-2xl text-muted-foreground">
-                The pattern is the same: once family sees the link, the product clicks immediately.
+                It&apos;s the loop the whole product is built around: once family sees the link, it clicks.
               </p>
             </FadeIn>
             <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
