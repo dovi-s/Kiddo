@@ -4177,11 +4177,26 @@ const [editFundName, setEditFundName] = useState("");
                     </button>
                   </div>
                 )}
-                <div className="divide-y divide-[hsl(var(--kiddo-border))] rounded-xl border border-border overflow-hidden">
-                  <div className="flex items-center justify-between gap-4 p-4 bg-background">
-                    <span className="text-sm text-muted-foreground">Visibility</span>
+                {/* Visibility is a FIXED guarantee for a child's fund, not a
+                    toggle. Minors' funds are never publicly discoverable
+                    (Legal.tsx privacy section, Security.tsx, COPPA posture +
+                    the design note's "for minors: never"). Adult-only
+                    findability is a separate, not-yet-surfaced feature
+                    (handleToggleDiscoverable); it is intentionally NOT exposed
+                    here. Styled as an info panel (lock + one-line guarantee) to
+                    match the gift-link box above, so it doesn't read as a
+                    dormant/broken settings toggle. */}
+                <div className="rounded-xl border border-border bg-muted/30 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Lock size={14} className="text-muted-foreground" />
+                      Visibility
+                    </span>
                     <span className="text-sm font-semibold text-foreground">Link only · Private</span>
                   </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                    Only people you share the link with can reach this fund. Funds for children are never publicly searchable.
+                  </p>
                 </div>
               </div>
             </SectionCard>
