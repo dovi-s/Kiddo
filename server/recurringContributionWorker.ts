@@ -556,6 +556,10 @@ async function processParentContributions(log: LogFn): Promise<void> {
       -- query), this clause ensures we never charge for a contribution
       -- whose fund has flipped to a different owner.
       AND f.user_id = pc.user_id
+      -- And never charge a real recurring contribution against a non-active
+      -- fund (closed/archived/draft). close-fund cancels these rows, but this
+      -- belt guards any other path that could leave a row active.
+      AND f.status = 'active'
     ORDER BY pc.next_run_date ASC
     LIMIT 100
   `);
@@ -582,6 +586,10 @@ async function processGifterRecurring(log: LogFn): Promise<void> {
     FROM recurring_gifts rg
     JOIN funds f ON f.id = rg.fund_id
     WHERE rg.status = 'active'
+      -- Only nudge gifters for ACTIVE funds. A closed/archived fund's gift
+      -- link 410s, so reminding a gifter to "gift again" there is a dead end
+      -- (and reads as broken). Reminders auto-resume if the fund is reopened.
+      AND f.status = 'active'
       AND rg.sender_email IS NOT NULL
       AND rg.next_charge_date IS NOT NULL
       AND rg.next_charge_date <= NOW()
