@@ -56,7 +56,10 @@ export default function Partners() {
             start matters most.
           </p>
           <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link href="/contact"><Button size="lg" data-testid="button-partners-hero-contact">Start a conversation</Button></Link>
+            {/* Subject-tagged mailto so partner inquiries arrive DISTINCTLY in the
+                support inbox (no new email alias needed). Swap to a dedicated
+                partnerships@ address here if/when one is set up. */}
+            <a href="mailto:support@kiddofund.com?subject=Partnership%20inquiry"><Button size="lg" data-testid="button-partners-hero-contact">Start a conversation</Button></a>
             <Link href="/how-it-works"><Button size="lg" variant="outline">See how Kiddo works</Button></Link>
           </div>
           <p className="mx-auto mt-5 max-w-xl text-xs leading-relaxed text-muted-foreground/70">
@@ -91,7 +94,7 @@ export default function Partners() {
               will build the right fit together.
             </p>
             <div className="mt-8">
-              <Link href="/contact"><Button data-testid="button-partners-contact">Tell us about your organization</Button></Link>
+              <a href="mailto:support@kiddofund.com?subject=Partnership%20inquiry"><Button data-testid="button-partners-contact">Tell us about your organization</Button></a>
             </div>
           </div>
         </div>
