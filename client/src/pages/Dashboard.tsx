@@ -5795,6 +5795,30 @@ export default function Dashboard() {
               </div>
             </motion.section>
 
+            {/* Parent's "your part of the story" moment. Post-handoff the parent
+                becomes a previous owner (read-only); the cold "transferred · view
+                only" hero badge is otherwise the only acknowledgment. This calm
+                card honors the years they tended the fund and plants the PARENT
+                side of the generational loop: the person who just finished one
+                handoff is the most likely to start the next. Persistent + dignified,
+                no action required, never naggy. Renders for any post-handoff parent
+                (real, or in the demo Phil viewing Haley's transferred fund). */}
+            {isPreviousOwner && (
+              <div className="mt-4 rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-5" data-testid="card-parent-handoff-moment">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.12)] text-[hsl(var(--kiddo-evergreen))]">
+                    <Heart size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-heading text-base font-semibold text-foreground">Your part of the story</p>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      The name on the paperwork is {recipientFirstNameDisplay || "theirs"} now, but the part you built doesn't change hands. Every gift you gathered and every note in the Memory Book is the reason today exists. When you're ready, there may be someone else whose future you want to start. You already know how.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* SSN nudge — placed AFTER the hero card so the parent gets
                 their warm balance + chart + share CTA first, then sees this
                 as one of several setup tasks. Previously above the hero,
