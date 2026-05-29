@@ -15745,7 +15745,11 @@ export async function registerRoutes(
         starterYearlyCount * (KORA_STARTER_YEARLY / 12);
       const annualRecurringRevenue = monthlyRecurringRevenue * 12;
 
-      const growthResult = await db.execute(sql`
+      // The growth mega-CTE and the asset CTE are the two heavy queries here and
+      // are mutually independent, so fire them concurrently (Promise.all below)
+      // rather than back-to-back. The leaf aggregates above are cheap and stay
+      // sequential. Deferred-promise form keeps the SQL byte-identical.
+      const growthResultP = db.execute(sql`
         WITH successful_gifts AS (
           SELECT
             g.fund_id,
@@ -15976,9 +15980,7 @@ export async function registerRoutes(
             ELSE ROUND(((SELECT reactivated_30d FROM reactivation_30d)::numeric / (SELECT canceled_30d FROM reactivation_30d)::numeric) * 100, 2)
           END AS reactivation_recovery_pct
       `);
-      const growthStats: any = growthResult.rows[0] || {};
-
-      const assetResult = await db.execute(sql`
+      const assetResultP = db.execute(sql`
         WITH successful_gifts AS (
           SELECT *
           FROM gifts
@@ -16016,6 +16018,8 @@ export async function registerRoutes(
           (SELECT json_agg(top_gifted_tickers) FROM top_gifted_tickers) AS top_gifted_tickers,
           (SELECT json_agg(holdings_exposure) FROM holdings_exposure) AS holdings_exposure
       `);
+      const [growthResult, assetResult] = await Promise.all([growthResultP, assetResultP]);
+      const growthStats: any = growthResult.rows[0] || {};
       const assetStats: any = assetResult.rows[0] || {};
 
       const payload = {
