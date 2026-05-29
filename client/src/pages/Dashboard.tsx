@@ -6135,7 +6135,7 @@ export default function Dashboard() {
                         data-testid="last30-row-auto"
                       >
                         <span className="text-sm text-muted-foreground">
-                          Your recurring investments
+                          {isOwnerMode ? "Your family's recurring investments" : "Your recurring investments"}
                           {/* When the 30-day total is zero AND there's a scheduled run
                               queued, append "starts {date}" so the bare $0 doesn't look
                               like a bug to a parent looking at 3 active schedules below.
@@ -6171,7 +6171,7 @@ export default function Dashboard() {
                         className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                         data-testid="last30-row-onetime"
                       >
-                        <span className="text-sm text-muted-foreground">Your one-time additions</span>
+                        <span className="text-sm text-muted-foreground">{isOwnerMode ? "Your family's one-time additions" : "Your one-time additions"}</span>
                         <span className="inline-flex items-center gap-1.5">
                           <span className="text-sm font-semibold text-foreground tabular-nums">
                             {fmtRow(yourOneTimeTotal)}
