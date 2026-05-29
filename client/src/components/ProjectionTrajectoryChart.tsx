@@ -105,7 +105,13 @@ export function ProjectionTrajectoryChart({
   const ratio = containerWidth > 0 ? containerWidth / heightPx : 3.4;
   const VB_W = Math.round(VB_H * ratio);
   const PAD_X_PCT = 0.04;
-  const PAD_TOP_PCT = 0.18;
+  // Top padding must clear the FULL target callout, not just the dot:
+  // the "Age NN" eyebrow sits 32 units above the dot (fontSize 10, so
+  // its glyphs reach ~40 units above the dot center). The highest data
+  // point maps to y = padTop, so padTop needs to exceed that ~40-unit
+  // stack or the eyebrow clips off the top edge. 0.22 * 200 = 44 clears
+  // it with margin. (Was 0.18 = 36, which cut off "Age 40".)
+  const PAD_TOP_PCT = 0.22;
   const PAD_BOT_PCT = 0.08;
 
   const drawnArea = useMemo(() => {
