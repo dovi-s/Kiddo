@@ -5266,8 +5266,8 @@ export default function Dashboard() {
                         );
                       })()}
                       <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" as const }} data-testid="text-fund-hero-label">
-                        {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s Fund` : activeFund?.name || "Your fund"}
-                        {" · "}{activeFund?.accountType || "UTMA"}
+                        {isOwnerMode ? "Your Fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s Fund` : activeFund?.name || "Your fund")}
+                        {" · "}{String(activeFund?.accountType || "UTMA").toUpperCase()}
                         {" · "}{activeFund?.status === "active" ? "Active" : "Draft"}
                       </div>
                     </div>
@@ -6063,7 +6063,7 @@ export default function Dashboard() {
                       {/* Always "fund so far" — lifetime view permanently
                           (was "last 30 days" once fund crossed 30 days). */}
                       <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                        {childPossess} fund so far <span aria-hidden>🌱</span>
+                        {isOwnerMode ? "Your" : childPossess} fund so far <span aria-hidden>🌱</span>
                       </p>
                       <p className="text-[10px] text-muted-foreground/60">
                         {/* Year ALWAYS shown 2026-05-23 — was conditionally
@@ -7013,7 +7013,7 @@ export default function Dashboard() {
             >
               <div className="flex items-center justify-between">
                 <p className="kiddo-section-label" data-testid="text-holdings-title">
-                  {recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "What the fund owns"}
+                  {isOwnerMode ? "What you own" : recipientFirstNameDisplay ? `What ${recipientFirstNameDisplay} owns` : "What the fund owns"}
                 </p>
               </div>
               {holdingsLoading ? (
@@ -7509,7 +7509,7 @@ export default function Dashboard() {
                                       className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold transition-colors bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)]`}
                                     >
                                       <Pencil size={9} />
-                                      {canCustomize ? `Customize ${childFirst}'s mix` : "Customize"}
+                                      {canCustomize ? (isOwnerMode ? "Customize your mix" : `Customize ${childFirst}'s mix`) : "Customize"}
                                       {!canCustomize && <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-gold-ink))]">Plus</span>}
                                     </button>
                                   </div>
@@ -10128,6 +10128,12 @@ export default function Dashboard() {
 
             </motion.section>
 
+            {/* At-majority handoff-prep section (countdown to majority, the parent's
+                letter editor, "what happens at majority"). All future-tense and
+                parent-facing, and moot once the handoff has happened — hide it for the
+                post-handoff owner, where it would read as past-tense nonsense ("you
+                turn 21 / the day it becomes yours"). 2026-05-29 owner-mode. */}
+            {!isOwnerMode && (
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -10463,6 +10469,7 @@ export default function Dashboard() {
                 </button>
               </div>
             </motion.section>
+            )}
 
             {/* Per-fund settings entry point REMOVED 2026-05-15. The
                 "{Kid}'s settings" button card (and its slide-up
