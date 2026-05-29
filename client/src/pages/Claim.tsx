@@ -697,7 +697,7 @@ export default function Claim() {
                         Projected ${claimedFundProjection.projectedValue.toLocaleString()} by {claimedFundProjection.childName}'s {claimedFundProjection.majorityAge}th birthday
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Hypothetical, 7% historical average annual return, net of Kiddo's annual fee ($1/yr per $1,000 invested).
+                        Hypothetical, 7% historical average annual return, net of Kiddo's annual fee ($1/yr per $1,000 invested). Markets move up and down; returns are never guaranteed.
                       </p>
                     </div>
                   </div>
