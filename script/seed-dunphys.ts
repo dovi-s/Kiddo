@@ -37,6 +37,7 @@ import {
   ageTransitions,
   parentContributions,
   recurringGifts,
+  bankAccounts,
   fundSnapshots,
   thankYous,
   type InsertGift,
@@ -1447,6 +1448,28 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
       createdAt: transferredAt,
     } as any);
     console.log(`  handoff: Haley's fund → haley@dunphyfamily.com (graduated adult account; Phil is previous owner)`);
+  }
+
+  // 3c. Seed a connected bank for the recurring-setup demo. Recurring pulls
+  //     from a linked bank for EVERYONE (parent + owner), and the setup modal
+  //     disables "Continue" with no bank. Without this, "Set up recurring" /
+  //     "+ Add another" dead-ends at the bank step in the demo — for Phil
+  //     (parent) AND Haley (graduated owner). Demo money is mocked, so this is
+  //     an illustrative connected account, not a real ACH source.
+  for (const [label, uid] of [["phil", philId], ["haley", haleyUserId]] as const) {
+    if (!uid) continue;
+    const existingBank = await db.select().from(bankAccounts).where(eq(bankAccounts.userId, uid)).limit(1);
+    if (existingBank.length > 0) continue;
+    await db.insert(bankAccounts).values({
+      userId: uid,
+      bankName: "Dunphy Checking",
+      accountLast4: "4291",
+      provider: "manual",
+      connectionStatus: "active",
+      status: "active",
+      isDefault: true,
+    } as any);
+    console.log(`  bank: ${label} → Dunphy Checking ····4291 (demo, for recurring setup)`);
   }
 
   // 4. Wire Claire as co-parent on the pre-handoff funds (Alex + Luke).
