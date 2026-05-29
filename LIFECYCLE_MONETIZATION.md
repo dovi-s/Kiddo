@@ -76,6 +76,39 @@ self-directed account for yourself" path; adult accounts only arise via the
 handoff. **Do not wire a direct-adult-signup path.** Revisit only with a
 deliberate strategic reason, and skeptically.
 
+## What the self-directed owner gets FREE (and why the "Plus" signal is parent-only)
+
+Recurring isn't a one-off. The owner gets every **self-management** feature of
+their own account free, by the same logic — the Plus subscription is the
+*custodian* bundle, it retired at majority, so the self-directed owner isn't on
+it and shouldn't be upsold it. Free for the owner:
+- **Recurring** (shipped) — auto-deposit into your own account.
+- **Custom mix / strategy switching** — picking your own holdings is table-stakes
+  at every self-directed brokerage (Robinhood/Schwab/Fidelity). Charging an adult
+  a sub to allocate their OWN account would be uncompetitive and odd.
+- **Occasions, their own Memory Book** — managing their own surfaces.
+
+Custodian-only Plus features don't apply to a solo owner at all (co-parent,
+multi-kid/Family, parent-authored media FOR a kid).
+
+**So the "Plus / Customize" upgrade signal must NOT render on the adult account** —
+it points at the custodian product the owner can't and shouldn't buy. Same class
+of leak as the recurring / Kid-View / share Plus-mode UI bleeding onto the owner's
+dashboard: **gate it on `isOwnerMode`** (off for the owner). KEEP the upgrade
+signal for PARENTS — custom mix is a real, valuable Plus differentiator for a
+custodian choosing a kid's allocation; it's just not applicable to the
+self-directed owner.
+
+Implementation note: `resolveAllowedFundStrategy` (server/routes/funds.ts) gates
+custom mix on coverage — it needs the post-handoff-owner exception (transferredAt
+&& fund.userId === viewer ⇒ custom allowed), mirroring the recurring gates. The
+client "Customize · Plus" chip on holdings (Dashboard.tsx) must hide the Plus
+signal in `isOwnerMode`. (Both pending — Dashboard.tsx is under concurrent edit.)
+
+A future ADULT-premium tier (if ever) gates genuinely-premium adult features
+(advanced planning, tax-loss harvesting, Roth/banking) — NOT basic
+self-allocation, which is table-stakes.
+
 ## The adult charge, answered directly
 
 - **Do we charge the adult an upgrade for recurring?** No. Recurring on a
