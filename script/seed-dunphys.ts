@@ -1424,6 +1424,28 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
       childEmailVerifiedAt: transferredAt,
       updatedAt: transferredAt,
     } as any).onConflictDoNothing();
+    // The real handoff flow (routes.ts ~7586) emits an "age18_handoff_completed_child"
+    // activity so the transfer lands as the most recent milestone in the owner's feed
+    // ("Fund handed off" / Sprout). The direct seed-transfer skips routes.ts, so emit it
+    // here too — otherwise Haley's Activity is missing the single most important event in
+    // her timeline: the day it became hers. createdAt = transferredAt keeps it at the top.
+    // Mirror the parent-side row too, so Phil's previous-owner view shows the handoff.
+    await db.insert(activities).values({
+      userId: haleyUserId,
+      fundId: haleyFundId,
+      type: "age18_handoff_completed_child",
+      title: "Your fund is now yours",
+      description: "Kiddo ownership transfer complete. Your fund now lives in your own account.",
+      createdAt: transferredAt,
+    } as any);
+    await db.insert(activities).values({
+      userId: philId,
+      fundId: haleyFundId,
+      type: "age18_handoff_completed_parent",
+      title: "Age-18 handoff completed",
+      description: "Haley now owns this fund in Kiddo.",
+      createdAt: transferredAt,
+    } as any);
     console.log(`  handoff: Haley's fund → haley@dunphyfamily.com (graduated adult account; Phil is previous owner)`);
   }
 
