@@ -8356,11 +8356,17 @@ export default function Dashboard() {
                         elements above the card, which broke visual rhythm
                         with the one-time card next door. */}
                     {(() => {
-                      const statuses = allContribs.map(c => optimisticContribStatus[String(c.id)] ?? c.status);
+                      // The former parent's handed-off plans (pause_reason
+                      // 'majority_handoff') are read-only history; the owner's
+                      // OWN plans are the live, manageable set. Count + summarize
+                      // the live set so the owner's recurring reads normally
+                      // alongside the parent's ended history below.
+                      const liveContribs = allContribs.filter(c => c.pauseReason !== "majority_handoff");
+                      const statuses = liveContribs.map(c => optimisticContribStatus[String(c.id)] ?? c.status);
                       const activeCount = statuses.filter(s => s === "active").length;
                       const pausedCount = statuses.filter(s => s === "paused").length;
-                      const allPaused = activeCount === 0 && pausedCount === total;
-                      const activeMonthly = allContribs.reduce((sum, c) => {
+                      const allPaused = activeCount === 0 && pausedCount === liveContribs.length && liveContribs.length > 0;
+                      const activeMonthly = liveContribs.reduce((sum, c) => {
                         const status = optimisticContribStatus[String(c.id)] ?? c.status;
                         if (status !== "active") return sum;
                         return sum + toMonthlyEquivalent(parseFloat(String(c.amount || "0")), c.frequency);
@@ -8368,12 +8374,10 @@ export default function Dashboard() {
                       const monthlyLabel = activeMonthly > 0
                         ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(activeMonthly))
                         : null;
-                      // Post-handoff the recipient owns the fund; the parent's
-                      // recurring was auto-paused at the handoff (worker
-                      // pause_reason 'majority_handoff') and can't be resumed
-                      // by/against either party. Render this section as
-                      // read-only history, not a resumable list.
-                      const summaryText = isOwnerMode
+                      // No live plans → only the parent's handed-off plan(s)
+                      // remain; say so. Otherwise summarize the live set (which,
+                      // post-handoff, is the owner's own recurring).
+                      const summaryText = liveContribs.length === 0
                         ? "Ended when you took ownership"
                         : allPaused
                         ? `${pausedCount} paused`
@@ -8391,11 +8395,11 @@ export default function Dashboard() {
                           </p>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                             <p style={{ fontSize: 12, color: "rgba(26,23,16,0.55)", fontWeight: 500, flex: 1, minWidth: 0 }}>{summaryText}</p>
-                            {allPaused && !isOwnerMode && (
+                            {allPaused && (
                               <button
                                 type="button"
                                 style={{ fontSize: 11.5, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                                onClick={() => allContribs.forEach(c => handleUpdateAutoInvestStatus(String(c.id), "active"))}
+                                onClick={() => liveContribs.forEach(c => handleUpdateAutoInvestStatus(String(c.id), "active"))}
                               >
                                 Resume all →
                               </button>
@@ -8412,6 +8416,12 @@ export default function Dashboard() {
                           {allContribs.map((contrib) => {
                             const effectiveStatus = optimisticContribStatus[String(contrib.id)] ?? contrib.status;
                             const isPausedRow = effectiveStatus === "paused";
+                            // The former parent's plan, ended at the handoff:
+                            // read-only history for the owner (the resume/edit/
+                            // cancel endpoints 403 on a record they don't own).
+                            // The owner's OWN plans aren't majority_handoff, so
+                            // they stay fully manageable.
+                            const isHandoffEnded = contrib.pauseReason === "majority_handoff";
                             const bank = contrib.bankAccountId
                               ? bankAccounts.find((b: any) => b.id === contrib.bankAccountId)
                               : null;
@@ -8455,11 +8465,12 @@ export default function Dashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    // Post-handoff owner can't manage the
-                                    // parent's plan (the action sheet's
-                                    // edit/pause/resume all 403). Tap opens the
-                                    // read-only history instead of a dead sheet.
-                                    if (isOwnerMode) {
+                                    // The parent's handed-off plan can't be
+                                    // managed by the owner (edit/pause/resume all
+                                    // 403). Tap opens read-only history instead
+                                    // of a dead sheet. The owner's OWN plans fall
+                                    // through to the normal action sheet.
+                                    if (isHandoffEnded) {
                                       openDetailScope({ kind: "schedule", scheduleId: String(contrib.id) });
                                       return;
                                     }
@@ -8533,10 +8544,10 @@ export default function Dashboard() {
                                   </div>
                                   <span
                                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                      isOwnerMode ? "bg-muted text-muted-foreground" : isPausedRow ? "bg-amber-100 text-amber-800" : "bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]"
+                                      isHandoffEnded ? "bg-muted text-muted-foreground" : isPausedRow ? "bg-amber-100 text-amber-800" : "bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]"
                                     }`}
                                   >
-                                    {isOwnerMode ? "Ended" : isPausedRow ? "Paused" : "Active"}
+                                    {isHandoffEnded ? "Ended" : isPausedRow ? "Paused" : "Active"}
                                   </span>
                                 </button>
                                 {/* Right-side action cluster — History opens
@@ -8561,10 +8572,11 @@ export default function Dashboard() {
                                   >
                                     <History size={14} />
                                   </button>
-                                  {/* No edit/pause/cancel menu post-handoff —
-                                      those mutate the parent's plan and 403 for
-                                      the new owner. History (above) stays. */}
-                                  {!isOwnerMode && (
+                                  {/* No edit/pause/cancel menu on the parent's
+                                      handed-off plan — those mutate a record the
+                                      owner doesn't own and 403. History (above)
+                                      stays. The owner's OWN plans keep the menu. */}
+                                  {!isHandoffEnded && (
                                     <button
                                       type="button"
                                       aria-label="Recurring investment actions"
@@ -8593,29 +8605,21 @@ export default function Dashboard() {
                         floating button. The dashed border on the button
                         itself signals "empty slot waiting to be filled"
                         (the affordance the design lens calls out). */}
-                    {isOwnerMode ? (
-                      // Post-handoff: no "+ Add another" — the owner isn't on a
-                      // Plus plan (the subscription retires at majority), so the
-                      // create path would 403 + pitch Plus, which contradicts
-                      // the retires-at-majority rule. An honest closing line
-                      // instead. (Owner-set recurring is a future kid-2.0
-                      // adult-tier capability; see the memory note.)
-                      <div className="border-t border-border/40 px-4 py-3">
-                        <p className="text-[11px] leading-snug text-muted-foreground text-center">
-                          Set up before you took ownership. Recurring ended at the handoff. The fund is fully yours now.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="border-t border-border/40 px-4 py-3">
-                        <button
-                          type="button"
-                          className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] py-2.5 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)] transition-colors"
-                          onClick={() => { haptic("selection"); setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }}
-                        >
-                          + Add another
-                        </button>
-                      </div>
-                    )}
+                    {/* "+ Add another" — always available when the card renders
+                        (access is gated upstream by hasAutoInvestAccess). The
+                        post-handoff owner now gets it too: they set up their OWN
+                        recurring for free, exactly like a parent does, just for
+                        themselves. The parent's handed-off plan sits above as
+                        read-only "Ended" history. */}
+                    <div className="border-t border-border/40 px-4 py-3">
+                      <button
+                        type="button"
+                        className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] py-2.5 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)] transition-colors"
+                        onClick={() => { haptic("selection"); setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }}
+                      >
+                        + Add another
+                      </button>
+                    </div>
                   </div>
                 );
               })()}

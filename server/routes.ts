@@ -3029,7 +3029,15 @@ export async function registerRoutes(
           getFundCoverageState(fund.userId, fund.id),
           isDemoFund(fund.id),
         ]);
+        // Post-handoff owner: the now-adult owns the fund (transferredAt set,
+        // and fund.userId is them). Recurring is FREE for them — the parent
+        // subscription retires at majority and AUM (0.10%) is the only
+        // post-handoff revenue, so the owner auto-invests in their OWN account
+        // with no Plus sub. (Charging a sub to invest in your own account would
+        // contradict subscription-retires-at-majority.) Per kid-2.0.
+        const isPostHandoffOwner = Boolean((fund as any).transferredAt) && fund.userId === (req.user as any)?.id;
         return fundIsDemo
+          || isPostHandoffOwner
           || coverage === "covered_starter"
           || coverage === "covered_family"
           || coverage === "trial_active";
@@ -15258,9 +15266,14 @@ export async function registerRoutes(
       // simply HAS no recurring plans; reading your own (empty) list is not
       // an error, so return [] rather than 403 so the dashboard query
       // resolves cleanly instead of logging a Forbidden.
+      // Post-handoff owner gets recurring free (see dashboard-summary's
+      // recurringEnabled note: subscription retires at majority + AUM-only).
+      // They own the fund now, so return their plans (their own + the parent's
+      // handoff-ended ones, which render as read-only history client-side).
+      const isPostHandoffOwner = Boolean((fund as any).transferredAt) && fund.userId === (req.user as any)?.id;
       const coverage = await getFundCoverageState(fund.userId, req.params.fundId);
       const hasRecurringAccess =
-        coverage === 'covered_starter' || coverage === 'covered_family' || coverage === 'trial_active';
+        isPostHandoffOwner || coverage === 'covered_starter' || coverage === 'covered_family' || coverage === 'trial_active';
       if (!hasRecurringAccess) {
         return res.json([]);
       }
@@ -15317,8 +15330,14 @@ export async function registerRoutes(
       // Coverage states that unlock recurring: covered_family,
       // covered_starter, trial_active. Anything else is "uncovered"
       // and gets a 403 with the upgrade pitch.
+      // Post-handoff owner exception: the now-adult owner sets up recurring
+      // into their OWN account for FREE — no Plus. Subscription retires at
+      // majority and AUM (0.10%) is the only post-handoff revenue, so gating
+      // self-directed recurring behind a sub would contradict the locked model
+      // (project_subscription_retires_at_majority.md). Per kid-2.0.
       const coverage = await getFundCoverageState(userId, req.params.fundId);
-      const recurringUnlocked = coverage === 'covered_family' || coverage === 'covered_starter' || coverage === 'trial_active';
+      const isPostHandoffOwner = Boolean((fund as any).transferredAt) && fund.userId === userId;
+      const recurringUnlocked = isPostHandoffOwner || coverage === 'covered_family' || coverage === 'covered_starter' || coverage === 'trial_active';
       if (!recurringUnlocked) {
         return res.status(403).json({
           error: 'Recurring investments unlock with Kiddo+ or Family',

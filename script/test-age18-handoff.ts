@@ -121,6 +121,8 @@ async function cleanup() {
       await pool.query(`DELETE FROM activities WHERE user_id = ANY($1::varchar[])`, [userIds]).catch(() => undefined);
       await pool.query(`DELETE FROM analytics_events WHERE user_id = ANY($1::varchar[])`, [userIds]).catch(() => undefined);
       await pool.query(`DELETE FROM subscriptions WHERE user_id = ANY($1::varchar[])`, [userIds]).catch(() => undefined);
+      // bank_accounts after parent_contributions (FK: pc.bank_account_id -> bank).
+      await pool.query(`DELETE FROM bank_accounts WHERE user_id = ANY($1::varchar[])`, [userIds]).catch(() => undefined);
       await pool.query(`DELETE FROM users WHERE id = ANY($1::varchar[])`, [userIds]).catch(() => undefined);
     }
   } catch (e: any) {
@@ -241,7 +243,31 @@ async function runChecks() {
     const replayRes = await kid.post(`${baseUrl}/api/age-transition/${inviteToken}/complete`);
     assert(replayRes.status() === 200, `replay complete should be idempotent 200 (got ${replayRes.status()})`);
 
-    console.log("Age-18/21 handoff flow passed (claim -> complete -> cascades -> welcome -> idempotent replay).");
+    // 12. Owner-recurring: the now-adult owner sets up their OWN recurring for
+    //     FREE (no Plus) — subscription retires at majority, AUM is the
+    //     post-handoff revenue. The kid is on the free plan (no coverage), so a
+    //     201 here proves the post-handoff-owner exception (not a paid plan).
+    //     Recurring needs a linked bank for EVERYONE (parent + owner alike), so
+    //     seed one for the kid first — the owner flow is parity with the parent.
+    const kidBank = await storage.createBankAccount({ userId: kidId, bankName: "QA Bank", accountLast4: "1111" } as any);
+    const ownerRecurringRes = await kid.post(`${baseUrl}/api/funds/${fund.id}/parent-contributions`, {
+      data: { amount: "25", frequency: "monthly", executionModel: "auto", bankAccountId: kidBank.id },
+    });
+    assert(ownerRecurringRes.status() === 201, `owner should create recurring free post-handoff (got ${ownerRecurringRes.status()} ${await ownerRecurringRes.text()})`);
+    const ownerListRes = await kid.get(`${baseUrl}/api/funds/${fund.id}/parent-contributions`);
+    assert(ownerListRes.status() === 200, `owner recurring GET should be 200, not gated (got ${ownerListRes.status()})`);
+    const ownerList = await ownerListRes.json();
+    assert(
+      Array.isArray(ownerList) && ownerList.some((c: any) => parseFloat(c.amount) === 25 && c.userId === kidId && c.status === "active"),
+      "the owner's own new recurring should appear in the list, owned by the kid, active",
+    );
+    // And the parent's old plan is still there as paused/majority_handoff (read-only history).
+    assert(
+      ownerList.some((c: any) => c.pauseReason === "majority_handoff"),
+      "the parent's handed-off plan should still be present as majority_handoff history",
+    );
+
+    console.log("Age-18/21 handoff flow passed (claim -> complete -> cascades -> welcome -> replay -> owner sets up own recurring free).");
   } finally {
     await kid.dispose();
   }
