@@ -14624,7 +14624,9 @@ export default function Dashboard() {
               subtitle={composedSubtitle}
               summaryStats={stats}
               rows={scopedRows}
-              bottomCta={{
+              // Post-handoff owner: read-only history, no manage CTA (the
+              // action sheet's pause/edit/cancel all 403 on the parent's plan).
+              bottomCta={isOwnerMode ? undefined : {
                 // Opens the existing Edit / Pause / Cancel action sheet —
                 // the canonical "do something with this schedule" surface.
                 // Was routing to the multi-step edit modal directly, which

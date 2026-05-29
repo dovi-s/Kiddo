@@ -3764,6 +3764,13 @@ export default function Activity() {
                           const isExpanded = expandedScheduledId === String(c.id);
                           const note = typeof c.note === "string" && c.note.trim() ? c.note.trim() : null;
                           const idStr = String(c.id);
+                          // Recurring that ended at the age-of-majority handoff
+                          // (worker stamps pause_reason 'majority_handoff'). It's
+                          // the former parent's plan — not resumable/editable by
+                          // the new owner (those endpoints 403 on a record they
+                          // don't own), so render it as read-only history rather
+                          // than a live, actionable schedule.
+                          const isOwnerHistorical = c.pauseReason === "majority_handoff";
                           const isMutating =
                             (pauseToggleMutation.isPending && pauseToggleMutation.variables?.id === idStr) ||
                             (cancelScheduleMutation.isPending && cancelScheduleMutation.variables === idStr) ||
@@ -3852,11 +3859,11 @@ export default function Activity() {
                                       <span
                                         style={{
                                           fontSize: 9.5, fontWeight: 700, borderRadius: 999, padding: "2px 7px",
-                                          background: isPaused ? "rgb(254,243,199)" : "rgb(220,247,228)",
-                                          color: isPaused ? "rgb(146,64,14)" : "rgb(15,82,42)",
+                                          background: isOwnerHistorical ? "rgb(238,235,231)" : isPaused ? "rgb(254,243,199)" : "rgb(220,247,228)",
+                                          color: isOwnerHistorical ? "rgb(112,103,95)" : isPaused ? "rgb(146,64,14)" : "rgb(15,82,42)",
                                         }}
                                       >
-                                        {isPaused ? "Paused" : "Active"}
+                                        {isOwnerHistorical ? "Ended" : isPaused ? "Paused" : "Active"}
                                       </span>
                                       {/* History icon → opens the detail modal
                                           scoped to this schedule. Click stops
@@ -3959,6 +3966,14 @@ export default function Activity() {
                                 // parents wonder why and don't know to renew.
                                 const pauseReason = isPaused && typeof c.pauseReason === "string" ? c.pauseReason : null;
                                 const pauseReasonText = (() => {
+                                  // Post-handoff owner view OR an explicit
+                                  // majority_handoff pause: this is the former
+                                  // parent's recurring, ended when the fund
+                                  // transferred. Not "you paused this" and not
+                                  // resumable by the owner.
+                                  if (isOwnerHistorical || pauseReason === "majority_handoff") {
+                                    return "This recurring was set up before the fund became yours. It ended at the handoff. The fund is fully yours now.";
+                                  }
                                   if (!pauseReason) return null;
                                   if (pauseReason === "subscription_ended") {
                                     return "Auto-paused because Kiddo+ lapsed. Resume your subscription and this schedule turns back on.";
@@ -3982,7 +3997,7 @@ export default function Activity() {
                                       marginBottom: 12,
                                     }}>
                                       <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: pauseReason === "subscription_ended" ? "rgb(146,108,46)" : "rgb(120,110,100)", marginBottom: 4 }}>
-                                        {pauseReason === "subscription_ended" ? "Action needed" : "Why this is paused"}
+                                        {(isOwnerHistorical || pauseReason === "majority_handoff") ? "Ended at handoff" : pauseReason === "subscription_ended" ? "Action needed" : "Why this is paused"}
                                       </p>
                                       <p style={{ fontSize: 12.5, color: "rgb(60,52,42)", lineHeight: 1.45 }}>
                                         {pauseReasonText}
@@ -4034,6 +4049,11 @@ export default function Activity() {
                                       )}
                                     </div>
                                   )}
+                                  {/* No resume/pause/add/edit/cancel for the
+                                      post-handoff owner — they don't own this
+                                      record, so every mutation 403s. The history
+                                      stays visible above; the actions don't. */}
+                                  {!isOwnerHistorical && (
                                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                                     <button
                                       type="button"
@@ -4109,6 +4129,7 @@ export default function Activity() {
                                       Cancel
                                     </button>
                                   </div>
+                                  )}
                                 </div>
                                 );
                               })()}
@@ -4256,6 +4277,10 @@ export default function Activity() {
         if (detailScope.kind === "schedule") {
           const schedule = scheduledContribs.find((c: any) => String(c.id) === detailScope.scheduleId);
           if (!schedule) return null;
+          // Handoff-ended recurring: the modal stays as read-only history, but
+          // drop the "Manage recurring" CTA — it deep-links to a manage sheet
+          // that 403s on the former parent's plan.
+          const scheduleOwnerHistorical = (schedule as any).pauseReason === "majority_handoff";
           // Filter rows to those linked to THIS schedule via metadata.
           const scopedRows = allFeed.filter((row) => {
             const meta = parseMetadata((row as any).metadata);
@@ -4326,7 +4351,7 @@ export default function Activity() {
               subtitle={composedSubtitle}
               summaryStats={stats}
               rows={scopedRows}
-              bottomCta={{
+              bottomCta={scheduleOwnerHistorical ? undefined : {
                 // Deep-link Dashboard's Edit / Pause / Cancel action sheet
                 // via ?openManage={id}. Single management surface across
                 // both modals — same label, same destination, no

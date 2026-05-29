@@ -781,6 +781,12 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   // shape the production worker leaves behind. totalContributed +
   // lastRunDate are backfilled from the cycles after they're inserted.
   const recurringPaused = kid.recurring.status === "paused";
+  // A graduated kid's fund has transferred, so its (former parent's) recurring
+  // was ended by the handoff, not paused by the user — mirror what the worker
+  // stamps in production so the Activity/Dashboard read-only "Ended at handoff"
+  // treatment renders correctly in the demo. Pre-majority paused funds keep
+  // "user" (a plain manual pause).
+  const recurringEndedAtHandoff = recurringPaused && kid.ageYears >= kid.majorityAge;
   const recurringChargeNote = giftList.find((g) => g.kind === "recurring")?.message ?? null;
   const recurringNextRun = (() => { const d = new Date(); d.setDate(d.getDate() + 14); return d; })();
   const [philContribution] = await db.insert(parentContributions).values({
@@ -790,7 +796,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
     frequency: "monthly",
     status: kid.recurring.status,
     note: recurringChargeNote,
-    pauseReason: recurringPaused ? "user" : null,
+    pauseReason: recurringPaused ? (recurringEndedAtHandoff ? "majority_handoff" : "user") : null,
     pausedAt: recurringPaused ? new Date() : null,
     nextRunDate: recurringPaused ? null : recurringNextRun,
   } as any).returning();
