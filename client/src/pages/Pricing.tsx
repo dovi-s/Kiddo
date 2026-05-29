@@ -95,7 +95,6 @@ const plans: readonly Plan[] = [
       "Text Memory Book entries (gifters can always attach photos, videos, and voice)",
       "Kid View. Your child sees what they own and how their fund grows",
       "SIPC-protected investments via our broker-dealer partner (at launch)",
-      "$1/year per $1,000 invested (only on invested assets)",
     ],
     note: "No credit card. No commitment.",
   },
@@ -134,7 +133,6 @@ const plans: readonly Plan[] = [
       "3 active occasions at a time (Free is 1)",
       "Annual contribution summary for tax records",
       "Priority support",
-      "$1/year per $1,000 invested (only on invested assets)",
     ],
   },
   {
@@ -174,7 +172,6 @@ const plans: readonly Plan[] = [
       // scope differential ("Unlimited" vs Plus's "3 active") is
       // the only difference. Clean bullet, no false suggestion.
       "Unlimited occasions",
-      "$1/year per $1,000 invested (only on invested assets)",
     ],
   },
 ];
@@ -412,6 +409,12 @@ export default function Pricing() {
                       </li>
                     ))}
                   </ul>
+
+                  {/* Fee as a footnote, not a checkmarked bullet — a charge
+                      under a green check reads as a perk. Applies to every
+                      plan, so it renders on all cards. The full breakdown is
+                      in the "How the annual fee works" table below. */}
+                  <p className="-mt-4 mb-8 text-xs leading-relaxed text-muted-foreground/70">Annual fee: $1/year per $1,000 invested (only on invested assets).</p>
 
                   <Link href="/get-started">
                     <Button variant={plan.featured ? "default" : "outline"} className="w-full" data-testid={`button-pricing-${plan.id}`}>
