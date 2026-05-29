@@ -119,7 +119,7 @@ function buildFaq(childName: string, majorityAge: number, majorityOrdinal: strin
     },
     {
       q: "What taxes are owed?",
-      a: `UTMA gains are taxed at ${childName}'s rate once ownership transfers. For most ${majorityAge}-year-olds, the long-term capital gains rate can be 0% on gains up to roughly $47,000. Talk to a CPA about your specific situation.`,
+      a: `UTMA gains are taxed to ${childName}, not you. But the kiddie tax can still apply while ${childName} is under 19 (or a full-time student under 24), taxing larger unearned gains at your rate rather than theirs. Once that no longer applies, a low-income young adult's long-term capital gains can be taxed as low as 0%. Talk to a CPA about your specific situation.`,
     },
     {
       q: `What happens if I pass away before ${childName} turns ${majorityAge}?`,
