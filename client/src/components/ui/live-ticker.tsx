@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Gift, TrendingUp, Sparkles } from "lucide-react";
 
 export interface Contributor {
@@ -201,16 +201,25 @@ export function InvestmentReveal({
   stockName?: string;
   shares?: string;
 }) {
+  const reduceMotion = useReducedMotion();
   const [stage, setStage] = useState(0);
 
   useEffect(() => {
+    // Respect prefers-reduced-motion: skip the timed spinner -> amount ->
+    // converting -> complete reveal (including two continuous spinners) and
+    // jump straight to the final invested state. The reveal is decorative;
+    // the information (stock, shares) is all in the final stage.
+    if (reduceMotion) {
+      setStage(3);
+      return;
+    }
     const timers = [
       setTimeout(() => setStage(1), 500),
       setTimeout(() => setStage(2), 1500),
       setTimeout(() => setStage(3), 2500),
     ];
     return () => timers.forEach(clearTimeout);
-  }, []);
+  }, [reduceMotion]);
 
   return (
     <motion.div
