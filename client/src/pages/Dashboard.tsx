@@ -8073,7 +8073,7 @@ export default function Dashboard() {
                   stamped into the Memory Book as love letters, not just transactions. */}
               <p className="kiddo-section-label" data-testid="text-your-part-title">
                 {isOwnerMode
-                  ? "Contributions to your fund"
+                  ? "Invest in your fund"
                   : recipientFirstNameDisplay
                     ? `Your part of ${recipientFirstNameDisplay}${recipientFirstNameDisplay.endsWith("s") ? "'" : "'s"} story`
                     : "Your part of their story"}
@@ -8708,7 +8708,9 @@ export default function Dashboard() {
                         <p className="text-xs text-muted-foreground pt-1">
                           {activeAutoInvest
                             ? "Add outside your regular schedule anytime."
-                            : `A birthday. A milestone. Just because. 🌱`}
+                            : isOwnerMode
+                              ? `A bonus. A windfall. Just because. 🌱`
+                              : `A birthday. A milestone. Just because. 🌱`}
                         </p>
                       </div>
                     )}
