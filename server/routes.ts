@@ -18565,143 +18565,124 @@ export async function registerRoutes(
         }
       };
 
-      const rawHoldings = await safeRows("holdings_raw", sql`SELECT * FROM holdings`);
-      const rawGifts = await safeRows("gifts_raw", sql`SELECT * FROM gifts`);
-      const rawFunds = await safeRows("funds_raw", sql`SELECT * FROM funds`);
-
+      // Aggregate in SQL (was: SELECT * on holdings/gifts/funds loaded whole
+      // into Node + reduced in JS — a memory/latency bomb at scale). The
+      // universeConfig enrichment (a JS object) still happens in JS on the
+      // small grouped result sets below.
       const toNum = (value: any) => {
         const n = Number(value);
         return Number.isFinite(n) ? n : 0;
       };
 
-      const get = (row: any, snake: string, camel: string) =>
-        row?.[snake] ?? row?.[camel] ?? null;
+      const holdingsAgg = await safeRows("holdings_agg", sql`
+        SELECT
+          UPPER(ticker) AS ticker,
+          MAX(name) AS name,
+          COUNT(*)::int AS positions,
+          COUNT(DISTINCT NULLIF(fund_id, ''))::int AS funds,
+          COALESCE(SUM(CAST(shares AS numeric)), 0) AS total_shares,
+          COALESCE(SUM(CAST(cost_basis AS numeric)), 0) AS total_cost_basis,
+          COALESCE(SUM(CAST(current_value AS numeric)), 0) AS total_value,
+          COALESCE(SUM(CAST(gain AS numeric)), 0) AS total_gain
+        FROM holdings
+        WHERE COALESCE(ticker, '') <> ''
+        GROUP BY UPPER(ticker)
+        ORDER BY total_value DESC
+      `);
+      const giftedAgg = await safeRows("gifted_agg", sql`
+        SELECT
+          UPPER(selected_ticker) AS ticker,
+          COUNT(*)::int AS gift_count,
+          COALESCE(SUM(CAST(net_amount AS numeric)), 0) AS total_net_amount,
+          COUNT(*) FILTER (WHERE LOWER(status) IN ('pending', 'processing'))::int AS pending_count
+        FROM gifts
+        WHERE LOWER(COALESCE(execution_model, '')) LIKE '%pick%' AND COALESCE(selected_ticker, '') <> ''
+        GROUP BY UPPER(selected_ticker)
+        ORDER BY total_net_amount DESC
+      `);
+      const executionAgg = await safeRows("execution_agg", sql`
+        SELECT
+          LOWER(COALESCE(NULLIF(execution_model, ''), 'auto')) AS execution_model,
+          COUNT(*)::int AS gift_count,
+          COALESCE(SUM(CAST(net_amount AS numeric)), 0) AS total_net_amount
+        FROM gifts
+        GROUP BY LOWER(COALESCE(NULLIF(execution_model, ''), 'auto'))
+        ORDER BY gift_count DESC
+      `);
+      const giftReconRows = await safeRows("gift_recon", sql`
+        SELECT
+          COALESCE(SUM(CAST(net_amount AS numeric)) FILTER (WHERE LOWER(status) IN ('invested', 'settled', 'processing')), 0) AS gift_net_completed,
+          COALESCE(SUM(CAST(amount AS numeric)) FILTER (WHERE LOWER(status) IN ('invested', 'settled', 'processing')), 0) AS gift_gross_completed,
+          COALESCE(SUM(CAST(net_amount AS numeric)) FILTER (WHERE LOWER(status) = 'pending'), 0) AS gift_net_pending
+        FROM gifts
+      `);
+      const strategyAgg = await safeRows("strategy_agg", sql`
+        SELECT
+          LOWER(COALESCE(NULLIF(investment_strategy, ''), 'auto_invest')) AS strategy,
+          COUNT(*)::int AS fund_count
+        FROM funds
+        GROUP BY LOWER(COALESCE(NULLIF(investment_strategy, ''), 'auto_invest'))
+        ORDER BY fund_count DESC
+      `);
+      const fundTotalsRows = await safeRows("fund_totals", sql`
+        SELECT
+          COALESCE(SUM(CAST(balance AS numeric)), 0) AS funds_invested,
+          COALESCE(SUM(CAST(pending_balance AS numeric)), 0) AS funds_pending
+        FROM funds
+      `);
 
-      const holdingsMap = new Map<string, any>();
-      for (const row of rawHoldings) {
-        const ticker = String(get(row, "ticker", "ticker") || "").toUpperCase();
-        if (!ticker) continue;
-        const fundId = String(get(row, "fund_id", "fundId") || "");
-        const shares = toNum(get(row, "shares", "shares"));
-        const costBasis = toNum(get(row, "cost_basis", "costBasis"));
-        const currentValue = toNum(get(row, "current_value", "currentValue"));
-        const gain = toNum(get(row, "gain", "gain"));
-        const name = String(get(row, "name", "name") || ticker);
-
-        if (!holdingsMap.has(ticker)) {
-          holdingsMap.set(ticker, {
-            ticker,
-            name,
-            positions: 0,
-            fundsSet: new Set<string>(),
-            total_shares: 0,
-            total_cost_basis: 0,
-            total_value: 0,
-            total_gain: 0,
-          });
-        }
-        const agg = holdingsMap.get(ticker);
-        agg.positions += 1;
-        if (fundId) agg.fundsSet.add(fundId);
-        agg.total_shares += shares;
-        agg.total_cost_basis += costBasis;
-        agg.total_value += currentValue;
-        agg.total_gain += gain;
-      }
-
-      const holdingsRows = Array.from(holdingsMap.values()).map((row: any) => {
-        const ticker = row.ticker;
+      const holdingsRows = holdingsAgg.map((row: any) => {
+        const ticker = String(row.ticker || "").toUpperCase();
         const known = universeConfig[ticker];
+        const name = String(row.name || ticker);
         return {
-          ...row,
-          funds: row.fundsSet.size,
-          fundsSet: undefined,
           ticker,
+          name,
+          positions: toNum(row.positions),
+          funds: toNum(row.funds),
+          total_shares: toNum(row.total_shares),
+          total_cost_basis: toNum(row.total_cost_basis),
+          total_value: toNum(row.total_value),
+          total_gain: toNum(row.total_gain),
           assetType: known?.type || (ticker.includes("ETF") ? "ETF" : "Stock"),
           assetSource: known?.source || "other",
-          knownName: known?.name || row.name || ticker,
+          knownName: known?.name || name || ticker,
         };
-      }).sort((a: any, b: any) => Number(b.total_value) - Number(a.total_value));
+      });
 
-      const giftedMap = new Map<string, any>();
-      const executionMap = new Map<string, any>();
-      let totalHoldingsValue = 0;
-      let totalHoldingsCostBasis = 0;
-      let totalFundsInvested = 0;
-      let totalFundsPending = 0;
-      let giftNetCompleted = 0;
-      let giftNetPending = 0;
-      let giftGrossCompleted = 0;
-
-      for (const h of holdingsRows) {
-        totalHoldingsValue += toNum(h.total_value);
-        totalHoldingsCostBasis += toNum(h.total_cost_basis);
-      }
-
-      for (const f of rawFunds) {
-        totalFundsInvested += toNum(get(f, "balance", "balance"));
-        totalFundsPending += toNum(get(f, "pending_balance", "pendingBalance"));
-      }
-
-      for (const row of rawGifts) {
-        const executionModel = String(get(row, "execution_model", "executionModel") || "auto").toLowerCase();
-        const netAmount = toNum(get(row, "net_amount", "netAmount"));
-        const grossAmount = toNum(get(row, "amount", "amount"));
-        const status = String(get(row, "status", "status") || "").toLowerCase();
-        const selectedTickerRaw = String(get(row, "selected_ticker", "selectedTicker") || "").toUpperCase();
-
-        if (status === "invested" || status === "settled" || status === "processing") {
-          giftNetCompleted += netAmount;
-          giftGrossCompleted += grossAmount;
-        } else if (status === "pending") {
-          giftNetPending += netAmount;
-        }
-
-        if (!executionMap.has(executionModel)) {
-          executionMap.set(executionModel, { execution_model: executionModel, gift_count: 0, total_net_amount: 0 });
-        }
-        const exec = executionMap.get(executionModel);
-        exec.gift_count += 1;
-        exec.total_net_amount += netAmount;
-
-        const isPickModel = executionModel.includes("pick");
-        if (!isPickModel || !selectedTickerRaw) continue;
-        if (!giftedMap.has(selectedTickerRaw)) {
-          giftedMap.set(selectedTickerRaw, {
-            ticker: selectedTickerRaw,
-            gift_count: 0,
-            total_net_amount: 0,
-            pending_count: 0,
-          });
-        }
-        const agg = giftedMap.get(selectedTickerRaw);
-        agg.gift_count += 1;
-        agg.total_net_amount += netAmount;
-        if (status === "pending" || status === "processing") agg.pending_count += 1;
-      }
-
-      const giftedTickerRows = Array.from(giftedMap.values()).map((row: any) => {
-        const ticker = row.ticker;
+      const giftedTickerRows = giftedAgg.map((row: any) => {
+        const ticker = String(row.ticker || "").toUpperCase();
         const known = universeConfig[ticker];
         return {
-          ...row,
           ticker,
+          gift_count: toNum(row.gift_count),
+          total_net_amount: toNum(row.total_net_amount),
+          pending_count: toNum(row.pending_count),
           assetType: known?.type || "Stock",
           knownName: known?.name || ticker,
         };
-      }).sort((a: any, b: any) => Number(b.total_net_amount) - Number(a.total_net_amount));
+      });
 
-      const strategyMap = new Map<string, number>();
-      for (const row of rawFunds) {
-        const strategy = String(get(row, "investment_strategy", "investmentStrategy") || "auto_invest").toLowerCase();
-        strategyMap.set(strategy, (strategyMap.get(strategy) || 0) + 1);
-      }
-      const strategyRows = Array.from(strategyMap.entries())
-        .map(([strategy, fund_count]) => ({ strategy, fund_count }))
-        .sort((a, b) => b.fund_count - a.fund_count);
+      const executionRows = executionAgg.map((row: any) => ({
+        execution_model: String(row.execution_model || "auto"),
+        gift_count: toNum(row.gift_count),
+        total_net_amount: toNum(row.total_net_amount),
+      }));
 
-      const executionRows = Array.from(executionMap.values())
-        .sort((a: any, b: any) => Number(b.gift_count) - Number(a.gift_count));
+      const strategyRows = strategyAgg.map((row: any) => ({
+        strategy: String(row.strategy || "auto_invest"),
+        fund_count: toNum(row.fund_count),
+      }));
+
+      const recon: any = giftReconRows[0] || {};
+      const fundTotals: any = fundTotalsRows[0] || {};
+      const totalHoldingsValue = holdingsRows.reduce((s, h) => s + toNum(h.total_value), 0);
+      const totalHoldingsCostBasis = holdingsRows.reduce((s, h) => s + toNum(h.total_cost_basis), 0);
+      const totalFundsInvested = toNum(fundTotals.funds_invested);
+      const totalFundsPending = toNum(fundTotals.funds_pending);
+      const giftNetCompleted = toNum(recon.gift_net_completed);
+      const giftGrossCompleted = toNum(recon.gift_gross_completed);
+      const giftNetPending = toNum(recon.gift_net_pending);
 
       const universeRows = Object.entries(universeConfig)
         .map(([ticker, meta]) => ({
@@ -18735,9 +18716,9 @@ export async function registerRoutes(
           pendingDelta: totalFundsPending - giftNetPending,
         },
         diagnostics: {
-          rawHoldingsCount: rawHoldings.length,
-          rawGiftsCount: rawGifts.length,
-          rawFundsCount: rawFunds.length,
+          rawHoldingsCount: holdingsRows.reduce((s, h) => s + toNum(h.positions), 0),
+          rawGiftsCount: executionRows.reduce((s, e) => s + toNum(e.gift_count), 0),
+          rawFundsCount: strategyRows.reduce((s, r) => s + toNum(r.fund_count), 0),
           queryErrorCount: queryErrors.length,
         },
       };
