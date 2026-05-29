@@ -109,7 +109,7 @@ const COMPANY_EXPLAINERS: Record<string, { emoji: string; youngOwner: string; wh
   },
   RBLX: {
     emoji: "🎮",
-    youngOwner: "You own a tiny piece of Roblox. That means you own a tiny piece of every game on Roblox.",
+    youngOwner: "You own a tiny piece of Roblox. That means a tiny piece of the place where all those games get played.",
     whatTheyDo: "Roblox is a platform where millions of kids play and build games every day.",
     whyItMatters: "When more people play on Roblox, the company earns more and can grow.",
   },
