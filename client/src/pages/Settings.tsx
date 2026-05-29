@@ -5524,12 +5524,14 @@ const [editFundName, setEditFundName] = useState("");
                   );
                 })()}
 
-                {/* Gifter reminder schedules — only mentioned when present. */}
+                {/* Gifter recurring — reassure it KEEPS running. It's the
+                    gifter's own commitment on their own card; your plan change
+                    doesn't stop it (only YOUR recurring pauses). */}
                 {cancellationImpact && cancellationImpact.recurringGifts.length > 0 && (
                   <p>
-                    Gift reminders going out to {cancellationImpact.recurringGifts.length === 1
+                    The recurring gifts {cancellationImpact.recurringGifts.length === 1
                       ? cancellationImpact.recurringGifts[0].senderName
-                      : `${cancellationImpact.recurringGifts.length} family members`} pause. They'll stop getting the email nudge.
+                      : `${cancellationImpact.recurringGifts.length} family members`} set up keep running. Those are on their own cards, so your plan change doesn't stop them.
                   </p>
                 )}
 
