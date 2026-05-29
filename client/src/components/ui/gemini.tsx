@@ -644,7 +644,6 @@ export function ProcessingState({
 export function SuccessState({
   message = "Complete!",
   submessage,
-  showSparkles = true,
 }: {
   message?: string;
   submessage?: string;
@@ -683,7 +682,10 @@ export function SuccessState({
             <motion.path d="M5 12l5 5L19 7" />
           </motion.svg>
         </motion.div>
-        {showSparkles && <SparkleBurst active={true} />}
+        {/* SparkleBurst render removed — sparkle iconography/effects banned per
+            feedback_iconography_consistency.md ("never re-introduce"). The
+            spring-animated Check carries the success moment. The SparkleBurst
+            function below is now unrendered dead code, flagged for a dead-code pass. */}
       </div>
       <div className="text-center space-y-1.5">
         <GradientText className="text-lg font-semibold">{message}</GradientText>
