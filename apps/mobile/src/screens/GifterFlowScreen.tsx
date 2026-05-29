@@ -257,7 +257,7 @@ export function GifterFlowScreen({ destination, identifier, onBack, onStartFund 
             {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryBtnText}>Send {childName}'s gift</Text>}
           </Pressable>
           <Text style={styles.legalLine}>
-            Gifts are permanent once sent. Once invested, assets are held by our broker-dealer partner, SIPC-protected up to $500,000 (broker failure, not market loss). Values can go up or down.
+            Gifts are permanent once sent. When investing is live, assets will be held by our broker-dealer partner, SIPC-protected up to $500,000 (broker failure, not market loss). Values can go up or down.
           </Text>
           <Pressable onPress={() => setStep("personalize")} style={styles.secondaryBtn}>
             <Text style={styles.secondaryBtnText}>Back</Text>
