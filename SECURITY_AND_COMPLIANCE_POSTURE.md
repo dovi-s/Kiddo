@@ -39,6 +39,29 @@ almost all in the Expo *mobile build toolchain* (`expo-constants`, `expo-asset`,
 memory disclosure). These are build/dev-time, not the production server attack
 surface. Not urgent, but track them (see B).
 
+## A2. Children's data — the highest-stakes surface (verified 2026-05-29)
+
+Kiddo stores children's PII: first/last name, DOB, SSN (last-4 only), photos,
+video, voice, and the Memory Book. Verified controls:
+- **SSN: last-4 + a collected-at timestamp only — never the full 9 digits at
+  rest** (`/api/funds/:id/recipient-ssn`); collection is audit-logged.
+- **Kid View is PIN-gated** — bcrypt-hashed PINs, checked server-side
+  (`bcrypt.compare`, 401 on mismatch).
+- **A child's fund/gift page is `noindex`** (X-Robots-Tag + meta on both the
+  scraper/og path and the SPA path) — their name can't land in a search index.
+- **`/uploads` hardened** — noindex/noimageindex, no-referrer, CSP sandbox,
+  dotfile-deny, so kids' photos/video/voice aren't crawlable.
+- Fund mutations (incl. SSN) gated to owner/co-admin; viewers blocked.
+
+Gaps (gated — not codeable here):
+- **`/uploads` → signed URLs** — kids' media is still served from
+  public-but-unguessable URLs; the signed-URL flip is built + dormant, gated on
+  Supabase Storage creds. This is the top open child-data item.
+- **Child-PII deletion (Option C)** — decided, partially built, counsel-gated.
+- **COPPA / state children's-privacy** — the parent-provides-it + PIN-gated
+  model narrows COPPA's "collected from a child" trigger, but applicability and
+  obligations are a privacy-counsel call.
+
 ## B. Code-fixable next (no external party needed — do deliberately, with tests)
 
 - **CSRF**: today we rely on `sameSite: lax` (a real baseline that blocks most
