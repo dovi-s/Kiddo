@@ -261,6 +261,20 @@ const MANAGED_STRATEGY_ALLOCATIONS: Record<string, Array<{ ticker: string; name:
   ],
 };
 
+// Canonical managed-mix ETF universe — every ETF that is, or HAS BEEN, part of a
+// managed / custom mix. These are recognized as "managed mix" in the Holdings
+// split REGARDLESS of which preset strategy is currently active. Without this, an
+// ETF dropped from the presets but still HELD by existing funds — e.g. VGT after
+// the 2026-05-28 self-directed pivot removed the tech sleeve — falls through to
+// "Chosen with love," miscategorizing a managed-basket ETF as an individually
+// picked stock. Mirrors the custom-mix ETF universe offered on the marketing +
+// Customize surfaces (VTI/VXUS/BND/VGT/VUG/VYM/SCHD/QQQ). Gifter-picked ETFs are
+// still surfaced as "chosen" via the proportional overlap split, so legacy
+// managed holdings land in the mix while an explicit pick stays a pick.
+const CANONICAL_MANAGED_ETF_TICKERS: readonly string[] = [
+  "VTI", "VXUS", "BND", "VGT", "VUG", "VYM", "SCHD", "QQQ",
+];
+
 const AUTO_INVEST_STOCKS = [
   { symbol: "DIS",   name: "Disney",    price: 106.42, tagline: "The magic factory",          emoji: "🏰" },
   { symbol: "AAPL",  name: "Apple",     price: 214.38, tagline: "Tech they'll grow up with",  emoji: "🍎" },
@@ -2306,6 +2320,10 @@ export default function Dashboard() {
         set.add(t.toUpperCase());
       }
     }
+    // ETFs dropped from the active presets but still held (e.g. VGT after the
+    // self-directed pivot) — this is the "EVER managed" set, so they belong
+    // here, otherwise a legacy managed position reads as an isolated ticker.
+    for (const t of CANONICAL_MANAGED_ETF_TICKERS) set.add(t);
     return set;
   }, [fundStrategy?.customAllocations]);
 
@@ -6986,6 +7004,12 @@ export default function Dashboard() {
                     managedStrategyTickers.add(t.toUpperCase());
                   }
                 }
+                // Plus the canonical managed-ETF universe so an ETF dropped from
+                // the active presets (e.g. VGT after the self-directed pivot) but
+                // still HELD is recognized as managed, not orphaned into "Chosen
+                // with love." A gifter-picked managed ETF still surfaces as chosen
+                // via the proportional overlap split below.
+                for (const t of CANONICAL_MANAGED_ETF_TICKERS) managedStrategyTickers.add(t);
                 const chosenAlsoManagedTickers = new Set(Array.from(chosenTickers).filter(t => managedStrategyTickers.has(t)));
 
                 // Gifter cost basis per chosen ticker (for splitting overlap positions)
