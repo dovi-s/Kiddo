@@ -146,7 +146,7 @@ const faqItems = [
     id: "transfer-out",
     category: "Account Basics",
     question: "Can I move my child's fund to another brokerage?",
-    answer: "Yes. Custodial accounts can be transferred. Kiddo doesn't charge a fee to leave. If the receiving brokerage charges an account-transfer fee, we cover it. Some brokerages accept in-kind transfers (the actual shares move over without selling); some require liquidation first (we sell, settle, then send cash). Which path applies depends on the receiving brokerage and how they handle UTMAs. If liquidation is required, the sale realizes capital gains under your child's tax ID. If unrealized gains exceed roughly $2,600 in a year, kiddie-tax rules apply. A CPA can help you sequence a large transfer across tax years to minimize the bill. Email transfers@kiddofund.com and support will walk you through the specific path for your fund.",
+    answer: "Yes. Custodial accounts can be transferred. Kiddo doesn't charge a fee to leave. If the receiving brokerage charges an account-transfer fee, we cover it. Some brokerages accept in-kind transfers (the actual shares move over without selling); some require liquidation first (we sell, settle, then send cash). Which path applies depends on the receiving brokerage and how they handle UTMAs. If liquidation is required, the sale realizes capital gains under your child's tax ID. If realized gains exceed roughly $2,700 in a year, kiddie-tax rules apply. A CPA can help you sequence a large transfer across tax years to minimize the bill. Email transfers@kiddofund.com and support will walk you through the specific path for your fund.",
   },
   {
     id: "custodian-death",
