@@ -6605,7 +6605,7 @@ export default function Dashboard() {
               <div className="kiddo-card overflow-hidden p-0">
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[hsl(var(--kiddo-border)/0.65)] px-4 pt-3">
                   <h3 className="text-sm font-bold text-muted-foreground">
-                    {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Fund growth"}
+                    {isOwnerMode ? "Your growth" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s growth` : "Fund growth"}
                   </h3>
                   <div className="flex flex-wrap items-center gap-1">
                     {(["1W", "1M", "YTD", "1Y", "5Y", "ALL"] as const).map((r) => (
