@@ -131,7 +131,6 @@ const plans: readonly Plan[] = [
       "Add your own photos, videos, and voice memos to Memory Book entries",
       "Co-parent access. Invite a partner or guardian",
       "3 active occasions at a time (Free is 1)",
-      "Annual contribution summary for tax records",
       "Priority support",
     ],
   },
