@@ -5857,7 +5857,7 @@ export default function Dashboard() {
                   <div className="min-w-0 flex-1">
                     <p className="font-heading text-base font-semibold text-foreground">Start one for someone you love</p>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      Someone started this for you before you could ask. When there's a kid whose future you want to show up for, you already know how it goes: quietly, early, and for years.
+                      Someone started this for you before you could ask. When there's a kid you want to show up for, you already know how: quietly, early, for years.
                     </p>
                     <Link
                       href="/get-started"
