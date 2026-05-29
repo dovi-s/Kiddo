@@ -666,15 +666,16 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
   // localStorage (markAllRead etc.) it also dispatches the read-state
   // event; the subscriber re-derives, every consumer re-renders.
   const { lastReadAt, readIds, unreadIds } = useNotificationReadState();
-  // Open action items — server-derived, always cross-fund. Unlike the
-  // informational notifications below (which scope to the active fund
-  // on fund-scoped pages), open todos float above the scope filter:
-  // a pending KYC on Liam's fund matters even when the parent is
-  // parked on Emma's Dashboard, because the parent is the actor.
-  // This also keeps the panel's count consistent with the bell badge,
-  // which already counts action items cross-fund regardless of page.
+  // Open action items — server-derived todos (KYC, SSN, payment failed,
+  // large-gift hold, fund setup gates). Scoped to the SAME fundFilter as the
+  // informational notifications below: per-fund on fund-scoped pages
+  // (Dashboard / Memory / Activity), all funds on non-fund-scoped pages
+  // (/account, /funds). Per user direction 2026-05-28 — a parent parked on
+  // Emma's page should NOT see another kid's SSN todo in Emma's panel; those
+  // surface when they switch to that fund, or on the household-glance /funds
+  // + /account views where fundFilter is "all" (the cross-fund safety view).
+  // The scoped list + count are derived below, once fundFilter is known.
   const { items: actionItems } = useActionItems();
-  const actionItemCount = actionItems.length;
   // Notifications panel follows the GLOBAL active fund on fund-scoped
   // pages (Dashboard, Memory, Activity, etc.) and switches to ALL
   // funds on non-fund-scoped pages (/funds, /account). No in-panel
@@ -699,6 +700,14 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
   // each render so navigating between fund-scoped and non-fund-scoped
   // pages updates the panel without an explicit state set.
   const fundFilter = shouldSuppressFundChrome(location) ? "all" : trackedActiveFundId;
+
+  // Scope action items to fundFilter — identical idiom to the activities
+  // filter below, so the "Needs your attention" cards and the informational
+  // feed agree on scope (per-fund on fund-scoped pages, all funds on
+  // /account + /funds). Fixes the leak where another fund's SSN/KYC todo
+  // showed on Emma's panel under an "Emma's fund" header.
+  const scopedActionItems = actionItems.filter((a) => fundFilter === "all" || a.fundId === fundFilter);
+  const actionItemCount = scopedActionItems.length;
 
   const { data: activitiesRaw = [] } = useActivities(40, isAuthenticated);
   // Apply gift-pair dedupe before any downstream rendering / filtering.
@@ -1037,12 +1046,11 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                       const name = capFirst(f.recipientFirstName) || f.name || "Fund";
                       return `${name}'s fund`;
                     })();
-                    // Roll action items into the summary. They're
-                    // cross-fund always, so the count can be > 0 even
-                    // when the scope label says "Emma's fund" — that's
-                    // intentional. The "needs you" half makes it clear
-                    // that those rows are user-scoped to-dos, not
-                    // Emma-specific gifts.
+                    // Roll action items into the summary. Both the action-item
+                    // count and the activities below are scoped to fundFilter,
+                    // so "1 to do" now agrees with the "Emma's fund" label
+                    // (on /account + /funds, fundFilter is "all" and both go
+                    // cross-fund together).
                     if (unreadCount === 0 && actionItemCount === 0) {
                       return totalReadCount > 0
                         ? `All caught up · ${scopeLabel}`
@@ -1112,15 +1120,12 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
             >
               {/* Needs-your-attention section — server-derived open
                   action items (KYC, SSN, payment failed, large-gift
-                  hold, fund setup gates). Always cross-fund regardless
-                  of which kid's page the parent is parked on, because
-                  the parent IS the actor: a pending KYC on Liam's
-                  fund matters even when looking at Emma's Dashboard.
-                  Each card shows the fund label inline so the parent
-                  knows whose todo it is. Compact variant fits the
-                  panel's narrow column. Tapping a card closes the
-                  panel and routes to the fix surface (handled inside
-                  ActionItemCard). */}
+                  hold, fund setup gates), scoped to fundFilter like the
+                  feed below: per-fund on fund-scoped pages, all funds on
+                  /account + /funds. Each card still shows the fund label
+                  inline. Compact variant fits the panel's narrow column.
+                  Tapping a card closes the panel and routes to the fix
+                  surface (handled inside ActionItemCard). */}
               {actionItemCount > 0 && (
                 <div
                   style={{
@@ -1130,7 +1135,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                   }}
                 >
                   <ActionItemList
-                    items={actionItems}
+                    items={scopedActionItems}
                     compact
                     heading="Needs your attention"
                   />
@@ -1722,7 +1727,15 @@ export function useNotificationUnreadCount(scope: "active" | "all" = "active"): 
     enabled: isAuthenticated,
     staleTime: 60_000,
   });
-  const actionItemCount = actionItemsResponse?.count ?? 0;
+  // Scope action items to the active fund when scope is "active" (mirrors this
+  // hook's activities filter above + the panel's fundFilter); count all funds
+  // on "all" pages (/account, /funds). Action items always carry a fundId, so
+  // this is a clean equality. Without it the badge counted another fund's todo
+  // on a fund-scoped page while the (scoped) panel showed nothing. 2026-05-28.
+  const actionItemCount =
+    scope === "active" && activeFundId
+      ? (actionItemsResponse?.items ?? []).filter((a: any) => a.fundId === activeFundId).length
+      : (actionItemsResponse?.count ?? 0);
   // Shared subscriber — re-derives whenever any consumer (panel,
   // another tab) writes to localStorage. Without this, the badge
   // stayed stale until an unrelated re-render shook it loose.
@@ -1850,7 +1863,15 @@ export function useBellUnreadCount(scope: "active" | "all" = "active"): number {
     enabled: isAuthenticated,
     staleTime: 60_000,
   });
-  const actionItemCount = actionItemsResponse?.count ?? 0;
+  // Scope action items to the active fund when scope is "active" (mirrors this
+  // hook's activities filter above + the panel's fundFilter); count all funds
+  // on "all" pages (/account, /funds). Action items always carry a fundId, so
+  // this is a clean equality. Without it the badge counted another fund's todo
+  // on a fund-scoped page while the (scoped) panel showed nothing. 2026-05-28.
+  const actionItemCount =
+    scope === "active" && activeFundId
+      ? (actionItemsResponse?.items ?? []).filter((a: any) => a.fundId === activeFundId).length
+      : (actionItemsResponse?.count ?? 0);
 
   const { lastReadAt, readIds, unreadIds } = useNotificationReadState();
   return useMemo(() => {
