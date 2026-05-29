@@ -386,7 +386,7 @@ function FundDetailsSnapshot({
                 ))}
               </div>
             ) : topHoldings.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">No holdings yet. New gifts will auto-invest based on strategy.</p>
+              <p className="text-[11px] text-muted-foreground">No holdings yet. Kiddo invests new gifts automatically based on your strategy.</p>
             ) : (
               <div className="space-y-1">
                 {topHoldings.map((h: any) => (
@@ -997,7 +997,7 @@ function LinkBankSheet({ open, onClose, onSuccess }: {
               <Building2 size={24} className="text-primary" />
             </div>
             <h2 className="font-heading text-xl font-semibold text-foreground">Connect your bank</h2>
-            <p className="text-sm text-muted-foreground">Used for auto-invest, withdrawals, and keeping Emma's fund moving. Kiddo never sees your login credentials.</p>
+            <p className="text-sm text-muted-foreground">Used for recurring investments, withdrawals, and keeping your fund moving. Kiddo never sees your login credentials.</p>
           </div>
 
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3">
@@ -1382,7 +1382,7 @@ function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess
           className={`w-full rounded-2xl border p-4 text-left transition-all ${defaultMode === "managed" ? "border-primary bg-primary/5" : "border-[hsl(var(--kiddo-border))] bg-card hover:border-[hsl(var(--kiddo-border))]/80"}`}
           data-testid="option-gifting-default-managed"
         >
-          <p className="text-sm font-medium text-foreground">Managed auto-invest</p>
+          <p className="text-sm font-medium text-foreground">Managed mix</p>
           <p className="mt-0.5 text-xs text-muted-foreground">Use your fund's investing style, like Growth Mix or Steady & Balanced.</p>
         </button>
         <button
@@ -5406,7 +5406,7 @@ const [editFundName, setEditFundName] = useState("");
                         <p className="text-[11px] text-muted-foreground leading-snug">
                           {editRecipientState
                             ? `UTMA control transfers to ${childFirst || "them"} at age ${getMajorityAgeForState(editRecipientState)} in ${US_STATES.find((s) => s.code === editRecipientState)?.name || editRecipientState}.`
-                            : "Sets the age of majority for the handoff. Without it we use the federal default of 18, which is wrong in states like PA, NY, and TX (21)."}
+                            : "Sets the age of majority for the handoff. Without it we use 18 (the most common), which is wrong in states like PA, NY, and TX (21)."}
                         </p>
                       </div>
                     </>

@@ -277,7 +277,7 @@ export default function CalculatorAt18() {
                     className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
                     data-testid="select-state-majority"
                   >
-                    <option value="">— Federal default (18) —</option>
+                    <option value="">— Most states (18) —</option>
                     {US_STATES.map((s) => {
                       const age = getMajorityAgeForState(s.code);
                       return (

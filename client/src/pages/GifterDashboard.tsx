@@ -521,7 +521,7 @@ export default function GifterDashboard() {
             <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8">
               <div className="flex items-center gap-2 text-primary">
                 <Lock className="h-4 w-4" />
-                <p className="text-sm font-medium">Free forever</p>
+                <p className="text-sm font-medium">Free gifter account</p>
               </div>
               <h2 className="mt-3 font-heading text-2xl font-semibold text-foreground">
                 {mode === "save" ? "Create your gifter account to save this fund" : "Sign in or create your gifter account"}

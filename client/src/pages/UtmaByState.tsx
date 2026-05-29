@@ -63,10 +63,10 @@ export default function UtmaByState() {
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-muted-foreground">
               {isExtended ? (
                 <>
-                  That's {age - 18} {age - 18 === 1 ? "year" : "years"} longer than the federal default of 18, which means more time for the fund to compound before the child takes legal control.
+                  That's {age - 18} {age - 18 === 1 ? "year" : "years"} longer than the age of 18 used in most states, which means more time for the fund to compound before the child takes legal control.
                 </>
               ) : (
-                <>That's the federal default. The custodian (usually a parent) manages the account until the child turns 18; on that birthday, control transfers and the kid decides what to do.</>
+                <>That's the most common age of majority. The custodian (usually a parent) manages the account until the child turns 18; on that birthday, control transfers and the kid decides what to do.</>
               )}
             </p>
           </motion.div>

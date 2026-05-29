@@ -80,7 +80,7 @@ const COMPARE_ROWS: CompareRow[] = [
   },
   {
     dimension: "What happens at 18",
-    trump: "Becomes a retirement IRA — locked until 59½ (10% penalty before)",
+    trump: "Becomes a retirement IRA — 10% penalty on withdrawals before 59½",
     kiddo: "Fully theirs — liquid, no restrictions",
     winner: "kiddo",
   },
