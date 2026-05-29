@@ -15601,6 +15601,17 @@ export async function registerRoutes(
       const [record] = await db.select().from(parentContributions).where(eq(parentContributions.id, req.params.id));
       if (!record) return res.status(404).json({ error: 'Plan not found' });
       if (record.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+      // Post-handoff lockout. These record-scoped routes bypass the
+      // /api/funds/:fundId namespace middleware (requireFundMutator), so a
+      // former parent — who still owns this OLD record — could otherwise act
+      // on a recurring plan whose fund transferred to the kid at majority.
+      // Refuse when the fund's current owner is no longer the contributor.
+      // (The ownership sweep also re-pauses such rows; this closes the
+      // direct-API path too.) Per the previous_owner read-only model.
+      const recordFund = await storage.getFund(record.fundId);
+      if (recordFund && recordFund.userId !== record.userId) {
+        return res.status(403).json({ error: 'fund_transferred', message: "This fund is the recipient's now. You can no longer change this recurring plan." });
+      }
 
       const { status, amount, frequency, bankAccountId, executionModel, selectedTicker, note } = req.body;
       const updates: any = {};
@@ -15723,6 +15734,12 @@ export async function registerRoutes(
       const [record] = await db.select().from(parentContributions).where(eq(parentContributions.id, req.params.id));
       if (!record) return res.status(404).json({ error: 'Plan not found' });
       if (record.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+      // Post-handoff lockout (see PATCH above): a former parent can't delete a
+      // plan tied to a fund that's transferred to the recipient.
+      const recordFund = await storage.getFund(record.fundId);
+      if (recordFund && recordFund.userId !== record.userId) {
+        return res.status(403).json({ error: 'fund_transferred', message: "This fund is the recipient's now. You can no longer change this recurring plan." });
+      }
 
       await storage.deleteParentContribution(req.params.id);
       res.json({ ok: true });
@@ -15760,6 +15777,14 @@ export async function registerRoutes(
       if (await isDemoFund(record.fundId)) {
         const origin = req.headers.origin || `${req.protocol}://${req.headers.host}`;
         return res.json(demoMockCheckoutResponse(`${origin}/dashboard?contribution=success&demo=1`));
+      }
+
+      // Post-handoff lockout (see PATCH above): if this record's fund has
+      // transferred to the recipient, the former parent can't push a one-time
+      // charge through their old plan. Closes the direct-API path the
+      // namespace write guard would otherwise cover.
+      if (fund.userId !== record.userId) {
+        return res.status(403).json({ error: 'fund_transferred', message: "This fund is the recipient's now. You can no longer contribute through this plan." });
       }
 
       const amount = parseFloat(record.amount);
