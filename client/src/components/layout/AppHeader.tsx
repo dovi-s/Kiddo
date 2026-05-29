@@ -309,19 +309,17 @@ export function AppHeader() {
       >
         {/* Left: page title + fund context */}
         <div ref={fundPickerRef} className="relative flex min-w-0 flex-1 items-center gap-2">
-          {/* Back arrow on pages that hide the primary nav (/account)
-              AND on fund sub-pages (/age-18-plan, /projection,
-              /tax-documents).
-              MOBILE ONLY (md:hidden) — desktop has the more prominent
-              sidebar Back button, and showing both would be two back
-              affordances pointing at the same destination on the
-              same screen. macOS Settings convention: back lives in
-              the sidebar on desktop. iOS Settings convention: back
-              lives in the top chrome on mobile. Each surface picks
-              the convention that matches its breakpoint.
-              Target + aria-label are context-aware: if the user came
-              from Memory Book, this returns to Memory Book. See
-              client/src/lib/last-location.ts. */}
+          {/* Context-aware Back arrow (target + aria-label come from the last
+              location — Memory Book → here → Back lands on Memory Book; see
+              client/src/lib/last-location.ts).
+              Visibility by surface (fixed 2026-05-28):
+                - FUND SUB-PAGES (/age-18-plan, /projection, /tax-documents):
+                  show on BOTH mobile and desktop. The desktop sidebar's Back is
+                  gated to /account (isUserScoped) and never covered these, so
+                  desktop had NO back affordance at all — this is the only one.
+                - /account (hideNav, not a fund sub-page): MOBILE ONLY. On desktop
+                  the sidebar renders its own Back, so this stays md:hidden to
+                  avoid two affordances pointing at the same place. */}
           {showBackArrow && (
             <button
               type="button"
@@ -329,7 +327,7 @@ export function AppHeader() {
                 haptic("selection");
                 setLocation(backHref);
               }}
-              className="md:hidden -ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-[hsl(var(--kiddo-cream))] transition-colors"
+              className={`${isSubPage ? "" : "md:hidden"} -ml-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-foreground hover:bg-[hsl(var(--kiddo-cream))] transition-colors`}
               data-testid="header-back-to-home"
               aria-label={backLabel}
             >
