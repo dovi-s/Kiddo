@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { ArrowRight, Bell, Cake, Sparkles } from "lucide-react";
+import { ArrowRight, Bell, Cake, PartyPopper } from "lucide-react";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ export default function PersonalFunds() {
               body: "Share one link and let friends send stock instead of another forgettable thing.",
             },
             {
-              icon: Sparkles,
+              icon: PartyPopper,
               title: "Any occasion, not just kids",
               body: "Graduation, moving, a sabbatical, or a big life milestone. Same gifting loop, different moment.",
             },

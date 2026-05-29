@@ -19,7 +19,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link, useSearch } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Sparkles, Lock, Users, Gift, Heart } from "lucide-react";
+import { ArrowRight, Check, Crown, Rocket, Lock, Users, Gift, Heart } from "lucide-react";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -219,7 +219,7 @@ export default function FoundingMembers() {
                 className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-foreground"
                 data-testid="text-founding-spots-remaining"
               >
-                <Sparkles size={14} className="text-primary" />
+                <Crown size={14} className="text-primary" />
                 <span>
                   <span className="tabular-nums font-semibold">{countState!.spotsRemaining.toLocaleString()}</span> of {countState!.cap.toLocaleString()} spots remaining
                 </span>
@@ -291,7 +291,7 @@ export default function FoundingMembers() {
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <Sparkles size={16} className="mt-1 shrink-0 text-primary" />
+                  <Rocket size={16} className="mt-1 shrink-0 text-primary" />
                   <span>
                     Try the beta features when we send them. We won't ship things to you we wouldn't ship to our own kids' funds.
                   </span>

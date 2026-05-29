@@ -16,7 +16,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Check, ChevronRight, Lock } from "lucide-react";
+import { Crown, Check, ChevronRight, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haptic } from "@/lib/haptics";
 
@@ -94,7 +94,7 @@ export function SponsorPlusCard({
           data-testid="sponsor-plus-already-covered"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Sparkles size={16} strokeWidth={1.8} />
+            <Crown size={16} strokeWidth={1.8} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">
@@ -164,7 +164,7 @@ export function SponsorPlusCard({
       <div className="rounded-2xl border border-[hsl(var(--kiddo-gold))]/30 bg-[hsl(var(--kiddo-gold))]/8 p-5">
         <div className="flex items-start gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-gold))] text-white">
-            <Sparkles size={16} strokeWidth={1.8} />
+            <Crown size={16} strokeWidth={1.8} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">

@@ -11,7 +11,7 @@ import {
   Smartphone,
   CreditCard,
   QrCode,
-  Sparkles,
+  Sprout,
   X,
   ChevronDown,
   Calendar,
@@ -363,7 +363,7 @@ export function ShareKit({
                       <p className="text-primary-foreground/60 text-xs uppercase tracking-wider mb-1">Gift to</p>
                       <p className="text-primary-foreground text-lg font-semibold">{recipientName}'s Fund</p>
                     </div>
-                    <Sparkles className="w-6 h-6 text-[hsl(var(--kora-gold))]" />
+                    <Sprout className="w-6 h-6 text-[hsl(var(--kora-gold))]" />
                   </div>
                   
                   <div className="flex items-end justify-between">

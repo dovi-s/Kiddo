@@ -18,7 +18,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { usePageSeo } from "@/lib/seo";
 import { haptic } from "@/lib/haptics";
-import { ArrowRight, Check, Wallet, TrendingUp, Sparkles, RotateCcw } from "lucide-react";
+import { ArrowRight, Check, Wallet, TrendingUp, Eye, RotateCcw } from "lucide-react";
 
 type Step = "intro" | "send" | "sent" | "claim" | "grow" | "convert";
 type SendMode = "cash" | "stock";
@@ -51,7 +51,7 @@ const fade = {
 function PreviewRibbon() {
   return (
     <div className="mx-auto mb-6 flex max-w-xl items-center justify-center gap-2 rounded-full border border-[hsl(var(--kiddo-gold)/0.4)] bg-[hsl(var(--kiddo-gold)/0.12)] px-4 py-2 text-center">
-      <Sparkles className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--kiddo-gold-ink))]" />
+      <Eye className="h-3.5 w-3.5 shrink-0 text-[hsl(var(--kiddo-gold-ink))]" />
       <span className="text-xs font-semibold text-[hsl(var(--kiddo-gold-ink))]">
         Concept preview. Not a live feature, and no real money moves here.
       </span>

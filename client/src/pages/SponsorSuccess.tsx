@@ -8,7 +8,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Crown } from "lucide-react";
 import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -69,7 +69,7 @@ export default function SponsorSuccess() {
               : `${childName}'s family was just emailed that it was you. Kiddo ${tierLabel} is now active on their fund for the next 12 months. That unlocks recurring contributions for everyone, custom fund mix, photo and voice memos in the Memory Book, and co-parent access.`}
           </p>
           <div className="mx-auto mt-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm font-medium text-foreground">
-            <Sparkles size={14} className="text-primary" />
+            <Crown size={14} className="text-primary" />
             <span>{priceLabel} · one-time · never auto-renews</span>
           </div>
 

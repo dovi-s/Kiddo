@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Gift, TrendingUp, Sparkles } from "lucide-react";
+import { Gift, TrendingUp, Sprout } from "lucide-react";
 
 export interface Contributor {
   id: string;
@@ -183,7 +183,7 @@ export function GiftPulse({ amount }: { amount: number }) {
         }}
       />
       <div className="relative flex items-center gap-2 px-4 py-2 bg-success rounded-full text-success-foreground text-sm font-medium shadow-lg shadow-success/30">
-        <Sparkles className="w-4 h-4" />
+        <Sprout className="w-4 h-4" />
         <span>+${amount}</span>
       </div>
     </motion.div>
@@ -313,7 +313,7 @@ export function InvestmentReveal({
               transition={{ delay: 0.5 }}
               className="mt-6 pt-4 border-t border-primary-foreground/10 flex items-center justify-center gap-2 text-primary-foreground/40 text-xs"
             >
-              <Sparkles className="w-3 h-3" />
+              <Sprout className="w-3 h-3" />
               <span>Now growing in their fund</span>
             </motion.div>
           </motion.div>

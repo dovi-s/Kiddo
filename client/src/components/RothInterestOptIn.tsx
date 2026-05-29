@@ -30,7 +30,7 @@
 //     button — the toggle IS the action.
 
 import { useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Bell } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 
 export type RothInterestOptInProps = {
@@ -94,7 +94,7 @@ export function RothInterestOptIn({ childName, className }: RothInterestOptInPro
               optedIn ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
             }`}
           >
-            {optedIn ? <Check size={16} strokeWidth={2.5} /> : <Sparkles size={16} strokeWidth={1.8} />}
+            {optedIn ? <Check size={16} strokeWidth={2.5} /> : <Bell size={16} strokeWidth={1.8} />}
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">
