@@ -146,8 +146,10 @@ const ACCOUNTS = [
 ];
 
 // Three Dunphy kids. Ages locked relative to today so the demo always
-// reads "Haley is 20 (~30 days from CA majority age 21, for the handoff
-// demo), Alex is 15, Luke is 13" regardless of when the seed is run.
+// reads "Haley is 22 (a year past CA majority age 21 — the graduated
+// adult-account demo), Alex is ~30 days from 21 (the approaching-handoff
+// demo), Luke is 13" regardless of when the seed is run. Haley sits a
+// clear year above Alex so the siblings don't read as same-age twins.
 // Birthdates derived as `today - years - months_offset`.
 // Per DUNPHY_DEMO_SPEC.md locked rule: Dunphys are LA-based →
 // California UTMA majority age = 21. Set on each fund.
@@ -164,12 +166,12 @@ const KIDS = [
     lastName: "Dunphy",
     pronoun: "she",
     majorityAge: 21,
-    ageYears: 21, // PAST CA majority (21) — the graduated adult-account demo
-    birthdate: birthdateForAge(21, 4), // ~21y4m, comfortably past majority
+    ageYears: 22, // a year PAST CA majority (21) — graduated adult-account demo; sits clearly above Alex so they don't read as twins
+    birthdate: birthdateForAge(22, 4), // ~22y4m, a year past the handoff
     state: "CA",
     slug: "haley-dunphy",
     strategy: "conservative",
-    description: "Haley turned 21. The fund is hers now. This is what graduating looks like.",
+    description: "Haley is 22, a year past majority. The fund is hers now — this is what graduating looks like.",
     // Recurring ended at the handoff: the parent's auto-invest stops once
     // ownership transfers. The fund still carries its full realized history
     // (see giftsForKid / seedKidFund); Haley controls it from here.
@@ -256,7 +258,7 @@ const KIDS = [
 //   • Gloria (grandma) — annual DIS birthday with a voice memo
 //   • Mitchell (uncle) — recurring annual AAPL birthday gift
 //   • Cameron (uncle)  — annual DIS "love-mark" with a rotating quip
-//   • Manny (cousin)   — small RBLX gift (recent only — Manny is young)
+//   • Manny (step-uncle, young) — small RBLX gift (recent only — Manny is young)
 //   • Phil (dad)       — quarterly add note (the "I show up" parent)
 //   • Claire (mom)     — occasional add note
 //

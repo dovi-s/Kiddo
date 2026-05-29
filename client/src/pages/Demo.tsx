@@ -38,7 +38,7 @@ const ACCOUNTS: DemoAccount[] = [
     email: "phil@dunphyfamily.com",
     display: "Phil Dunphy",
     role: "parent",
-    oneLiner: "Parent dashboard, Family tier. Three kids across the whole arc: Luke growing up, Alex weeks from the handoff, Haley already graduated to her own account. Start here.",
+    oneLiner: "Parent dashboard, Family tier. All three kids' funds from one seat.",
   },
   {
     email: "claire@dunphyfamily.com",
@@ -74,13 +74,13 @@ const ACCOUNTS: DemoAccount[] = [
     email: "manny@dunphyfamily.com",
     display: "Manny Delgado",
     role: "gifter",
-    oneLiner: "Cousin. Small gift in Roblox stock. The young-gifter angle.",
+    oneLiner: "Step-uncle, close to the kids' age. Small gift in Roblox stock. The young-gifter angle.",
   },
   {
     email: "haley@dunphyfamily.com",
     display: "Haley Dunphy",
     role: "graduate",
-    oneLiner: "Age 21, graduated. The fund is hers now. This is the real adult account after the handoff: the same fund, self-directed, with the whole Memory Book unlocked.",
+    oneLiner: "Graduated to her own account. The fund is fully hers now, the real post-handoff adult experience.",
   },
 ];
 
@@ -182,10 +182,13 @@ export default function Demo() {
           </div>
 
           {/* Featured walkthrough — drops the visitor straight on
-              Haley's Age 18 Plan (the centerpiece slider + Phil's
-              sealed letter + the at-21 handoff countdown). Saves 3
-              navigation clicks vs the standard "log in as Phil →
-              dashboard → age18-plan → switch funds" path. Sits above
+              Alex's handoff plan (the /age-18-plan page): the
+              centerpiece slider + Phil's sealed letter + the at-21
+              handoff countdown. Saves 3 navigation clicks vs the
+              standard "log in as Phil → dashboard → age-18-plan →
+              switch funds" path. (Haley, the older sister, is already
+              PAST majority — her fund is the graduated adult-account
+              demo, reachable from the dashboard.) Sits above
               the per-account login grid so the first-time visitor
               sees the highest-leverage demo surface as the default
               call to action; the per-account grid stays for visitors
@@ -203,7 +206,7 @@ export default function Demo() {
                   Alex is weeks from 21.
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  The full handoff page: the centerpiece projection slider, Phil's sealed letter, years of voice memos from Gloria, and a fund built across her whole childhood. Land here first to see what Kiddo is for. (Her big sister Haley already turned 21; log in as Haley below to step into the adult account after the handoff.)
+                  The full handoff page: the centerpiece projection slider, Phil's sealed letter, years of voice memos from Gloria, and a fund built across her whole childhood. Land here first to see what Kiddo is for. (Her big sister Haley already graduated a year ago; log in as Haley below to step into the adult account after the handoff.)
                 </p>
               </div>
               <button
@@ -250,7 +253,7 @@ export default function Demo() {
           <section className="mx-auto mt-10 grid max-w-4xl gap-4">
             <h2 className="font-heading text-lg font-semibold text-foreground">Or step into the adult account</h2>
             <p className="text-sm text-muted-foreground">
-              Haley turned 21, so her fund transferred to her. Log in as Haley to step into the real adult account after the handoff: the same fund, now self-directed and fully hers, with the whole Memory Book unlocked. From Phil's dashboard you also see it as a fund he can no longer touch, which is the other half of the moment.
+              Haley crossed majority a year ago, so her fund transferred to her. Log in as Haley to step into the real adult account after the handoff: the same fund, now self-directed and fully hers, with the whole Memory Book unlocked. From Phil's dashboard you also see it as a fund he can no longer touch. That's the other half of the moment.
             </p>
             {ACCOUNTS.filter((a) => a.role === "graduate").map((account) => (
               <button
