@@ -398,13 +398,13 @@ export default function Age18() {
                 <h3 className="font-heading text-2xl font-semibold text-foreground">Here is something most people do not know.</h3>
                 <div className="mt-4 space-y-4 text-sm leading-7 text-muted-foreground md:text-base md:leading-8">
                   <p>
-                    The account becomes more tax-efficient at 18. Not less.
+                    Over time, the account becomes more tax-efficient, not less.
                   </p>
                   <p>
-                    When Emma takes ownership, future gains are taxed at her rate. For most 18-year-olds with modest income, the long-term capital gains rate is 0% on gains up to approximately $47,000.
+                    When Emma takes ownership, future gains are taxed to her, not you. The kiddie tax can still apply while she's under 19 (or a full-time student under 24), taxing larger gains at your rate; once it no longer does, a low-income young adult's long-term capital gains can be taxed as low as 0%.
                   </p>
                   <p className="font-medium text-foreground">
-                    $9,000 in gifts. Potentially $424,891 by retirement. Zero capital gains tax on a significant portion of it.
+                    From $9,000 in gifts to potentially $424,891 by retirement — and if her income stays modest, much of that gain can be taxed at 0%.
                   </p>
                   <p className="text-sm">
                     Consult a tax professional about your specific situation. Kiddo does not provide tax advice.
