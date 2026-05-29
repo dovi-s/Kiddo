@@ -795,20 +795,27 @@ export default function Home() {
               </h2>
             </FadeIn>
             <FadeIn delay={0.08} className="mx-auto max-w-5xl overflow-hidden rounded-2xl border border-border bg-card shadow-premium-sm">
-              <div className="grid grid-cols-4 border-b border-border bg-muted/20 text-sm font-medium text-foreground">
-                <div className="p-4"></div>
-                <div className="p-4">Savings account</div>
-                <div className="p-4">529 plan</div>
-                <div className="p-4">Kiddo</div>
-              </div>
-              {comparisonRows.map((row) => (
-                <div key={row.label} className="grid grid-cols-4 border-b border-border text-sm last:border-b-0">
-                  <div className="p-4 font-medium text-foreground">{row.label}</div>
-                  <div className="p-4 text-muted-foreground">{row.savings}</div>
-                  <div className="p-4 text-muted-foreground">{row.plan529}</div>
-                  <div className="p-4 text-muted-foreground">{row.kora}</div>
+              {/* Horizontal scroll on phones so the 4-column comparison stays
+                  readable instead of crushing to ~90px columns. min-width keeps
+                  each column legible; on desktop it fits within max-w-5xl. */}
+              <div className="overflow-x-auto">
+                <div className="min-w-[600px]">
+                  <div className="grid grid-cols-4 border-b border-border bg-muted/20 text-sm font-medium text-foreground">
+                    <div className="p-4"></div>
+                    <div className="p-4">Savings account</div>
+                    <div className="p-4">529 plan</div>
+                    <div className="p-4">Kiddo</div>
+                  </div>
+                  {comparisonRows.map((row) => (
+                    <div key={row.label} className="grid grid-cols-4 border-b border-border text-sm last:border-b-0">
+                      <div className="p-4 font-medium text-foreground">{row.label}</div>
+                      <div className="p-4 text-muted-foreground">{row.savings}</div>
+                      <div className="p-4 text-muted-foreground">{row.plan529}</div>
+                      <div className="p-4 text-muted-foreground">{row.kora}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </FadeIn>
             <FadeIn delay={0.12} className="mt-6 text-center">
               <Link href="/compare" className="text-sm font-medium text-primary hover:underline">

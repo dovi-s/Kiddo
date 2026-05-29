@@ -679,18 +679,24 @@ function ComparisonDetail({ page }: { page: ComparisonPage }) {
             <div className="border-b border-border bg-muted/30 px-6 py-5">
               <h2 className="font-heading text-2xl font-semibold text-foreground">{page.tableTitle}</h2>
             </div>
-            <div className="grid grid-cols-3 border-b border-border bg-muted/20 text-sm font-medium text-foreground">
-              <div className="px-5 py-4"></div>
-              <div className="px-5 py-4">{page.competitorLabel}</div>
-              <div className="px-5 py-4">Kiddo</div>
-            </div>
-            {page.comparisonRows.map((row) => (
-              <div key={row.label} className="grid grid-cols-3 border-b border-border text-sm last:border-b-0">
-                <div className="px-5 py-4 font-medium text-foreground">{row.label}</div>
-                <div className="px-5 py-4 text-muted-foreground">{row.competitor}</div>
-                <div className="px-5 py-4 text-muted-foreground">{row.kora}</div>
+            {/* Horizontal scroll on phones so the 3 columns keep enough width
+                to read the sentence-length cells; on desktop it fits the card. */}
+            <div className="overflow-x-auto">
+              <div className="min-w-[560px]">
+                <div className="grid grid-cols-3 border-b border-border bg-muted/20 text-sm font-medium text-foreground">
+                  <div className="px-5 py-4"></div>
+                  <div className="px-5 py-4">{page.competitorLabel}</div>
+                  <div className="px-5 py-4">Kiddo</div>
+                </div>
+                {page.comparisonRows.map((row) => (
+                  <div key={row.label} className="grid grid-cols-3 border-b border-border text-sm last:border-b-0">
+                    <div className="px-5 py-4 font-medium text-foreground">{row.label}</div>
+                    <div className="px-5 py-4 text-muted-foreground">{row.competitor}</div>
+                    <div className="px-5 py-4 text-muted-foreground">{row.kora}</div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </FadeIn>
         </div>
       </section>
