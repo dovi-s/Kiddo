@@ -430,13 +430,23 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  async getMemoryEntriesByFund(fundId: string): Promise<MemoryEntry[]> {
-    // Three filters layered here, all user-facing surfaces (parent memory
-    // book, kid view, gifter share) call this. Admin browses use raw
-    // /api/admin/memory which bypasses these.
+  async getMemoryEntriesByFund(fundId: string, opts?: { includePending?: boolean }): Promise<MemoryEntry[]> {
+    // Filters layered here; all user-facing surfaces (parent memory book,
+    // kid view, age-transition / at-18 view, gifter share, dashboard preview)
+    // call this. Admin browses use raw /api/admin/memory which bypasses these.
     //
-    // 1. T&S — exclude admin-hidden / removed / escalated entries.
-    // 2. Memory Book inversion — exclude legacy auto-generated boilerplate
+    // 1. T&S — exclude admin-hidden / removed / escalated entries
+    //    (moderationStatus, the admin-level safety state).
+    // 2. Gifter-moderation gate — when fund.gifterMemoryModeration is on,
+    //    gifter entries land as status='pending_review' and MUST stay hidden
+    //    from EVERY user-facing surface (KidView + the at-18 view included)
+    //    until the parent approves. Centralized here so no caller can forget
+    //    it; only the parent's pending-approval tray opts in via
+    //    includePending. Previously this filter lived only in the public +
+    //    parent-main views, so KidView and the age-transition view leaked
+    //    unapproved gifter entries straight to the child — the exact failure
+    //    this gate exists to prevent.
+    // 3. Memory Book inversion — exclude legacy auto-generated boilerplate
     //    rows. The write path no longer creates these as of the inversion
     //    fix, but existing rows persist in the DB from before. The two
     //    patterns are:
@@ -447,12 +457,15 @@ export class DatabaseStorage implements IStorage {
     //    Both patterns are excluded ONLY when there is no media attached
     //    — if the entry has a photo / video / voice, the media is the
     //    entry regardless of what's in content.
-    // 3. (Already in place) — moderation status filter above.
+    const conditions = [
+      eq(memoryEntries.fundId, fundId),
+      sql`(${memoryEntries.moderationStatus} IS NULL OR ${memoryEntries.moderationStatus} NOT IN ('hidden','removed','escalated'))`,
+    ];
+    if (opts?.includePending !== true) {
+      conditions.push(sql`${memoryEntries.status} <> 'pending_review'`);
+    }
     const rows = await db.select().from(memoryEntries)
-      .where(and(
-        eq(memoryEntries.fundId, fundId),
-        sql`(${memoryEntries.moderationStatus} IS NULL OR ${memoryEntries.moderationStatus} NOT IN ('hidden','removed','escalated'))`,
-      ))
+      .where(and(...conditions))
       .orderBy(desc(memoryEntries.createdAt));
 
     return rows.filter((entry) => {

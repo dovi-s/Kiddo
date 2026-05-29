@@ -12610,7 +12610,10 @@ export async function registerRoutes(
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
 
-      const allEntries = await storage.getMemoryEntriesByFund(req.params.fundId);
+      // includePending: this is the ONLY surface that wants pending_review
+      // entries — the parent's approval tray. Every other caller gets the
+      // default (pending excluded) so unapproved gifter entries never leak.
+      const allEntries = await storage.getMemoryEntriesByFund(req.params.fundId, { includePending: true });
       const pending = allEntries.filter((e) => String((e as any).status || 'published') === 'pending_review');
       const enriched = await Promise.all(
         pending.map(async (entry) => {
