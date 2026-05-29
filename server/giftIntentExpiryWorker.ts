@@ -39,12 +39,21 @@ import { sql, eq, and, lte, gte, isNull } from "drizzle-orm";
 import { giftIntents } from "@shared/schema";
 import { sendEmail } from "./emailDelivery";
 import { renderKiddoEmail } from "./templates/baseTemplate";
+import { isGifterCaptureAtIntentEnabled } from "./giftCaptureFlag";
+import { settleGiftIntentOffSession } from "./giftIntentSettlement";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "gift-intent-expiry-worker";
 const RUN_INTERVAL_MS = 24 * 60 * 60 * 1000; // daily
 const HEADS_UP_LEAD_DAYS_MIN = 1;
 const HEADS_UP_LEAD_DAYS_MAX = 10;
+// P0-1 capture-at-intent (Option C): how many off-session charge attempts (incl.
+// the initial one at pairing) before we give up on a declined vaulted card. The
+// worker is daily, so this is ~MAX_SETTLE_RETRIES days of soft-decline recovery
+// before a terminal cancel + one goodbye email. Bounded to avoid card-network
+// retry abuse. (An interactive "update your card" re-vault flow is a future
+// enhancement; v1 retries the same saved card for soft declines.)
+const MAX_SETTLE_RETRIES = 5;
 
 function getBaseUrl(): string {
   const configured =
@@ -252,11 +261,132 @@ async function processExpiries(log: LogFn): Promise<number> {
   }
 }
 
+/**
+ * Terminal give-up on a declined capture intent after MAX_SETTLE_RETRIES: mark
+ * cancelled + send ONE honest goodbye email. No re-select after this (status
+ * leaves 'paired'), so the email fires exactly once.
+ */
+async function giveUpOnDeclinedIntent(
+  intent: { id: string; gifterName: string; gifterEmail: string | null; kidFirstName: string; amount: string },
+  log: LogFn,
+): Promise<void> {
+  try {
+    await db
+      .update(giftIntents)
+      .set({ status: "cancelled", cancelledAt: new Date(), paymentStatus: "expired" })
+      .where(eq(giftIntents.id, intent.id));
+  } catch (err: any) {
+    log(`give-up update failed for intent ${intent.id}: ${err?.message || err}`, WORKER_SOURCE);
+    return;
+  }
+  if (!intent.gifterEmail) return;
+  const baseUrl = getBaseUrl();
+  const giveAGiftUrl = `${baseUrl}/give-a-gift`;
+  const firstName = intent.gifterName ? intent.gifterName.split(" ")[0] || intent.gifterName : null;
+  const greeting = firstName ? `Hi ${firstName},` : "Hi there,";
+  const text = [
+    greeting,
+    ``,
+    `We tried a few times but couldn't complete your ${fmtMoney(intent.amount)} gift for ${intent.kidFirstName} — your card didn't go through.`,
+    ``,
+    `No charge was made. If you'd still like to give, you can start fresh any time and use a different card.`,
+    ``,
+    `To start fresh: ${giveAGiftUrl}`,
+    ``,
+    `— The Kiddo team`,
+  ].join("\n");
+  try {
+    const { html } = renderKiddoEmail({
+      heading: `We couldn't complete your gift for ${intent.kidFirstName}`,
+      intro: text,
+      cta: { text: "Start fresh", url: giveAGiftUrl },
+    });
+    await sendEmail({
+      to: intent.gifterEmail,
+      subject: `We couldn't complete your gift for ${intent.kidFirstName}`,
+      text,
+      html,
+      tags: ["gift-intent-charge-failed"],
+      metadata: { intentId: intent.id },
+    });
+    log(`give-up goodbye sent to ${intent.gifterEmail} for intent ${intent.id}`, WORKER_SOURCE);
+  } catch (err: any) {
+    log(`give-up email failed for intent ${intent.id}: ${err?.message || err}`, WORKER_SOURCE);
+  }
+}
+
+/**
+ * P0-1 capture-at-intent (Option C) decline recovery. For paired intents whose
+ * vaulted-card off-session charge was declined, retry the SAME card (catches
+ * soft declines that later clear). Reuses the exact settle helper the pairing
+ * loop uses, so the two paths can't diverge. After MAX_SETTLE_RETRIES attempts,
+ * give up terminally. INERT unless capture-at-intent is enabled.
+ */
+async function processDeclineRetries(log: LogFn): Promise<number> {
+  if (!isGifterCaptureAtIntentEnabled()) return 0;
+  let due: Array<{
+    id: string;
+    amount: string;
+    gifterName: string;
+    gifterEmail: string | null;
+    message: string | null;
+    kidFirstName: string;
+    fundId: string | null;
+    stripeSetupIntentId: string | null;
+    stripeCustomerId: string | null;
+    failedChargeCount: number | null;
+  }>;
+  try {
+    due = await db
+      .select({
+        id: giftIntents.id,
+        amount: giftIntents.amount,
+        gifterName: giftIntents.gifterName,
+        gifterEmail: giftIntents.gifterEmail,
+        message: giftIntents.message,
+        kidFirstName: giftIntents.kidFirstName,
+        fundId: giftIntents.fundId,
+        stripeSetupIntentId: giftIntents.stripeSetupIntentId,
+        stripeCustomerId: giftIntents.stripeCustomerId,
+        failedChargeCount: giftIntents.failedChargeCount,
+      })
+      .from(giftIntents)
+      .where(and(eq(giftIntents.status, "paired"), eq(giftIntents.paymentStatus, "declined")))
+      .limit(100);
+  } catch (err: any) {
+    log(`decline-retry select failed: ${err?.message || err}`, WORKER_SOURCE);
+    return 0;
+  }
+  if (due.length === 0) return 0;
+  log(`processing ${due.length} decline-retry candidate(s)`, WORKER_SOURCE);
+  let settled = 0;
+  for (const intent of due) {
+    const priorFails = Number(intent.failedChargeCount) || 0;
+    if (priorFails >= MAX_SETTLE_RETRIES) {
+      await giveUpOnDeclinedIntent(intent, log);
+      continue;
+    }
+    try {
+      const result = await settleGiftIntentOffSession(intent, { attempt: priorFails, markPaired: false });
+      if (result.settled) {
+        settled += 1;
+        log(`decline-retry settled intent ${intent.id} -> gift ${result.giftId}`, WORKER_SOURCE);
+      } else if (result.declined && priorFails + 1 >= MAX_SETTLE_RETRIES) {
+        await giveUpOnDeclinedIntent(intent, log);
+      }
+    } catch (err: any) {
+      log(`decline-retry error for intent ${intent.id}: ${err?.message || err}`, WORKER_SOURCE);
+    }
+  }
+  return settled;
+}
+
 async function tick(log: LogFn): Promise<void> {
   const headsUps = await processHeadsUps(log);
   const expiries = await processExpiries(log);
-  if (headsUps === 0 && expiries === 0) return;
-  log(`tick done: headsUps=${headsUps} expiries=${expiries}`, WORKER_SOURCE);
+  const retries = await processDeclineRetries(log);
+  if (headsUps === 0 && expiries === 0 && retries === 0) return;
+  log(`tick done: headsUps=${headsUps} expiries=${expiries} declineRetries=${retries}`, WORKER_SOURCE);
 }
 
 export function startGiftIntentExpiryWorker(log: LogFn): void {

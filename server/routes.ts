@@ -3,6 +3,7 @@ import { type Server } from "http";
 import { storage } from "./storage";
 import { stripeService } from "./stripeService";
 import { isGifterCaptureAtIntentEnabled } from "./giftCaptureFlag";
+import { settleGiftIntentOffSession } from "./giftIntentSettlement";
 import { getUncachableStripeClient } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
 import { subscribeUser, subscriberCounts } from "./realtime";
@@ -3420,71 +3421,25 @@ export async function registerRoutes(
           for (const intent of matchingIntents) {
             // P0-1 capture-at-intent (Option C) settlement: if the gifter vaulted
             // a card at intent time and the flag is on, charge it off-session NOW
-            // and invest — no second trip. INERT unless GIFTER_CAPTURE_AT_INTENT is
-            // on. No-card / decline falls back to the warm-promise "one click to
-            // send" email below. See P0-1_ADVISORY_PANEL_DECISION.md.
+            // and invest — no second trip, via the shared settle helper (same
+            // path the decline-retry worker uses). INERT unless
+            // GIFTER_CAPTURE_AT_INTENT is on. No-card / decline falls back to the
+            // warm-promise "one click to send" email below. See
+            // P0-1_ADVISORY_PANEL_DECISION.md / P0-1_IMPLEMENTATION_REVIEW.md.
             let autoCharged = false;
             if (isGifterCaptureAtIntentEnabled() && intent.stripeSetupIntentId && intent.stripeCustomerId) {
               try {
-                const setup = await stripeService.retrieveSetupIntent(String(intent.stripeSetupIntentId));
-                const pmId = typeof setup.payment_method === "string"
-                  ? setup.payment_method
-                  : (setup.payment_method as any)?.id;
-                if (setup.status === "succeeded" && pmId) {
-                  const pi = await stripeService.chargeGifterOffSession({
-                    customerId: String(intent.stripeCustomerId),
-                    paymentMethodId: String(pmId),
-                    amountCents: Math.round(parseFloat(String(intent.amount)) * 100),
-                    metadata: { kind: "gifter_capture_settlement", giftIntentId: intent.id, fundId: fund.id },
-                    // Idempotency: one charge per intent even if settlement retries.
-                    idempotencyKey: `gifter-settle-${intent.id}`,
-                  });
-                  if (pi.status === "succeeded") {
-                    // Gifter pledged `amount`; we charge exactly that and net all
-                    // of it to the fund (Kiddo absorbs Stripe processing on this
-                    // path — matches the "no surprise fees" point-of-charge
-                    // disclosure). Fee treatment to confirm pre-launch per P0-1_SPEC.
-                    const amt = parseFloat(String(intent.amount)).toFixed(2);
-                    const giftRow = await storage.createGift({
-                      fundId: fund.id,
-                      senderName: intent.gifterName,
-                      senderEmail: intent.gifterEmail,
-                      amount: amt,
-                      netAmount: amt,
-                      processingFee: "0",
-                      koraFee: "0",
-                      message: intent.message || null,
-                      status: "pending",
-                      stripePaymentIntentId: pi.id,
-                    } as any);
-                    await WebhookHandlers.completeGiftPostPayment(giftRow.id, {
-                      fundId: fund.id,
-                      isParentContribution: "false",
-                    });
-                    await db.update(giftIntents)
-                      .set({
-                        status: "completed",
-                        fundId: fund.id,
-                        pairedAt: new Date(),
-                        completedAt: new Date(),
-                        chargedAt: new Date(),
-                        paymentStatus: "charged",
-                        settledGiftId: giftRow.id,
-                      })
-                      .where(eq(giftIntents.id, intent.id));
-                    autoCharged = true;
-                    console.log(`[gift-intent] capture-at-intent settled ${intent.id} -> gift ${giftRow.id}`);
-                  }
+                const result = await settleGiftIntentOffSession(
+                  { ...intent, fundId: fund.id },
+                  { attempt: 0, markPaired: true },
+                );
+                autoCharged = result.settled;
+                if (result.settled) {
+                  console.log(`[gift-intent] capture-at-intent settled ${intent.id} -> gift ${result.giftId}`);
                 }
               } catch (chargeErr) {
-                // Decline / requires_action / API error: record and fall back to
-                // the warm-promise email so the gifter can still complete manually.
-                console.warn(`[gift-intent] off-session settlement failed for ${intent.id}; falling back:`, (chargeErr as any)?.message || chargeErr);
-                try {
-                  await db.update(giftIntents)
-                    .set({ paymentStatus: "declined", failedChargeCount: (Number(intent.failedChargeCount) || 0) + 1 })
-                    .where(eq(giftIntents.id, intent.id));
-                } catch { /* non-fatal */ }
+                // Unexpected error: fall back to the warm-promise email below.
+                console.warn(`[gift-intent] off-session settlement error for ${intent.id}; falling back:`, (chargeErr as any)?.message || chargeErr);
               }
             }
 
