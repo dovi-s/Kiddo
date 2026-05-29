@@ -5075,8 +5075,12 @@ const [editFundName, setEditFundName] = useState("");
           project_cancellation_dark_pattern_avoidance.md +
           project_close_fund_design_lens.md. */}
       <Dialog open={closeFundOpen} onOpenChange={(o) => { if (!o) setCloseFundOpen(false); }}>
-        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl">
-          <div className="p-6">
+        <DialogContent className="max-w-md w-[95vw] p-0 gap-0 overflow-hidden rounded-2xl flex max-h-[90vh] flex-col">
+          {/* Scrollable body — capped to 90vh with the action buttons pinned
+              in a non-scrolling footer below, so on short/mobile viewports the
+              disclosure scrolls and the confirm/cancel buttons stay reachable
+              instead of being clipped off the bottom of the screen. */}
+          <div className="min-h-0 flex-1 overflow-y-auto p-6">
             <DialogTitle className="font-heading text-xl font-bold text-foreground">
               Close {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund
             </DialogTitle>
@@ -5137,27 +5141,28 @@ const [editFundName, setEditFundName] = useState("");
               />
             </div>
 
-            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-xl"
-                onClick={() => { setCloseFundOpen(false); setCloseFundReason(""); }}
-                disabled={closingFund}
-                data-testid="button-cancel-close-fund"
-              >
-                Keep fund open
-              </Button>
-              <Button
-                size="sm"
-                className="rounded-xl"
-                onClick={handleCloseFund}
-                disabled={closingFund}
-                data-testid="button-confirm-close-fund"
-              >
-                {closingFund ? "Closing..." : "Close fund"}
-              </Button>
-            </div>
+          </div>
+
+          <div className="flex flex-col-reverse gap-2 border-t border-border px-6 py-4 sm:flex-row sm:justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-xl"
+              onClick={() => { setCloseFundOpen(false); setCloseFundReason(""); }}
+              disabled={closingFund}
+              data-testid="button-cancel-close-fund"
+            >
+              Keep fund open
+            </Button>
+            <Button
+              size="sm"
+              className="rounded-xl"
+              onClick={handleCloseFund}
+              disabled={closingFund}
+              data-testid="button-confirm-close-fund"
+            >
+              {closingFund ? "Closing..." : "Close fund"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
