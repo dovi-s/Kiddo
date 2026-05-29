@@ -181,7 +181,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     comparisonRows: [
       { label: "Category", competitor: "Micro-investing (parent saves for child)", kora: "Investment gifting (family invests in child)" },
       { label: "How money enters the fund", competitor: "Round-ups and manual deposits from parent", kora: "Gifts from anyone via shareable link" },
-      { label: "Monthly fee", competitor: "$5/mo through Acorns Gold", kora: "Free to start. Kiddo+ is $3.99/mo or $29/yr." },
+      { label: "Monthly fee", competitor: "$12/mo through Acorns Gold (the tier that includes Early)", kora: "Free to start. Kiddo+ is $3.99/mo or $29/yr." },
       { label: "Shareable gift link", competitor: "No", kora: "Yes" },
       { label: "No account needed to give", competitor: "No", kora: "Yes" },
       { label: "Occasion pages", competitor: "No", kora: "Yes" },
@@ -377,7 +377,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
   },
   "savings-account": {
     slug: "savings-account",
-    metaTitle: "Savings Account vs Kiddo | 0.01% interest vs real stock investments",
+    metaTitle: "Savings Account vs Kiddo | Low-yield cash vs real stock investments",
     metaDescription:
       "A savings account earns almost nothing. A Kiddo UTMA invests in real stocks. Here is the honest comparison for long-term family gifting.",
     heroTitle: "A savings account earns almost nothing.",
@@ -510,7 +510,7 @@ const fullComparisonRows: FullComparisonRow[] = [
     feature: "Monthly fee",
     kiddo: "Free to start. Kiddo+ is $3.99/mo.",
     earlybird: "$3/mo per child (no longer available)",
-    acornsEarly: "$5/mo bundled with Acorns Gold",
+    acornsEarly: "$12/mo via Acorns Gold (tier that includes Early)",
     greenlight: "$5.99 to $14.98/mo depending on tier",
     plan529: "No monthly fee; fund expense ratios vary",
     savings: "Free at most banks",
