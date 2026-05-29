@@ -134,3 +134,42 @@ self-directed UTMA on [custodian] with a 0.10% asset-based platform fee, are we
 an investment adviser requiring Form ADV registration, or can we structure as a
 non-advisory technology/platform fee?"). Decide both together — the answer to one
 constrains the other.
+
+## Ready-to-send outreach email (added 2026-05-28)
+
+Send the SAME email to each vendor's BD / partnerships / compliance intake
+(DriveWealth, Alpaca, Apex Fintech Solutions). Fire all three in parallel; whoever
+confirms criteria 1–4 in writing fastest leads. Fill the two brackets and paste.
+
+> **Subject:** Custodial UTMA brokerage-as-a-service — fit + a few API questions (pre-launch fintech)
+>
+> Hi [Name],
+>
+> We're Kiddo, Inc., a pre-launch, US-only fintech. Parents open custodial (UTMA)
+> brokerage accounts for their kids, and friends and family contribute small
+> dollar-based gift-investments that buy fractional shares. We're the technology /
+> UX layer and are evaluating brokerage-as-a-service custodians before we wire
+> anything. A handful of questions decide fit for us:
+>
+> 1. Do you support **UGMA/UTMA custodial accounts** opened via API, with
+>    state-specific age-of-majority? (We'd need this confirmed in writing.)
+> 2. **Dollar-based fractional** orders down to ~$1?
+> 3. Can a **single minor custodial account receive funds from many third parties**
+>    (grandparents, friends)? How do you handle source-of-funds / AML for that?
+> 4. At age of majority, can the UTMA be **re-registered in-kind** to an individual
+>    account (no liquidation, no taxable event)?
+> 5. Who issues the **1099-DIV / 1099-B**, and is it retrievable via API?
+> 6. Do we need to be a **Registered Investment Adviser** to operate with a 0.10%
+>    asset-based fee, or can we operate as an introducing technology partner?
+> 7. Full **fee schedule**: account minimums, per-account, per-trade/ticket, monthly
+>    platform minimum, fractional handling, fee-debit support.
+> 8. **Internal transfers** between two customer accounts (cash + fractional, a book
+>    journal, not ACATS)? And standard customer-initiated **ACH withdrawal**?
+> 9. **Sandbox** access, API docs, versioning policy, and time-to-first-account-open?
+> 10. **KYC/CIP**: do you provide identity verification + OFAC, or must we bring our own?
+> 11. Onboarding requirements + timeline for an early-stage company.
+>
+> Happy to share more on the product. What's the best way to get answers to 1–4 quickly?
+>
+> Best,
+> [Your name], Kiddo, Inc.
