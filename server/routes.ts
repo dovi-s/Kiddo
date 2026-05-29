@@ -7939,6 +7939,14 @@ export async function registerRoutes(
         updatedAt: new Date(),
       }).where(eq(users.id, userId));
 
+      // Audit trail for SSN/KYC collection (Tier-3 PII). Logs the decision and
+      // that an SSN was provided — never the SSN itself. Per
+      // policies/data-classification.md (SSN collection is audit-logged).
+      await writeAudit(req, 'kyc_submitted', 'user', userId, {
+        decision: decision.status,
+        ssnProvided: true,
+      });
+
       const userFunds = await storage.getFundsByUser(userId);
       let activatedFunds = 0;
       if (decision.status === 'approved') {
@@ -8505,6 +8513,17 @@ export async function registerRoutes(
         status: transactionStatus,
         description: `${delivered ? 'Cash sent to' : 'Cash queued for'} ${bankAccount.bankName} ending in ${bankAccount.accountLast4}`,
         fundId,
+      });
+
+      // Audit trail for money LEAVING a child's custodial account — the most
+      // sensitive money operation in the app. Logs the fact + amount + bank
+      // last-4 + delivery state; never the full account number. Per
+      // policies/data-classification.md (sensitive operations are audit-logged).
+      await writeAudit(req, 'fund_withdrawal', 'fund', fundId, {
+        amount: withdrawAmount.toFixed(2),
+        bankLast4: bankAccount.accountLast4,
+        delivered,
+        status: transactionStatus,
       });
 
       await captureFundSnapshot(fundId);
@@ -9593,6 +9612,12 @@ export async function registerRoutes(
       } catch (err) {
         console.error('[activity] ssn_provided write failed:', err);
       }
+
+      // Security/compliance audit trail (distinct from the parent-facing
+      // activity entry above). Logs the fact + last4 only — never the full
+      // digits. Per policies/data-classification.md (SSN collection is
+      // audit-logged to the audit_logs table).
+      await writeAudit(req, 'recipient_ssn_collected', 'fund', fund.id, { last4 });
 
       // Return the merged fund row (Drizzle's view + raw enrichment) so the
       // client can patch its cache with authoritative data and skip a
