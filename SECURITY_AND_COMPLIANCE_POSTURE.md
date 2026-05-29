@@ -50,7 +50,13 @@ surface. Not urgent, but track them (see B).
   Run with a build + smoke verification, never blind (lockfile churn).
 - **`/uploads` → signed URLs**: code is built and dormant; flip when Supabase
   Storage creds exist. Removes public-object exposure for kids' media. (creds-gated)
-- **Optional 2FA/MFA** for parent accounts (TOTP) — pure engineering, additive.
+- **2FA/MFA for parent accounts (TOTP) — SHIPPED 2026-05-29.** Dependency-free
+  RFC 6238 (`server/totp.ts`, pinned to the RFC test vectors), migration 0039,
+  `/api/auth/2fa/*` endpoints, login-enforcement gate (inert until enrolled —
+  non-enrolled login byte-for-byte unchanged), and the Account > Security UI
+  (QR enroll + backup codes + disable). REMAINING: founder must verify enroll +
+  2FA login + a backup code on a real account (the one flow not testable in the
+  build env); recovery = backup codes + the disable endpoint.
 - **Audit logging review**: confirm sensitive actions (withdrawals, role changes,
   PII edits) write an immutable trail.
 
