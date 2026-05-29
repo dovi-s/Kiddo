@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
 import { setActiveFundId } from "@/hooks/use-active-fund";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowRight, Users, Gift, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Users, Gift, ShieldCheck, Star } from "lucide-react";
 import { LockedRefusalsPanel } from "@/components/LockedRefusalsPanel";
 
 const DEMO_PASSWORD = "dunphyfamily";
@@ -188,7 +188,7 @@ export default function Demo() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
+                  <Star size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
                   <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] uppercase tracking-widest">
                     Featured walkthrough
                   </p>

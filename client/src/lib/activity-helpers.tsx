@@ -5,7 +5,7 @@
 // contributions detail modal landed and started rendering the same row shape.
 
 import type { Activity as ActivityType } from "@shared/schema";
-import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, BookOpen, BellRing, Repeat, Star, Pause, Play, X as XIcon, Settings, Sparkles, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle } from "lucide-react";
+import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, BookOpen, BellRing, Repeat, Star, Pause, Play, X as XIcon, Settings, CreditCard, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle } from "lucide-react";
 
 export type FeedActivity = ActivityType & {
   fundName?: string | null;
@@ -120,7 +120,7 @@ export function getTypeConfig(type?: string | null): { bg: string; color: string
   if (t.startsWith("successor_custodian_"))
     return { bg: "rgb(232,242,255)", color: "rgb(30,80,170)", icon: <UserCheck size={16} />, label: "Successor custodian" };
   if (t === "subscription_started" || t === "starter_plan_activated" || t === "family_plan_activated")
-    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <Sparkles size={16} />, label: "Subscription" };
+    return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <CreditCard size={16} />, label: "Subscription" };
   if (t === "subscription_renewal")
     return { bg: "rgb(245,237,253)", color: "rgb(126,68,180)", icon: <Repeat size={16} />, label: "Renewed" };
   if (t === "subscription_canceled")

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useLocation, useRoute, useSearch } from "wouter";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, Sparkles, BookOpen, ArrowRight } from "lucide-react";
+import { Check, Bell, BookOpen, ArrowRight } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
@@ -250,7 +250,7 @@ export default function ClaimFund() {
                   <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors ${
                     rothOptedIn ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary"
                   }`}>
-                    {rothOptedIn ? <Check size={16} strokeWidth={2.5} /> : <Sparkles size={16} strokeWidth={1.8} />}
+                    {rothOptedIn ? <Check size={16} strokeWidth={2.5} /> : <Bell size={16} strokeWidth={1.8} />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-foreground">

@@ -21,7 +21,7 @@ import { useMemo, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowRight, BookOpen, Briefcase, Coins, Receipt, Sparkles, TrendingUp, Heart } from "lucide-react";
+import { ArrowRight, BookOpen, Briefcase, Coins, Receipt, Sprout, TrendingUp, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { capFirst } from "@/lib/format-name";
@@ -243,7 +243,7 @@ export default function Age18Welcome() {
                 pure additive layers. */}
             <div className="relative">
               <MomentParticles count={16} durationMs={2400} />
-              <Eyebrow icon={<Sparkles size={14} />}>This is yours now.</Eyebrow>
+              <Eyebrow icon={<Sprout size={14} />}>This is yours now.</Eyebrow>
               <h1 className="font-heading text-4xl md:text-5xl font-bold tracking-tight">
                 {fund.recipientFirstName ? `Hi, ${capFirst(fund.recipientFirstName)}.` : "Welcome."}
                 <br />
@@ -355,7 +355,7 @@ export default function Age18Welcome() {
             {balance > 0 && (
               <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)] p-5 space-y-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
+                  <Heart size={14} className="text-[hsl(var(--kiddo-evergreen))]" />
                   <p className="text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] uppercase tracking-wide">
                     Or pass it down
                   </p>

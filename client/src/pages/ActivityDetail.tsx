@@ -1,7 +1,7 @@
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, Gift, TrendingUp, Clock, Check, Share2, MessageCircle, Calendar, DollarSign, User, Sparkles, AlertCircle, ShieldCheck, Banknote, CreditCard, PartyPopper, XCircle } from "lucide-react";
+import { ArrowLeft, Gift, TrendingUp, Clock, Check, Share2, MessageCircle, Calendar, DollarSign, User, AlertCircle, ShieldCheck, Banknote, CreditCard, PartyPopper, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { Nav } from "@/components/layout/Nav";
@@ -69,7 +69,7 @@ function getTypeConfig(type: string) {
     case "bank_linked":
       return { icon: CreditCard, bg: "bg-indigo-100", color: "text-indigo-600", label: "Bank Linked" };
     case "subscription_started":
-      return { icon: Sparkles, bg: "bg-purple-100", color: "text-purple-600", label: "Subscription Started" };
+      return { icon: CreditCard, bg: "bg-purple-100", color: "text-purple-600", label: "Subscription Started" };
     case "event_pass_purchased":
       return { icon: PartyPopper, bg: "bg-pink-100", color: "text-pink-600", label: "Premium Event Coverage" };
     case "subscription_canceled":

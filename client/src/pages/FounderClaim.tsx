@@ -17,7 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowRight, Check, Crown, Gift, Lock, Mail, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Crown, Gift, Lock, Mail, Rocket } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { haptic } from "@/lib/haptics";
 import { toast } from "@/hooks/use-toast";
@@ -145,7 +145,7 @@ export default function FounderClaim() {
     { icon: Lock, label: "$19/year, locked in for life" },
     { icon: Gift, label: "$25 starter gift for your first fund" },
     { icon: Crown, label: "Founding Member badge" },
-    { icon: Sparkles, label: "Early access to everything we build next" },
+    { icon: Rocket, label: "Early access to everything we build next" },
   ];
 
   return (

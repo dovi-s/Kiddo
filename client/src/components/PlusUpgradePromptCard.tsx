@@ -37,7 +37,7 @@
 // dismissals.
 
 import { useState } from "react";
-import { Camera, Gift, TrendingUp, Sparkles, Lock } from "lucide-react";
+import { Camera, Gift, TrendingUp, Crown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
 import { haptic } from "@/lib/haptics";
@@ -86,7 +86,7 @@ const PROMPT_COPY: Record<PlusUpgradePromptKind, PromptCopy> = {
   "thirty-day-anniversary": {
     headline: "You've committed for a month.",
     body: "Plus gives you the operator tools: custom fund mix, your own photos and voice memos in the Memory Book, co-parent access, and a tax summary at year-end. The features for the parent who's in it for the long run.",
-    icon: Sparkles,
+    icon: Crown,
     modalTitle: (childName) => `30 days into ${childName}'s fund.`,
     modalBody: (childName) =>
       `A month in is the moment Plus pays for itself. Custom fund mix so the money grows where you choose. Your own photos and voice memos in the Memory Book (the kid hearing your voice from years ago is the artifact nothing else gives them). Co-parent invite to share the work. Annual tax summary so January is easy. The features for the parent who's in this for ${childName}'s long run.`,

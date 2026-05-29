@@ -6,7 +6,7 @@ import { useLocation, useSearch, Link } from "wouter";
 // row-types it was used for (Kid suggestion / Subscription / Age-18 invite)
 // now use semantically-correct icons: Lightbulb (gentle nudge), CreditCard
 // (billing event), Mail (invitation).
-import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Sparkles, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History } from "lucide-react";
+import { Gift, TrendingUp, Calendar, Check, Clock, ArrowUp, ChevronDown, BookOpen, BellRing, Repeat, Star, Search, Pause, Play, Crown, X as XIcon, Settings, Lightbulb, CreditCard, Mail, Sliders, ShieldCheck, UserCheck, Building2, Sprout, FileText, AlertCircle, History } from "lucide-react";
 import { DetailHistoryModal, type DetailStat, type DetailScheduledRow } from "@/components/DetailHistoryModal";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -339,7 +339,7 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   // moment, not a deposit). Sparkles icon signals "something opened
   // up on this fund." See project_gifter_sponsors_plus_subscription.md.
   if (t === "sponsor_plus_activated")
-    return { ...PALETTE.CELEBRATION_GOLD, icon: <Sparkles size={16} />, label: "Plus sponsored" };
+    return { ...PALETTE.CELEBRATION_GOLD, icon: <Crown size={16} />, label: "Plus sponsored" };
   // Sponsor-Plus renewal reminder sent (shipped 2026-05-23 same-day as
   // MVP). Quieter palette than the activation moment — it's a beat,
   // not a celebration. Mail icon signals "we sent you a thing." See
