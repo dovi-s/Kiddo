@@ -60,9 +60,12 @@ type PlanPrice =
       // The phrasing matches the established "$3.99/month — about 13¢
       // a day" pattern from PlusUpgradePromptCard + MemoryMediaPicker.
       // Optional field — Free / Founding cards skip it (no monthly billing).
-      dailyFraming?: string;
-      yearly: { price: string; period: string; equivalent: string };
-      monthly: { price: string; period: string; equivalent: string };
+      // Carried per-cadence so the daily number matches the price actually
+      // shown: the annual toggle divides the yearly price, the monthly toggle
+      // divides the monthly price. A single shared string was wrong on the
+      // annual view ($29/yr is ~8¢/day, not the monthly plan's 13¢/day).
+      yearly: { price: string; period: string; equivalent: string; dailyFraming?: string };
+      monthly: { price: string; period: string; equivalent: string; dailyFraming?: string };
     };
 
 type Plan = {
@@ -102,9 +105,8 @@ const plans: readonly Plan[] = [
     eyebrow: "For the parent who shows up every month.",
     pricing: {
       kind: "billed",
-      dailyFraming: "About 13¢ a day",
-      yearly: { price: "$29", period: "/year", equivalent: "or $3.99/month" },
-      monthly: { price: "$3.99", period: "/month", equivalent: "or $29/year" },
+      yearly: { price: "$29", period: "/year", equivalent: "or $3.99/month", dailyFraming: "About 8¢ a day" },
+      monthly: { price: "$3.99", period: "/month", equivalent: "or $29/year", dailyFraming: "About 13¢ a day" },
     },
     cta: "Start with Kiddo+",
     featured: true,
@@ -141,9 +143,8 @@ const plans: readonly Plan[] = [
     eyebrow: "For families with two or more children.",
     pricing: {
       kind: "billed",
-      dailyFraming: "About 23¢ a day",
-      yearly: { price: "$59", period: "/year", equivalent: "or $6.99/month" },
-      monthly: { price: "$6.99", period: "/month", equivalent: "or $59/year" },
+      yearly: { price: "$59", period: "/year", equivalent: "or $6.99/month", dailyFraming: "About 16¢ a day" },
+      monthly: { price: "$6.99", period: "/month", equivalent: "or $59/year", dailyFraming: "About 23¢ a day" },
     },
     cta: "Cover all your children",
     featured: false,
@@ -294,7 +295,7 @@ export default function Pricing() {
                 + project_pre_launch_strategic_frame.md. */}
             <p className="mx-auto mt-4 max-w-3xl rounded-2xl border border-primary/30 bg-primary/5 px-5 py-4 text-sm leading-relaxed text-foreground">
               <span className="font-semibold">Pre-launch: Founding Members get $19/year Plus, locked in for life.</span>{" "}
-              First 1,000 families. Plus a Founding Member badge, $25 starter credit, and early access to every future Kiddo product.{" "}
+              First 1,000 families. Plus a Founding Member badge, $25 starter credit at launch, and early access to every future Kiddo product.{" "}
               <Link href="/founding-members" className="font-medium text-primary underline underline-offset-2">
                 Reserve your spot →
               </Link>
@@ -362,8 +363,8 @@ export default function Pricing() {
               const priceDisplay = plan.pricing.kind === "flat"
                 ? { price: plan.pricing.price, period: plan.pricing.period, equivalent: null as string | null, dailyFraming: null as string | null }
                 : billingPeriod === "yearly"
-                  ? { ...plan.pricing.yearly, equivalent: plan.pricing.yearly.equivalent, dailyFraming: plan.pricing.dailyFraming ?? null }
-                  : { ...plan.pricing.monthly, equivalent: plan.pricing.monthly.equivalent, dailyFraming: plan.pricing.dailyFraming ?? null };
+                  ? { ...plan.pricing.yearly, equivalent: plan.pricing.yearly.equivalent, dailyFraming: plan.pricing.yearly.dailyFraming ?? null }
+                  : { ...plan.pricing.monthly, equivalent: plan.pricing.monthly.equivalent, dailyFraming: plan.pricing.monthly.dailyFraming ?? null };
               return (
               <FadeIn key={plan.id} delay={index * 0.08}>
                 <div className={`relative flex h-full flex-col rounded-2xl bg-card p-8 shadow-premium-sm ${plan.featured ? "ring-2 ring-primary" : ""}`}>
