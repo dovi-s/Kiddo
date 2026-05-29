@@ -102,33 +102,24 @@ export function KidAt18WelcomeBanner({
           Dismiss
         </button>
       </div>
-      <ul className="mt-4 space-y-2 text-sm leading-relaxed text-muted-foreground">
-        <li className="flex items-start gap-2">
-          <span aria-hidden className="text-foreground font-bold">·</span>
-          <span>
-            <span className="text-foreground font-medium">Nothing was sold.</span> The investments stay exactly where they are. You decide what happens next: hold, sell, or reinvest.
-          </span>
+      {/* Bold-lead points, no bullet markers. The earlier version used a
+          literal "·" character as the marker, which read as unfinished /
+          placeholder. The bold lead-in is the scannable anchor; spacing
+          carries the separation. */}
+      <ul className="mt-4 space-y-3 text-sm leading-relaxed text-muted-foreground">
+        <li>
+          <span className="font-semibold text-foreground">Nothing was sold.</span> The investments stay exactly where they are. You decide what happens next: hold, sell, or reinvest.
         </li>
-        <li className="flex items-start gap-2">
-          <span aria-hidden className="text-foreground font-bold">·</span>
-          <span>
-            The Memory Book travels with you. Notes, photos, voice notes, the parent letter. All yours to read whenever.
-          </span>
+        <li>
+          <span className="font-semibold text-foreground">The Memory Book is yours.</span> Every note, photo, voice memo, and the letter from your parent. Yours to read whenever.
         </li>
-        <li className="flex items-start gap-2">
-          <span aria-hidden className="text-foreground font-bold">·</span>
-          <span>
-            This is a custodial brokerage account. There are tax considerations the year you take ownership. Talk to a CPA before you make changes.
-          </span>
+        <li>
+          <span className="font-semibold text-foreground">It's a custodial brokerage account.</span> There can be tax to consider the year you take ownership. Talk to a CPA before any big changes.
         </li>
-        <li className="flex items-start gap-2">
-          <span aria-hidden className="text-foreground font-bold">·</span>
-          <span>
-            The dashboard below is what your parent saw. Same view, your money. Some buttons (gift links, recurring investments) are designed for someone managing a child's fund, so feel free to ignore those.
-          </span>
+        <li>
+          <span className="font-semibold text-foreground">This was your parent's view.</span> Same numbers, now yours. A few controls (gift links, recurring investments) were built for managing a child's fund, so you can ignore them.
         </li>
       </ul>
-      <p className="mt-5 font-serif italic text-foreground/85">That's the whole point.</p>
       {/* Link to the year-by-year retrospective. The kid's first
           emotional anchor surface — every gift, every note, grouped
           by year of life. */}
