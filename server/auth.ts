@@ -47,6 +47,7 @@ import { registerPasskeyRoutes } from "./passkeyAuth";
 import { registerPostmarkWebhook } from "./postmarkWebhook";
 import { mintRestoreToken, verifyRestoreToken } from "./accountRestoreToken";
 import { auditLogs } from "@shared/schema";
+import { verifyTotp, findBackupCodeMatch } from "./totp";
 import { sendEmail } from "./emailDelivery";
 import { buildPasswordResetEmail } from "./templates/passwordReset";
 import { buildVerificationEmail } from "./templates/emailVerification";
@@ -1114,6 +1115,25 @@ export function setupAuth(app: Express) {
         }
         return res.status(401).json({ message: info?.message || "Invalid email or password" });
       }
+      // Two-factor gate. The password is verified at this point. If this
+      // account has TOTP enabled, do NOT establish the authenticated session
+      // yet — regenerate the session (anti-fixation), stash a short-lived
+      // pending marker, and require the second factor at
+      // /api/auth/2fa/login-verify. Non-enrolled accounts (everyone who hasn't
+      // opted in) fall straight through to the unchanged login flow below;
+      // totpEnabled is present on the full user row the local strategy loads.
+      if (user.totpEnabled === true) {
+        return req.session.regenerate((regenErr) => {
+          if (regenErr) {
+            return res.status(500).json({ message: "Failed to create session" });
+          }
+          (req.session as any).pending2faUserId = user.id;
+          (req.session as any).pending2faAt = Date.now();
+          return respondAfterSessionSave(req, res, () => {
+            res.json({ twoFactorRequired: true });
+          });
+        });
+      }
       // Regenerate the session BEFORE establishing identity to prevent
       // session fixation — an attacker who planted a known session id in the
       // victim's browser pre-login must not keep an authenticated session
@@ -1138,6 +1158,60 @@ export function setupAuth(app: Express) {
         });
       });
     })(req, res, next);
+  });
+
+  // Complete a 2FA login. The password step set a short-lived pending marker;
+  // here we verify the authenticator code (or a single-use backup code) and
+  // ONLY THEN establish the authenticated session. A wrong/expired attempt
+  // never produces a logged-in session.
+  app.post("/api/auth/2fa/login-verify", async (req: any, res) => {
+    try {
+      const pendingId = req.session?.pending2faUserId;
+      const pendingAt = Number(req.session?.pending2faAt || 0);
+      if (!pendingId || Date.now() - pendingAt > 5 * 60 * 1000) {
+        return res.status(401).json({ message: "Your sign-in step expired. Enter your email and password again." });
+      }
+      const code = String(req.body?.code || "");
+      const [user] = await db.select().from(users).where(eq(users.id, pendingId)).limit(1);
+      if (!user || user.totpEnabled !== true || !user.totpSecret) {
+        return res.status(401).json({ message: "Two-factor is not set up for this account." });
+      }
+      const hashes = Array.isArray(user.totpBackupCodes) ? (user.totpBackupCodes as string[]) : [];
+      let ok = verifyTotp(user.totpSecret, code);
+      let usedBackupIndex = -1;
+      if (!ok) {
+        usedBackupIndex = await findBackupCodeMatch(code, hashes);
+        ok = usedBackupIndex >= 0;
+      }
+      if (!ok) {
+        return res.status(401).json({ message: "That code didn't match. Try your authenticator or a backup code." });
+      }
+      // Single-use backup codes: burn the one that was just used.
+      if (usedBackupIndex >= 0) {
+        const remaining = hashes.filter((_, i) => i !== usedBackupIndex);
+        await db.update(users).set({ totpBackupCodes: remaining, updatedAt: new Date() }).where(eq(users.id, user.id));
+      }
+      // Regenerate again so the pending-state session id is not reused for the
+      // authenticated session, then establish identity.
+      req.session.regenerate((regenErr: any) => {
+        if (regenErr) {
+          return res.status(500).json({ message: "Failed to create session" });
+        }
+        req.login(user, (err: any) => {
+          if (err) {
+            return res.status(500).json({ message: "Failed to create session" });
+          }
+          void trackLoginDevice(user.id, req);
+          const { passwordHash: _p, kycData: _k, ...safeUser } = user;
+          return respondAfterSessionSave(req, res, () => {
+            res.json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email) });
+          });
+        });
+      });
+    } catch (e) {
+      console.error("[2fa] login-verify error:", e);
+      res.status(500).json({ message: "Login failed" });
+    }
   });
 
   app.get("/api/auth/providers", (_req, res) => {
