@@ -43,7 +43,7 @@ export const EMAIL_PREFERENCE_CATEGORIES = [
   {
     key: "taxPrep",
     label: "Tax-season prep",
-    description: "A January reminder about UTMA tax docs from DriveWealth.",
+    description: "A January reminder about your child's UTMA tax documents.",
   },
   {
     key: "gifterReturn",
