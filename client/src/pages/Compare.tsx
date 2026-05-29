@@ -236,7 +236,7 @@ const comparisonPages: Record<string, ComparisonPage> = {
     competitorLabel: "Greenlight",
     comparisonRows: [
       { label: "Primary focus", competitor: "Spending and banking", kora: "Gifting and investing" },
-      { label: "Monthly fee", competitor: "$5.99 to $24.98/mo", kora: "Free to start. Paid plans from $3.99/mo" },
+      { label: "Monthly fee", competitor: "$5.99 to $14.98/mo", kora: "Free to start. Paid plans from $3.99/mo" },
       { label: "Debit card for kids", competitor: "Yes", kora: "No" },
       { label: "Parental spending controls", competitor: "Yes", kora: "No" },
       { label: "Gifting link for family", competitor: "No", kora: "Yes" },
@@ -511,7 +511,7 @@ const fullComparisonRows: FullComparisonRow[] = [
     kiddo: "Free to start. Kiddo+ is $3.99/mo.",
     earlybird: "$3/mo per child (no longer available)",
     acornsEarly: "$5/mo bundled with Acorns Gold",
-    greenlight: "$4.99 to $14.98/mo depending on tier",
+    greenlight: "$5.99 to $14.98/mo depending on tier",
     plan529: "No monthly fee; fund expense ratios vary",
     savings: "Free at most banks",
   },
@@ -821,20 +821,20 @@ function ComparisonHub() {
               <h3 className="mt-3 font-heading text-2xl font-bold text-foreground">Every birthday. Every holiday. Everyone who loves your child.</h3>
               <div className="mt-5 space-y-2 text-sm text-muted-foreground">
                 <div className="flex justify-between border-b border-border pb-2">
-                  <span>Average birthday gift</span>
-                  <span className="font-medium text-foreground">$75</span>
+                  <span>Birthday gifts (across the circle)</span>
+                  <span className="font-medium text-foreground">$200</span>
                 </div>
                 <div className="flex justify-between border-b border-border pb-2">
-                  <span>Average holiday gift</span>
-                  <span className="font-medium text-foreground">$75</span>
+                  <span>Holiday gifts</span>
+                  <span className="font-medium text-foreground">$200</span>
                 </div>
                 <div className="flex justify-between border-b border-border pb-2">
-                  <span>Other occasions</span>
-                  <span className="font-medium text-foreground">$50</span>
+                  <span>Baby shower and other occasions</span>
+                  <span className="font-medium text-foreground">$100</span>
                 </div>
                 <div className="flex justify-between border-b border-border pb-2">
                   <span>Annual gifting (one child, small circle)</span>
-                  <span className="font-medium text-foreground">$200+</span>
+                  <span className="font-medium text-foreground">$500</span>
                 </div>
                 <div className="flex justify-between pt-1">
                   <span className="font-semibold text-foreground">After 18 years at 7%</span>
