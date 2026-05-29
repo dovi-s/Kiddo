@@ -38,7 +38,11 @@ export default function Login() {
   const [magicSent, setMagicSent] = useState(false);
   const [magicLoading, setMagicLoading] = useState(false);
   const [oauthProviders, setOauthProviders] = useState({ google: false, apple: false, biometricReady: false });
-  const { login, isLoggingIn, loginError } = useAuth();
+  // Two-factor step. Opens when /api/auth/login reports the account has TOTP
+  // enabled (password verified, session NOT yet established).
+  const [twoFactorStep, setTwoFactorStep] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const { login, isLoggingIn, loginError, verifyTwoFactor, isVerifyingTwoFactor, verifyTwoFactorError } = useAuth();
   const queryClient = useQueryClient();
   const url = typeof window !== "undefined" ? new URL(window.location.href) : null;
   const oauthErrorParam = url?.searchParams.get("error");
@@ -79,7 +83,13 @@ export default function Login() {
     e.preventDefault();
     haptic('medium');
     try {
-      await login({ email, password });
+      const result = await login({ email, password });
+      // Account has 2FA on — password accepted but no session yet. Open the
+      // code step; the redirect happens after verifyTwoFactor succeeds.
+      if ((result as any)?.twoFactorRequired === true) {
+        setTwoFactorStep(true);
+        return;
+      }
       haptic('success');
       // Pre-warm the dashboard the user is about to land on. Fires in
       // parallel with setLocation — by the time React renders the new route,
@@ -87,6 +97,21 @@ export default function Login() {
       // "blank dashboard with spinner" moment that defines first impressions.
       // Uses stored active fund id from a previous session if present;
       // otherwise the funds list alone primes the AppHeader.
+      if (redirectTarget === "/dashboard" || redirectTarget.startsWith("/dashboard")) {
+        prefetchDashboard(queryClient, getActiveFundId());
+      }
+      setLocation(redirectTarget);
+    } catch {
+      haptic('error');
+    }
+  };
+
+  const handleVerifyTwoFactor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    haptic('medium');
+    try {
+      await verifyTwoFactor(twoFactorCode.trim());
+      haptic('success');
       if (redirectTarget === "/dashboard" || redirectTarget.startsWith("/dashboard")) {
         prefetchDashboard(queryClient, getActiveFundId());
       }
@@ -196,6 +221,40 @@ export default function Login() {
               {oauthError}
             </motion.div>
           )}
+
+          <Dialog open={twoFactorStep} onOpenChange={(o) => { if (!o) { setTwoFactorStep(false); setTwoFactorCode(""); } }}>
+            <DialogContent className="max-w-sm rounded-2xl">
+              <DialogHeader>
+                <DialogTitle className="font-heading text-xl font-bold text-foreground">Two-factor verification</DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                  Enter the 6-digit code from your authenticator app. You can also use one of your backup codes.
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleVerifyTwoFactor} className="mt-2 space-y-3">
+                <input
+                  autoFocus
+                  inputMode="text"
+                  autoComplete="one-time-code"
+                  value={twoFactorCode}
+                  onChange={(e) => setTwoFactorCode(e.target.value)}
+                  placeholder="123456"
+                  className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-center text-lg tracking-[0.3em] tabular-nums outline-none focus:border-[hsl(var(--kiddo-evergreen))]"
+                  data-testid="input-2fa-code"
+                />
+                {verifyTwoFactorError && (
+                  <p className="text-sm text-destructive text-center" data-testid="text-2fa-error">{verifyTwoFactorError}</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={!twoFactorCode.trim() || isVerifyingTwoFactor}
+                  className="w-full h-11 rounded-xl bg-foreground text-background font-semibold disabled:opacity-50"
+                  data-testid="button-2fa-verify"
+                >
+                  {isVerifyingTwoFactor ? "Verifying..." : "Verify and sign in"}
+                </button>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="bg-card rounded-2xl border border-border/50 shadow-premium-sm p-6 space-y-5 gemini-soft-container">

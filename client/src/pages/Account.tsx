@@ -13,6 +13,7 @@ import { Check, ChevronRight, LogOut, Shield, Camera, Eye, EyeOff, UserPlus, Loa
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { DeleteAccountModal } from "@/components/DeleteAccountModal";
+import { TwoFactorCard } from "@/components/TwoFactorCard";
 import { PasskeyManager } from "@/components/PasskeyManager";
 import { PlanBenefitsCard } from "@/components/PlanBenefitsCard";
 import {
@@ -1487,6 +1488,7 @@ export default function Account() {
             transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
             className="space-y-4"
           >
+            <TwoFactorCard />
             <SectionCard>
               <div className="divide-y divide-[hsl(var(--kiddo-border))]">
                 {/* Password row */}

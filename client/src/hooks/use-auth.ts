@@ -57,7 +57,7 @@ async function fetchUser(): Promise<SafeUserWithFlags | null> {
   return normalized;
 }
 
-async function loginFn(data: { email: string; password: string }): Promise<SafeUserWithFlags> {
+async function loginFn(data: { email: string; password: string }): Promise<SafeUserWithFlags | { twoFactorRequired: true }> {
   const response = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -68,6 +68,34 @@ async function loginFn(data: { email: string; password: string }): Promise<SafeU
   if (!response.ok) {
     const err = await response.json();
     throw new Error(err.message || "Login failed");
+  }
+
+  const user = await response.json();
+  // Password accepted, but the account has 2FA on — the server has NOT created
+  // a session yet. Return a marker so the Login page can collect the
+  // authenticator code; do not normalize/stamp (there is no user session yet).
+  if (user && user.twoFactorRequired === true) {
+    return { twoFactorRequired: true };
+  }
+  const normalized = normalizeUser(user);
+  persistDevUserId(normalized);
+  writeLocalCache(LOCAL_CACHE_KEYS.authUser, normalized);
+  return normalized;
+}
+
+// Completes a 2FA login: posts the authenticator (or backup) code; the server
+// only establishes the session on success.
+async function verifyTwoFactorFn(code: string): Promise<SafeUserWithFlags> {
+  const response = await fetch("/api/auth/2fa/login-verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ code }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.message || "Verification failed");
   }
 
   const user = await response.json();
@@ -178,6 +206,10 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: loginFn,
     onSuccess: (user) => {
+      // 2FA pending: there is no session yet — the Login page collects the
+      // authenticator code via verifyTwoFactor. Skip ALL session-stamping for
+      // the marker so the normal (non-2FA) path below is byte-for-byte intact.
+      if ((user as any)?.twoFactorRequired === true) return;
       // Stamp the new user first, then drop the per-user localStorage
       // caches that were keyed to the previous account. The localStorage
       // entries (active fund ID, funds list cache) survive across logins
@@ -202,6 +234,25 @@ export function useAuth() {
       // current user. Invalidation marks them stale so the next read
       // refetches; it doesn't wipe the cached value in a way that
       // briefly shows "no data" to currently-mounted components.
+      queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+    },
+  });
+
+  // Second-factor completion. On success it establishes the session, so it
+  // runs the same post-login cache reset as loginMutation.
+  const verifyTwoFactorMutation = useMutation({
+    mutationFn: verifyTwoFactorFn,
+    onSuccess: (user) => {
+      writeLocalCache(LOCAL_CACHE_KEYS.authUser, user);
+      queryClient.setQueryData(["/api/auth/user"], user);
+      try { window.localStorage.removeItem("kiddo_active_fund_id"); } catch {}
+      removeLocalCache(LOCAL_CACHE_KEYS.funds);
+      removeLocalCache(LOCAL_CACHE_KEYS.subscription);
+      removeLocalCachePrefix("kora.dashboard-summary.");
+      removeLocalCachePrefix("kiddo.fund-balance.");
+      clearPerUserDismissals();
       queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
       queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
       queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
@@ -258,6 +309,9 @@ export function useAuth() {
     login: loginMutation.mutateAsync,
     loginError: loginMutation.error?.message,
     isLoggingIn: loginMutation.isPending,
+    verifyTwoFactor: verifyTwoFactorMutation.mutateAsync,
+    verifyTwoFactorError: verifyTwoFactorMutation.error?.message,
+    isVerifyingTwoFactor: verifyTwoFactorMutation.isPending,
     register: registerMutation.mutateAsync,
     registerError: registerMutation.error?.message,
     isRegistering: registerMutation.isPending,
