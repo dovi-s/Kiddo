@@ -183,17 +183,21 @@ export class StripeService {
   }
 
   // P0-1 "capture money at intent" (Option C: vault-and-charge-later).
-  // Saves the gifter's card for a future OFF-SESSION charge at pairing — no
-  // money is charged or held now. The off-session charge itself (at fund
-  // creation) reuses the existing PaymentIntent path. Gated by
-  // isGifterCaptureAtIntentEnabled(); see P0-1_ADVISORY_PANEL_DECISION.md.
-  async createGifterSetupIntent(params: { customerId: string; metadata?: Record<string, string> }): Promise<Stripe.SetupIntent> {
+  // Hosted setup-mode Checkout that saves the gifter's card for a future
+  // OFF-SESSION charge at pairing — no money is charged or held now. We use
+  // hosted Checkout (not embedded Elements) to match the rest of the app: the
+  // client has no Stripe.js dependency. On completion the session carries a
+  // confirmed `setup_intent`, captured by WebhookHandlers.handleGifterCardSetup.
+  // Gated by isGifterCaptureAtIntentEnabled(); see P0-1_ADVISORY_PANEL_DECISION.md.
+  async createGifterCardSetupCheckout(params: { customerId: string; successUrl: string; cancelUrl: string; metadata?: Record<string, string> }): Promise<Stripe.Checkout.Session> {
     const stripe = await getUncachableStripeClient();
-    return await stripe.setupIntents.create({
-      customer: params.customerId,
+    return await stripe.checkout.sessions.create({
+      mode: 'setup',
       payment_method_types: ['card'],
-      usage: 'off_session',
-      metadata: params.metadata,
+      customer: params.customerId,
+      success_url: params.successUrl,
+      cancel_url: params.cancelUrl,
+      metadata: { type: 'gifter_card_setup', ...(params.metadata || {}) },
     });
   }
 

@@ -18,7 +18,7 @@
 // framing is "give a child a gift that lasts" not "fast-track
 // your gift now." Matches the locked Kiddo copy discipline.
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, Check, Gift, Heart, Mail, Sprout } from "lucide-react";
@@ -44,6 +44,9 @@ export default function GiveAGift() {
 
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState<{ recipientEmail: string; kidFirstName: string; gifterName: string; amount: number } | null>(null);
+  // P0-1 capture-at-intent (Option C): return from the hosted setup-Checkout.
+  // ?setup=done → card saved; ?setup=cancelled → they backed out (stay on form).
+  const [cardSaved, setCardSaved] = useState(false);
 
   const [gifterName, setGifterName] = useState("");
   const [gifterEmail, setGifterEmail] = useState("");
@@ -52,6 +55,20 @@ export default function GiveAGift() {
   const [amount, setAmount] = useState<number>(100);
   const [customAmount, setCustomAmount] = useState("");
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const setup = params.get("setup");
+    if (setup === "done") {
+      setCardSaved(true);
+    } else if (setup === "cancelled") {
+      toast({ title: "No card saved", description: "You can still send the note — your gift completes when the parent sets up the fund." });
+    }
+    if (setup) {
+      // Clean the query so a refresh doesn't re-trigger the screen.
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [toast]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -81,6 +98,14 @@ export default function GiveAGift() {
         toast({ title: "Couldn't send", description: data.error || "Try again in a moment.", variant: "destructive" });
         return;
       }
+      // P0-1 capture-at-intent (Option C): if the server vaulted a card path
+      // (flag on), it returns a hosted setup-Checkout URL — redirect so the
+      // gifter can save their card. Absent → warm-promise confirmation, as before.
+      if (data.captureCheckoutUrl) {
+        haptic("success");
+        window.location.href = data.captureCheckoutUrl as string;
+        return;
+      }
       haptic("success");
       setCompleted({
         recipientEmail: recipientEmail.trim(),
@@ -94,6 +119,43 @@ export default function GiveAGift() {
       setSubmitting(false);
     }
   };
+
+  // P0-1 capture-at-intent (Option C) return screen: the gifter saved a card on
+  // the hosted page. NOTE: final wording here + the point-of-charge disclosure
+  // on the form are PENDING COUNSEL (LAWYER_Q gate #2) before the flag is enabled.
+  if (cardSaved) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Nav />
+        <main className="px-4 pb-20 pt-24 md:pb-28 md:pt-32">
+          <div className="mx-auto max-w-2xl">
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="space-y-6 text-center"
+            >
+              <div className="mx-auto h-14 w-14 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                <Check size={24} />
+              </div>
+              <h1 className="font-heading text-3xl md:text-4xl font-bold tracking-tight">
+                Your card is saved.
+              </h1>
+              <p className="text-base text-foreground/80 leading-relaxed max-w-md mx-auto">
+                We won't charge it yet. When the parent sets up the child's fund, we'll charge your card and your gift becomes a real investment in the child's name. If they don't set it up, we won't charge you — and you can change your mind any time before then.
+              </p>
+              <div className="flex flex-col gap-3 max-w-xs mx-auto">
+                <Link href="/">
+                  <Button variant="outline" className="w-full">Back to Kiddo</Button>
+                </Link>
+              </div>
+            </motion.div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (completed) {
     return (

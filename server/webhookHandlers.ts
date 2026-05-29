@@ -2,7 +2,7 @@ import Stripe from 'stripe';
 import { getStripeSecretKey, getUncachableStripeClient } from './stripeClient';
 import { storage } from './storage';
 import { db } from './db';
-import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships, recurringGifts, foundingMembers } from '@shared/schema';
+import { webhookEvents, transactions, memoryEntries, subscriptions, fundMemberships, recurringGifts, foundingMembers, giftIntents } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { captureError, sendOpsAlert } from './ops';
 import { recordEvent } from './analytics';
@@ -1147,6 +1147,12 @@ export class WebhookHandlers {
       // direct signups do. Per project_gifter_sponsors_plus_subscription.md
       // (founder gifting closes the engineering arc, 2026-05-23).
       await this.handleSponsorFounderPurchase(session);
+    } else if (type === 'gifter_card_setup') {
+      // P0-1 capture-at-intent (Option C): the gifter completed the hosted
+      // setup-mode Checkout that vaults their card. Stamp the confirmed
+      // SetupIntent onto the gift_intent so settlement-at-pairing can charge it
+      // off-session. INERT unless GIFTER_CAPTURE_AT_INTENT produced the session.
+      await this.handleGifterCardSetup(session);
     }
 
     const paymentIntentId = typeof session.payment_intent === 'string'
@@ -1174,6 +1180,31 @@ export class WebhookHandlers {
       eventId: metadata.eventId || null,
       completedAt: new Date(),
     });
+  }
+
+  // P0-1 capture-at-intent (Option C). The hosted setup-mode Checkout completed:
+  // record the confirmed SetupIntent + customer on the gift_intent so the
+  // pairing settlement can charge the card off-session. Idempotent (re-setting
+  // the same fields is harmless). Gated upstream by isGifterCaptureAtIntentEnabled().
+  static async handleGifterCardSetup(session: any): Promise<void> {
+    const metadata = session.metadata || {};
+    const giftIntentId = metadata.giftIntentId;
+    const setupIntentId = typeof session.setup_intent === 'string'
+      ? session.setup_intent
+      : session.setup_intent?.id;
+    const customerId = typeof session.customer === 'string'
+      ? session.customer
+      : session.customer?.id;
+    if (!giftIntentId || !setupIntentId) {
+      console.warn('[Webhook] gifter_card_setup missing giftIntentId or setup_intent:', session.id);
+      return;
+    }
+    await db.update(giftIntents).set({
+      stripeSetupIntentId: setupIntentId,
+      ...(customerId ? { stripeCustomerId: customerId } : {}),
+      paymentStatus: 'setup_confirmed',
+    }).where(eq(giftIntents.id, giftIntentId));
+    console.log(`[Webhook] gifter card setup confirmed for intent ${giftIntentId} -> ${setupIntentId}`);
   }
 
   static async handleGiftPayment(session: any): Promise<void> {

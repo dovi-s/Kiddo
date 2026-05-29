@@ -14725,14 +14725,12 @@ export async function registerRoutes(
 
       // P0-1 capture-at-intent (Option C). INERT unless GIFTER_CAPTURE_AT_INTENT
       // is enabled AND counsel has cleared the gates (LAWYER_Q_HOLDING_GIFT_FUNDS.md).
-      // When ON: vault the gifter's card via a SetupIntent now (NO charge, no funds
-      // held); the off-session charge fires at pairing in POST /api/funds. When OFF
-      // (default): behavior is unchanged — warm-promise, no card. A Stripe failure
-      // here degrades gracefully to the warm-promise path; it never blocks intent
-      // creation. See P0-1_ADVISORY_PANEL_DECISION.md.
-      let captureClientSecret: string | null = null;
+      // When ON: vault the gifter's card via a hosted setup-mode Checkout (NO
+      // charge, no funds held); the off-session charge fires at pairing in
+      // POST /api/funds. When OFF (default): behavior is unchanged — warm-promise,
+      // no card. A Stripe failure here degrades gracefully to the warm-promise
+      // path; it never blocks intent creation. See P0-1_ADVISORY_PANEL_DECISION.md.
       let captureCustomerId: string | null = null;
-      let captureSetupIntentId: string | null = null;
       if (isGifterCaptureAtIntentEnabled()) {
         try {
           const customer = await stripeService.getOrCreateCustomer(
@@ -14741,23 +14739,9 @@ export async function registerRoutes(
             maybeGifter?.id || undefined,
           );
           captureCustomerId = customer.id;
-          const setupIntent = await stripeService.createGifterSetupIntent({
-            customerId: customer.id,
-            metadata: {
-              kind: "gifter_capture_at_intent",
-              gifterEmail: trimmedGifterEmail,
-              recipientEmail: trimmedRecipientEmail,
-              kidFirstName: trimmedKidFirstName.slice(0, 100),
-              amount: parsedAmount.toFixed(2),
-            },
-          });
-          captureSetupIntentId = setupIntent.id;
-          captureClientSecret = setupIntent.client_secret || null;
-        } catch (setupErr) {
-          console.warn("[gift-intent] capture-at-intent SetupIntent failed; falling back to warm-promise:", (setupErr as any)?.message || setupErr);
-          captureClientSecret = null;
+        } catch (custErr) {
+          console.warn("[gift-intent] capture-at-intent customer lookup failed; falling back to warm-promise:", (custErr as any)?.message || custErr);
           captureCustomerId = null;
-          captureSetupIntentId = null;
         }
       }
 
@@ -14774,10 +14758,35 @@ export async function registerRoutes(
         status: "pending",
         expiresAt,
         // capture-at-intent (Option C) — stays 'none'/null unless the flag is on.
-        paymentStatus: captureSetupIntentId ? "setup_pending" : "none",
-        stripeSetupIntentId: captureSetupIntentId,
+        // stripeSetupIntentId is stamped later by handleGifterCardSetup.
+        paymentStatus: captureCustomerId ? "setup_pending" : "none",
         stripeCustomerId: captureCustomerId,
       } as any).returning();
+
+      // capture-at-intent: create the hosted setup-mode Checkout that vaults the
+      // card. The confirmed SetupIntent is stamped onto this intent by
+      // WebhookHandlers.handleGifterCardSetup on completion. Failure → warm-promise.
+      let captureCheckoutUrl: string | null = null;
+      if (captureCustomerId) {
+        try {
+          const baseUrl = getAppBaseUrl(req);
+          const setupSession = await stripeService.createGifterCardSetupCheckout({
+            customerId: captureCustomerId,
+            successUrl: `${baseUrl}/give-a-gift?setup=done`,
+            cancelUrl: `${baseUrl}/give-a-gift?setup=cancelled`,
+            metadata: {
+              giftIntentId: intent.id,
+              recipientEmail: trimmedRecipientEmail,
+              kidFirstName: trimmedKidFirstName.slice(0, 100),
+              amount: parsedAmount.toFixed(2),
+            },
+          });
+          captureCheckoutUrl = setupSession.url || null;
+        } catch (sessErr) {
+          console.warn("[gift-intent] capture-at-intent setup checkout failed; falling back to warm-promise:", (sessErr as any)?.message || sessErr);
+          captureCheckoutUrl = null;
+        }
+      }
 
       // Send the nudge email. Failure to send doesn't roll back the
       // intent — the gifter can re-trigger from their dashboard.
@@ -14817,10 +14826,11 @@ export async function registerRoutes(
         expiresAt: intent.expiresAt,
         recipientEmail: trimmedRecipientEmail,
         // capture-at-intent (Option C): present only when the flag produced a
-        // SetupIntent. Client confirms this clientSecret with a card element to
-        // vault the card; absent → warm-promise (no-card) path, as before.
-        captureAtIntent: Boolean(captureClientSecret),
-        setupIntentClientSecret: captureClientSecret,
+        // setup-mode Checkout session. Client redirects here so the gifter can
+        // vault a card on Stripe's hosted page; absent → warm-promise (no-card)
+        // path, as before.
+        captureAtIntent: Boolean(captureCheckoutUrl),
+        captureCheckoutUrl,
       });
     } catch (error) {
       console.error("Error creating gift intent:", error);
