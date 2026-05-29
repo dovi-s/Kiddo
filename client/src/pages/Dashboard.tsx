@@ -5272,7 +5272,7 @@ export default function Dashboard() {
                       })()}
                       <div style={{ fontSize: 11.5, color: "rgba(255,255,255,0.5)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" as const }} data-testid="text-fund-hero-label">
                         {isOwnerMode ? "Your Fund" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s Fund` : activeFund?.name || "Your fund")}
-                        {" · "}{String(activeFund?.accountType || "UTMA").toUpperCase()}
+                        {" · "}{isOwnerMode ? "Personal" : String(activeFund?.accountType || "UTMA").toUpperCase()}
                         {" · "}{activeFund?.status === "active" ? "Active" : "Draft"}
                       </div>
                     </div>

@@ -279,18 +279,23 @@ export function AppHeader() {
   const accountType = activeFund ? String((activeFund as any).accountType || "UTMA").toUpperCase() : "";
   // Owner mode: the post-handoff recipient viewing their OWN fund (transferred AND
   // current owner). Flips the header fund label to "Your Fund" — the biggest "it's
-  // mine" signal, on every page. Same signal as Projection.tsx. Audience/share copy
-  // (gift links, share titles) stays "{kid}'s" — that's for the people she shares with.
+  // mine" signal, on every page. Same signal as Projection.tsx. The share LABEL in the
+  // owner's OWN UI reads "your"; only the gift PAGE a recipient lands on stays "{kid}'s"
+  // (the people she shares with really do give TO her).
   const isOwnerMode = Boolean(activeFund && (activeFund as any).transferredAt && (activeFund as any).accessRole === "owner");
   const statusLabel = activeFund ? ((activeFund as any).status === "active" ? "Active" : "Draft") : "";
   // Badge suppressed on any non-fund-scoped page (household /funds
   // and user-scoped /account both). The "UTMA · Active" label is a
   // per-fund status; it's noise on pages where the user isn't
   // operating on a specific fund.
+  // Owner mode: a UTMA terminates at the age of majority and the assets become the owner's
+  // outright, so "UTMA" is stale for them — show "Personal" (the platform's adult-account
+  // type) instead.
+  const displayAccountType = isOwnerMode && accountType ? "Personal" : accountType;
   const badgeText = suppressFundChrome
     ? ""
-    : accountType && statusLabel
-      ? `${accountType} · ${statusLabel}`
+    : displayAccountType && statusLabel
+      ? `${displayAccountType} · ${statusLabel}`
       : statusLabel;
 
   return (
@@ -670,9 +675,11 @@ export function AppHeader() {
                   verb-action, not the stock noun. See locked rule in
                   feedback_share_vs_gift_distinction.md ("approved
                   adjustment if the generic-feel concern persists"). */}
-              {activeFund.recipientFirstName
-                ? `Share ${capFirst(activeFund.recipientFirstName)}'s link`
-                : "Share gift link"}
+              {isOwnerMode
+                ? "Share your link"
+                : activeFund.recipientFirstName
+                  ? `Share ${capFirst(activeFund.recipientFirstName)}'s link`
+                  : "Share gift link"}
             </button>
           )}
         </div>
