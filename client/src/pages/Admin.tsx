@@ -1064,7 +1064,7 @@ export default function Admin() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const allowed: Tab[] = ["overview", "growth", "funnels", "access-review", "users", "funds", "assets", "config", "gifters", "gifts", "transactions", "audit", "moderation", "ops", "loops", "integrations", "deliverability"];
+    const allowed: Tab[] = ["overview", "funnels", "access-review", "users", "funds", "assets", "config", "gifters", "gifts", "transactions", "audit", "moderation", "ops", "loops", "integrations", "deliverability"];
     if (allowed.includes(queryTab as Tab)) {
       setActiveTab(queryTab as Tab);
     }
@@ -1134,7 +1134,6 @@ export default function Admin() {
 
   const tabs: { id: Tab; label: string; icon: any }[] = [
     { id: "overview", label: "Overview", icon: TrendingUp },
-    { id: "growth", label: "Growth", icon: Activity },
     { id: "funnels", label: "Funnels", icon: Activity },
     { id: "access-review", label: "Access Review", icon: Shield },
     { id: "loops", label: "Loops", icon: Activity },
@@ -1195,8 +1194,14 @@ export default function Admin() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {activeTab === "overview" && <OverviewTab goTab={goTab} />}
-        {activeTab === "growth" && <GrowthTab />}
-        {activeTab === "funnels" && <FunnelsTab />}
+        {/* Growth merged into Funnels (2026-05-28): both answer "does the loop
+            convert?" off different sources — one tab, two labeled sections. */}
+        {activeTab === "funnels" && (
+          <div className="space-y-8">
+            <FunnelsTab />
+            <GrowthTab />
+          </div>
+        )}
         {activeTab === "access-review" && <AccessReviewTab />}
         {activeTab === "users" && <UsersTab isSuperAdmin={isSuperAdmin} />}
         {activeTab === "funds" && <FundsTab />}
@@ -2241,7 +2246,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
           </h2>
           <div className="grid grid-cols-2 gap-3">
             <StatCard label="Total AUM" value={fmt(f.total_aum)} icon={Wallet} color="green" sub={`${fmtNum(f.total_funds)} funds`} onClick={() => goTab("funds")} />
-            <StatCard label="Invested" value={fmt(f.total_invested)} icon={TrendingUp} color="blue" sub={`Pending: ${fmt(f.total_pending)}`} onClick={() => goTab("assets")} />
+            <StatCard label="Fund Balance" value={fmt(f.total_invested)} icon={TrendingUp} color="blue" sub={`Pending: ${fmt(f.total_pending)}`} onClick={() => goTab("assets")} />
             <StatCard label="UTMA (Kids)" value={fmtNum(f.utma_funds)} icon={Users} color="amber" sub="Custodial accounts" onClick={() => goTab("funds", { accountType: "UTMA" })} />
             <StatCard label="Personal" value={fmtNum(f.personal_funds)} icon={Wallet} color="primary" sub="Adult accounts" onClick={() => goTab("funds", { accountType: "Personal" })} />
           </div>
@@ -3157,7 +3162,6 @@ function AccessReviewTab() {
         <StatCard label="Admin accounts" value={fmtNum(summary.totalAdminAccounts || 0)} icon={Shield} color="blue" />
         <StatCard label="Super-admin accounts" value={fmtNum(summary.totalSuperAdminAccounts || 0)} icon={Shield} color="purple" />
         <StatCard label="Accounts needing review" value={fmtNum(summary.accountsNeedingReview || 0)} icon={AlertTriangle} color={summary.accountsNeedingReview > 0 ? "amber" : "green"} />
-        <StatCard label="MFA verified" value="—" sub="Capability not yet wired" icon={Shield} color="amber" />
       </div>
 
       <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
