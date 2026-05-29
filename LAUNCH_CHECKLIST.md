@@ -114,10 +114,18 @@ can't charge:
 
 A birthday-only product is seasonal and dies. Recurring + multi-occasion + "just
 because" turns a once-a-year card into a habit — and every extra gift fills the
-Memory Book, which *is* the switching-cost reinforcer (`MOAT_MEMO.md §2`). The
-gifter-recurring UI is the open build here
-(`project_gifter_recurring_restoration`, 3–5 dev days; schema + worker already
-exist).
+Memory Book, which *is* the switching-cost reinforcer (`MOAT_MEMO.md §2`).
+
+**Verified 2026-05-29: gifter recurring is already SHIPPED, not an open build.**
+The old "3–5 dev days remaining" note was stale. Full stack is live and
+typecheck-clean: setup (`GiftCheckout.tsx`), full management — pause/resume/
+edit/cancel/history — (`GifterDashboard.tsx ~688-939`), 7 server endpoints
+(`routes.ts ~5278-5616` + setup `~11767`), worker + dunning
+(`recurringContributionWorker.ts`), and the Bucket-4b copy was restored to the
+strong framing (`parentHandoffRecurring.ts:94`). **Remaining is polish only**:
+recurring management is web-only (no mobile surface — the one real gap, non-
+blocking); edit-frequency-only UX; no batch ops / CSV export. None gate launch.
+This box is effectively DONE.
 
 ---
 
