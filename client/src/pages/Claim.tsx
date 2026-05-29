@@ -398,10 +398,11 @@ export default function Claim() {
               </div>
 
               <div className="bg-card rounded-2xl border border-border p-6 lg:p-8 space-y-6">
-                <div className="flex rounded-lg bg-muted p-1">
+                <div className="flex rounded-lg bg-muted p-1" role="group" aria-label="Choose account mode">
                   <button
                     onClick={() => setAuthMode("signup")}
                     data-testid="tab-signup"
+                    aria-pressed={authMode === "signup"}
                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                       authMode === "signup" 
                         ? "bg-card text-foreground shadow-sm" 
@@ -413,6 +414,7 @@ export default function Claim() {
                   <button
                     onClick={() => setAuthMode("signin")}
                     data-testid="tab-signin"
+                    aria-pressed={authMode === "signin"}
                     className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
                       authMode === "signin" 
                         ? "bg-card text-foreground shadow-sm" 
@@ -455,7 +457,7 @@ export default function Claim() {
                 </div>
 
                 {(authMode === "signin" ? loginError : registerError) && (
-                  <p className="text-sm text-red-500" data-testid="text-auth-error">
+                  <p className="text-sm text-red-500" role="alert" data-testid="text-auth-error">
                     {authMode === "signin" ? loginError : registerError}
                   </p>
                 )}
@@ -512,7 +514,7 @@ export default function Claim() {
                 </p>
               </div>
 
-              <div className="bg-card rounded-2xl border border-border p-6 lg:p-8 space-y-4">
+              <div className="bg-card rounded-2xl border border-border p-6 lg:p-8 space-y-4" role="radiogroup" aria-label="Choose where to deposit the gift">
                 {userFunds.map((fund) => (
                   <button
                     key={fund.id}
@@ -521,6 +523,8 @@ export default function Claim() {
                       setCreateNewFund(false);
                     }}
                     data-testid={`fund-option-${fund.id}`}
+                    role="radio"
+                    aria-checked={selectedFund === fund.id && !createNewFund}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
                       selectedFund === fund.id && !createNewFund
                         ? "border-primary bg-muted"
@@ -549,6 +553,8 @@ export default function Claim() {
                     setSelectedFund(null);
                   }}
                   data-testid="button-create-new-fund"
+                  role="radio"
+                  aria-checked={createNewFund}
                   className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
                     createNewFund
                       ? "border-primary bg-muted"
@@ -603,7 +609,7 @@ export default function Claim() {
               </div>
 
               {claimMutation.error && (
-                <p className="text-sm text-red-500 text-center" data-testid="text-claim-error">
+                <p className="text-sm text-red-500 text-center" role="alert" data-testid="text-claim-error">
                   {claimMutation.error.message}
                 </p>
               )}
