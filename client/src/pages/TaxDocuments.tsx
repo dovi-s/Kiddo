@@ -981,14 +981,22 @@ export default function TaxDocuments() {
                   // applies. State stored as 2-letter code; surfaced
                   // verbatim because parents recognize codes.
                   const state = (activeFund as any).recipientState || null;
+                  const stateCode = state ? String(state).toUpperCase() : null;
                   items.push({
                     label: "Governing state",
-                    value: state ? `${String(state).toUpperCase()} (UTMA statute)` : null,
+                    value: stateCode ? `${stateCode} (UTMA statute)` : null,
                   });
+                  // The majority age is set by the GOVERNING STATE's UTMA
+                  // statute (18 in most; 19 in AL/NE; 21 in MS/PA and others).
+                  // Only assert a definitive age when the state is known —
+                  // otherwise the 18 default is a guess presented as law on a
+                  // tax/legal page. Per project_age_milestone_majorityage_footgun.
                   const ma = Number((activeFund as any).majorityAge) || 18;
                   items.push({
                     label: "Age of majority",
-                    value: `${ma} (per state UTMA law)`,
+                    value: stateCode
+                      ? `${ma} (per ${stateCode} UTMA law)`
+                      : "18 in most states; set your state to confirm",
                   });
                   // Fund open date.
                   const opened = (activeFund as any).createdAt;
@@ -1047,7 +1055,7 @@ export default function TaxDocuments() {
                 <div>
                   <p className="text-sm font-bold text-foreground">Our broker-dealer partner · Member FINRA / SIPC</p>
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                    When investing is live, {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your child's"} UTMA holds positions through our broker-dealer partner, a US broker-dealer registered with the SEC, regulated by FINRA, and a member of SIPC. Our broker-dealer partner provides custody for the assets; Kiddo provides the front-end, the gifting flow, and the Memory Book. Same custody pattern Wealthfront, Acorns Early, and many other consumer investing apps use.
+                    When investing is live, {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your child's"} UTMA holds positions through our broker-dealer partner, a US broker-dealer registered with the SEC, regulated by FINRA, and a member of SIPC. Our broker-dealer partner provides custody for the assets; Kiddo provides the front-end, the gifting flow, and the Memory Book. This is the same custody pattern most consumer investing apps use.
                   </p>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2.5">
@@ -1066,13 +1074,13 @@ export default function TaxDocuments() {
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Account type</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      UTMA custodial account under your state's Uniform Transfers to Minors Act. Custodian (you) controls until {activeFund?.recipientFirstName || "the child"} reaches majority age in your state.
+                      UTMA custodial account under your state's Uniform Transfers to Minors Act. Custodian (you) controls until {activeFund?.recipientFirstName ? capFirst(activeFund.recipientFirstName) : "the child"} reaches majority age in your state.
                     </p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Fees</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      Kiddo's annual management fee ($1 per $1,000 invested, about $10/yr on a $10,000 fund) applies to invested assets only, not on cash or pending gifts. Accrued daily, deducted quarterly. No trading commissions, no account fees.
+                      Kiddo's annual fee ($1 per $1,000 invested, about $10/yr on a $10,000 fund) applies to invested assets only, not on cash or pending gifts. Prorated daily, deducted from invested balance. No trading commissions, no account fees.
                     </p>
                   </div>
                 </div>
