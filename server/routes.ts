@@ -7458,7 +7458,16 @@ export async function registerRoutes(
         userId,
         accountType: "Personal",
         recipientRelation: "self",
-      });
+        // Stamp the canonical "this fund has crossed majority" signals at the
+        // moment of transfer (the schema comment documents this as part of the
+        // atomic reassignment). transferredAt drives isOwnerMode + the share
+        // recipientIsOwner reframe + post-handoff read-only treatment;
+        // previousOwnerId keeps the fund attributable to the former custodian.
+        // Without these, a REAL handoff left them null and none of the
+        // owner-mode UX activated (the demo seed set them by hand, masking it).
+        transferredAt: new Date(),
+        previousOwnerId,
+      } as any);
       if (!updatedFund) {
         return res.status(500).json({ error: "Could not complete the transfer." });
       }
