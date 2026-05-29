@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 // BookOpen replaces Sparkles 2026-05-12 for "Latest Memory Book moment" —
 // Sparkles banned per feedback_no_ai_slop.md. BookOpen is the locked Memory
 // Book semantic icon per feedback_iconography_consistency.md.
-import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat, Crown, Sparkles, Pause, Play, Pencil, Receipt, ChevronDown } from "lucide-react";
+import { Heart, Lock, Mail, Gift, ArrowRight, Bookmark, CalendarDays, BookOpen, BellRing, TrendingUp, Repeat, Crown, Plus, Pause, Play, Pencil, Receipt, ChevronDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
@@ -1022,7 +1022,7 @@ export default function GifterDashboard() {
               <div className="rounded-[28px] border border-border/60 bg-card p-6 sm:p-8" data-testid="section-founder-gifts">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen))]/10 text-[hsl(var(--kiddo-evergreen))]">
-                    <Sparkles size={18} strokeWidth={1.8} />
+                    <Crown size={18} strokeWidth={1.8} />
                   </div>
                   <div>
                     <h2 className="font-heading text-2xl font-semibold text-foreground">Founder slots you've gifted</h2>
@@ -1310,7 +1310,7 @@ export default function GifterDashboard() {
               <div className="mt-3 flex flex-wrap gap-2 sm:mt-0">
                 <Link href={startFundHref}>
                   <Button variant="ghost" size="sm" className="rounded-xl">
-                    <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                    <Plus className="mr-1.5 h-3.5 w-3.5" />
                     Start a fund
                   </Button>
                 </Link>
