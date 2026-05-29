@@ -273,7 +273,12 @@ export function AppHeader() {
   const lastLocation = showBackArrow ? readLastAppLocation() : null;
   const backHref = backTargetHref(lastLocation, activeFund?.id ?? null);
   const backLabel = formatBackLabel(lastLocation, capFirst(activeFund?.recipientFirstName) || null);
-  const accountType = activeFund ? ((activeFund as any).accountType || "UTMA") : "";
+  const accountType = activeFund ? String((activeFund as any).accountType || "UTMA").toUpperCase() : "";
+  // Owner mode: the post-handoff recipient viewing their OWN fund (transferred AND
+  // current owner). Flips the header fund label to "Your Fund" — the biggest "it's
+  // mine" signal, on every page. Same signal as Projection.tsx. Audience/share copy
+  // (gift links, share titles) stays "{kid}'s" — that's for the people she shares with.
+  const isOwnerMode = Boolean(activeFund && (activeFund as any).transferredAt && (activeFund as any).accessRole === "owner");
   const statusLabel = activeFund ? ((activeFund as any).status === "active" ? "Active" : "Draft") : "";
   // Badge suppressed on any non-fund-scoped page (household /funds
   // and user-scoped /account both). The "UTMA · Active" label is a
@@ -376,9 +381,11 @@ export function AppHeader() {
                 <span className="truncate">
                   {isFundsOverview
                     ? "Your funds"
-                    : activeFund.recipientFirstName
-                      ? `${capFirst(activeFund.recipientFirstName)}'s Fund`
-                      : activeFund.name || "Fund"}
+                    : isOwnerMode
+                      ? "Your Fund"
+                      : activeFund.recipientFirstName
+                        ? `${capFirst(activeFund.recipientFirstName)}'s Fund`
+                        : activeFund.name || "Fund"}
                 </span>
                 <ChevronDown size={12} className={`shrink-0 transition-transform text-muted-foreground ${fundPickerOpen ? "rotate-180" : ""}`} />
               </button>
