@@ -18,7 +18,14 @@ apps/mobile/.expo
 # in version control.
 .local/
 .npm-cache/
-.claude/
+# .claude is local config (settings.local.json etc.) — ignored — EXCEPT the
+# shared, version-controlled workflows so collaborators get the security-audit
+# team. Git can't re-include a file under a fully-excluded dir, so exclude the
+# CONTENTS and re-include the one tracked path.
+.claude/*
+!.claude/workflows/
+.claude/workflows/*
+!.claude/workflows/security-audit.js
 *.log
 
 # IDE
