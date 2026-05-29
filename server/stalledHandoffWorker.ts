@@ -136,6 +136,8 @@ async function getStalledRows(log: LogFn): Promise<StalledRow[]> {
         AND at.child_claimed_at IS NULL
         AND at.ownership_transferred_at IS NULL
         AND at.invited_at <= NOW() - INTERVAL '7 days'
+        -- Demo-safety: never fire stalled-handoff emails for demo funds.
+        AND COALESCE(u.is_demo_account, false) = false
       ORDER BY at.invited_at ASC
       LIMIT 500
     `);

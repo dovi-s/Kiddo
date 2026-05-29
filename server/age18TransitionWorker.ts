@@ -224,6 +224,12 @@ async function loadDueFunds(): Promise<{
       WHERE f.recipient_birthdate IS NOT NULL
         AND f.status = 'active'
         AND u.email IS NOT NULL
+        -- Demo-safety: never fire real age-of-majority emails for demo
+        -- funds. The Dunphy seed puts Alex ~30 days from 21 (inside the
+        -- T-30 window), which would email phil@dunphyfamily.com for real.
+        -- The demo showcases the handoff via the interactive claim flow +
+        -- seeded state, not via this background worker's live emails.
+        AND COALESCE(u.is_demo_account, false) = false
     )
     SELECT * FROM (
       -- T-30 widened to a 3-day window (28-30 days out, inclusive).

@@ -411,6 +411,10 @@ export async function autoPauseOwnershipMismatchedContributions(log: LogFn): Pro
     JOIN users u ON u.id = pc.user_id
     WHERE pc.status = 'active'
       AND f.user_id <> pc.user_id
+      -- Demo-safety: skip demo funds. Their money flow is mocked (no real
+      -- charge to pause), and the per-row activity + "convert to gift" email
+      -- below would otherwise hit the demo parent's address for real.
+      AND COALESCE(u.is_demo_account, false) = false
   `);
 
   if (flippedResult.rows.length === 0) return;

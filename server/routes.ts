@@ -7605,7 +7605,9 @@ export async function registerRoutes(
       // visibility but not raised to the client response.
       try {
         const parentRemainingFunds = await storage.getFundsByUser(previousOwnerId);
-        if (parentRemainingFunds.length === 0) {
+        // Demo-safety: never send the real subscription-retirement email for a
+        // demo fund's handoff (would hit the demo parent's address for real).
+        if (parentRemainingFunds.length === 0 && !(await isDemoFund(fund.id))) {
           const parentSub = await storage.getSubscription(previousOwnerId);
           const isPaidActive =
             parentSub?.status === "active" &&

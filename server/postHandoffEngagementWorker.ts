@@ -124,6 +124,8 @@ async function findEligibleOwners(now: Date): Promise<EngagementCandidate[]> {
       and(
         sql`LOWER(${funds.accountType}) = 'personal'`,
         sql`LOWER(${funds.recipientRelation}) = 'self'`,
+        // Demo-safety: never send post-handoff engagement emails to demo kid-owners.
+        sql`COALESCE(${users.isDemoAccount}, false) = false`,
         isNotNull(users.email),
         sql`${funds.updatedAt} <= ${graceCutoff}`,
       ),
@@ -246,6 +248,8 @@ async function findThirtyDayCheckInOwners(now: Date): Promise<ThirtyDayCandidate
       and(
         sql`LOWER(${funds.accountType}) = 'personal'`,
         sql`LOWER(${funds.recipientRelation}) = 'self'`,
+        // Demo-safety: never send post-handoff engagement emails to demo kid-owners.
+        sql`COALESCE(${users.isDemoAccount}, false) = false`,
         isNotNull(users.email),
         sql`${funds.updatedAt} <= ${upperCutoff}`,
         sql`${funds.updatedAt} >= ${lowerCutoff}`,
