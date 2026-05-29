@@ -1130,7 +1130,7 @@ export default function GiftCheckout() {
     ? `${checkoutPreviewStock.name} (${checkoutPreviewStock.symbol})`
     : effectiveExecutionModel === "family"
       ? "Cash for the family to invest"
-      : `${strategyLabel} auto-invest`;
+      : `${strategyLabel} mix`;
   const isSavingsGoal = isSavingsGoalEarly;
   const savingsGoalTypeHeadlines: Record<string, string> = {
     college: `Help ${recipientLooksLikeFund ? "them" : recipientName} get to college.`,
@@ -2364,7 +2364,7 @@ export default function GiftCheckout() {
                         ? <>{checkoutPreviewStock.symbol} · ~{checkoutEstimatedSharesLabel} shares</>
                         : effectiveExecutionModel === "family"
                           ? <>Fund cash &mdash; the family invests it when ready</>
-                          : <>{strategyLabel} mix &mdash; auto-invested</>}
+                          : <>{strategyLabel} mix &mdash; invested automatically</>}
                     </p>
                   </div>
                 </div>
