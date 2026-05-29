@@ -408,6 +408,27 @@ export default function FundsOverview() {
 
   const enabled = data?.enabled === true;
   const funds = useMemo(() => data?.funds ?? [], [data]);
+  // Order the list so the funds that actually have money come first.
+  // With several empty / just-created funds, the one funded fund would
+  // otherwise sink to the bottom and the whole page reads as lifeless.
+  // Stable within each group (preserves the API's order — typically
+  // creation order — so it stays predictable), and transferred (handed-
+  // off) funds sink to the bottom as historical. Pure reorder, no new
+  // framing — stays within project_funds_overview_rules.md.
+  const sortedFunds = useMemo(() => {
+    const rank = (f: OverviewFund) => {
+      if (f.accessRole === "previous_owner") return 2; // transferred → bottom
+      const bal =
+        parseFloat(String(f.balance || "0")) +
+        parseFloat(String(f.pendingBalance || "0")) +
+        parseFloat(String(f.cashBalance || "0"));
+      return bal >= 1 ? 0 : 1; // funded → top, not-yet-funded → middle
+    };
+    return funds
+      .map((f, i) => ({ f, i }))
+      .sort((a, b) => rank(a.f) - rank(b.f) || a.i - b.i)
+      .map((x) => x.f);
+  }, [funds]);
   const thisMonth = data?.thisMonth;
   const occasions = data?.upcomingOccasions ?? [];
   const recurring = data?.recurring;
@@ -687,7 +708,7 @@ export default function FundsOverview() {
         <section className="rounded-3xl border border-border bg-card p-5">
           <p className="kiddo-section-label mb-3">Each fund</p>
           <div className="space-y-2">
-            {funds.map((f, i) => {
+            {sortedFunds.map((f, i) => {
               const balance =
                 parseFloat(String(f.balance || "0")) +
                 parseFloat(String(f.pendingBalance || "0")) +
