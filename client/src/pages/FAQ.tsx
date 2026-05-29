@@ -5,6 +5,7 @@ import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { ChevronDown, Lock, Search, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { KIDDIE_TAX_NOTE } from "@shared/legal-copy";
 
 const faqItems = [
   {
@@ -275,9 +276,9 @@ const faqItems = [
       <>
         Most Kiddo-sized gifts are nowhere near the annual gift-tax exclusion, so families usually do not
         need to worry about gift-tax filing just because a grandparent sent a birthday gift. Investment
-        income inside the account can create tax reporting over time, and the kiddie tax can matter if
-        unearned income grows beyond the annual thresholds. For many families starting small, that is not
-        an immediate issue, but it is worth understanding as the fund grows. If you are deciding between
+        income inside the account can create tax reporting over time. {KIDDIE_TAX_NOTE} For many families
+        starting small, that is not an immediate issue, but it is worth understanding as the fund grows. If
+        you are deciding between
         account types, compare{" "}
         <Link href="/blog/utma-vs-529-for-family-gifting" className="text-primary hover:underline">
           child funds vs 529s for family gifting

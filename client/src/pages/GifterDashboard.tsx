@@ -16,6 +16,7 @@ import { useCountUp } from "@/hooks/use-count-up";
 import { GifterFundSparkline } from "@/components/GifterFundSparkline";
 import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { projectFundValue, yearsBetween } from "@shared/projection";
+import { PROJECTION_DISCLAIMER } from "@shared/legal-copy";
 
 // Per-user gifter dashboard cache. Same caching trio pattern (initialData
 // + writeLocalCache + 5-minute staleTime) as the rest of the codebase
@@ -1212,7 +1213,7 @@ export default function GifterDashboard() {
                             Your {fmtMoney(fund.totalGifted)} to {fund.childName} could be worth this when {fund.childName} turns {attribution.majorityAge}, if it stays invested.
                           </p>
                           <p className="mt-2 text-[10px] text-muted-foreground/60 leading-snug">
-                            Assumes 7% yearly average net of Kiddo's annual fee ($1/yr per $1,000 invested). Markets vary; returns are never guaranteed.
+                            {PROJECTION_DISCLAIMER}
                           </p>
                         </div>
                       )}
