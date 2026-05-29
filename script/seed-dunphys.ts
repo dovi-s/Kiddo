@@ -34,6 +34,7 @@ import {
   events,
   subscriptions,
   fundCollaborators,
+  ageTransitions,
   parentContributions,
   recurringGifts,
   fundSnapshots,
@@ -136,6 +137,12 @@ const ACCOUNTS = [
   { email: "mitchell@dunphyfamily.com", firstName: "Mitchell", lastName: "Pritchett", preferredName: "Mitchell", role: "gifter" as const },
   { email: "cameron@dunphyfamily.com",  firstName: "Cameron",  lastName: "Tucker",    preferredName: "Cam",      role: "gifter" as const },
   { email: "manny@dunphyfamily.com",    firstName: "Manny",    lastName: "Delgado",   preferredName: "Manny",    role: "gifter" as const },
+  // Haley is the graduated adult: past CA majority (21), her fund is transferred
+  // to her below (step 3b). The "graduate" role gives her approved KYC in
+  // upsertUser — she owns a live individual investing account now, not a
+  // parent-custodial one. Logging in as her renders the REAL post-handoff adult
+  // experience (the demo is the real app, not a mock view).
+  { email: "haley@dunphyfamily.com",    firstName: "Haley",    lastName: "Dunphy",    preferredName: "Haley",    role: "graduate" as const },
 ];
 
 // Three Dunphy kids. Ages locked relative to today so the demo always
@@ -504,7 +511,7 @@ async function upsertUser(account: typeof ACCOUNTS[number]): Promise<string> {
   // doesn't surface "Activate investing / Until we verify your
   // identity" prompts. Gifters don't need KYC — they go through the
   // gift checkout flow. Locked 2026-05-21 with the demo polish pass.
-  const isParent = account.role === "parent" || account.role === "co-parent";
+  const isParent = account.role === "parent" || account.role === "co-parent" || account.role === "graduate";
   const kycStatus = isParent ? "approved" : "none";
   // Check for existing by email. If found, update flags + return id.
   const [existing] = await db.select().from(users).where(eq(users.email, account.email)).limit(1);
@@ -1374,7 +1381,42 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
     console.log(`  fund: ${kid.firstName}'s Fund (${kid.slug}) → ${fundId}`);
   }
 
-  // 4. Wire Claire as co-parent on all three funds. Without this,
+  // 3b. Hand Haley's fund off to Haley — the graduated adult-account demo.
+  //
+  // The demo IS the real app, so there is no mock "adult view": we seed the
+  // ACTUAL post-handoff state. The real claim/transfer flow flips fund.userId,
+  // stamps transferredAt + previousOwnerId, and the Age18Welcome walkthrough
+  // sets kidWelcomeCompletedAt; we replicate exactly that. Result: logging in
+  // as Haley renders the real adult/individual experience, and Phil sees the
+  // real previous-owner "your part of the story" view of her fund.
+  const haleyFundId = seededFundIds[0]; // KIDS[0] is Haley (age 21, past CA majority)
+  const haleyUserId = userIdByEmail.get("haley@dunphyfamily.com");
+  if (haleyUserId && haleyFundId) {
+    const transferredAt = new Date();
+    await db.update(funds).set({
+      userId: haleyUserId,
+      previousOwnerId: philId,
+      transferredAt,
+      kidWelcomeCompletedAt: transferredAt,
+    }).where(eq(funds.id, haleyFundId));
+    await db.insert(ageTransitions).values({
+      fundId: haleyFundId,
+      childClaimedByUserId: haleyUserId,
+      childClaimedAt: transferredAt,
+      ownershipTransferredAt: transferredAt,
+      ownershipTransferredByUserId: haleyUserId,
+      formerCustodianUserId: philId,
+      invitedAt: transferredAt,
+      inviteViewedAt: transferredAt,
+      childEmailVerifiedAt: transferredAt,
+      updatedAt: transferredAt,
+    } as any).onConflictDoNothing();
+    console.log(`  handoff: Haley's fund → haley@dunphyfamily.com (graduated adult account; Phil is previous owner)`);
+  }
+
+  // 4. Wire Claire as co-parent on the pre-handoff funds (Alex + Luke).
+  //    Haley's fund transferred to her at majority, so co-parent access there
+  //    ended with the handoff — a graduated adult owns it solo. Without this,
   //    logging in as Claire via /demo shows an empty fund list and
   //    Dashboard redirects to /get-started — defeating the
   //    "co-parent view of the same three funds" spec promise.
@@ -1385,6 +1427,7 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
   const claireId = userIdByEmail.get("claire@dunphyfamily.com");
   if (claireId && seededFundIds.length > 0) {
     for (const fundId of seededFundIds) {
+      if (fundId === haleyFundId) continue; // transferred to Haley at majority; co-parent access ended
       await db.insert(fundCollaborators).values({
         fundId,
         userId: claireId,
@@ -1395,7 +1438,7 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
         invitedAt: new Date(),
       } as any);
     }
-    console.log(`  collaborator: claire@dunphyfamily.com → co-parent on ${seededFundIds.length} fund(s)`);
+    console.log(`  collaborator: claire@dunphyfamily.com → co-parent on ${seededFundIds.filter((id) => id !== haleyFundId).length} fund(s) (Haley's transferred out)`);
   }
 
   // 5. Phil's recurring parent_contributions are now seeded PER FUND

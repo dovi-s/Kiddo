@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { haptic } from "@/lib/haptics";
 import { setActiveFundId } from "@/hooks/use-active-fund";
 import { useAuth } from "@/hooks/use-auth";
-import { ArrowRight, Users, Gift, ShieldCheck, Star } from "lucide-react";
+import { ArrowRight, Users, Gift, ShieldCheck, Star, GraduationCap } from "lucide-react";
 import { LockedRefusalsPanel } from "@/components/LockedRefusalsPanel";
 
 const DEMO_PASSWORD = "dunphyfamily";
@@ -29,7 +29,7 @@ const DEMO_PASSWORD = "dunphyfamily";
 type DemoAccount = {
   email: string;
   display: string;
-  role: "parent" | "co-parent" | "gifter";
+  role: "parent" | "co-parent" | "gifter" | "graduate";
   oneLiner: string;
 };
 
@@ -75,6 +75,12 @@ const ACCOUNTS: DemoAccount[] = [
     display: "Manny Delgado",
     role: "gifter",
     oneLiner: "Cousin. Small gift in Roblox stock. The young-gifter angle.",
+  },
+  {
+    email: "haley@dunphyfamily.com",
+    display: "Haley Dunphy",
+    role: "graduate",
+    oneLiner: "Age 21, graduated. The fund is hers now. This is the real adult account after the handoff: the same fund, self-directed, with the whole Memory Book unlocked.",
   },
 ];
 
@@ -197,7 +203,7 @@ export default function Demo() {
                   Alex is weeks from 21.
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  The full handoff page: the centerpiece projection slider, Phil's sealed letter, years of voice memos from Gloria, and a fund built across her whole childhood. Land here first to see what Kiddo is for. (Her big sister Haley already turned 21. See the graduated account from Phil's dashboard.)
+                  The full handoff page: the centerpiece projection slider, Phil's sealed letter, years of voice memos from Gloria, and a fund built across her whole childhood. Land here first to see what Kiddo is for. (Her big sister Haley already turned 21; log in as Haley below to step into the adult account after the handoff.)
                 </p>
               </div>
               <button
@@ -216,7 +222,7 @@ export default function Demo() {
           <section className="mx-auto mt-10 grid max-w-4xl gap-4">
             <h2 className="font-heading text-lg font-semibold text-foreground">Or start with Phil</h2>
             <p className="text-sm text-muted-foreground">
-              Three kids at three life stages: Luke growing up and getting gifts, Alex weeks from taking ownership, Haley already graduated to her own adult account. The whole journey in one family.
+              Three kids at three life stages: Luke growing up and getting gifts, Alex weeks from taking ownership, Haley already graduated to her own adult account. The whole arc in one family.
             </p>
             {ACCOUNTS.filter((a) => a.role === "parent").map((account) => (
               <button
@@ -241,13 +247,41 @@ export default function Demo() {
             ))}
           </section>
 
+          <section className="mx-auto mt-10 grid max-w-4xl gap-4">
+            <h2 className="font-heading text-lg font-semibold text-foreground">Or step into the adult account</h2>
+            <p className="text-sm text-muted-foreground">
+              Haley turned 21, so her fund transferred to her. Log in as Haley to step into the real adult account after the handoff: the same fund, now self-directed and fully hers, with the whole Memory Book unlocked. From Phil's dashboard you also see it as a fund he can no longer touch, which is the other half of the moment.
+            </p>
+            {ACCOUNTS.filter((a) => a.role === "graduate").map((account) => (
+              <button
+                key={account.email}
+                type="button"
+                onClick={() => handleLogin(account.email)}
+                disabled={loadingEmail === account.email}
+                className="group flex items-center justify-between gap-4 rounded-2xl border-2 border-[hsl(var(--kiddo-evergreen)/0.3)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-5 py-4 text-left transition-all hover:border-[hsl(var(--kiddo-evergreen)/0.6)] hover:bg-[hsl(var(--kiddo-evergreen)/0.1)] disabled:opacity-60"
+                data-testid={`demo-login-${account.email.split("@")[0]}`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]">
+                    <GraduationCap size={18} />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">{account.display}</p>
+                    <p className="text-xs text-muted-foreground">{account.oneLiner}</p>
+                  </div>
+                </div>
+                <ArrowRight size={18} className="shrink-0 text-[hsl(var(--kiddo-evergreen))] transition-transform group-hover:translate-x-1" />
+              </button>
+            ))}
+          </section>
+
           <section className="mx-auto mt-10 grid max-w-4xl gap-3">
             <h2 className="font-heading text-lg font-semibold text-foreground">Or log in as a gifter</h2>
             <p className="text-sm text-muted-foreground">
               See the gifter side of the loop. Each account demonstrates a different gifter pattern.
             </p>
             <div className="grid gap-2 md:grid-cols-2">
-              {ACCOUNTS.filter((a) => a.role !== "parent").map((account) => (
+              {ACCOUNTS.filter((a) => a.role !== "parent" && a.role !== "graduate").map((account) => (
                 <button
                   key={account.email}
                   type="button"
