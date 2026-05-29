@@ -10063,7 +10063,53 @@ export async function registerRoutes(
       }
       // Access enforced by requireOwnedFundParam (owner or accepted collaborator).
       const gifts = await storage.getGiftsByFund(req.params.fundId);
-      res.json(gifts);
+      // Enrich each gift with the matched account's preferred display name +
+      // avatar (by senderEmail) so the "Who loves you" roster can show how the
+      // family actually refers to a gifter ("Dad", "Mom") with a real photo,
+      // not a bare first name + initials. Low-sensitivity: the gifter is already
+      // named on the gift. NEVER enrich anonymous gifts (the gifter opted out).
+      // Falls back silently to name+initials when there's no matching account.
+      const giftEmails = Array.from(new Set(
+        gifts
+          .filter((g) => (g as any).isAnonymous !== true)
+          .map((g) => String(g.senderEmail || "").trim().toLowerCase())
+          .filter(Boolean),
+      ));
+      const gifterInfoByEmail = new Map<string, { preferredName: string | null; avatarUrl: string | null }>();
+      if (giftEmails.length > 0) {
+        try {
+          const rows = await db
+            .select({
+              email: users.email,
+              preferredName: users.preferredName,
+              profileImageUrl: users.profileImageUrl,
+            })
+            .from(users)
+            .where(inArray(sql`lower(${users.email})`, giftEmails));
+          for (const r of rows) {
+            if (!r.email) continue;
+            gifterInfoByEmail.set(String(r.email).trim().toLowerCase(), {
+              preferredName: (r.preferredName && String(r.preferredName).trim()) || null,
+              avatarUrl: (r as any).profileImageUrl || null,
+            });
+          }
+        } catch (enrichErr) {
+          console.warn("[gifts] gifter enrichment failed (non-fatal):", (enrichErr as any)?.message || enrichErr);
+        }
+      }
+      const enriched = gifts.map((g) => {
+        if ((g as any).isAnonymous === true) {
+          return { ...g, gifterPreferredName: null, gifterAvatarUrl: null };
+        }
+        const key = String(g.senderEmail || "").trim().toLowerCase();
+        const match = key ? gifterInfoByEmail.get(key) : undefined;
+        return {
+          ...g,
+          gifterPreferredName: match?.preferredName || null,
+          gifterAvatarUrl: match?.avatarUrl || null,
+        };
+      });
+      res.json(enriched);
     } catch (error) {
       console.error('Error fetching gifts:', error);
       res.status(500).json({ error: 'Failed to fetch gifts' });

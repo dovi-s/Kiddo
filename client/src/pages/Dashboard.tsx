@@ -1006,6 +1006,12 @@ type GifterProfile = {
   totalNetAmount: number;
   lastGiftDate: string | null;
   gifts: GiftType[];
+  // How this gifter's account asks to be referred to ("Dad", "Mom", "Cam") and
+  // their profile photo — server-enriched by senderEmail. Lets the roster show
+  // the relationship + a real face instead of a first name + initials. Null when
+  // the gifter isn't a Kiddo account or chose anonymity.
+  preferredName?: string | null;
+  avatarUrl?: string | null;
 };
 
 // Avatar background palette for named gifters. Hash-based assignment
@@ -3044,6 +3050,8 @@ export default function Dashboard() {
       const rawName = displayGifterName(g.senderName, (g as any).isAnonymous);
       const key = rawName.toLowerCase();
       const net = parseFloat(String(g.netAmount || g.amount || "0"));
+      const giftPreferredName = ((g as any).gifterPreferredName && String((g as any).gifterPreferredName).trim()) || null;
+      const giftAvatarUrl = (g as any).gifterAvatarUrl || null;
       const existing = map.get(key);
       if (existing) {
         existing.giftCount += 1;
@@ -3054,6 +3062,10 @@ export default function Dashboard() {
             existing.lastGiftDate = String(g.createdAt);
           }
         }
+        // Fill enrichment from whichever gift carries it (older gifts may pre-date
+        // the gifter creating an account / setting a preferred name or photo).
+        if (!existing.preferredName && giftPreferredName) existing.preferredName = giftPreferredName;
+        if (!existing.avatarUrl && giftAvatarUrl) existing.avatarUrl = giftAvatarUrl;
         existing.gifts.push(g);
       } else {
         const parts = rawName.trim().split(/\s+/);
@@ -3068,6 +3080,8 @@ export default function Dashboard() {
           totalNetAmount: Number.isFinite(net) ? net : 0,
           lastGiftDate: g.createdAt ? String(g.createdAt) : null,
           gifts: [g],
+          preferredName: giftPreferredName,
+          avatarUrl: giftAvatarUrl,
         });
       }
     }
@@ -6135,7 +6149,7 @@ export default function Dashboard() {
                         data-testid="last30-row-auto"
                       >
                         <span className="text-sm text-muted-foreground">
-                          {isOwnerMode ? "Your family's recurring investments" : "Your recurring investments"}
+                          Your recurring investments
                           {/* When the 30-day total is zero AND there's a scheduled run
                               queued, append "starts {date}" so the bare $0 doesn't look
                               like a bug to a parent looking at 3 active schedules below.
@@ -6171,7 +6185,7 @@ export default function Dashboard() {
                         className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                         data-testid="last30-row-onetime"
                       >
-                        <span className="text-sm text-muted-foreground">{isOwnerMode ? "Your family's one-time additions" : "Your one-time additions"}</span>
+                        <span className="text-sm text-muted-foreground">Your one-time additions</span>
                         <span className="inline-flex items-center gap-1.5">
                           <span className="text-sm font-semibold text-foreground tabular-nums">
                             {fmtRow(yourOneTimeTotal)}
@@ -7650,6 +7664,10 @@ export default function Dashboard() {
                       {visibleGifters.map(gifter => {
                         const color = GIFTER_AVATAR_COLORS[gifter.colorIdx];
                         const firstName = gifter.name.split(" ")[0];
+                        // Show how the family refers to this person ("Dad",
+                        // "Mom", "Cam") when their account sets a preferred name;
+                        // else the first name. The viewer's own row stays "You".
+                        const displayName = (gifter.preferredName && gifter.preferredName.trim()) || firstName;
                         // Gifter-level "thanked" badge only fires when EVERY
                         // thankable gift from this gifter has actually been
                         // thanked. The previous `.some(...)` form lit up the
@@ -7665,6 +7683,11 @@ export default function Dashboard() {
                         const isOwner = !!user?.email && gifter.gifts.some(g =>
                           String(g.senderEmail || "").trim().toLowerCase() === String(user.email).trim().toLowerCase()
                         );
+                        // Avatar: the gifter's own profile photo (server-enriched
+                        // by email) for ANY gifter — e.g. Dad's photo on the kid's
+                        // "Who loves you". Falls back to the viewer's own photo for
+                        // their self-tile, then to initials.
+                        const avatarSrc = gifter.avatarUrl || (isOwner ? (user?.profileImageUrl || null) : null);
                         // Recurring signal source depends on whose avatar
                         // this is. Owner: parent_contributions table.
                         // External (legacy): recurring_gifts. Gifter
@@ -7684,7 +7707,7 @@ export default function Dashboard() {
                         // open the dialog just to see "when did Grandma
                         // last give?"
                         const tooltipParts: string[] = [
-                          isOwner ? `${firstName} (you)` : firstName,
+                          isOwner ? `${displayName} (you)` : displayName,
                           gifter.lastGiftDate
                             ? `last gave ${new Date(gifter.lastGiftDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}`
                             : null,
@@ -7723,12 +7746,13 @@ export default function Dashboard() {
                                   transition: "transform 0.15s ease, box-shadow 0.15s ease",
                                 }}
                               >
-                                {isOwner && user?.profileImageUrl ? (
-                                  // Parent's own profile photo when set — Acorns-style
-                                  // personal touch beats generic initials for the
-                                  // "this is me" tile in the gifter roster.
+                                {avatarSrc ? (
+                                  // The gifter's real profile photo when set — a
+                                  // face beats generic initials. Works for any
+                                  // gifter (Dad's photo on the kid's roster), not
+                                  // just the viewer's own "this is me" tile.
                                   <img
-                                    src={user.profileImageUrl}
+                                    src={avatarSrc}
                                     alt=""
                                     className="w-full h-full object-cover"
                                   />
@@ -7795,7 +7819,7 @@ export default function Dashboard() {
                               maxWidth: 56, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                               textAlign: "center",
                             }}>
-                              {isOwner ? "You" : firstName}
+                              {isOwner ? "You" : displayName}
                             </span>
                             {/* Recency + repeat-count secondary line.
                                 Single-gift gifters: just date ("May 5").
@@ -8713,7 +8737,7 @@ export default function Dashboard() {
                           {activeAutoInvest
                             ? "Add outside your regular schedule anytime."
                             : isOwnerMode
-                              ? `A bonus. A windfall. Just because. 🌱`
+                              ? `A bonus. A good month. Just because. 🌱`
                               : `A birthday. A milestone. Just because. 🌱`}
                         </p>
                       </div>
@@ -11759,12 +11783,12 @@ export default function Dashboard() {
                             : "0 2px 8px rgba(26,23,16,0.12)",
                         }}
                       >
-                        {isOwnerPopup && user?.profileImageUrl ? (
-                          // Parent's own profile photo in the gifter detail
-                          // modal hero — same swap as the small roster avatar
-                          // so the parent reads "this is me" consistently.
+                        {(selectedGifter.avatarUrl || (isOwnerPopup ? user?.profileImageUrl : null)) ? (
+                          // The gifter's real profile photo in the detail modal
+                          // hero — same swap as the small roster avatar so the
+                          // face reads consistently (Dad's photo, not initials).
                           <img
-                            src={user.profileImageUrl}
+                            src={(selectedGifter.avatarUrl || user?.profileImageUrl) as string}
                             alt=""
                             className="w-full h-full object-cover"
                           />
