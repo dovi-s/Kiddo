@@ -26,6 +26,32 @@ liability — before the destination custodial brokerage account exists, then ei
 (a) invest the funds once the parent opens the account, or (b) auto-refund the
 gifter if the account isn't opened within N days?**
 
+## ⭐ The two binary gates that most shape the build (added 2026-05-29)
+
+An internal expert-panel review converged on a **no-funds-held** design (save the
+gifter's card via a Stripe SetupIntent, then charge it off-session when the parent
+creates the fund — Kiddo never holds the money). That likely sidesteps the holding
+question entirely. But two binary questions gate it, and we need a written yes/no:
+
+- **(A) Off-session conditional-charge classification.** Does charging a gifter's
+  *pre-authorized, saved* card **off-session, weeks later, on a trigger the gifter
+  did not directly initiate** (the parent's unilateral fund creation), **with a 14-30
+  day decline-retry loop**, trigger FinCEN MSB / state money-transmission licensing /
+  BSA-AML — or does the fact that Stripe (a licensed acquirer) holds the token and
+  processes the charge fully exonerate us? (Our concern: regulators may define
+  transmission/custody by *control over the timing and direction of funds*, not
+  physical possession.)
+- **(B) Broker-dealer acceptance of multi-gifter funding.** Does our BD agreement
+  explicitly document (i) acceptance of **multiple non-parent gifters funding a single
+  minor's UTMA account**, and (ii) their source-of-funds/AML procedure for those
+  third-party contributions — and will they accept a *volume surge* of small
+  multi-contributor accounts? (If their AML team flags this, gifts get charged but
+  orphaned — silent failure of the whole acquisition loop.)
+
+If (A) is "you need MTL/MSB," we either license or fall back to an auth-only path. If
+(B) is unconfirmed, we hold the charge-at-pairing step. Everything below remains
+relevant for the alternative (funds-held) design.
+
 ## Sub-questions that determine the build
 
 1. **Money transmission / custody of customer funds.** Does holding gift money
