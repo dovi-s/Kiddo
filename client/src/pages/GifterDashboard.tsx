@@ -466,7 +466,13 @@ export default function GifterDashboard() {
 
   const handleLogin = async () => {
     try {
-      await login({ email: email.trim(), password });
+      const result = await login({ email: email.trim(), password });
+      if ((result as any)?.twoFactorRequired) {
+        // 2FA-enrolled account: no session yet. Finish sign-in (incl. the code
+        // step) on the full login page, then return to the gifter dashboard.
+        window.location.assign(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+        return;
+      }
     } catch (error) {
       toast({ title: "Could not sign in", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
     }

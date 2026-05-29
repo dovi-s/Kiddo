@@ -169,7 +169,13 @@ export default function Claim() {
       if (authMode === "signup") {
         await register({ email, password });
       } else {
-        await login({ email, password });
+        const result = await login({ email, password });
+        if ((result as any)?.twoFactorRequired) {
+          // 2FA-enrolled account: no session created yet. Finish sign-in
+          // (including the code step) on the full login page, then return here.
+          navigate(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+          return;
+        }
       }
       haptic('medium');
       await queryClient.invalidateQueries({ queryKey: ["/api/funds"] });

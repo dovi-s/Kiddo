@@ -201,7 +201,13 @@ export default function AgeTransitionInvite() {
       if (authMode === "register") {
         await register({ email, password, firstName });
       } else {
-        await login({ email, password });
+        const result = await login({ email, password });
+        if ((result as any)?.twoFactorRequired) {
+          // 2FA-enrolled account: no session yet. Complete sign-in (incl. the
+          // code step) on the full login page, then return to this invite.
+          window.location.assign(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+          return;
+        }
       }
       await claimMutation.mutateAsync();
     } catch (error) {
