@@ -22,6 +22,7 @@ import { LOCAL_CACHE_KEYS, readLocalCache } from "@/lib/local-cache";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { getActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
+import { useFunds } from "@/hooks/use-funds";
 import { prefetchDashboard, prefetchMemoryBook, onIdle } from "@/lib/prefetch";
 import { scrollToFirstMatchingTestId } from "@/lib/scroll-to-element";
 import { getDeepLinkHighlightStyle } from "@/lib/deep-link-highlight";
@@ -834,6 +835,19 @@ export default function Activity() {
   // kept showing rows from the previously-active fund. Same parallel bug
   // and listener-based fix as Projection / TaxDocuments / Age18Plan.
   const [activeFundIdForActivity, setActiveFundIdForActivity] = useState<string>(() => getActiveFundId());
+  // Owner-mode: the set of the viewer's funds that have been handed off to them as the
+  // adult owner (accessRole 'owner' + transferredAt). Used to flip "{child}'s fund" ->
+  // "your fund" per row in this cross-fund feed. Reuses the cached /api/funds query (same
+  // queryKey), so no extra fetch. 2026-05-29.
+  const { data: allFundsForOwnerMode = [] } = useFunds();
+  const ownerModeFundIds = useMemo(
+    () => new Set(
+      (allFundsForOwnerMode as any[])
+        .filter((f: any) => f?.accessRole === "owner" && f?.transferredAt)
+        .map((f: any) => String(f.id)),
+    ),
+    [allFundsForOwnerMode],
+  );
   useEffect(() => {
     const handler = (e: Event) => {
       const newId = (e as CustomEvent<{ id: string }>).detail?.id;
@@ -2194,7 +2208,8 @@ export default function Activity() {
           const cachedKidName = (cachedActivities[0] as any)?.recipientFirstName
             || (filtered[0] as any)?.recipientFirstName
             || null;
-          const safetyLine = cachedKidName
+          const firstFundId = String((cachedActivities[0] as any)?.fundId || (filtered[0] as any)?.fundId || "");
+          const safetyLine = cachedKidName && !ownerModeFundIds.has(firstFundId)
             ? `${cachedKidName}'s fund is safe.`
             : "Your fund is safe.";
           return (
@@ -2477,7 +2492,7 @@ export default function Activity() {
                               The first gift
                             </p>
                             <p style={{ fontSize: 11.5, color: "rgb(95,85,72)", lineHeight: 1.4 }}>
-                              The moment {capFirst(item.recipientFirstName) || "your child"}'s fund became real.
+                              The moment {ownerModeFundIds.has(String((item as any).fundId)) ? "your" : `${capFirst(item.recipientFirstName) || "your child"}'s`} fund became real.
                             </p>
                           </div>
                         </div>
@@ -3636,7 +3651,7 @@ export default function Activity() {
                                   )}
                                 </div>
                                 <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3 }}>
-                                  Into {c.recipientFirstName ? `${capFirst(c.recipientFirstName)}'s` : "the"} fund · {c.frequency}
+                                  Into {ownerModeFundIds.has(String((c as any).fundId)) ? "your" : c.recipientFirstName ? `${capFirst(c.recipientFirstName)}'s` : "the"} fund · {c.frequency}
                                 </p>
                                 {/* Manage link added 2026-05-25 — user-flagged
                                     that pending 'Coming soon' rows had no
