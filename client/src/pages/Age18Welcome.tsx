@@ -522,6 +522,21 @@ export default function Age18Welcome() {
               Everyone who put money into this fund left notes, photos, and voice memos along the way.
               Some of it was reserved for today. It's all yours to read now.
             </p>
+            {/* Generational identity seed. Screen 2's "pass it down" callout makes
+                the MONEY case (this can fund the next generation); this closing beat
+                makes the IDENTITY case at the emotional climax: the people in this
+                book showed up for you, and one day you'll be the one who shows up.
+                That reframes retention from "don't sell" (defensive) to "this is who
+                I am now" (the kid-2.0 loop closing as a relationship). Calm register,
+                no CTA, no push. */}
+            <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.20)] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-5">
+              <p className="text-sm text-foreground/85 leading-relaxed">
+                Someone started this for you before you were old enough to ask. One day there may be
+                someone whose future you want to show up for the same way, and now you know how:
+                quietly, early, and for years. The book you're about to open is the one you'll
+                someday know how to write.
+              </p>
+            </div>
             <div className="flex flex-col gap-3 pt-2">
               <Button
                 type="button"
