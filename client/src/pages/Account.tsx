@@ -1586,13 +1586,6 @@ export default function Account() {
                   )}
                 </div>
 
-                <div className="flex items-center justify-between gap-4 p-4">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Two-factor authentication</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Coming soon</p>
-                  </div>
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">Soon</span>
-                </div>
               </div>
             </SectionCard>
 
