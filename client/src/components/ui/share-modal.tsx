@@ -330,7 +330,11 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <p style={{
       fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em",
-      textTransform: "uppercase" as const, color: "rgb(160,150,140)", marginBottom: 8,
+      // Was rgb(160,150,140) (~2.9:1 on white — failed WCAG AA). Darkened to
+      // rgb(112,103,95) (~5.5:1) so the section labels are legible for the
+      // older-gifter cohort; hierarchy now carried by size/weight/uppercase,
+      // not lightness. (a11y contrast sweep 2026-05-29.)
+      textTransform: "uppercase" as const, color: "rgb(112,103,95)", marginBottom: 8,
     }}>
       {children}
     </p>
@@ -369,7 +373,7 @@ function ShareRow({
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 13.5, fontWeight: 600, color: "rgb(26,23,16)", lineHeight: 1.2 }}>{label}</p>
-        <p style={{ fontSize: 11, color: "rgb(140,130,122)", marginTop: 1 }}>{subtitle}</p>
+        <p style={{ fontSize: 11, color: "rgb(112,103,95)", marginTop: 1 }}>{subtitle}</p>
       </div>
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: "rgb(200,190,182)", flexShrink: 0 }}>
         <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -723,7 +727,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
               <p style={{ fontSize: 14, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.2 }}>
                 {view === "email" ? `Email invite` : `Share`}
               </p>
-              <p style={{ fontSize: 11, color: "rgb(140,130,122)", marginTop: 2 }}>
+              <p style={{ fontSize: 11, color: "rgb(112,103,95)", marginTop: 2 }}>
                 {view === "email" ? "Pre-written. Warm. Edit anything." : "Choose how you'd like to share"}
               </p>
             </div>
@@ -789,6 +793,8 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                         value={selected.url}
                         size={156}
                         level="M"
+                        role="img"
+                        aria-label={`QR code linking to ${firstName}'s gift page`}
                       />
                     </motion.div>
                   </AnimatePresence>
@@ -842,13 +848,13 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                           <Hash size={16} color="rgba(255,255,255,0.85)" />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 2 }}>
+                          <p style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 2 }}>
                             {selected.isPermanent ? "Fund code" : "Event code"}
                           </p>
                           <p style={{ fontSize: 20, fontWeight: 800, color: "white", letterSpacing: "0.12em", lineHeight: 1 }}>
                             {selected.giftCode ?? giftCode!.code}
                           </p>
-                          <p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.5)", marginTop: 3 }}>
+                          <p style={{ fontSize: 10.5, color: "rgba(255,255,255,0.72)", marginTop: 3 }}>
                             Enter at {(giftCode?.lookupUrl ?? `${window.location.origin}/gift`).replace(/^https?:\/\//, "")}
                           </p>
                         </div>
@@ -858,7 +864,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                             : <Copy size={14} color="rgba(255,255,255,0.5)" />}
                         </div>
                       </button>
-                      <p style={{ fontSize: 10.5, color: "rgb(160,150,140)", marginTop: 7, lineHeight: 1.5 }}>
+                      <p style={{ fontSize: 10.5, color: "rgb(112,103,95)", marginTop: 7, lineHeight: 1.5 }}>
                         {selected.isPermanent
                           ? "People can type this code at the link above. No URL needed."
                           : "This code goes to this specific occasion. Expired events redirect warmly to the main fund."}
@@ -978,7 +984,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       <SocialBtn label="X" bg="rgb(0,0,0)" icon={<XIcon />} onClick={handleX} />
                       <SocialBtn label="Story card" bg="linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045)" icon={<StoryCardIcon />} onClick={handleStoryCard} loading={generatingCard} />
                     </div>
-                    <p style={{ fontSize: 10, color: "rgb(175,164,156)", marginTop: 7, lineHeight: 1.5 }}>
+                    <p style={{ fontSize: 10, color: "rgb(112,103,95)", marginTop: 7, lineHeight: 1.5 }}>
                       Story card generates a 9:16 image for Stories or Shorts (Instagram, TikTok, Snap, YouTube Shorts).
                     </p>
                   </div>
@@ -1057,7 +1063,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
 
                   {/* TO */}
                   <div>
-                    <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: "rgb(140,130,122)", marginBottom: 6 }}>
+                    <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: "rgb(112,103,95)", marginBottom: 6 }}>
                       To
                     </label>
                     <input
@@ -1078,7 +1084,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
 
                   {/* SUBJECT */}
                   <div>
-                    <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: "rgb(140,130,122)", marginBottom: 6 }}>
+                    <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: "rgb(112,103,95)", marginBottom: 6 }}>
                       Subject
                     </label>
                     <input
@@ -1098,7 +1104,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
 
                   {/* MESSAGE */}
                   <div>
-                    <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: "rgb(140,130,122)", marginBottom: 6 }}>
+                    <label style={{ display: "block", fontSize: 10, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: "rgb(112,103,95)", marginBottom: 6 }}>
                       Message
                     </label>
                     <textarea
@@ -1115,7 +1121,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                       onFocus={e => (e.target.style.borderColor = "rgb(26,61,43)")}
                       onBlur={e => (e.target.style.borderColor = "rgba(26,23,16,0.12)")}
                     />
-                    <p style={{ fontSize: 10.5, color: "rgb(175,164,156)", marginTop: 5, lineHeight: 1.5 }}>
+                    <p style={{ fontSize: 10.5, color: "rgb(112,103,95)", marginTop: 5, lineHeight: 1.5 }}>
                       Pre-written and warm. Edit anything. The link is already in the message.
                     </p>
                   </div>
@@ -1137,7 +1143,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                     Send invite
                   </button>
 
-                  <p style={{ fontSize: 10.5, color: "rgb(175,164,156)", textAlign: "center" as const, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 10.5, color: "rgb(112,103,95)", textAlign: "center" as const, lineHeight: 1.5 }}>
                     Opens your email app with this message ready to send.
                   </p>
 
@@ -1170,7 +1176,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
                 DIFFERENT audience entirely — not for grandparents
                 gifting, but for the people reviewing the fund's
                 structure. Audit-flagged 2026-05-26. */}
-            <p style={{ fontSize: 9.5, fontWeight: 700, color: "rgb(120,110,100)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 8 }}>
+            <p style={{ fontSize: 9.5, fontWeight: 700, color: "rgb(112,103,95)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 8 }}>
               For your advisor or spouse
             </p>
             <div style={{
@@ -1194,7 +1200,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
               <p style={{ fontSize: 12.5, fontWeight: 600, color: "rgb(26,23,16)" }}>
                 Fund snapshot
               </p>
-              <p style={{ fontSize: 11, color: "rgb(120,110,100)", marginTop: 1, lineHeight: 1.4 }}>
+              <p style={{ fontSize: 11, color: "rgb(112,103,95)", marginTop: 1, lineHeight: 1.4 }}>
                 Holdings + strategy on one page. For a spouse, advisor, or grandparent reviewing the fund.
               </p>
             </div>
