@@ -563,10 +563,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   // === Subscription cascade helpers ===
-  // When a household's paid plan ends, every active parent_contribution and
-  // recurring_gift across all of the user's funds is auto-paused with
-  // pause_reason="subscription_ended". Reactivating the plan flips them back to
-  // active (only the rows we paused — manually-paused rows stay paused).
+  // When a household's paid plan ends, every active parent_contribution across
+  // the user's funds is auto-paused with pause_reason="subscription_ended"
+  // (reactivating flips back only the rows we paused; manually-paused rows
+  // stay paused). GIFTER recurring is deliberately NOT paused — per the locked
+  // pricing-v3 grandfathering policy (project_pricing_v3_recurring_at_plus.md),
+  // existing gifter recurring CONTINUES; cancelling grandma's monthly gift
+  // because the PARENT stopped paying Plus is brand poison (she didn't churn).
+  // NEW gifter recurring is blocked at setup (the gifter endpoint gates on the
+  // fund's current tier). Bonus: the old pause was also a no-op for the actual
+  // charge — gifter recurring is a Stripe sub on the gifter's card, so flipping
+  // only the DB row left the sub charging while the UI showed "paused." Not
+  // pausing keeps the row honest with reality.
 
   async pauseScheduledItemsForUserOnSubscriptionEnd(userId: string): Promise<{ parentContributionsPaused: number; recurringGiftsPaused: number }> {
     const userFunds = await db.select({ id: funds.id }).from(funds).where(eq(funds.userId, userId));
@@ -585,18 +593,10 @@ export class DatabaseStorage implements IStorage {
     `);
     const parentContributionsPaused = (parentRes as any).rowCount ?? (parentRes as any).rows?.length ?? 0;
 
-    const giftRes = await db.execute(sql`
-      UPDATE recurring_gifts
-      SET status = 'paused',
-          pause_reason = 'subscription_ended',
-          paused_at = NOW()
-      WHERE fund_id = ANY(${fundIds})
-        AND status = 'active'
-      RETURNING id
-    `);
-    const recurringGiftsPaused = (giftRes as any).rowCount ?? (giftRes as any).rows?.length ?? 0;
-
-    return { parentContributionsPaused, recurringGiftsPaused };
+    // Gifter recurring intentionally left running (grandfathering — see the
+    // helper-group comment above). recurringGiftsPaused stays 0; the webhook
+    // log + return shape are unchanged so callers don't break.
+    return { parentContributionsPaused, recurringGiftsPaused: 0 };
   }
 
   async resumeScheduledItemsForUserAfterSubscriptionRestart(userId: string): Promise<{ parentContributionsResumed: number; recurringGiftsResumed: number }> {
@@ -617,19 +617,9 @@ export class DatabaseStorage implements IStorage {
     `);
     const parentContributionsResumed = (parentRes as any).rowCount ?? (parentRes as any).rows?.length ?? 0;
 
-    const giftRes = await db.execute(sql`
-      UPDATE recurring_gifts
-      SET status = 'active',
-          pause_reason = NULL,
-          paused_at = NULL
-      WHERE fund_id = ANY(${fundIds})
-        AND status = 'paused'
-        AND pause_reason = 'subscription_ended'
-      RETURNING id
-    `);
-    const recurringGiftsResumed = (giftRes as any).rowCount ?? (giftRes as any).rows?.length ?? 0;
-
-    return { parentContributionsResumed, recurringGiftsResumed };
+    // Gifter recurring was never paused on churn (see pause helper), so there's
+    // nothing to resume — it kept running the whole time.
+    return { parentContributionsResumed, recurringGiftsResumed: 0 };
   }
 
   async getCollaboratorsByFund(fundId: string): Promise<FundCollaborator[]> {
