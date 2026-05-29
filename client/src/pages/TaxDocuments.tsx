@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Download, FileText, Info, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Download, FileText, Info, ShieldCheck } from "lucide-react";
+import { Link } from "wouter";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { useFunds } from "@/hooks/use-funds";
 import { useAuth } from "@/hooks/use-auth";
@@ -353,10 +354,22 @@ export default function TaxDocuments() {
     <div className="kiddo-app-page kiddo-print-friendly md:ml-[264px] pb-24 md:pb-8">
       <AppHeader />
       <div className="kiddo-canvas px-4 py-6 max-w-3xl space-y-5">
-        {/* In-content "Back to settings" link removed 2026-05-11.
-            TaxDocuments is Tier-1 fund-scoped per page-scope.ts;
-            AppHeader + DesktopSidebar + MobileNav already provide global
-            nav. Apple-Settings register has no in-page back chrome. */}
+        {/* Contextual back affordance re-added 2026-05-28 (reverses the
+            2026-05-11 removal): Tax Documents is a deep LEAF sub-page reached via
+            a quick-link / the "Taxes" entry, not a primary tab — so a subtle
+            top-left "Back to Settings" gives a clear return path without relying
+            on the user re-finding the sidebar, and it matches the iOS-Settings
+            sub-screen back-chevron pattern. Settings is the most common exit
+            (see the idle-prefetch above). */}
+        <Link
+          href="/settings"
+          onClick={() => haptic("selection")}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          data-testid="link-tax-back-to-settings"
+        >
+          <ChevronLeft size={16} className="shrink-0" />
+          Back to Settings
+        </Link>
 
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">
