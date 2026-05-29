@@ -344,11 +344,30 @@ export default function TaxDocuments() {
     enabled: Math.abs(totals.gain) > 0.01,
   });
 
+  // Year tabs span the standard 4-year tax-record window, but never reach back
+  // before the year the fund was opened. A fund opened in 2026 has nothing to
+  // show for 2023-2025; listing those years reads as "missing forms" when the
+  // account simply didn't exist yet.
+  const openYear = useMemo(() => {
+    const created = (activeFund as any)?.createdAt;
+    const d = created ? new Date(created) : null;
+    return d && Number.isFinite(d.getTime()) ? d.getFullYear() : null;
+  }, [activeFund]);
   const yearOptions = useMemo(() => {
+    const floor = openYear != null ? Math.max(currentYear - 3, openYear) : currentYear - 3;
     const out: string[] = [];
-    for (let y = currentYear; y >= currentYear - 3; y -= 1) out.push(String(y));
+    for (let y = currentYear; y >= floor; y -= 1) out.push(String(y));
     return out;
-  }, [currentYear]);
+  }, [currentYear, openYear]);
+  // Keep the selected year valid. Default is "last year" (you file the prior
+  // year's return early in the current year), but a fund opened this year has
+  // no prior year to show, and switching funds can leave the selection outside
+  // the new fund's window — snap it back into range in both cases.
+  useEffect(() => {
+    if (!yearOptions.includes(yearFilter)) {
+      setYearFilter(yearOptions.includes(String(currentYear - 1)) ? String(currentYear - 1) : yearOptions[0]);
+    }
+  }, [yearOptions, yearFilter, currentYear]);
 
   return (
     <div className="kiddo-app-page kiddo-print-friendly md:ml-[264px] pb-24 md:pb-8">
@@ -611,7 +630,7 @@ export default function TaxDocuments() {
             </div>
           )}
           <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
-            Cost basis is calculated using the average-cost method. Gains are <span className="font-semibold">unrealized</span> until positions are sold — no tax is owed on growth alone. Actual tax treatment depends on the holding period and the kiddie tax rules below.
+            Cost basis is the total you've invested in each position. Gains are <span className="font-semibold">unrealized</span> until positions are sold — no tax is owed on growth alone. Actual tax treatment depends on the holding period and the kiddie tax rules below.
           </p>
         </section>
 
@@ -814,7 +833,7 @@ export default function TaxDocuments() {
               </div>
             </div>
             <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
-              Realized gains are computed using the average-cost method. Short-term sales (held under 1 year) are taxed as ordinary income; long-term sales (held 1 year or more) get preferred capital-gains rates. Compare the total against the kiddie-tax thresholds below.
+              Realized gains here are computed on an average-cost basis. Your broker's 1099-B may instead use FIFO or specific-lot identification, so these figures can differ; the 1099-B is the authoritative number to file from. Short-term sales (held under 1 year) are taxed as ordinary income; long-term sales (held 1 year or more) get preferred capital-gains rates. Compare the total against the kiddie-tax thresholds below.
             </p>
           </section>
         )}
