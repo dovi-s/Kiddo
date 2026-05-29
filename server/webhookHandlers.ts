@@ -1177,6 +1177,23 @@ export class WebhookHandlers {
   }
 
   static async handleGiftPayment(session: any): Promise<void> {
+    // Never create-and-invest a gift for a session that isn't actually paid.
+    // `checkout.session.completed` fires for delayed/async payment methods
+    // (ACH, bank debits) with payment_status='unpaid' — the money has NOT
+    // landed yet. Investing on that would credit a fund (and fire the
+    // "your gift just landed" parent email + flip the fund draft→active via
+    // reconcileFundFromGifts) for money we don't have. Cards always complete
+    // 'paid', so this can't touch the normal flow; it only blocks the unpaid
+    // case (which would need a checkout.session.async_payment_succeeded
+    // handler to ever resolve — not present today, so skipping is correct).
+    // We only short-circuit when payment_status is EXPLICITLY a non-paid
+    // value; missing/undefined falls through to preserve prior behavior.
+    const paymentStatus = String(session.payment_status || '').toLowerCase();
+    if (paymentStatus && paymentStatus !== 'paid' && paymentStatus !== 'no_payment_required') {
+      console.log('[Webhook] Gift checkout session not paid (payment_status=' + paymentStatus + '); skipping gift creation:', session.id);
+      return;
+    }
+
     const metadata = session.metadata || {};
     const rawExecutionModel = String(metadata.executionModel || '').toLowerCase();
     const normalizedExecutionModel =
