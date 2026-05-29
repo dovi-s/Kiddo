@@ -3017,8 +3017,27 @@ export async function registerRoutes(
         // Best-effort; never block dashboard summary on this surface.
       }
 
+      // Whether recurring investments are unlocked for this fund. The
+      // client uses this for hasAutoInvestAccess (the recurring CTA + the
+      // parent-authored Memory Book media gate). Derived from the FUND
+      // OWNER's coverage so a co-parent on a free personal plan still sees
+      // recurring on a paid fund; OR'd with the demo bypass so the seeded
+      // demo recurring plans always render (mirrors the parent-contributions
+      // GET). Same predicate the GET/POST gate on — single source of truth.
+      const recurringEnabled = await timeStage("recurring_coverage", async () => {
+        const [coverage, fundIsDemo] = await Promise.all([
+          getFundCoverageState(fund.userId, fund.id),
+          isDemoFund(fund.id),
+        ]);
+        return fundIsDemo
+          || coverage === "covered_starter"
+          || coverage === "covered_family"
+          || coverage === "trial_active";
+      });
+
       const responsePayload = await timeStage("response_assembly", async () => ({
           fundId: fund.id,
+          recurringEnabled,
           holdings: holdingsForFund,
           gifts: giftsForFund,
           events: eventsForFund,
@@ -15219,25 +15238,19 @@ export async function registerRoutes(
         return res.json(contributions);
       }
 
-      const subscription = await storage.getSubscription(fund.userId);
-      const plan = subscription?.plan;
-      const isGlobalActive = subscription?.status === 'active';
-      const isFamily = isGlobalActive && (plan === 'family' || plan === 'legacy');
-      const isGlobalStarter = isGlobalActive && plan === 'starter';
-      // Plan/membership checks are scoped to the FUND OWNER. A collaborator
-      // viewing this endpoint inherits the owner's gate — if the owner's
-      // subscription lapses, the recurring-investments panel hides for
-      // everyone, including viewers.
-      const fundMembership = await storage.getFundMembership(fund.userId, req.params.fundId);
-      const isFundStarter = fundMembership?.status === 'active' ||
-        (fundMembership?.status === 'canceled' && fundMembership?.currentPeriodEnd && new Date(String(fundMembership.currentPeriodEnd)).getTime() > Date.now());
-      if (!isFamily && !isGlobalStarter && !isFundStarter) {
-        // Recurring is a paid fund-tier feature (pricing-v3) — a free fund
-        // simply HAS no recurring plans. Reading your own (empty) list is
-        // not an error, so return [] rather than 403: the dashboard query
-        // resolves cleanly instead of logging a Forbidden. Feature
-        // availability is gated in the client UI + on the write/charge path,
-        // not by erroring this read.
+      // Recurring is a paid fund-tier feature (pricing-v3). Gate on the
+      // FUND OWNER's coverage via getFundCoverageState — the single source
+      // of truth shared with dashboard-summary's `recurringEnabled` and the
+      // POST gate below. This correctly includes gifter-sponsored Plus and
+      // an active trial (the previous inline plan/membership check missed
+      // both, wrongly hiding plans on trial/sponsored funds). A free fund
+      // simply HAS no recurring plans; reading your own (empty) list is not
+      // an error, so return [] rather than 403 so the dashboard query
+      // resolves cleanly instead of logging a Forbidden.
+      const coverage = await getFundCoverageState(fund.userId, req.params.fundId);
+      const hasRecurringAccess =
+        coverage === 'covered_starter' || coverage === 'covered_family' || coverage === 'trial_active';
+      if (!hasRecurringAccess) {
         return res.json([]);
       }
 

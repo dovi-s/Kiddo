@@ -584,6 +584,12 @@ type DashboardSummary = {
   largeGiftHolds: any;
   recurringGifts: RecurringGift[];
   parentContributions: ParentContribution[];
+  // Whether recurring investments are unlocked for THIS fund, derived
+  // server-side from the fund owner's coverage (Plus/Family/legacy,
+  // gifter-sponsored Plus, or an active trial) — not the viewer's plan,
+  // so a co-parent on a free personal plan still sees recurring on a
+  // paid fund. Drives `hasAutoInvestAccess`. Per pricing-v3.
+  recurringEnabled?: boolean;
   transactions: DashboardTransaction[];
   giftAllocations?: GiftAllocationLite[];
   // ISO timestamp the current viewer claimed this fund as the at-18
@@ -2157,16 +2163,22 @@ export default function Dashboard() {
   const activeFundMembership = activeFundId ? (subscription?.starterByFund?.[activeFundId] as any) : null;
   const activeFundHasStarter = activeFundMembership?.status === "active" ||
     (activeFundMembership?.status === "canceled" && activeFundMembership?.currentPeriodEnd && new Date(activeFundMembership.currentPeriodEnd).getTime() > Date.now());
-  // Locked open 2026-05-21 per the Plus pricing reframe (see
-  // project_plus_pricing_reframe.md). Recurring contributions are
-  // free across all tiers. Plus's actual gate moved to custom-mix
-  // design (resolveAllowedFundStrategy server-side). The previous
-  // gate (`isFamily || isStarter || activeFundHasStarter`) is
-  // preserved here as a code-comment in case the reframe is
-  // reverted; the inline plan-derived flags stay valid for other
-  // downstream uses (subscription card, upgrade nudges, etc.) but
-  // recurring access is no longer one of them.
-  const hasAutoInvestAccess = true;
+  // Recurring investments are a paid fund-tier feature under the locked
+  // pricing-v3 model (project_pricing_v3_recurring_at_plus.md); free
+  // funds get the reminder system instead. The 2026-05-21 reframe that
+  // briefly made recurring free for all tiers was SUPERSEDED 2026-05-23
+  // by v3, but this flag was left hardcoded `true` — which both showed
+  // the recurring UI on free funds (the server then 403'd the fetch) and
+  // silently dropped the parent-authored Memory Book media Plus gate
+  // (requiresPlus={!hasAutoInvestAccess}).
+  //
+  // Source of truth is the server: dashboard-summary derives
+  // `recurringEnabled` from the FUND OWNER's coverage via
+  // getFundCoverageState (Plus/Family/legacy, gifter-sponsored Plus, or
+  // an active trial). Deriving from the fund — not the viewer's personal
+  // plan — keeps a co-parent on a free plan correctly seeing recurring on
+  // a paid fund. Re-synced 2026-05-29.
+  const hasAutoInvestAccess = Boolean(dashboardSummary?.recurringEnabled);
   void isFamily; void isStarter; void activeFundHasStarter;
   const { data: parentLetter } = useQuery<{ id: string; content: string; type: string; authorName?: string } | null>({
     queryKey: ["memory", activeFundId, "parent_letter"],
