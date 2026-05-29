@@ -15202,12 +15202,22 @@ export async function registerRoutes(
 
   app.get('/api/funds/:fundId/parent-contributions', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = (req.user as any).id;
       const fund = await storage.getFund(req.params.fundId);
       if (!fund) return res.status(404).json({ error: 'Fund not found' });
       // Access enforced by requireOwnedFundParam (owner or accepted collaborator).
-      // userId stays scoped to the OWNER for subscription lookups below — a
-      // collaborator on a fund doesn't have the owner's billing context.
+      // Subscription lookups below stay scoped to the OWNER — a collaborator
+      // on a fund doesn't have the owner's billing context.
+
+      // Demo funds mirror the POST handler's demo bypass (see below): the
+      // seeded demo state includes active recurring plans to showcase the
+      // feature, so the plan gate must not hide them just because the demo
+      // owner sits on a free tier. Without this, the GET 403'd and the
+      // seeded recurring cards never loaded on the demo dashboard (the
+      // df0112ae console-403 the report surfaced). Fixed 2026-05-29.
+      if (await isDemoFund(req.params.fundId)) {
+        const contributions = await storage.getParentContributionsByFund(req.params.fundId);
+        return res.json(contributions);
+      }
 
       const subscription = await storage.getSubscription(fund.userId);
       const plan = subscription?.plan;
@@ -15222,7 +15232,13 @@ export async function registerRoutes(
       const isFundStarter = fundMembership?.status === 'active' ||
         (fundMembership?.status === 'canceled' && fundMembership?.currentPeriodEnd && new Date(String(fundMembership.currentPeriodEnd)).getTime() > Date.now());
       if (!isFamily && !isGlobalStarter && !isFundStarter) {
-        return res.status(403).json({ error: 'Kiddo+, Family, or Legacy required for recurring investments' });
+        // Recurring is a paid fund-tier feature (pricing-v3) — a free fund
+        // simply HAS no recurring plans. Reading your own (empty) list is
+        // not an error, so return [] rather than 403: the dashboard query
+        // resolves cleanly instead of logging a Forbidden. Feature
+        // availability is gated in the client UI + on the write/charge path,
+        // not by erroring this read.
+        return res.json([]);
       }
 
       const contributions = await storage.getParentContributionsByFund(req.params.fundId);
