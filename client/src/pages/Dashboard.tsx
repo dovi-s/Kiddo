@@ -554,7 +554,7 @@ type MarketQuoteResponse = {
     isEstimate?: boolean;
   }>;
 };
-type ParentContribution = { id: string; bankAccountId?: string | null; amount: string; frequency: string; status: string; nextRunDate?: string; lastRunDate?: string | Date | null; totalContributed?: string | null; executionModel?: string | null; selectedTicker?: string | null; createdAt?: string | Date | null };
+type ParentContribution = { id: string; bankAccountId?: string | null; amount: string; frequency: string; status: string; pauseReason?: string | null; nextRunDate?: string; lastRunDate?: string | Date | null; totalContributed?: string | null; executionModel?: string | null; selectedTicker?: string | null; createdAt?: string | Date | null };
 type DashboardTransaction = {
   id: string;
   type: string;
@@ -8361,7 +8361,14 @@ export default function Dashboard() {
                       const monthlyLabel = activeMonthly > 0
                         ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(activeMonthly))
                         : null;
-                      const summaryText = allPaused
+                      // Post-handoff the recipient owns the fund; the parent's
+                      // recurring was auto-paused at the handoff (worker
+                      // pause_reason 'majority_handoff') and can't be resumed
+                      // by/against either party. Render this section as
+                      // read-only history, not a resumable list.
+                      const summaryText = isOwnerMode
+                        ? "Ended when you took ownership"
+                        : allPaused
                         ? `${pausedCount} paused`
                         : pausedCount === 0
                           ? monthlyLabel
@@ -8377,7 +8384,7 @@ export default function Dashboard() {
                           </p>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                             <p style={{ fontSize: 12, color: "rgba(26,23,16,0.55)", fontWeight: 500, flex: 1, minWidth: 0 }}>{summaryText}</p>
-                            {allPaused && (
+                            {allPaused && !isOwnerMode && (
                               <button
                                 type="button"
                                 style={{ fontSize: 11.5, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))", background: "none", border: "none", cursor: "pointer", padding: 0 }}
@@ -8441,6 +8448,14 @@ export default function Dashboard() {
                                 <button
                                   type="button"
                                   onClick={() => {
+                                    // Post-handoff owner can't manage the
+                                    // parent's plan (the action sheet's
+                                    // edit/pause/resume all 403). Tap opens the
+                                    // read-only history instead of a dead sheet.
+                                    if (isOwnerMode) {
+                                      openDetailScope({ kind: "schedule", scheduleId: String(contrib.id) });
+                                      return;
+                                    }
                                     haptic("selection");
                                     setListActionConfirmCancel(false);
                                     setListActionContribId(String(contrib.id));
@@ -8511,10 +8526,10 @@ export default function Dashboard() {
                                   </div>
                                   <span
                                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                      isPausedRow ? "bg-amber-100 text-amber-800" : "bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]"
+                                      isOwnerMode ? "bg-muted text-muted-foreground" : isPausedRow ? "bg-amber-100 text-amber-800" : "bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]"
                                     }`}
                                   >
-                                    {isPausedRow ? "Paused" : "Active"}
+                                    {isOwnerMode ? "Ended" : isPausedRow ? "Paused" : "Active"}
                                   </span>
                                 </button>
                                 {/* Right-side action cluster — History opens
@@ -8539,20 +8554,25 @@ export default function Dashboard() {
                                   >
                                     <History size={14} />
                                   </button>
-                                  <button
-                                    type="button"
-                                    aria-label="Recurring investment actions"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      haptic("selection");
-                                      setListActionConfirmCancel(false);
-                                      setListActionContribId(String(contrib.id));
-                                    }}
-                                    data-testid={`recurring-list-actions-${contrib.id}`}
-                                    className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
-                                  >
-                                    <MoreVertical size={16} />
-                                  </button>
+                                  {/* No edit/pause/cancel menu post-handoff —
+                                      those mutate the parent's plan and 403 for
+                                      the new owner. History (above) stays. */}
+                                  {!isOwnerMode && (
+                                    <button
+                                      type="button"
+                                      aria-label="Recurring investment actions"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        haptic("selection");
+                                        setListActionConfirmCancel(false);
+                                        setListActionContribId(String(contrib.id));
+                                      }}
+                                      data-testid={`recurring-list-actions-${contrib.id}`}
+                                      className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/60 hover:text-foreground hover:bg-muted transition-colors"
+                                    >
+                                      <MoreVertical size={16} />
+                                    </button>
+                                  )}
                                 </div>
                               </li>
                             );
@@ -8566,15 +8586,29 @@ export default function Dashboard() {
                         floating button. The dashed border on the button
                         itself signals "empty slot waiting to be filled"
                         (the affordance the design lens calls out). */}
-                    <div className="border-t border-border/40 px-4 py-3">
-                      <button
-                        type="button"
-                        className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] py-2.5 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)] transition-colors"
-                        onClick={() => { haptic("selection"); setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }}
-                      >
-                        + Add another
-                      </button>
-                    </div>
+                    {isOwnerMode ? (
+                      // Post-handoff: no "+ Add another" — the owner isn't on a
+                      // Plus plan (the subscription retires at majority), so the
+                      // create path would 403 + pitch Plus, which contradicts
+                      // the retires-at-majority rule. An honest closing line
+                      // instead. (Owner-set recurring is a future kid-2.0
+                      // adult-tier capability; see the memory note.)
+                      <div className="border-t border-border/40 px-4 py-3">
+                        <p className="text-[11px] leading-snug text-muted-foreground text-center">
+                          Set up before you took ownership. Recurring ended at the handoff. The fund is fully yours now.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="border-t border-border/40 px-4 py-3">
+                        <button
+                          type="button"
+                          className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] py-2.5 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)] transition-colors"
+                          onClick={() => { haptic("selection"); setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); }}
+                        >
+                          + Add another
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
