@@ -832,7 +832,14 @@ ${shareUrl}`;
         <p className="text-[10.5px] text-muted-foreground/80 leading-relaxed text-center px-2">
           For illustrative purposes only. Based on long-term historical market averages, not guaranteed.{" "}
           {isUtma
-            ? <>Assumes monthly investing continues until {childName}'s {majorityOrdinal} birthday, then pure compound at the chosen rate. At {majorityAge}, UTMA control transfers to {childName}; what {she} does next is {her} decision.</>
+            ? (currentAge >= majorityAge
+                // Post-majority (the owner now holds it — e.g. the graduated
+                // adult viewing their own account). The "contributions until
+                // majority" window has passed, so it's pure compound from today,
+                // and the future-tense "control transfers to them" line would be
+                // wrong (it already did). Stay present-tense + owner-framed.
+                ? <>Pure compound from today at the chosen rate. {childName} owns this fund now, so anything added to it and whatever happens next is {her} decision.</>
+                : <>Assumes monthly investing continues until {childName}'s {majorityOrdinal} birthday, then pure compound at the chosen rate. At {majorityAge}, UTMA control transfers to {childName}; what {she} does next is {her} decision.</>)
             : <>Assumes monthly investing continues at the chosen rate for the full duration.</>
           }{" "}
           Investing involves risk, including possible loss of principal.
