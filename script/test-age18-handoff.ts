@@ -267,7 +267,27 @@ async function runChecks() {
       "the parent's handed-off plan should still be present as majority_handoff history",
     );
 
-    console.log("Age-18/21 handoff flow passed (claim -> complete -> cascades -> welcome -> replay -> owner sets up own recurring free).");
+    // 13. Post-handoff lockout: the FORMER PARENT still owns their old record,
+    //     but the fund transferred to the kid — so the record-scoped routes must
+    //     refuse (fund.userId !== record.userId). Prove resume + contribute-now
+    //     both 403, so a direct-API former parent can't reanimate a charge on a
+    //     fund they no longer own.
+    const parentCtx = await request.newContext({ baseURL: baseUrl, extraHTTPHeaders: { Accept: "application/json" } });
+    try {
+      const loginRes = await parentCtx.post(`${baseUrl}/api/auth/login`, { data: { email: PARENT_EMAIL, password: PASSWORD } });
+      assert(loginRes.status() === 200, `parent login failed: ${loginRes.status()} ${await loginRes.text()}`);
+      const resumeRes = await parentCtx.patch(`${baseUrl}/api/parent-contributions/${contrib.id}`, { data: { status: "active" } });
+      assert(resumeRes.status() === 403, `former parent resume should be 403 fund_transferred (got ${resumeRes.status()})`);
+      const contribNowRes = await parentCtx.post(`${baseUrl}/api/parent-contributions/${contrib.id}/contribute-now`);
+      assert(contribNowRes.status() === 403, `former parent contribute-now should be 403 fund_transferred (got ${contribNowRes.status()})`);
+      // The record is still paused (the blocked resume didn't take).
+      const stillPaused = await pool.query(`SELECT status FROM parent_contributions WHERE id = $1`, [contrib.id]);
+      assert(stillPaused.rows[0]?.status === "paused", `parent's old plan should remain paused (got ${stillPaused.rows[0]?.status})`);
+    } finally {
+      await parentCtx.dispose();
+    }
+
+    console.log("Age-18/21 handoff flow passed (claim -> complete -> cascades -> welcome -> replay -> owner recurring free -> former-parent lockout).");
   } finally {
     await kid.dispose();
   }
