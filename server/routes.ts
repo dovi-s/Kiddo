@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { type Server } from "http";
 import { storage } from "./storage";
 import { stripeService } from "./stripeService";
+import { isGifterCaptureAtIntentEnabled } from "./giftCaptureFlag";
 import { getUncachableStripeClient } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
 import { subscribeUser, subscriberCounts } from "./realtime";
@@ -6738,7 +6739,15 @@ export async function registerRoutes(
       // inherit the fund's tier. See
       // project_pricing_v3_recurring_at_plus.md.
       const fundCoverageForGifter = await getFundCoverageState(fund.userId, fund.id);
+      // A fund "supports recurring" when EITHER it's a paid custodial fund
+      // (Plus/Family/trial) OR it's a self-directed post-handoff fund. Post-
+      // handoff the fund is the now-adult owner's own account: recurring is
+      // free for the owner AND gifters, monetized by AUM (the subscription is
+      // a custodian product that retired at majority). See
+      // LIFECYCLE_MONETIZATION.md. So gifters to a graduated owner's fund can
+      // set up recurring too — same per-fund "supports recurring" rule.
       const recurringSupported =
+        Boolean((fund as any).transferredAt) ||
         fundCoverageForGifter === 'covered_family' ||
         fundCoverageForGifter === 'covered_starter' ||
         fundCoverageForGifter === 'trial_active';
@@ -11842,7 +11851,11 @@ export async function registerRoutes(
       // supports one-time gifts and reminders" is the locked
       // gifter-side copy direction per design constraint #2.
       const recurringFundCoverage = await getFundCoverageState(fund.userId, fund.id);
+      // Self-directed post-handoff funds support recurring (owner + gifters)
+      // free, monetized by AUM — same fund-level rule as the public
+      // recurringSupported flag above. See LIFECYCLE_MONETIZATION.md.
       const fundSupportsRecurring =
+        Boolean((fund as any).transferredAt) ||
         recurringFundCoverage === 'covered_family' ||
         recurringFundCoverage === 'covered_starter' ||
         recurringFundCoverage === 'trial_active';
@@ -14640,6 +14653,44 @@ export async function registerRoutes(
 
       const trimmedMessage = typeof message === "string" ? message.trim().slice(0, 490) : null;
 
+      // P0-1 capture-at-intent (Option C). INERT unless GIFTER_CAPTURE_AT_INTENT
+      // is enabled AND counsel has cleared the gates (LAWYER_Q_HOLDING_GIFT_FUNDS.md).
+      // When ON: vault the gifter's card via a SetupIntent now (NO charge, no funds
+      // held); the off-session charge fires at pairing in POST /api/funds. When OFF
+      // (default): behavior is unchanged — warm-promise, no card. A Stripe failure
+      // here degrades gracefully to the warm-promise path; it never blocks intent
+      // creation. See P0-1_ADVISORY_PANEL_DECISION.md.
+      let captureClientSecret: string | null = null;
+      let captureCustomerId: string | null = null;
+      let captureSetupIntentId: string | null = null;
+      if (isGifterCaptureAtIntentEnabled()) {
+        try {
+          const customer = await stripeService.getOrCreateCustomer(
+            trimmedGifterEmail,
+            trimmedGifterName,
+            maybeGifter?.id || undefined,
+          );
+          captureCustomerId = customer.id;
+          const setupIntent = await stripeService.createGifterSetupIntent({
+            customerId: customer.id,
+            metadata: {
+              kind: "gifter_capture_at_intent",
+              gifterEmail: trimmedGifterEmail,
+              recipientEmail: trimmedRecipientEmail,
+              kidFirstName: trimmedKidFirstName.slice(0, 100),
+              amount: parsedAmount.toFixed(2),
+            },
+          });
+          captureSetupIntentId = setupIntent.id;
+          captureClientSecret = setupIntent.client_secret || null;
+        } catch (setupErr) {
+          console.warn("[gift-intent] capture-at-intent SetupIntent failed; falling back to warm-promise:", (setupErr as any)?.message || setupErr);
+          captureClientSecret = null;
+          captureCustomerId = null;
+          captureSetupIntentId = null;
+        }
+      }
+
       const [intent] = await db.insert(giftIntents).values({
         token,
         gifterUserId: maybeGifter?.id || null,
@@ -14652,6 +14703,10 @@ export async function registerRoutes(
         message: trimmedMessage,
         status: "pending",
         expiresAt,
+        // capture-at-intent (Option C) — stays 'none'/null unless the flag is on.
+        paymentStatus: captureSetupIntentId ? "setup_pending" : "none",
+        stripeSetupIntentId: captureSetupIntentId,
+        stripeCustomerId: captureCustomerId,
       } as any).returning();
 
       // Send the nudge email. Failure to send doesn't roll back the
@@ -14691,6 +14746,11 @@ export async function registerRoutes(
         token,
         expiresAt: intent.expiresAt,
         recipientEmail: trimmedRecipientEmail,
+        // capture-at-intent (Option C): present only when the flag produced a
+        // SetupIntent. Client confirms this clientSecret with a card element to
+        // vault the card; absent → warm-promise (no-card) path, as before.
+        captureAtIntent: Boolean(captureClientSecret),
+        setupIntentClientSecret: captureClientSecret,
       });
     } catch (error) {
       console.error("Error creating gift intent:", error);

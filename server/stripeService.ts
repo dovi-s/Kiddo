@@ -182,6 +182,21 @@ export class StripeService {
     return await this.createCustomer(email, name, userId ? { userId } : undefined);
   }
 
+  // P0-1 "capture money at intent" (Option C: vault-and-charge-later).
+  // Saves the gifter's card for a future OFF-SESSION charge at pairing — no
+  // money is charged or held now. The off-session charge itself (at fund
+  // creation) reuses the existing PaymentIntent path. Gated by
+  // isGifterCaptureAtIntentEnabled(); see P0-1_ADVISORY_PANEL_DECISION.md.
+  async createGifterSetupIntent(params: { customerId: string; metadata?: Record<string, string> }): Promise<Stripe.SetupIntent> {
+    const stripe = await getUncachableStripeClient();
+    return await stripe.setupIntents.create({
+      customer: params.customerId,
+      payment_method_types: ['card'],
+      usage: 'off_session',
+      metadata: params.metadata,
+    });
+  }
+
   private getPaymentMethodTypes(preference?: PaymentMethodPreference): Stripe.Checkout.SessionCreateParams.PaymentMethodType[] {
     switch (preference) {
       case 'bank':

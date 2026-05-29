@@ -1194,6 +1194,23 @@ export const giftIntents = pgTable("gift_intents", {
   // ever. Distinct from lastReminderAt (which is parent-facing) so
   // the two cadences can evolve independently if needed.
   gifterReminderSentAt: timestamp("gifter_reminder_sent_at"),
+  // ── P0-1 "capture money at intent" (Option C: vault-and-charge-later) ──────
+  // INERT until the GIFTER_CAPTURE_AT_INTENT flag is enabled (defaults OFF) AND
+  // counsel clears the two binary gates in LAWYER_Q_HOLDING_GIFT_FUNDS.md.
+  // Decision: P0-1_ADVISORY_PANEL_DECISION.md. We never hold funds — we save the
+  // gifter's card (SetupIntent) at intent, then charge off-session at pairing.
+  // paymentStatus: none|setup_pending|setup_confirmed|charged|declined|refunded|expired
+  paymentStatus: text("payment_status").notNull().default("none"),
+  // The SetupIntent that vaults the card at intent time (no charge yet).
+  stripeSetupIntentId: text("stripe_setup_intent_id"),
+  // The Stripe Customer the card is attached to, for the off-session charge.
+  stripeCustomerId: text("stripe_customer_id"),
+  // When the off-session charge actually succeeded at pairing.
+  chargedAt: timestamp("charged_at"),
+  // The gifts row created when this intent settled into a real funded gift.
+  settledGiftId: varchar("settled_gift_id").references(() => gifts.id),
+  // Off-session decline retries (dunning cascade), idempotency anchor.
+  failedChargeCount: integer("failed_charge_count").notNull().default(0),
 }, (table) => [
   index("gift_intents_token_idx").on(table.token),
   index("gift_intents_recipient_email_idx").on(table.recipientEmail),
