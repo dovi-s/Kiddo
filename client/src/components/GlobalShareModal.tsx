@@ -72,8 +72,12 @@ export function GlobalShareModal() {
   const sharePages: SharePage[] = useMemo(() => {
     if (!activeFund?.slug) return [];
     const origin = typeof window !== "undefined" ? window.location.origin : "";
+    // Owner mode: the label in the OWNER's own share UI reads "your" — but the gift page
+    // the recipient lands on stays targeted to them ("gift to {name}"), since gifters
+    // really are giving to the owner. Only this UI label flips. 2026-05-29.
+    const isOwnerMode = Boolean((activeFund as any).transferredAt && (activeFund as any).accessRole === "owner");
     const pages: SharePage[] = [{
-      label: `${capFirst(activeFund.recipientFirstName) || activeFund.name}'s gift link`,
+      label: isOwnerMode ? "Your gift link" : `${capFirst(activeFund.recipientFirstName) || activeFund.name}'s gift link`,
       description: "Always-on gift link",
       url: `${origin}/${activeFund.slug}`,
       giftCode: giftCodeData?.code,

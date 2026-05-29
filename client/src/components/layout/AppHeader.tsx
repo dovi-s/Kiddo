@@ -179,9 +179,12 @@ export function AppHeader() {
   const headerSharePages = useMemo<SharePage[]>(() => {
     if (!activeFund || !(activeFund as any).slug) return [];
     const childFirst = capFirst(activeFund.recipientFirstName) || activeFund.name || "your child";
+    // Owner mode: the label in the owner's own share UI reads "your"; the destination gift
+    // page stays targeted to them (gifters give TO the owner).
+    const ownerMode = Boolean((activeFund as any).transferredAt && (activeFund as any).accessRole === "owner");
     return [
       {
-        label: `${childFirst}'s gift page`,
+        label: ownerMode ? "Your gift page" : `${childFirst}'s gift page`,
         description: "Anyone can give in under a minute. No account needed.",
         url: shareUrl,
         isPermanent: true,
