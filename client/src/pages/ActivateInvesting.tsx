@@ -1428,7 +1428,7 @@ export default function ActivateInvesting() {
                 </span>
               </label>
               <p className="text-[11px] text-muted-foreground -mt-2">
-                Once your account is open, investment accounts are SIPC protected up to $500,000 at the brokerage custodian. This does not protect against market losses.
+                Once your account is open, investment accounts are SIPC protected up to $500,000 at the brokerage custodian. This does not protect against market losses. Investing involves risk, including possible loss of principal.
               </p>
 
               <Button
