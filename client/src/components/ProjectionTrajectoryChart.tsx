@@ -30,7 +30,7 @@
 // presentational; it doesn't recompute math, ensuring the curve
 // matches the slider's target-age number exactly.
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState, useLayoutEffect } from "react";
 import { motion } from "framer-motion";
 
 export type TrajectoryPoint = {
@@ -52,7 +52,7 @@ interface Props {
   // The current age (anchor for the "today" label). Optional —
   // when missing, the start dot has no age label.
   currentAge?: number;
-  // Optional CSS height. Defaults to 140px.
+  // Optional CSS height. Defaults to 168px.
   heightPx?: number;
 }
 
@@ -67,8 +67,28 @@ export function ProjectionTrajectoryChart({
   targetAge,
   currentValue,
   currentAge,
-  heightPx = 140,
+  heightPx = 168,
 }: Props) {
+  // Measure the container so the viewBox ratio MATCHES the rendered
+  // box. Previously the viewBox was locked to a fixed 3:1 ratio with
+  // preserveAspectRatio="meet" — on a wide card the chart got pinned
+  // by its height and floated as a small island with empty gutters on
+  // either side ("a square in a rectangle"). By widening the viewBox's
+  // horizontal extent to the live width:height ratio, "meet" becomes a
+  // no-op (ratios match) so the curve fills the whole card AND circles
+  // stay perfectly round + text un-stretched. Fixed 2026-05-29.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect?.width ?? 0;
+      if (w > 0) setContainerWidth(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   // Hide entirely with fewer than 2 points — the curve needs a
   // start and an end to render meaningfully. The slider page
   // always passes a series of length yearsAhead+1, so this is
@@ -76,12 +96,14 @@ export function ProjectionTrajectoryChart({
   // "empty chart with axes."
   const ok = Array.isArray(points) && points.length >= 2;
 
-  // Viewbox uses 600x200 for resolution; the SVG scales to the
-  // container width. We pad 4% on the left/right so the start +
-  // end dots don't clip against the edges, and 18% on top to leave
-  // room for the target-age dollar callout above the dot.
-  const VB_W = 600;
+  // Vertical resolution is fixed at 200 (all font sizes + paddings are
+  // calibrated against it). The horizontal extent tracks the live
+  // container ratio so the viewBox aspect ratio === the rendered box —
+  // the chart fills the card edge-to-edge with no side gutters. Falls
+  // back to a 3.4:1 ratio before the first measurement.
   const VB_H = 200;
+  const ratio = containerWidth > 0 ? containerWidth / heightPx : 3.4;
+  const VB_W = Math.round(VB_H * ratio);
   const PAD_X_PCT = 0.04;
   const PAD_TOP_PCT = 0.18;
   const PAD_BOT_PCT = 0.08;
@@ -144,7 +166,7 @@ export function ProjectionTrajectoryChart({
       startValue: points[0].value,
       baseY,
     };
-  }, [ok, points, targetAge]);
+  }, [ok, points, targetAge, VB_W, VB_H]);
 
   if (!ok || !drawnArea) return null;
 
@@ -157,15 +179,15 @@ export function ProjectionTrajectoryChart({
       transition={{ duration: 0.35 }}
       className="w-full"
       data-testid="projection-trajectory-chart"
+      ref={containerRef}
     >
       <svg
         viewBox={`0 0 ${VB_W} ${VB_H}`}
-        // preserveAspectRatio="xMidYMid meet" preserves the 3:1
-        // viewBox ratio, so circles stay circular and text labels
-        // stay un-stretched. The previous `none` value stretched
-        // the SVG non-uniformly to fill its container; circles read
-        // as ovals on wide containers and the dollar callout text
-        // looked distorted horizontally. Audit-flagged 2026-05-26.
+        // The viewBox ratio now tracks the live container ratio (see
+        // the ResizeObserver above), so "meet" no longer letterboxes —
+        // it fills the card edge-to-edge while keeping circles round
+        // and text un-stretched (uniform scale). The old fixed 3:1
+        // viewBox under "meet" left empty side gutters on wide cards.
         preserveAspectRatio="xMidYMid meet"
         style={{ width: "100%", height: heightPx, display: "block" }}
         aria-label={`Projected growth trajectory from ${fmtCompact(currentValue)}${currentAge ? ` at age ${currentAge}` : ""} to ${fmtCompact(drawnArea.targetValue)} at age ${drawnArea.targetAgeReal}`}
