@@ -27,7 +27,7 @@ import { FundSettingsChildPanel } from "@/components/FundSettingsChildPanel";
 import { toast } from "@/hooks/use-toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
-  ChevronRight, ChevronDown, Star, Lock, Crown, ArrowUpRight, Wallet, Plus, Loader2,
+  ChevronRight, ChevronDown, Star, Lock, Crown, ArrowUpRight, Wallet, Plus, Minus, Loader2,
   Building2, Trash2, TrendingDown, ArrowDownToLine, X, PieChart, Users, UserPlus, Pencil, Share2, ExternalLink, Camera,
   Calendar as CalendarIcon, Mail,
 } from "lucide-react";
@@ -5100,31 +5100,73 @@ const [editFundName, setEditFundName] = useState("");
                 style destructive actions must be HONEST and
                 SPECIFIC, not gentle and vague. */}
             <div className="mt-5 space-y-3">
-              <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">What stays</p>
-                <ul className="mt-2 space-y-1 text-sm text-foreground">
-                  <li>· Memory Book entries (notes, photos, videos, voice memos). {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The kid's"} keepsake.</li>
-                  <li>· Activity history and audit trail.</li>
-                  <li>· Cash and invested holdings, safe at our broker-dealer partner. No auto-withdrawal. Kiddo's annual fee ($1/yr per $1,000 invested) still applies to invested balance until you withdraw.</li>
-                  <li>· {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The kid's"} View. The PIN-protected view keeps working.</li>
-                  <li>· The fund itself. Reversible from this same page, anytime.</li>
-                </ul>
-              </div>
-              <div className="rounded-xl border border-border bg-muted/30 px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">What stops</p>
-                <ul className="mt-2 space-y-1 text-sm text-foreground">
-                  <li>· The public gift link. Visitors see "This gift page is closed" with a friendly note.</li>
-                  <li>· Your active recurring investments. They cancel. You'd re-create them on reopen.</li>
-                  <li>· Co-parent access for everyone on the access list, including pending invites. You'd re-invite on reopen.</li>
-                  <li>· New occasions. Existing occasions stay paused alongside the fund; goal progress is preserved.</li>
-                </ul>
-                <p className="mt-2 text-xs italic text-muted-foreground">
-                  Gifts already paid but still settling (1–2 business days) still arrive in the fund. Closing doesn't claw them back.
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Want to withdraw cash first? Use Money → Take money out. That's a separate, deliberate action.
-                </p>
-              </div>
+              {(() => {
+                const who = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The kid's";
+                // [bold lead, muted detail]. Lead carries the noun, detail the
+                // consequence — so the parent scans the leads and reads detail
+                // only where it matters. Reversibility stated once (the fund
+                // bullet), not three times. Honest, no guilt copy — per
+                // project_cancellation_dark_pattern_avoidance.md.
+                const stays: [string, string][] = [
+                  ["Memory Book entries.", `Notes, photos, videos, voice memos. ${who} keepsake.`],
+                  ["Activity history.", "The full record and audit trail stay intact."],
+                  ["Cash and invested holdings.", "Safe at our broker-dealer partner, with no auto-withdrawal."],
+                  [`${who} View.`, "The PIN-protected view keeps working."],
+                  ["The fund itself.", "Paused, never deleted. Reopen from this page anytime."],
+                ];
+                const stops: [string, string][] = [
+                  ["The public gift link.", `Visitors see "This gift page is closed" with a friendly note.`],
+                  ["Active recurring investments.", "These cancel. Re-create them when you reopen."],
+                  ["Co-parent access.", "For everyone on the list, including pending invites. Re-invite on reopen."],
+                  ["New occasions.", "Existing occasions pause with the fund; goal progress is preserved."],
+                ];
+                return (
+                  <>
+                    <div className="rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-4 py-3.5">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.14)]">
+                          <Check className="h-3 w-3 text-[hsl(var(--kiddo-evergreen))]" />
+                        </span>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-[hsl(var(--kiddo-evergreen))]">What stays</p>
+                      </div>
+                      <ul className="mt-3 space-y-2.5">
+                        {stays.map(([lead, detail]) => (
+                          <li key={lead} className="flex items-start gap-2.5 text-sm leading-snug">
+                            <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-[hsl(var(--kiddo-evergreen))]" />
+                            <span><span className="font-semibold text-foreground">{lead}</span> <span className="text-muted-foreground">{detail}</span></span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-3 border-t border-[hsl(var(--kiddo-evergreen)/0.15)] pt-2.5 text-xs leading-relaxed text-muted-foreground">
+                        The annual fee ($1/yr per $1,000 invested) still applies to invested balance until you withdraw.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-border bg-muted/30 px-4 py-3.5">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/10">
+                          <Minus className="h-3 w-3 text-muted-foreground" />
+                        </span>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">What stops</p>
+                      </div>
+                      <ul className="mt-3 space-y-2.5">
+                        {stops.map(([lead, detail]) => (
+                          <li key={lead} className="flex items-start gap-2.5 text-sm leading-snug">
+                            <Minus className="mt-[3px] h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                            <span><span className="font-semibold text-foreground">{lead}</span> <span className="text-muted-foreground">{detail}</span></span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-3 border-t border-border pt-2.5 text-xs italic leading-relaxed text-muted-foreground">
+                        Gifts already paid but still settling (1–2 business days) still arrive in the fund. Closing doesn't claw them back.
+                      </p>
+                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                        Want to withdraw cash first? Use Money → Take money out. It's a separate, deliberate action.
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="mt-5">
