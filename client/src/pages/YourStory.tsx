@@ -292,6 +292,29 @@ export default function YourStory() {
             <p className="pt-4 text-center font-serif italic text-foreground/85">
               That's {ownerName === "you" ? "the whole story" : `${ownerName}'s story`} so far.
             </p>
+
+            {/* Agency forward-beat for the post-handoff ADULT OWNER only
+                (currentPhase === "adult"). Deliberately NOT a price pitch: the
+                parent-letter climax above stays pure (selling on grief is the
+                trap). This is a calm "this is yours to keep building" that echoes
+                the generational seed from the Age18Welcome handoff close, with a
+                quiet link to the dashboard, where the real build-mode + Plus
+                prompts live. Hidden for child/teen viewers (they don't own it
+                yet) and for the kid-at-18 preview. */}
+            {data.currentPhase === "adult" && (
+              <div className="pt-8 text-center">
+                <p className="mx-auto max-w-md font-serif italic leading-relaxed text-foreground/70">
+                  And it doesn't have to end here. This is yours now: keep adding to it, and one day start one for someone whose future you want to show up for.
+                </p>
+                <Link
+                  href={`/dashboard?fund=${data.fund.id}`}
+                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))] hover:opacity-75"
+                  data-testid="link-your-story-keep-building"
+                >
+                  Keep building it →
+                </Link>
+              </div>
+            )}
           </>
         )}
       </main>
