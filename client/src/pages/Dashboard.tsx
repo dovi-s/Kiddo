@@ -7238,7 +7238,7 @@ export default function Dashboard() {
                         DriveWealth/SIPC trust signal made visible per
                         project_brokerage_as_trust_feature.md. */}
                       {(() => {
-                          const childPoss = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund";
+                          const childPoss = isOwnerMode ? "your fund" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund";
                           const childFirst = recipientFirstNameDisplay || "them";
                           const hasBothSections = chosenH.length > 0 && managedH.length > 0;
                           const canCustomize = effectivePlan === "starter" || effectivePlan === "family";
