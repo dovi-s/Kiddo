@@ -458,7 +458,7 @@ export default function Pricing() {
               </table>
             </div>
             <p className="mx-auto mt-4 max-w-2xl text-center text-xs leading-relaxed text-muted-foreground">
-              For context, that is roughly the cost of a single coffee per year per $10,000 invested.
+              For context, that is less than a dollar a month per $10,000 invested.
             </p>
             {/* Explicit revenue-source transparency. Before the
                 alignment closing beat, name exactly what Kiddo earns
