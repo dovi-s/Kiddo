@@ -96,7 +96,7 @@ export default function YourStory() {
   return (
     <div className="min-h-screen bg-background gemini-warm-section">
       <header className="sticky top-0 z-40 border-b border-border/40 bg-background/85 backdrop-blur-lg">
-        <div className="mx-auto flex h-14 max-w-3xl items-center justify-between px-4">
+        <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
           <Link href="/dashboard">
             <button className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               <ArrowLeft size={14} />
@@ -107,7 +107,7 @@ export default function YourStory() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl space-y-6 px-4 py-8 md:py-12">
+      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 md:py-12">
         {isLoading && (
           <p className="text-center text-sm text-muted-foreground">Loading your story…</p>
         )}
@@ -151,12 +151,9 @@ export default function YourStory() {
             )}
 
             <div className="space-y-5">
-              {data.years.map((year, idx) => (
-                <motion.section
+              {data.years.map((year) => (
+                <section
                   key={year.year}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(idx * 0.04, 0.4), duration: 0.4 }}
                   className="rounded-3xl border border-border/50 bg-card p-6 shadow-premium-sm"
                 >
                   {/* Year kicker — anchors the timeline visually so the scroll
@@ -252,7 +249,7 @@ export default function YourStory() {
                       )}
                     </div>
                   )}
-                </motion.section>
+                </section>
               ))}
             </div>
 
