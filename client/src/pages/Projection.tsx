@@ -665,7 +665,7 @@ ${shareUrl}`;
                 parent looking at "$42,891 at 65" might assume $50/mo
                 continued for 47 years (which would be incorrect for UTMA);
                 this surfaces the actual model in one quiet sentence. */}
-            {monthly > 0 && targetAge > currentAge && (
+            {monthly > 0 && targetAge > currentAge && contributionYearsCap > 0 && (
               <p className="text-xs italic text-white/65 mt-2 leading-relaxed">
                 {isUtma
                   ? targetAge <= majorityAge
