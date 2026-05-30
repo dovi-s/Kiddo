@@ -7657,7 +7657,29 @@ export default function Dashboard() {
             {gifterRoster.length > 0 && (() => {
               const namedGifters = gifterRoster.filter(g => g.name !== "Anonymous");
               const anonEntry = gifterRoster.find(g => g.name === "Anonymous");
-              const totalGifted = gifterRoster.reduce((s, g) => s + g.totalNetAmount, 0);
+              // "{X} gifted" = gifts from people OTHER than the account holders
+              // (the owner + the custodian parent who set up recurring). Mirrors
+              // the lifetime breakdown's "Gifts from people who love you" so the
+              // two surfaces agree: a parent's own recurring/one-time is investing
+              // (shown separately as "Invested by …"), not a gift. Source-keyed,
+              // not viewer-keyed — same fix as the breakdown card. Anonymous
+              // external gifts still count (anonymity hides the name, not the gift).
+              const loveSenderOf = (g: any) => String(g?.senderEmail || "").trim().toLowerCase();
+              const loveLiveGifts = (gifts || []).filter((g) => {
+                const s = String(g.status || "").toLowerCase();
+                return s !== "failed" && s !== "refunded";
+              });
+              const loveOwnerEmail = String(user?.email || "").trim().toLowerCase();
+              const loveCustodianEmails = new Set(
+                loveLiveGifts.filter((g) => !!(g as any).parentContributionId).map(loveSenderOf).filter(Boolean),
+              );
+              const loveAccountHolders = new Set([loveOwnerEmail, ...Array.from(loveCustodianEmails)].filter(Boolean));
+              const totalGifted = loveLiveGifts.reduce((s, g) => {
+                if ((g as any).parentContributionId) return s;
+                if (loveAccountHolders.has(loveSenderOf(g))) return s;
+                const n = parseFloat(String((g as any).netAmount || g.amount || "0"));
+                return s + (Number.isFinite(n) && n > 0 ? n : 0);
+              }, 0);
               const fmtWhole = (v: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v);
               const childName = recipientFirstNameDisplay;
               return (
@@ -14705,6 +14727,11 @@ export default function Dashboard() {
               ? "into family mix"
               : "into managed mix";
           const isPaused = (schedule as any).status === "paused";
+          // A schedule paused BY the age-18 handoff didn't pause — it ENDED, and
+          // the owner can't resume it (they set up their own recurring instead).
+          // Mirror the recurring-section's isHandoffEnded (~8529) so this modal
+          // reads "Ended", not the misleading "Paused" (which implies resumable).
+          const isHandoffEnded = (schedule as any).pauseReason === "majority_handoff";
           // Payment method + next-charge info now lands in the hero
           // (subtitle + stats grid) instead of a recursive Scheduled tab
           // that just re-displayed the schedule the parent had already
@@ -14717,7 +14744,9 @@ export default function Dashboard() {
             : null;
           const pmLabel = bank ? `${bank.bankName || "Bank"} ····${bank.last4 || ""}` : null;
           const nextRunDate = (schedule as any).nextRunDate ? new Date(String((schedule as any).nextRunDate)) : null;
-          const nextChargeLabel = isPaused
+          const nextChargeLabel = isHandoffEnded
+            ? "Ended"
+            : isPaused
             ? "Paused"
             : nextRunDate && Number.isFinite(nextRunDate.getTime())
               ? nextRunDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
@@ -14737,7 +14766,8 @@ export default function Dashboard() {
           // card already showed.
           const subtitleParts = [destLabel];
           if (pmLabel) subtitleParts.push(pmLabel);
-          if (isPaused) subtitleParts.push("paused");
+          if (isHandoffEnded) subtitleParts.push("ended");
+          else if (isPaused) subtitleParts.push("paused");
           const composedSubtitle = subtitleParts.join(" · ");
           return (
             <DetailHistoryModal
