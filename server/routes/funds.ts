@@ -448,17 +448,23 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
   // they do NOT appear in any year bucket.
   app.get("/api/funds/:fundId/your-story", isAuthenticated, async (req: any, res) => {
     try {
-      const fund = await storage.getFund(req.params.fundId);
+      // One round-trip wave instead of two: the fund lookup, gifts, and
+      // memory entries all fire in parallel. The DB executes each in <1ms;
+      // the real cost is per-round-trip network latency to the (remote) DB,
+      // so collapsing getFund -> {gifts, memory} from sequential to parallel
+      // roughly halves the endpoint's wall-clock. Auth/validation runs on the
+      // resolved fund below; the gifts/memory results are simply discarded on
+      // a 403/404 (cheap, read-only, owner-scoped route).
+      const [fund, allGifts, allEntries] = await Promise.all([
+        storage.getFund(req.params.fundId),
+        storage.getGiftsByFund(req.params.fundId),
+        storage.getMemoryEntriesByFund(req.params.fundId),
+      ]);
       if (!fund) return res.status(404).json({ error: "Fund not found" });
       if (fund.userId !== (req.user as any).id) return res.status(403).json({ error: "Forbidden" });
       if (!fund.recipientBirthdate) {
         return res.status(400).json({ error: "Fund needs a recipient birthdate to build the story." });
       }
-
-      const [allGifts, allEntries] = await Promise.all([
-        storage.getGiftsByFund(fund.id),
-        storage.getMemoryEntriesByFund(fund.id),
-      ]);
 
       const birthDate = fund.recipientBirthdate instanceof Date
         ? fund.recipientBirthdate

@@ -130,6 +130,12 @@ export default function YourStory() {
       return res.json();
     },
     enabled: !!fundId,
+    // The story is a slow-moving historical aggregate (gifts + memories
+    // across a whole childhood). It doesn't change minute-to-minute, so
+    // hold it fresh for 5 min: navigating away and back is then instant
+    // instead of re-paying the API round trips.
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const childFirst = capFirst(data?.fund.recipientFirstName) || "";
