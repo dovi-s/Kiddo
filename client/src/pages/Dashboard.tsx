@@ -554,7 +554,7 @@ type MarketQuoteResponse = {
     isEstimate?: boolean;
   }>;
 };
-type ParentContribution = { id: string; bankAccountId?: string | null; amount: string; frequency: string; status: string; pauseReason?: string | null; nextRunDate?: string; lastRunDate?: string | Date | null; totalContributed?: string | null; executionModel?: string | null; selectedTicker?: string | null; createdAt?: string | Date | null };
+type ParentContribution = { id: string; userId?: string | null; bankAccountId?: string | null; amount: string; frequency: string; status: string; pauseReason?: string | null; nextRunDate?: string; lastRunDate?: string | Date | null; totalContributed?: string | null; executionModel?: string | null; selectedTicker?: string | null; createdAt?: string | Date | null };
 type DashboardTransaction = {
   id: string;
   type: string;
@@ -7255,7 +7255,13 @@ export default function Dashboard() {
                           const childPoss = isOwnerMode ? "your fund" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund";
                           const childFirst = recipientFirstNameDisplay || "them";
                           const hasBothSections = chosenH.length > 0 && managedH.length > 0;
-                          const canCustomize = effectivePlan === "starter" || effectivePlan === "family";
+                          // Post-handoff owner customizes their own mix FREE — same logic as
+                          // owner-recurring: the Plus sub is a custodian product that retires at
+                          // majority, and picking your own holdings is table-stakes on a
+                          // self-directed account. No "Plus" chip / upsell for the owner; the
+                          // upgrade signal stays for parents. Server mirror: resolveAllowedFund-
+                          // Strategy. Per LIFECYCLE_MONETIZATION.md.
+                          const canCustomize = effectivePlan === "starter" || effectivePlan === "family" || isOwnerMode;
 
                           // Renders one holding row. `isChosen` enables the contextual `+`
                           // button — only meaningful for picks (a parent can intentionally
@@ -8385,7 +8391,12 @@ export default function Dashboard() {
                       // OWN plans are the live, manageable set. Count + summarize
                       // the live set so the owner's recurring reads normally
                       // alongside the parent's ended history below.
-                      const liveContribs = allContribs.filter(c => c.pauseReason !== "majority_handoff");
+                      // "Live" = the viewer's OWN plans (manageable). A plan owned by
+                      // someone else (the former parent's, post-handoff) is read-only
+                      // history — the server 403s any mutation on a record you don't own,
+                      // so the client mirrors that by OWNERSHIP, not by pause_reason (which
+                      // misses a plan the parent manually paused before handoff + co-parents).
+                      const liveContribs = allContribs.filter(c => !c.userId || c.userId === (user as any)?.id);
                       const statuses = liveContribs.map(c => optimisticContribStatus[String(c.id)] ?? c.status);
                       const activeCount = statuses.filter(s => s === "active").length;
                       const pausedCount = statuses.filter(s => s === "paused").length;
@@ -8446,6 +8457,11 @@ export default function Dashboard() {
                             // The owner's OWN plans aren't majority_handoff, so
                             // they stay fully manageable.
                             const isHandoffEnded = contrib.pauseReason === "majority_handoff";
+                            // Read-only when the plan isn't the viewer's — mirrors the server's
+                            // record.userId !== userId 403. Catches the parent's handed-off plan
+                            // (handoff-ended OR manually paused pre-handoff) + a co-parent viewing
+                            // the owner's plans. The viewer's OWN plans stay fully manageable.
+                            const isReadOnly = !!contrib.userId && contrib.userId !== (user as any)?.id;
                             const bank = contrib.bankAccountId
                               ? bankAccounts.find((b: any) => b.id === contrib.bankAccountId)
                               : null;
@@ -8494,7 +8510,7 @@ export default function Dashboard() {
                                     // 403). Tap opens read-only history instead
                                     // of a dead sheet. The owner's OWN plans fall
                                     // through to the normal action sheet.
-                                    if (isHandoffEnded) {
+                                    if (isReadOnly) {
                                       openDetailScope({ kind: "schedule", scheduleId: String(contrib.id) });
                                       return;
                                     }
@@ -8568,7 +8584,7 @@ export default function Dashboard() {
                                   </div>
                                   <span
                                     className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                      isHandoffEnded ? "bg-muted text-muted-foreground" : isPausedRow ? "bg-amber-100 text-amber-800" : "bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]"
+                                      isReadOnly ? "bg-muted text-muted-foreground" : isPausedRow ? "bg-amber-100 text-amber-800" : "bg-[hsl(var(--kiddo-evergreen)/0.15)] text-[hsl(var(--kiddo-evergreen))]"
                                     }`}
                                   >
                                     {isHandoffEnded ? "Ended" : isPausedRow ? "Paused" : "Active"}
@@ -8600,7 +8616,7 @@ export default function Dashboard() {
                                       handed-off plan — those mutate a record the
                                       owner doesn't own and 403. History (above)
                                       stays. The owner's OWN plans keep the menu. */}
-                                  {!isHandoffEnded && (
+                                  {!isReadOnly && (
                                     <button
                                       type="button"
                                       aria-label="Recurring investment actions"

@@ -316,6 +316,17 @@ export async function resolveAllowedFundStrategy(
   if (!["growth", "balanced", "conservative", "custom"].includes(normalized)) return "growth";
   if (normalized !== "custom") return normalized as "growth" | "balanced" | "conservative";
   if (!userId) return "growth";
+  // Post-handoff owner customizes their own mix FREE — same logic as
+  // owner-recurring: the Plus sub is a custodian product that retires at
+  // majority, and picking your own holdings is table-stakes on a self-directed
+  // account. The Plus custom-mix gate is for the CUSTODIAN choosing a kid's
+  // allocation, not the owner allocating their own. Per LIFECYCLE_MONETIZATION.md.
+  if (fundId) {
+    try {
+      const ownFund = await storage.getFund(fundId);
+      if (ownFund && (ownFund as any).transferredAt && (ownFund as any).userId === userId) return "custom";
+    } catch { /* fall through to the paid-plan check */ }
+  }
   const paid = await hasPaidPlanForFund(userId, fundId);
   return paid.paid ? "custom" : "growth";
 }
