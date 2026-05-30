@@ -12,8 +12,8 @@ import { useMemo } from "react";
 import { Link, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ArrowLeft, BookOpen, Gift, Users } from "lucide-react";
-import { Logo } from "@/components/ui/logo";
+import { BookOpen, Gift, Users } from "lucide-react";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { capFirst } from "@/lib/format-name";
 
 type YourStoryYear = {
@@ -136,20 +136,10 @@ export default function YourStory() {
   const ownerName = useMemo(() => childFirst || "you", [childFirst]);
 
   return (
-    <div className="min-h-screen bg-background gemini-warm-section">
-      <header className="sticky top-0 z-40 border-b border-border/40 bg-background/85 backdrop-blur-lg">
-        <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
-          <Link href="/dashboard">
-            <button className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft size={14} />
-              Back to dashboard
-            </button>
-          </Link>
-          <Logo size="md" className="text-foreground" />
-        </div>
-      </header>
+    <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8" data-testid="page-your-story">
+      <AppHeader />
 
-      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 md:py-12">
+      <main className="kiddo-canvas space-y-6 px-4 py-5 md:py-6">
         {isLoading && <StorySkeleton />}
 
         {isError && (

@@ -114,10 +114,10 @@ export function shouldHidePrimaryNav(pathname: string): boolean {
 // a back button top left, and tapping Emma should go home."
 //
 // Add new fund sub-pages here as they ship. /age-18-plan and
-// /tax-documents are exact-match; /projection takes a fundId param
-// so it uses prefix-match.
+// /tax-documents are exact-match; /projection and /your-story take a
+// fundId param so they use prefix-match.
 const FUND_SUB_PAGES_EXACT = new Set<string>(["/age-18-plan", "/tax-documents"]);
-const FUND_SUB_PAGES_PREFIX = ["/projection/"];
+const FUND_SUB_PAGES_PREFIX = ["/projection/", "/your-story/"];
 
 export function isFundSubPage(pathname: string): boolean {
   if (FUND_SUB_PAGES_EXACT.has(pathname)) return true;
