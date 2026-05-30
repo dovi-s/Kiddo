@@ -1868,7 +1868,10 @@ export default function Activity() {
                   transition: "background 0.15s, color 0.15s, box-shadow 0.15s",
                 }}
               >
-                {t.label}
+                {/* In owner mode the "Yours" filter actually surfaces the
+                    parent's custodial contributions, not the owner's — relabel
+                    so it doesn't claim them as the owner's. */}
+                {activeFundIsOwned && t.label === "Yours" ? "Contributions" : t.label}
                 {t.count != null && t.count > 0 && (
                   <span
                     style={{
