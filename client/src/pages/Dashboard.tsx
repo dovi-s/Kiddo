@@ -5955,36 +5955,62 @@ export default function Dashboard() {
               void isYoungFund; // kept for any downstream branching that may come back
 
               const ownerEmail = String(user?.email || "").trim().toLowerCase();
+              const senderOf = (g: any) => String(g?.senderEmail || "").trim().toLowerCase();
               const last30 = (gifts || []).filter((g) => {
                 const d = g.createdAt ? new Date(String(g.createdAt)).getTime() : 0;
                 if (!d || d < periodStartMs) return false;
                 const status = String(g.status || "").toLowerCase();
                 return status !== "failed" && status !== "refunded";
               });
-              const last30FromOthers = last30.filter((g) =>
-                String((g as any).senderEmail || "").trim().toLowerCase() !== ownerEmail || ownerEmail === "",
+              // Bucket by contribution SOURCE, not by the viewer's email — so the
+              // custodian parent's recurring/one-time aren't mis-attributed (or
+              // double-counted into "gifts from others") when the kid views the
+              // fund post-handoff with a different email. The old viewer-keyed
+              // logic was correct only while the viewer WAS the custodian.
+              // Recurring = parent_contribution-linked gifts; their senders are
+              // the fund's custodian(s).
+              const recurringRows = last30.filter((g) => !!(g as any).parentContributionId);
+              const custodianEmails = new Set(recurringRows.map(senderOf).filter(Boolean));
+              // Account holders = current owner + custodian(s). Their NON-recurring
+              // gifts are personal additions, not gifts-from-others.
+              const accountHolderEmails = new Set([ownerEmail, ...Array.from(custodianEmails)].filter(Boolean));
+              const oneTimeAccountHolderRows = last30.filter((g) =>
+                !(g as any).parentContributionId && accountHolderEmails.has(senderOf(g)),
               );
-              const last30Auto = last30.filter((g) => !!(g as any).parentContributionId);
-              const last30OneTime = last30.filter((g) =>
-                ownerEmail !== ""
-                && String((g as any).senderEmail || "").trim().toLowerCase() === ownerEmail
-                && !(g as any).parentContributionId,
+              // Gifts from OTHERS = non-recurring gifts from anyone who isn't an
+              // account holder. Mutually exclusive with the two buckets above, so
+              // the totals sum cleanly and market growth isn't distorted.
+              const fromOthersRows = last30.filter((g) =>
+                !(g as any).parentContributionId && !accountHolderEmails.has(senderOf(g)),
               );
-              // Exclude parent's own gifts from the "from others" total when we know who
-              // the owner is — a gift you sent yourself isn't "from people who love her".
-              const fromOthersIfKnown = ownerEmail
-                ? last30.filter((g) => {
-                    const e = String((g as any).senderEmail || "").trim().toLowerCase();
-                    return e !== ownerEmail;
-                  })
-                : last30FromOthers;
               const sumAmt = (rows: typeof last30) => rows.reduce((s, g) => {
                 const n = parseFloat(String((g as any).netAmount || g.amount || "0"));
                 return s + (Number.isFinite(n) && n > 0 ? n : 0);
               }, 0);
-              const giftsFromOthersTotal = sumAmt(fromOthersIfKnown);
-              const yourAutoInvestTotal = sumAmt(last30Auto);
-              const yourOneTimeTotal = sumAmt(last30OneTime);
+              const giftsFromOthersTotal = sumAmt(fromOthersRows);
+              // Parent-mode rows ("Your recurring / Your one-time"): the account
+              // holder IS the viewer.
+              const yourAutoInvestTotal = sumAmt(recurringRows);
+              const yourOneTimeTotal = sumAmt(oneTimeAccountHolderRows.filter((g) => senderOf(g) === ownerEmail));
+              // Owner-mode (post-handoff) split: what the custodian parent(s) put
+              // in BEFORE handoff vs. what the owner (e.g. Haley) adds herself.
+              // Reserves "Your additions" for the owner's own money and credits
+              // the rest to the parent. (Owner-set recurring isn't built yet, so
+              // yourAdditionsTotal is 0 today, but the wiring is ready for it.)
+              const accountHolderContribRows = [...recurringRows, ...oneTimeAccountHolderRows];
+              const investedByParentsTotal = sumAmt(accountHolderContribRows.filter((g) => senderOf(g) !== ownerEmail));
+              const yourAdditionsTotal = sumAmt(accountHolderContribRows.filter((g) => senderOf(g) === ownerEmail));
+              const accountHolderContribTotal = sumAmt(accountHolderContribRows);
+              // Credit the custodian by how the family refers to them ("Dad") when
+              // there's a single one; else neutral "your parents". Uses the
+              // server-enriched preferredName on the recurring gift rows.
+              const custodianNames = Array.from(new Set(
+                accountHolderContribRows
+                  .filter((g) => senderOf(g) !== ownerEmail)
+                  .map((g) => (String((g as any).gifterPreferredName || "").trim()) || String((g as any).senderName || "").trim().split(/\s+/)[0])
+                  .filter(Boolean),
+              ));
+              const custodianLabel = custodianNames.length === 1 ? custodianNames[0] : "your parents";
 
               // 30-day market growth: walk fundHistory for the snapshot at or before 30
               // days ago, compute (today's value − then's value) − (today's basis − then's
@@ -6008,7 +6034,7 @@ export default function Dashboard() {
               // cleanly to `currentValue − contributions` → "Total so
               // far" naturally equals the actual fund value, matching
               // every other surface in the app.
-              const periodContributionFlows = giftsFromOthersTotal + yourAutoInvestTotal + yourOneTimeTotal;
+              const periodContributionFlows = giftsFromOthersTotal + accountHolderContribTotal;
               const marketGrowth30 = (valueThen != null && Number.isFinite(valueThen))
                 ? (totalValue - valueThen) - periodContributionFlows
                 : (totalValue - periodContributionFlows);
@@ -6027,7 +6053,7 @@ export default function Dashboard() {
               // row only when nonzero; silent on the typical case.
               const periodCash = cash;
 
-              const total30 = giftsFromOthersTotal + yourAutoInvestTotal + yourOneTimeTotal + marketGrowth30 - periodWithdrawals;
+              const total30 = giftsFromOthersTotal + accountHolderContribTotal + marketGrowth30 - periodWithdrawals;
 
               // Next scheduled run — soonest active parent_contribution.
               const nextScheduled = (parentContributions || [])
@@ -6039,9 +6065,9 @@ export default function Dashboard() {
               // Render guard: don't show the card if there's literally nothing to say
               // AND no upcoming run. Empty hero is fine on a brand-new fund.
               const hasAnything =
-                fromOthersIfKnown.length > 0
-                || last30Auto.length > 0
-                || last30OneTime.length > 0
+                fromOthersRows.length > 0
+                || recurringRows.length > 0
+                || oneTimeAccountHolderRows.length > 0
                 || (marketGrowth30 != null && Math.abs(marketGrowth30) >= 0.01)
                 || !!nextScheduled;
               if (!hasAnything) return null;
@@ -6133,6 +6159,8 @@ export default function Dashboard() {
                           <ChevronRight size={14} className="text-muted-foreground/50 flex-shrink-0" aria-hidden />
                         </span>
                       </button>
+                      {!isOwnerMode ? (
+                        <>
                       <button
                         type="button"
                         // Deep-link to the Dashboard's own "Recurring investments"
@@ -6193,6 +6221,48 @@ export default function Dashboard() {
                           <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
                         </span>
                       </button>
+                        </>
+                      ) : (
+                        <>
+                          {/* Owner (post-handoff) view: the historical recurring +
+                              one-time were put in by the custodian parent(s) — NOT
+                              by the owner viewing now — so credit them ("Invested by
+                              Dad"), and reserve "Your additions" for money the owner
+                              adds herself (0 today; row appears when she does). */}
+                          {investedByParentsTotal > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => summaryScrollTo("recurring")}
+                              className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                              data-testid="lifetime-row-parent-invested"
+                            >
+                              <span className="text-sm text-muted-foreground">Invested by {custodianLabel}</span>
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="text-sm font-semibold text-foreground tabular-nums">
+                                  {fmtRow(investedByParentsTotal)}
+                                </span>
+                                <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
+                              </span>
+                            </button>
+                          )}
+                          {yourAdditionsTotal > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => summaryScrollTo("onetime")}
+                              className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
+                              data-testid="lifetime-row-your-additions"
+                            >
+                              <span className="text-sm text-muted-foreground">Your additions</span>
+                              <span className="inline-flex items-center gap-1.5">
+                                <span className="text-sm font-semibold text-foreground tabular-nums">
+                                  {fmtRow(yourAdditionsTotal)}
+                                </span>
+                                <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
+                              </span>
+                            </button>
+                          )}
+                        </>
+                      )}
                       {marketGrowth30 != null && (
                         <button
                           type="button"
