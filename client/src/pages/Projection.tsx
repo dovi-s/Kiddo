@@ -830,7 +830,7 @@ ${shareUrl}`;
           className="w-full rounded-2xl bg-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.92)] text-white py-4 font-bold transition-colors flex items-center justify-center gap-2"
         >
           <Share2 size={16} />
-          Share {possessive} potential 🎁
+          Share {isOwnerMode ? "your" : possessive} potential 🎁
         </button>
 
         {/* Disclaimer. Honest about the model: contributions stop at 18 for UTMAs

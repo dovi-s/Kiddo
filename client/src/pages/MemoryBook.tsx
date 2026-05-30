@@ -2991,7 +2991,7 @@ export default function MemoryBook() {
                       header. Three distinct concepts, three
                       distinct words: occasions / moments / updates. */}
                   <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
-                    {childName ? `${childName}'s occasions` : "Occasions"}
+                    {isOwnerMode ? "Your occasions" : childName ? `${childName}'s occasions` : "Occasions"}
                   </p>
                   {eventFilter && (
                     <button
@@ -3348,7 +3348,7 @@ export default function MemoryBook() {
                    for fundData (and for auth itself to settle) before
                    deciding. Eliminates the flash for the parent. */
                 <div className="border-b border-border/70 px-4 py-4" data-testid="memory-gifter-roster">
-                  <p className="kiddo-section-label mb-3">{childName ? `Who loves ${childName}` : "Who gave"}</p>
+                  <p className="kiddo-section-label mb-3">{isOwnerMode ? "Who loves you" : childName ? `Who loves ${childName}` : "Who gave"}</p>
                   <div className="flex gap-4 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
                     {gifterRoster.map((gifter) => {
                       const isActive = gifterFilter?.toLowerCase() === gifter.name.toLowerCase();
@@ -3842,7 +3842,7 @@ export default function MemoryBook() {
                 if (activeFilter === "photo") {
                   return {
                     icon: "📷",
-                    title: childName ? `No photos in ${childName}'s book yet.` : "No photos yet.",
+                    title: isOwnerMode ? "No photos in your book yet." : childName ? `No photos in ${childName}'s book yet.` : "No photos yet.",
                     subtitle: "Add a photo memory or attach one when you invest.",
                     tone: "neutral",
                   };
@@ -3851,14 +3851,14 @@ export default function MemoryBook() {
                   return {
                     icon: "🌟",
                     title: "First milestone is on its way.",
-                    subtitle: childName ? `Each $X crossing in ${childName}'s fund will celebrate here.` : "Each $X crossing in the fund will celebrate here.",
+                    subtitle: isOwnerMode ? "Each $X crossing in your fund will celebrate here." : childName ? `Each $X crossing in ${childName}'s fund will celebrate here.` : "Each $X crossing in the fund will celebrate here.",
                     tone: "neutral",
                   };
                 }
                 if (activeFilter === "note") {
                   return {
                     icon: "✏️",
-                    title: childName ? `No memories written for ${childName} yet.` : "No memories written yet.",
+                    title: isOwnerMode ? "No memories written for you yet." : childName ? `No memories written for ${childName} yet.` : "No memories written yet.",
                     subtitle: "First steps. First words. First day of school. The moments that matter live here.",
                     tone: "neutral",
                   };
@@ -3866,7 +3866,7 @@ export default function MemoryBook() {
                 if (activeFilter === "gift_message") {
                   return {
                     icon: "🎁",
-                    title: childName ? `No gifts in ${childName}'s book yet.` : "No gifts yet.",
+                    title: isOwnerMode ? "No gifts in your book yet." : childName ? `No gifts in ${childName}'s book yet.` : "No gifts yet.",
                     subtitle: "Share the gift link to get the first one in.",
                     tone: "neutral",
                   };
@@ -3890,7 +3890,7 @@ export default function MemoryBook() {
                 return {
                   icon: "🌱",
                   title: "Nothing here in this view.",
-                  subtitle: childName ? `Try a different filter, or clear them all to see ${childName}'s full story.` : "Try a different filter, or clear them all to see the full story.",
+                  subtitle: isOwnerMode ? "Try a different filter, or clear them all to see your full story." : childName ? `Try a different filter, or clear them all to see ${childName}'s full story.` : "Try a different filter, or clear them all to see the full story.",
                   tone: "neutral",
                 };
               })();
@@ -4129,7 +4129,7 @@ export default function MemoryBook() {
                               Where it began
                             </p>
                             <p className="text-[12px] text-[rgb(95,85,72)] leading-snug mt-0.5">
-                              The moment {childName ? `${childName}'s` : "the"} fund became real.
+                              The moment {isOwnerMode ? "your" : childName ? `${childName}'s` : "the"} fund became real.
                             </p>
                           </div>
                         </div>
@@ -4579,7 +4579,7 @@ export default function MemoryBook() {
                                     </span>
                                   ) : (
                                     <span className="inline-flex items-center rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-foreground">
-                                      {childName ? `${childName}'s mix` : "Diversified mix"}
+                                      {isOwnerMode ? "Your mix" : childName ? `${childName}'s mix` : "Diversified mix"}
                                     </span>
                                   )}
                                 </div>
@@ -4842,7 +4842,7 @@ export default function MemoryBook() {
                                 <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] text-[hsl(var(--kiddo-gold))] text-[14px]" aria-hidden>🎙</span>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))] leading-tight">Voice note</p>
-                                  <p className="text-[11px] text-muted-foreground/80 leading-tight">They wanted {childName ? childName : "her"} to hear this.</p>
+                                  <p className="text-[11px] text-muted-foreground/80 leading-tight">They wanted {isOwnerMode ? "you" : childName ? childName : "her"} to hear this.</p>
                                 </div>
                                 <span className="text-[hsl(var(--kiddo-gold)/0.55)]" aria-hidden><StaticWaveform size="sm" /></span>
                               </div>
