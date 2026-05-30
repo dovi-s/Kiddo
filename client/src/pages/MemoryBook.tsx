@@ -1117,11 +1117,17 @@ export default function MemoryBook() {
       : "";
     switch (tone) {
       case "warm":
-        return `Dear ${name},\n\nThank you so much for your ${fmt} gift to ${child}'s fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for ${child}'s future.\n\n${child} will read this one day.\n\nWith love,\n${ownerName}`;
+        return isOwnerMode
+          ? `Dear ${name},\n\nThank you so much for your ${fmt} gift to my fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for my future.\n\nWith love,\n${ownerName}`
+          : `Dear ${name},\n\nThank you so much for your ${fmt} gift to ${child}'s fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for ${child}'s future.\n\n${child} will read this one day.\n\nWith love,\n${ownerName}`;
       case "brief":
-        return `Hi ${name},\n\nThank you for the ${fmt} gift to ${child}'s fund.${portfolioSentenceBrief} We really appreciate it!\n\nWith gratitude,\n${ownerName}`;
+        return isOwnerMode
+          ? `Hi ${name},\n\nThank you for the ${fmt} gift to my fund.${portfolioSentenceBrief} I really appreciate it!\n\nWith gratitude,\n${ownerName}`
+          : `Hi ${name},\n\nThank you for the ${fmt} gift to ${child}'s fund.${portfolioSentenceBrief} We really appreciate it!\n\nWith gratitude,\n${ownerName}`;
       case "formal":
-        return `Dear ${name},\n\nWe are writing to express our sincere gratitude for your generous gift of ${fmt} to ${child}'s fund.${portfolioSentenceFormal} Your thoughtfulness is deeply appreciated.\n\nSincerely,\n${ownerName}`;
+        return isOwnerMode
+          ? `Dear ${name},\n\nThank you sincerely for your generous gift of ${fmt} to my fund.${portfolioSentenceFormal} Your thoughtfulness means a great deal to me.\n\nSincerely,\n${ownerName}`
+          : `Dear ${name},\n\nWe are writing to express our sincere gratitude for your generous gift of ${fmt} to ${child}'s fund.${portfolioSentenceFormal} Your thoughtfulness is deeply appreciated.\n\nSincerely,\n${ownerName}`;
     }
   }
 
@@ -1171,11 +1177,17 @@ export default function MemoryBook() {
     const name = titleCaseName(senderName) || senderName;
     switch (tone) {
       case "warm":
-        return `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one of them is a real investment ${child} will read about one day. It means more than you know: not just the money but the fact that you keep showing up for ${child}.\n\nWith love,\n${ownerName}`;
+        return isOwnerMode
+          ? `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to my fund, ${fmtTotal} in total. Each one is a real investment in my future. It means more than you know: not just the money but the fact that you keep showing up for me.\n\nWith love,\n${ownerName}`
+          : `Dear ${name},\n\nThank you so much for the ${count} gifts you sent to ${child}'s fund, ${fmtTotal} in total. Each one of them is a real investment ${child} will read about one day. It means more than you know: not just the money but the fact that you keep showing up for ${child}.\n\nWith love,\n${ownerName}`;
       case "brief":
-        return `Hi ${name},\n\nThank you for the ${count} gifts to ${child}'s fund (${fmtTotal} total). We really appreciate your generosity.\n\nWith gratitude,\n${ownerName}`;
+        return isOwnerMode
+          ? `Hi ${name},\n\nThank you for the ${count} gifts to my fund (${fmtTotal} total). I really appreciate your generosity.\n\nWith gratitude,\n${ownerName}`
+          : `Hi ${name},\n\nThank you for the ${count} gifts to ${child}'s fund (${fmtTotal} total). We really appreciate your generosity.\n\nWith gratitude,\n${ownerName}`;
       case "formal":
-        return `Dear ${name},\n\nWe are writing to express our sincere gratitude for the ${count} gifts you have made to ${child}'s fund, totaling ${fmtTotal}. Your continued support is deeply appreciated.\n\nSincerely,\n${ownerName}`;
+        return isOwnerMode
+          ? `Dear ${name},\n\nThank you sincerely for the ${count} gifts you have made to my fund, totaling ${fmtTotal}. Your continued support means a great deal to me.\n\nSincerely,\n${ownerName}`
+          : `Dear ${name},\n\nWe are writing to express our sincere gratitude for the ${count} gifts you have made to ${child}'s fund, totaling ${fmtTotal}. Your continued support is deeply appreciated.\n\nSincerely,\n${ownerName}`;
     }
   }
 
