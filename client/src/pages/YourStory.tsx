@@ -77,6 +77,48 @@ function formatMonth(date: string | Date) {
   return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
+function SkeletonBar({ className = "" }: { className?: string }) {
+  return <div className={`rounded-md bg-muted ${className}`} />;
+}
+
+// Structure-matching skeleton so the (data-fetched) page feels like it's
+// loading content, not hanging. Pure CSS pulse — no framer-motion, to keep
+// the load cheap. Mirrors the hero + first few year cards.
+function StorySkeleton() {
+  return (
+    <div role="status" aria-busy="true">
+      <span className="sr-only">Loading your story…</span>
+      <div className="space-y-6 animate-pulse" aria-hidden="true">
+        <div className="rounded-3xl border border-border/50 p-8">
+          <SkeletonBar className="h-2.5 w-20" />
+          <SkeletonBar className="mt-4 h-8 w-3/4" />
+          <SkeletonBar className="mt-2 h-8 w-1/2" />
+          <SkeletonBar className="mt-5 h-4 w-full max-w-xl" />
+          <SkeletonBar className="mt-2 h-4 w-2/3 max-w-xl" />
+        </div>
+        <div className="space-y-5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-3xl border border-border/50 bg-card p-6">
+              <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                <SkeletonBar className="h-2.5 w-24" />
+                <SkeletonBar className="h-2.5 w-32" />
+              </div>
+              <div className="mt-4 flex items-start gap-3">
+                <SkeletonBar className="mt-0.5 h-4 w-4 shrink-0 rounded-full" />
+                <SkeletonBar className="h-4 w-1/2" />
+              </div>
+              <div className="mt-3 rounded-2xl bg-muted/30 p-3">
+                <SkeletonBar className="h-3 w-3/4" />
+                <SkeletonBar className="mt-2 h-2.5 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function YourStory() {
   const { fundId } = useParams<{ fundId: string }>();
 
@@ -108,9 +150,7 @@ export default function YourStory() {
       </header>
 
       <main className="mx-auto max-w-4xl space-y-6 px-4 py-8 md:py-12">
-        {isLoading && (
-          <p className="text-center text-sm text-muted-foreground">Loading your story…</p>
-        )}
+        {isLoading && <StorySkeleton />}
 
         {isError && (
           <p className="text-center text-sm text-destructive">
