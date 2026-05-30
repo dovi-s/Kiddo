@@ -2456,9 +2456,24 @@ export default function Activity() {
                   // See rewriteLegacyAutoInvestTitle (top of file) for
                   // why this exists. Legacy rows that pre-date the
                   // server-side rename get rewritten at display time.
-                  const effectiveTitle = overrideToParentContrib
-                    ? `You added $${(amtNum != null ? amtNum : 0).toFixed(2)}`
-                    : rewriteLegacyAutoInvestTitle(item.title);
+                  // Owner mode (post-handoff): a parent's custodial-era
+                  // contribution is NOT the owner's — never title it "You".
+                  // Credit the contributor (preferred name / first name from the
+                  // row, else a neutral "Your parent"). Mirrors the Dashboard's
+                  // "Invested by …" framing. See project_post_handoff_*.
+                  const isParentContribRow = effectiveType === "parent_contribution" || (meta as any).isParentContribution === true;
+                  const ownerViewingParentContrib = activeFundIsOwned && isParentContribRow;
+                  const parentContribName = (() => {
+                    const c = typeof (meta as any).contributorName === "string" ? (meta as any).contributorName.trim() : "";
+                    if (c) return c;
+                    const sn = typeof (meta as any).senderName === "string" ? (meta as any).senderName.trim() : "";
+                    return sn ? sn.split(/\s+/)[0] : "Your parent";
+                  })();
+                  const effectiveTitle = ownerViewingParentContrib
+                    ? `${parentContribName} added $${(amtNum != null ? amtNum : 0).toFixed(2)}`
+                    : overrideToParentContrib
+                      ? `You added $${(amtNum != null ? amtNum : 0).toFixed(2)}`
+                      : rewriteLegacyAutoInvestTitle(item.title);
                   const effectiveDescription = overrideToParentContrib
                     ? (ticker ? `Investing into ${ticker}` : "Investing across the diversified mix")
                     : rewriteLegacyDescription(item.description);
@@ -2771,7 +2786,7 @@ export default function Activity() {
                                 {childLabel}
                               </span>
                             )}
-                            <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>{config.label}</span>
+                            <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>{ownerViewingParentContrib ? "Contribution" : config.label}</span>
                             {dateShort && <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>· {dateShort}</span>}
                             {/* Gift-source chip: renders only when the
                                 gift came via a specific occasion page.
@@ -3795,7 +3810,15 @@ export default function Activity() {
                           // the new owner (those endpoints 403 on a record they
                           // don't own), so render it as read-only history rather
                           // than a live, actionable schedule.
-                          const isOwnerHistorical = c.pauseReason === "majority_handoff";
+                          // Read-only for the post-handoff owner. On a handed-off
+                          // fund the recurring schedule was the custodian parent's
+                          // (on the parent's card) — the owner can't resume/edit/
+                          // cancel it (every mutation 403s), so treat it as ended
+                          // history regardless of the stored pause_reason. Keys on
+                          // owner-mode, not just pause_reason === 'majority_handoff',
+                          // so stale/user-paused rows on an owned fund still render
+                          // correctly.
+                          const isOwnerHistorical = c.pauseReason === "majority_handoff" || activeFundIsOwned || ownerModeFundIds.has(String((c as any).fundId));
                           const isMutating =
                             (pauseToggleMutation.isPending && pauseToggleMutation.variables?.id === idStr) ||
                             (cancelScheduleMutation.isPending && cancelScheduleMutation.variables === idStr) ||
@@ -4054,7 +4077,7 @@ export default function Activity() {
                                       marginBottom: 12,
                                       fontSize: 11.5, color: "rgb(110,100,90)",
                                     }}>
-                                      {paymentSourceLabel && (
+                                      {paymentSourceLabel && !isOwnerHistorical && (
                                         <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                                           <span style={{ color: "rgb(155,144,136)" }}>Charges</span>
                                           <span style={{ color: "rgb(60,52,42)", fontWeight: 600 }}>{paymentSourceLabel}</span>
@@ -4498,8 +4521,8 @@ export default function Activity() {
           <DetailHistoryModal
             open
             onClose={closeDetailScope}
-            title="Your investments"
-            subtitle="Every dollar you've added to this fund."
+            title={activeFundIsOwned ? "Contributions from your parent" : "Your investments"}
+            subtitle={activeFundIsOwned ? "Every dollar added to this fund before it became yours." : "Every dollar you've added to this fund."}
             summaryStats={stats}
             subToggle={{
               options: [

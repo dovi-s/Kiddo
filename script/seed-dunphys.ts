@@ -620,7 +620,7 @@ async function seedGifterNotifications(
   return byEmail.size;
 }
 
-async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Promise<string> {
+async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], parentDisplayName: string): Promise<string> {
   // Idempotent: if Phil already owns a fund with this slug, return its id.
   const [existing] = await db.select().from(funds).where(
     and(eq(funds.userId, parentUserId), eq(funds.slug, kid.slug)),
@@ -803,6 +803,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
   } as any).returning();
   let recurringTotal = 0;
   let recurringLastDate: Date | null = null;
+  let recurringFirstDate: Date | null = null;
   let recurringMemoryStamped = false;
   // Collect external gifts so a realistic subset can be seeded as ALREADY-SENT
   // thank-yous after the loop (so the demo shows the "Thanked" state, not only
@@ -860,6 +861,12 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
         message: g.message || null,
         executionModel: isRecurring ? "auto_invest" : null,
         senderEmail: g.senderEmail || null,
+        senderName: g.senderName || null,
+        // How the family refers to the custodian who made this contribution
+        // ("Dad"). Lets the post-handoff owner view credit "Dad added $X"
+        // instead of the custodial-era "You contributed". Only on recurring
+        // (parent) contributions; external gifts carry their own senderName.
+        contributorName: isRecurring ? parentDisplayName : null,
         isParentContribution: isRecurring,
         parentContributionId: isRecurring ? philContribution.id : null,
       }),
@@ -877,6 +884,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
       recurringTotal += g.amount;
       const chargeDate = new Date(g.createdAt);
       if (!recurringLastDate || chargeDate > recurringLastDate) recurringLastDate = chargeDate;
+      if (!recurringFirstDate || chargeDate < recurringFirstDate) recurringFirstDate = chargeDate;
       if (!recurringMemoryStamped && recurringChargeNote) {
         await db.insert(memoryEntries).values({
           fundId: fund.id,
@@ -924,6 +932,11 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number]): Prom
     .set({
       totalContributed: recurringTotal.toFixed(2),
       lastRunDate: recurringLastDate ?? null,
+      // Backdate the schedule's start to its FIRST cycle. The row defaults
+      // createdAt=now, but the recurring detail's "Started" stat reads
+      // schedule.createdAt — so without this it showed today even though the
+      // 36 cycles span ~3 years (an impossible "Started today + 36 cycles").
+      ...(recurringFirstDate ? { createdAt: recurringFirstDate } : {}),
     })
     .where(eq(parentContributions.id, philContribution.id));
 
@@ -1388,9 +1401,13 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
   }
 
   // 3. Seed all three Dunphy kid funds.
+  // Custodian's preferred display name ("Dad") — stamped onto each recurring
+  // contribution's activity so the post-handoff owner view can credit "Dad
+  // added $X" instead of the custodial-era "You contributed".
+  const philDisplayName = ACCOUNTS.find((a) => a.role === "parent")?.preferredName || "Dad";
   const seededFundIds: string[] = [];
   for (const kid of KIDS) {
-    const fundId = await seedKidFund(philId, kid);
+    const fundId = await seedKidFund(philId, kid, philDisplayName);
     seededFundIds.push(fundId);
     console.log(`  fund: ${kid.firstName}'s Fund (${kid.slug}) → ${fundId}`);
   }
