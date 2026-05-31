@@ -63,8 +63,8 @@ type FeedActivity = ActivityType & {
 //                "Recurring" was overloaded — it lumped one-time parent
 //                contributions in with recurring schedule events. "Yours"
 //                cleanly answers "what did I do?" regardless of cadence,
-//                and matches the row label "Your gift" already rendered
-//                for parent_contribution rows.
+//                and matches the "Contribution" row label rendered for
+//                parent_contribution rows.
 //   Growth     = portfolio mechanics (sells, withdrawals, banks)
 //   Milestones = lifecycle, account state, KYC, age phases, memory
 const filterOptions: { value: FilterType; label: string }[] = [
@@ -120,6 +120,12 @@ const GROWTH_TYPES = [
   "bank_linked",
   "bank_unlinked",              // bank account removed
   "cash_invested",
+  // Strategy + custom-mix changes are PORTFOLIO decisions, not "milestones".
+  // Moved here 2026-05-31 so they populate the Portfolio filter (where a
+  // strategy switch belongs) instead of cluttering Milestones with admin
+  // events. GROWTH_TYPES is checked before MILESTONE_TYPES in the mapper.
+  "fund_strategy_changed",
+  "custom_allocations_changed",
 ];
 // Milestone types fired by the server-side milestones engine. Each is a
 // celebratory row (not a transaction) that captures an emotional moment
@@ -148,8 +154,9 @@ const MILESTONE_TYPES = [
   "kid_stock_suggestion",       // kid suggested a stock from KidView; parent reviews
   "kid_suggestion_approved", "kid_suggestion_declined", // parent's review entry — pairs with the suggestion above
   "fund_created",               // origin row for the fund's history
-  "fund_strategy_changed",      // growth → conservative etc.
-  "custom_allocations_changed", // tweaked the custom mix without changing strategy
+  // fund_strategy_changed + custom_allocations_changed moved to GROWTH_TYPES
+  // (the Portfolio filter) 2026-05-31 — a strategy/mix change is a portfolio
+  // decision, not a milestone. Keeping them here made Milestones confusing.
   "event_created", "event_archived", "event_unarchived",
   "ssn_provided",               // tax ID added (last4 in metadata, never full)
   "successor_custodian_added", "successor_custodian_changed", "successor_custodian_removed",
@@ -312,7 +319,7 @@ function getTypeConfig(type?: string | null): { bg: string; color: string; icon:
   if (t === "auto_invest")
     return { ...PALETTE.RECURRING, icon: <Repeat size={16} />, label: "Recurring investment" };
   if (t === "parent_contribution")
-    return { ...PALETTE.RECURRING, icon: <Repeat size={16} />, label: "Your gift" };
+    return { ...PALETTE.RECURRING, icon: <Repeat size={16} />, label: "Contribution" };
   // Pricing-v3 (locked 2026-05-23): a gifter on a Free fund used the
   // "ask the family to enable monthly contributions" CTA in
   // GiftCheckout. This activity row IS the relationship signal; the
@@ -2156,7 +2163,11 @@ export default function Activity() {
                   cursor: "pointer", transition: "all 0.12s", fontFamily: "inherit",
                 }}
               >
-                {opt.label}
+                {/* Owner mode: the "auto" bucket holds the parent's pre-handoff
+                    contributions (now labeled "Dad added") plus the owner's own
+                    since handoff — so "Yours" is wrong here. "Contributions" is
+                    neutral + accurate, matching the contributions-detail modal. */}
+                {activeFundIsOwned && opt.value === "auto" ? "Contributions" : opt.label}
               </button>
             ))}
             </div>
@@ -4466,32 +4477,76 @@ export default function Activity() {
           }
           return false;
         };
+        // Owner-mode attribution: who actually made each contribution. Anything
+        // added BEFORE the handoff was the parent's ("Dad added $50"); anything
+        // since is the owner's own ("You added $50"). Split on the handoff date
+        // (transferredAt). The stored title is first-person from the parent's
+        // POV at creation ("You contributed $50"), which reads wrong once the
+        // grown kid owns the fund — this re-attributes it. The parent's legacy
+        // rows aren't the owner's to dispute, so we suppress Report-an-issue.
+        const ownerFundObj = (allFundsForOwnerMode as any[]).find(
+          (f) => String(f?.id) === String(activeFundIdForActivity),
+        );
+        const custodianAddedLabel =
+          (ownerFundObj?.previousOwnerCallMe && String(ownerFundObj.previousOwnerCallMe).trim()) || "Your parent";
+        const ownerHandoffAt = ownerFundObj?.transferredAt ? parseSafeDate(ownerFundObj.transferredAt) : null;
+        const contribIsParents = (row: FeedActivity): boolean => {
+          if (!activeFundIsOwned) return false;
+          const created = parseSafeDate(row.createdAt);
+          return !ownerHandoffAt || !created || created.getTime() < ownerHandoffAt.getTime();
+        };
         // Row display transform: rewrite gift_received → parent_contribution
-        // visuals (type/title/description) so the modal renders "You
-        // contributed $X · Investing into AAPL" instead of "Gift from Dovi
-        // · Gift received". Mirrors the inline override the Activity main
-        // feed already applies. Pre-transformed at the IIFE level so the
-        // generic DetailHistoryModal stays a dumb renderer.
+        // visuals so the modal renders a contribution row, not "Gift from X".
+        // In owner mode it also re-attributes the title (parent vs owner).
         const applyParentContribDisplay = (row: FeedActivity): FeedActivity => {
           const t = normalizeActivityType(row.type);
-          if (t === "parent_contribution" || t === "parent_contribution_failed") return row;
-          if (t !== "gift_received" && t !== "gift_received_cash" && t !== "gift_invested") return row;
-          const meta = parseMetadata((row as any).metadata);
-          const overrideToParent =
-            (meta as any).isParentContribution === true ||
-            (!!ownerEmailLowerForFilter && rowSenderEmail(row) === ownerEmailLowerForFilter);
-          if (!overrideToParent) return row;
+          const isContribType = t === "parent_contribution" || t === "parent_contribution_failed";
+          let isOverrideGift = false;
+          if (!isContribType && (t === "gift_received" || t === "gift_received_cash" || t === "gift_invested")) {
+            const meta = parseMetadata((row as any).metadata);
+            isOverrideGift =
+              (meta as any).isParentContribution === true ||
+              (!!ownerEmailLowerForFilter && rowSenderEmail(row) === ownerEmailLowerForFilter);
+          }
+          if (!isContribType && !isOverrideGift) return row;
           const amtNum = parseAmount(row.amount);
+          const amtStr = `$${(amtNum != null ? amtNum : 0).toFixed(2)}`;
+          // Owner mode: attribute by who added it. Keep the row's own note as the
+          // description (e.g. "Every month, a little more for Haley. From Dad.").
+          if (activeFundIsOwned) {
+            const parents = contribIsParents(row);
+            const out: any = {
+              ...row,
+              type: "parent_contribution" as any,
+              title: parents ? `${custodianAddedLabel} added ${amtStr}` : `You added ${amtStr}`,
+            };
+            if (parents) out.__suppressReport = true;
+            return out as FeedActivity;
+          }
+          // Parent mode (unchanged): parent_contribution rows keep their stored
+          // title; overridden gift rows render as "You added $X".
+          if (isContribType) return row;
+          const meta = parseMetadata((row as any).metadata);
           const tickerRaw = (meta as any).ticker;
           const ticker = typeof tickerRaw === "string" ? tickerRaw.toUpperCase() : null;
           return {
             ...row,
             type: "parent_contribution" as any,
-            title: `You added $${(amtNum != null ? amtNum : 0).toFixed(2)}`,
+            title: `You added ${amtStr}`,
             description: ticker ? `Investing into ${ticker}` : "Investing across the diversified mix",
           };
         };
         const allContribRows = allFeed.filter(isParentContribRow).map(applyParentContribDisplay);
+        // Owner mode: has the owner added any of their OWN contributions since
+        // the handoff? Drives whether the header stays "from your parent" (only
+        // the parent's legacy contributions) or goes neutral ("Contributions")
+        // once the owner has started their own. ownerAllTotal powers the story
+        // subtitle ("Dad added $X across N, before this became yours").
+        const hasOwnContribs = activeFundIsOwned && allContribRows.some((r) => !contribIsParents(r));
+        const ownerAllTotal = allContribRows.reduce((s, r) => {
+          const n = parseAmount(r.amount);
+          return s + (n != null && n > 0 ? n : 0);
+        }, 0);
         const subFilteredRows = allContribRows.filter((row) => {
           if (contributionsSubFilter === "all") return true;
           const recurring = isRecurringRow(row);
@@ -4524,8 +4579,18 @@ export default function Activity() {
           <DetailHistoryModal
             open
             onClose={closeDetailScope}
-            title={activeFundIsOwned ? "Contributions from your parent" : "Your investments"}
-            subtitle={activeFundIsOwned ? "Every dollar added to this fund before it became yours." : "Every dollar you've added to this fund."}
+            title={
+              activeFundIsOwned
+                ? (hasOwnContribs ? "Contributions" : "Contributions from your parent")
+                : "Your investments"
+            }
+            subtitle={
+              activeFundIsOwned
+                ? (hasOwnContribs
+                    ? `What ${custodianAddedLabel} added before the handoff, and what you've added since.`
+                    : `${custodianAddedLabel} added ${formatCurrency(ownerAllTotal)} across ${allContribRows.length} ${allContribRows.length === 1 ? "contribution" : "contributions"}, before this became yours.`)
+                : "Every dollar you've added to this fund."
+            }
             summaryStats={stats}
             subToggle={{
               options: [

@@ -673,7 +673,7 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
       <RowChips
         receiptUrl={reconcileReceiptUrl}
         tradeConfirmationUrl={tradeConfirmationUrl}
-        showReportIssue={REPORTABLE_TYPES.has(normalizedType)}
+        showReportIssue={REPORTABLE_TYPES.has(normalizedType) && (row as any).__suppressReport !== true}
         rowId={String(row.id || "")}
         fundId={(row as any).fundId || null}
         type={normalizedType}

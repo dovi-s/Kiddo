@@ -1015,7 +1015,10 @@ type GifterProfile = {
 };
 
 // Avatar background palette for named gifters. Hash-based assignment
-// (gifterColorIdx) so the same name always lands on the same color.
+// (gifterColorIdx) gives each name a stable default color; a de-collision
+// pass in the gifterRoster useMemo then ensures no two gifters in the
+// displayed list share a color while the palette has room (the user-reported
+// "orange twice"). Colors only repeat past the palette size.
 //
 // One slot was previously brand gold (`rgb(184,121,26)`), which collided
 // with the Share CTA register — gold/orange is RESERVED for that single
@@ -1033,6 +1036,9 @@ const GIFTER_AVATAR_COLORS = [
   { bg: "rgb(67,101,82)",  text: "white" }, // Sage green
   { bg: "rgb(90,65,45)",   text: "white" }, // Coffee brown
   { bg: "rgb(58,55,92)",   text: "white" }, // Indigo
+  { bg: "rgb(110,70,95)",  text: "white" }, // Plum
+  { bg: "rgb(70,95,120)",  text: "white" }, // Slate blue
+  { bg: "rgb(40,95,100)",  text: "white" }, // Deep teal
 ];
 
 function gifterColorIdx(name: string): number {
@@ -3091,11 +3097,31 @@ export default function Dashboard() {
     // regardless of size." Recency answers a warmer question: "who's
     // loving Emma lately?" Anonymous group is filtered out at render
     // time and placed last, so its position here doesn't matter.
-    return Array.from(map.values()).sort((a, b) => {
+    const sortedRoster = Array.from(map.values()).sort((a, b) => {
       const ta = a.lastGiftDate ? new Date(a.lastGiftDate).getTime() : 0;
       const tb = b.lastGiftDate ? new Date(b.lastGiftDate).getTime() : 0;
       return tb - ta;
     });
+    // De-collide avatar colors so two gifters in the displayed (recency) order
+    // never share a background while the palette has room (the user-reported
+    // "orange twice"). Greedy: keep the name's stable hash color when it's
+    // still free, else take the next unused palette slot. Repeats only when
+    // there are more gifters than palette colors (unavoidable; "unique if
+    // possible"). Deterministic per render.
+    const usedColors = new Set<number>();
+    for (const gifter of sortedRoster) {
+      let idx = gifter.colorIdx;
+      if (usedColors.size < GIFTER_AVATAR_COLORS.length) {
+        let tries = 0;
+        while (usedColors.has(idx) && tries < GIFTER_AVATAR_COLORS.length) {
+          idx = (idx + 1) % GIFTER_AVATAR_COLORS.length;
+          tries++;
+        }
+      }
+      gifter.colorIdx = idx;
+      usedColors.add(idx);
+    }
+    return sortedRoster;
   }, [gifts]);
 
   const recentGiftsFeed = useMemo(() => {

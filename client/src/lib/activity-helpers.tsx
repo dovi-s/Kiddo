@@ -94,7 +94,7 @@ export function getTypeConfig(type?: string | null): { bg: string; color: string
   if (t === "auto_invest")
     return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Recurring investment" };
   if (t === "parent_contribution")
-    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Your gift" };
+    return { bg: "rgb(224,237,227)", color: "rgb(43,88,64)", icon: <Repeat size={16} />, label: "Contribution" };
   if (t === "parent_contribution_failed")
     return { bg: "rgb(254,228,228)", color: "rgb(170,38,38)", icon: <AlertCircle size={16} />, label: "Charge failed" };
   if (t === "memory_milestone_added")
