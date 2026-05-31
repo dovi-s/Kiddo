@@ -137,10 +137,21 @@ an existing one.**
 
 ## 8. The one open question (only the founder answers)
 
-**Cash-flow business or platform swing?** Write the answer here when it's made:
+**Cash-flow business or platform swing?**
 
-> _[decision + date]_
+> **Working decision (2026-05-31): PLATFORM SWING, executed the hybrid way** —
+> bootstrap the loop to funded-k ≥ 1, then take *only strategic* capital for the
+> regulated core. Recorded on the founder's repeated "do what's best" mandate and
+> agreement to the recommendation, given the entire lifetime-platform thesis
+> (kid-2.0, parent-2.0 re-subscription, private-markets north star, Memory Book
+> moat, AUM-as-annuity, "patient money," "Target not Walmart").
+>
+> **What this commits / doesn't:** it's a *framing* decision — it sets priorities
+> and the eventual-raise *posture*. It does **NOT** mean raising now (you bootstrap
+> to PMF first), and it's **reversible**: if the loop economics later argue for the
+> cash-flow path, the founder overrides this line. The decision exists so
+> downstream work has a frame, not to lock capital.
 
-Until then, the operating defaults above hold either way (bootstrap to PMF,
-support-as-moat, AUM-as-engine, partners-after-k≥1). The answer only changes the
-*capital* decision — and it's yours, not derivable from the code.
+The operating defaults hold either way (bootstrap to PMF, support-as-moat,
+AUM-as-engine, partners-after-k ≥ 1); the swing decision only changes the
+*capital* posture, and it stays the founder's to revise.
