@@ -49,6 +49,9 @@ export function FundDetailsCard({
     : null;
   const transferDateValid = transferDate && !isNaN(transferDate.getTime());
   const childName = capFirst(fund?.recipientFirstName);
+  // Owner mode: the handoff already happened, so a future-tense "Transfers to
+  // {child}" row is wrong — hide it for the owner.
+  const isOwnerMode = (fund as any)?.accessRole === "owner" && !!(fund as any)?.transferredAt;
 
   return (
     <SectionCard>
@@ -75,7 +78,7 @@ export function FundDetailsCard({
             detail into a parent-visible reality without verbose
             explanation. The full age-18 plan UX lives elsewhere;
             this is the calm utility-surface acknowledgment. */}
-        {transferDateValid && (
+        {transferDateValid && !isOwnerMode && (
           <div className="flex items-center justify-between gap-4 p-4" data-testid="row-fund-transfer-date">
             <span className="text-sm text-muted-foreground">
               Transfers to {childName || "your child"}

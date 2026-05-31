@@ -98,8 +98,11 @@ export function ChildIdentityCard({
     const created = fund?.createdAt ? new Date(fund.createdAt) : null;
     if (!created || isNaN(created.getTime())) return null;
     const monthYear = created.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+    // Owner mode (the kid now owns the fund post-handoff): drop the third-person
+    // "for {child}" — they're viewing their own fund.
+    const isOwnerMode = (fund as any)?.accessRole === "owner" && !!(fund as any)?.transferredAt;
     const childName = capFirst(fund?.recipientFirstName);
-    return childName ? `Growing for ${childName} since ${monthYear}` : `Growing since ${monthYear}`;
+    return (childName && !isOwnerMode) ? `Growing for ${childName} since ${monthYear}` : `Growing since ${monthYear}`;
   })();
 
   return (
