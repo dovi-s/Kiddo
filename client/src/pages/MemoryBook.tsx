@@ -637,6 +637,7 @@ export default function MemoryBook() {
   const [composerContext, setComposerContext] = useState<{
     ticker?: string | null;
     currentValue?: number | null;
+    giftDate?: string | Date | null;
   }>({});
   // Preview step — parent reviews how the gifter will receive the note
   // before sending. Compose → preview → send → toast. Reduces accidental
@@ -1085,7 +1086,7 @@ export default function MemoryBook() {
     tone: "warm" | "brief" | "formal" | "custom",
     senderName: string,
     amount: string,
-    ctx?: { ticker?: string | null; currentValue?: number | null }
+    ctx?: { ticker?: string | null; currentValue?: number | null; giftDate?: string | Date | null }
   ): string {
     if (tone === "custom") return "";
     const fmt = `$${parseFloat(amount || "0").toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -1115,8 +1116,26 @@ export default function MemoryBook() {
     const portfolioSentenceFormal = tickerCo && valueNow
       ? ` Your gift was allocated to ${tickerCo} and is currently valued at ${valueNow}.`
       : "";
+    // Time-aware OWNER variant. When the now-adult owner thanks a gift made
+    // before she came of age, name how old she actually was ("when I was 6")
+    // and lean into reading it as an adult now. Only fires when we can compute
+    // a real childhood age from her birthdate + the gift's date — never for a
+    // gift to her adult account (ageAtGift >= majorityAge), and never for the
+    // parent. Falls back to the standard owner warm copy otherwise.
+    const birthMs = fundData?.recipientBirthdate ? new Date(fundData.recipientBirthdate).getTime() : NaN;
+    const giftMs = ctx?.giftDate ? new Date(ctx.giftDate as any).getTime() : NaN;
+    const majorityAge = Number((fundData as any)?.majorityAge) || 18;
+    let ageAtGift: number | null = null;
+    if (Number.isFinite(birthMs) && Number.isFinite(giftMs) && giftMs >= birthMs) {
+      ageAtGift = Math.floor((giftMs - birthMs) / (365.25 * 24 * 60 * 60 * 1000));
+    }
+    const useTimeAwareOwner = isOwnerMode && ageAtGift !== null && ageAtGift < majorityAge;
+    const whenAgePhrase = ageAtGift === null ? "" : ageAtGift <= 1 ? "when I was just a baby" : `when I was ${ageAtGift}`;
     switch (tone) {
       case "warm":
+        if (useTimeAwareOwner) {
+          return `Dear ${name},\n\nThank you for the ${fmt} you gave me ${whenAgePhrase}.${portfolioSentenceWarm} I'm old enough now to understand what you were doing back then, and it means even more to me than it could have at the time.\n\nWith love,\n${ownerName}`;
+        }
         return isOwnerMode
           ? `Dear ${name},\n\nThank you so much for your ${fmt} gift to my fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for my future.\n\nWith love,\n${ownerName}`
           : `Dear ${name},\n\nThank you so much for your ${fmt} gift to ${child}'s fund.${portfolioSentenceWarm} It means more than you know: not just the investment itself, but the fact that you showed up for ${child}'s future.\n\n${child} will read this one day.\n\nWith love,\n${ownerName}`;
@@ -1404,7 +1423,7 @@ export default function MemoryBook() {
         const dlPrice = dlTicker ? giftPriceByTicker.get(dlTicker) : null;
         const dlShares = target.gift.sharesAcquired ? parseFloat(target.gift.sharesAcquired) : null;
         const dlValue = dlShares !== null && dlShares > 0 && dlPrice && dlPrice > 0 ? dlShares * dlPrice : null;
-        const dlCtx = { ticker: dlTicker, currentValue: dlValue };
+        const dlCtx = { ticker: dlTicker, currentValue: dlValue, giftDate: target.gift.createdAt ?? null };
         // Defer one tick so the composer opens AFTER the row renders &
         // scrolls into view — opening immediately would cause the page to
         // scroll past the now-taller row.
@@ -5033,7 +5052,7 @@ export default function MemoryBook() {
                               tcRealShares !== null && tcRealShares > 0 && tcCurrentPrice && tcCurrentPrice > 0
                                 ? tcRealShares * tcCurrentPrice
                                 : null;
-                            const tyCtx = { ticker: tcTicker, currentValue: tcCurrentValue };
+                            const tyCtx = { ticker: tcTicker, currentValue: tcCurrentValue, giftDate: entry.gift?.createdAt ?? null };
                             // Source of truth for "can we email this gifter":
                             // the GIFT's senderEmail (captured at Stripe
                             // checkout). The thank-you record's senderEmail
