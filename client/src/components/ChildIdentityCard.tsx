@@ -105,10 +105,12 @@ export function ChildIdentityCard({
     return (childName && !isOwnerMode) ? `Growing for ${childName} since ${monthYear}` : `Growing since ${monthYear}`;
   })();
 
+  // Post-handoff owner: this card is the owner's own identity, not a child's.
+  const isOwnerMode = (fund as any)?.accessRole === "owner" && !!(fund as any)?.transferredAt;
   return (
     <SectionCard>
       <div className="p-5">
-        <p className="kiddo-section-label mb-4">Child</p>
+        <p className="kiddo-section-label mb-4">{isOwnerMode ? "Account" : "Child"}</p>
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -158,7 +160,7 @@ export function ChildIdentityCard({
               onClick={onEditChild}
               data-testid="button-edit-child-details"
             >
-              Edit child details
+              {isOwnerMode ? "Edit your details" : "Edit child details"}
             </button>
           </div>
         </div>

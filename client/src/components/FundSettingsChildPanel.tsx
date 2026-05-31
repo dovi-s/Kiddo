@@ -88,7 +88,11 @@ export function FundSettingsChildPanel({
   return (
     <div className="space-y-4" data-testid="settings-child-panel">
       <ChildIdentityCard fund={fund} onEditChild={onEditFund} />
-      <KidsViewCard fund={fund} enabled={kidViewQueryEnabled} />
+      {/* Kid View is the CHILD's login surface — meaningless for an adult owner
+          who logs in as themselves with full access. Per the locked Kid View
+          policy, hide it for the owner (it returns naturally on a child fund
+          they later create). See project_adult_account_is_parent_2_0_onramp. */}
+      {!fundIsOwnerHeld && <KidsViewCard fund={fund} enabled={kidViewQueryEnabled} />}
       <InvitationsToYouCard />
       {!fundIsOwnerHeld && (
         <CoParentAccessCard

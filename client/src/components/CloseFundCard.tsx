@@ -49,12 +49,20 @@ export function CloseFundCard({
   const isClosed = String(fund?.status || "").toLowerCase() === "closed";
   if (isClosed) return null;
 
+  // Post-handoff owner: it's "your fund," not "{child}'s fund."
+  const isOwnerMode = (fund as any)?.accessRole === "owner" && !!(fund as any)?.transferredAt;
+  const fundPossessive = isOwnerMode
+    ? "your"
+    : fund?.recipientFirstName
+      ? `${capFirst(fund.recipientFirstName)}'s`
+      : "this";
+
   return (
     <SectionCard className="border-border/60">
       <div className="p-5">
         <h2 className="text-base font-bold text-foreground">Close this fund</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Stop accepting gifts to {fund?.recipientFirstName ? `${capFirst(fund.recipientFirstName)}'s` : "this"} fund. The Memory Book and history stay intact, and you can reopen anytime.
+          Stop accepting gifts to {fundPossessive} fund. The Memory Book and history stay intact, and you can reopen anytime.
         </p>
         <Button
           variant="outline"
