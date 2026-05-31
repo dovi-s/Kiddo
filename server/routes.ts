@@ -21769,6 +21769,31 @@ export async function registerRoutes(
       const userId = (req.user as any).id;
       const requestedPlan = String(req.body?.plan || "").toLowerCase();
       const requestedFundId = String(req.body?.fundId || "").trim();
+      // Optional, honest churn capture (G3 / TACTICAL_RETENTION_SPEC.md). Both
+      // questions are optional and never block the cancel. We persist them on
+      // Stripe's native cancellation_details (feedback enum + free-text comment)
+      // — queryable in the Stripe dashboard, no schema/migration. "Liked most"
+      // is the Nostalgia question; primarily a research signal (support-as-moat).
+      const cancelReasonRaw = String(req.body?.cancelReason || "").trim();
+      const likedMostRaw = String(req.body?.likedMost || "").trim().slice(0, 500);
+      const FEEDBACK_MAP: Record<string, string> = {
+        too_expensive: "too_expensive",
+        not_using: "unused",
+        missing_features: "missing_features",
+        confusing: "too_complex",
+        switched: "switched_service",
+        other: "other",
+      };
+      const cancelFeedback = FEEDBACK_MAP[cancelReasonRaw];
+      // Built as `any` so the optional cancellation_details param doesn't depend
+      // on the installed Stripe SDK's type version. Shared by both update calls.
+      const cancelParams: any = { cancel_at_period_end: true };
+      if (cancelFeedback || likedMostRaw) {
+        cancelParams.cancellation_details = {
+          ...(cancelFeedback ? { feedback: cancelFeedback } : {}),
+          ...(likedMostRaw ? { comment: `Liked most: ${likedMostRaw}` } : {}),
+        };
+      }
       const subscription = await storage.getSubscription(userId);
       const householdActive =
         !!subscription &&
@@ -21823,9 +21848,7 @@ export async function registerRoutes(
           });
         }
 
-        const updatedStripeSubscription: any = await stripe.subscriptions.update(membership.stripeSubscriptionId, {
-          cancel_at_period_end: true,
-        });
+        const updatedStripeSubscription: any = await stripe.subscriptions.update(membership.stripeSubscriptionId, cancelParams);
         const activeUntil = getStripeSubscriptionPeriodEnd(
           updatedStripeSubscription,
           membership.currentPeriodEnd || null,
@@ -21865,9 +21888,7 @@ export async function registerRoutes(
         });
       }
 
-      const updatedStripeSubscription: any = await stripe.subscriptions.update(subscription.stripeSubscriptionId, {
-        cancel_at_period_end: true,
-      });
+      const updatedStripeSubscription: any = await stripe.subscriptions.update(subscription.stripeSubscriptionId, cancelParams);
       const activeUntil = getStripeSubscriptionPeriodEnd(
         updatedStripeSubscription,
         subscription.currentPeriodEnd || null,

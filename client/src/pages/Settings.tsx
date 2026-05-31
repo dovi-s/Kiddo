@@ -2939,6 +2939,13 @@ const [editFundName, setEditFundName] = useState("");
   const [reactivating, setReactivating] = useState(false);
   const [openingPortal, setOpeningPortal] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  // Optional churn-capture state (G3). Cleared whenever the dialog closes so a
+  // reopened dialog starts blank. Sent with the cancel POST; never required.
+  const [cancelReason, setCancelReason] = useState<string>("");
+  const [likedMost, setLikedMost] = useState<string>("");
+  useEffect(() => {
+    if (!showCancelConfirm) { setCancelReason(""); setLikedMost(""); }
+  }, [showCancelConfirm]);
   const [cancelStep, setCancelStep] = useState<"warn" | "confirm">("warn");
   // Successor custodian editor (Settings → Child tab). Pre-populated from
   // the fund record on expand; edits go through PATCH /api/funds/:id which
@@ -3437,7 +3444,11 @@ const [editFundName, setEditFundName] = useState("");
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(opts || {}),
+        body: JSON.stringify({
+          ...(opts || {}),
+          cancelReason: cancelReason || undefined,
+          likedMost: likedMost.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -5584,6 +5595,58 @@ const [editFundName, setEditFundName] = useState("");
                   Your fund stays safe.
                 </p>
               </div>
+
+              {/* Optional churn capture (G3 / TACTICAL_RETENTION_SPEC.md). Two
+                  optional questions, no save-gauntlet (honors
+                  project_cancellation_dark_pattern_avoidance). "What did you like
+                  most?" is the Nostalgia question — primarily a research signal;
+                  both persist on Stripe's native cancellation_details. */}
+              <div className="space-y-3 rounded-xl bg-muted/30 p-3.5">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-foreground/80">
+                    Mind sharing why? <span className="font-normal text-muted-foreground">(optional)</span>
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { value: "too_expensive", label: "Too expensive" },
+                      { value: "not_using", label: "Not using it" },
+                      { value: "missing_features", label: "Missing a feature" },
+                      { value: "confusing", label: "Too confusing" },
+                      { value: "switched", label: "Using something else" },
+                      { value: "other", label: "Other" },
+                    ].map((r) => (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => setCancelReason((cur) => (cur === r.value ? "" : r.value))}
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                          cancelReason === r.value
+                            ? "bg-foreground text-background"
+                            : "border border-border text-muted-foreground hover:text-foreground"
+                        }`}
+                        data-testid={`cancel-reason-${r.value}`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="liked-most" className="block text-xs font-medium text-foreground/80">
+                    What did you like most? <span className="font-normal text-muted-foreground">(optional)</span>
+                  </label>
+                  <textarea
+                    id="liked-most"
+                    value={likedMost}
+                    onChange={(e) => setLikedMost(e.target.value.slice(0, 300))}
+                    rows={2}
+                    placeholder="The thing you'd miss…"
+                    className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    data-testid="input-liked-most"
+                  />
+                </div>
+              </div>
+
               <div className="flex gap-3">
                 <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setCancelStep("warn")} disabled={canceling}>
                   Go back
