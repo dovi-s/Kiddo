@@ -127,7 +127,7 @@ export default function TaxDocsExplainer() {
               <p>
                 The first chunk of your unearned income (dividends + capital
                 gains) gets taxed at your rate. Anything above the threshold
-                (around $2,500 for 2024 to 2025; adjusts each year) gets taxed
+                (around $2,700 for 2025; adjusts each year) gets taxed
                 at your parents' rate, which is usually higher than yours.
               </p>
               <p>
@@ -212,8 +212,8 @@ export default function TaxDocsExplainer() {
           <p className="text-sm font-semibold">Still confused?</p>
           <p className="text-sm text-foreground/70 leading-relaxed">
             Email{" "}
-            <a href="mailto:hello@kiddofund.com" className="text-primary underline-offset-2 hover:underline">
-              hello@kiddofund.com
+            <a href="mailto:support@kiddofund.com" className="text-primary underline-offset-2 hover:underline">
+              support@kiddofund.com
             </a>{" "}
             before April 1. We'll walk you through your specific numbers. No appointment,
             no charge.
