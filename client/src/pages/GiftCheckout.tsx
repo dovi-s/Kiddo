@@ -1192,14 +1192,15 @@ export default function GiftCheckout() {
         tagline: `Gifts that last don't stop at ${fundMajorityAge}. 🌱 Based on 7% historical returns. Not guaranteed.`,
       };
     }
-    // Already 18+ - no "turns 18" framing, just show the long arc
-    const at25 = yTo25 >= 3 ? fmt(g(yTo25)) : null;
-    const at30 = yTo30 >= 3 ? fmt(g(yTo30)) : null;
-    if (!at25 && !at30) return null;
+    // At/past majority (an owner-held fund, or an adult's personal account):
+    // there's no "turns N" milestone, and fixed ages like 25/30 can already be
+    // in the past. Project a FORWARD arc from today so it's true at ANY age —
+    // dynamic regardless of account type. Minors get the majority arc above;
+    // adults/owners get this. (Server reports yearsUntil18=0 for owner funds.)
+    const in10 = fmt(g(10));
+    const in20 = fmt(g(20));
     return {
-      headline: at25 && at30
-        ? `${src} today → ~${at25} at 25. ~${at30} at 30.`
-        : `${src} today → ~${at25 ?? at30} and growing.`,
+      headline: `${src} today → ~${in10} in 10 years. ~${in20} in 20 years. 🌱`,
       tagline: "The best gifts keep compounding. Based on 7% historical returns. Not guaranteed.",
     };
   })();

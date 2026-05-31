@@ -4092,7 +4092,11 @@ export async function registerRoutes(
         availability,
         permanentEventSlug: permanentEvent?.slug || null,
         activeEvents: activeNonPermanentEvents.map((e) => ({ name: e.name, slug: e.slug, eventType: e.eventType || null })),
-        yearsUntil18: computeYearsUntil18(fund?.recipientBirthdate, Number((fund as any)?.majorityAge) || 18),
+        // Owner-held (post-handoff/adult) funds have no majority countdown — report
+        // 0 so the gift projection uses the forward "in N years" arc instead of a
+        // false "turns {majorityAge}" milestone (and avoids the newborn fallback
+        // when an owner fund carries no birthdate).
+        yearsUntil18: ((fund as any)?.transferredAt || String((fund as any)?.accountType || "").toLowerCase() === "personal") ? 0 : computeYearsUntil18(fund?.recipientBirthdate, Number((fund as any)?.majorityAge) || 18),
         giftCount: socialProofGifts.length,
         // uniqueGifterCount added 2026-05-25 — same fix as
         // /api/public/funds/:slug. Counts unique people, not total gifts.
@@ -6848,7 +6852,8 @@ export async function registerRoutes(
           }
           return keys.size;
         })(),
-        yearsUntil18: computeYearsUntil18(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18),
+        // Owner-held funds: no majority countdown → 0 (forward-arc projection).
+        yearsUntil18: ((fund as any).transferredAt || String((fund as any).accountType || "").toLowerCase() === "personal") ? 0 : computeYearsUntil18(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18),
         // recentGifters — AGGREGATED by canonical sender identity 2026-05-25.
         //
         // Pre-2026-05-25 bug: this returned the last 5 GIFTS in chronological
@@ -12344,7 +12349,11 @@ export async function registerRoutes(
         hasPhoto: Boolean(metadata.photoUrl),
         hasVideo: Boolean(metadata.videoUrl),
         hasAudio: Boolean(metadata.audioUrl),
-        yearsUntil18: computeYearsUntil18(fund?.recipientBirthdate, Number((fund as any)?.majorityAge) || 18),
+        // Owner-held (post-handoff/adult) funds have no majority countdown — report
+        // 0 so the gift projection uses the forward "in N years" arc instead of a
+        // false "turns {majorityAge}" milestone (and avoids the newborn fallback
+        // when an owner fund carries no birthdate).
+        yearsUntil18: ((fund as any)?.transferredAt || String((fund as any)?.accountType || "").toLowerCase() === "personal") ? 0 : computeYearsUntil18(fund?.recipientBirthdate, Number((fund as any)?.majorityAge) || 18),
         giftStatus: gift?.status || null,
         holdUntil:
           gift && String(gift.status || "").toLowerCase() === "host_hold" && gift.createdAt
