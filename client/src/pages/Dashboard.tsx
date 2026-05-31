@@ -3413,13 +3413,20 @@ export default function Dashboard() {
         })
       : null;
 
-    // Scenario 1: outperforming (9%+). Use the fund's actual gain % (gain ÷
-    // cost basis) — the same figure shown everywhere else on the dashboard.
-    // The prior snapshot-principalBasis ratio divided by a tiny early-basis
-    // denominator and produced absurd returns (e.g. 10041% / 1685.7%).
-    const oneYearReturn = displayGainPct;
-    if (oneYearReturn >= 9 && currentProjection && doubledProjection && monthlyAmt > 0) {
-      setSmartNudge({ scenario: "outperforming", returnPct: Math.round(oneYearReturn * 10) / 10, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
+    // Scenario 1 ("outperforming" is the internal label only). Use the fund's
+    // actual gain % (gain ÷ cost basis) — the same figure shown everywhere else
+    // on the dashboard. The prior snapshot-principalBasis ratio divided by a
+    // tiny early-basis denominator and produced absurd returns (e.g. 10041%).
+    //
+    // CONTRACT: cumulativeGainPct is the LIFETIME (since-inception) market gain
+    // on contributed capital — NOT a 1-year or "this year" return. The card
+    // copy frames it as "{child}'s fund so far". Do NOT relabel it as a period
+    // return without wiring a real time-windowed, contribution-adjusted figure
+    // (the marketGrowth30 pattern). The old name `oneYearReturn` is what invited
+    // exactly that mislabel — fixed in commit d874e48, locked by this rename.
+    const cumulativeGainPct = displayGainPct;
+    if (cumulativeGainPct >= 9 && currentProjection && doubledProjection && monthlyAmt > 0) {
+      setSmartNudge({ scenario: "outperforming", returnPct: Math.round(cumulativeGainPct * 10) / 10, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
       localStorage.setItem(NUDGE_KEY, String(now));
       return;
     }
@@ -3427,7 +3434,7 @@ export default function Dashboard() {
     // Scenario 2: consistent streak (3+ months)
     const createdAt = activeAutoInvest.createdAt ? new Date(activeAutoInvest.createdAt).getTime() : null;
     const monthsRunning = createdAt ? Math.floor((now - createdAt) / (30 * 24 * 60 * 60 * 1000)) : 0;
-    if (monthsRunning >= 3 && currentProjection && doubledProjection && monthlyAmt > 0 && oneYearReturn >= 0) {
+    if (monthsRunning >= 3 && currentProjection && doubledProjection && monthlyAmt > 0 && cumulativeGainPct >= 0) {
       setSmartNudge({ scenario: "consistent", streakMonths: monthsRunning, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
       localStorage.setItem(NUDGE_KEY, String(now));
       return;
@@ -3474,7 +3481,7 @@ export default function Dashboard() {
     const hitMilestone = prevValue > 0
       ? MONEY_CROSS_THRESHOLDS.find((m) => totalValue >= m && prevValue < m)
       : undefined;
-    if (hitMilestone && monthlyAmt > 0 && currentProjection && oneYearReturn >= 0) {
+    if (hitMilestone && monthlyAmt > 0 && currentProjection && cumulativeGainPct >= 0) {
       const nextMilestone = MONEY_CROSS_THRESHOLDS.find((m) => m > hitMilestone) ?? null;
       // Month-by-month simulation. Uses the locked Kiddo projection
       // rule: 7% historical average annual return, 0.10% AUM fee
