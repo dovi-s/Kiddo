@@ -50,11 +50,17 @@ const LEGACY_FUND_STRATEGY_OVERRIDES_PATH = path.join(
   "fund-strategy-overrides.json",
 );
 
+// Default custom-mix starter. Dropped VGT 2026-05-31 to match the managed
+// presets, which removed the tech-sector sleeve in the 2026-05-28 self-directed
+// pivot (a sector tilt is the most advice-like allocation — see the RIA question
+// in COUNSEL_ENGAGEMENT_PACKET.md Part 1). Now mirrors the client-side prefill
+// (Settings.tsx DEFAULT_CUSTOM_ALLOCATION_ROWS: VTI 62 / VXUS 28 / BND 10) so the
+// server fallback and the user-facing starter agree. VGT remains SELECTABLE in a
+// custom mix (it's still in ETF_ALLOWLIST); it's just no longer the default.
 export const DEFAULT_CUSTOM_ALLOCATIONS: CustomAllocations = {
-  VTI: 0.5,
-  VXUS: 0.25,
-  BND: 0.15,
-  VGT: 0.1,
+  VTI: 0.62,
+  VXUS: 0.28,
+  BND: 0.1,
 };
 
 type NormalizeResult =
@@ -147,8 +153,8 @@ async function readLegacyFile(fundId: string): Promise<CustomAllocations | null>
  *
  * Returns null when the fund has no saved custom mix. Callers
  * generally fall back to DEFAULT_CUSTOM_ALLOCATIONS in that case
- * (DEFAULT_CUSTOM_ALLOCATIONS is the {VTI 50, VXUS 25, BND 15,
- * VGT 10} starter mix exported above).
+ * (DEFAULT_CUSTOM_ALLOCATIONS is the {VTI 62, VXUS 28, BND 10}
+ * starter mix exported above — VGT-free since 2026-05-31).
  */
 export async function getFundCustomAllocations(fundId: string): Promise<CustomAllocations | null> {
   if (!fundId) return null;

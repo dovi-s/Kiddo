@@ -1523,16 +1523,24 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
   // to sum to 100% within the managed mix, NOT within the whole fund. Mixing
   // a "% of whole fund" current with a "% of managed-mix subset" target is a
   // category error — it's what produced the misleading "−34 pts off" headline
-  // when the real managed-mix drift was ~20 pts. Membership in the managed mix
-  // is determined by membership in the active strategy's target basket
-  // (computed in the consumer below as `targetMap`).
-  const managedMixTargetTickers = new Set(
-    activeStrategy.allocations.map((a) => String(a.ticker).toUpperCase()),
-  );
+  // when the real managed-mix drift was ~20 pts.
+  //
+  // Membership = the CANONICAL managed-ETF universe (VTI/VXUS/BND/VGT/VUG/VYM/
+  // SCHD/QQQ), NOT just the active strategy's target basket. This mirrors the
+  // Dashboard's CANONICAL_MANAGED_ETF_TICKERS + server ETF_ALLOWLIST so a
+  // held-but-dropped ETF (e.g. legacy VGT after the 2026-05-28 self-directed
+  // pivot removed the tech sleeve) is still recognized as managed mix here —
+  // instead of falling through and being mis-counted as a Chosen-with-Love pick.
+  // That mis-count inflated the "X% Chosen with Love" line AND hid the held ETF
+  // from this view, so Settings showed 3 ETFs while the Dashboard (which already
+  // uses the canonical set) showed 4. Individual stocks (Chosen with Love) are
+  // NOT in this set, so they stay out of the managed-mix math exactly as before.
+  // Kept in sync with server ETF_ALLOWLIST / Dashboard CANONICAL_MANAGED_ETF_TICKERS.
+  const managedMixTickers = new Set(["VTI", "VXUS", "BND", "VGT", "VUG", "VYM", "SCHD", "QQQ"]);
   const managedMixInvestedValue = strategyHoldings.reduce(
     (sum: number, h: any) => {
       const t = String(h?.ticker || "").toUpperCase();
-      if (!managedMixTargetTickers.has(t)) return sum;
+      if (!managedMixTickers.has(t)) return sum;
       return sum + parseFloat(h?.currentValue || "0");
     },
     0,
@@ -1543,11 +1551,13 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
     for (const h of strategyHoldings) {
       const t = String(h?.ticker || "").toUpperCase();
       if (!t) continue;
-      // Only include managed-mix tickers in the percentage map. Chosen-with-love
-      // positions (GOOGL, AAPL, DUOL, etc.) aren't part of the managed mix and
-      // shouldn't appear in the rebalance view — they have no targets and
-      // aren't subject to contribution-based rebalancing.
-      if (!managedMixTargetTickers.has(t)) continue;
+      // Only include managed-mix tickers (the canonical ETF universe) in the
+      // percentage map. Chosen-with-love positions (GOOGL, AAPL, DUOL, etc.)
+      // aren't managed ETFs, so they have no targets and aren't subject to
+      // contribution-based rebalancing — they stay out of this view. A legacy
+      // managed ETF that's still held but dropped from the target (VGT) DOES
+      // belong here, and now appears (target 0%) instead of being hidden.
+      if (!managedMixTickers.has(t)) continue;
       const v = parseFloat(h?.currentValue || "0");
       if (!Number.isFinite(v) || v <= 0) continue;
       out[t] = (out[t] || 0) + (v / managedMixInvestedValue) * 100;
@@ -1861,17 +1871,21 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
             for (const a of activeStrategy.allocations) {
               targetMap[String(a.ticker).toUpperCase()] = (targetMap[String(a.ticker).toUpperCase()] || 0) + a.weight;
             }
-            // Iterate ONLY over managed-mix target tickers. Previously we
-            // unioned with current-holdings tickers, which dragged
-            // chosen-with-love positions (GOOGL, AAPL, DUOL, etc.) into the
-            // rebalance view with target=0 and large positive drift — a
-            // conceptual error since chosen-with-love stocks aren't part of
-            // the managed-mix's contribution-based rebalancing. Per
-            // project_setup_aha_habit_per_surface and the locked architecture,
-            // managed mix and chosen-with-love are two separate buckets with
-            // two different stories. This view is for the managed-mix story.
-            const rows = Object.keys(targetMap).map((t) => {
-              const target = targetMap[t];
+            // Rows = the union of (target ETFs) ∪ (held managed-mix ETFs).
+            // currentAllocPct is gated to the canonical managed-ETF universe
+            // (managedMixTickers), so a legacy ETF still held but dropped from
+            // the target — e.g. VGT after the 2026-05-28 pivot — now shows here
+            // as "held X% → 0% target" instead of vanishing (which made Settings
+            // disagree with the Dashboard's holdings and inflated Chosen-with-
+            // Love). Chosen-with-love positions (GOOGL, AAPL, DUOL, etc.) are NOT
+            // managed ETFs, so they're absent from currentAllocPct and correctly
+            // stay out — avoiding the old bug where unioning ALL current holdings
+            // dragged picked stocks in with target=0. managed mix and chosen-with-
+            // love remain two separate buckets with two different stories; this
+            // view is the managed-mix story.
+            const rowTickers = new Set([...Object.keys(targetMap), ...Object.keys(currentAllocPct)]);
+            const rows = Array.from(rowTickers).map((t) => {
+              const target = targetMap[t] ?? 0;
               const current = currentAllocPct[t] ?? 0;
               return { ticker: t, target, current, diff: current - target };
             }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
@@ -4147,7 +4161,7 @@ const [editFundName, setEditFundName] = useState("");
                 directly, then this entire membership tab JSX can be
                 deleted. */}
             {[
-              { id: "child", label: ((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "Account" : "Child" },
+              { id: "child", label: ((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "You" : "Child" },
               { id: "gifts", label: "Gifts" },
               { id: "notifications", label: "Notifications" },
               { id: "money", label: "Money" },

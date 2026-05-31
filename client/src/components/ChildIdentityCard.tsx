@@ -139,7 +139,7 @@ export function ChildIdentityCard({
   return (
     <SectionCard>
       <div className="p-5">
-        <p className="kiddo-section-label mb-4">{isOwnerMode ? "Account" : "Child"}</p>
+        <p className="kiddo-section-label mb-4">{isOwnerMode ? "You" : "Child"}</p>
         <div className="flex items-center gap-4">
           <button
             type="button"
