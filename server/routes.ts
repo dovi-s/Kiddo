@@ -4088,9 +4088,12 @@ export async function registerRoutes(
           // never the raw founderTier. Per the founder claim spec, component 6.
           creatorIsFounder: Boolean(creator?.founderTier),
           pronoun: fund?.pronoun || null,
-          // Owner-held fund (handed off; the now-adult owns it). Lets the gift
-          // page drop childhood framing without depending on yearsUntil18=0.
-          recipientIsOwner: Boolean((fund as any)?.transferredAt),
+          // Owner-type fund: handed off (now-adult owns it) OR an adult personal
+          // account. Either way there's no childhood majority milestone. Matches
+          // the yearsUntil18=0 gate AND the gift-summary's recipientIsOwner, so
+          // the checkout header + forward-arc projection stay consistent with the
+          // success page across the whole gift flow.
+          recipientIsOwner: Boolean((fund as any)?.transferredAt || String((fund as any)?.accountType || "").toLowerCase() === "personal"),
         },
         availability,
         permanentEventSlug: permanentEvent?.slug || null,
@@ -6823,9 +6826,12 @@ export async function registerRoutes(
           creatorFirstName: creator?.firstName || null,
           creatorIsFounder: Boolean(creator?.founderTier),
           pronoun: fund.pronoun || null,
-          // Owner-held fund (handed off; the now-adult owns it). Lets the gift
-          // page drop childhood framing without depending on yearsUntil18=0.
-          recipientIsOwner: Boolean((fund as any).transferredAt),
+          // Owner-type fund: handed off (now-adult owns it) OR an adult personal
+          // account. Either way there's no childhood majority milestone. Matches
+          // the yearsUntil18=0 gate AND the gift-summary's recipientIsOwner, so
+          // the checkout header + forward-arc projection stay consistent with the
+          // success page across the whole gift flow.
+          recipientIsOwner: Boolean((fund as any).transferredAt || String((fund as any).accountType || "").toLowerCase() === "personal"),
           // Age of majority (18/19/21 per state) so the gift-checkout
           // projection reads "when {child} turns {N}" with the real handoff
           // age. Without it the client's fundMajorityAge falls back to 18 —
