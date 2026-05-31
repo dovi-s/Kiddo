@@ -4088,6 +4088,9 @@ export async function registerRoutes(
           // never the raw founderTier. Per the founder claim spec, component 6.
           creatorIsFounder: Boolean(creator?.founderTier),
           pronoun: fund?.pronoun || null,
+          // Owner-held fund (handed off; the now-adult owns it). Lets the gift
+          // page drop childhood framing without depending on yearsUntil18=0.
+          recipientIsOwner: Boolean((fund as any)?.transferredAt),
         },
         availability,
         permanentEventSlug: permanentEvent?.slug || null,
@@ -6820,6 +6823,9 @@ export async function registerRoutes(
           creatorFirstName: creator?.firstName || null,
           creatorIsFounder: Boolean(creator?.founderTier),
           pronoun: fund.pronoun || null,
+          // Owner-held fund (handed off; the now-adult owns it). Lets the gift
+          // page drop childhood framing without depending on yearsUntil18=0.
+          recipientIsOwner: Boolean((fund as any).transferredAt),
           // Age of majority (18/19/21 per state) so the gift-checkout
           // projection reads "when {child} turns {N}" with the real handoff
           // age. Without it the client's fundMajorityAge falls back to 18 —

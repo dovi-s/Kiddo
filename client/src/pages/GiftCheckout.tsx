@@ -180,6 +180,10 @@ interface PublicEventData {
     creatorIsFounder?: boolean;
     childPhotoUrl?: string | null;
     pronoun?: string | null;
+    // True once the fund has been handed off and the now-adult owns it
+    // (server: Boolean(fund.transferredAt)). Flips the gift page to owner-aware
+    // framing (no childhood "turns N" milestone; forward-arc projection).
+    recipientIsOwner?: boolean;
     // Pricing-v3: gifter UI uses this to decide whether to show the
     // recurring toggle (true → Plus/Family fund) or the reminder-only
     // path with a "ask parents to enable" CTA (false → Free fund).
@@ -579,6 +583,11 @@ export default function GiftCheckout() {
       ? familyDefaultStock
       : suggestedStock;
   const yearsUntil18 = eventData?.yearsUntil18 ?? 18;
+  // Explicit owner-fund signal (server sets Boolean(fund.transferredAt)). Drives
+  // the gift page's owner framing + the forward-arc projection DIRECTLY, so it
+  // never depends on yearsUntil18 reaching 0 through the server+wrapper layers —
+  // an owner fund can't fall back to the childhood "turns N" framing.
+  const recipientIsOwner = Boolean((eventData?.fund as any)?.recipientIsOwner);
   const fundPronouns = getPronouns(eventData?.fund?.pronoun);
   // State-specific UTMA majority age (18 default, 21 in CA/KY/IN, etc).
   // The gifter-facing projection copy below uses this for "when {child}
@@ -1158,6 +1167,17 @@ export default function GiftCheckout() {
     const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
     const src = fmt(amount);
     const g = (yrs: number) => compoundGrowth(amount, 0.07, yrs);
+    // Owner-held fund (the now-adult owns it post-handoff): there is no majority
+    // milestone, and a fixed age can already be in the past ("turns 21" for a
+    // 22-year-old). A FORWARD arc reads true at any age. Gated on the explicit
+    // recipientIsOwner flag so it short-circuits BEFORE the yearsUntil18 branches
+    // and can never render a childhood horizon, regardless of data plumbing.
+    if (recipientIsOwner) {
+      return {
+        headline: `${src} today → ~${fmt(g(10))} in 10 years. ~${fmt(g(20))} in 20 years. 🌱`,
+        tagline: "The best gifts keep compounding. Based on 7% historical returns, not guaranteed.",
+      };
+    }
     // Years from today to milestone ages
     const yTo25 = Math.max(0, yearsUntil18 + 7);
     const yTo30 = Math.max(0, yearsUntil18 + 12);
@@ -1658,7 +1678,9 @@ export default function GiftCheckout() {
                 <>
                   {/* Non-occasion: dark hero layout (permanent / gift anytime / savings goal) */}
                   <p className="text-center text-sm text-muted-foreground">
-                    Someone who loves {recipientLooksLikeFund ? "this child" : recipientName} shared this with you. 🎁
+                    {recipientIsOwner
+                      ? <>{recipientLooksLikeFund ? "A private gift link to this fund" : `${recipientName} shared their fund with you`}. 🎁</>
+                      : <>Someone who loves {recipientLooksLikeFund ? "this child" : recipientName} shared this with you. 🎁</>}
                   </p>
 
                   <div className="kiddo-hero-card overflow-hidden">
