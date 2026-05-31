@@ -1321,7 +1321,14 @@ function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess
 
   const [defaultMode, setDefaultMode] = useState<"managed" | "stock" | "cash">("managed");
   const [defaultTicker, setDefaultTicker] = useState("DIS");
-  const [allowGifterStockPick, setAllowGifterStockPick] = useState(false);
+  // Match the server defaults (server/fundInvestmentPreferences.ts DEFAULTS):
+  // gifter stock-picks are allowed by default (the "Chosen with Love" magic,
+  // and they land in a separate sleeve so they don't touch the managed mix);
+  // cash gifts are NOT allowed by default (keep gifts auto-investing — the
+  // "your gift bought shares" moment + no idle cash). These get reconciled with
+  // saved prefs on load; initializing them to the true defaults avoids showing
+  // the wrong state for a beat before the query resolves.
+  const [allowGifterStockPick, setAllowGifterStockPick] = useState(true);
   const [allowGifterCashGift, setAllowGifterCashGift] = useState(false);
   const [saving, setSaving] = useState(false);
 
