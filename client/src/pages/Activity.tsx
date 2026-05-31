@@ -4511,8 +4511,7 @@ export default function Activity() {
           if (!isContribType && !isOverrideGift) return row;
           const amtNum = parseAmount(row.amount);
           const amtStr = `$${(amtNum != null ? amtNum : 0).toFixed(2)}`;
-          // Owner mode: attribute by who added it. Keep the row's own note as the
-          // description (e.g. "Every month, a little more for Haley. From Dad.").
+          // Owner mode: attribute by who added it.
           if (activeFundIsOwned) {
             const parents = contribIsParents(row);
             const out: any = {
@@ -4520,6 +4519,11 @@ export default function Activity() {
               type: "parent_contribution" as any,
               title: parents ? `${custodianAddedLabel} added ${amtStr}` : `You added ${amtStr}`,
             };
+            // De-noise the "wall": recurring contributions all carry the same
+            // boilerplate note ("Every month, a little more…"), already conveyed
+            // by the header — drop it on recurring rows so the list reads as a
+            // clean dated ledger. Keep it on one-time contributions (meaningful).
+            if (isRecurringRow(row)) out.description = undefined;
             if (parents) out.__suppressReport = true;
             return out as FeedActivity;
           }
