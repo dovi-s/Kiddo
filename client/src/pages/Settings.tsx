@@ -91,7 +91,20 @@ function getFundTotalValue(fund: { balance?: string; pendingBalance?: string; ca
 // new-device alert, large-gift alert, age-transition emails, gift
 // receipts) are NOT listed here — they're security/legal and
 // always send.
-function EmailPreferenceCenterCard() {
+// Email prefs that only make sense for a parent of a minor — hidden for a user
+// with no child fund (e.g. a post-handoff adult owner viewing their own account).
+// "milestones" only fires at a child's ages 5/10/13/16, so it never sends to a
+// childless owner anyway; hiding the toggle just removes a meaningless row.
+// (Mother's/Father's Day is left visible: it's warmth-only + toggleable, and
+// hiding it without a server-side send-gate would trap the user into receiving
+// it with no way to opt out.)
+const OWNER_HIDDEN_EMAIL_PREFS = new Set<string>(["milestones"]);
+// First-person rewrites of the "your child's …" descriptions for that case.
+const OWNER_EMAIL_PREF_DESC: Record<string, string> = {
+  birthday: "A once-a-year note from the fund itself on your birthday.",
+  taxPrep: "A January reminder about your tax documents.",
+};
+function EmailPreferenceCenterCard({ hasChildFund }: { hasChildFund: boolean }) {
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -151,11 +164,13 @@ function EmailPreferenceCenterCard() {
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading preferences…</p>
           ) : (
-            EMAIL_PREFERENCE_CATEGORIES.map((cat) => (
+            EMAIL_PREFERENCE_CATEGORIES
+              .filter((cat) => hasChildFund || !OWNER_HIDDEN_EMAIL_PREFS.has(cat.key))
+              .map((cat) => (
               <NotificationSwitchRow
                 key={cat.key}
                 title={cat.label}
-                body={cat.description}
+                body={!hasChildFund && OWNER_EMAIL_PREF_DESC[cat.key] ? OWNER_EMAIL_PREF_DESC[cat.key] : cat.description}
                 checked={isEnabled(cat.key)}
                 onCheckedChange={(next) => void togglePreference(cat.key, next)}
                 disabled={saving === cat.key}
@@ -4658,7 +4673,7 @@ const [editFundName, setEditFundName] = useState("");
             className="space-y-4"
             data-testid="settings-notifications-panel"
           >
-            <EmailPreferenceCenterCard />
+            <EmailPreferenceCenterCard hasChildFund={funds.some((f) => !(f as any).transferredAt)} />
 
             <SectionCard>
               <div className="p-5">
@@ -4718,7 +4733,7 @@ const [editFundName, setEditFundName] = useState("");
               <div className="p-5">
                 <h2 className="text-base font-bold text-foreground">Notifications for people who gifted</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Control whether opted-in people receive reminders and updates for {notificationChildName}'s fund.
+                  Control whether opted-in people receive reminders and updates for {notificationFundIsOwnerHeld ? "your fund" : `${notificationChildName}'s fund`}.
                 </p>
                 <div className="mt-5 space-y-3">
                   <NotificationSwitchRow
@@ -4731,7 +4746,7 @@ const [editFundName, setEditFundName] = useState("");
                   />
                   <NotificationSwitchRow
                     title="Birthday reminders"
-                    body={`Annual reminder on ${notificationChildName}'s birthday with a one-tap gift-back path.`}
+                    body={`Annual reminder on ${notificationFundIsOwnerHeld ? "your" : `${notificationChildName}'s`} birthday with a one-tap gift-back path.`}
                     checked={notificationSettings.birthdayReminders ?? true}
                     disabled={loadingGifterNotifications || updateGifterNotificationSettings.isPending}
                     onCheckedChange={(checked) => updateGifterNotificationSetting("birthdayReminders", checked)}
