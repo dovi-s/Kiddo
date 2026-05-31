@@ -14346,7 +14346,7 @@ export default function Dashboard() {
                 {smartNudge.scenario === "outperforming" && (
                   <div className="text-center">
                     <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {child}'s fund this year
+                      {child}'s fund so far
                     </p>
                     <h2 className="mt-1 font-heading text-xl font-semibold text-foreground">
                       Up {smartNudge.returnPct}%.
@@ -14357,7 +14357,7 @@ export default function Dashboard() {
                       </p>
                     )}
                     <p className="mt-3 rounded-xl bg-muted/30 px-4 py-3 text-left text-sm text-foreground/80 leading-relaxed">
-                      Markets swing year to year, so we project ahead at the 7% long-run average, not this year's pace. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
+                      Past growth isn't a promise, so we project ahead at the 7% long-run average. At {fmtAmt(smartNudge.currentMonthlyAmt)}/mo,{" "}
                       {child} is projected to have {fmt(smartNudge.currentProjection)} at {majorityAge}.
                       {(smartNudge.doubledProjection ?? 0) > 0 && (smartNudge.doubledAmt ?? 0) > 0 && (
                         <>
