@@ -446,22 +446,32 @@ export default function TaxDocuments() {
         {/* Year filter only — fund scope is set by the sidebar's active-fund
             switcher (same pattern as Memory Book / Dashboard). One source of
             truth for "which fund am I looking at"; no redundant in-page picker. */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-full border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.5)] p-0.5">
-            {yearOptions.map((y) => (
-              <button
-                key={y}
-                type="button"
-                onClick={() => { haptic("selection"); setYearFilter(y); }}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${
-                  yearFilter === y ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                }`}
-                data-testid={`button-tax-year-${y}`}
-              >
-                {y}
-              </button>
-            ))}
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Tax year</span>
+            <div className="inline-flex rounded-full border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.5)] p-0.5">
+              {yearOptions.map((y) => (
+                <button
+                  key={y}
+                  type="button"
+                  onClick={() => { haptic("selection"); setYearFilter(y); }}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${
+                    yearFilter === y ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                  }`}
+                  data-testid={`button-tax-year-${y}`}
+                >
+                  {y}
+                </button>
+              ))}
+            </div>
           </div>
+          {/* The year picker scopes only the per-year tax records (forms +
+              summary + realized sales). The headline cost basis / value / gain
+              and the positions table are ALWAYS current — they don't change by
+              year — so say so, or clicking years reads as "nothing happened." */}
+          <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
+            Scopes the forms and the {yearFilter} summary below. Your cost basis, value, and positions are current — they don't change by year.
+          </p>
         </div>
 
         {/* Documents — honest empty state. No fake 1099s. The moment DW wires
@@ -475,7 +485,10 @@ export default function TaxDocuments() {
                 <FileText size={18} className="text-muted-foreground" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-foreground">No tax forms for {yearFilter} yet</p>
+                {/* "yet" only for the current/future year (a form is genuinely
+                    still pending until January). For a closed past year, "yet"
+                    wrongly implies a form is still coming — drop it. */}
+                <p className="text-sm font-bold text-foreground">No tax forms for {yearFilter}{Number(yearFilter) >= currentYear ? " yet" : ""}</p>
                 <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
                   Once investing is live, our broker-dealer partner issues 1099-DIV (dividends &amp; distributions) and 1099-B (sales) the January after each tax year. Funds open part-way through a year may have nothing to report until the following January. Forms appear here automatically — no email needed.
                 </p>
@@ -949,6 +962,26 @@ export default function TaxDocuments() {
               )}
               <p className="mt-3 text-[11px] text-muted-foreground/80 leading-relaxed">
                 Fees are estimated from the time-weighted average invested balance ($1/yr per $1,000 invested, or 0.10% annual). Once investing is live, realized gains and the broker-dealer-issued 1099 will be the authoritative numbers. Use this summary as the at-a-glance scan; reconcile against the per-sale and per-position tables below.
+              </p>
+            </div>
+          </section>
+        )}
+        {/* Coherent empty state: when a selected year has no recorded activity,
+            show the summary section with a clear "nothing recorded" line instead
+            of silently vanishing — otherwise clicking through years feels broken
+            (a summary appears for one year and disappears for the next). */}
+        {yearSummary && !(
+          yearSummary.totalDepositsUsd > 0 ||
+          yearSummary.withdrawalsUsd > 0 ||
+          Math.abs(yearSummary.realizedGainsUsd) > 0.01 ||
+          yearSummary.estimatedFeesUsd > 0 ||
+          (yearSummary.yearEndValue ?? 0) > 0
+        ) && (
+          <section>
+            <p className="kiddo-section-label mb-2">{yearFilter} summary</p>
+            <div className="kiddo-card p-5">
+              <p className="text-sm text-muted-foreground">
+                No deposits, sales, or fees recorded for {yearFilter}.
               </p>
             </div>
           </section>
