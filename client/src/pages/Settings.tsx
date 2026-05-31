@@ -4240,7 +4240,7 @@ const [editFundName, setEditFundName] = useState("");
             <SectionCard>
               <div className="p-5">
                 <p className="kiddo-section-label mb-1">What people can do</p>
-                <p className="text-[11px] text-muted-foreground mb-4">Choose how personal gifts can be for {recipientFirstNameDisplay || "your child"}.</p>
+                <p className="text-[11px] text-muted-foreground mb-4">Choose how personal gifts can be for {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "you" : (recipientFirstNameDisplay || "your child")}.</p>
                 {primaryFund ? (
                   <div data-testid="settings-gifts-gifter-rules-editor">
                     <GifterInvestmentRulesEditor fund={primaryFund} onSuccess={refreshAll} />
@@ -4262,7 +4262,7 @@ const [editFundName, setEditFundName] = useState("");
                 <p className="text-[11px] text-muted-foreground mb-4">Default: instant. Your gift link is private, and you can delete any entry anytime.</p>
                 <NotificationSwitchRow
                   title="Require my approval first"
-                  body="When on, gifter notes, photos, video, and voice land in a pending tray on your Memory Book until you approve them. Most parents leave this off so notes appear in real time as gifters add them."
+                  body={`When on, gifter notes, photos, video, and voice land in a pending tray on your Memory Book until you approve them. ${((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "Most people" : "Most parents"} leave this off so notes appear in real time as gifters add them.`}
                   checked={Boolean((primaryFund as any)?.gifterMemoryModeration)}
                   disabled={!primaryFund?.id || updateMemoryModeration.isPending}
                   onCheckedChange={(checked) => updateMemoryModeration.mutate(checked)}
