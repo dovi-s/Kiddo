@@ -1796,8 +1796,8 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                     )}
                     {isLocked && <Lock size={12} className="text-muted-foreground" />}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{strategy.description}</p>
-                  {strategy.bestFor && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{seIsOwnerMode ? strategy.description.replace(/\s*·?\s*protect what's there as \d+ approaches/i, " · protect what's there").replace(/\s*as \d+ approaches/i, "") : strategy.description}</p>
+                  {!seIsOwnerMode && strategy.bestFor && (
                     <p className="text-[11px] text-muted-foreground/70 mt-0.5">{strategy.bestFor}</p>
                   )}
                   {/* At-a-glance stocks/bonds split per option. The one
@@ -1877,7 +1877,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
             }).sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
             const maxDriftPts = rows.reduce((m, r) => Math.max(m, Math.abs(r.diff)), 0);
             const inLine = maxDriftPts <= 3;
-            const childPossessive = childName ? `${childName}'s mix` : "Managed mix";
+            const childPossessive = seIsOwnerMode ? "your mix" : (childName ? `${childName}'s mix` : "Managed mix");
             return (
               <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4 space-y-2">
                 <div className="flex items-center justify-between gap-2">
@@ -1980,7 +1980,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
               so copy and code agree. Individual stocks live in Chosen
               with Love (one-time contributions or recurring picks). */}
           <p className="text-[11.5px] text-muted-foreground/85 leading-relaxed -mt-1">
-            Pick the ETFs and weights for {fund?.recipientFirstName ? `${fund.recipientFirstName}'s` : "your child's"} managed mix.
+            Pick the ETFs and weights for {seIsOwnerMode ? "your" : (fund?.recipientFirstName ? `${fund.recipientFirstName}'s` : "your child's")} managed mix.
             Up to {MAX_CUSTOM_HOLDINGS} holdings. Want a specific stock like Apple or Disney instead? That goes in <span className="font-semibold">Chosen with Love</span>.
           </p>
 
@@ -2713,6 +2713,10 @@ const [editFundName, setEditFundName] = useState("");
   // references inside per-fund closures) intentionally keep the raw
   // value so saving doesn't mutate the parent's stored casing.
   const recipientFirstNameDisplay = capFirst(primaryFund?.recipientFirstName);
+  // Post-handoff adult owner viewing their own fund — drives first-person copy
+  // across the tabs. (isOwnerMode at the top of this file is in a different
+  // scope; this is the main-component flag used by the render below.)
+  const primaryFundIsOwnerHeld = (primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt);
 
   const { data: holdingsData = [] } = useQuery<any[]>({
     queryKey: ["/api/funds", primaryFund?.id, "holdings"],
@@ -4917,10 +4921,10 @@ const [editFundName, setEditFundName] = useState("");
             <SectionCard>
               <div className="p-5">
                 <h2 className="text-base font-bold text-foreground">
-                  Investment strategy{recipientFirstNameDisplay ? ` for ${recipientFirstNameDisplay}` : ""}
+                  Investment strategy{primaryFundIsOwnerHeld || !recipientFirstNameDisplay ? "" : ` for ${recipientFirstNameDisplay}`}
                 </h2>
                 <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                  Where {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the fund's"} gifts go by default. Gifters can still personalize if you let them.
+                  Where {primaryFundIsOwnerHeld ? "your" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the fund's")} gifts go by default. Gifters can still personalize if you let them.
                 </p>
                 {primaryFund ? (
                   <div className="mt-5" data-testid="settings-money-strategy-editor">
@@ -4979,7 +4983,7 @@ const [editFundName, setEditFundName] = useState("");
                     {activeRecurring.length === 0 ? (
                       <>
                         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                          Set up automatic monthly contributions from the dashboard. {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} fund grows on its own rhythm.
+                          Set up automatic monthly contributions from the dashboard. {primaryFundIsOwnerHeld ? "Your" : (recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The")} fund grows on its own rhythm.
                         </p>
                         <Link href="/dashboard">
                           <Button variant="outline" size="sm" className="mt-4 rounded-xl" data-testid="link-recurring-dashboard-empty">
