@@ -227,6 +227,14 @@ async function getLifecycleRows(): Promise<LifecycleRow[]> {
         GROUP BY fund_id
       ) g ON g.fund_id = f.id
       WHERE u.email IS NOT NULL
+        -- Exclude post-handoff (owner-held) funds. The parent lifecycle drip
+        -- (activation Day 1/3/7, milestone "{child}'s fund passed $X", birthday
+        -- and dormant reminders) is third-person PARENT copy. Once a kid owns
+        -- their fund, f.user_id IS the owner, so without this gate we'd email
+        -- the grown owner third-person notices about their own fund. The
+        -- postHandoffEngagementWorker covers owners instead. Matches the
+        -- transferred_at IS NULL gate every other email worker already uses.
+        AND f.transferred_at IS NULL
     `,
   );
   return result.rows as LifecycleRow[];
