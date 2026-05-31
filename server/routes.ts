@@ -6123,6 +6123,14 @@ export async function registerRoutes(
       if (!record) return res.status(404).json({ error: "Child view not found." });
       const fund = await storage.getFund(record.fundId);
       if (!fund) return res.status(404).json({ error: "Fund not found." });
+      // Once the fund is claimed at majority (transferredAt set), it's a
+      // personal account the now-adult owns from their own Dashboard — the
+      // PIN-gated Kid View no longer applies. Gate it so a stale link/PIN can't
+      // serve the now-wrong "yours when you turn N" copy. (The pre-claim adult-
+      // phase celebration still works: transferredAt isn't set until claim.)
+      if ((fund as any).transferredAt) {
+        return res.status(404).json({ error: "This fund has been claimed by its owner and is no longer viewable here." });
+      }
       const ageInfo = getKidAgePhase(fund.recipientBirthdate, Number((fund as any).majorityAge) || 18);
       res.json({
         childName: fund.recipientFirstName || fund.name,
@@ -6142,6 +6150,12 @@ export async function registerRoutes(
     try {
       const record = await getKidViewRecordByShareToken(req.params.token);
       if (!record) return res.status(404).json({ error: "Child view not found." });
+      // Gate transferred (claimed) funds — see /meta. No PIN/token issued for a
+      // fund the owner now holds directly.
+      const unlockFund = await storage.getFund(record.fundId);
+      if (unlockFund && (unlockFund as any).transferredAt) {
+        return res.status(404).json({ error: "This fund has been claimed by its owner and is no longer viewable here." });
+      }
       const pin = String(req.body?.pin || "").trim();
       if (record.pinHash) {
         const ok = await bcrypt.compare(pin, record.pinHash);
@@ -6165,6 +6179,12 @@ export async function registerRoutes(
       if (!validAccess) return res.status(401).json({ error: "Unlock required." });
       const fund = await storage.getFund(record.fundId);
       if (!fund) return res.status(404).json({ error: "Fund not found." });
+
+      // Transferred-fund gate — see /meta. A claimed fund is the owner's
+      // personal account; Kid View no longer applies.
+      if ((fund as any).transferredAt) {
+        return res.status(404).json({ error: "This fund has been claimed by its owner and is no longer viewable here." });
+      }
 
       // Test-user gate (durable hygiene). When the fund's owner is flagged as
       // a test/dev account, the entire KidView returns empty so seed-data
