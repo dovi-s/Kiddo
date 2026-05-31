@@ -12380,6 +12380,11 @@ export async function registerRoutes(
         // false "turns {majorityAge}" milestone (and avoids the newborn fallback
         // when an owner fund carries no birthdate).
         yearsUntil18: ((fund as any)?.transferredAt || String((fund as any)?.accountType || "").toLowerCase() === "personal") ? 0 : computeYearsUntil18(fund?.recipientBirthdate, Number((fund as any)?.majorityAge) || 18),
+        // Owner-type fund (handed off OR an adult personal account): no majority
+        // milestone, so the success page shows the forward "in N years" arc
+        // (matching the gift checkout page) rather than suppressing the
+        // projection. Same condition as the yearsUntil18=0 gate above.
+        recipientIsOwner: Boolean((fund as any)?.transferredAt || String((fund as any)?.accountType || "").toLowerCase() === "personal"),
         giftStatus: gift?.status || null,
         holdUntil:
           gift && String(gift.status || "").toLowerCase() === "host_hold" && gift.createdAt

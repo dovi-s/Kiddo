@@ -187,6 +187,10 @@ export default function GiftSuccess() {
   // "when {kid} turns {N}" projection copy below uses this. See
   // project_state_majority_age_sweep.md.
   const [majorityAge, setMajorityAge] = useState<number>(18)
+  // Owner-type fund (handed-off / adult personal account): the gift projection
+  // uses the forward "in N years" arc (like the checkout page) instead of being
+  // suppressed, since there's no childhood majority milestone to count toward.
+  const [recipientIsOwner, setRecipientIsOwner] = useState<boolean>(false)
   const [eventInfo, setEventInfo] = useState<{
     name: string;
     eventType: string | null;
@@ -333,6 +337,9 @@ export default function GiftSuccess() {
             }
             if (typeof (summary as any)?.majorityAge === "number" && (summary as any).majorityAge >= 18) {
               setMajorityAge((summary as any).majorityAge)
+            }
+            if (typeof (summary as any)?.recipientIsOwner === "boolean") {
+              setRecipientIsOwner((summary as any).recipientIsOwner)
             }
             if (summary?.event && typeof summary.event === "object") {
               setEventInfo({
@@ -646,6 +653,17 @@ export default function GiftSuccess() {
         monthlyContribution: 0,
         yearsAhead: yearsUntil18,
       })
+    : null
+
+  // Owner-type fund (handed-off / adult personal account): forward arc instead
+  // of a "turns {majorityAge}" milestone or silence. Mirrors the gift checkout
+  // page's owner projection so the gifter sees a consistent growth story across
+  // the flow. Same projectFundValue helper (7% net of fee, monthly compounding).
+  const ownerForwardArc = recipientIsOwner && Number.isFinite(numericAmount) && numericAmount > 0
+    ? {
+        in10: projectFundValue({ startingValue: numericAmount, monthlyContribution: 0, yearsAhead: 10 }),
+        in20: projectFundValue({ startingValue: numericAmount, monthlyContribution: 0, yearsAhead: 20 }),
+      }
     : null
 
   const { data: tickerQuoteData } = useQuery<{ quotes: Array<{ symbol: string; price: number }> }>({
@@ -1211,8 +1229,19 @@ export default function GiftSuccess() {
           )
         })()}
 
-        {/* Projection */}
-        {projectedAmount && (
+        {/* Projection. Owner-type funds (handed-off / adult) get the forward
+            arc; minors get the "when {name} turns {majorityAge}" milestone. */}
+        {ownerForwardArc ? (
+          <motion.p
+            className="mb-4 w-full max-w-sm rounded-2xl border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] px-4 py-3 text-center text-sm font-medium text-foreground"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.68 }}
+            data-testid="text-success-projection"
+          >
+            At 7% historical average returns, ${Math.round(numericAmount).toLocaleString()} today could be about ${ownerForwardArc.in10.toLocaleString()} in 10 years, ${ownerForwardArc.in20.toLocaleString()} in 20 years. 🌱 Not guaranteed. But gifts that last? Those are.
+          </motion.p>
+        ) : projectedAmount ? (
           <motion.p
             className="mb-4 w-full max-w-sm rounded-2xl border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.10)] px-4 py-3 text-center text-sm font-medium text-foreground"
             initial={{ opacity: 0, y: 8 }}
@@ -1222,7 +1251,7 @@ export default function GiftSuccess() {
           >
             At 7% historical average returns, that could be about ${projectedAmount.toLocaleString()} when {childFirstName || "they"} turn{childFirstName ? "s" : ""} {majorityAge}. Not guaranteed. But gifts that last? Those are.
           </motion.p>
-        )}
+        ) : null}
 
         {/* Provenance */}
         <motion.p
