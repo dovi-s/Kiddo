@@ -1779,8 +1779,16 @@ export function useNotificationUnreadCount(scope: "active" | "all" = "active"): 
       // in, see nothing." `null !== activeFundId` is true → account-
       // level filtered. `otherFundId !== activeFundId` is true →
       // cross-fund filtered. `activeFundId !== activeFundId` is false
-      // → matching items still count. Single condition catches both.
-      if (scope === "active" && activeFundId && a.fundId !== activeFundId) return false;
+      // → matching items still count.
+      //
+      // 2026-05-31: the `&& activeFundId` guard reintroduced the SAME bug
+      // on the initial-load race. Before the active fund resolves,
+      // activeFundId is falsy, the guard short-circuited the filter to
+      // false, and the dot tallied cross-fund + account-level rows the
+      // fund-scoped /activity page then excluded — "starts with 8, click
+      // in, nothing there, badge clears." Now: no resolved fund → count 0,
+      // never a dot that leads to an empty page.
+      if (scope === "active" && (!activeFundId || a.fundId !== activeFundId)) return false;
       // Explicit unreadIds win — a past row re-promoted to unread
       // via swipe stays in the count until either tapped (which
       // re-marks as read) or auto-marked-read on Activity-page
@@ -1885,7 +1893,15 @@ export function useBellUnreadCount(scope: "active" | "all" = "active"): number {
       // badge for a single problem. After my fix the panel renders
       // them once; the badge needs to mirror that.
       if (isRepresentedByActionItem(a.type)) return false;
-      if (scope === "active" && activeFundId && a.fundId && a.fundId !== activeFundId) return false;
+      // Mirror the bell PANEL's scope exactly: on a fund-scoped page the
+      // panel shows only `a.fundId === activeFundId` and EXCLUDES
+      // account-level (null-fund) rows. The prior `&& a.fundId` guard let
+      // null-fund rows through here, so the badge counted welcome / plan /
+      // onboarding rows the panel never rendered ("N unread, open bell,
+      // nothing there"). Drop the guard; also count 0 (not cross-fund)
+      // when no active fund is resolved yet. The scope "all" path
+      // (/account, /funds) is unaffected — it never reaches this filter.
+      if (scope === "active" && (!activeFundId || a.fundId !== activeFundId)) return false;
       const idStr = String(a.id);
       if (unreadIds.has(idStr)) return true;
       if (new Date(a.createdAt!).getTime() <= lastReadAt) return false;
