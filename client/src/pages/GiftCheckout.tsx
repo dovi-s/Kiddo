@@ -370,7 +370,7 @@ export default function GiftCheckout() {
       const res = await fetch(`/api/public/funds/${fundSlug}`);
       if (!res.ok) throw new Error("Fund not found");
       const fundData = await res.json();
-      return { event: { id: fundData.permanentEventId || "", name: "Gift anytime", giftCount: fundData.giftCount ?? 0, uniqueGifterCount: fundData.uniqueGifterCount ?? fundData.giftCount ?? 0 }, fund: fundData.fund, giftCount: fundData.giftCount ?? 0, uniqueGifterCount: fundData.uniqueGifterCount ?? fundData.giftCount ?? 0, recentGifters: (fundData.recentGifters ?? []) as Array<{ name: string; amount: number; count?: number; ticker?: string | null; tickerName?: string | null; executionModel?: string | null }>, activeEvents: fundData.activeEvents || [], permanentEventSlug: fundData.permanentEventSlug || null };
+      return { event: { id: fundData.permanentEventId || "", name: "Gift anytime", giftCount: fundData.giftCount ?? 0, uniqueGifterCount: fundData.uniqueGifterCount ?? fundData.giftCount ?? 0 }, fund: fundData.fund, giftCount: fundData.giftCount ?? 0, uniqueGifterCount: fundData.uniqueGifterCount ?? fundData.giftCount ?? 0, recentGifters: (fundData.recentGifters ?? []) as Array<{ name: string; amount: number; count?: number; ticker?: string | null; tickerName?: string | null; executionModel?: string | null }>, activeEvents: fundData.activeEvents || [], permanentEventSlug: fundData.permanentEventSlug || null, yearsUntil18: fundData.yearsUntil18 };
     },
     enabled: !!(eventSlug || fundSlug),
   });
