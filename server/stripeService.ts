@@ -228,6 +228,29 @@ export class StripeService {
     );
   }
 
+  // P0-1 expiry cleanup: honor the point-of-charge promise ("we delete your
+  // saved card after 60 days"). Given a setup-intent id, detach the vaulted card
+  // from the customer so nothing remains on file once an intent expires
+  // unfulfilled. Idempotent: an already-detached/missing card resolves cleanly;
+  // a transient Stripe error THROWS so the caller keeps the reference and retries.
+  async detachGifterSavedCard(setupIntentId: string): Promise<void> {
+    const stripe = await getUncachableStripeClient();
+    const setup = await stripe.setupIntents.retrieve(setupIntentId);
+    const pmId = typeof setup.payment_method === "string"
+      ? setup.payment_method
+      : (setup.payment_method?.id ?? null);
+    if (!pmId) return; // setup never confirmed — no card was vaulted
+    try {
+      await stripe.paymentMethods.detach(pmId);
+    } catch (err: any) {
+      const code = err?.code || err?.raw?.code;
+      // Already detached / not attached → done. Rethrow anything else so the
+      // worker keeps the setup_intent_id and retries on the next tick.
+      if (code === "resource_missing" || code === "payment_method_not_attached") return;
+      throw err;
+    }
+  }
+
   private getPaymentMethodTypes(preference?: PaymentMethodPreference): Stripe.Checkout.SessionCreateParams.PaymentMethodType[] {
     switch (preference) {
       case 'bank':

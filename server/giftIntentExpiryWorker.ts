@@ -41,6 +41,7 @@ import { sendEmail } from "./emailDelivery";
 import { renderKiddoEmail } from "./templates/baseTemplate";
 import { isGifterCaptureAtIntentEnabled } from "./giftCaptureFlag";
 import { settleGiftIntentOffSession } from "./giftIntentSettlement";
+import { stripeService } from "./stripeService";
 
 type LogFn = (message: string, source?: string) => void;
 const WORKER_SOURCE = "gift-intent-expiry-worker";
@@ -241,6 +242,7 @@ async function processHeadsUps(log: LogFn): Promise<number> {
  * tick (for the log).
  */
 async function processExpiries(log: LogFn): Promise<number> {
+  let flipped = 0;
   try {
     const result = await pool.query(
       `UPDATE gift_intents
@@ -250,15 +252,49 @@ async function processExpiries(log: LogFn): Promise<number> {
          AND expires_at < NOW()
        RETURNING id`,
     );
-    const flipped = result.rows.length;
+    flipped = result.rows.length;
     if (flipped > 0) {
       log(`flipped ${flipped} intent(s) to expired`, WORKER_SOURCE);
     }
-    return flipped;
   } catch (err: any) {
     log(`expiry flip failed: ${err?.message || err}`, WORKER_SOURCE);
-    return 0;
   }
+
+  // Honor the point-of-charge disclosure ("we delete your saved card after 60
+  // days"): detach the vaulted card from Stripe for any EXPIRED intent that
+  // still holds one. Self-healing — stripe_setup_intent_id is cleared only after
+  // a successful detach, so a transient Stripe failure simply retries next tick
+  // (this scan, not the flip above, drives cleanup). Gated by the capture flag
+  // (no card is vaulted when it's off); never touches a charged/completed intent.
+  if (isGifterCaptureAtIntentEnabled()) {
+    try {
+      const stale = await pool.query(
+        `SELECT id, stripe_setup_intent_id
+           FROM gift_intents
+          WHERE status = 'expired'
+            AND stripe_setup_intent_id IS NOT NULL
+            AND COALESCE(payment_status, '') <> 'charged'
+          LIMIT 200`,
+      );
+      for (const row of stale.rows) {
+        try {
+          await stripeService.detachGifterSavedCard(String(row.stripe_setup_intent_id));
+          await pool.query(
+            `UPDATE gift_intents
+                SET stripe_setup_intent_id = NULL, payment_status = 'expired'
+              WHERE id = $1`,
+            [row.id],
+          );
+          log(`deleted saved card for expired intent ${row.id}`, WORKER_SOURCE);
+        } catch (cardErr: any) {
+          log(`card cleanup for intent ${row.id} failed (will retry): ${cardErr?.message || cardErr}`, WORKER_SOURCE);
+        }
+      }
+    } catch (selErr: any) {
+      log(`saved-card cleanup scan failed: ${selErr?.message || selErr}`, WORKER_SOURCE);
+    }
+  }
+  return flipped;
 }
 
 /**
