@@ -274,8 +274,16 @@ export function AppHeader() {
   // ("Back to {Kid}'s fund") if no prior location was recorded —
   // covers cold deep-link entries.
   const lastLocation = showBackArrow ? readLastAppLocation() : null;
-  const backHref = backTargetHref(lastLocation, activeFund?.id ?? null);
-  const backLabel = formatBackLabel(lastLocation, capFirst(activeFund?.recipientFirstName) || null);
+  // Tax Documents launches from Settings → Money/Account (+ the LegalDocuments
+  // card), never from a primary tab. But /settings is skip-saved from the journey
+  // anchor (so /account's Back doesn't read "Back to Settings"), which makes the
+  // generic last-location Back overshoot to the prior anchor — e.g. Activity, which
+  // has nothing to do with taxes. Point Tax Documents' Back at Settings, its real
+  // parent. (Other fund sub-pages — Projection, Age-18 Plan — launch from Dashboard,
+  // which IS a saved anchor, so they keep the context-aware last-location target.)
+  const isTaxDocsPage = location.startsWith("/tax-documents");
+  const backHref = isTaxDocsPage ? "/settings" : backTargetHref(lastLocation, activeFund?.id ?? null);
+  const backLabel = isTaxDocsPage ? "Back to Settings" : formatBackLabel(lastLocation, capFirst(activeFund?.recipientFirstName) || null);
   const accountType = activeFund ? String((activeFund as any).accountType || "UTMA").toUpperCase() : "";
   // Owner mode: the post-handoff recipient viewing their OWN fund (transferred AND
   // current owner). Flips the header fund label to "Your Fund" — the biggest "it's
