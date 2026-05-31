@@ -1589,6 +1589,12 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
   // 18" onto a grown owner whose real horizon is decades. Let them just pick.
   const seIsOwnerMode = (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
   const recommendedKey = seIsOwnerMode ? null : recommendedStrategyKey(yearsTo18);
+  // Tier copy hardcodes "18" (only the conservative tier: "approaching 18" /
+  // "as 18 approaches"). Reflect the fund's REAL age of majority so an AL/NE
+  // (19) or MS/PA/CA (21) fund reads its true handoff age, not a flat 18. The
+  // swap is a no-op for the other tiers (no "18") and for the common 18 case.
+  const seMajorityAge = Number((fund as any)?.majorityAge) || 18;
+  const ageifyTierCopy = (s: string) => s.replace(/\b18\b/g, String(seMajorityAge));
   const childName = (fund as any)?.recipientFirstName || null;
   const [customRows, setCustomRows] = useState<Array<{ ticker: string; weight: number }>>(DEFAULT_CUSTOM_ALLOCATION_ROWS);
   const [initialCustomRows, setInitialCustomRows] = useState<Array<{ ticker: string; weight: number }>>(DEFAULT_CUSTOM_ALLOCATION_ROWS);
@@ -1806,9 +1812,9 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                     )}
                     {isLocked && <Lock size={12} className="text-muted-foreground" />}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{seIsOwnerMode ? strategy.description.replace(/\s*·?\s*protect what's there as \d+ approaches/i, " · protect what's there").replace(/\s*as \d+ approaches/i, "") : strategy.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{seIsOwnerMode ? strategy.description.replace(/\s*·?\s*protect what's there as \d+ approaches/i, " · protect what's there").replace(/\s*as \d+ approaches/i, "") : ageifyTierCopy(strategy.description)}</p>
                   {!seIsOwnerMode && strategy.bestFor && (
-                    <p className="text-[11px] text-muted-foreground/70 mt-0.5">{strategy.bestFor}</p>
+                    <p className="text-[11px] text-muted-foreground/70 mt-0.5">{ageifyTierCopy(strategy.bestFor)}</p>
                   )}
                   {/* At-a-glance stocks/bonds split per option. The one
                       number a parent actually weighs when choosing a mix

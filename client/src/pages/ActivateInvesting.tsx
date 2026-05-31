@@ -1092,7 +1092,7 @@ export default function ActivateInvesting() {
                   {
                     id: "conservative",
                     label: "Conservative Mix",
-                    description: "Capital preservation tilt. Best for kids approaching 18",
+                    description: "Capital preservation tilt. Steadier as the handoff nears",
                     icon: <ShieldCheck size={20} />,
                     tag: null,
                     locked: false,
