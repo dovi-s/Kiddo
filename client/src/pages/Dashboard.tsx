@@ -121,7 +121,7 @@ import {
   parseAmount as parseActivityAmount,
   normalizeActivityType,
 } from "@/lib/activity-helpers";
-import { useActivities } from "@/hooks/use-activities";
+import { useActivities, useFundActivities } from "@/hooks/use-activities";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -2852,11 +2852,21 @@ export default function Dashboard() {
   // contributions →" link on the Last contribution card opens the rich
   // detail view without forcing a navigation to /activity. Activity feed
   // is pulled from the same query Activity uses (cache-shared).
-  const { data: dashboardActivityFeed = [] } = useActivities(
+  // isOwnerMode (computed above): an owner fund's pre-handoff contributions were
+  // created under the PARENT's userId, so the user-scoped useActivities feed
+  // misses them — leaving the per-schedule detail's History empty even though
+  // 36 cycles fired. Use the FUND-scoped feed for owner funds (the same switch
+  // the Activity page makes); the user-scoped feed otherwise.
+  const { data: dashboardActivityFeedUser = [] } = useActivities(
     200,
-    !!activeFundId && isAuthenticated,
+    !!activeFundId && isAuthenticated && !isOwnerMode,
     activeFundId,
   );
+  const { data: dashboardActivityFeedFund = [] } = useFundActivities(
+    isOwnerMode && activeFundId ? activeFundId : undefined,
+    200,
+  );
+  const dashboardActivityFeed = isOwnerMode ? dashboardActivityFeedFund : dashboardActivityFeedUser;
   type DetailScope =
     | { kind: "schedule"; scheduleId: string }
     | { kind: "contributions" }
