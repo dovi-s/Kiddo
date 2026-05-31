@@ -260,8 +260,16 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       }
 
       // Tag owned funds before any merge with collaborated funds.
-      // accessRole = 'owner' on every entry the parent owns directly.
-      const ownedTagged = ensuredFunds.map((f: any) => ({ ...f, accessRole: 'owner' as const }));
+      // accessRole = 'owner' on every entry the parent owns DIRECTLY — but
+      // preserve any role already stamped above. The transferred-only push
+      // (line ~173) tags handed-off funds 'previous_owner'; a blanket 'owner'
+      // map clobbered that tag, so a parent viewing a fund they handed off
+      // (Phil → Haley's transferred fund) resolved to accessRole='owner' +
+      // transferredAt = isOwnerMode, and saw the now-adult's second-person
+      // self-view ("your future / who loves you / Start one for someone you
+      // love") instead of the read-only previous-owner view. Only entries with
+      // no prior tag are ones the viewer owns directly → default those to owner.
+      const ownedTagged = ensuredFunds.map((f: any) => ({ ...f, accessRole: (f.accessRole as 'owner' | 'previous_owner' | 'collaborator' | undefined) || 'owner' }));
 
       // Union with funds this user has been accepted into as a collaborator.
       // The shape is identical to owned funds plus an accessRole tag the
