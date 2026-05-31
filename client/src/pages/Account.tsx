@@ -1052,7 +1052,15 @@ export default function Account() {
                 <EmailVerificationStatusRow />
 
 
-                {/* Preferred name */}
+                {/* Preferred name. NOTE: one field doing two jobs — owner mode
+                    ("What should we call you?", self-name like "Haley") vs parent
+                    mode ("What do your kids call you?", kid-facing like "Mom").
+                    The label flips correctly via isNonParentOwner. Known edge: a
+                    BOTH-role user (owns their own fund AND has a kid) gets one
+                    value ("Mom") that also surfaces on their own fund — mildly
+                    odd, not wrong. Perfect fix = two fields; deferred as a
+                    kid-2.0-endgame item (rare, far out). See
+                    memory: project_adult_account_is_parent_2_0_onramp. */}
                 <div>
                   <label htmlFor="account-preferred-name" className="block text-xs font-semibold text-foreground mb-1.5">
                     {isNonParentOwner ? "What should we call you?" : "What do your kids call you?"}
