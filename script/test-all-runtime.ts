@@ -17,6 +17,7 @@ const TEST_STEPS = [
   "test:gift-reconciliation-repair",
   "test:stripe-pipeline:strict",
   "test:founder-claim",
+  "test:capture-at-intent",
   "test:launch-readiness",
   "test:memory-utils",
   "test:mobile-gifter-logos",
