@@ -273,7 +273,15 @@ export default function Projection() {
   // UTMA accounts cap parent contributions at age 18 (control transfers to the
   // child). Personal accounts have no such cap — the parent funds their own
   // account indefinitely. This single boolean drives the projection model fork.
-  const isUtma = String((activeFund as any)?.accountType || "").toLowerCase() === "utma";
+  // A UTMA legally TERMINATES at the age of majority — a transferred (owner-held)
+  // fund is an individual account, never a UTMA, regardless of what accountType
+  // says. Gating on `&& !transferredAt` makes every isUtma-driven line below (the
+  // "takes control at {majority}" inflection caption, the "through {child}'s Nth
+  // birthday" assumption, the "months until {child} turns {majority}" countdown)
+  // structurally correct for a graduated owner even if accountType is stale —
+  // rather than relying on the handoff/seed having flipped accountType to
+  // "Personal". Active parent funds (transferredAt null) are unaffected.
+  const isUtma = String((activeFund as any)?.accountType || "").toLowerCase() === "utma" && !(activeFund as any)?.transferredAt;
 
   const [rateId, setRateId] = useState<(typeof RETURN_RATES)[number]["id"]>("moderate");
 
