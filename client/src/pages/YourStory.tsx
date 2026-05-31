@@ -12,6 +12,7 @@ import { useMemo } from "react";
 import { Link, useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
 import { BookOpen, Gift, Users } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { capFirst } from "@/lib/format-name";
@@ -122,20 +123,30 @@ function StorySkeleton() {
 export default function YourStory() {
   const { fundId } = useParams<{ fundId: string }>();
 
+  const storyCacheKey = fundId ? `kiddo.yourstory.v1:${fundId}` : "";
   const { data, isLoading, isError } = useQuery<YourStoryPayload>({
     queryKey: ["your-story", fundId],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${fundId}/your-story`, { credentials: "include" });
       if (!res.ok) throw new Error("Could not load your story");
-      return res.json();
+      const json = (await res.json()) as YourStoryPayload;
+      // Persist so a FRESH load (hard nav / new tab / after gcTime) paints the
+      // last-seen story instantly from localStorage, then refetches in the
+      // background — instead of showing the skeleton while the remote-DB
+      // aggregate round-trips. The story is append-mostly, so a slightly stale
+      // first paint is correct and self-corrects on the background refetch.
+      if (storyCacheKey) writeLocalCache(storyCacheKey, json);
+      return json;
     },
     enabled: !!fundId,
-    // The story is a slow-moving historical aggregate (gifts + memories
-    // across a whole childhood). It doesn't change minute-to-minute, so
-    // hold it fresh for 5 min: navigating away and back is then instant
-    // instead of re-paying the API round trips.
+    // Slow-moving historical aggregate (gifts + memories across a whole
+    // childhood) — hold it fresh for 5 min so in-session nav is instant.
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    // initialDataUpdatedAt:0 marks the cached copy stale, so it shows instantly
+    // AND triggers a background refetch to reconcile.
+    initialData: () => (storyCacheKey ? readLocalCache<YourStoryPayload>(storyCacheKey) : undefined),
+    initialDataUpdatedAt: 0,
   });
 
   const childFirst = capFirst(data?.fund.recipientFirstName) || "";
