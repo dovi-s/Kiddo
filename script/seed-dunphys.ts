@@ -181,13 +181,13 @@ const KIDS = [
       { ticker: "AAPL",  shares: 12.45, costBasis: 2245.00, currentValue: 2503.20, name: "Apple" },
       { ticker: "GOOGL", shares: 8.32,  costBasis: 1387.00, currentValue: 1498.40, name: "Google" },
       { ticker: "DIS",   shares: 9.12,  costBasis: 821.00,  currentValue: 894.16,  name: "Disney" },
-      // Legacy conservative-mix holdings, built over years BEFORE the 2026-05-28
-      // self-directed pivot dropped the VGT tech sleeve. Existing positions stay
-      // (realistic for a long-lived fund); NEW managed investments now follow the
-      // VGT-free conservative target (VTI 42 / VXUS 18 / BND 40, ~60% equity).
-      { ticker: "VTI",   shares: 9.82,  costBasis: 2535.00, currentValue: 2800.00, name: "US Total Market" },
-      { ticker: "VXUS",  shares: 18.46, costBasis: 1085.00, currentValue: 1200.00, name: "International" },
-      { ticker: "VGT",   shares: 1.39,  costBasis: 725.00,  currentValue: 800.00,  name: "Tech" },
+      // Managed mix on the canonical VGT-free conservative target after the
+      // 2026-05-28 self-directed pivot: VTI 42 / VXUS 18 / BND 40 (~60% equity).
+      // Broad market-cap weight only, no sector tilt (ACCOUNT_MODEL.md §2b). The
+      // old VGT sleeve was folded into VTI/VXUS at the same US:Intl ratio so the
+      // fund's total value + gain are unchanged; only the composition is clean.
+      { ticker: "VTI",   shares: 11.79, costBasis: 3041.00, currentValue: 3360.00, name: "US Total Market" },
+      { ticker: "VXUS",  shares: 22.15, costBasis: 1302.00, currentValue: 1440.00, name: "International" },
       { ticker: "BND",   shares: 44.44, costBasis: 3300.00, currentValue: 3200.00, name: "Bonds" },
     ],
   },
@@ -209,11 +209,12 @@ const KIDS = [
       { ticker: "AAPL",  shares: 4.20,  costBasis: 770.00,  currentValue: 844.20, name: "Apple" },
       { ticker: "GOOGL", shares: 3.10,  costBasis: 520.00,  currentValue: 558.40, name: "Google" },
       { ticker: "DIS",   shares: 6.50,  costBasis: 585.00,  currentValue: 637.00, name: "Disney" },
-      // Legacy balanced-mix holdings (pre-2026-05-28 pivot, included a VGT sleeve).
-      // New managed investments follow the VGT-free target: VTI 50 / VXUS 25 / BND 25.
-      { ticker: "VTI",   shares: 8.42,  costBasis: 2175.00, currentValue: 2400.00, name: "US Total Market" },
-      { ticker: "VXUS",  shares: 18.46, costBasis: 1085.00, currentValue: 1200.00, name: "International" },
-      { ticker: "VGT",   shares: 1.57,  costBasis: 815.00,  currentValue: 900.00,  name: "Tech" },
+      // Managed mix on the canonical VGT-free balanced target after the
+      // 2026-05-28 self-directed pivot: VTI 50 / VXUS 25 / BND 25. Broad
+      // market-cap weight only, no sector tilt (ACCOUNT_MODEL.md §2b). The old
+      // VGT sleeve was folded into VTI/VXUS so the fund total is unchanged.
+      { ticker: "VTI",   shares: 10.53, costBasis: 2717.00, currentValue: 3000.00, name: "US Total Market" },
+      { ticker: "VXUS",  shares: 23.08, costBasis: 1356.00, currentValue: 1500.00, name: "International" },
       { ticker: "BND",   shares: 20.83, costBasis: 1545.00, currentValue: 1500.00, name: "Bonds" },
     ],
   },
@@ -234,12 +235,13 @@ const KIDS = [
       { ticker: "GOOGL", shares: 1.50,  costBasis: 252.00,  currentValue: 270.30, name: "Google" },
       { ticker: "DIS",   shares: 4.20,  costBasis: 378.00,  currentValue: 411.60, name: "Disney" },
       { ticker: "RBLX",  shares: 8.50,  costBasis: 425.00,  currentValue: 467.50, name: "Roblox" },
-      // Legacy growth-mix holdings (pre-2026-05-28 pivot, included a VGT sleeve).
-      // New managed investments follow the VGT-free target: VTI 62 / VXUS 28 / BND 10
-      // (~90% equity, the up-and-to-the-right default for a lifelong horizon).
-      { ticker: "VTI",   shares: 3.86,  costBasis: 995.00,  currentValue: 1100.00, name: "US Total Market" },
-      { ticker: "VXUS",  shares: 7.69,  costBasis: 453.00,  currentValue: 500.00,  name: "International" },
-      { ticker: "VGT",   shares: 0.35,  costBasis: 181.00,  currentValue: 200.00,  name: "Tech" },
+      // Managed mix on the canonical VGT-free growth target after the 2026-05-28
+      // self-directed pivot: VTI 62 / VXUS 28 / BND 10 (~90% equity, the
+      // up-and-to-the-right default for a lifelong horizon). Broad market-cap
+      // weight only, no sector tilt (ACCOUNT_MODEL.md §2b). Old VGT sleeve folded
+      // into VTI/VXUS so the fund total is unchanged.
+      { ticker: "VTI",   shares: 4.35,  costBasis: 1121.00, currentValue: 1240.00, name: "US Total Market" },
+      { ticker: "VXUS",  shares: 8.62,  costBasis: 507.00,  currentValue: 560.00,  name: "International" },
       { ticker: "BND",   shares: 2.78,  costBasis: 206.00,  currentValue: 200.00,  name: "Bonds" },
     ],
   },
