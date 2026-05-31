@@ -1369,15 +1369,19 @@ function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess
     }
   };
 
+  // Post-handoff owner has no "family" — it's just their own default.
+  const rulesIsOwnerHeld = (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
+  const familyDefaultLabel = rulesIsOwnerHeld ? "default" : "family default";
+
   return (
     <div className="space-y-4">
       <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
         <p className="kiddo-section-label">Default path for new gifts</p>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          Pick one family default. Most gifts follow this. Gifter stock picks or cash gifts only happen if you allow those overrides below.
+          Pick one {familyDefaultLabel}. Most gifts follow this. Gifter stock picks or cash gifts only happen if you allow those overrides below.
         </p>
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          If a gifter chooses a stock, it applies only to that gift. Your family default stays the same for future gifts.
+          If a gifter chooses a stock, it applies only to that gift. Your {familyDefaultLabel} stays the same for future gifts.
         </p>
       </div>
 
@@ -1435,7 +1439,7 @@ function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess
         <div className="flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium text-foreground">Allow people to choose a stock</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">If off, gifts follow your family default.</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">If off, gifts follow your {familyDefaultLabel}.</p>
           </div>
           <Switch checked={allowGifterStockPick} onCheckedChange={setAllowGifterStockPick} data-testid="switch-allow-gifter-stock-pick" />
         </div>
@@ -1451,7 +1455,7 @@ function GifterInvestmentRulesEditor({ fund, onSuccess }: { fund: any; onSuccess
       <div className="rounded-2xl border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-evergreen)/0.04)] p-4">
         <p className="kiddo-section-label">What people will see</p>
         <p className="mt-2 text-sm text-foreground">
-          Use family default
+          Use {familyDefaultLabel}
           {allowGifterStockPick ? " · Choose a stock" : ""}
           {allowGifterCashGift ? " · Let the family decide later" : ""}
         </p>
