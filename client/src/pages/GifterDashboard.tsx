@@ -917,6 +917,14 @@ export default function GifterDashboard() {
                         {sch.status === "paused" && sch.pauseReason === "user" && (
                           <p className="mt-1 text-xs text-muted-foreground">Paused by you.</p>
                         )}
+                        {sch.status === "paused" && sch.pauseReason === "majority_handoff" && (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            This recurring gift ended when {sch.fundName.replace(/['’]s Fund$/i, "").trim() || "the recipient"} received their fund at the age of majority. It is theirs to grow now.
+                          </p>
+                        )}
+                        {sch.status === "paused" && sch.pauseReason !== "payment_failed" && sch.pauseReason !== "user" && sch.pauseReason !== "majority_handoff" && (
+                          <p className="mt-1 text-xs text-muted-foreground">This recurring gift is paused.</p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5">
                         {sch.status === "paused" && sch.pauseReason === "user" && (
