@@ -6011,7 +6011,14 @@ export default function Dashboard() {
                   .map((g) => (String((g as any).gifterPreferredName || "").trim()) || String((g as any).senderName || "").trim().split(/\s+/)[0])
                   .filter(Boolean),
               ));
-              const custodianLabel = custodianNames.length === 1 ? custodianNames[0] : "your parents";
+              // Owner mode (post-handoff): prefer the previous custodian's
+              // "what your kids call you" label (server-supplied from their
+              // Account-settings preferredName) so it reads "Invested by Dad"
+              // not "Invested by Phil". Falls back to the derived first name
+              // when the custodian never set one — no hardcoding.
+              const ownerCustodianLabel = isOwnerMode ? String((activeFund as any)?.previousOwnerCallMe || "").trim() : "";
+              const custodianLabel = ownerCustodianLabel
+                || (custodianNames.length === 1 ? custodianNames[0] : "your parents");
 
               // 30-day market growth: walk fundHistory for the snapshot at or before 30
               // days ago, compute (today's value − then's value) − (today's basis − then's

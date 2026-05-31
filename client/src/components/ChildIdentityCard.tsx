@@ -88,6 +88,35 @@ export function ChildIdentityCard({
     }
   };
 
+  // Clear the fund photo. Preserve-but-control: at handoff we never auto-delete
+  // a child's photo (it's their record), but the owner — or the parent — can
+  // remove it on request. Optimistically clears the cache so the avatar drops
+  // to the initials immediately.
+  const handleRemove = async () => {
+    if (!fund?.id || uploading) return;
+    setUploading(true);
+    try {
+      const res = await fetch(`/api/funds/${fund.id}/child-photo`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        queryClient.setQueryData(["/api/funds"], (old: any[]) =>
+          (old || []).map((f: any) => f.id === fund.id ? { ...f, childPhotoUrl: null } : f),
+        );
+        haptic("success");
+        toast({ title: "Photo removed" });
+      } else {
+        const payload = await res.json().catch(() => ({}));
+        toast({ title: "Could not remove photo", description: payload?.error || "Please try again.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not remove photo", variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // "Growing for [child] since [Month YYYY]" — the one warm
   // line in the Child identity card. Restrained, factual,
   // sprout-voice. Single line, no chrome around it. Renders
@@ -154,14 +183,27 @@ export function ChildIdentityCard({
                 {growingSinceLine}
               </p>
             )}
-            <button
-              type="button"
-              className="mt-2 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]"
-              onClick={onEditChild}
-              data-testid="button-edit-child-details"
-            >
-              {isOwnerMode ? "Edit your details" : "Edit child details"}
-            </button>
+            <div className="mt-2 flex items-center gap-3">
+              <button
+                type="button"
+                className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]"
+                onClick={onEditChild}
+                data-testid="button-edit-child-details"
+              >
+                {isOwnerMode ? "Edit your details" : "Edit child details"}
+              </button>
+              {fund?.childPhotoUrl && (
+                <button
+                  type="button"
+                  className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+                  onClick={handleRemove}
+                  disabled={uploading}
+                  data-testid="button-remove-child-photo"
+                >
+                  Remove photo
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

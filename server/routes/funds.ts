@@ -223,6 +223,42 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
         console.warn("[funds] UTMA-column enrichment skipped:", (enrichErr as any)?.message || enrichErr);
       }
 
+      // Owner-mode relational label. For a fund the viewer now owns
+      // post-handoff (transferredAt set + previousOwnerId present), surface
+      // the PREVIOUS custodian's "what do your kids call you" label
+      // (users.preferred_name — the Account-settings field, placeholder
+      // "Dad, Mom, Papa…") as previousOwnerCallMe. The owner-mode Dashboard
+      // uses it so the grown kid sees "Invested by Dad" instead of the
+      // custodian's bare first name. Null when the custodian never set one →
+      // the client falls back to the first name (unchanged behavior). No
+      // hardcoding: purely the value the custodian chose.
+      try {
+        const ownerHeld = ensuredFunds.filter(
+          (f: any) => f?.transferredAt && f?.previousOwnerId,
+        );
+        const prevOwnerIds = Array.from(
+          new Set(ownerHeld.map((f: any) => String(f.previousOwnerId)).filter(Boolean)),
+        );
+        if (prevOwnerIds.length > 0) {
+          const labelRows = await db
+            .select({ id: users.id, preferredName: users.preferredName })
+            .from(users)
+            .where(inArray(users.id, prevOwnerIds));
+          const labelById = new Map(
+            labelRows.map((r) => [String(r.id), String(r.preferredName || "").trim()]),
+          );
+          for (const f of ensuredFunds) {
+            const ff = f as any;
+            if (ff?.transferredAt && ff?.previousOwnerId) {
+              const lbl = labelById.get(String(ff.previousOwnerId));
+              if (lbl) ff.previousOwnerCallMe = lbl;
+            }
+          }
+        }
+      } catch (labelErr) {
+        console.warn("[funds] previous-owner label enrichment skipped:", (labelErr as any)?.message || labelErr);
+      }
+
       // Tag owned funds before any merge with collaborated funds.
       // accessRole = 'owner' on every entry the parent owns directly.
       const ownedTagged = ensuredFunds.map((f: any) => ({ ...f, accessRole: 'owner' as const }));

@@ -94,6 +94,13 @@ const MEMORY_FUND_CACHE_PREFIX = "kiddo.memory.fund.v1:";
 const MEMORY_EVENTS_CACHE_PREFIX = "kiddo.memory.events.v1:";
 // Per-fund thank-yous cache. Same pattern; same fix; same reason.
 const MEMORY_THANK_YOUS_CACHE_PREFIX = "kiddo.memory.thank-yous.v1:";
+// The remaining mount queries that previously fired fresh every visit with no
+// initialData — the "loads slow and last" feeling on the share badge and the
+// live gift values in the story/timeline. Same caching trio as above so
+// returning visits paint instantly, then refresh in the background.
+const MEMORY_GIFTER_NOTIF_CACHE_PREFIX = "kiddo.memory.gifterNotif.v1:";
+const MEMORY_PAST_SHARES_CACHE_PREFIX = "kiddo.memory.pastShares.v1:";
+const MEMORY_GIFT_QUOTES_CACHE_PREFIX = "kiddo.memory.giftQuotes.v1:";
 // Per-fund "last visited" timestamp for the Memory Book unread badge on
 // the bottom-nav. Same shape as the Activity tab's lastReadAt: when the
 // parent lands on the Memory Book page, we stamp Date.now() into this
@@ -907,9 +914,16 @@ export default function MemoryBook() {
     queryFn: async () => {
       const res = await fetch(`/api/market/quotes?symbols=${encodeURIComponent(giftTickerSymbols)}`, { credentials: "include" });
       if (!res.ok) return { quotes: [] };
-      return res.json();
+      const data = await res.json();
+      // Cache last-known prices per fund so gift VALUES in the story paint
+      // instantly on the next visit instead of popping in after the
+      // entries→tickers→quotes waterfall resolves. Prices refresh in the bg.
+      if (fundId) writeLocalCache(`${MEMORY_GIFT_QUOTES_CACHE_PREFIX}${fundId}`, data);
+      return data;
     },
     enabled: !!giftTickerSymbols && isAuthenticated,
+    initialData: () => (fundId ? readLocalCache<{ quotes: Array<{ symbol: string; price: number }> }>(`${MEMORY_GIFT_QUOTES_CACHE_PREFIX}${fundId}`) : undefined),
+    initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -981,10 +995,14 @@ export default function MemoryBook() {
     queryFn: async () => {
       const res = await fetch(`/api/funds/${fundId}/gifter-notifications`, { credentials: "include" });
       if (!res.ok) throw new Error("could not load");
-      return res.json();
+      const data = await res.json();
+      if (fundId) writeLocalCache(`${MEMORY_GIFTER_NOTIF_CACHE_PREFIX}${fundId}`, data);
+      return data;
     },
     enabled: !!fundId && isAuthenticated && !authLoading,
-    staleTime: 30_000,
+    initialData: () => (fundId ? readLocalCache<{ optedInCount: number; subscribers: Array<{ email: string; name?: string | null; unsubscribed?: boolean }>; settings?: { memoryBookSharesSentThisYear?: number } }>(`${MEMORY_GIFTER_NOTIF_CACHE_PREFIX}${fundId}`) : undefined),
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
   });
 
   const optedInGifters = useMemo(() => {
@@ -1014,13 +1032,19 @@ export default function MemoryBook() {
     queryFn: async () => {
       const res = await fetch(`/api/funds/${fundId}/gifter-notifications/memory-shares`, { credentials: "include" });
       if (!res.ok) return { shares: [] };
-      return res.json();
+      const data = await res.json();
+      if (fundId) writeLocalCache(`${MEMORY_PAST_SHARES_CACHE_PREFIX}${fundId}`, data);
+      return data;
     },
     // Always-on (when authenticated) so the count is available on the
     // Memory Book page itself — used by the "Share update · X sent" badge
     // — without needing the modal to be open. Cheap query (≤4 rows).
+    // initialData paints the badge instantly on return visits instead of
+    // after a fresh round-trip (the "loads slow and last" anti-pattern).
     enabled: !!fundId && isAuthenticated && !authLoading,
-    staleTime: 60_000,
+    initialData: () => (fundId ? readLocalCache<{ shares: Array<{ token: string; message: string; photoUrl: string | null; recipientCount: number; createdAt: string; shareUrl: string }> }>(`${MEMORY_PAST_SHARES_CACHE_PREFIX}${fundId}`) : undefined),
+    initialDataUpdatedAt: 0,
+    staleTime: 5 * 60 * 1000,
   });
   // Filter test-pattern updates from the past-shares list. Same
   // allowlist as the Memory Book entry filter, the server-side guard,
@@ -3309,11 +3333,13 @@ export default function MemoryBook() {
                 <div className="flex items-baseline justify-between gap-3 mb-1">
                   <p className="kiddo-section-label">Capture a moment</p>
                   <span className="text-[10.5px] uppercase tracking-wide text-muted-foreground/60">
-                    Saved for {childName || "them"} at {fundMajorityAge}
+                    {isOwnerMode ? "Your story" : <>Saved for {childName || "them"} at {fundMajorityAge}</>}
                   </span>
                 </div>
                 <p className="text-xs leading-relaxed text-muted-foreground mb-3">
-                  Tap one. Add a date, a note, a photo. {childName || "They"}'ll read it later.
+                  {isOwnerMode
+                    ? "Tap one. Add a date, a note, a photo to your story."
+                    : <>Tap one. Add a date, a note, a photo. {childName || "They"}'ll read it later.</>}
                 </p>
                 {/* Single-row horizontal scroll (was flex-wrap) —
                     locked 2026-05-19 per the chip-row layout audit.
@@ -3330,7 +3356,7 @@ export default function MemoryBook() {
                     <button
                       key={m.key}
                       type="button"
-                      onClick={() => openMilestoneComposer(m.starter)}
+                      onClick={() => openMilestoneComposer(isOwnerMode ? m.starter.replace(/\btheir\b/gi, "my") : m.starter)}
                       className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[hsl(var(--kiddo-evergreen)/0.18)] bg-[hsl(var(--kiddo-evergreen)/0.05)] px-3 py-1.5 text-[12px] font-medium text-foreground transition-[colors,transform] duration-150 hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] hover:border-[hsl(var(--kiddo-evergreen)/0.35)] active:scale-[0.97]"
                       data-testid={`milestone-chip-${m.key}`}
                     >

@@ -7532,6 +7532,22 @@ export async function registerRoutes(
       // Non-fatal — a failure here can't roll back the actual
       // ownership transfer, but it does need to be logged loudly.
       let revokedAtHandoff = 0;
+      // Capture accepted collaborators BEFORE revoking, so we can send them a
+      // warm heads-up. A co-parent (often the other parent) who helped steward
+      // the fund for years shouldn't have their access silently vanish — the
+      // revocation is correct, but the SILENCE was the gap.
+      let priorCollaboratorEmails: string[] = [];
+      try {
+        const collabs = await storage.getCollaboratorsByFund(fund.id);
+        priorCollaboratorEmails = Array.from(new Set(
+          collabs
+            .filter((c: any) => String(c?.status || "").toLowerCase() === "accepted" && c?.email)
+            .map((c: any) => String(c.email).trim().toLowerCase())
+            .filter(Boolean),
+        ));
+      } catch (collabReadErr) {
+        console.warn('[age18] could not read collaborators before revoke (heads-up skipped):', fund.id, collabReadErr);
+      }
       try {
         revokedAtHandoff = await storage.deleteCollaboratorsByFund(fund.id);
         if (revokedAtHandoff > 0) {
@@ -7545,6 +7561,50 @@ export async function registerRoutes(
           message: `Fund ${fund.id} ownership transferred to the now-adult kid, but the prior parent's collaborator rows did NOT auto-delete. Manual cleanup needed.`,
           context: { fundId: fund.id, previousOwnerId, newOwnerId: userId, error: String(revokeErr) },
         }).catch(() => { /* alerting failure must not block handoff */ });
+      }
+
+      // Co-parent / collaborator handoff heads-up. Their access was just
+      // revoked (correct — the legal account changed); this tells them WHY,
+      // warmly, instead of leaving them to discover the fund vanished.
+      // Demo-safe (never emails real addresses for a demo fund). Best-effort:
+      // a send failure cannot roll back the completed transfer.
+      if (priorCollaboratorEmails.length > 0 && !(await isDemoFund(fund.id))) {
+        try {
+          const { renderKiddoEmail } = await import("./templates/baseTemplate");
+          const childName = fund.recipientFirstName || currentUser.firstName || "Your family member";
+          const majorityAge = Number((fund as any).majorityAge) || 18;
+          const intro = [
+            "Hi,",
+            "",
+            `${childName} just turned ${majorityAge} and now legally owns the Kiddo fund you shared access to. Under state UTMA law, control transfers to them at this age, and the fund has moved into their own account.`,
+            "",
+            `Because the account is now ${childName}'s, shared access has ended — that's the normal, expected part of a handoff, not something you need to fix. Nothing was sold; the investments stay exactly where they are.`,
+            "",
+            `If ${childName} wants to share the fund with you again, they can invite you from their own account.`,
+            "",
+            "Thank you for showing up for them all these years.",
+            "",
+            "— The Kiddo team",
+          ].join("\n");
+          const { html } = renderKiddoEmail({
+            heading: `${childName} now owns their Kiddo fund`,
+            intro,
+          });
+          for (const email of priorCollaboratorEmails) {
+            await sendEmail({
+              to: email,
+              subject: `${childName} now owns their Kiddo fund`,
+              text: intro,
+              html,
+              tags: ["age_transition", "coparent_handoff_notice"],
+              metadata: { fundId: fund.id, milestone: "coparent_handoff_notice" },
+            }).catch((sendErr) => {
+              console.error('[age18] co-parent handoff notice send failed (non-fatal):', fund.id, email, sendErr);
+            });
+          }
+        } catch (coparentEmailErr) {
+          console.error('[age18] co-parent handoff notice block failed (non-fatal):', fund.id, coparentEmailErr);
+        }
       }
 
       // Recurring contribution auto-pause (Polish 1 from the
@@ -12472,6 +12532,25 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error uploading child photo:', error);
       res.status(500).json({ error: 'Failed to upload child photo' });
+    }
+  });
+
+  // Clear the fund photo. Same owner-only gate as the upload. Used by the
+  // "Remove photo" affordance — notably the post-handoff owner who wants their
+  // own account without the childhood photo a parent uploaded. We null the
+  // reference (not a destructive scrub of the file); consistent with replace,
+  // which also orphans the prior file. Preserve-but-let-them-control, never an
+  // auto-delete at handoff (per CHILD_PII_DELETION_DECISION).
+  app.delete('/api/funds/:fundId/child-photo', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: 'Forbidden' });
+      await storage.updateFund(req.params.fundId, { childPhotoUrl: null } as any);
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('Error removing child photo:', error);
+      res.status(500).json({ error: 'Failed to remove child photo' });
     }
   });
 
