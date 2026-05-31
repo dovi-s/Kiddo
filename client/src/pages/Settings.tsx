@@ -2735,6 +2735,13 @@ const [editFundName, setEditFundName] = useState("");
   // across the tabs. (isOwnerMode at the top of this file is in a different
   // scope; this is the main-component flag used by the render below.)
   const primaryFundIsOwnerHeld = (primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt);
+  // Previous owner (the parent who handed this fund off): post-handoff they keep
+  // read-only visibility but no longer MANAGE the fund — every Settings mutation
+  // (strategy, gift defaults, notifications, withdrawals) 403s server-side
+  // (fundAccessRole !== 'owner'). So hide the editable tabs + content and show a
+  // read-only "they manage it now" notice instead of dead controls wrapped in
+  // stale "switch child" / "approaching majority" / "handoff ready" copy.
+  const primaryFundIsPreviousOwner = (primaryFund as any)?.accessRole === "previous_owner";
 
   const { data: holdingsData = [] } = useQuery<any[]>({
     queryKey: ["/api/funds", primaryFund?.id, "holdings"],
@@ -4131,7 +4138,9 @@ const [editFundName, setEditFundName] = useState("");
               </h1>
             )}
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-              {funds.length > 1 ? (
+              {primaryFundIsPreviousOwner ? (
+                <>You're viewing {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} as the previous owner.{" "}</>
+              ) : funds.length > 1 ? (
                 <>These settings apply only to {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "the fund above"}. Tap the tabs above to switch child.{" "}</>
               ) : (
                 <>Changes apply to this fund.{" "}</>
@@ -4144,7 +4153,7 @@ const [editFundName, setEditFundName] = useState("");
         )}
 
         <div className="space-y-2">
-          <div className="kiddo-tab-row max-w-full overflow-x-auto" data-testid="settings-tabs" role="tablist" aria-label="Settings sections">
+          <div className={`kiddo-tab-row max-w-full overflow-x-auto${primaryFundIsPreviousOwner ? " hidden" : ""}`} data-testid="settings-tabs" role="tablist" aria-label="Settings sections">
             {/* "Membership" tab removed from the in-app navigation
                 on 2026-05-14 per the WHO/HOW IA Phase 1c. Account is
                 now the primary home for plan management; users who
@@ -4192,6 +4201,17 @@ const [editFundName, setEditFundName] = useState("");
               distinction. */}
         </div>
 
+        {primaryFundIsPreviousOwner && (
+          <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-5" data-testid="settings-previous-owner-notice">
+            <p className="font-heading text-base font-semibold text-foreground">
+              {recipientFirstNameDisplay || "The owner"} manages this fund now
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+              After the age-of-majority handoff, {recipientFirstNameDisplay || "the owner"} owns this fund. The investing mix, gift options, notifications, and money movement are theirs to manage from here. You can still follow along from the dashboard and Memory Book.
+            </p>
+          </div>
+        )}
+
         {/* Tab-fade transitions added 2026-05-25. Each branch wraps in
             a motion.div keyed by the tab name so switching tabs reads
             as a soft fade-in, not an instant swap. No exit animation
@@ -4200,7 +4220,7 @@ const [editFundName, setEditFundName] = useState("");
             fade is what carries the "considered design" feeling. Quiet
             register: 280ms / 6px / out-expo. Matches the page-hero
             entrance timing for visual coherence. */}
-        {settingsTab === "child" && primaryFund && (
+        {settingsTab === "child" && primaryFund && !primaryFundIsPreviousOwner && (
           // The full Child-tab body now lives in FundSettingsChildPanel
           // (chunk 9). Same composition, same eight cards, same order.
           // The panel takes callbacks for the three modals Settings
@@ -4230,7 +4250,7 @@ const [editFundName, setEditFundName] = useState("");
           </motion.div>
         )}
 
-        {settingsTab === "gifts" && (
+        {settingsTab === "gifts" && !primaryFundIsPreviousOwner && (
           <motion.div
             key="settings-tab-gifts"
             initial={{ opacity: 0, y: 6 }}
@@ -4686,7 +4706,7 @@ const [editFundName, setEditFundName] = useState("");
           </div>
         )}
 
-        {settingsTab === "notifications" && (
+        {settingsTab === "notifications" && !primaryFundIsPreviousOwner && (
           <motion.div
             key="settings-tab-notifications"
             initial={{ opacity: 0, y: 6 }}
@@ -4906,7 +4926,7 @@ const [editFundName, setEditFundName] = useState("");
           </motion.div>
         )}
 
-        {settingsTab === "money" && (
+        {settingsTab === "money" && !primaryFundIsPreviousOwner && (
           <motion.div
             key="settings-tab-money"
             initial={{ opacity: 0, y: 6 }}
