@@ -1280,9 +1280,20 @@ export default function Dashboard() {
     const handleAddFund = () => {
       const latestFunds = fundsRef.current ?? [];
       const latestPlan = effectivePlanRef.current;
-      const ownedChildFunds = latestFunds.filter(
-        (f) => (f as any).fundType !== "personal" && (f as any).accessRole !== "previous_owner",
-      );
+      // Child funds only — exclude the user's OWN holdings (their post-handoff
+      // personal/owner fund + previous-owner views). `fundType` was never a real
+      // field (always undefined), so the old check counted an owner's own
+      // transferred fund as a child and wrongly walled them on their FIRST kid.
+      // Mirrors AddFundSheet's existingChildFundCount so both gates agree.
+      const ownedChildFunds = latestFunds.filter((f) => {
+        const ff = f as any;
+        const isOwnHeld =
+          Boolean(ff.transferredAt) ||
+          String(ff.accountType || "").toLowerCase() === "personal" ||
+          ff.recipientRelation === "self" ||
+          ff.accessRole === "previous_owner";
+        return !isOwnHeld;
+      });
       const atLimit =
         latestPlan !== "family" && latestPlan !== "legacy" && ownedChildFunds.length >= 1;
       if (atLimit) {
@@ -5900,13 +5911,20 @@ export default function Dashboard() {
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                       Someone started this for you before you could ask. When there's a kid you want to show up for, you already know how: quietly, early, for years.
                     </p>
-                    <Link
-                      href="/get-started"
+                    {/* Logged-in owner → open the add-a-child sheet inline via
+                        the canonical ADD_FUND_EVENT (same path as the header /
+                        sidebar / funds-overview triggers), NOT the public
+                        /get-started onboarding funnel. handleAddFund opens the
+                        AddFundSheet (free for the first kid; the gate now
+                        correctly ignores their own owner fund). */}
+                    <button
+                      type="button"
+                      onClick={() => { haptic("selection"); window.dispatchEvent(new CustomEvent(ADD_FUND_EVENT)); }}
                       className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-[hsl(var(--kiddo-gold-ink))] hover:opacity-75"
-                      data-testid="link-start-a-fund-doorway"
+                      data-testid="button-start-a-fund-doorway"
                     >
                       Start a fund →
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>
