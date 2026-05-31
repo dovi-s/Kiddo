@@ -1547,7 +1547,12 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
     const ms = eighteenth.getTime() - Date.now();
     return ms > 0 ? ms / (365.25 * 24 * 60 * 60 * 1000) : 0;
   })();
-  const recommendedKey = recommendedStrategyKey(yearsTo18);
+  // Post-handoff adult owner: suppress the age-to-majority recommendation +
+  // child horizon. yearsTo18 clamps to 0 past the 18th birthday, which would
+  // otherwise force "Recommended: Conservative — best for children approaching
+  // 18" onto a grown owner whose real horizon is decades. Let them just pick.
+  const seIsOwnerMode = (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
+  const recommendedKey = seIsOwnerMode ? null : recommendedStrategyKey(yearsTo18);
   const childName = (fund as any)?.recipientFirstName || null;
   const [customRows, setCustomRows] = useState<Array<{ ticker: string; weight: number }>>(DEFAULT_CUSTOM_ALLOCATION_ROWS);
   const [initialCustomRows, setInitialCustomRows] = useState<Array<{ ticker: string; weight: number }>>(DEFAULT_CUSTOM_ALLOCATION_ROWS);
@@ -1905,7 +1910,9 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
               (sigma scales by 1/sqrt(years)). Always paired with the standard disclaimer. */}
           {(() => {
             const range = projectionRangeForStrategy(activeStrategy as any, yearsTo18);
-            if (!range || yearsTo18 == null) return null;
+            // Owner mode: yearsTo18 clamps to 0, which would render a nonsensical
+            // "1-month annualized" child-horizon projection for a grown owner. Skip it.
+            if (!range || yearsTo18 == null || seIsOwnerMode) return null;
             const horizonLabel = yearsTo18 < 1 ? `${Math.max(1, Math.round(yearsTo18 * 12))}-month` : `${Math.round(yearsTo18)}-year`;
             const horizonText = yearsTo18 < 1 ? horizonLabel : `${horizonLabel} annualized`;
             const fmt = (n: number) => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
@@ -3185,6 +3192,11 @@ const [editFundName, setEditFundName] = useState("");
     : notificationAgeTransition.stage === "adult"
       ? `Age-${notificationMajorityAge} handoff is ready now. Review transfer steps before sending this note.`
       : `Final thank-you note when control passes at ${notificationMajorityAge}. Planning anchor: ${formatAgeTransitionDate(notificationAgeTransition.eighteenthBirthday)}.`;
+  // The active notification fund has already transferred to the owner → the
+  // age-of-majority handoff note no longer applies (hide the row below).
+  const notificationFundIsOwnerHeld =
+    (selectedNotificationFund as any)?.accessRole === "owner" &&
+    Boolean((selectedNotificationFund as any)?.transferredAt);
   const getFundValue = (fund: any) =>
     parseFloat(fund?.balance || "0") +
     parseFloat(fund?.pendingBalance || "0") +
@@ -4721,14 +4733,21 @@ const [editFundName, setEditFundName] = useState("");
                     meta="4 per year"
                     testId="row-gifter-memory-sharing"
                   />
-                  <NotificationSwitchRow
-                    title={age18NotificationTitle}
-                    body={age18NotificationBody}
-                    checked={notificationSettings.age18Notification ?? true}
-                    disabled={loadingGifterNotifications || updateGifterNotificationSettings.isPending}
-                    onCheckedChange={(checked) => updateGifterNotificationSetting("age18Notification", checked)}
-                    testId="row-gifter-age18-notification"
-                  />
+                  {/* The age-of-majority handoff notification is meaningless on a
+                      fund that has ALREADY transferred to the owner — the handoff
+                      happened, there's no future "transfer note" to send. Hide it
+                      in owner mode (it otherwise renders "Age-21 handoff is ready
+                      now" to a grown owner who already owns the account). */}
+                  {!notificationFundIsOwnerHeld && (
+                    <NotificationSwitchRow
+                      title={age18NotificationTitle}
+                      body={age18NotificationBody}
+                      checked={notificationSettings.age18Notification ?? true}
+                      disabled={loadingGifterNotifications || updateGifterNotificationSettings.isPending}
+                      onCheckedChange={(checked) => updateGifterNotificationSetting("age18Notification", checked)}
+                      testId="row-gifter-age18-notification"
+                    />
+                  )}
                 </div>
                 <div className="hidden">
                   {[
@@ -4879,7 +4898,17 @@ const [editFundName, setEditFundName] = useState("");
                   <div className="mt-5" data-testid="settings-money-strategy-editor">
                     <StrategyEditor
                       fund={primaryFund}
-                      canUseCustom={userPlan === "family" || hasStarterEntitlement(starterByFund[String(primaryFund.id)])}
+                      // Custom mix is FREE for the post-handoff adult owner — no
+                      // paywall on your own account. Matches the server's
+                      // resolveAllowedFundStrategy owner exception + commit 96057c2
+                      // / LIFECYCLE_MONETIZATION (subscription retires at majority;
+                      // self-allocation is table-stakes). The plan gate still
+                      // applies to parents managing a minor's fund.
+                      canUseCustom={
+                        (((primaryFund as any)?.accessRole === "owner") && Boolean((primaryFund as any)?.transferredAt)) ||
+                        userPlan === "family" ||
+                        hasStarterEntitlement(starterByFund[String(primaryFund.id)])
+                      }
                       onSuccess={refreshAll}
                     />
                   </div>
