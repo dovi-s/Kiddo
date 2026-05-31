@@ -40,6 +40,14 @@ Use this when the question is:
 - which Acorns-like ideas are smart vs distracting?
 - what is `Do Now`, `Do Later`, and `Do Not Build`?
 
+Also see:
+- [GOFUNDME_POSITIONING_NOTE.md](/abs/path/c:/Apps/Kora%20(newest)/GOFUNDME_POSITIONING_NOTE.md)
+
+Use this when the question is:
+- how do we position vs giving / crowdfunding platforms?
+- what is the "every dollar reaches the kid" / anti-GoFundMe contrast?
+- where is ready-to-lift launch copy for the no-gift-fee moat?
+
 ### 4. Platform Direction
 
 Then read:
