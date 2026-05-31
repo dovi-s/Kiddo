@@ -463,6 +463,19 @@ export default function Account() {
     }
   }, [funds, selectedStarterFundId]);
 
+  // Non-parent owner = the account owns funds but NONE is a custodial child fund
+  // they still manage (a not-yet-handed-off UTMA fund). Covers a kid who inherited
+  // their fund at majority and an adult with a personal fund — neither has a
+  // "child" to frame profile copy around, and per the locked "subscription
+  // retires at majority" rule neither should be sold a parent plan. Reads
+  // accessRole/transferredAt/accountType off the /api/funds rows (present at
+  // runtime; the narrow query type omits them).
+  const ownedFundsForFraming = (funds as any[]).filter((f) => f?.accessRole === "owner");
+  const managesCustodialChild = ownedFundsForFraming.some(
+    (f) => !f?.transferredAt && String(f?.accountType || "UTMA").toUpperCase() === "UTMA",
+  );
+  const isNonParentOwner = ownedFundsForFraming.length > 0 && !managesCustodialChild;
+
   const handleUpgradeStarter = async (fundId?: string) => {
     const targetFundId = String(fundId || selectedStarterFundId || "");
     if (!targetFundId) {
@@ -927,7 +940,7 @@ export default function Account() {
                 <div className="p-4">
                   <p className="text-sm font-semibold text-foreground">Complete your profile</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Add your {profileNeedsName && profileNeedsPhoto ? "name and photo" : profileNeedsName ? "name" : "photo"} so it appears in your child's Memory Book.
+                    Add your {profileNeedsName && profileNeedsPhoto ? "name and photo" : profileNeedsName ? "name" : "photo"} so it appears in {isNonParentOwner ? "your" : "your child's"} Memory Book.
                   </p>
                 </div>
               </SectionCard>
@@ -967,7 +980,7 @@ export default function Account() {
                     className="hidden"
                   />
                   <p className="text-xs text-muted-foreground">
-                    {profileNeedsPhoto ? "Add a photo so your child's Memory Book has a real face behind it." : "Tap to change photo."}
+                    {profileNeedsPhoto ? `Add a photo so ${isNonParentOwner ? "your" : "your child's"} Memory Book has a real face behind it.` : "Tap to change photo."}
                   </p>
                 </div>
 
@@ -1042,7 +1055,7 @@ export default function Account() {
                 {/* Preferred name */}
                 <div>
                   <label htmlFor="account-preferred-name" className="block text-xs font-semibold text-foreground mb-1.5">
-                    What do your kids call you?
+                    {isNonParentOwner ? "What should we call you?" : "What do your kids call you?"}
                   </label>
                   <input
                     id="account-preferred-name"
@@ -1051,12 +1064,12 @@ export default function Account() {
                     autoComplete="nickname"
                     value={preferredName}
                     onChange={(e) => setPreferredName(e.target.value.slice(0, 50))}
-                    placeholder="Dad, Mom, Papa, Mama…"
+                    placeholder={isNonParentOwner ? "Your name or nickname…" : "Dad, Mom, Papa, Mama…"}
                     className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     data-testid="input-preferred-name"
                   />
                   <p className="mt-1.5 text-[11px] text-muted-foreground">
-                    Shows up in the Memory Book and Kid's View. Optional.
+                    {isNonParentOwner ? "Shows up in your Memory Book. Optional." : "Shows up in the Memory Book and Kid's View. Optional."}
                   </p>
                   <Button
                     size="sm"
@@ -1240,7 +1253,9 @@ export default function Account() {
                             ? "Unlimited funds, unlimited occasions, and Kid View across every child."
                             : userPlan === "legacy"
                               ? "Everything in Family, plus 2 Occasion credits per year."
-                              : "One child fund, a gift link, the Memory Book basics, no platform fee on normal gifts."}
+                              : isNonParentOwner
+                                ? "Your fund, yours to manage. No subscription, just the annual fee on invested assets."
+                                : "One child fund, a gift link, the Memory Book basics, no platform fee on normal gifts."}
                       </p>
                     </div>
                   </div>
@@ -1298,7 +1313,23 @@ export default function Account() {
                 cancel. Duplicated JSX with Settings.tsx membership
                 tab — Phase 1c will extract to a shared component
                 when the upgrade ladder is removed from Settings. */}
-            {(() => {
+            {/* Owner billing note — a fund you OWN has no subscription. Per the
+                locked "subscription retires at majority" rule, a graduated owner
+                (or adult personal-fund holder) is never sold a parent plan; AUM
+                is the only post-handoff cost. The upgrade ladder below is hidden
+                for them. */}
+            {isNonParentOwner && (
+              <SectionCard>
+                <div className="p-5">
+                  <p className="text-sm font-semibold text-foreground">This fund is yours</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    There's no subscription on a fund you own. Kiddo's only ongoing cost is the annual fee: $1/year per $1,000 invested, charged on invested assets only.
+                  </p>
+                </div>
+              </SectionCard>
+            )}
+
+            {!isNonParentOwner && (() => {
               const isStarterCurrent = userPlan === "starter";
               const isFamilyCurrent = userPlan === "family";
               const isLegacyCurrent = userPlan === "legacy";
