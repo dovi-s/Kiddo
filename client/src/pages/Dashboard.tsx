@@ -2525,7 +2525,7 @@ export default function Dashboard() {
       return `What I want ${childName} to know by graduation day...`;
     }
     if (eventType === "birthday" || /\bbirthday\b/i.test(eventName)) {
-      return `What ${childName}'s next birthday means to you...`;
+      return isOwnerMode ? `What this birthday means to you...` : `What ${childName}'s next birthday means to you...`;
     }
     if (eventType === "wedding" || /\bwedding\b/i.test(eventName)) {
       return `What you hope for ${childName} on their wedding day...`;
@@ -8135,7 +8135,7 @@ export default function Dashboard() {
                         );
                       })()}
                       <p style={{ fontSize: 13.5, color: "rgb(100,92,86)", marginTop: 8, lineHeight: 1.5 }}>
-                        {fmtWhole(totalGifted)} gifted to {childName ? `${childName}'s` : "the"} fund.{" "}
+                        {fmtWhole(totalGifted)} gifted to {isOwnerMode ? "your" : childName ? `${childName}'s` : "the"} fund.{" "}
                         {/* Inline share-loop close. The community signal
                             here ("X people love Emma") is the moment to
                             invite more — but the surface used to end at
@@ -8549,11 +8549,16 @@ export default function Dashboard() {
                             // The owner's OWN plans aren't majority_handoff, so
                             // they stay fully manageable.
                             const isHandoffEnded = contrib.pauseReason === "majority_handoff";
-                            // Read-only when the plan isn't the viewer's — mirrors the server's
-                            // record.userId !== userId 403. Catches the parent's handed-off plan
-                            // (handoff-ended OR manually paused pre-handoff) + a co-parent viewing
-                            // the owner's plans. The viewer's OWN plans stay fully manageable.
-                            const isReadOnly = !!contrib.userId && contrib.userId !== (user as any)?.id;
+                            // Read-only when EITHER the whole fund is read-only to this user (viewer
+                            // / previous-owner — they 403 on every mutation, so a handed-off parent
+                            // must not see live manage buttons on a fund they no longer control) OR
+                            // the plan isn't theirs — mirroring the server's record.userId !== userId
+                            // 403 (the parent's handed-off plan, or a co-parent viewing the owner's
+                            // plans). Fail-closed: a non-matching userId is read-only, never
+                            // manageable (userId is NOT NULL in schema, so this only hardens the
+                            // polarity). A co-parent (write role, NOT isReadOnlyFund) still manages
+                            // their OWN plans — they're owner-of-record on those rows.
+                            const isReadOnly = isReadOnlyFund || contrib.userId !== (user as any)?.id;
                             const bank = contrib.bankAccountId
                               ? bankAccounts.find((b: any) => b.id === contrib.bankAccountId)
                               : null;
@@ -8989,7 +8994,7 @@ export default function Dashboard() {
                       onClick={() => { haptic("light"); setOneTimeAmount("50"); setOneTimeStep("amount"); setOneTimeExecutionModel("auto"); setOneTimeTicker(""); setOneTimePaymentMethod("apple_pay"); setOneTimeMemoryNote(""); setOneTimeNoteSaved(false); setOneTimeModalOpen(true); }}
                       data-testid="button-one-time-contribution-v2"
                     >
-                      Add a gift
+                      {isOwnerMode ? "Add to your fund" : "Add a gift"}
                     </Button>
                   )}
                 </div>
@@ -10743,7 +10748,7 @@ export default function Dashboard() {
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">How we calculate projections ⓘ</p>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} projected value at {age18Transition?.majorityAge ?? 18} is based on:
+                  {isOwnerMode ? "Your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} projected value at {age18Transition?.majorityAge ?? 18} is based on:
                 </p>
               </div>
               <div className="rounded-xl bg-muted/30 p-4 space-y-1.5">
@@ -10766,7 +10771,7 @@ export default function Dashboard() {
                   // honest when they're not the same.
                   const majorityDateLabel = age18Transition
                     ? majorityAge === 18
-                      ? `${childFirst ? `${childFirst}'s` : `${capFirst(childPronouns.possAdj)}`} ${majorityOrdinal} birthday: ${formatAgeTransitionDate(age18Transition.eighteenthBirthday)}`
+                      ? `${isOwnerMode ? "Your" : childFirst ? `${childFirst}'s` : `${capFirst(childPronouns.possAdj)}`} ${majorityOrdinal} birthday: ${formatAgeTransitionDate(age18Transition.eighteenthBirthday)}`
                       : `${childFirst ? `${childFirst}'s` : "Their"} ${majorityAge}st birthday (your state's UTMA majority date): ${formatAgeTransitionDate(age18Transition.eighteenthBirthday)}`
                     : null;
                   const items = [
@@ -10863,7 +10868,7 @@ export default function Dashboard() {
 
           <div className="px-6 pt-5 shrink-0">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-gold)/0.12)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-gold-ink))]">
-              <span className="text-[10px]">💛</span> Add a gift
+              <span className="text-[10px]">{isOwnerMode ? "🌱" : "💛"}</span> {isOwnerMode ? "Add to your fund" : "Add a gift"}
             </span>
           </div>
 
@@ -10876,7 +10881,7 @@ export default function Dashboard() {
                     How much?
                   </h2>
                   <p className="mt-1.5 text-sm text-muted-foreground">
-                    Goes straight into {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} fund and invests immediately.
+                    Goes straight into {isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} fund and invests immediately.
                   </p>
                 </div>
 
@@ -10965,7 +10970,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         <StockLogo ticker={oneTimeTicker} size={20} />
                         <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
-                          {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} {companyName} position
+                          {isOwnerMode ? "Your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} {companyName} position
                         </p>
                       </div>
                       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
@@ -11290,7 +11295,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         <StockLogo ticker={oneTimeTicker} size={20} />
                         <p className="text-[10.5px] font-bold uppercase tracking-[0.08em] text-[hsl(var(--kiddo-evergreen))]">
-                          {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} {companyName} position
+                          {isOwnerMode ? "Your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} {companyName} position
                         </p>
                       </div>
                       <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
@@ -12555,6 +12560,7 @@ export default function Dashboard() {
           thankYousByGiftId={dashboardThankYouByGiftId}
           ownerEmail={user?.email || null}
           isReadOnly={isReadOnlyFund}
+          isOwnerMode={isOwnerMode}
           isManagedMix={selectedHolding ? managedStrategyTickerSet.has(String(selectedHolding.ticker || "").toUpperCase()) : false}
           strategyLabel={strategyLabelFor((activeFund as any)?.investmentStrategy, recipientFirstNameDisplay, isOwnerMode)}
           onAddToStrategy={() => {
@@ -14777,9 +14783,10 @@ export default function Dashboard() {
               subtitle={composedSubtitle}
               summaryStats={stats}
               rows={scopedRows}
-              // Post-handoff owner: read-only history, no manage CTA (the
-              // action sheet's pause/edit/cancel all 403 on the parent's plan).
-              bottomCta={isOwnerMode ? undefined : {
+              // Post-handoff owner OR a read-only viewer/previous-owner: read-only
+              // history, no manage CTA (the action sheet's pause/edit/cancel all
+              // 403 on a plan the current user isn't owner-of-record for).
+              bottomCta={(isOwnerMode || isReadOnlyFund) ? undefined : {
                 // Opens the existing Edit / Pause / Cancel action sheet —
                 // the canonical "do something with this schedule" surface.
                 // Was routing to the multi-step edit modal directly, which

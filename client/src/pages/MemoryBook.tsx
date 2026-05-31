@@ -1141,7 +1141,12 @@ export default function MemoryBook() {
     setComposerGiftId(giftId);
     setComposerTone("warm");
     setComposerContext(ctx ?? {});
-    setComposerMessage(ty?.message || buildThankYouMessage("warm", senderName, amount, ctx));
+    // Post-handoff owner: the stored auto-draft (ty.message) was generated in
+    // the parent era — "Thank you X for your generous gift of $Y to Haley's
+    // Fund!", third person — and reads wrong when Haley thanks her own gifters.
+    // Seed from the first-person warm template instead (buildThankYouMessage is
+    // owner-aware). The parent still gets their stored/auto draft as before.
+    setComposerMessage((!isOwnerMode && ty?.message) || buildThankYouMessage("warm", senderName, amount, ctx));
     setComposerStep("compose");
     haptic("selection");
   };

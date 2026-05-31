@@ -50,6 +50,10 @@ interface HoldingDetailSheetProps {
   // chart, "Chosen with love" attribution, gift history) and stays
   // open for read-only roles; only the parent actions disappear.
   isReadOnly?: boolean;
+  // True when the current viewer OWNS this fund post-handoff (the kid, now the
+  // adult owner). Flips third-person child framing ("% of Haley's fund", "chose
+  // AAPL for Haley") to second person ("% of your fund", "chose AAPL for you").
+  isOwnerMode?: boolean;
   // True when this ticker is a slice of the active managed mix (VTI/BND/etc).
   // When true, per-ETF actions are replaced by strategy-level actions —
   // adding to one ETF or selling one ETF would silently break the strategy.
@@ -533,6 +537,7 @@ function HoldingDetailSheetBody({
   giftAllocations,
   thankYousByGiftId,
   ownerEmail,
+  isOwnerMode = false,
   onAddMore,
   onSell,
   isManagedMix = false,
@@ -990,7 +995,7 @@ function HoldingDetailSheetBody({
         </div>
         <div className="mt-2.5 rounded-2xl bg-muted/40 border border-border/30 p-3.5">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            {recipientName ? `% of ${recipientName}'s fund` : "% of fund"}
+            {isOwnerMode ? "% of your fund" : recipientName ? `% of ${recipientName}'s fund` : "% of fund"}
           </p>
           <p className="text-base font-bold text-foreground tabular-nums">
             {portfolioPct > 0 ? `${portfolioPct.toFixed(1)}%` : "--"}
@@ -1009,10 +1014,10 @@ function HoldingDetailSheetBody({
               <Users size={14} className="text-muted-foreground shrink-0" />
               <p className="text-sm font-semibold text-foreground">
                 {isManaged
-                  ? `Everyone who built ${recipientName ? `${recipientName}'s` : "this"} portfolio`
+                  ? `Everyone who built ${isOwnerMode ? "your" : recipientName ? `${recipientName}'s` : "this"} portfolio`
                   : contributorList.length === 1
-                    ? `1 person chose ${ticker} for ${recipientName || "this fund"}`
-                    : `${contributorList.length} people chose ${ticker} for ${recipientName || "this fund"}`}
+                    ? `1 person chose ${ticker} for ${isOwnerMode ? "you" : recipientName || "this fund"}`
+                    : `${contributorList.length} people chose ${ticker} for ${isOwnerMode ? "you" : recipientName || "this fund"}`}
               </p>
             </div>
             {isManaged && (
