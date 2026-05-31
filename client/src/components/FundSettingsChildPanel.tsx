@@ -73,19 +73,33 @@ export function FundSettingsChildPanel({
   onOpenInviteModal: () => void;
   onOpenCloseDialog: () => void;
 }) {
+  // Post-handoff adult owner: two cards are custodian-of-a-minor concepts that
+  // don't apply to someone who owns their own account, and they aren't owner-
+  // framed yet (unlike ChildIdentity/KidsView/FundDetails, which adapt):
+  //   - Co-parent access — you don't "co-parent" your own adult account; the
+  //     "you are the legal custodian, they have no legal claim" framing is wrong.
+  //   - Successor custodian — "manage the fund if anything happens to you before
+  //     {child} turns 21" is false for a grown owner. The adult analog is a
+  //     beneficiary / transfer-on-death designation — a separate build. Hide
+  //     until that exists rather than show a custodian instrument.
+  // See project_adult_account_is_parent_2_0_onramp.
+  const fundIsOwnerHeld =
+    (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
   return (
     <div className="space-y-4" data-testid="settings-child-panel">
       <ChildIdentityCard fund={fund} onEditChild={onEditFund} />
       <KidsViewCard fund={fund} enabled={kidViewQueryEnabled} />
       <InvitationsToYouCard />
-      <CoParentAccessCard
-        fund={fund}
-        user={user}
-        userPlan={userPlan}
-        onOpenInviteModal={onOpenInviteModal}
-      />
+      {!fundIsOwnerHeld && (
+        <CoParentAccessCard
+          fund={fund}
+          user={user}
+          userPlan={userPlan}
+          onOpenInviteModal={onOpenInviteModal}
+        />
+      )}
       <FundDetailsCard fund={fund} onEditFund={onEditFund} />
-      <SuccessorCustodianCard fund={fund} />
+      {!fundIsOwnerHeld && <SuccessorCustodianCard fund={fund} />}
       <LegalDocumentsCard />
       <CloseFundCard fund={fund} onOpenCloseDialog={onOpenCloseDialog} />
     </div>
