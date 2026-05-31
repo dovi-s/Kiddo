@@ -113,6 +113,12 @@ export default function TaxDocuments() {
     return funds[0];
   }, [funds, storedFundId]);
 
+  // Post-handoff owner: the UTMA terminated at the age of majority and this is
+  // now the owner's own individual account. Kiddie tax, the custodian/beneficiary
+  // split, age-of-majority, UTMA irrevocability, and "custodian controls until
+  // they reach majority" all stop applying — gate every such surface below.
+  const isOwnerMode = (activeFund as any)?.accessRole === "owner" && Boolean((activeFund as any)?.transferredAt);
+
   const { data: activeHoldings = [], isLoading: holdingsLoading } = useQuery<Holding[]>({
     queryKey: ["/api/funds", activeFund?.id, "holdings"],
     queryFn: async () => {
@@ -379,10 +385,10 @@ export default function TaxDocuments() {
             duplicate chrome, and it returns to wherever you came from. */}
         <div>
           <h1 className="font-heading text-2xl font-bold text-foreground">
-            Tax documents{activeFund?.recipientFirstName ? ` · ${capFirst(activeFund.recipientFirstName)}` : ""}
+            Tax documents{!isOwnerMode && activeFund?.recipientFirstName ? ` · ${capFirst(activeFund.recipientFirstName)}` : ""}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-            Cost basis, unrealized gains, and — once investing is live — the tax forms our broker-dealer partner issues for {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s fund` : "this fund"}.
+            Cost basis, unrealized gains, and — once investing is live — the tax forms our broker-dealer partner issues for {isOwnerMode ? "your fund" : activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s fund` : "this fund"}.
             {funds.length > 1 && " Switch funds from the sidebar."}
           </p>
         </div>
@@ -395,7 +401,9 @@ export default function TaxDocuments() {
             <div className="min-w-0">
               <p className="text-sm font-bold text-foreground">Tax information is not tax advice.</p>
               <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                UTMA accounts have unique tax implications including the kiddie tax. Numbers shown here are informational. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing.
+                {isOwnerMode
+                  ? "This is your own individual investment account. Numbers shown here are informational; realized gains are taxed at your own rate when positions are sold. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing."
+                  : "UTMA accounts have unique tax implications including the kiddie tax. Numbers shown here are informational. Once investing is live, official tax forms (1099-DIV, 1099-B) are issued by our broker-dealer partner each January for the prior tax year. Consult a qualified CPA before filing."}
               </p>
             </div>
           </div>
@@ -617,7 +625,7 @@ export default function TaxDocuments() {
             </div>
           )}
           <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
-            Cost basis is the total you've invested in each position. Gains are <span className="font-semibold">unrealized</span> until positions are sold — no tax is owed on growth alone. Actual tax treatment depends on the holding period and the kiddie tax rules below.
+            Cost basis is the total you've invested in each position. Gains are <span className="font-semibold">unrealized</span> until positions are sold — no tax is owed on growth alone. Actual tax treatment depends on the holding period{isOwnerMode ? "." : " and the kiddie tax rules below."}
           </p>
         </section>
 
@@ -829,6 +837,9 @@ export default function TaxDocuments() {
             integration state. Real IRS thresholds for the most recent
             published year. The "consult a CPA" note keeps us out of giving
             actual advice while still answering the most-asked UTMA question. */}
+        {/* Kiddie tax applies only to minors — hidden for the post-handoff
+            adult owner, whose realized gains are taxed at their own rate. */}
+        {!isOwnerMode && (
         <section>
           <p className="kiddo-section-label mb-2">Understanding the kiddie tax</p>
           <div className="kiddo-card p-5">
@@ -855,6 +866,7 @@ export default function TaxDocuments() {
             </p>
           </div>
         </section>
+        )}
 
         {/* Year-end summary — the single highest-impact CPA-readable
             artifact on this page. One glance shows every money flow
@@ -959,51 +971,58 @@ export default function TaxDocuments() {
               <div className="grid sm:grid-cols-2 gap-3">
                 {(() => {
                   const items: Array<{ label: string; value: string | null }> = [];
-                  // Custodian — parent's full name when available.
+                  // Custodian — parent's full name. Post-handoff there is NO
+                  // custodian (the owner holds the account themselves), so omit it.
                   const custodianName = [user?.firstName, (user as any)?.lastName].filter(Boolean).join(" ").trim();
-                  items.push({
-                    label: "Custodian",
-                    value: custodianName || (user as any)?.email || null,
-                  });
+                  if (!isOwnerMode) {
+                    items.push({
+                      label: "Custodian",
+                      value: custodianName || (user as any)?.email || null,
+                    });
+                  }
                   // Beneficiary — kid's full name + birthdate when known.
                   const kidFirst = (activeFund as any).recipientFirstName || "";
                   const kidLast = (activeFund as any).recipientLastName || "";
                   const beneficiaryName = [capFirst(kidFirst), capFirst(kidLast)].filter(Boolean).join(" ").trim();
                   items.push({
-                    label: "Beneficiary",
+                    label: isOwnerMode ? "Account owner" : "Beneficiary",
                     value: beneficiaryName || null,
                   });
                   // Beneficiary birthdate (UTMA majority math anchors on this).
                   const dob = (activeFund as any).recipientBirthdate;
                   const dobDate = dob ? new Date(dob) : null;
                   items.push({
-                    label: "Beneficiary date of birth",
+                    label: isOwnerMode ? "Date of birth" : "Beneficiary date of birth",
                     value: dobDate && Number.isFinite(dobDate.getTime())
                       ? dobDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
                       : null,
                   });
-                  items.push({ label: "Account type", value: "UTMA (Uniform Transfers to Minors Act)" });
+                  items.push({ label: "Account type", value: isOwnerMode ? "Personal (individual account)" : "UTMA (Uniform Transfers to Minors Act)" });
                   // State + majority age — governs which UTMA statute
                   // applies. State stored as 2-letter code; surfaced
                   // verbatim because parents recognize codes.
                   const state = (activeFund as any).recipientState || null;
                   const stateCode = state ? String(state).toUpperCase() : null;
-                  items.push({
-                    label: "Governing state",
-                    value: stateCode ? `${stateCode} (UTMA statute)` : null,
-                  });
+                  if (!isOwnerMode) {
+                    items.push({
+                      label: "Governing state",
+                      value: stateCode ? `${stateCode} (UTMA statute)` : null,
+                    });
+                  }
                   // The majority age is set by the GOVERNING STATE's UTMA
                   // statute (18 in most; 19 in AL/NE; 21 in MS/PA and others).
                   // Only assert a definitive age when the state is known —
                   // otherwise the 18 default is a guess presented as law on a
                   // tax/legal page. Per project_age_milestone_majorityage_footgun.
                   const ma = Number((activeFund as any).majorityAge) || 18;
-                  items.push({
-                    label: "Age of majority",
-                    value: stateCode
-                      ? `${ma} (per ${stateCode} UTMA law)`
-                      : "18 in most states; set your state to confirm",
-                  });
+                  if (!isOwnerMode) {
+                    items.push({
+                      label: "Age of majority",
+                      value: stateCode
+                        ? `${ma} (per ${stateCode} UTMA law)`
+                        : "18 in most states; set your state to confirm",
+                    });
+                  }
                   // Fund open date.
                   const opened = (activeFund as any).createdAt;
                   const openedDate = opened ? new Date(opened) : null;
@@ -1018,12 +1037,14 @@ export default function TaxDocuments() {
                   // reclaimed. Important paper-trail item.
                   const acked = (activeFund as any).utmaAcknowledgedAt;
                   const ackedDate = acked ? new Date(acked) : null;
-                  items.push({
-                    label: "UTMA irrevocability acknowledged",
-                    value: ackedDate && Number.isFinite(ackedDate.getTime())
-                      ? ackedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-                      : null,
-                  });
+                  if (!isOwnerMode) {
+                    items.push({
+                      label: "UTMA irrevocability acknowledged",
+                      value: ackedDate && Number.isFinite(ackedDate.getTime())
+                        ? ackedDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                        : null,
+                    });
+                  }
                   return items.map((row) => (
                     <div key={row.label} className="min-w-0">
                       <p className="text-[10.5px] font-bold uppercase tracking-wide text-muted-foreground">{row.label}</p>
@@ -1035,7 +1056,9 @@ export default function TaxDocuments() {
                 })()}
               </div>
               <p className="mt-4 text-[11px] text-muted-foreground/70 leading-relaxed">
-                These details come from your account setup. The custodian, beneficiary, state, and majority age all govern how UTMA tax rules apply to {activeFund.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "this"} fund. Update them in Settings → Child if anything changes (a move to a new state, a legal-name change, etc.).
+                {isOwnerMode
+                  ? "These details come from your account setup. Update them in Settings → Account if anything changes (a legal-name change, etc.)."
+                  : <>These details come from your account setup. The custodian, beneficiary, state, and majority age all govern how UTMA tax rules apply to {activeFund.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "this"} fund. Update them in Settings → Child if anything changes (a move to a new state, a legal-name change, etc.).</>}
               </p>
             </div>
           </section>
@@ -1061,7 +1084,7 @@ export default function TaxDocuments() {
                 <div>
                   <p className="text-sm font-bold text-foreground">Our broker-dealer partner · Member FINRA / SIPC</p>
                   <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                    When investing is live, {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your child's"} UTMA holds positions through our broker-dealer partner, a US broker-dealer registered with the SEC, regulated by FINRA, and a member of SIPC. Our broker-dealer partner provides custody for the assets; Kiddo provides the front-end, the gifting flow, and the Memory Book. This is the same custody pattern most consumer investing apps use.
+                    When investing is live, {isOwnerMode ? "your account" : (activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s UTMA` : "your child's UTMA")} holds positions through our broker-dealer partner, a US broker-dealer registered with the SEC, regulated by FINRA, and a member of SIPC. Our broker-dealer partner provides custody for the assets; Kiddo provides the front-end, the gifting flow, and the Memory Book. This is the same custody pattern most consumer investing apps use.
                   </p>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-2.5">
@@ -1074,13 +1097,15 @@ export default function TaxDocuments() {
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Segregated accounts</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      Once investing is live, customer assets are held separately from our broker-dealer partner's own funds under SEC Rule 15c3-3. The shares are {activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "the child's"}, not the broker's.
+                      Once investing is live, customer assets are held separately from our broker-dealer partner's own funds under SEC Rule 15c3-3. The shares are {isOwnerMode ? "yours" : (activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "the child's")}, not the broker's.
                     </p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Account type</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
-                      UTMA custodial account under your state's Uniform Transfers to Minors Act. Custodian (you) controls until {activeFund?.recipientFirstName ? capFirst(activeFund.recipientFirstName) : "the child"} reaches majority age in your state.
+                      {isOwnerMode
+                        ? "Individual brokerage account held in your name. The UTMA ended at the age of majority — you own and control the account directly now."
+                        : <>UTMA custodial account under your state's Uniform Transfers to Minors Act. Custodian (you) controls until {activeFund?.recipientFirstName ? capFirst(activeFund.recipientFirstName) : "the child"} reaches majority age in your state.</>}
                     </p>
                   </div>
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
