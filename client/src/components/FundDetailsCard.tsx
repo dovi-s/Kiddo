@@ -62,7 +62,12 @@ export function FundDetailsCard({
         </div>
         <div className="flex items-center justify-between gap-4 p-4">
           <span className="text-sm text-muted-foreground">Account type</span>
-          <span className="text-sm font-semibold text-foreground">{fund?.accountType === "personal" ? "Personal" : "UTMA"}</span>
+          {/* A UTMA terminates at the age of majority — the custodianship
+              dissolves and the assets become the (former) minor's own
+              individual account. So a post-handoff owner's fund is Personal,
+              even if the stored accountType still reads "UTMA" (the demo seed /
+              handoff may not flip the column). Show the legally-correct type. */}
+          <span className="text-sm font-semibold text-foreground">{(isOwnerMode || fund?.accountType === "personal") ? "Personal" : "UTMA"}</span>
         </div>
         <div className="flex items-center justify-between gap-4 p-4">
           <span className="text-sm text-muted-foreground">Status</span>

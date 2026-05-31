@@ -4081,7 +4081,9 @@ const [editFundName, setEditFundName] = useState("");
               </div>
             ) : (
               <h1 className="mt-1 font-heading text-2xl md:text-3xl font-semibold text-foreground leading-tight">
-                {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "Your fund"}
+                {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt))
+                  ? "Your fund"
+                  : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "Your fund"}
               </h1>
             )}
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
