@@ -54,10 +54,15 @@ interface MilestoneMomentProps {
   currentValue: number;
   previousValue: number;
   recipientName?: string | null;
+  // True when the viewer OWNS this fund post-handoff (the kid, now adult owner).
+  // The ON-SCREEN moment is shown TO them, so it reads second-person ("Your fund
+  // crossed"). NOTE: the shareable card stays third-person ("Haley's fund") on
+  // purpose — it's an outbound image whose audience is other people.
+  isOwnerMode?: boolean;
   onDismiss?: () => void;
 }
 
-export function MilestoneMoment({ currentValue, previousValue, recipientName, onDismiss }: MilestoneMomentProps) {
+export function MilestoneMoment({ currentValue, previousValue, recipientName, isOwnerMode = false, onDismiss }: MilestoneMomentProps) {
   const [milestone, setMilestone] = useState<number | null>(null);
   const [visible, setVisible] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -226,7 +231,7 @@ export function MilestoneMoment({ currentValue, previousValue, recipientName, on
                 {formatMilestone(milestone)}
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                {recipientName
+                {recipientName && !isOwnerMode
                   ? `${recipientName}'s fund crossed ${formatMilestone(milestone)}.`
                   : `Your fund crossed ${formatMilestone(milestone)}.`}
                 {milestoneCopy?.emotionalLine ? ` ${milestoneCopy.emotionalLine}` : ""}

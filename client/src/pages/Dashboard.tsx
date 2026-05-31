@@ -5111,6 +5111,7 @@ export default function Dashboard() {
             anchor (community-college, state-school-year, etc.) honor
             the locked discipline against AI-slop celebrations. */}
         <MilestoneMoment
+          isOwnerMode={isOwnerMode}
           currentValue={rawTotalValue}
           previousValue={prevValueRef.current}
           recipientName={recipientFirstNameDisplay}
