@@ -2303,6 +2303,10 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
           maximumFractionDigits: 0,
         }).format(investedValue);
         const who = childName || "your child";
+        // Owner mode needs both grammatical forms: possessive ("your existing")
+        // and object ("a taxable event for you").
+        const whoPossessive = seIsOwnerMode ? "Your" : `${who}'s`;
+        const whoObject = seIsOwnerMode ? "you" : who;
         return (
           <div
             className="rounded-xl border border-[hsl(var(--kiddo-gold)/0.35)] bg-[hsl(var(--kiddo-gold)/0.06)] p-3 space-y-2"
@@ -2330,7 +2334,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
               </span>
             </div>
             <p className="text-xs leading-relaxed text-foreground">
-              {who}'s existing {formattedInvested} stays invested as it is. New gifts and recurring investments will follow the {newLabel} from now on.
+              {whoPossessive} existing {formattedInvested} stays invested as it is. New gifts and recurring investments will follow the {newLabel} from now on.
             </p>
             {/* Em-dash removed (feedback_no_emdash). Orphan-holding consequence
                 added: previously the copy implied existing positions stay
@@ -2341,7 +2345,7 @@ function StrategyEditor({ fund, canUseCustom, onSuccess }: { fund: any; canUseCu
                 added to and never sold. Worth saying explicitly so the
                 parent isn't surprised three months later. */}
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              We don't sell holdings to switch. Every sale would be a taxable event for {who}. Holdings that aren't in the new mix stay where they are. We won't add to them or sell them. The new mix drifts toward target as fresh gifts arrive.
+              We don't sell holdings to switch. Every sale would be a taxable event for {whoObject}. Holdings that aren't in the new mix stay where they are. We won't add to them or sell them. The new mix drifts toward target as fresh gifts arrive.
             </p>
           </div>
         );
