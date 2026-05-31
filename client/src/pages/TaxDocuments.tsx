@@ -470,7 +470,7 @@ export default function TaxDocuments() {
               and the positions table are ALWAYS current — they don't change by
               year — so say so, or clicking years reads as "nothing happened." */}
           <p className="text-[11px] text-muted-foreground/70 leading-relaxed">
-            Scopes the forms and the {yearFilter} summary below. Your cost basis, value, and positions are current — they don't change by year.
+            Scopes the forms and the {yearFilter} summary below. Your cost basis, value, and positions are current. They don't change by year.
           </p>
         </div>
 
@@ -1137,7 +1137,7 @@ export default function TaxDocuments() {
                     <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Account type</p>
                     <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">
                       {isOwnerMode
-                        ? "Individual brokerage account held in your name. The UTMA ended at the age of majority — you own and control the account directly now."
+                        ? "Individual brokerage account held in your name. The UTMA ended at the age of majority. You own and control the account directly now."
                         : <>UTMA custodial account under your state's Uniform Transfers to Minors Act. Custodian (you) controls until {activeFund?.recipientFirstName ? capFirst(activeFund.recipientFirstName) : "the child"} reaches majority age in your state.</>}
                     </p>
                   </div>
