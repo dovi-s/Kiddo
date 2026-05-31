@@ -38,7 +38,7 @@ import {
   age18ReminderState,
 } from "../shared/schema";
 import { sql as drizzleSql } from "drizzle-orm";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, or, like } from "drizzle-orm";
 import { runDunphySeed } from "./seed-dunphys";
 
 const DEMO_EMAILS = [
@@ -65,10 +65,21 @@ async function wipeDemoState(): Promise<void> {
 
   console.log(`Found ${demoUserIds.length} demo user(s). Wiping dependent rows...`);
 
-  // 2. Find demo fund IDs (owned by demo users).
+  // 2. Find demo fund IDs. Collect by current owner OR previous owner OR the
+  //    "-dunphy" slug — NOT just current owner. A fund handed off to a graduated
+  //    demo kid (Haley) is owned by the KID, and across resets the kid's funds
+  //    were being missed and ORPHANED: each reseed left the old transferred fund
+  //    behind and created a slug-collision dupe (haley-dunphy-2, -3…), so the app
+  //    showed an empty Haley fund while her gifts/activities lived on an orphan.
+  //    previousOwnerId (the former custodian, always a demo user) + the slug
+  //    pattern (every demo fund is "{kid}-dunphy") make the wipe exhaustive.
   const demoFunds = await db.select({ id: funds.id, name: funds.name })
     .from(funds)
-    .where(inArray(funds.userId, demoUserIds));
+    .where(or(
+      inArray(funds.userId, demoUserIds),
+      inArray(funds.previousOwnerId, demoUserIds),
+      like(funds.slug, "%-dunphy%"),
+    ));
   const demoFundIds = demoFunds.map((f) => f.id);
 
   // 3. Delete dependent rows in FK-safe order. Fund-scoped first, then
