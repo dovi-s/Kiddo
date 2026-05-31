@@ -13,10 +13,18 @@ gates are *blocking and require written sign-off*, not parallel rubber-stamps.
 ## What the panel found wrong / missing (and status)
 1. **Missing decline-retry worker for `gift_intents`.** The dunning cascade reused
    in settlement runs on `recurring_gifts`, a different table — so a declined
-   off-session charge currently just records `declined` and stops. **STILL OPEN
-   (next increment).**
+   off-session charge currently just records `declined` and stops. **FIXED
+   2026-05-29 (commit 5b90391)** — extracted a shared `settleGiftIntentOffSession`
+   (server/giftIntentSettlement.ts) used by both the pairing loop and a new
+   `processDeclineRetries` pass in `giftIntentExpiryWorker.ts` (daily): retries
+   the vaulted card for paired+declined intents, gives up terminally after
+   `MAX_SETTLE_RETRIES` (5) with one goodbye email. Interactive "update your card"
+   re-vault remains a future enhancement.
 2. **No orphan monitoring** (charge succeeds but custodian/BD rejects → funds in
-   limbo). **STILL OPEN.**
+   limbo). **ADDRESSED 2026-05-31** — `server/giftOrphanMonitorWorker.ts` scans for
+   charged-but-not-invested gifts (status `processing`, no `investedAt`, past a 3h
+   grace) and alerts ops (deduped per gift). Read-only; built ahead of custody so a
+   real BD rejection surfaces here the moment investing is wired.
 3. **Disclosure placeholder below the required floor** — omitted the trigger, the
    60-day window, the retry loop, the no-charge-if-unpaired guarantee, and
    affirmative consent. **FIXED 2026-05-29** — added a point-of-charge disclosure
@@ -25,9 +33,15 @@ gates are *blocking and require written sign-off*, not parallel rubber-stamps.
 4. **Double-charge / idempotency risk** on settlement retry. **FIXED 2026-05-29**
    — off-session charge now uses an idempotency key (`gifter-settle-<intentId>`).
 5. **Expiry worker** must cover the capture case (delete SetupIntent; no refund).
-   `giftIntentExpiryWorker.ts` exists — **needs confirmation/extension. OPEN.**
+   **FIXED 2026-05-31** — `stripeService.detachGifterSavedCard()` + a self-healing
+   cleanup pass in `giftIntentExpiryWorker.ts` detach the vaulted card at 60-day
+   expiry (clearing the ref only after a successful detach), honoring the "we delete
+   your saved card after 60 days" disclosure.
 6. **Tests** for intent → setup → pairing → charge → invest, and decline → dunning.
-   **OPEN.**
+   **STARTED 2026-05-31** — `script/test-capture-at-intent.ts` locks the two safety
+   invariants (flag hermeticity + settlement refuses to charge without prereqs),
+   wired into `test:all`. Fuller pairing→charge→invest e2e needs Stripe test-mode +
+   a live custodian, so it lands with custody.
 
 ## 🔴 Five WRITTEN gates before the flag flips to true
 | # | Gate | Owner |

@@ -172,6 +172,37 @@ need a **written yes/no** on each:
 **What we need back:** which holding structure is permissible and cleanest, the
 max defensible hold window, and the required gifter disclosures.
 
+**The five written gates that must close before we flip the flag.** The built
+flow is the no-funds-held SetupIntent design above; an internal implementation
+review (`P0-1_IMPLEMENTATION_REVIEW.md`) identified these specific sign-offs.
+Please address each **in writing**:
+1. **Off-session MTL/MSB classification** *(securities counsel)* — gate (A): does
+   the off-session, parent-triggered charge with a 14–30 day retry loop trigger
+   FinCEN MSB / state money-transmission licensing, or does Stripe's acquirer
+   license cover it? (Regulators weigh *control over timing/direction*, not
+   possession — "Stripe holds the token" is an argument, not a shield.)
+2. **Broker-dealer multi-gifter acceptance** *(BD/custodian + counsel)* — gate (B):
+   written amendment that the BD accepts multiple non-parent gifters into one
+   minor UTMA, their source-of-funds/AML procedure, and a tolerance for a volume
+   surge (a test batch).
+3. **Point-of-charge + dunning disclosure compliance** *(consumer-protection counsel)* —
+   does our built disclosure (saved-now/charged-later, the trigger, the 60-day
+   window, the 30-day retry, the no-charge-if-unpaired guarantee, affirmative
+   consent) satisfy **UDAAP (12 CFR §1026.61), Reg E, ROSCA, EFTA, and the
+   strictest state UDAP (CA/NY/IL/TX)** — and is a checkbox required vs. a banner?
+4. **Stripe Compliance pre-clearance** *(payments ops → Stripe; not counsel)* —
+   notify Stripe in writing that this is *gifting* off-session (not SaaS dunning)
+   with a parent-triggered retry, and get the use case blessed. (Listed here so
+   it isn't lost — it's the founder's action, not a counsel question.)
+5. **Gift-completion timing** *(tax counsel)* — confirm the UTMA gift completes on
+   the **off-session charge date, not the SetupIntent date** (IRC §2511), no
+   Form 709 ambiguity.
+
+Nothing flips the `GIFTER_CAPTURE_AT_INTENT` flag until these five land in
+writing. The **code is complete**: the card is auto-deleted at 60-day expiry, the
+off-session charge is idempotent, decline-retry dunning + orphan monitoring +
+safety tests are in place. So post-sign-off this is a **flag flip, not a build**.
+
 ---
 
 # Part 3 — Child PII on parental account deletion ⭐ (Privacy / Securities)
