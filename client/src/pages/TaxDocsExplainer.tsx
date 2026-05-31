@@ -16,8 +16,19 @@
 import { Link } from "wouter";
 import { ArrowLeft, FileText, Receipt, TrendingUp, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useFunds } from "@/hooks/use-funds";
+import { getActiveFundId } from "@/hooks/use-active-fund";
 
 export default function TaxDocsExplainer() {
+  // Owner-mode (the post-handoff adult owner of the active fund): the kiddie-tax
+  // section doesn't apply to them, and it's hidden on the main tax page too
+  // (c07a9c0). This explainer is reached from the fund-scoped tax docs, so the
+  // active fund tells us whether to drop it. Parents and minor recipients still
+  // see it — it's relevant education for them.
+  const { data: funds = [] } = useFunds();
+  const activeFundId = getActiveFundId();
+  const activeFund = funds.find((f) => String(f.id) === String(activeFundId)) ?? funds[0] ?? null;
+  const isOwnerMode = (activeFund as any)?.accessRole === "owner" && Boolean((activeFund as any)?.transferredAt);
   return (
     <div className="kiddo-app-page md:ml-[264px] pb-24 md:pb-8">
       <main className="kiddo-canvas px-4 py-6 space-y-6 max-w-2xl mx-auto">
@@ -114,6 +125,7 @@ export default function TaxDocsExplainer() {
           }
         />
 
+        {!isOwnerMode && (
         <Section
           icon={<AlertCircle size={16} />}
           title="If you're under 19 (or in college)"
@@ -146,6 +158,7 @@ export default function TaxDocsExplainer() {
             </>
           }
         />
+        )}
 
         <Section
           icon={<AlertCircle size={16} />}
