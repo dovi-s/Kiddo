@@ -720,7 +720,9 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     name: `${kid.firstName}'s Fund`,
     slug: kid.slug,
     description: kid.description,
-    accountType: "utma",
+    // Canonical casing "UTMA" (matches driveWealthAccountSetup + the real fund
+    // creation), not "utma" — several reads compare accountType === "UTMA".
+    accountType: "UTMA",
     status: "active",
     // Column is `investmentStrategy` (DB: investment_strategy). The old
     // `strategy` key matched NO column, so Drizzle silently dropped it and
@@ -1427,6 +1429,15 @@ export async function runDunphySeed(options: { closePool?: boolean } = {}): Prom
     await db.update(funds).set({
       userId: haleyUserId,
       previousOwnerId: philId,
+      // Mirror the real /complete handoff (routes.ts ~7503): a UTMA terminates
+      // at majority and becomes the owner's own individual account. Without
+      // these the demo fund stayed accountType "utma" + recipientRelation null,
+      // which (a) showed "UTMA" on the tax / fund-details surfaces and (b) made
+      // postHandoffEngagementWorker (gated on LOWER(accountType)='personal')
+      // SKIP Haley — so the graduated owner never got the post-handoff
+      // engagement loop. Set them here so the seed matches a real handoff.
+      accountType: "Personal",
+      recipientRelation: "self",
       transferredAt,
       kidWelcomeCompletedAt: transferredAt,
     }).where(eq(funds.id, haleyFundId));
