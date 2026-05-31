@@ -172,6 +172,59 @@ legal counsel signs off):
 - Customer research surfaces "I want to name a successor" as a
   felt-need parent request (would justify prioritizing Phase 1+2).
 
+## Post-handoff: beneficiary / transfer-on-death (the OWNER-side analog)
+
+Everything above is the *pre-majority* case (a custodian dies while the
+beneficiary is still a minor → a **successor custodian** continues the UTMA).
+After the age-of-majority handoff there is **no custodian** — the grown
+recipient owns an individual account outright. So the "what if the holder dies"
+question changes instrument entirely: it's no longer a successor custodian, it's
+a **beneficiary / transfer-on-death (TOD)** designation on the owner's own
+account.
+
+**Why the Settings card is hidden in owner mode right now.** The Account-tab
+`SuccessorCustodianCard` is gated off for owners in `FundSettingsChildPanel`
+(`!fundIsOwnerHeld`), because "name someone to manage the fund if anything
+happens to you before {child} turns 21" is meaningless for a 22-year-old who
+owns the account. Hiding it is the correct interim — but it leaves a real gap:
+**the owner currently has no way to say who inherits the account.** That gap is
+in tension with the locked `project_adult_account_is_parent_2_0_onramp` principle
+("not a cash-out terminal") — a beneficiary/TOD designation is precisely what
+makes the adult account a *persistent, transferable* asset rather than something
+that dies (legally messy, into probate) with the owner.
+
+**This is NOT built and must not be built blind** — same reasoning as the
+takeover flow above: it's legal-heavy and a half-built version is worse than
+nothing.
+
+### Open legal/compliance questions (for the same counsel engagement)
+1. **Does the broker-dealer support TOD registration** on an individual taxable
+   account, and via what API/process? (Most US broker-dealers offer TOD; whether
+   our partner exposes it programmatically is the question — mirrors Open
+   Question 2 above for custodian-change.)
+2. **TOD vs. will/probate.** A TOD beneficiary bypasses probate for that account.
+   Is a TOD designation through Kiddo legally sufficient, or advisory-only
+   (i.e., we collect intent but the actual TOD must be filed with the broker)?
+3. **Beneficiary KYC / identity.** What do we need to collect about the
+   beneficiary, and when (at designation vs. at death)?
+4. **State variance.** TOD (a.k.a. POD for cash) availability + rules vary by
+   state, like the UTMA successor mechanism.
+5. **Minor beneficiary.** If the owner names a *minor* beneficiary, the asset
+   would need to land in a new UTMA — i.e., the loop's next generation. Worth
+   designing so this case routes back into Kiddo's own custodial product (a
+   clean parent-2.0 / kid-3.0 hook) rather than out to an external custodian.
+
+### Interim + build trigger
+- **Interim (today):** card hidden in owner mode; no beneficiary designation
+  exists for owners. Acceptable pre-custody (no real assets, no real death
+  scenarios).
+- **Build trigger:** custody live + counsel sign-off on the questions above
+  (bundle into the same securities/fintech engagement as
+  `LAWYER_Q_HOLDING_GIFT_FUNDS.md` and the AUM brief). Then build a
+  "Beneficiary" card on the owner Account tab (the owner-mode replacement for
+  the hidden successor card), with the same human-review + broker-dealer
+  integration discipline as the successor takeover flow.
+
 ## References
 
 - Internal: `AGE_18_HANDOFF_SPEC.md` failure-paths section
