@@ -4111,7 +4111,7 @@ const [editFundName, setEditFundName] = useState("");
                 directly, then this entire membership tab JSX can be
                 deleted. */}
             {[
-              { id: "child", label: "Child" },
+              { id: "child", label: ((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "Account" : "Child" },
               { id: "gifts", label: "Gifts" },
               { id: "notifications", label: "Notifications" },
               { id: "money", label: "Money" },
@@ -4224,7 +4224,7 @@ const [editFundName, setEditFundName] = useState("");
                     <span className="text-sm font-semibold text-foreground">Link only · Private</span>
                   </div>
                   <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                    Only people you share the link with can reach this fund. Funds for children are never publicly searchable.
+                    Only people you share the link with can reach this fund. {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? "It is never publicly searchable." : "Funds for children are never publicly searchable."}
                   </p>
                 </div>
               </div>
@@ -4654,7 +4654,7 @@ const [editFundName, setEditFundName] = useState("");
                     <Star size={16} />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-foreground">Parent lifecycle emails</h2>
+                    <h2 className="text-base font-bold text-foreground">{notificationFundIsOwnerHeld ? "Lifecycle emails" : "Parent lifecycle emails"}</h2>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                       Kiddo sends a lightweight series so important moments do not rely on memory alone.
                     </p>
@@ -4726,7 +4726,7 @@ const [editFundName, setEditFundName] = useState("");
                   />
                   <NotificationSwitchRow
                     title="Memory Book sharing"
-                    body={`Lets you send warm parent-written updates. ${memoryBookSharesSent} of 4 used this year.`}
+                    body={`Lets you send warm ${notificationFundIsOwnerHeld ? "" : "parent-written "}updates. ${memoryBookSharesSent} of 4 used this year.`}
                     checked={notificationSettings.memoryBookSharing ?? true}
                     disabled={loadingGifterNotifications || updateGifterNotificationSettings.isPending}
                     onCheckedChange={(checked) => updateGifterNotificationSetting("memoryBookSharing", checked)}
@@ -5030,9 +5030,11 @@ const [editFundName, setEditFundName] = useState("");
               <div className="p-5">
                 <h2 className="text-base font-bold text-foreground">Taking money out</h2>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Move cash from {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} to your bank.
-                  This is a deliberate action. Once invested, the money belongs to {recipientFirstNameDisplay || "the child"},
-                  so withdrawals are distributions to them and may have tax implications.
+                  {((primaryFund as any)?.accessRole === "owner" && Boolean((primaryFund as any)?.transferredAt)) ? (
+                    <>Move cash from your fund to your bank. This is a deliberate action. The money is yours; selling investments to withdraw may have capital-gains tax implications.</>
+                  ) : (
+                    <>Move cash from {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s fund` : "this fund"} to your bank. This is a deliberate action. Once invested, the money belongs to {recipientFirstNameDisplay || "the child"}, so withdrawals are distributions to them and may have tax implications.</>
+                  )}
                 </p>
                 <Button
                   variant="outline"
