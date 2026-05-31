@@ -3906,7 +3906,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     const handler = () => {
-      if (isFamily || isStarter) setCreateEventSheetOpen(true); else setEventGateOpen(true);
+      if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true);
     };
     window.addEventListener("kiddo:create-event", handler);
     return () => window.removeEventListener("kiddo:create-event", handler);
@@ -9022,7 +9022,7 @@ export default function Dashboard() {
                 {!isReadOnlyFund && (
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); haptic("selection"); if (isFamily || isStarter) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
+                    onClick={(e) => { e.stopPropagation(); haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
                     className="flex h-6 w-6 items-center justify-center rounded-full bg-[hsl(var(--kiddo-evergreen)/0.10)] text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.18)] transition-colors"
                     aria-label="New occasion or goal"
                   >
@@ -9492,7 +9492,7 @@ export default function Dashboard() {
 
                 const visibleArchived = showArchivedTilesV2 ? archivedEvents : [];
                 const childFirst = recipientFirstNameDisplay || "your child";
-                const openCreate = () => { haptic("selection"); if (isFamily || isStarter) setCreateEventSheetOpen(true); else setEventGateOpen(true); };
+                const openCreate = () => { haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); };
 
                 if (activeEvents.length === 0 && archivedEvents.length === 0) {
                   return (
@@ -9698,7 +9698,7 @@ export default function Dashboard() {
                       {!isReadOnlyFund && (
                         <button
                           type="button"
-                          onClick={() => { haptic("selection"); if (isFamily || isStarter) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
+                          onClick={() => { haptic("selection"); if (isFamily || isStarter || isOwnerMode) setCreateEventSheetOpen(true); else setEventGateOpen(true); }}
                           style={{
                             width: 72, minWidth: 72, height: 148, flexShrink: 0,
                             borderRadius: 18, border: "1.5px dashed rgba(26,23,16,0.15)",
@@ -12653,6 +12653,7 @@ export default function Dashboard() {
         childPhotoUrl={(activeFund as any)?.childPhotoUrl || undefined}
         investPrefs={dashboardSummary?.investmentPreferences || undefined}
         editEvent={editEventTarget}
+        isOwnerMode={isOwnerMode}
       />
 
 

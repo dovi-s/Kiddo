@@ -45,6 +45,9 @@ interface CreateEventSheetProps {
   childPhotoUrl?: string;
   investPrefs?: InvestPrefs;
   editEvent?: EditEventData | null;
+  // True when the viewer OWNS this fund post-handoff (the adult owner). Flips
+  // "for {child}" / "into {child}'s fund" instructional copy to second person.
+  isOwnerMode?: boolean;
 }
 
 const GIFTING_TYPES = [
@@ -214,7 +217,7 @@ const S = {
 };
 
 export function CreateEventSheet({
-  open, onClose, fundId, fundName, fundSlug, childPhotoUrl, investPrefs, editEvent,
+  open, onClose, fundId, fundName, fundSlug, childPhotoUrl, investPrefs, editEvent, isOwnerMode = false,
 }: CreateEventSheetProps) {
   const isEditing = !!(editEvent?.id);
   const isCreatingFromArchived = isEditing && !!editEvent?.isArchived;
@@ -523,9 +526,9 @@ export function CreateEventSheet({
     (!isEditing && step !== "category" && step !== "done");
 
   const headerContent = () => {
-    if (step === "category") return { title: "New occasion or goal", sub: fundName ? `What are you creating for ${fundName}?` : "What are you creating?" };
-    if (step === "type") return { title: "What's the occasion?", sub: fundName ? `For ${fundName}` : "Pick one" };
-    if (step === "goal-type") return { title: "Savings goal", sub: fundName ? `What is ${fundName} saving for?` : "What are they saving for?" };
+    if (step === "category") return { title: "New occasion or goal", sub: (fundName && !isOwnerMode) ? `What are you creating for ${fundName}?` : "What are you creating?" };
+    if (step === "type") return { title: "What's the occasion?", sub: (fundName && !isOwnerMode) ? `For ${fundName}` : "Pick one" };
+    if (step === "goal-type") return { title: "Savings goal", sub: isOwnerMode ? "What are you saving for?" : fundName ? `What is ${fundName} saving for?` : "What are they saving for?" };
     if (step === "details") return { title: isEditing && !isCreatingFromArchived ? "Edit occasion" : selectedGiftingType?.label ?? "Occasion", sub: isEditing && !isCreatingFromArchived ? "Update the details" : "Tell people what it's about" };
     if (step === "goal-details") return { title: isEditing && !isCreatingFromArchived ? "Edit goal" : selectedGoalTypeDef?.label ?? "Savings goal", sub: "Set the details" };
     if (step === "preview") return { title: "Preview", sub: "How people will see it" };
@@ -971,7 +974,7 @@ export function CreateEventSheet({
               <div style={{ marginBottom: 14 }}>
                 <label style={S.label()}>Description <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
                 <textarea value={goalDescription} onChange={(e) => setGoalDescription(e.target.value)}
-                  placeholder={`What is this goal for? How will it help ${fundName || "them"}?`}
+                  placeholder={`What is this goal for? How will it help ${isOwnerMode ? "you" : fundName || "them"}?`}
                   rows={3} style={S.textarea()} />
               </div>
 
@@ -1167,7 +1170,7 @@ export function CreateEventSheet({
                 <div style={{ marginBottom: 20, padding: "13px 16px", borderRadius: 16, background: "hsl(143,28%,96%)", border: "1.5px solid hsl(143,28%,88%)", display: "flex", alignItems: "flex-start", gap: 10 }}>
                   <span style={{ fontSize: 16, lineHeight: 1, marginTop: 1, flexShrink: 0 }}>🌱</span>
                   <p style={{ fontSize: 13, color: "hsl(143,40%,28%)", lineHeight: 1.6, margin: 0 }}>
-                    Gifts to this occasion go directly into {fundName ? `${fundName}'s fund` : "the fund"}. Same place. Just beautifully tagged.
+                    Gifts to this occasion go directly into {isOwnerMode ? "your fund" : fundName ? `${fundName}'s fund` : "the fund"}. Same place. Just beautifully tagged.
                   </p>
                 </div>
               )}

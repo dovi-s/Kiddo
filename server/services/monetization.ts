@@ -157,6 +157,32 @@ export async function hasPaidPlanForFund(
   ]);
   const legacy = householdPlan === "legacy";
   const family = householdPlan === "family" || legacy;
+
+  // Post-handoff owner entitlement. Once a fund transfers to the kid at majority,
+  // the owner is NEVER charged a subscription (locked "subscription retires at
+  // majority" rule — AUM is the only post-handoff revenue), but they still own
+  // the fund and get its paid features for free: occasions, custom mix, owner-
+  // authored Memory Book media, etc. Treat the current owner of a transferred
+  // fund as Plus-equivalent so nothing paywalls them. Their gifters inherit this
+  // fund tier too — the intended kid-2.0 behavior (gifts keep coming with full
+  // features). Plus-equivalent (not Family) because it's a single owned fund.
+  if (userId && fundId) {
+    try {
+      const fund = await storage.getFund(fundId);
+      if (fund && (fund as any).transferredAt && String(fund.userId) === String(userId)) {
+        return {
+          legacy: false,
+          family: false,
+          starter: true,
+          paid: true,
+          hostPlan: "starter",
+        } as const;
+      }
+    } catch {
+      // Non-fatal — fall through to the subscription-based result below.
+    }
+  }
+
   return {
     legacy,
     family,
