@@ -89,7 +89,21 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
   };
 
   const effectivePlan = subscription?.effectivePlan ?? "free";
-  const existingChildFundCount = funds?.length ?? 0;
+  // Count only CHILD (custodial) funds toward the limit — NOT the user's own
+  // account. A graduated owner (post-handoff: transferredAt set / accountType
+  // "personal" / recipientRelation "self") holds their OWN fund; it must not
+  // consume the free child-fund slot or force Family when they add their FIRST
+  // kid. Family is for multiple CHILDREN, not "my own account + one kid". So a
+  // brand-new parent and a graduated-owner-turned-parent both get the same
+  // first-kid experience: free, with Family only at the 2nd child.
+  const existingChildFundCount = (funds ?? []).filter((f) => {
+    const ff = f as any;
+    const isOwnHeld =
+      Boolean(ff.transferredAt) ||
+      String(ff.accountType || "").toLowerCase() === "personal" ||
+      ff.recipientRelation === "self";
+    return !isOwnHeld;
+  }).length;
   const childFundLimit = effectivePlan === "family" || effectivePlan === "legacy" ? Infinity : 1;
   const isAtChildFundLimit = existingChildFundCount >= childFundLimit;
 
