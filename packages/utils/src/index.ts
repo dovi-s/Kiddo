@@ -26,6 +26,12 @@ export const onboardingRates = {
 
 export const onboardingAnnualGiftOptions = [250, 500, 1000, 2000] as const;
 
+// Onboarding + mobile stock-preference list. Was a 10-item subset that, oddly,
+// showed FEWER brands than the public gift page (17). Brought to parity with the
+// canonical universe in shared/stock-picks.ts so onboarding, the gift page, the
+// parent picker, and mobile all offer the same set. KEEP IN SYNC with
+// shared/stock-picks.ts (this package can't import it without a build cycle;
+// when they drift, shared/stock-picks.ts is the source of truth).
 export const onboardingStockChoices: StockChoice[] = [
   { ticker: "DIS", name: "Disney" },
   { ticker: "AAPL", name: "Apple" },
@@ -34,9 +40,17 @@ export const onboardingStockChoices: StockChoice[] = [
   { ticker: "NFLX", name: "Netflix" },
   { ticker: "AMZN", name: "Amazon" },
   { ticker: "GOOGL", name: "Google" },
-  { ticker: "TSLA", name: "Tesla" },
   { ticker: "SPOT", name: "Spotify" },
   { ticker: "RBLX", name: "Roblox" },
+  { ticker: "TSLA", name: "Tesla" },
+  { ticker: "NTDOY", name: "Nintendo" },
+  { ticker: "DUOL", name: "Duolingo" },
+  { ticker: "DPZ", name: "Domino's" },
+  { ticker: "CHWY", name: "Chewy" },
+  { ticker: "ABNB", name: "Airbnb" },
+  { ticker: "ADBE", name: "Adobe" },
+  { ticker: "TGT", name: "Target" },
+  { ticker: "CMCSA", name: "Comcast" },
 ];
 
 export const gifterLoopMetricsTargets = {
