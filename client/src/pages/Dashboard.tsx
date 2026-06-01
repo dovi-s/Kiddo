@@ -5136,11 +5136,18 @@ export default function Dashboard() {
             last 30 days (server-gated via dashboardSummary.coparentAcceptance).
             One-time + dismissable + keyed per-fund-per-collaborator-id so
             future co-parent additions on the same fund still celebrate. */}
-        <CoparentAcceptedBanner
-          acceptance={(dashboardSummary as any)?.coparentAcceptance}
-          fundId={activeFundId}
-          childFirstName={recipientFirstNameDisplay}
-        />
+        {/* Only the fund OWNER (the inviter) sees this celebration. The copy is
+            "{coparent} accepted YOUR invite … can now see the fund alongside you" —
+            nonsense for the collaborator themselves, yet it was rendering on the
+            co-parent's OWN dashboard. The server should also scope coparentAcceptance to
+            the owner; this is the client guard. 2026-05-31, founder-reported. */}
+        {activeFundAccessRole === 'owner' && (
+          <CoparentAcceptedBanner
+            acceptance={(dashboardSummary as any)?.coparentAcceptance}
+            fundId={activeFundId}
+            childFirstName={recipientFirstNameDisplay}
+          />
+        )}
 
         {/* Plus first-media unlock celebration — wired 2026-05-23 per
             Tier-2 deferred item #2. Fires once across the parent's
