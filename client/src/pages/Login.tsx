@@ -24,6 +24,10 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  // "Keep me signed in on this device." Default on (the warm default for a
+  // relationship product). Unchecking it — the shared/public-computer case —
+  // makes the session a browser-session cookie that's cleared on browser close.
+  const [rememberMe, setRememberMe] = useState(true);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
@@ -83,7 +87,7 @@ export default function Login() {
     e.preventDefault();
     haptic('medium');
     try {
-      const result = await login({ email, password });
+      const result = await login({ email, password, rememberMe });
       // Account has 2FA on — password accepted but no session yet. Open the
       // code step; the redirect happens after verifyTwoFactor succeeds.
       if ((result as any)?.twoFactorRequired === true) {
@@ -350,6 +354,20 @@ export default function Login() {
                   </button>
                 </div>
               </div>
+
+              <label
+                className="flex items-center gap-2.5 cursor-pointer select-none text-sm text-muted-foreground"
+                data-testid="label-remember-me"
+              >
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => { haptic('light'); setRememberMe(e.target.checked); }}
+                  className="h-4 w-4 rounded border-input accent-[hsl(var(--kiddo-gold))] cursor-pointer"
+                  data-testid="checkbox-remember-me"
+                />
+                Keep me signed in on this device
+              </label>
 
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <button

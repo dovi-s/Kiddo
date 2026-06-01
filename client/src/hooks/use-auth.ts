@@ -57,7 +57,7 @@ async function fetchUser(): Promise<SafeUserWithFlags | null> {
   return normalized;
 }
 
-async function loginFn(data: { email: string; password: string }): Promise<SafeUserWithFlags | { twoFactorRequired: true }> {
+async function loginFn(data: { email: string; password: string; rememberMe?: boolean }): Promise<SafeUserWithFlags | { twoFactorRequired: true }> {
   const response = await fetch("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

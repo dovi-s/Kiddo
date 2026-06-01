@@ -106,6 +106,12 @@ const loginSchema = z.object({
     .string()
     .min(1, "Password is required")
     .max(128, "Password must be 128 characters or fewer"),
+  // "Keep me signed in on this device." Defaults true (the warm, relationship
+  // product wants people to stay logged in). When the user unchecks it — the
+  // shared/public-computer case — we make the session a browser-session cookie
+  // (cleared when the browser closes) instead of a persistent one, so no
+  // long-lived token is left behind on a machine that isn't theirs.
+  rememberMe: z.boolean().optional(),
 });
 
 const forgotPasswordSchema = z.object({
@@ -679,6 +685,25 @@ async function getOrCreateOAuthUser(params: {
   return user;
 }
 
+// Apply the "Keep me signed in on this device" choice to the freshly-created
+// session. Call AFTER req.session.regenerate (which resets the cookie to the
+// configured default) and before the session is saved. remember=true keeps the
+// persistent 30-day rolling cookie; remember=false makes it a browser-session
+// cookie (no persistent expiry → cleared on browser close), the right default
+// for a shared/public computer.
+function applySessionDuration(req: Request, remember: boolean) {
+  if (!req.session) return;
+  if (remember) return; // keep the configured persistent default
+  // Browser-session cookie: cleared when the browser closes, nothing left on a
+  // shared machine. `expires = false` is express-session's session-cookie
+  // signal. We MUST also null `originalMaxAge`: with `rolling: true` the store
+  // calls touch() on every request, which resets maxAge back to originalMaxAge
+  // — so without this the cookie would silently re-expand to the persistent
+  // 30-day default on the very next request, defeating the whole point.
+  (req.session.cookie as any).expires = false;
+  (req.session.cookie as any).originalMaxAge = null;
+}
+
 function respondAfterSessionSave(
   req: Request,
   res: Response,
@@ -699,7 +724,15 @@ export function setupAuth(app: Express) {
     throw new Error("SESSION_SECRET must be set");
   }
 
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000;
+  // "Keep me signed in" default. 30-day inactivity ceiling, but with
+  // `rolling: true` below the window slides forward on every request — so an
+  // active user effectively stays signed in (consumer-app behavior, right for
+  // a relationship product) and only an ABANDONED session ages out after 30d.
+  // The shared-device path (rememberMe unchecked) downgrades this to a
+  // browser-session cookie at login. The real protection for dangerous actions
+  // (money movement, SSN/PII) is step-up re-auth at custody time, NOT an idle
+  // logout here — see SECURITY_SESSION_PLAN.md.
+  const sessionTtl = 30 * 24 * 60 * 60 * 1000;
   // Default to Postgres-backed sessions even in development so auth remains
   // consistent across devices, tabs, and local process restarts.
   // Opt into memory only when explicitly requested.
@@ -771,6 +804,11 @@ export function setupAuth(app: Express) {
       store: sessionStore,
       resave: false,
       saveUninitialized: false,
+      // Slide the expiry forward on every response, so an active user is never
+      // logged out mid-use; only true inactivity (no request for the TTL) ages
+      // a session out. For a browser-session cookie (shared-device path) there
+      // is no maxAge to slide, so it stays "until the browser closes."
+      rolling: true,
       cookie: {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -1235,6 +1273,7 @@ export function setupAuth(app: Express) {
       // /api/auth/2fa/login-verify. Non-enrolled accounts (everyone who hasn't
       // opted in) fall straight through to the unchanged login flow below;
       // totpEnabled is present on the full user row the local strategy loads.
+      const rememberMe = (req.body as any)?.rememberMe !== false; // default true
       if (user.totpEnabled === true) {
         return req.session.regenerate((regenErr) => {
           if (regenErr) {
@@ -1242,6 +1281,9 @@ export function setupAuth(app: Express) {
           }
           (req.session as any).pending2faUserId = user.id;
           (req.session as any).pending2faAt = Date.now();
+          // Carry the device choice through the 2FA step; the real session is
+          // established at /api/auth/2fa/login-verify.
+          (req.session as any).pending2faRemember = rememberMe;
           return respondAfterSessionSave(req, res, () => {
             res.json({ twoFactorRequired: true });
           });
@@ -1260,6 +1302,7 @@ export function setupAuth(app: Express) {
           if (err) {
             return res.status(500).json({ message: "Failed to create session" });
           }
+          applySessionDuration(req, rememberMe);
           // Fire-and-forget new-device tracking. Sends an alert email
           // when the fingerprint is novel for this user (after the
           // first-ever login). Locked 2026-05-15.
@@ -1281,6 +1324,8 @@ export function setupAuth(app: Express) {
     try {
       const pendingId = req.session?.pending2faUserId;
       const pendingAt = Number(req.session?.pending2faAt || 0);
+      // Captured before regenerate() (below) wipes the pending session.
+      const remember2fa = (req.session as any)?.pending2faRemember !== false;
       if (!pendingId || Date.now() - pendingAt > 5 * 60 * 1000) {
         return res.status(401).json({ message: "Your sign-in step expired. Enter your email and password again." });
       }
@@ -1314,6 +1359,7 @@ export function setupAuth(app: Express) {
           if (err) {
             return res.status(500).json({ message: "Failed to create session" });
           }
+          applySessionDuration(req, remember2fa);
           void trackLoginDevice(user.id, req);
           const { passwordHash: _p, kycData: _k, ...safeUser } = user;
           return respondAfterSessionSave(req, res, () => {
