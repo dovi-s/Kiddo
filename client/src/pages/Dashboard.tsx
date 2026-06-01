@@ -8612,17 +8612,26 @@ export default function Dashboard() {
                       // OWN plans are the live, manageable set. Count + summarize
                       // the live set so the owner's recurring reads normally
                       // alongside the parent's ended history below.
-                      // "Live" = the viewer's OWN plans (manageable). A plan owned by
-                      // someone else (the former parent's, post-handoff) is read-only
-                      // history — the server 403s any mutation on a record you don't own,
-                      // so the client mirrors that by OWNERSHIP, not by pause_reason (which
-                      // misses a plan the parent manually paused before handoff + co-parents).
-                      const liveContribs = allContribs.filter(c => !c.userId || c.userId === (user as any)?.id);
-                      const statuses = liveContribs.map(c => optimisticContribStatus[String(c.id)] ?? c.status);
+                      // The card renders the FUND's recurring plans (each row read-only unless the
+                      // viewer owns it). The SUMMARY must describe what's SHOWN and be correct across
+                      // ROLES, not just the viewer's own plans:
+                      //   - post-handoff OWNER: own = none, the parent's plan is majority_handoff
+                      //     (read-only "Ended" history below) → "Ended when you took ownership"
+                      //   - CO-PARENT: sees the OTHER parent's active recurring (read-only to them) →
+                      //     summarize it as active. (PRIOR BUG: the summary counted only the viewer's
+                      //     OWN plans, so a co-parent with no plan of their own read "Ended when you
+                      //     took ownership" sitting directly above an ACTIVE plan.)
+                      //   - PARENT: own active recurring → summarized normally.
+                      // Handoff-ended plans are excluded from the active/paused tally (they render as
+                      // read-only "Ended" rows). "Resume all" acts ONLY on the viewer's OWN paused
+                      // plans — the server 403s a mutation on a plan you don't own.
+                      const shownContribs = allContribs.filter(c => c.pauseReason !== "majority_handoff");
+                      const statuses = shownContribs.map(c => optimisticContribStatus[String(c.id)] ?? c.status);
                       const activeCount = statuses.filter(s => s === "active").length;
                       const pausedCount = statuses.filter(s => s === "paused").length;
-                      const allPaused = activeCount === 0 && pausedCount === liveContribs.length && liveContribs.length > 0;
-                      const activeMonthly = liveContribs.reduce((sum, c) => {
+                      const ownPaused = shownContribs.filter(c => (optimisticContribStatus[String(c.id)] ?? c.status) === "paused" && (!c.userId || c.userId === (user as any)?.id));
+                      const allPaused = activeCount === 0 && pausedCount === shownContribs.length && shownContribs.length > 0;
+                      const activeMonthly = shownContribs.reduce((sum, c) => {
                         const status = optimisticContribStatus[String(c.id)] ?? c.status;
                         if (status !== "active") return sum;
                         return sum + toMonthlyEquivalent(parseFloat(String(c.amount || "0")), c.frequency);
@@ -8630,11 +8639,11 @@ export default function Dashboard() {
                       const monthlyLabel = activeMonthly > 0
                         ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(activeMonthly))
                         : null;
-                      // No live plans → only the parent's handed-off plan(s)
-                      // remain; say so. Otherwise summarize the live set (which,
-                      // post-handoff, is the owner's own recurring).
-                      const summaryText = liveContribs.length === 0
-                        ? "Ended when you took ownership"
+                      // Empty active/paused set: only the OWNER (whose plan ended at handoff) sees the
+                      // "Ended when you took ownership" line; anyone else with no recurring just sees
+                      // "No recurring yet" — never the handoff copy.
+                      const summaryText = shownContribs.length === 0
+                        ? (isOwnerMode ? "Ended when you took ownership" : "No recurring yet")
                         : allPaused
                         ? `${pausedCount} paused`
                         : pausedCount === 0
@@ -8651,11 +8660,11 @@ export default function Dashboard() {
                           </p>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                             <p style={{ fontSize: 12, color: "rgba(26,23,16,0.55)", fontWeight: 500, flex: 1, minWidth: 0 }}>{summaryText}</p>
-                            {allPaused && (
+                            {allPaused && ownPaused.length > 0 && (
                               <button
                                 type="button"
                                 style={{ fontSize: 11.5, fontWeight: 700, color: "hsl(var(--kiddo-evergreen))", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-                                onClick={() => liveContribs.forEach(c => handleUpdateAutoInvestStatus(String(c.id), "active"))}
+                                onClick={() => ownPaused.forEach(c => handleUpdateAutoInvestStatus(String(c.id), "active"))}
                               >
                                 Resume all →
                               </button>
