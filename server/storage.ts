@@ -527,6 +527,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMemoryEntry(entry: InsertMemoryEntry): Promise<MemoryEntry> {
+    // Idempotency on (giftId, type). A gift carries at most one memory entry of
+    // a given type: a gifter gift -> one gift_message; a recurring first cycle
+    // -> one parent_note (a single gift can hold BOTH, since they differ by
+    // type). Several completion paths (completeGiftPostPayment via webhook +
+    // manual reconcile + retry) each call this for the same gift; with no guard
+    // they each inserted a fresh gift_message, leaving duplicate rows that
+    // inflated the raw Memory Book count. The client de-dups by giftId so users
+    // never saw it, but the row pollution was real and unbounded. Guarding here
+    // protects EVERY write path at one point, no schema change, no throw. Only
+    // applies when a gift is linked; free-form notes/letters (giftId null) can
+    // legitimately repeat. (Found 2026-06-01 via a live count audit: one Emma
+    // gift had two gift_message rows -> 20 raw vs 19 gifts.)
+    const giftId = (entry as any).giftId;
+    const entryType = (entry as any).type;
+    if (giftId && entryType) {
+      const [existing] = await db
+        .select()
+        .from(memoryEntries)
+        .where(and(eq(memoryEntries.giftId, giftId), eq(memoryEntries.type, entryType)))
+        .limit(1);
+      if (existing) return existing;
+    }
     const [created] = await db.insert(memoryEntries).values(entry).returning();
     return created;
   }
