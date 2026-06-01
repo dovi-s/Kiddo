@@ -36,27 +36,27 @@ interface LockedRefusalsPanelProps {
 const REFUSALS = [
   {
     refusal: "No platform fee on gifts.",
-    why: "$50 from grandma is $50 to the fund. The gifter loop is the moat; we don't tax it.",
+    why: "$50 from grandma is $50 to the fund. We never take a cut of a gift.",
   },
   {
     refusal: "No paywall on the kid's view.",
-    why: "Kid View is free across every plan. Mila on Free shouldn't see a worse version than Emma on Plus — the kid didn't choose the tier.",
+    why: "Kid View is free on every plan. A child on a free fund should never get a lesser experience than one on a paid plan. The kid didn't choose the tier.",
   },
   {
     refusal: "No streaks, no badges, no confetti for putting money in.",
-    why: "This is a 16-year compounding instrument. Gamifying it would turn it into something we don't want it to be.",
+    why: "This money is meant to grow for years, until your child is an adult. Turning it into a game would cheapen what it's for.",
   },
   {
     refusal: "No subscription for the kid after handoff.",
-    why: "When the kid takes legal ownership at majority, the parent paywall retires. The only post-handoff revenue is the annual fee on invested assets ($1/yr per $1,000 invested).",
+    why: "When your child takes ownership as an adult, the parent subscription ends. After that, the only fee is the annual $1 per $1,000 invested.",
   },
   {
-    refusal: "No selling kid data, no targeted ads, no growth hacking the gift flow.",
-    why: "Sold kid data would have ended this product before it started.",
+    refusal: "No selling kids' data, no targeted ads, no dark patterns in the gift flow.",
+    why: "A child's data is never the product. We don't sell it, and we never will.",
   },
   {
-    refusal: "No \"Always free\" claim that ignores the invested-assets fee.",
-    why: "Acorns-style fine-print isn't the register we want. We say \"$0 per month\" and the $1-per-$1,000-invested annual fee is a feature, not a footnote.",
+    refusal: "No \"Always free\" claim that hides the invested-assets fee.",
+    why: "We won't bury a fee in fine print. We say \"$0 per month,\" and the annual $1 per $1,000 invested is stated plainly, never a footnote.",
   },
 ];
 
