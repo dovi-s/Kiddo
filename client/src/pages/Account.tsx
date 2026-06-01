@@ -1471,6 +1471,16 @@ export default function Account() {
                 const currentLabel = userPlan === "family" ? "Kiddo Family" : userPlan === "legacy" ? "Kiddo Legacy" : "your plan";
                 return `Included in ${currentLabel}`;
               };
+              // A lower-rank card from a higher-rank current plan is a DOWNGRADE.
+              // The ladder CTAs fire the per-plan CHECKOUT, which the server rejects
+              // for downgrades (the household-coverage guard blocks a Plus purchase
+              // while Family/Legacy is active) — so a "Downgrade to Plus" button here
+              // just errors. Real downgrades go through the plan-fit card above
+              // (Family → Kiddo+, the safe one-fund case) or the cancel flow, not
+              // this ladder. Hide the CTA on downgrade cards; the "Included in {plan}"
+              // pill conveys the state. See SUBSCRIPTION_DOWNGRADE_SPEC.md.
+              const isDowngradeCard = (cardPlan: "starter" | "family" | "legacy") =>
+                cardPlan !== userPlan && planRank(cardPlan) < currentRank;
               const recommendedPlan: "starter" | "family" | null =
                 userPlan === "free" ? "starter"
                 : userPlan === "starter" ? "family"
@@ -1521,14 +1531,16 @@ export default function Account() {
                           {includedHint("starter")}
                         </p>
                       )}
-                      <Button
-                        className="mt-5 w-full rounded-xl"
-                        onClick={() => handleUpgradeStarter(selectedStarterFundId)}
-                        disabled={upgrading || isStarterCurrent}
-                        data-testid="button-account-upgrade-starter"
-                      >
-                        {ctaLabel("starter")}
-                      </Button>
+                      {!isDowngradeCard("starter") && (
+                        <Button
+                          className="mt-5 w-full rounded-xl"
+                          onClick={() => handleUpgradeStarter(selectedStarterFundId)}
+                          disabled={upgrading || isStarterCurrent}
+                          data-testid="button-account-upgrade-starter"
+                        >
+                          {ctaLabel("starter")}
+                        </Button>
+                      )}
                     </div>
                   </SectionCard>
 
@@ -1573,15 +1585,17 @@ export default function Account() {
                           {includedHint("family")}
                         </p>
                       )}
-                      <Button
-                        variant="outline"
-                        className="mt-5 w-full rounded-xl border-white/25 bg-white/10 text-white hover:bg-white/15 hover:text-white disabled:opacity-50"
-                        onClick={handleUpgradeFamily}
-                        disabled={upgrading || isFamilyCurrent}
-                        data-testid="button-account-upgrade-family"
-                      >
-                        {ctaLabel("family")}
-                      </Button>
+                      {!isDowngradeCard("family") && (
+                        <Button
+                          variant="outline"
+                          className="mt-5 w-full rounded-xl border-white/25 bg-white/10 text-white hover:bg-white/15 hover:text-white disabled:opacity-50"
+                          onClick={handleUpgradeFamily}
+                          disabled={upgrading || isFamilyCurrent}
+                          data-testid="button-account-upgrade-family"
+                        >
+                          {ctaLabel("family")}
+                        </Button>
+                      )}
                     </div>
                   </div>
 

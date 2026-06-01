@@ -29,6 +29,7 @@ import { ArrowRight, CalendarClock, ChevronRight, Gift, Heart, Plus } from "luci
 import { AppHeader } from "@/components/layout/AppHeader";
 import { GiftersAcrossFundsSheet } from "@/components/GiftersAcrossFundsSheet";
 import { useAuth } from "@/hooks/use-auth";
+import { useSubscription } from "@/hooks/use-subscription";
 import { ADD_FUND_EVENT, setActiveFundId } from "@/hooks/use-active-fund";
 import { capFirst } from "@/lib/format-name";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -353,6 +354,15 @@ function buildRecurringRowSubtitle(item: OverviewRecurringItem): string {
 
 export default function FundsOverview() {
   const [, setLocation] = useLocation();
+  // Plan-fit nudge (read-only): the household view is where a parent sees the fund
+  // count drop after a handoff, so surface the "you could pay less" prompt here too,
+  // linking to the full switch on billing. Server-gated to the safe one-fund case.
+  // See SUBSCRIPTION_DOWNGRADE_SPEC.md.
+  const { data: subscription } = useSubscription();
+  const planFit = (subscription as any)?.planFit as
+    | { kind: "downgrade_to_plus" | "no_plan_needed"; fund: { id: string; name: string; childName: string | null } | null }
+    | null
+    | undefined;
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   // Slide-up sheet for the cross-fund gifter view. Opens from the
   // "Across all funds" card below. The household-glance answer to
@@ -699,6 +709,27 @@ export default function FundsOverview() {
               Added 2026-05-18. */}
           <HouseholdSparkline history={aggregateHistory} deltaOverride={householdDelta30d} />
         </motion.section>
+
+        {/* Plan-fit nudge. Surfaced here (the household view) because this is where a
+            parent sees the fund count drop after a kid hands off. Links to the full
+            switch on the billing page rather than duplicating it. Server-gated to the
+            safe one-fund case (planFit). See SUBSCRIPTION_DOWNGRADE_SPEC.md. */}
+        {planFit?.kind === "downgrade_to_plus" && (
+          <button
+            type="button"
+            onClick={() => { haptic("selection"); setLocation("/account?tab=plan"); }}
+            className="flex w-full items-center gap-3 rounded-2xl border border-[hsl(var(--kiddo-gold)/0.45)] bg-[hsl(var(--kiddo-gold)/0.08)] p-4 text-left transition-colors hover:bg-[hsl(var(--kiddo-gold)/0.12)]"
+            data-testid="button-overview-planfit"
+          >
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-[hsl(var(--kiddo-gold-ink))]">You're managing one fund now</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Kiddo+ covers one child for less than Kiddo Family. Review your plan whenever it suits you.
+              </p>
+            </div>
+            <ArrowRight size={18} className="shrink-0 text-[hsl(var(--kiddo-gold-ink))]" />
+          </button>
+        )}
 
         {/* Per-fund list. Each card routes to the kid's Dashboard via
             setActiveFundId — same mechanism the AppHeader switcher

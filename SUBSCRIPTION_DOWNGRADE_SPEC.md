@@ -41,7 +41,9 @@ could not test from the agent shell:
   **blocks Plus while any household plan is active** — and a `cancel_at_period_end` Family is
   still entitled until period end, so Plus can't be purchased in advance. The existing
   "Downgrade to Plus" button in the plan ladder (`Account.tsx:~1357`) calls
-  `handleUpgradeStarter` and therefore **errors** for a Family user. (Worth fixing/hiding.)
+  `handleUpgradeStarter` and therefore **errored** for a Family user. **FIXED 2026-06-01:**
+  downgrade-direction CTAs are now hidden in the ladder via `isDowngradeCard` (the
+  "Included in {plan}" pill conveys state); the safe downgrade lives in the plan-fit card.
 - **Design for the seamless version (flag-gated, mirror the `GIFTER_CAPTURE_AT_INTENT`
   precedent):** on confirm, create the Kiddo+ subscription for the remaining fund with its
   **first charge anchored to the Family period end** (`trial_end`/`billing_cycle_anchor` =
@@ -51,10 +53,14 @@ could not test from the agent shell:
   verified downgrade path only, and have `handleStarterPlanPurchase` activate the membership.
   **Verify in Stripe test mode before flipping the flag.**
 
-## Placement #2 — at the handoff moment (TODO)
-Surface the same `planFit` nudge contextually right after a fund hands off ("Now that
-{name} owns their account, you're only managing {other}'s fund — want to pay less?"), not just
-on the billing page. Reuse the `planFit` signal. Not yet wired.
+## Placement #2 — at the handoff moment (SHIPPED 2026-06-01)
+The `planFit` nudge is now also surfaced on the **household "Your funds" overview**
+(`FundsOverview.tsx`) — the surface where a parent actually sees the fund count drop after a
+kid hands off. It's a gentle gold card ("You're managing one fund now…") that links to
+`/account?tab=plan` for the full switch rather than duplicating the action. Read-only
+(`useSubscription`), gated to `planFit.kind === 'downgrade_to_plus'`. The literal
+at-the-instant-of-handoff prompt (e.g. in the age-transition completion screen) remains a
+possible future refinement, but the overview catches it at the natural next visit.
 
 ## Test plan (for the seamless endpoint, when built)
 1. Family + 2 minor funds → `planFit` null (no offer). ✓ guard.
