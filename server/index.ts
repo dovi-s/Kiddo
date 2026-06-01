@@ -35,6 +35,7 @@ import { registerOGMiddleware } from "./ogMiddleware";
 import { users } from "@shared/schema";
 import { getConfiguredSuperAdminEmails, getDefaultSuperAdminEmails } from "@shared/adminAccess";
 import { buildPlatformReadiness, summarizePlatformReadiness } from "@shared/platformReadiness";
+import { US_STATES } from "@shared/utma";
 import { inArray, sql } from "drizzle-orm";
 import fs from "fs";
 import path from "path";
@@ -329,13 +330,49 @@ app.get("/robots.txt", (req, res) => {
 app.get("/sitemap.xml", (req, res) => {
   const base = getPublicBaseUrl(req);
   const now = new Date().toISOString();
+  // Every PUBLIC, indexable, non-user-scoped page. The satellite SEO surface
+  // (comparisons, tools, programmatic state pages) is the gifter-intent funnel
+  // — these were built but absent from the sitemap, so search engines weren't
+  // told they exist. Private/user-scoped routes stay out (and are also blocked
+  // in robots.txt above); orphan/noindex pages (/partners, /demo) stay out by
+  // design. See SEO_GTM_STRATEGY.md.
   const routes: Array<{ path: string; changefreq: string; priority: string }> = [
+    // Core funnel
     { path: "/", changefreq: "weekly", priority: "1.0" },
     { path: "/get-started", changefreq: "weekly", priority: "0.9" },
+    { path: "/how-it-works", changefreq: "monthly", priority: "0.8" },
+    { path: "/give-a-gift", changefreq: "monthly", priority: "0.8" },
+    { path: "/pricing", changefreq: "monthly", priority: "0.7" },
+    { path: "/founding-members", changefreq: "monthly", priority: "0.7" },
+    { path: "/personal-funds", changefreq: "monthly", priority: "0.6" },
+    { path: "/age-18", changefreq: "monthly", priority: "0.6" },
+    // Gifter-intent SEO satellites (the strategic core: comparison + tools)
+    { path: "/compare", changefreq: "monthly", priority: "0.8" },
+    { path: "/tools/at-18-calculator", changefreq: "monthly", priority: "0.8" },
+    { path: "/tools/robux-vs-utma", changefreq: "monthly", priority: "0.8" },
+    { path: "/tools/trump-account-vs-utma", changefreq: "monthly", priority: "0.8" },
+    { path: "/tools/utma-by-state", changefreq: "monthly", priority: "0.7" },
+    // Content hubs (children discovered via the hub + entries below)
+    { path: "/blog", changefreq: "weekly", priority: "0.6" },
+    { path: "/stories", changefreq: "weekly", priority: "0.6" },
+    // Trust / info
     { path: "/faq", changefreq: "monthly", priority: "0.7" },
+    { path: "/security", changefreq: "monthly", priority: "0.5" },
     { path: "/about", changefreq: "monthly", priority: "0.6" },
-    { path: "/legal", changefreq: "monthly", priority: "0.5" },
+    { path: "/contact", changefreq: "monthly", priority: "0.4" },
+    { path: "/legal", changefreq: "monthly", priority: "0.4" },
   ];
+  // Programmatic: one UTMA page per state. Self-maintaining from shared
+  // US_STATES; canonical URL is lowercase (matches UtmaByStateIndex links).
+  for (const s of US_STATES) {
+    routes.push({ path: `/tools/utma-by-state/${s.code.toLowerCase()}`, changefreq: "monthly", priority: "0.6" });
+  }
+  // Programmatic: comparison pages. Keep in sync with COMPARISONS in
+  // client/src/pages/Compare.tsx (small, stable set).
+  const COMPARE_SLUGS = ["earlybird", "acorns-early", "greenlight", "stockpile", "529", "savings-account", "fidelity-utma"];
+  for (const slug of COMPARE_SLUGS) {
+    routes.push({ path: `/compare/${slug}`, changefreq: "monthly", priority: "0.7" });
+  }
   const urlset = routes
     .map(
       (r) =>
