@@ -1044,7 +1044,8 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
                       const f = funds.find((f) => f.id === fundFilter);
                       if (!f) return "this fund";
                       const name = capFirst(f.recipientFirstName) || f.name || "Fund";
-                      return `${name}'s fund`;
+                      // Owner's own (post-handoff) fund reads "your fund", not their own name.
+                      return ((f as any)?.transferredAt && (f as any)?.accessRole === "owner") ? "your fund" : `${name}'s fund`;
                     })();
                     // Roll action items into the summary. Both the action-item
                     // count and the activities below are scoped to fundFilter,
