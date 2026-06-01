@@ -607,7 +607,7 @@ export default function Home() {
           <div className={SECTION_MAX}>
             <FadeIn className="mb-16 text-center">
               <h2 className="mb-4 font-heading text-2xl font-bold tracking-normal text-foreground md:text-4xl">
-                From gift link to invested stock in under 60 seconds.
+                From gift link to their fund in under 60 seconds.
               </h2>
             </FadeIn>
             <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
