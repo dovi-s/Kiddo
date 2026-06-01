@@ -4751,6 +4751,41 @@ export async function registerRoutes(
     }
   });
 
+  // Owner-initiated removal of a named gifter subscriber. The gifter can already
+  // self-unsubscribe via their emailed token; this lets the fund OWNER take
+  // someone off the milestone-notification list (stale address, or at the
+  // gifter's verbal request). Marks unsubscribed rather than deleting — matches
+  // the token-unsubscribe path + the `!unsubscribed` filters, and preserves the
+  // gifter's contribution history/stats. Owner-only; anonymous subscribers have
+  // no email to target and are never individually removable.
+  app.post('/api/funds/:fundId/gifter-notifications/remove', isAuthenticated, async (req: any, res) => {
+    try {
+      const fund = await storage.getFund(req.params.fundId);
+      if (!fund) return res.status(404).json({ error: "Fund not found" });
+      if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: "Forbidden" });
+      const email = String(req.body?.email || "").trim().toLowerCase();
+      if (!email) return res.status(400).json({ error: "email is required" });
+      const store = await loadGifterNotificationStore();
+      const fundSubs = store.subscribersByFund[fund.id] || {};
+      // Records are keyed by email; match case-insensitively to be safe.
+      const key = Object.keys(fundSubs).find((k) => k.toLowerCase() === email);
+      const subscriber = key ? fundSubs[key] : undefined;
+      if (!subscriber || subscriber.isAnonymous) {
+        return res.status(404).json({ error: "Subscriber not found" });
+      }
+      store.subscribersByFund[fund.id][key!] = {
+        ...subscriber,
+        unsubscribed: true,
+        unsubscribedAt: new Date().toISOString(),
+      };
+      await saveGifterNotificationStore(store);
+      res.json({ success: true, email: key });
+    } catch (error) {
+      console.error("Error removing gifter subscriber:", error);
+      res.status(500).json({ error: "Failed to remove subscriber" });
+    }
+  });
+
   app.post('/api/funds/:fundId/gifter-notifications/memory-share', isAuthenticated, async (req: any, res) => {
     try {
       const fund = await storage.getFund(req.params.fundId);

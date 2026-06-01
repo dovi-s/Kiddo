@@ -3005,6 +3005,31 @@ const [editFundName, setEditFundName] = useState("");
       toast({ title: "Could not save settings", description: error?.message || "Please try again.", variant: "destructive" });
     },
   });
+  // Owner-initiated removal of a named gifter subscriber (stale address, or at
+  // the gifter's request). Marks them unsubscribed server-side; the list filters
+  // on !unsubscribed so they drop off. `email` carried for the optimistic-feel
+  // pending state on the right row.
+  const removeGifterSubscriber = useMutation({
+    mutationFn: async (email: string) => {
+      const res = await fetch(`/api/funds/${selectedSettingsFundId}/gifter-notifications/remove`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "Could not remove subscriber");
+      return data;
+    },
+    onSuccess: (_data, email) => {
+      haptic("success");
+      toast({ title: "Removed", description: `${email} will no longer get updates for this fund.` });
+      void queryClient.invalidateQueries({ queryKey: ["/api/funds", selectedSettingsFundId, "gifter-notifications"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Could not remove", description: error?.message || "Please try again.", variant: "destructive" });
+    },
+  });
 
   // Memory Book moderation toggle. Off by default everywhere; the parent opts
   // in if they want gifter-submitted entries to land as 'pending_review'
@@ -4984,6 +5009,16 @@ const [editFundName, setEditFundName] = useState("");
                           <p className="text-[10px] text-muted-foreground shrink-0">
                             {s.lastGiftAt ? new Date(s.lastGiftAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""}
                           </p>
+                          <button
+                            type="button"
+                            disabled={removeGifterSubscriber.isPending}
+                            onClick={() => { haptic("selection"); removeGifterSubscriber.mutate(s.email); }}
+                            className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
+                            aria-label={`Remove ${s.name || s.email} from notifications`}
+                            data-testid={`button-remove-gifter-subscriber-${s.email}`}
+                          >
+                            {removeGifterSubscriber.isPending && removeGifterSubscriber.variables === s.email ? "Removing..." : "Remove"}
+                          </button>
                         </div>
                       ))}
                       {namedSubscribers.length > 6 && (
