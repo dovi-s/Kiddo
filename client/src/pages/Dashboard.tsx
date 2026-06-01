@@ -1731,11 +1731,29 @@ export default function Dashboard() {
     effectivePlanRef.current = effectivePlan;
   }, [effectivePlan]);
 
+  // Send a real, fund-less account to onboarding — but ONLY once the funds
+  // list is confirmed empty by an ACTUAL server fetch. The old guard gated on
+  // `!fundsLoading`, which is false during the window where the query is
+  // showing empty initialData (status 'success' + isLoading false) while the
+  // network fetch is still in flight (initialDataUpdatedAt: 0 here). That
+  // window bounced demo personas (who always have seeded funds) and real
+  // users mid-load to /get-started "randomly", depending purely on whether
+  // the fetch had resolved when the effect ran — the reported "I open the
+  // demo and it throws me to Get Started" bug. Now:
+  //   • fundsDataUpdatedAt > 0  → the network fetch actually resolved (not
+  //     just cached initialData), so funds.length === 0 is the truth.
+  //   • !fundsFetching          → no fetch in flight that could fill it.
+  //   • !isDemoAccount          → a demo persona is NEVER sent to signup
+  //     (defense in depth: a spurious bounce now also destroys the demo
+  //     session on GetStarted arrival, so the cost of a false positive rose).
   useEffect(() => {
-    if (!authLoading && isAuthenticated && !fundsLoading && funds.length === 0) {
+    if (isDemoAccount) return;
+    if (authLoading || !isAuthenticated) return;
+    if (fundsFetching || fundsDataUpdatedAt === 0) return;
+    if (funds.length === 0) {
       setLocation("/get-started");
     }
-  }, [authLoading, isAuthenticated, fundsLoading, funds.length, setLocation]);
+  }, [isDemoAccount, authLoading, isAuthenticated, fundsFetching, fundsDataUpdatedAt, funds.length, setLocation]);
 
   useEffect(() => {
     let canceledEffect = false;
