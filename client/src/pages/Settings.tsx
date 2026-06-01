@@ -2748,6 +2748,16 @@ const [editFundName, setEditFundName] = useState("");
   // read-only "they manage it now" notice instead of dead controls wrapped in
   // stale "switch child" / "approaching majority" / "handoff ready" copy.
   const primaryFundIsPreviousOwner = (primaryFund as any)?.accessRole === "previous_owner";
+  // Co-parent (co-admin collaborator). The server gives a co-admin broad
+  // day-to-day write (gifts, memory, occasions, recurring — global mutator gate
+  // at routes.ts ~2668) but keeps strategy, gift routing, money movement, and
+  // fund structure OWNER-ONLY (explicit carve-outs). Settings otherwise has no
+  // co-admin branch, so a co-parent saw the owner-only controls and hit
+  // "View-only access" 403s. Hide the owner-only surfaces (most importantly the
+  // Money tab, which also exposes the owner's PRIVATE bank + tax docs) and show
+  // a co-parent banner. They still see how it's invested on the dashboard and do
+  // the day-to-day there. See CO_PARENT_PERMISSIONS_NOTE.md.
+  const primaryFundIsCoAdmin = (primaryFund as any)?.accessRole === "co-admin";
 
   const { data: holdingsData = [] } = useQuery<any[]>({
     queryKey: ["/api/funds", primaryFund?.id, "holdings"],
@@ -4180,7 +4190,7 @@ const [editFundName, setEditFundName] = useState("");
               { id: "gifts", label: "Gifts" },
               { id: "notifications", label: "Notifications" },
               { id: "money", label: "Money" },
-            ].map((tab) => (
+            ].filter((tab) => !(primaryFundIsCoAdmin && tab.id === "money")).map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -4214,6 +4224,17 @@ const [editFundName, setEditFundName] = useState("");
             </p>
             <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
               After the age-of-majority handoff, {recipientFirstNameDisplay || "the owner"} owns this fund. The investing mix, gift options, notifications, and money movement are theirs to manage from here. You can still follow along from the dashboard and Memory Book.
+            </p>
+          </div>
+        )}
+
+        {primaryFundIsCoAdmin && (
+          <div className="rounded-2xl border border-[hsl(var(--kiddo-evergreen)/0.22)] bg-[hsl(var(--kiddo-evergreen)/0.05)] p-5" data-testid="settings-co-parent-notice">
+            <p className="font-heading text-base font-semibold text-foreground">
+              You're a co-parent on {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "this"} fund
+            </p>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+              Add gifts, notes, and occasions from the dashboard anytime. The fund owner manages the investing strategy, gift options, money, and fund settings.
             </p>
           </div>
         )}
@@ -4306,6 +4327,11 @@ const [editFundName, setEditFundName] = useState("");
               </div>
             </SectionCard>
 
+            {/* Owner-only gifter controls (gift routing + Memory Book moderation).
+                Hidden for co-parents — the fund owner manages these (server:
+                investment-preferences + memory-moderation are owner-only). The
+                gift-page link above stays visible so a co-parent can still share. */}
+            {!primaryFundIsCoAdmin && (<>
             {/* What gifters can do */}
             <SectionCard>
               <div className="p-5">
@@ -4340,6 +4366,7 @@ const [editFundName, setEditFundName] = useState("");
                 />
               </div>
             </SectionCard>
+            </>)}
           </motion.div>
         )}
 
@@ -4932,7 +4959,7 @@ const [editFundName, setEditFundName] = useState("");
           </motion.div>
         )}
 
-        {settingsTab === "money" && !primaryFundIsPreviousOwner && (
+        {settingsTab === "money" && !primaryFundIsPreviousOwner && !primaryFundIsCoAdmin && (
           <motion.div
             key="settings-tab-money"
             initial={{ opacity: 0, y: 6 }}

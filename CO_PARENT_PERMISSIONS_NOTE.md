@@ -80,6 +80,26 @@ Mirror the `previous_owner` Settings fix (commit 4054551), but PARTIAL:
    structured "View-only access" 403 shape as `requireFundMutator` for
    consistency, but no auth change.
 
-I can ship steps 1-3 immediately on your confirmation of the table above. Until
-then nothing is gated, because guessing a permission model is the one place
-shipping-before-confirming is genuinely risky.
+## Shipped 2026-05-31 (founder said "do what's absolutely best")
+
+Client-only gating in Settings.tsx, mirroring the server's existing owner-only
+carve-outs (can't hide anything a co-parent could actually use, since the server
+already 403s those). `primaryFundIsCoAdmin = accessRole === 'co-admin'`:
+- **Money tab hidden** for co-admin (tab button filtered + content gated). This
+  is the most important one: it also stops exposing the OWNER's private linked
+  bank + tax documents to a co-parent, and removes the "Taking money out" control.
+- **Gifts tab owner-only sections hidden**: "What people can do" (gift routing /
+  GifterInvestmentRulesEditor) + "Memory Book entries from gifters" moderation.
+  The gift-page LINK stays visible so a co-parent can still share.
+- **Co-parent banner** added: "You're a co-parent on {kid}'s fund. Add gifts,
+  notes, and occasions from the dashboard anytime. The fund owner manages the
+  investing strategy, gift options, money, and fund settings."
+- Co-parent keeps the day-to-day write (dashboard) + sees how it's invested on
+  the dashboard. check (lint:content + tsc) green.
+
+REMAINING (small follow-up): the Child tab's "Invite co-parent" + "Close fund"
+buttons live inside the FundSettingsChildPanel sub-component (passed via
+onOpenInviteModal / onOpenCloseDialog), so gating them cleanly needs a prop on
+that panel. Lower stakes than the Money tab, and the banner already frames them
+as the owner's ("manages... fund settings"). Wire a `canManageStructure` prop
+when convenient.
