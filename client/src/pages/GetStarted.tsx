@@ -193,9 +193,10 @@ export default function GetStarted() {
   const registerReferralCode = isUserReferralCode(refCode) ? refCode?.trim().toUpperCase() : undefined;
   const { user, register, isAuthenticated, isRegistering } = useAuth();
   const queryClient = useQueryClient();
-  // Reverse-trial state for the success-screen transparency line. effectivePlan
-  // === "trial" only when the first-fund Plus trial actually granted, so the
-  // "free for 14 days" line never shows if an admin disabled the trial.
+  // Reverse-trial state for the success-screen transparency line. The first-fund
+  // trial lands in coverageByFund[fundId] === "trial_active" (NOT effectivePlan,
+  // which stays "free" without a paid sub — verified live), so the "free for 14
+  // days" line shows only when the trial really granted, never if it's disabled.
   const { data: subscription } = useSubscription();
   // A Dunphy demo login is a REAL authenticated session (as phil@dunphyfamily.com
   // etc.). For onboarding that must NOT count as "signed in" — otherwise a
@@ -1254,12 +1255,15 @@ export default function GetStarted() {
                 <h1 className="mt-8 font-heading text-[2.4rem] font-semibold leading-tight text-foreground">{accountType === "personal" ? `${created.name} is live.` : `${childDisplayName}'s fund is live.`}</h1>
                 <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Share the link and the first gift can happen today. When you are ready to open the real investment account, tap Activate Investing. It takes 2 minutes.</p>
                 {/* Reverse-trial transparency — a TELL, not a paywall choice.
-                    Shown only when the first-fund Plus trial actually granted
-                    (effectivePlan === "trial"), so it can never misrepresent the
-                    plan. Sets the expectation + primes the trial-end conversion
-                    without putting a Free-vs-Plus decision in the onboarding
-                    flow (which the reverse trial exists to defer). */}
-                {subscription?.effectivePlan === "trial" && (
+                    Gated on THIS fund's coverage being trial_active (verified
+                    live: the first-fund reverse trial lands in coverageByFund,
+                    NOT effectivePlan — which stays "free" since there's no paid
+                    user-level sub). So the line shows iff the trial really
+                    granted, and never misrepresents the plan. Sets the
+                    expectation + primes trial-end conversion without putting a
+                    Free-vs-Plus decision in onboarding (which the reverse trial
+                    exists to defer). */}
+                {created && subscription?.coverageByFund?.[created.id] === "trial_active" && (
                   <p className="mx-auto mt-5 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-4 py-1.5 text-xs font-medium text-[hsl(var(--kiddo-evergreen))]">
                     You&apos;re on Kiddo Plus, free for 14 days. No card needed.
                   </p>
