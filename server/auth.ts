@@ -1069,6 +1069,119 @@ export function setupAuth(app: Express) {
         console.error("Failed to log claim activity:", actErr);
       }
 
+      // === Handoff cleanup parity with the complete-transfer endpoint ===
+      // This Kid-View claim path is a SECOND door to the same ownership
+      // transfer as routes.ts `/complete-transfer` (~7549). That path runs a
+      // full cleanup; this one historically only flipped the fund row, which
+      // left real gaps on a claimed fund:
+      //   1. Parent-era collaborators (co-admin = WRITE) kept standing access
+      //      to the now-adult's personal fund — a privacy hole with no worker
+      //      backstop (unlike recurring). THIS is the load-bearing fix.
+      //   2. events.userId stayed pointed at the former custodian.
+      //   3. Recurring + stale fund_memberships weren't cleaned inline.
+      // Mirror the canonical cleanup so both doors behave identically. KEEP IN
+      // SYNC with routes.ts complete-transfer. All best-effort: a failure here
+      // cannot roll back the completed transfer (which already succeeded above).
+      const fundIsDemoForCleanup = await (await import("./demoSandbox"))
+        .isDemoFund(fund.id)
+        .catch(() => false);
+      try {
+        const { events: eventsTable } = await import("@shared/schema");
+        await dbModule
+          .update(eventsTable)
+          .set({ userId: user.id, updatedAt: transferTime })
+          .where(eq(eventsTable.fundId, fund.id));
+      } catch (evErr) {
+        console.error("[claim] events reassignment failed (non-fatal):", fund.id, evErr);
+      }
+
+      // Capture accepted collaborators BEFORE revoking (for the heads-up),
+      // then revoke ALL of them. The parent's sharing choices do not carry
+      // into the kid's own account; the adult re-invites whoever they want.
+      let priorCollaboratorEmails: string[] = [];
+      try {
+        const collabs = await storageModule.getCollaboratorsByFund(fund.id);
+        priorCollaboratorEmails = Array.from(new Set(
+          (collabs || [])
+            .filter((c: any) => String(c?.status || "").toLowerCase() === "accepted" && c?.email)
+            .map((c: any) => String(c.email).trim().toLowerCase())
+            .filter(Boolean),
+        ));
+      } catch (readErr) {
+        console.warn("[claim] could not read collaborators before revoke (heads-up skipped):", fund.id, readErr);
+      }
+      try {
+        const revoked = await storageModule.deleteCollaboratorsByFund(fund.id);
+        if (revoked > 0) console.log(`[claim] Revoked ${revoked} collaborator(s) on handoff for fund ${fund.id}`);
+      } catch (revokeErr) {
+        console.error("[claim] Collaborator revocation failed at handoff (manual cleanup required):", fund.id, revokeErr);
+        try {
+          const { sendOpsAlert } = await import("./ops");
+          await sendOpsAlert({
+            severity: "warning",
+            title: "Age-claim handoff: collaborator revocation failed",
+            message: `Fund ${fund.id} was claimed by the now-adult kid, but the prior parent's collaborator rows did NOT auto-delete. Manual cleanup needed.`,
+            context: { fundId: fund.id, previousOwnerId, newOwnerId: user.id, error: String(revokeErr) },
+          });
+        } catch { /* alerting failure must not block claim */ }
+      }
+
+      // Warm heads-up to the revoked co-parents (mirror complete-transfer):
+      // their access ending is correct, but the silence was the gap.
+      if (priorCollaboratorEmails.length > 0 && !fundIsDemoForCleanup) {
+        try {
+          const { renderKiddoEmail } = await import("./templates/baseTemplate");
+          const childName = fund.recipientFirstName || user.firstName || "Your family member";
+          const majorityAgeForEmail = Number((fund as any).majorityAge) || 18;
+          const intro = [
+            "Hi,",
+            "",
+            `${childName} just turned ${majorityAgeForEmail} and claimed the Kiddo fund you shared access to. Under state UTMA law, control transfers to them at this age, and the fund has moved into their own account.`,
+            "",
+            `Because the account is now ${childName}'s, shared access has ended. That's the normal, expected part of a handoff, not something you need to fix. Nothing was sold; the investments stay exactly where they are.`,
+            "",
+            `If ${childName} wants to share the fund with you again, they can invite you from their own account.`,
+            "",
+            "Thank you for showing up for them all these years.",
+            "",
+            "The Kiddo team",
+          ].join("\n");
+          const { html } = renderKiddoEmail({ heading: `${childName} now owns their Kiddo fund`, intro });
+          for (const to of priorCollaboratorEmails) {
+            await sendEmail({
+              to,
+              subject: `${childName} now owns their Kiddo fund`,
+              text: intro,
+              html,
+              tags: ["age_transition", "coparent_handoff_notice"],
+              metadata: { fundId: fund.id, milestone: "coparent_handoff_notice" },
+            }).catch((sendErr) => console.error("[claim] co-parent heads-up send failed (non-fatal):", fund.id, to, sendErr));
+          }
+        } catch (emailErr) {
+          console.error("[claim] co-parent heads-up block failed (non-fatal):", fund.id, emailErr);
+        }
+      }
+
+      // Recurring auto-pause + fund_memberships hygiene (mirror complete-transfer).
+      // The recurring worker also catches ownership-mismatched rows on its next
+      // tick (money-safe in the interim via its f.user_id = pc.user_id guard);
+      // calling inline makes the parent's pause + conversion email atomic.
+      try {
+        const { autoPauseOwnershipMismatchedContributions } = await import("./recurringContributionWorker");
+        await autoPauseOwnershipMismatchedContributions(() => undefined);
+      } catch (pauseErr) {
+        console.error("[claim] inline recurring auto-pause failed (worker will catch next tick):", fund.id, pauseErr);
+      }
+      try {
+        const cleaned = await dbModule
+          .delete(fundMemberships)
+          .where(and(eq(fundMemberships.userId, previousOwnerId), eq(fundMemberships.fundId, fund.id)))
+          .returning({ id: fundMemberships.id });
+        if (cleaned.length > 0) console.log(`[claim] Cleaned ${cleaned.length} stale fund_memberships row(s) for fund ${fund.id}`);
+      } catch (memErr) {
+        console.error("[claim] fund_memberships cleanup failed (manual cleanup may be needed):", fund.id, memErr);
+      }
+
       // Establish session as the new owner (mirror /api/auth/register).
       // Regenerate first (session-fixation prevention) — this path takes
       // ownership of a custodial fund, so a clean session id matters.
