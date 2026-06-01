@@ -387,10 +387,27 @@ two adjacent things may be worth it, and we need the line drawn:
    and economically sensible?
 5. **In-house management (lowest priority, likely a no).** What would discretionary
    human management by Kiddo itself require, and is it ever worth it vs. referral?
+6. **The "designed by experts" marketing claim.** We want to say the model portfolios
+   were "designed by experts" / "built by a CFA charterholder." Review the exact
+   wording so it is (i) not a misleading/unsubstantiated claim (SEC marketing rule /
+   FINRA / FTC, depending on our hat) and (ii) does not imply *personalized*
+   advice. Specifically: does **naming a credentialed designer** — especially if
+   they are an RIA/IAR — imply an advisory relationship with our users that triggers
+   disclosure or registration? Is "built by a CFA" safer than generic "experts," and
+   are there words to avoid ("recommended," "tailored," "for your child")?
 
-**What we need back:** a clear "self-selected menu vs. advice" line for (a), and a
-yes/no + structure for the referral model (b). We expect in-house management to be
-advised against — confirm.
+**Substantiation discipline (internal — what we must have BEFORE making the claim).**
+The claim is only true if a real, named, credentialed person actually designed the
+portfolios. Required before "designed by experts" appears anywhere: (a) the designer
+is a **CFA / CFP / RIA** (the founder's licensed-advisor contacts fit here); (b) a
+short **written methodology** they authored; (c) a **dated sign-off**; (d) their
+**consent to be named** (or named by credential). Name the *specific credential*,
+never vague "experts" — it's both more credible and more defensible.
+
+**What we need back:** a clear "self-selected menu vs. advice" line for (a); a
+yes/no + structure for the referral model (b); approved wording for the
+"designed by experts" claim (Q6). We expect in-house management to be advised
+against — confirm.
 
 **On expert review (FYI — keep these channels distinct).** The founder's
 licensed-advisor contacts will review product/portfolio design before go-live.
