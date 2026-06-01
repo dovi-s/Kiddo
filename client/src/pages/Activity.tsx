@@ -605,6 +605,13 @@ function rewriteLegacyAutoInvestTitle(t: string | null | undefined): string {
 // New rows pass through unchanged.
 function rewriteLegacyDescription(d: string | null | undefined): string | null {
   if (!d) return d ?? null;
+  // Drop dead filler so the feed doesn't read templated/"AI" down a column of gifts:
+  // "No note." (a note-less gift needs no body) and the redundant "$X gift received" (the
+  // amount is already shown on the row). Returning null → the body simply isn't rendered.
+  // Cleans EXISTING rows at display time; the server now writes something useful for new
+  // gifts (webhookHandlers). 2026-06-01.
+  const t = d.trim();
+  if (t === "No note." || /^\$[\d,]+(\.\d{2})? gift received$/i.test(t)) return null;
   let out = d;
   // Singular/plural for position count.
   out = out.replace(/\bacross 1 positions\b/g, "across 1 position");
@@ -3622,7 +3629,7 @@ export default function Activity() {
                                     </p>
                                   )}
                                 </div>
-                                {item.description && (
+                                {rewriteLegacyDescription(item.description) && (
                                   <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3, lineHeight: 1.45 }}>
                                     {rewriteLegacyDescription(item.description)}
                                   </p>
