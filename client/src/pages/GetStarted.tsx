@@ -23,6 +23,7 @@ import { USOnlyOffRamp } from "@/components/USOnlyOffRamp";
 import { GiftIntentBanner } from "@/components/GiftIntentBanner";
 import { RothInterestOptIn } from "@/components/RothInterestOptIn";
 import { useAuth } from "@/hooks/use-auth";
+import { useQueryClient } from "@tanstack/react-query";
 import type {
   AuthProvidersStatus,
   OnboardingAccountType,
@@ -190,6 +191,7 @@ export default function GetStarted() {
   const utm = extractUtmMetadata(search);
   const registerReferralCode = isUserReferralCode(refCode) ? refCode?.trim().toUpperCase() : undefined;
   const { user, register, isAuthenticated, isRegistering } = useAuth();
+  const queryClient = useQueryClient();
   // A Dunphy demo login is a REAL authenticated session (as phil@dunphyfamily.com
   // etc.). For onboarding that must NOT count as "signed in" — otherwise a
   // prospect who explored the demo and then clicked Get Started skips signup
@@ -201,28 +203,44 @@ export default function GetStarted() {
   const isDemoAccount = Boolean((user as any)?.isDemoAccount);
   const isRealAuthenticated = isAuthenticated && !isDemoAccount;
   // Landing here from inside the demo means the prospect is leaving the demo to
-  // sign up for real. Drop the demo's cached per-user client state once so it
-  // can't bleed into the new account — chiefly the active-fund id, which
-  // Dashboard reads to decide which fund to render (a demo Luke/Alex/Haley id
-  // would otherwise survive the redirect-based OAuth signup). The session
-  // itself is replaced server-side by register (regenerate+login) or the OAuth
-  // callback; this covers the client cache the OAuth redirect path wouldn't.
+  // sign up for real. Quietly END the demo session the moment they arrive, so
+  // BOTH the email and OAuth signup paths start from a clean, anonymous slate:
+  //   1. POST /api/auth/logout — destroys the demo session server-side. (We
+  //      don't use useAuth's logout(), which hard-redirects to "/" and would
+  //      bounce them off this page; we do the fetch + cache reset inline.)
+  //   2. Clear the demo's cached per-user client state — chiefly the active-fund
+  //      id, which Dashboard reads to pick a fund (a demo Luke/Alex/Haley id
+  //      would otherwise survive the redirect-based OAuth signup and briefly
+  //      render a demo fund under the new account).
+  //   3. Reset the auth query to null so the page re-renders as anonymous.
+  // Runs once. Real (non-demo) users never hit this. The isRealAuthenticated
+  // gating below is still the belt-and-suspenders if this logout ever fails.
   const demoStateClearedRef = useRef(false);
   useEffect(() => {
     if (!isDemoAccount || demoStateClearedRef.current || typeof window === "undefined") return;
     demoStateClearedRef.current = true;
-    try {
-      window.localStorage.removeItem("kiddo_active_fund_id");
-      for (let i = window.localStorage.length - 1; i >= 0; i--) {
-        const k = window.localStorage.key(i);
-        if (k && (k.startsWith("kora.dashboard-summary.") || k.startsWith("kiddo.fund-balance."))) {
-          window.localStorage.removeItem(k);
-        }
+    void (async () => {
+      try {
+        await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      } catch {
+        // Network blip — register/OAuth still replace the session server-side.
       }
-    } catch {
-      // localStorage blocked — non-fatal; register/OAuth still replace the session.
-    }
-  }, [isDemoAccount]);
+      try {
+        window.localStorage.removeItem("kiddo_active_fund_id");
+        for (let i = window.localStorage.length - 1; i >= 0; i--) {
+          const k = window.localStorage.key(i);
+          if (k && (k.startsWith("kora.dashboard-summary.") || k.startsWith("kiddo.fund-balance."))) {
+            window.localStorage.removeItem(k);
+          }
+        }
+      } catch {
+        // localStorage blocked — non-fatal.
+      }
+      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+    })();
+  }, [isDemoAccount, queryClient]);
   const [step, setStep] = useState<OnboardingStep>("welcome");
   // Multi-step onboarding transitions happen via React state, not URL —
   // so the global ScrollToTop in App.tsx never fires on step change.
