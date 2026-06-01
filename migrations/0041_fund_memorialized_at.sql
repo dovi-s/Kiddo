@@ -1,0 +1,21 @@
+-- Migration 0041: funds.memorialized_at — bereavement / memorial flag.
+--
+-- Set support-side ONLY (never a self-serve toggle) if a fund's beneficiary passes away.
+-- When set, the client suppresses every forward-looking surface (projections, "turns N"
+-- countdowns, active-management CTAs) so a grieving family never sees "on track for $X when
+-- {child} turns N"; the Memory Book stays, as a memorial. See SUCCESSOR_CUSTODIAN_SPEC.md
+-- "Deceased beneficiary", and the isMemorialized gate already shipped in Dashboard.tsx.
+--
+-- Nullable; NULL = normal. Idempotent (safe to re-run).
+--
+-- ⚠️ DROP-IN SEQUENCE (this .sql is inert until journaled — db:migrate applies via the
+--    journal, not by scanning files). When the migration channel is clear:
+--      1. shared/schema.ts → funds table, add:  memorializedAt: timestamp("memorialized_at"),
+--         (do this IN THE SAME commit as steps 2-3 + apply — adding it alone, before the
+--          column exists in the DB, breaks every `select().from(funds)` against the live DB.)
+--      2. migrations/meta/_journal.json → append to "entries":
+--         { "idx": 41, "version": "7", "when": <ms-timestamp>, "tag": "0041_fund_memorialized_at", "breakpoints": true }
+--      3. npm run db:migrate   (founder action — writes to the live remote Supabase DB)
+--    Then extend the isMemorialized gate to the projection hero + the Projection page.
+
+ALTER TABLE funds ADD COLUMN IF NOT EXISTS memorialized_at timestamp;
