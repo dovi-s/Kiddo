@@ -346,6 +346,62 @@ licensing benefit.
 
 ---
 
+# Part 8 — Advisory / human-managed tier (Securities — Advisers Act) — NOT launch-gating, forward-looking
+
+**Source:** strategy decision 2026-05-31 + `memory/project_account_model_decisions.md`
+(the self-directed pivot). **Not a launch blocker** — this maps a *future* boundary
+so we neither foreclose it nor accidentally step into it. Same Advisers Act
+analysis as Part 1, so it costs little to answer on the same call.
+
+**The trigger.** Founder has licensed-advisor contacts and asked whether Kiddo
+should offer human-managed portfolios or partner with licensed pros. Our answer
+for the **core** is no (it would reverse the self-directed posture in Part 1 and
+invert the unit economics — a human managing a $2k UTMA at 0.10% is ~$2/yr). But
+two adjacent things may be worth it, and we need the line drawn:
+
+**Our position (please confirm / correct):**
+- The **core stays self-directed** — no portfolio management, no personalized
+  recommendations at the kid/gift level. Preserves Part 1.
+- **(a) Expert-*designed*, user-*selected* model portfolios** — a menu the user
+  picks from (credibility / trust play), explicitly *not* "recommended for your
+  child."
+- **(b) A future, opt-in, high-balance / adult-owner tier that REFERS to
+  independent licensed RIAs** (never in-house), possibly for a referral fee.
+
+**The questions:**
+1. **Model portfolios — where is the line?** At what point does an expert-designed,
+   user-selected model-portfolio menu cross into "investment advice"/RIA? Does
+   labeling ("designed by a CFA"), goal-tagging ("growth," "for college"), or any
+   sorting/matching of a portfolio *to a user* constitute a recommendation? Draw
+   the exact boundary between a self-selected menu and advice so product can build
+   (a) safely.
+2. **Referral / solicitor model.** If we refer adult owners/parents to independent
+   RIAs for compensation, what's triggered (Advisers Act marketing rule / solicitor
+   disclosure, written agreements, Form ADV references)? Can Kiddo earn a referral
+   fee **without itself registering**?
+3. **Contamination risk.** Can an advisory/referral tier exist as a clearly-separate,
+   opt-in product **without compromising the self-directed determination of the
+   core** gifting product?
+4. **Threshold.** At what balance / account type (e.g., the post-handoff adult
+   personal account) does an advisory or referral offering become both compliant
+   and economically sensible?
+5. **In-house management (lowest priority, likely a no).** What would discretionary
+   human management by Kiddo itself require, and is it ever worth it vs. referral?
+
+**What we need back:** a clear "self-selected menu vs. advice" line for (a), and a
+yes/no + structure for the referral model (b). We expect in-house management to be
+advised against — confirm.
+
+**On expert review (FYI — keep these channels distinct).** The founder's
+licensed-advisor contacts will review product/portfolio design before go-live.
+They're ideal for *designing* the (a) model portfolios, lensing credibility, and
+as candidate referral partners for (b) — but they are **not** a substitute for
+this written securities-counsel opinion on where the advice line sits. "An advisor
+friend said it's fine" is not the RIA determination; counsel draws the line,
+advisors build inside it.
+
+---
+
 # Engagement logistics
 
 **Firm type (in order):** SEC-RIA specialist boutiques (Hardin Compliance, ACA
