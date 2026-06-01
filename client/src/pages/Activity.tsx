@@ -43,7 +43,7 @@ type ActivityTab = "history" | "pending" | "scheduled";
 // these in one tab too — same "this is happening soon" mental model.
 const PENDING_UPCOMING_DAYS = 3;
 
-type FilterType = "all" | "gifts" | "auto" | "growth" | "milestones";
+type FilterType = "all" | "gifts" | "auto" | "growth";
 type FeedActivity = ActivityType & {
   fundName?: string | null;
   recipientFirstName?: string | null;
@@ -78,7 +78,6 @@ const filterOptions: { value: FilterType; label: string }[] = [
   // pill label changes. Matches the per-row "Portfolio" label that
   // already renders for sell rows below.
   { value: "growth",     label: "Portfolio" },
-  { value: "milestones", label: "Milestones" },
 ];
 
 // Filter category mapping. Every activity type that gets written to the
@@ -707,7 +706,11 @@ function StatusPill({ status, type }: { status?: string | null; type?: string | 
 // the loading state below. This keeps the local skeleton declaration removed
 // so future variations all flow through the named-variant API.
 
-const VALID_FILTERS: FilterType[] = ["all", "gifts", "auto", "growth", "milestones"];
+// "milestones" intentionally dropped 2026-06-01: it was a sparse filter that
+// duplicated the Memory Book (the real home for the emotional lifecycle) and
+// rendered near-empty for young funds. Milestone/memory rows still appear under
+// "All". A stale ?filter=milestones URL falls back to "all" via the check below.
+const VALID_FILTERS: FilterType[] = ["all", "gifts", "auto", "growth"];
 
 export default function Activity() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -1328,7 +1331,6 @@ export default function Activity() {
       if (filter === "gifts"      && cat !== "gift") return false;
       if (filter === "auto"       && cat !== "auto") return false;
       if (filter === "growth"     && cat !== "growth") return false;
-      if (filter === "milestones" && !["memory", "milestone"].includes(cat)) return false;
     }
     if (search) {
       // Search matches across title + description PLUS metadata-derived
@@ -1476,7 +1478,12 @@ export default function Activity() {
   }, 0);
   const giftCount = allVisible.filter(i => mapItemToCategory(i) === "gift").length;
   const investCount = allVisible.filter(i => ["auto", "growth"].includes(mapItemToCategory(i))).length;
-  const milestoneCount = allVisible.filter(i => ["memory", "milestone"].includes(mapItemToCategory(i))).length;
+  // Portfolio (sells / withdrawals / bank-account mechanics) is empty for the
+  // vast majority of funds — a kid's fund doesn't sell or withdraw until much
+  // later (often the at-18 handoff). So only show the Portfolio pill when there
+  // is actually portfolio activity to filter to; otherwise it's another
+  // "click → nothing" empty-state-on-a-promise. The rows still live under "All".
+  const hasGrowthRows = allVisible.some(i => mapItemToCategory(i) === "growth");
 
   const cachedVisible = useMemo(() => {
     // Same paired-gift dedupe as the live feed — prevents a brief flash of
@@ -2153,7 +2160,7 @@ export default function Activity() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
             <div style={{ display: "flex", gap: 6, overflowX: "auto" as const, paddingBottom: 2, flex: 1, minWidth: 0 }} data-testid="filter-pills">
-            {filterOptions.map(opt => (
+            {filterOptions.filter(opt => opt.value !== "growth" || hasGrowthRows).map(opt => (
               <button
                 key={opt.value}
                 type="button"
