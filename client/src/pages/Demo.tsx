@@ -23,6 +23,7 @@ import { setActiveFundId } from "@/hooks/use-active-fund";
 import { useAuth } from "@/hooks/use-auth";
 import { ArrowRight, Users, Gift, ShieldCheck, Star, GraduationCap } from "lucide-react";
 import { LockedRefusalsPanel } from "@/components/LockedRefusalsPanel";
+import { usePageSeo } from "@/lib/seo";
 
 const DEMO_PASSWORD = "dunphyfamily";
 
@@ -85,6 +86,18 @@ const ACCOUNTS: DemoAccount[] = [
 ];
 
 export default function Demo() {
+  // Now linked from the footer ("See it live"), so it's no longer an orphan URL.
+  // Stay noindex,nofollow regardless: this page one-click logs a visitor into a
+  // seeded persona's account — not something we want in search results or
+  // competing with the real marketing pages. Mirrors /partners. Kept out of the
+  // sitemap too (see server/seoMeta.ts).
+  usePageSeo({
+    title: "See Kiddo live | Explore a real family's funds",
+    description:
+      "Step into a live Kiddo demo. Explore the parent, co-parent, gifter, and grown-up views of a family's investment funds, with no signup.",
+    robots: "noindex,nofollow",
+    ogType: "website",
+  });
   const [, setLocation] = useLocation();
   const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
   const { toast } = useToast();

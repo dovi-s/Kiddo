@@ -3,6 +3,7 @@ import { Logo } from "@/components/ui/logo";
 
 const topRowLinks: Array<{ href: string; label: string; external?: boolean }> = [
   { href: "/how-it-works", label: "How it works" },
+  { href: "/demo", label: "See it live" },
   { href: "/pricing", label: "Pricing" },
   { href: "/faq", label: "FAQ" },
   { href: "/about", label: "About" },

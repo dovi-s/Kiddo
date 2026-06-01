@@ -438,6 +438,16 @@ export default function Home() {
                   {websiteCopy.hero.secondaryCta}
                 </Link>
               </div>
+              {/* Quiet secondary path for the "show me before I commit" visitor.
+                  /demo one-click logs into a seeded family so they can touch the
+                  real product with no signup. Kept below the primary CTA so it
+                  never competes with it. noindex (see Demo.tsx). */}
+              <p className="mt-4 text-sm text-muted-foreground">
+                Want to look around first?{" "}
+                <Link href="/demo" className="font-medium text-primary underline-offset-4 hover:text-foreground hover:underline" data-testid="link-hero-demo">
+                  Explore a live demo
+                </Link>
+              </p>
               {/* AUM honesty in hero — per pricing-v3 + behavioral framing
                   discipline (cents-on-dollar legibility): the 0.10% AUM
                   appears as "10¢ per $100 invested" so the genuinely tiny
