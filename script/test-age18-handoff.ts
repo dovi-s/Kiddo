@@ -18,6 +18,13 @@
 //   -> assert fund.kidWelcomeCompletedAt stamped
 //   -> replay /complete and confirm it's idempotent (already-transferred)
 //
+// THEN (runKidViewClaimChecks) the SECOND handoff door — the Kid-View
+// /api/kid-view/:token/claim-account path — is driven end to end (enable Kid
+// View + PIN -> unlock -> claim) and asserted to run the IDENTICAL cascade
+// (revoke collaborators + reassign events + pause recurring + clean
+// memberships). Both doors must stay in lockstep; see
+// project_age_handoff_two_doors_must_match.
+//
 // This is the app-layer guarantee. When DriveWealth custody is wired, ADD
 // assertions here that the real brokerage account transfer fired (today it
 // queues to an outbox — see CUSTODIAN_SOURCE_OF_TRUTH.md). Until then the test
@@ -42,6 +49,13 @@ const PARENT_EMAIL = `qa_handoff_parent_${stamp}@example.com`;
 const KID_EMAIL = `qa_handoff_kid_${stamp}@example.com`;
 const COPARENT_EMAIL = `qa_handoff_coparent_${stamp}@example.com`;
 const FUND_SLUG = `qa-handoff-${stamp}`;
+// Door #2 (Kid-View claim-account) fixtures. Same qa_handoff_* / qa-handoff-*
+// prefixes so the existing cleanup sweep catches them.
+const KV_PARENT_EMAIL = `qa_handoff_kv_parent_${stamp}@example.com`;
+const KV_KID_EMAIL = `qa_handoff_kv_kid_${stamp}@example.com`;
+const KV_COPARENT_EMAIL = `qa_handoff_kv_coparent_${stamp}@example.com`;
+const KV_FUND_SLUG = `qa-handoff-kv-${stamp}`;
+const KV_PIN = "4821";
 
 function spawnNpm(args: string[], options: SpawnOptions): ChildProcess {
   if (process.platform === "win32") {
@@ -112,6 +126,7 @@ async function cleanup() {
     if (fundIds.length) {
       await pool.query(`DELETE FROM activities WHERE fund_id = ANY($1::varchar[])`, [fundIds]).catch(() => undefined);
       await pool.query(`DELETE FROM parent_contributions WHERE fund_id = ANY($1::varchar[])`, [fundIds]).catch(() => undefined);
+      await pool.query(`DELETE FROM fund_memberships WHERE fund_id = ANY($1::varchar[])`, [fundIds]).catch(() => undefined);
       await pool.query(`DELETE FROM fund_collaborators WHERE fund_id = ANY($1::varchar[])`, [fundIds]).catch(() => undefined);
       await pool.query(`DELETE FROM age_transitions WHERE fund_id = ANY($1::varchar[])`, [fundIds]).catch(() => undefined);
       await pool.query(`DELETE FROM events WHERE fund_id = ANY($1::varchar[])`, [fundIds]).catch(() => undefined);
@@ -293,6 +308,115 @@ async function runChecks() {
   }
 }
 
+// Door #2: the Kid-View `claim-account` path. The age-of-majority handoff has
+// TWO ownership-transfer doors. runChecks() above drives door #1
+// (/api/age-transition/:token/complete). This drives door #2
+// (/api/kid-view/:token/claim-account — the kid claiming straight from Kid
+// View) and asserts the IDENTICAL cleanup cascade. Door #2 historically
+// skipped collaborator revocation (a privacy hole: parent-era co-admins kept
+// WRITE access to the now-adult's fund), fixed 2026-05-31. This test locks the
+// invariant so the two doors can't silently drift apart again. See
+// project_age_handoff_two_doors_must_match.
+async function runKidViewClaimChecks() {
+  // 1. Parent in a persistent (authenticated) context — register establishes the session.
+  const parentCtx = await request.newContext({ baseURL: baseUrl, extraHTTPHeaders: { Accept: "application/json" } });
+  try {
+    const regRes = await parentCtx.post(`${baseUrl}/api/auth/register`, { data: { email: KV_PARENT_EMAIL, password: PASSWORD, firstName: "QAKvParent" } });
+    assert(regRes.status() === 201, `kv parent register failed: ${regRes.status()} ${await regRes.text()}`);
+    const parentId = (await regRes.json()).id as string;
+    assert(parentId, "kv parent register returned no id");
+
+    // 2. Fund past majority (majorityAge 21, ~22yo), owned by the parent.
+    const birthdate = new Date(Date.now() - 22 * 365.25 * 86_400_000);
+    const fund = await storage.createFund({
+      userId: parentId,
+      name: "QA KidView Handoff Fund",
+      slug: KV_FUND_SLUG,
+      recipientFirstName: "QAKvChild",
+      recipientRelation: "daughter",
+      recipientBirthdate: birthdate,
+      majorityAge: 21,
+      accountType: "UTMA",
+      status: "active",
+      balance: "1000.00",
+    } as any);
+    assert(fund?.id, "kv createFund returned a fund id");
+
+    // 3. Fixtures the handoff cascade must act on: a co-parent collaborator
+    //    (must be REVOKED — the load-bearing assertion), an active recurring
+    //    (must pause), an event (must reassign to the kid), a fund_membership
+    //    (must be cleaned).
+    await storage.createCollaborator({ fundId: fund.id, email: KV_COPARENT_EMAIL, role: "co-admin", status: "accepted" } as any);
+    const contrib = await storage.createParentContribution({ fundId: fund.id, userId: parentId, amount: "50.00", frequency: "monthly", status: "active" } as any);
+    assert(contrib?.id, "kv createParentContribution returned an id");
+    const event = await storage.createEvent({ fundId: fund.id, userId: parentId, name: "QA Birthday", slug: `qa-kv-bday-${stamp}`, eventType: "birthday" } as any);
+    assert(event?.id, "kv createEvent returned an id");
+    await storage.upsertFundMembership({ userId: parentId, fundId: fund.id, plan: "starter", status: "active" } as any);
+
+    // 4. Parent enables Kid View + sets a PIN (the real owner-side setup that
+    //    makes the share link claimable). shareToken comes back in shareLink.
+    const setRes = await parentCtx.patch(`${baseUrl}/api/funds/${fund.id}/kid-view-settings`, { data: { enabled: true, pin: KV_PIN } });
+    assert(setRes.status() === 200, `kid-view-settings failed: ${setRes.status()} ${await setRes.text()}`);
+    const shareLink = String((await setRes.json())?.shareLink || "");
+    const shareToken = shareLink.split("/kid/")[1] || "";
+    assert(shareToken, `kid-view-settings returned no shareToken (link=${shareLink})`);
+
+    // 5. Kid (fresh, UNauthenticated context) unlocks with the PIN -> access token.
+    const kid = await request.newContext({ baseURL: baseUrl, extraHTTPHeaders: { Accept: "application/json" } });
+    try {
+      const unlockRes = await kid.post(`${baseUrl}/api/kid-view/${shareToken}/unlock`, { data: { pin: KV_PIN } });
+      assert(unlockRes.status() === 200, `kid-view unlock failed: ${unlockRes.status()} ${await unlockRes.text()}`);
+      const accessToken = String((await unlockRes.json())?.accessToken || "");
+      assert(accessToken, "kid-view unlock returned no accessToken");
+
+      // 6. THE DOOR: claim the account straight from Kid View (creates the kid
+      //    user + flips ownership in one call).
+      const claimRes = await kid.post(`${baseUrl}/api/kid-view/${shareToken}/claim-account`, {
+        data: { accessToken, email: KV_KID_EMAIL, password: PASSWORD, firstName: "QAKvKid" },
+      });
+      assert(claimRes.status() === 200, `kid-view claim-account failed: ${claimRes.status()} ${await claimRes.text()}`);
+      const claimBody = await claimRes.json();
+      const kidId = String(claimBody?.id || "");
+      assert(kidId, "claim-account returned no kid id");
+      assert(claimBody?.claimedFundId === fund.id, `claim-account should report claimedFundId (got ${claimBody?.claimedFundId})`);
+
+      // 7. Assert the SAME cascade door #1 guarantees.
+      const movedFund = await storage.getFund(fund.id);
+      assert(movedFund, "kv fund still exists after claim");
+      assert((movedFund as any).userId === kidId, `kv fund.userId should flip to kid (got ${(movedFund as any).userId})`);
+      assert((movedFund as any).transferredAt, "kv fund.transferredAt should be stamped");
+      assert((movedFund as any).previousOwnerId === parentId, `kv fund.previousOwnerId should be the parent (got ${(movedFund as any).previousOwnerId})`);
+
+      // THE load-bearing assertion: collaborators revoked on THIS door too.
+      const collabCount = await pool.query(`SELECT COUNT(*)::int AS n FROM fund_collaborators WHERE fund_id = $1`, [fund.id]);
+      assert(collabCount.rows[0].n === 0, `kv: co-parent collaborators should be revoked on the claim door (found ${collabCount.rows[0].n})`);
+
+      // Events reassigned to the new owner.
+      const evRow = await pool.query(`SELECT user_id FROM events WHERE id = $1`, [event.id]);
+      assert(evRow.rows[0]?.user_id === kidId, `kv: event should be reassigned to kid (got ${evRow.rows[0]?.user_id})`);
+
+      // Recurring paused with the handoff reason.
+      const pcRow = await pool.query(`SELECT status, pause_reason FROM parent_contributions WHERE id = $1`, [contrib.id]);
+      assert(pcRow.rows[0]?.status === "paused", `kv: recurring should be paused (got ${pcRow.rows[0]?.status})`);
+      assert(pcRow.rows[0]?.pause_reason === "majority_handoff", `kv: pause_reason should be majority_handoff (got ${pcRow.rows[0]?.pause_reason})`);
+
+      // Stale former-parent fund_membership cleaned.
+      const fmRow = await pool.query(`SELECT COUNT(*)::int AS n FROM fund_memberships WHERE fund_id = $1 AND user_id = $2`, [fund.id, parentId]);
+      assert(fmRow.rows[0].n === 0, `kv: former-parent fund_memberships should be cleaned (found ${fmRow.rows[0].n})`);
+
+      // The claim logged its activity (door #2 writes kid_claimed_fund).
+      const claimAct = await pool.query(`SELECT COUNT(*)::int AS n FROM activities WHERE fund_id = $1 AND type = 'kid_claimed_fund'`, [fund.id]);
+      assert(claimAct.rows[0].n >= 1, `kv: a kid_claimed_fund activity should be logged (found ${claimAct.rows[0].n})`);
+
+      console.log("Kid-View claim-account door passed (unlock -> claim -> SAME cascade: revoke collaborators + reassign events + pause recurring + clean memberships).");
+    } finally {
+      await kid.dispose();
+    }
+  } finally {
+    await parentCtx.dispose();
+  }
+}
+
 async function main() {
   let server: ChildProcess | undefined;
   if (!(await isHealthy())) {
@@ -307,6 +431,7 @@ async function main() {
 
   try {
     await runChecks();
+    await runKidViewClaimChecks();
   } finally {
     await cleanup();
     if (server?.pid) killProcessTree(server.pid);
