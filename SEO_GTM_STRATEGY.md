@@ -96,21 +96,30 @@ robots), robots.txt with private surfaces disallowed.
    exist. Now includes every public/satellite page + all 51 state pages
    (self-maintaining from `@shared/utma`) + the 7 comparison pages.
    (`server/index.ts`.)
-2. **Prerendering — the real ceiling-raiser (DECISION PENDING, founder).** The
-   app is a client-side SPA: `usePageSeo` injects title/description/content
-   **after** JS loads, with no SSR/prerender. Google can render JS (slower,
-   weaker); most social + LLM + non-Google crawlers cannot. **This is the #1
-   structural cap on any heavy SEO push.** Until it's decided, satellite content
-   will under-rank relative to effort.
-   - **Recommended:** prerender (static HTML snapshots) the **marketing +
-     satellite routes only** (home, how-it-works, pricing, compare/*, tools/*,
-     utma-by-state/*, blog/*, stories/*, faq, about, security) — NOT the
-     authed/dynamic app. Options: a prerender step in the build (e.g.
-     react-snap / a headless-Chrome crawl of the public route list), or move
-     these routes to a lightweight SSR/SSG layer. App routes stay SPA.
-   - Hold heavy content production until this is decided, so the work isn't
-     spent on pages that can't rank.
-3. **Topical clusters (then).** Build out the three intent clusters above
+2. **Head-level SSR (DONE 2026-05-31).** The problem was: production served one
+   identical `index.html` head for **every** route (`server/static.ts`), and
+   `usePageSeo` only fixed it client-side *after* hydration — so non-JS crawlers
+   (social cards, LLM crawlers, Google's first wave) saw a generic "Kiddo" shell
+   on every page, and most public pages had no per-page title even client-side.
+   Now the static server injects a correct per-route
+   `<title>`/description/canonical/OG into the **initial HTML** for the public
+   marketing + satellite routes, from a server-side authority table
+   (`server/seoMeta.ts`: static routes + all 51 state pages + the 7 comparison
+   pages, titles mirroring the client pages). App/private/dynamic-gift/404 routes
+   fall through to the unchanged shell. No build change, no new deps, no
+   hydration risk (client upserts the same tags). This is the high-value,
+   low-risk subset of prerendering and it shipped without touching the build
+   pipeline.
+3. **Full body-snapshot prerender — OPTIONAL next step, measure first.** Head SSR
+   fixes metadata; the page *body* is still client-rendered (Google renders JS,
+   so body content is indexable, just on the slower second wave). Only escalate
+   to full static-HTML snapshots (headless-Chrome crawl of the public route list
+   at build, e.g. react-snap, writing `dist/public/<route>/index.html`) **if
+   Search Console shows the satellite *content* isn't getting indexed.** Don't
+   pay the Puppeteer/Chromium-in-CI + hydration cost speculatively — the head-SSR
+   above is likely enough for the comparison/tool/state pages. Decision deferred
+   to data, not pending on the founder.
+4. **Topical clusters (then).** Build out the audience clusters above
    deliberately, internally linked, each with a clear path into the capture
    flow. Measure by funded-k contribution, not sessions.
 

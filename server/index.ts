@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
+import { getPublicBaseUrl } from "./publicUrl";
 import { createServer } from "http";
 import { WebhookHandlers } from "./webhookHandlers";
 import { setupAuth } from "./auth";
@@ -225,29 +226,6 @@ async function initStripe() {
   if (!process.env.STRIPE_WEBHOOK_SECRET) {
     console.warn('Stripe webhook verification is disabled until STRIPE_WEBHOOK_SECRET is set');
   }
-}
-
-function getPublicBaseUrl(req: Request): string {
-  const configured =
-    process.env.APP_BASE_URL ||
-    process.env.PUBLIC_APP_URL ||
-    process.env.APP_URL ||
-    process.env.BASE_URL ||
-    "";
-  if (configured) {
-    try {
-      const u = new URL(configured);
-      return `${u.protocol}//${u.host}`;
-    } catch {
-      // fall through to request-derived URL
-    }
-  }
-  const forwardedProtoRaw = String(req.get("x-forwarded-proto") || "").split(",")[0].trim();
-  const forwardedHostRaw = String(req.get("x-forwarded-host") || "").split(",")[0].trim();
-  const reqHostRaw = String(req.get("host") || "").split(",")[0].trim();
-  const proto = forwardedProtoRaw || req.protocol || "https";
-  const host = forwardedHostRaw || reqHostRaw || "localhost:5000";
-  return `${proto}://${host}`;
 }
 
 function parseEnvList(value: string | undefined): string[] {
