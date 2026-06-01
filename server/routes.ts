@@ -3,6 +3,7 @@ import { type Server } from "http";
 import { storage } from "./storage";
 import { stripeService } from "./stripeService";
 import { isGifterCaptureAtIntentEnabled } from "./giftCaptureFlag";
+import { isSeamlessPlanDowngradeEnabled } from "./planDowngradeFlag";
 import { settleGiftIntentOffSession } from "./giftIntentSettlement";
 import { getUncachableStripeClient } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
@@ -22236,6 +22237,132 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Error canceling subscription:', error);
       res.status(500).json({ error: 'Failed to cancel subscription' });
+    }
+  });
+
+  // Family -> Kiddo+ downgrade, taken at renewal. Two modes:
+  //   - SEAMLESS (flag PLAN_DOWNGRADE_SEAMLESS on): create the Kiddo+ sub now with
+  //     its first charge anchored to the Family period end (free until then), then
+  //     cancel Family at period end. Coverage is continuous, no double-bill, the
+  //     switch is automatic. Real future money movement — flag-gated + Stripe-test-
+  //     verified. Rolls back the new Plus sub if the Family cancel fails (never
+  //     leaves Plus-created-but-Family-still-renewing).
+  //   - FALLBACK (flag off, default): just cancel Family at period end; the one
+  //     remaining fund re-takes Kiddo+ via the normal uncovered-fund nudge.
+  // Gated to the unambiguously-safe case: Family active + exactly one active minor
+  // fund. See SUBSCRIPTION_DOWNGRADE_SPEC.md.
+  app.post('/api/subscription/downgrade-to-plus', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      if (await isDemoUser(userId)) {
+        return res.json({ success: true, demo: true, seamless: false });
+      }
+      const subscription = await storage.getSubscription(userId);
+      const householdActive =
+        !!subscription &&
+        subscription.plan === "family" &&
+        !!subscription.stripeSubscriptionId &&
+        subscription.status !== "canceled" &&
+        hasEntitlementFromStatus(subscription.status, subscription.currentPeriodEnd);
+      if (!householdActive || !subscription) {
+        return res.status(409).json({ error: "No active Kiddo Family plan to switch from." });
+      }
+      const userFunds = await storage.getFundsByUser(userId);
+      const activeMinorFunds = userFunds.filter((f: any) => !f.transferredAt);
+      if (activeMinorFunds.length !== 1) {
+        return res.status(409).json({
+          error: activeMinorFunds.length === 0
+            ? "You have no active child funds to move to Kiddo+."
+            : "Kiddo+ covers one child, so Kiddo Family is the right fit while you manage more than one fund.",
+        });
+      }
+      const fund: any = activeMinorFunds[0];
+
+      const finishFamilyCancel = async () => {
+        const updatedFamily = await stripeService.cancelSubscription(subscription.stripeSubscriptionId!, false);
+        const activeUntilDate = getStripeSubscriptionPeriodEnd(updatedFamily, subscription.currentPeriodEnd || null);
+        await storage.updateSubscription(subscription.id, {
+          status: "canceled",
+          canceledAt: new Date(),
+          currentPeriodEnd: activeUntilDate,
+        } as any);
+        return activeUntilDate ? new Date(activeUntilDate).toISOString() : null;
+      };
+
+      if (isSeamlessPlanDowngradeEnabled()) {
+        const periodEnd = subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd) : null;
+        if (!periodEnd || periodEnd.getTime() <= Date.now()) {
+          return res.status(409).json({ error: "Could not determine your renewal date; try again shortly." });
+        }
+        const userEmail = (req.user as any).email as string | undefined;
+        const userName = [((req.user as any).firstName || ""), ((req.user as any).lastName || "")].join(" ").trim() || undefined;
+        if (!userEmail) return res.status(409).json({ error: "An email is required to set up Kiddo+." });
+        // Mirror the starter-checkout price resolution, including the founder lock.
+        const isFounder = (req.user as any)?.founderTier === "plus_founder";
+        const billingInterval: "monthly" | "yearly" =
+          isFounder || subscription.billingInterval === "yearly" ? "yearly" : "monthly";
+        const priceId = isFounder
+          ? await findCheckoutPriceId({ productNames: ["Kiddo+ Founder Annual"], mode: "subscription", recurringInterval: "year" })
+          : await findCheckoutPriceId({
+              productNames: ["Kiddo+", "Kiddo Plus", "Kora+", "Starter Plan"],
+              mode: "subscription",
+              recurringInterval: billingInterval === "yearly" ? "year" : "month",
+            });
+        if (!priceId) return res.status(404).json({ error: "Kiddo+ price not found in Stripe." });
+        const customer = await stripeService.getOrCreateCustomer(userEmail, userName, userId);
+        const trialEndUnix = Math.floor(periodEnd.getTime() / 1000);
+        // Create Plus first; roll it back if the Family cancel fails so we never
+        // leave a chargeable Plus sub alongside a still-renewing Family.
+        const plusSub: any = await stripeService.createDeferredSubscription({
+          customerId: customer.id,
+          priceId,
+          trialEndUnixSeconds: trialEndUnix,
+          metadata: { userId: String(userId), fundId: String(fund.id), type: "starter_plan_downgrade" },
+        });
+        try {
+          await storage.upsertFundMembership({
+            userId,
+            fundId: String(fund.id),
+            stripeSubscriptionId: plusSub.id,
+            stripeCustomerId: customer.id,
+            plan: "starter",
+            billingInterval,
+            status: plusSub.status,
+            currentPeriodStart: new Date(plusSub.current_period_start * 1000),
+            currentPeriodEnd: new Date(plusSub.current_period_end * 1000),
+          } as any);
+          const activeUntil = await finishFamilyCancel();
+          await storage.createActivity({
+            userId,
+            fundId: String(fund.id),
+            type: "subscription_downgrade_scheduled",
+            title: "Switching to Kiddo+",
+            description: `Kiddo Family ends at renewal; Kiddo+ for ${fund.name} starts then.`,
+          } as any);
+          return res.json({ success: true, seamless: true, activeUntil, fund: { id: String(fund.id), name: fund.name } });
+        } catch (innerErr) {
+          // Rollback: cancel the just-created Plus sub immediately + mark the membership canceled.
+          try { await stripeService.cancelSubscription(plusSub.id, true); } catch {}
+          try {
+            const m = await storage.getFundMembershipByStripeId(plusSub.id);
+            if (m) await storage.updateFundMembership(m.id, { status: "canceled", canceledAt: new Date() } as any);
+          } catch {}
+          throw innerErr;
+        }
+      }
+
+      // Fallback (flag off): cancel Family at period end; remaining fund re-takes Plus via the nudge.
+      const activeUntil = await finishFamilyCancel();
+      await storage.createActivity({
+        userId,
+        type: "subscription_downgrade_scheduled",
+        title: "Kiddo Family ending",
+        description: "Kiddo Family ends at renewal. You can move the remaining fund to Kiddo+ then.",
+      } as any);
+      return res.json({ success: true, seamless: false, activeUntil, fund: { id: String(fund.id), name: fund.name } });
+    } catch (error) {
+      console.error("Error downgrading to Kiddo+:", error);
+      res.status(500).json({ error: "Could not switch your plan. Please try again." });
     }
   });
 

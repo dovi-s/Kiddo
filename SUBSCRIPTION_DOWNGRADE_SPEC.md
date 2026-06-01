@@ -44,14 +44,24 @@ could not test from the agent shell:
   `handleUpgradeStarter` and therefore **errored** for a Family user. **FIXED 2026-06-01:**
   downgrade-direction CTAs are now hidden in the ladder via `isDowngradeCard` (the
   "Included in {plan}" pill conveys state); the safe downgrade lives in the plan-fit card.
-- **Design for the seamless version (flag-gated, mirror the `GIFTER_CAPTURE_AT_INTENT`
-  precedent):** on confirm, create the Kiddo+ subscription for the remaining fund with its
-  **first charge anchored to the Family period end** (`trial_end`/`billing_cycle_anchor` =
-  `familyCurrentPeriodEnd`) so it is $0 until renewal then bills $3.99, AND set the Family sub
-  to `cancel_at_period_end`. Net: no gap, no double-bill, takes effect at renewal. Route the
-  Stripe write through `stripeService` (per CLAUDE.md), lift the household guard for this
-  verified downgrade path only, and have `handleStarterPlanPurchase` activate the membership.
-  **Verify in Stripe test mode before flipping the flag.**
+- **Seamless version — BUILT + flag-gated 2026-06-01 (commit pending).** `POST
+  /api/subscription/downgrade-to-plus` now has both modes. When `PLAN_DOWNGRADE_SEAMLESS`
+  (`server/planDowngradeFlag.ts`) is **on**: it creates the Kiddo+ sub via
+  `stripeService.createDeferredSubscription` with `trial_end = family currentPeriodEnd` (free
+  until renewal, then bills the saved card off-session), records the `fund_memberships` row
+  (status `trialing`, so the existing `subscription.updated` webhook syncs it to `active` at
+  trial end), then cancels Family at period end. It **rolls back** the new Plus sub if the
+  Family cancel fails (never leaves Plus-created-but-Family-renewing → no double-bill). Founder
+  price lock honored. Did NOT need to touch the checkout-guard (this path uses
+  `subscriptions.create` directly, not the blocked checkout). When the flag is **off**
+  (default), the same endpoint falls back to cancel-Family-at-renewal (the shipped safe path).
+  **⚠️ Verify in Stripe TEST MODE before flipping `PLAN_DOWNGRADE_SEAMLESS=true`:** (a) the
+  trial-end invoice charges the saved PM; (b) Family cancels cleanly at the same boundary with
+  no uncovered gap; (c) `customer.subscription.updated` flips the membership `trialing→active`;
+  (d) the rollback path fires if the Family cancel throws; (e) `trialing` is not entitled in
+  `hasEntitlementFromStatus`, which is fine ONLY because Family covers during the overlap —
+  re-check there's no gap at the exact transition. Note: `trial_settings.missing_payment_method
+  = 'cancel'` means a customer with no saved card just gets no Plus (clean, no past_due).
 
 ## Placement #2 — at the handoff moment (SHIPPED 2026-06-01)
 The `planFit` nudge is now also surfaced on the **household "Your funds" overview**

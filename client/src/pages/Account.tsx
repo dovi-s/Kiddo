@@ -417,22 +417,24 @@ export default function Account() {
     }
   };
 
-  // Family → Kiddo+ downgrade, taken at renewal. Reuses the proven
-  // cancel-at-period-end flow (POST /api/subscription/cancel with plan:'family'):
-  // Family rides out the period already paid for, then stops. The one remaining
-  // minor fund moves to Kiddo+ once Family lapses (the household-coverage guard
-  // clears, so the standard per-fund Plus path works). Fully reversible from the
-  // amber "Keep my plan" card that this flips into. The fully-seamless auto-start
-  // of Plus the instant Family ends is the flag-gated enhancement in the spec.
+  // Family → Kiddo+ downgrade (or stop, when no funds need a plan), taken at
+  // renewal. The "downgrade_to_plus" case hits POST /api/subscription/downgrade-to-plus,
+  // which is seamless when the PLAN_DOWNGRADE_SEAMLESS flag is on (Plus auto-starts
+  // the instant Family ends) and otherwise cancels Family at renewal with the
+  // remaining fund re-taking Plus via the nudge. The "no_plan_needed" case just
+  // stops Family via the proven cancel flow. Either way Family rides out the period
+  // already paid for, and it's reversible from the amber "Keep my plan" card that
+  // this flips into. See SUBSCRIPTION_DOWNGRADE_SPEC.md.
   const handleDowngradeToPlus = async () => {
     setDowngrading(true);
     haptic("medium");
     try {
-      const res = await fetch("/api/subscription/cancel", {
+      const isStop = planFit?.kind === "no_plan_needed";
+      const res = await fetch(isStop ? "/api/subscription/cancel" : "/api/subscription/downgrade-to-plus", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "family" }),
+        body: JSON.stringify(isStop ? { plan: "family" } : {}),
       });
       const data = await res.json();
       if (res.ok) {
@@ -440,11 +442,14 @@ export default function Account() {
         const until = data?.activeUntil
           ? new Date(data.activeUntil).toLocaleDateString("en-US", { month: "long", day: "numeric" })
           : null;
+        const childSuffix = planFit?.fund?.childName ? ` for ${planFit.fund.childName}` : "";
         toast({
           title: "You're all set",
-          description: planFit?.kind === "no_plan_needed"
+          description: isStop
             ? `Kiddo Family stays active${until ? ` until ${until}` : ""}, then stops. Your Memory Books stay safe.`
-            : `You'll keep Kiddo Family${until ? ` until ${until}` : ""}, then move to Kiddo+${planFit?.fund?.childName ? ` for ${planFit.fund.childName}` : ""}. Nothing to pay now.`,
+            : data?.seamless
+              ? `You'll keep Kiddo Family${until ? ` until ${until}` : ""}, then automatically move to Kiddo+${childSuffix}. Nothing else to do.`
+              : `You'll keep Kiddo Family${until ? ` until ${until}` : ""}, then move to Kiddo+${childSuffix}. We'll guide you then. Nothing to pay now.`,
         });
         queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
         queryClient.invalidateQueries({ queryKey: ["/api/funds"] });

@@ -568,6 +568,30 @@ export class StripeService {
     });
   }
 
+  // Create a subscription that is FREE until `trialEndUnixSeconds`, then bills the
+  // customer's default payment method off-session. Used by the seamless
+  // Family -> Kiddo+ downgrade: anchor the new Plus sub's first charge to the
+  // Family period end so coverage is continuous and there's no double-bill.
+  // `missing_payment_method: 'cancel'` keeps it clean if the customer somehow has
+  // no saved card at trial end (the sub just cancels rather than going past_due).
+  // proration_behavior 'none' — there's nothing to prorate before the trial ends.
+  async createDeferredSubscription(params: {
+    customerId: string;
+    priceId: string;
+    trialEndUnixSeconds: number;
+    metadata?: Record<string, string>;
+  }): Promise<Stripe.Subscription> {
+    const stripe = await getUncachableStripeClient();
+    return await stripe.subscriptions.create({
+      customer: params.customerId,
+      items: [{ price: params.priceId }],
+      trial_end: params.trialEndUnixSeconds,
+      proration_behavior: "none",
+      trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+      metadata: params.metadata || {},
+    });
+  }
+
   async getPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
     const stripe = await getUncachableStripeClient();
     return await stripe.paymentIntents.retrieve(paymentIntentId);
