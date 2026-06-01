@@ -1998,6 +1998,13 @@ export default function Dashboard() {
   // loop's second turn). Distinct from isPreviousOwner (the parent who handed it off);
   // the two are mutually exclusive. Same signal as AppHeader / Projection.
   const isOwnerMode = activeFundAccessRole === 'owner' && Boolean((activeFund as any)?.transferredAt);
+  // Bereavement / memorial flag (set support-side, NEVER self-serve, if the beneficiary passes
+  // away — see SUCCESSOR_CUSTODIAN_SPEC.md "Deceased beneficiary"). Read DEFENSIVELY via cast so
+  // it's a harmless no-op until the `memorialized_at` column ships (migration is founder/live-DB-
+  // applied; the migration channel is busy with the parallel session right now). When set, it
+  // suppresses forward-looking surfaces so a grieving family never sees "on track for $X when
+  // {child} turns N." The Memory Book stays — it becomes the memorial.
+  const isMemorialized = Boolean((activeFund as any)?.memorializedAt);
   // Read-only union: viewers AND previous owners (post-handoff parents)
   // both lose write capabilities. Used to gate every CTA that would
   // mutate fund state — Share / Add Gift / Recurring Investments /
@@ -10538,7 +10545,7 @@ export default function Dashboard() {
                 parent-facing, and moot once the handoff has happened — hide it for the
                 post-handoff owner, where it would read as past-tense nonsense ("you
                 turn 21 / the day it becomes yours"). 2026-05-29 owner-mode. */}
-            {!isOwnerMode && (
+            {!isOwnerMode && !isMemorialized && (
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
