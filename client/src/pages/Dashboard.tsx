@@ -7766,6 +7766,13 @@ export default function Dashboard() {
                                         ({stratEmoji} {bareStratName})
                                       </span>
                                     </p>
+                                    {/* Investing strategy is OWNER-ONLY (server: PATCH /strategy adds
+                                        fundAccessRole !== 'owner'). Hide "Customize" for a co-admin /
+                                        viewer / previous-owner — it would 403, and the Plus-badge
+                                        variant would wrongly imply a Plus gate when it's an OWNERSHIP
+                                        gate. The co-parent banner already states the owner manages
+                                        investing. 2026-06-01 co-parent sweep. */}
+                                    {activeFundAccessRole === 'owner' && (
                                     <button
                                       type="button"
                                       onClick={handleCustomize}
@@ -7775,6 +7782,7 @@ export default function Dashboard() {
                                       {canCustomize ? (isOwnerMode ? "Customize your mix" : `Customize ${childFirst}'s mix`) : "Customize"}
                                       {!canCustomize && <span className="rounded-full bg-[hsl(var(--kiddo-gold)/0.18)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.06em] text-[hsl(var(--kiddo-gold-ink))]">Plus</span>}
                                     </button>
+                                    )}
                                   </div>
                                   {[...managedH].sort((a, b) => parseFloat(b.currentValue || "0") - parseFloat(a.currentValue || "0")).map((h) => renderHoldingRow(h, false))}
                                   {/* Section summary — composition only. See
