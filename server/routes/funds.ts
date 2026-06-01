@@ -100,7 +100,22 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
               const bCreated = new Date(b?.createdAt || 0).getTime();
               return bCreated - aCreated;
             });
-            funds = deduped as any;
+            // SECURITY + consistency fix (2026-06-01, FUND_403_STORM_NOTE.md):
+            // surface ONLY the logged-in row's own funds. The canonical-email
+            // lookup above can pull in funds owned by OTHER user rows sharing
+            // this email (duplicate accounts) — but the per-fund access
+            // middleware (routes.ts requireOwnedFundParam) grants by the
+            // logged-in userId only. So a sibling-row fund would appear in this
+            // list yet 403 on EVERY per-fund endpoint (dashboard-summary /
+            // holdings / gifts / memory / ...), and the client can't self-heal
+            // because the fund looks "valid" in the list. That was the 403
+            // storm. Cross-row funds are inaccessible regardless; the real fix
+            // for dupe rows is to dedupe/reassign them, not to surface unusable
+            // rows. Filtering to the current userId keeps list + middleware
+            // consistent. (Collaborator + previous_owner funds are merged in
+            // below by their own middleware-consistent logic, so they're
+            // unaffected.)
+            funds = deduped.filter((f: any) => String(f?.userId || "") === String(userId)) as any;
           }
         } catch (canonicalErr) {
           console.warn("[funds] canonical fallback skipped:", (canonicalErr as any)?.message || canonicalErr);
