@@ -171,7 +171,7 @@ const faqItems = [
     id: "contribution-fees",
     category: "Pricing & Fees",
     question: "Are there fees on gifts?",
-    answer: "Kiddo does not charge a platform fee on gifts. The gift amount stays whole, and the gifter pays payment processing separately. There is no required Kiddo large-gift fee. Optional premium gift upgrades are separate and shown before checkout.",
+    answer: "Kiddo does not charge a platform fee on gifts. The gift amount stays whole, and the gifter pays payment processing separately. There is no required Kiddo large-gift fee. Optional premium gift upgrades are separate and shown before checkout. And unlike some giving platforms, Kiddo never asks you to add a tip for us on top of your gift. The dollars you send go to the child, not to Kiddo.",
   },
   {
     id: "occasions-free-plan",
