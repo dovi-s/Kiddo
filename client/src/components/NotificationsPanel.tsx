@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, type PanInfo } from "framer-motion";
 import { Check, X, ChevronDown } from "lucide-react";
-import { useActivities } from "@/hooks/use-activities";
+import { useActivities, useFundActivities } from "@/hooks/use-activities";
+import { useFunds } from "@/hooks/use-funds";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRealtimeEvents } from "@/lib/realtime-context";
 import { Link, useLocation } from "wouter";
@@ -1695,17 +1696,40 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
 // are stale lifecycle nudges from abandoned funds. Pass scope: "all" to
 // opt out (currently no callers do; reserved for future "all funds"
 // indicator if needed).
+// Source the notification feed the SAME way the /activity page does, so a
+// fund-scoped count can never promise N items the page then doesn't render —
+// the recurring "badge says N, click in, nothing there" bug. Branches exactly
+// like Activity.tsx:
+//   - scope "all" (/account, /funds): the cross-fund /api/me feed.
+//   - scope "active", normal fund: the fund-scoped /api/me feed (fundId param),
+//     identical to the page's non-owner feed.
+//   - scope "active", owner-mode (a fund transferred TO this viewer at
+//     majority): the FUND ledger (/api/funds/:id/activities), because the
+//     viewer's /api/me feed returns nothing for a fund whose history lives
+//     under the previous owner's userId.
+// Both useActivities + useFundActivities are called unconditionally (hook
+// rules); we return whichever matches. dedupe is applied here.
+function useScopedNotifActivities(scope: "active" | "all", activeFundId: string, isAuthenticated: boolean): Activity[] {
+  const { data: allFunds = [] } = useFunds();
+  const isOwnerModeFund = useMemo(
+    () =>
+      scope === "active" &&
+      !!activeFundId &&
+      (allFunds as any[]).some(
+        (f) => String(f?.id) === String(activeFundId) && f?.accessRole === "owner" && f?.transferredAt,
+      ),
+    [allFunds, activeFundId, scope],
+  );
+  const scopedFundId = scope === "active" ? (activeFundId || null) : null;
+  const userFeed = useActivities(40, isAuthenticated && !isOwnerModeFund, scopedFundId);
+  const fundFeed = useFundActivities(isOwnerModeFund ? (activeFundId || undefined) : undefined, 40);
+  const raw = (isOwnerModeFund ? fundFeed.data : userFeed.data) ?? [];
+  return useMemo(() => dedupeGiftPairs(raw as Activity[]), [raw]);
+}
+
 export function useNotificationUnreadCount(scope: "active" | "all" = "active"): number {
   const { isAuthenticated } = useAuth();
-  const { data: activitiesRaw = [] } = useActivities(40, isAuthenticated);
-  // Same gift-pair dedupe as the panel — without this, the bell badge
-  // counts both `gift_received` and `gift_invested` for the same gift,
-  // doubling the unread count on every new contribution.
-  const activities = useMemo(
-    () => dedupeGiftPairs(activitiesRaw as Activity[]),
-    [activitiesRaw],
-  );
-  // Track the active fund id reactively so badge updates when user
+  // Track the active fund id reactively so the badge updates when the user
   // switches funds in AppHeader's picker.
   const [activeFundId, setActiveFundIdState] = useState<string>(() => getActiveFundId());
   useEffect(() => {
@@ -1713,6 +1737,9 @@ export function useNotificationUnreadCount(scope: "active" | "all" = "active"): 
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
+  // Count from the SAME feed the /activity page renders (see helper) so this
+  // tab-dot count can't drift from the page — over, under, or "blank".
+  const activities = useScopedNotifActivities(scope, activeFundId, isAuthenticated);
   // Action items contribute to the activity-tab dot for the same
   // reason they contribute to the bell badge: a kyc_action_required
   // todo isn't "resolved" just because the parent tapped over to
