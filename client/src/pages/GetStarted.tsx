@@ -200,6 +200,29 @@ export default function GetStarted() {
   // clears the demo's cached funds (see registerMutation.onSuccess).
   const isDemoAccount = Boolean((user as any)?.isDemoAccount);
   const isRealAuthenticated = isAuthenticated && !isDemoAccount;
+  // Landing here from inside the demo means the prospect is leaving the demo to
+  // sign up for real. Drop the demo's cached per-user client state once so it
+  // can't bleed into the new account — chiefly the active-fund id, which
+  // Dashboard reads to decide which fund to render (a demo Luke/Alex/Haley id
+  // would otherwise survive the redirect-based OAuth signup). The session
+  // itself is replaced server-side by register (regenerate+login) or the OAuth
+  // callback; this covers the client cache the OAuth redirect path wouldn't.
+  const demoStateClearedRef = useRef(false);
+  useEffect(() => {
+    if (!isDemoAccount || demoStateClearedRef.current || typeof window === "undefined") return;
+    demoStateClearedRef.current = true;
+    try {
+      window.localStorage.removeItem("kiddo_active_fund_id");
+      for (let i = window.localStorage.length - 1; i >= 0; i--) {
+        const k = window.localStorage.key(i);
+        if (k && (k.startsWith("kora.dashboard-summary.") || k.startsWith("kiddo.fund-balance."))) {
+          window.localStorage.removeItem(k);
+        }
+      }
+    } catch {
+      // localStorage blocked — non-fatal; register/OAuth still replace the session.
+    }
+  }, [isDemoAccount]);
   const [step, setStep] = useState<OnboardingStep>("welcome");
   // Multi-step onboarding transitions happen via React state, not URL —
   // so the global ScrollToTop in App.tsx never fires on step change.
