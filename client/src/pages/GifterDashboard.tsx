@@ -27,7 +27,18 @@ import { PROJECTION_DISCLAIMER } from "@shared/legal-copy";
 // The data is per-user and lifetime-aggregated; mutations (save fund,
 // follow updates, send gift) invalidate the query explicitly so the cache
 // stays accurate for actionable events.
-const GIFTER_DASHBOARD_CACHE_KEY = "kiddo.gifter-dashboard.v1";
+//
+// 2026-05-31 FIX: this key + the query key were a single CONSTANT, NOT
+// per-user despite the comment above claiming "per-user". So switching
+// accounts (e.g. flipping demo personas Jay → Cameron → Manny) showed the
+// PREVIOUS user's saved-fund cards — identical "$3,250 from you" cards
+// under every persona — until the network refetch landed (and the
+// localStorage initialData re-seeded the stale blob on the next mount).
+// The hero (fresh from refetch) and the cards (stale cache) could even
+// disagree on the same screen. The cache is now namespaced by user id so
+// each account reads only its own gifts. `${base}.${userId}` mirrors the
+// shape used by the other per-user caches in this codebase.
+const GIFTER_DASHBOARD_CACHE_BASE = "kiddo.gifter-dashboard.v1";
 
 type GifterFundRow = {
   fundId: string;
@@ -122,6 +133,27 @@ function statusLabel(value: string) {
   }
 }
 
+// Card eyebrow label from the server's age phase. Previously this was an
+// inline `childPhase === "teen" ? "Teen fund" : "Child fund"` ternary,
+// which mislabeled a graduated ADULT (server phase "adult", e.g. Haley at
+// 22 past CA majority 21) as a "Child fund" — the oldest recipient reading
+// as a child while the younger two read "Teen". The server already
+// distinguishes "adult" (age >= majority = handed off); honor it here so a
+// post-handoff account reads as the grown-up account it is. "unknown"
+// (missing/invalid birthdate) falls back to a neutral "Fund". 2026-05-31.
+function phaseLabel(phase: string): string {
+  switch (String(phase || "").toLowerCase()) {
+    case "adult":
+      return "Adult account";
+    case "teen":
+      return "Teen fund";
+    case "child":
+      return "Child fund";
+    default:
+      return "Fund";
+  }
+}
+
 // "Your gift, projected forward" attribution per fund. Computes the
 // future value of the gifter's lifetime contributions to this kid at
 // the kid's UTMA majority. Returns null when there's no birthdate to
@@ -170,17 +202,23 @@ export default function GifterDashboard() {
     loop_channel: "web",
   });
 
+  // Per-user cache namespace — keyed by the signed-in user's id so one
+  // account never reads another's saved-fund blob (the cross-persona
+  // bleed fixed 2026-05-31). Falls back to "anon" pre-auth; the query is
+  // gated on isAuthenticated so the anon bucket is never actually written.
+  const gifterCacheKey = `${GIFTER_DASHBOARD_CACHE_BASE}.${user?.id ?? "anon"}`;
+
   const { data, isLoading } = useQuery<GifterDashboardData>({
-    queryKey: ["/api/gifter-account/dashboard"],
+    queryKey: ["/api/gifter-account/dashboard", user?.id],
     queryFn: async () => {
       const res = await fetch("/api/gifter-account/dashboard", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load your saved funds");
       const payload = await res.json();
-      writeLocalCache(GIFTER_DASHBOARD_CACHE_KEY, payload);
+      writeLocalCache(gifterCacheKey, payload);
       return payload;
     },
     enabled: isAuthenticated,
-    initialData: () => readLocalCache<GifterDashboardData>(GIFTER_DASHBOARD_CACHE_KEY),
+    initialData: () => readLocalCache<GifterDashboardData>(gifterCacheKey),
     initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,
   });
@@ -204,7 +242,11 @@ export default function GifterDashboard() {
     autoCharge?: boolean;
   };
   const { data: recurringData } = useQuery<{ schedules: GifterRecurringRow[] }>({
-    queryKey: ["/api/gifter-account/recurring"],
+    // user?.id in the key for the same cross-account reason as the
+    // dashboard query above — otherwise a persona switch shows the prior
+    // account's recurring schedules until refetch. (invalidateQueries on
+    // the bare ["/api/gifter-account/recurring"] prefix still matches.)
+    queryKey: ["/api/gifter-account/recurring", user?.id],
     queryFn: async () => {
       const res = await fetch("/api/gifter-account/recurring", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load recurring schedules");
@@ -1112,7 +1154,7 @@ export default function GifterDashboard() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">{fund.childPhase === "teen" ? "Teen fund" : "Child fund"}</p>
+                          <p className="text-xs font-medium uppercase tracking-[0.18em] text-primary">{phaseLabel(fund.childPhase)}</p>
                           <h3 className="mt-2 font-heading text-xl font-semibold text-foreground">{fund.childName}</h3>
                           <p className="mt-1 text-sm text-muted-foreground">
                             {fund.giftCount > 0 ? `${fund.giftCount} gifts sent • ${fmtMoney(fund.totalGifted)} from you` : "Saved for the next event"}
@@ -1271,7 +1313,16 @@ export default function GifterDashboard() {
                             so it reads as an additional option, not a
                             competing primary action. Per
                             project_gifter_sponsors_plus_subscription.md. */}
-                        {fund.eligibleForSponsorship && (
+                        {/* Suppressed on adult/handed-off accounts (server
+                            phase "adult"): a gifter "covering Plus" on a kid's
+                            FAMILY fund is the gesture; once the fund has
+                            transferred to the now-grown owner, they manage
+                            their own subscription, so the sponsor pill is
+                            nonsensical there. This was the "why is Plus only
+                            over Haley?" confusion — her graduated account was
+                            the lone Free-coverage fund, so it was the only one
+                            still showing the pill. 2026-05-31. */}
+                        {fund.eligibleForSponsorship && fund.childPhase !== "adult" && (
                           <Link href={`${fund.sharePath}${fund.sharePath.includes("?") ? "&" : "?"}sponsor=1&src=gifter_dashboard_pill`}>
                             <Button
                               variant="outline"
