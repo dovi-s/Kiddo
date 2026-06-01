@@ -189,7 +189,17 @@ export default function GetStarted() {
   const giftSessionId = new URLSearchParams(search).get("gift_session_id") || null;
   const utm = extractUtmMetadata(search);
   const registerReferralCode = isUserReferralCode(refCode) ? refCode?.trim().toUpperCase() : undefined;
-  const { register, isAuthenticated, isRegistering } = useAuth();
+  const { user, register, isAuthenticated, isRegistering } = useAuth();
+  // A Dunphy demo login is a REAL authenticated session (as phil@dunphyfamily.com
+  // etc.). For onboarding that must NOT count as "signed in" — otherwise a
+  // prospect who explored the demo and then clicked Get Started skips signup
+  // entirely and ends up creating a fund under the DEMO account instead of a
+  // real one (reported 2026-05-31: "signed up but it put me in the demo flow").
+  // Treat a demo session as anonymous here so they go through real
+  // registration, which regenerates the session as the brand-new account and
+  // clears the demo's cached funds (see registerMutation.onSuccess).
+  const isDemoAccount = Boolean((user as any)?.isDemoAccount);
+  const isRealAuthenticated = isAuthenticated && !isDemoAccount;
   const [step, setStep] = useState<OnboardingStep>("welcome");
   // Multi-step onboarding transitions happen via React state, not URL —
   // so the global ScrollToTop in App.tsx never fires on step change.
@@ -334,12 +344,12 @@ export default function GetStarted() {
   );
 
   const canContinue = useMemo(() => {
-    if (step === "welcome") return isAuthenticated || authMode === "none" || (authMode === "email" && email.trim().length > 3 && password.length >= 8);
+    if (step === "welcome") return isRealAuthenticated || authMode === "none" || (authMode === "email" && email.trim().length > 3 && password.length >= 8);
     if (step === "who") return Boolean(accountType);
     if (step === "details") return country === "US" && (accountType === "child" ? name.trim().length > 0 && birthdate.trim().length > 0 && !dobIssue && Boolean(occasion) && Boolean(gifterAudience) : name.trim().length > 0);
     if (step === "investment") return investment !== "stock" || Boolean(ticker);
     return true;
-  }, [accountType, authMode, birthdate, dobIssue, email, gifterAudience, investment, isAuthenticated, name, occasion, password.length, step, ticker]);
+  }, [accountType, authMode, birthdate, dobIssue, email, gifterAudience, investment, isRealAuthenticated, name, occasion, password.length, step, ticker]);
 
   const progress = useMemo(() => {
     const i = onboardingFlow.indexOf(step);
@@ -613,7 +623,7 @@ export default function GetStarted() {
     if (step === "welcome") {
       void trackOnboardingSignal("cta_click", "onboarding_continue", { step: "welcome" });
       setAuthError("");
-      if (isAuthenticated) {
+      if (isRealAuthenticated) {
         moveToStep("who");
         return;
       }
@@ -770,7 +780,7 @@ export default function GetStarted() {
               <Dock
                 primary={
                   <Button onClick={() => void handleContinue()} disabled={!canContinue || isRegistering} className="h-14 w-full rounded-2xl text-base btn-action" data-testid="button-welcome-continue">
-                  {isAuthenticated ? "Continue" : authMode === "email" ? (isRegistering ? "Creating account..." : "Continue with email") : "Continue with email"}
+                  {isRealAuthenticated ? "Continue" : authMode === "email" ? (isRegistering ? "Creating account..." : "Continue with email") : "Continue with email"}
                   {!isRegistering && <ArrowRight className="ml-2 h-5 w-5" />}
                   </Button>
                 }
