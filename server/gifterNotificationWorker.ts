@@ -385,6 +385,10 @@ async function getFundReminderRows(): Promise<FundReminderRow[]> {
     FROM funds f
     LEFT JOIN users u ON u.id = f.user_id
     WHERE f.recipient_birthdate IS NOT NULL
+      -- Exclude post-handoff funds: a transferred fund is owned by the now-adult recipient,
+      -- so gifter birthday/holiday/age-18 reminders ("Emma's birthday is in 14 days") are
+      -- contextually wrong once Emma is grown and owns the fund. Mirrors fundBirthdayWorker.
+      AND f.transferred_at IS NULL
   `);
   return result.rows as FundReminderRow[];
 }

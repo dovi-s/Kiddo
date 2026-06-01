@@ -262,6 +262,16 @@ export async function getTrialForFund(fundId: string): Promise<TrialState | null
   const state = await loadMonetizationState();
   const trial = state.trials?.[fundId];
   if (!trial) return null;
+  // An EXPIRED trial must behave exactly like no trial: the fund reverts to free
+  // (uncovered). Returning the expired record surfaced coverage state "trial_expired",
+  // which NO consumer handles — every gate (held-gift release `canReleaseWithCurrentPlan`,
+  // fee calc, feature gates) branches only on "trial_active". So an expired trial became a
+  // limbo state that BLOCKED release of gifts held during the trial (money stuck). Treating
+  // expired as null lets getFundCoverageState fall through to "uncovered" (the normal free
+  // path every consumer already handles). Especially load-bearing now that the reverse trial
+  // is on by default. 2026-05-31, per launch audit.
+  const expiresAt = new Date(trial.expiresAt);
+  if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() <= Date.now()) return null;
   return trial;
 }
 

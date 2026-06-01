@@ -173,6 +173,10 @@ export default function Age18Plan() {
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
   const activeFund = funds.find((f) => f.id === storedFundId) ?? funds[0];
+  // Post-handoff adult owner. NOTE: Age18Plan is otherwise parent-framed throughout (it's the
+  // pre-handoff prep surface); this only fixes the flagged third-person self-reference on the
+  // letter CTA. The page as a whole still needs a fuller owner-mode pass (like TaxDocuments got).
+  const isOwnerMode = Boolean((activeFund as any)?.transferredAt && (activeFund as any)?.accessRole === "owner");
 
   // Active recurring on THIS fund — used to seed the projection slider's
   // default so the "Projected value at {majority}" centerpiece reflects
@@ -891,7 +895,7 @@ export default function Age18Plan() {
                   className="rounded-full text-xs h-9 px-5"
                   onClick={() => { haptic("medium"); setNoteEditorOpen(true); }}
                 >
-                  ✉️ Write {childName !== "your child" ? `${activeFund?.recipientFirstName}'s` : "the"} letter →
+                  ✉️ Write {isOwnerMode ? "your" : childName !== "your child" ? `${activeFund?.recipientFirstName}'s` : "the"} letter →
                 </Button>
               </div>
             )}
