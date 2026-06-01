@@ -8830,6 +8830,32 @@ export default function Dashboard() {
                 );
               })()}
 
+              {/* Read-only recurring card for read-only roles (previous owner /
+                  viewer). The write deck above is correctly gated off for them,
+                  but rendering NOTHING left an empty gap next to the one-time
+                  card — the "where did recurring go?" hole the user flagged.
+                  Mirror the one-time card's read-only treatment with a dignified
+                  note so the two columns read as a coherent pair. The previous
+                  owner's actual schedule history lives in "View past
+                  investments" on the one-time card next to this. */}
+              {isReadOnlyFund && (
+                <div className="kiddo-card p-5 flex flex-col flex-1" data-testid="recurring-readonly">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
+                    Recurring investments
+                  </p>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--kiddo-evergreen)/0.10)]">
+                      <Repeat size={17} className="text-[hsl(var(--kiddo-evergreen))]" />
+                    </div>
+                    <p className="text-xs text-muted-foreground pt-1 leading-relaxed">
+                      {isPreviousOwner
+                        ? `The recurring you set up ended when ${recipientFirstNameDisplay || "the fund's owner"} took ownership. Every dollar you sent is still here, compounding.`
+                        : "The fund owner manages recurring investments for this fund."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               </div>
 
               {/* Warm divider — horizontal on mobile (between stacked columns),
@@ -8916,7 +8942,9 @@ export default function Dashboard() {
                           <Plus size={17} className="text-[hsl(var(--kiddo-evergreen))]" />
                         </div>
                         <p className="text-xs text-muted-foreground pt-1">
-                          {activeAutoInvest
+                          {isReadOnlyFund
+                            ? `Your one-time investments are part of ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the"} fund now.`
+                            : activeAutoInvest
                             ? "Add outside your regular schedule anytime."
                             : isOwnerMode
                               ? `A bonus. A good month. Just because. 🌱`
