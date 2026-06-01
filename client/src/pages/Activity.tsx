@@ -4106,7 +4106,7 @@ export default function Activity() {
                                   </div>
                                   <p style={{ fontSize: 12.5, color: "rgba(26,23,16,0.55)", marginTop: 3 }}>
                                     {strategyLabel}
-                                    {next && !isPaused ? ` · next ${next.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` : ""}
+                                    {next && !isPaused ? ` · ${(!totalNum || totalNum <= 0) && !c.hasRecentFailure ? "first charge" : "next"} ${next.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}` : ""}
                                   </p>
                                   {/* Total contributed pill — long-term commitment story.
                                       Only shows when there's been at least one cycle. */}
@@ -4536,7 +4536,11 @@ export default function Activity() {
             // Replaces "Cycle amount" — the cycle amount is already in
             // the modal title ($25.00/mo). "Next charge" is the question
             // the parent actually asks looking at this surface.
-            { label: "Next charge", value: nextChargeLabel, tone: isPaused ? "neutral" : "positive" },
+            // Never-fired schedule reads "First charge" not "Next charge" — a
+            // schedule that has run 0 cycles ($0 invested) alongside a "Next
+            // charge" label reads as broken ("why has my monthly done nothing?").
+            // "First charge" makes the 0/$0 coherent: it simply hasn't run yet.
+            { label: cycles === 0 && !isPaused ? "First charge" : "Next charge", value: nextChargeLabel, tone: isPaused ? "neutral" : "positive" },
             { label: "Started", value: startedDate ? startedDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }) : "Not yet", tone: "neutral" },
           ];
           // Subtitle merges destination + payment method so "where" and
