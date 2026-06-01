@@ -220,8 +220,9 @@ export function useAuth() {
       //
       // DO NOT call queryClient.clear() here — it wipes the auth query
       // mid-render, which Dashboard sees as "logged out, no funds" and
-      // redirects to /get-started. The per-query invalidation below is
-      // enough; TanStack Query refetches on next read.
+      // redirects to /get-started. The targeted per-query removal below
+      // is enough; TanStack Query refetches on next read. Auth is set via
+      // setQueryData (below), so it's never the empty one.
       writeLocalCache(LOCAL_CACHE_KEYS.authUser, user);
       queryClient.setQueryData(["/api/auth/user"], user);
       try { window.localStorage.removeItem("kiddo_active_fund_id"); } catch {}
@@ -230,13 +231,20 @@ export function useAuth() {
       removeLocalCachePrefix("kora.dashboard-summary.");
       removeLocalCachePrefix("kiddo.fund-balance.");
       clearPerUserDismissals();
-      // Invalidate (not clear) the data queries that are scoped to the
-      // current user. Invalidation marks them stale so the next read
-      // refetches; it doesn't wipe the cached value in a way that
-      // briefly shows "no data" to currently-mounted components.
-      queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      // REMOVE (not invalidate) the user-scoped data queries. Invalidate
+      // keeps the PREVIOUS user's cached value on screen until the refetch
+      // resolves — fine for a same-user refresh, but across an account
+      // switch it briefly renders the prior account's data. That's exactly
+      // the "I signed into my own account and it flashed the Dunphy demo"
+      // bug: the demo's funds lingered in the in-memory cache after login.
+      // removeQueries drops the stale data so currently-mounted components
+      // fall to loading, then fill with the real account. Safe to drop now
+      // that Dashboard's fund-less → /get-started guard waits for a
+      // CONFIRMED fetch (dataUpdatedAt > 0) instead of bouncing on a
+      // transient empty cache. Prefix match also clears per-fund subqueries.
+      queryClient.removeQueries({ queryKey: ["/api/funds"] });
+      queryClient.removeQueries({ queryKey: ["/api/subscription"] });
+      queryClient.removeQueries({ queryKey: ["/api/activities"] });
     },
   });
 
@@ -253,9 +261,12 @@ export function useAuth() {
       removeLocalCachePrefix("kora.dashboard-summary.");
       removeLocalCachePrefix("kiddo.fund-balance.");
       clearPerUserDismissals();
-      queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      // removeQueries (not invalidate) so a prior cached account's data —
+      // notably a lingering Dunphy demo session — can't flash on screen
+      // before the real account's refetch resolves. See loginMutation above.
+      queryClient.removeQueries({ queryKey: ["/api/funds"] });
+      queryClient.removeQueries({ queryKey: ["/api/subscription"] });
+      queryClient.removeQueries({ queryKey: ["/api/activities"] });
     },
   });
 
@@ -270,9 +281,12 @@ export function useAuth() {
       removeLocalCachePrefix("kora.dashboard-summary.");
       removeLocalCachePrefix("kiddo.fund-balance.");
       clearPerUserDismissals();
-      queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/activities"] });
+      // removeQueries (not invalidate) so a prior cached account's data —
+      // notably a lingering Dunphy demo session — can't flash on screen
+      // before the real account's refetch resolves. See loginMutation above.
+      queryClient.removeQueries({ queryKey: ["/api/funds"] });
+      queryClient.removeQueries({ queryKey: ["/api/subscription"] });
+      queryClient.removeQueries({ queryKey: ["/api/activities"] });
     },
   });
 
