@@ -3178,19 +3178,47 @@ export default function Dashboard() {
   const [newGiftFlash, setNewGiftFlash] = useState(false);
   const latestGiftId = recentGiftsFeed[0]?.id ?? null;
 
-  // The baseline (the gift id the parent has already SEEN acknowledged on the
-  // hero) persists per-fund in localStorage. Two reasons over a plain ref:
-  //   • A gift that lands while they're on another page or another tab is
-  //     remembered as "not yet seen," so its arrival cue plays when they come
-  //     BACK to the hero — instead of sitting there already-arrived with no
-  //     beat. Without this the cue is purely time-of-data-arrival: miss the
-  //     ~3.8s window and the "watch it land" moment is gone for good.
-  //   • It still suppresses a retro-celebration on first-ever load — the
-  //     stored ack distinguishes "arrived since I last looked" from "the most
-  //     recent existing gift, which I've already seen."
+  // The arrival cue ("watch it land") should play to the parent's EYES, not on
+  // a data-arrival clock. We hold a freshly-arrived gift as `pendingFlashId`
+  // and only fire the cue once BOTH gates are open: the tab is visible AND the
+  // hero balance is on screen. Until then the gift waits — so a gift that lands
+  // while they're on another tab, or scrolled down past the hero, still gets
+  // its beat the moment they're actually looking, instead of burning down
+  // unseen in the ~3.8s window.
   const HERO_ACK_PREFIX = "kiddo.hero-acked-gift:";
+  const heroBalanceRef = useRef<HTMLDivElement | null>(null);
+  const [pendingFlashId, setPendingFlashId] = useState<string | null>(null);
+  const [heroTabVisible, setHeroTabVisible] = useState(
+    () => typeof document === "undefined" || document.visibilityState !== "hidden",
+  );
+  const [heroInView, setHeroInView] = useState(true);
 
-  // Seed the baseline from the persisted ack on mount / fund switch (NOT null).
+  // Tab visibility gate.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onVis = () => setHeroTabVisible(document.visibilityState !== "hidden");
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  // Hero-in-viewport gate. Defaults open if IntersectionObserver is missing or
+  // the element hasn't mounted, so the cue degrades to "fire as before."
+  useEffect(() => {
+    const el = heroBalanceRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") { setHeroInView(true); return; }
+    const io = new IntersectionObserver(
+      ([entry]) => setHeroInView(entry.isIntersecting),
+      { threshold: 0.2 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  // The baseline (the gift id the parent has already SEEN acknowledged on the
+  // hero) persists per-fund in localStorage so a gift that arrives while they
+  // were away replays when they return, while first-ever load still suppresses
+  // a retro-celebration (stored ack distinguishes "arrived since I last looked"
+  // from "the most recent existing gift, which I've already seen").
   // Runs before the arrival effect below so the ref is seeded first.
   useEffect(() => {
     if (!activeFundId) { lastSeenGiftIdRef.current = null; return; }
@@ -3198,44 +3226,37 @@ export default function Dashboard() {
     try { acked = window.localStorage.getItem(`${HERO_ACK_PREFIX}${activeFundId}`); } catch { acked = null; }
     lastSeenGiftIdRef.current = acked;
     setNewGiftFlash(false);
+    setPendingFlashId(null);
   }, [activeFundId]);
 
+  // Detect a genuinely new gift and queue it; the firing effect below decides
+  // WHEN it actually plays (once both gates are open).
   useEffect(() => {
     if (!latestGiftId || !activeFundId) return;
-    const ackKey = `${HERO_ACK_PREFIX}${activeFundId}`;
-    const ack = (id: string) => {
-      lastSeenGiftIdRef.current = id;
-      try { window.localStorage.setItem(ackKey, id); } catch { /* ignore */ }
-    };
     // First-ever look at this fund (no persisted ack): set the baseline and
     // ack it silently — landing on the dashboard shouldn't retro-play whatever
     // the newest existing gift happens to be.
-    if (lastSeenGiftIdRef.current === null) { ack(String(latestGiftId)); return; }
-    if (latestGiftId === lastSeenGiftIdRef.current) return;
-
-    // A genuinely new gift relative to what they last saw. Fire the cue only
-    // while the tab is actually visible; if it's hidden (another tab), defer
-    // until they return so the beat plays to their eyes, not an empty tab.
-    let flashTimer: ReturnType<typeof setTimeout> | undefined;
-    const fire = () => {
-      ack(String(latestGiftId));
-      setHeroGiftIdx(0);
-      setNewGiftFlash(true);
-      flashTimer = setTimeout(() => setNewGiftFlash(false), 3800);
-    };
-    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
-      const onVis = () => {
-        if (document.visibilityState === "visible") {
-          document.removeEventListener("visibilitychange", onVis);
-          fire();
-        }
-      };
-      document.addEventListener("visibilitychange", onVis);
-      return () => { document.removeEventListener("visibilitychange", onVis); if (flashTimer) clearTimeout(flashTimer); };
+    if (lastSeenGiftIdRef.current === null) {
+      lastSeenGiftIdRef.current = String(latestGiftId);
+      try { window.localStorage.setItem(`${HERO_ACK_PREFIX}${activeFundId}`, String(latestGiftId)); } catch { /* ignore */ }
+      return;
     }
-    fire();
-    return () => { if (flashTimer) clearTimeout(flashTimer); };
+    if (latestGiftId === lastSeenGiftIdRef.current) return;
+    setPendingFlashId(String(latestGiftId));
   }, [latestGiftId, activeFundId]);
+
+  // Fire the queued cue once the tab is visible AND the hero is on screen.
+  useEffect(() => {
+    if (!pendingFlashId || !activeFundId) return;
+    if (!heroTabVisible || !heroInView) return;
+    lastSeenGiftIdRef.current = pendingFlashId;
+    try { window.localStorage.setItem(`${HERO_ACK_PREFIX}${activeFundId}`, pendingFlashId); } catch { /* ignore */ }
+    setHeroGiftIdx(0);
+    setNewGiftFlash(true);
+    setPendingFlashId(null);
+    const t = setTimeout(() => setNewGiftFlash(false), 3800);
+    return () => clearTimeout(t);
+  }, [pendingFlashId, heroTabVisible, heroInView, activeFundId]);
 
   // Carousel container height: locks to the ACTIVE page's offsetHeight, with
   // a CSS `transition: height 0.22s ease` on the container animating between
@@ -5576,6 +5597,7 @@ export default function Dashboard() {
                           scrub (the value swap there is user-driven, not
                           system-driven, so the stagger would feel like lag). */}
                       <motion.div
+                        ref={heroBalanceRef}
                         className="font-heading"
                         initial={isScrubbing ? false : { opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
