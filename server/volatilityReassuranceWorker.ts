@@ -57,12 +57,12 @@ async function tick(log: LogFn): Promise<void> {
   try {
     const result = await pool.query(`
       WITH latest AS (
-        SELECT DISTINCT ON (fund_id) fund_id, balance, snapshot_date
+        SELECT DISTINCT ON (fund_id) fund_id, total_value, snapshot_date
         FROM fund_snapshots
         ORDER BY fund_id, snapshot_date DESC
       ),
       prior AS (
-        SELECT DISTINCT ON (fund_id) fund_id, balance, snapshot_date
+        SELECT DISTINCT ON (fund_id) fund_id, total_value, snapshot_date
         FROM fund_snapshots
         WHERE snapshot_date < NOW() - INTERVAL '12 hours'
         ORDER BY fund_id, snapshot_date DESC
@@ -73,8 +73,8 @@ async function tick(log: LogFn): Promise<void> {
         f.balance AS current_balance,
         u.email AS parent_email, u.first_name AS parent_first_name,
         u.email_preferences AS parent_email_preferences,
-        latest.balance AS latest_snapshot,
-        prior.balance AS prior_snapshot
+        latest.total_value AS latest_snapshot,
+        prior.total_value AS prior_snapshot
       FROM funds f
       JOIN users u ON u.id = f.user_id
       LEFT JOIN latest ON latest.fund_id = f.id
@@ -82,10 +82,10 @@ async function tick(log: LogFn): Promise<void> {
       WHERE f.transferred_at IS NULL
         AND u.email IS NOT NULL
         AND u.deleted_at IS NULL
-        AND prior.balance IS NOT NULL
-        AND prior.balance::numeric > 100
-        AND latest.balance IS NOT NULL
-        AND ((prior.balance::numeric - latest.balance::numeric) / NULLIF(prior.balance::numeric, 0)) * 100 >= $1
+        AND prior.total_value IS NOT NULL
+        AND prior.total_value::numeric > 100
+        AND latest.total_value IS NOT NULL
+        AND ((prior.total_value::numeric - latest.total_value::numeric) / NULLIF(prior.total_value::numeric, 0)) * 100 >= $1
       LIMIT 1000
     `, [DROP_THRESHOLD_PCT]);
     rows = result.rows;
