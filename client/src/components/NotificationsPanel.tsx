@@ -188,7 +188,20 @@ const BELL_EXCLUDED_TYPES = new Set<string>([
   "ssn_provided",
 ]);
 function isBellNoise(type?: string | null): boolean {
-  return BELL_EXCLUDED_TYPES.has(String(type || ""));
+  const t = String(type || "");
+  // Engagement nudges (lifecycle_no_gift_14d, lifecycle_share_no_checkout_48h,
+  // lifecycle_event_*, lifecycle_first_gift_received, …) are internal growth
+  // prompts surfaced contextually on the Dashboard, NOT notifications. The
+  // /activity page ALREADY hides every `lifecycle_*` row from its ledger
+  // (`!t.startsWith("lifecycle_")` at multiple render sites). Before this
+  // exclusion, the bell/Activity-tab badge COUNTED them while the Activity
+  // page rendered none — the exact "badge says N, click in, nothing there"
+  // bug, made worse because a worker re-writes `lifecycle_no_gift_14d` on a
+  // schedule, re-pinging the dot after the user had marked everything read.
+  // NOTE: age-phase rows use the `age16_`/`age17_` prefixes, NOT `lifecycle_`,
+  // so real age milestones still surface. Keep this aligned with Activity.tsx.
+  if (t.startsWith("lifecycle_")) return true;
+  return BELL_EXCLUDED_TYPES.has(t);
 }
 
 // Activity types that are now rendered as action-item CARDS at the top
