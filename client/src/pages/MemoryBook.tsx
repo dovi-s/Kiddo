@@ -954,7 +954,7 @@ export default function MemoryBook() {
   // query). Without this trio the strip rendered empty during
   // load and then populated when the network resolved — visible
   // "popping in" the user flagged 2026-05-20.
-  const { data: fundEvents = [] } = useQuery<FundEvent[]>({
+  const { data: fundEvents = [], isLoading: fundEventsLoading } = useQuery<FundEvent[]>({
     queryKey: ["fund-events", fundId],
     queryFn: async () => {
       const res = await fetch(`/api/funds/${fundId}/events`, { credentials: "include" });
@@ -3031,6 +3031,29 @@ export default function MemoryBook() {
             className="relative"
             data-testid="timeline-container"
           >
+            {/* Occasions-strip placeholder — reserves the strip's space on a
+                COLD load (a demo login clears the localStorage initialData that
+                normally paints this instantly), so the real strip fades in here
+                instead of popping in above the list and shoving it down. Shows
+                only while the fund-events round-trip is still in flight with no
+                cached data; once it settles this is gone and the real
+                conditional below decides strip-or-nothing. */}
+            {fundEventsLoading && fundEvents.length === 0 && (
+              <div className="mb-6" role="status" aria-label="Loading occasions" data-testid="memory-occasions-skeleton">
+                <div className="mb-3 h-3 w-28 rounded-full bg-[hsl(var(--kiddo-border)/0.55)]" />
+                <div className="flex gap-3 overflow-hidden pb-2">
+                  {[0, 1, 2].map((i) => (
+                    <motion.div
+                      key={i}
+                      animate={{ opacity: [0.55, 0.85, 0.55] }}
+                      transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut", delay: i * 0.18 }}
+                      style={{ flexShrink: 0, width: 180, height: 158, borderRadius: 18 }}
+                      className="border border-[hsl(var(--kiddo-border)/0.6)] bg-[hsl(var(--kiddo-cream)/0.5)]"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             {/* Event Chapters — section header gates on the SAME filter
                 used by the rail below so an empty filtered result hides
                 the whole section (header included) instead of showing a
@@ -3411,6 +3434,31 @@ export default function MemoryBook() {
                   canonical surfaces: each piece of content has ONE
                   primary home; secondary surfaces show smaller versions
                   or are hidden for that audience. */}
+              {/* Roster placeholder — same cold-load reasoning as the occasions
+                  strip. gifterRoster is derived from the (already-loaded) memory
+                  query, but the real roster waits on fundData to avoid a
+                  childName/owner-label flash; on a cold demo login fundData lands
+                  after memory, so reserve the avatar row and let it fade in place.
+                  Public (unauthenticated) viewers skip this — they render the real
+                  strip without needing fundData. */}
+              {gifterRoster.length > 0 && !authLoading && isAuthenticated && !fundData && (
+                <div className="border-b border-border/70 px-4 py-4" role="status" aria-label="Loading contributors" data-testid="memory-roster-skeleton">
+                  <div className="mb-3 h-3 w-24 rounded-full bg-[hsl(var(--kiddo-border)/0.55)]" />
+                  <div className="flex gap-4 overflow-hidden pb-1">
+                    {Array.from({ length: Math.min(gifterRoster.length, 7) }).map((_, i) => (
+                      <motion.div
+                        key={i}
+                        animate={{ opacity: [0.55, 0.85, 0.55] }}
+                        transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut", delay: i * 0.1 }}
+                        className="flex flex-col items-center gap-1.5 min-w-[64px]"
+                      >
+                        <div className="h-12 w-12 rounded-full bg-[hsl(var(--kiddo-border)/0.55)]" />
+                        <div className="h-2.5 w-10 rounded-full bg-[hsl(var(--kiddo-border)/0.5)]" />
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {gifterRoster.length > 0 && !authLoading && (!isAuthenticated || !!fundData) && (
                 /* Shown to EVERY viewer, owner included. Founder call 2026-05-31:
                    the "who gave / how much" roster is part of the Memory Book's
