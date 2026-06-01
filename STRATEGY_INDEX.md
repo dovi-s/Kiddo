@@ -48,6 +48,15 @@ Use this when the question is:
 - what is the "every dollar reaches the kid" / anti-GoFundMe contrast?
 - where is ready-to-lift launch copy for the no-gift-fee moat?
 
+Also see:
+- [COMPOUNDING_NARRATIVE_NOTE.md](/abs/path/c:/Apps/Kora%20(newest)/COMPOUNDING_NARRATIVE_NOTE.md)
+
+Use this when the question is:
+- how should we show compounding / future value WITHOUT crossing into
+  performance-claim or dark-pattern territory?
+- why is it 7% (not the viral 10%/27x/3,800x), always disclaimed, real-first?
+- where does the compounding story live per surface, and what are the two cheap wins?
+
 ### 4. Platform Direction
 
 Then read:
