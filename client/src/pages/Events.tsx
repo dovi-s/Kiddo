@@ -143,6 +143,9 @@ export default function Events() {
   const { data: funds = [], isLoading: fundsLoading } = useFunds();
   const storedFundId = getActiveFundId();
   const activeFund = (storedFundId && funds.find((f: any) => f.id === storedFundId)) || funds[0] || null;
+  // Post-handoff adult owner: occasions are still available (Share stays post-handoff), but
+  // they're for collecting gifts to THEIR own fund — so "your" not "{child}'s".
+  const isOwnerMode = Boolean((activeFund as any)?.transferredAt && (activeFund as any)?.accessRole === "owner");
   const { data: fundCodes = {} } = useQuery<Record<string, { code: string }>>({
     queryKey: ["/api/gift-codes/funds"],
     queryFn: async () => {
@@ -386,7 +389,7 @@ export default function Events() {
     const pages: SharePage[] = [];
     // Include permanent (anytime) link for this fund
     pages.push({
-      label: `${recipient}'s gift link`,
+      label: ((fund as any)?.transferredAt && (fund as any)?.accessRole === "owner") ? "Your gift link" : `${recipient}'s gift link`,
       url: `${origin}/${fundSlug}`,
       isPermanent: true,
     });
@@ -417,7 +420,7 @@ export default function Events() {
       (e) => String(e.fundId) === String(firstFund.id) && !e.isPermanent && String(e.status || "active") === "active"
     );
     const pages: SharePage[] = [{
-      label: `${recipient}'s gift link`,
+      label: isOwnerMode ? "Your gift link" : `${recipient}'s gift link`,
       url: `${origin}/${firstFund.slug}`,
       isPermanent: true,
     }];
@@ -646,12 +649,14 @@ export default function Events() {
               <MascotMoment
                 mood="guide"
                 context="events-empty"
-                title={activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s birthday is coming.` : "Birthdays. Baby showers. Holidays."}
-                description={activeFund?.recipientFirstName
-                  ? `Create an occasion and let family show up for ${capFirst(activeFund.recipientFirstName)}. Takes 2 minutes. Gifts start flowing immediately.`
-                  : "Create a gifting occasion and give your people a reason to show up. Takes 2 minutes."}
+                title={isOwnerMode ? "Your birthday is coming." : activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s birthday is coming.` : "Birthdays. Baby showers. Holidays."}
+                description={isOwnerMode
+                  ? "Create an occasion and let family show up for you. Takes 2 minutes. Gifts start flowing immediately."
+                  : activeFund?.recipientFirstName
+                    ? `Create an occasion and let family show up for ${capFirst(activeFund.recipientFirstName)}. Takes 2 minutes. Gifts start flowing immediately.`
+                    : "Create a gifting occasion and give your people a reason to show up. Takes 2 minutes."}
                 primaryAction={{
-                  label: `Create ${activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your"} first occasion`,
+                  label: `Create ${isOwnerMode ? "your" : activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s` : "your"} first occasion`,
                   testId: "button-create-first-event",
                   onClick: () => {
                     haptic("medium");

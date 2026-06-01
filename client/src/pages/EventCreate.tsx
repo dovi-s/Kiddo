@@ -701,7 +701,8 @@ export default function EventCreate() {
                                   if (!eventName) {
                                     const child = funds.find(f => f.id === fundId || f.id === preselectedFundId);
                                     const childName = capFirst(child?.recipientFirstName);
-                                    setEventName(childName ? `${childName}'s ${type.label} fund` : `${type.label} fund`);
+                                    const childIsOwned = Boolean((child as any)?.transferredAt && (child as any)?.accessRole === "owner");
+                                    setEventName((childName && !childIsOwned) ? `${childName}'s ${type.label} fund` : `${type.label} fund`);
                                   }
                                 }}
                                 className={`p-4 rounded-2xl border-2 transition-all text-left ${
