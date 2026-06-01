@@ -8957,10 +8957,50 @@ export async function registerRoutes(
       if (bal > 0.005 || cash > 0.005 || pending > 0.005) blockers.push('it holds a balance');
       if (holdingsForFund.length > 0) blockers.push('it has investment holdings');
       if (giftsForFund.length > 0) blockers.push(`it has received ${giftsForFund.length} gift${giftsForFund.length === 1 ? '' : 's'}`);
-      if (blockers.length > 0) {
+
+      // ── Stripe / billing safety ──────────────────────────────────────
+      // The cascade deletes fund-scoped rows that can carry a LIVE recurring
+      // Stripe subscription — fund_memberships (the per-fund Plus/Family sub)
+      // and recurring_gifts (a gifter's auto-charge) — plus sponsored subs.
+      // Deleting those DB rows without cancelling in Stripe would orphan the
+      // subscription: the card keeps getting billed with no record on our
+      // side. A $0 balance does NOT imply no billing, so we must check it
+      // explicitly. We BLOCK (rather than auto-cancel) — consistent with the
+      // rest of this gate — and route the user to cancel/close first, where
+      // the existing Stripe-cancel paths run. (subscriptions is user-scoped,
+      // never fund-deleted, so it's intentionally not checked here.)
+      let billing = { memberships: 0, recurring: 0, sponsorships: 0 };
+      try {
+        const r = await db.execute(sql`
+          SELECT
+            (SELECT count(*) FROM fund_memberships WHERE fund_id = ${fundId} AND status = 'active')::int AS memberships,
+            (SELECT count(*) FROM recurring_gifts WHERE fund_id = ${fundId} AND status = 'active')::int AS recurring,
+            (SELECT count(*) FROM sponsored_subscriptions WHERE fund_id = ${fundId} AND status = 'active' AND expires_at > now())::int AS sponsorships
+        `);
+        const row: any = (r.rows as any[])[0] || {};
+        billing = { memberships: Number(row.memberships || 0), recurring: Number(row.recurring || 0), sponsorships: Number(row.sponsorships || 0) };
+      } catch (err) {
+        // Fail CLOSED: if we can't confirm there's no live billing, refuse to
+        // delete rather than risk orphaning a Stripe subscription.
+        console.warn('[delete-fund] billing check failed — blocking delete:', err);
         return res.status(409).json({
           error: 'fund_not_deletable',
-          message: `This fund can't be deleted because ${blockers.join(' and ')}. Close it instead — that preserves the Memory Book and records while pausing the gift link.`,
+          message: "We couldn't verify this fund has no active subscription, so we didn't delete it. Try again, or close the fund instead.",
+        });
+      }
+      if (billing.memberships > 0) blockers.push('it has an active subscription');
+      if (billing.recurring > 0) blockers.push('it has an active recurring gift');
+      if (billing.sponsorships > 0) blockers.push('it has a sponsored subscription');
+
+      if (blockers.length > 0) {
+        const hasBilling = billing.memberships > 0 || billing.recurring > 0 || billing.sponsorships > 0;
+        return res.status(409).json({
+          error: 'fund_not_deletable',
+          message: `This fund can't be deleted because ${blockers.join(' and ')}. ${
+            hasBilling
+              ? 'Cancel the active subscription first, then close the fund — closing preserves the Memory Book and records while pausing the gift link.'
+              : 'Close it instead — that preserves the Memory Book and records while pausing the gift link.'
+          }`,
           blockers,
         });
       }
