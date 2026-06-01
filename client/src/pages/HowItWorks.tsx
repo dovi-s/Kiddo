@@ -198,7 +198,7 @@ export default function HowItWorks() {
             ))}
           </div>
           <FadeIn className="mt-10 text-center">
-            <p className="text-muted-foreground">No account. No app. No hassle. Just a gift that actually grows.</p>
+            <p className="text-muted-foreground">No account to open, nothing to download — just a gift that actually grows.</p>
           </FadeIn>
         </div>
       </section>
