@@ -223,8 +223,8 @@ export async function fireReturningGifterMilestone(
   try {
     const title = `${display}'s ${ordinal} gift`;
     const description = count === 2
-      ? `${display} gave again. The first time someone returns is when you know ${childName}'s fund has a community.`
-      : `${display} has now given ${count} times to ${childName}. Sustained love.`;
+      ? `${display} gave again. Their 2nd gift to ${childName}.`
+      : `${display} has now given ${count} times to ${childName}.`;
     await storage.createActivity({
       userId,
       fundId,
@@ -276,7 +276,7 @@ export async function fireUniqueGiftersMilestone(
   const childName = await fundDisplayName(fundId);
   try {
     const title = `${count} people have given`;
-    const description = `${count} different people have given to ${childName}. A village.`;
+    const description = `${count} different people have given to ${childName}.`;
     await storage.createActivity({
       userId,
       fundId,
@@ -345,14 +345,14 @@ export async function fireAnniversaryMilestone(
     18: `${childName}'s fund · 18 years`,
   };
   const descByYears: Record<number, string> = {
-    1:  `One year of building. The compounding has started.`,
-    5:  `Five years in. The early gifts have had time to grow.`,
-    10: `A decade. Look at what consistent love built.`,
-    18: `Eighteen years. The day we always pointed to is here.`,
+    1:  `One year in.`,
+    5:  `Five years in.`,
+    10: `Ten years in.`,
+    18: `Eighteen years in.`,
   };
   try {
     const title = titleByYears[years] || `${childName}'s fund · ${years} years`;
-    const description = descByYears[years] || "Another year of building.";
+    const description = descByYears[years] || `${years} years in.`;
     await storage.createActivity({
       userId,
       fundId,
@@ -414,7 +414,7 @@ export async function fireFirstVoiceMilestone(fundId: string, userId: string): P
   await fireFirstMilestone(
     fundId, userId, "first_voice",
     "First voice memory",
-    `Someone recorded the first voice memory for ${childName}. The richest kind of memory the fund holds.`,
+    `Someone recorded the first voice memory for ${childName}.`,
   );
 }
 
@@ -458,6 +458,6 @@ export async function fireFirstKidPickApprovedMilestone(fundId: string, userId: 
   await fireFirstMilestone(
     fundId, userId, "first_kid_pick_approved",
     `${childName} picked their first stock`,
-    `${childName} suggested a stock and you approved it. The first time the kid took agency in their fund.`,
+    `${childName} suggested a stock and you approved it.`,
   );
 }

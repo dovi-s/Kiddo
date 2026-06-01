@@ -1129,23 +1129,20 @@ async function seedMilestonesFromSnapshots(fundId: string, childFirst: string): 
     .orderBy(asc(fundSnapshots.snapshotDate));
   if (snaps.length === 0) return;
   const finalVal = parseFloat(String(snaps[snaps.length - 1].totalValue || "0"));
-  const note: Record<number, string> = {
-    5000: "Started small; grew through every birthday, holiday, and gift from the people who showed up.",
-    10000: "Five figures now — compounding doing the quiet work.",
-    15000: "Past the halfway mark; from here it's mostly the market.",
-    20000: "A real head start. The kind that changes the options in front of a kid.",
-    25000: "Two decades of showing up, compounded.",
-  };
   for (const threshold of [5000, 10000, 15000, 20000, 25000]) {
     if (finalVal < threshold) break;
     const crossing = snaps.find((s) => parseFloat(String(s.totalValue || "0")) >= threshold);
     if (!crossing) continue;
     await db.insert(memoryEntries).values({
       fundId,
-      content: `${childFirst}'s fund crossed $${threshold.toLocaleString("en-US")}. ${note[threshold] || ""}`.trim(),
+      // Just the fact, nothing else. Matches the clean shared MONEY_CROSS_COPY
+      // register (no cost-anchor, no "head start" vibes) and the real milestone
+      // engine, which writes a SYSTEM-authored row (authorName null → renders as
+      // Kiddo, not the parent — a balance crossing isn't a note someone wrote).
+      // Keeps milestones simple, not cheesy/AI.
+      content: `${childFirst}'s fund crossed $${threshold.toLocaleString("en-US")}.`,
       type: "milestone",
-      authorRole: "parent",
-      authorName: "Phil Dunphy",
+      authorName: null,
       visibility: "kid_now",
       createdAt: new Date(crossing.snapshotDate as any),
     } as any);
