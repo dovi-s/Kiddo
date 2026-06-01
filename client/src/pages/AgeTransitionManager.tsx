@@ -309,7 +309,7 @@ export default function AgeTransitionManager() {
               ) : transition?.childEmailVerificationSentAt ? (
                 <div className="space-y-2">
                   <p className="text-[11px] italic text-muted-foreground">
-                    Verification email sent — waiting on them to click the link.
+                    Verification email sent. Waiting on them to click the link.
                   </p>
                   <Button
                     variant="outline"
@@ -349,7 +349,7 @@ export default function AgeTransitionManager() {
                 <p className="text-sm font-semibold">Share Kid View</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Kid View is the kid-friendly view of the fund — their gifts, holdings, stock explainers. Shared via private link and PIN. Sharing it pre-{majorityAge} means {capFirst(fund?.recipientFirstName) || "they"} won't arrive at {majorityAge} cold.
+                Kid View is the kid-friendly view of the fund: their gifts, holdings, stock explainers. Shared via private link and PIN. Sharing it pre-{majorityAge} means {capFirst(fund?.recipientFirstName) || "they"} won't arrive at {majorityAge} cold.
               </p>
               <a
                 href={`/dashboard?fund=${encodeURIComponent(fundId || "")}`}

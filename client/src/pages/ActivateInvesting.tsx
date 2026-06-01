@@ -1323,7 +1323,7 @@ export default function ActivateInvesting() {
                           Name a successor custodian <span className="font-normal text-muted-foreground">(optional)</span>
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                          The person who steps in to manage {capFirst(pendingSuccessorFund.recipientFirstName) || "this fund"}'s fund if anything happens to you. UTMA law expects a named successor — without one, a court chooses.
+                          The person who steps in to manage {capFirst(pendingSuccessorFund.recipientFirstName) || "this fund"}'s fund if anything happens to you. UTMA law expects a named successor. Without one, a court chooses.
                         </p>
                       </div>
                     </div>

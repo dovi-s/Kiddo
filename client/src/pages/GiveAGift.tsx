@@ -66,7 +66,7 @@ export default function GiveAGift() {
     if (setup === "done") {
       setCardSaved(true);
     } else if (setup === "cancelled") {
-      toast({ title: "No card saved", description: "You can still send the note — your gift completes when the parent sets up the fund." });
+      toast({ title: "No card saved", description: "You can still send the note. Your gift completes when the parent sets up the fund." });
     }
     if (setup) {
       // Clean the query so a refresh doesn't re-trigger the screen.
@@ -146,13 +146,13 @@ export default function GiveAGift() {
                 Before you save your card
               </h1>
               <div className="rounded-2xl border border-border bg-card p-5 text-left text-sm text-foreground/80 leading-relaxed space-y-2">
-                <p><span className="font-semibold text-foreground">Your card will be saved now and charged later — not today.</span></p>
+                <p><span className="font-semibold text-foreground">Your card will be saved now and charged later, not today.</span></p>
                 <ul className="list-disc pl-5 space-y-1.5">
                   <li>We securely save your card now. <span className="font-semibold">You will not be charged today.</span></li>
-                  <li>Your card is charged <span className="font-semibold">${pendingCapture.amount.toFixed(2)}</span> when {pendingCapture.kidFirstName}'s parent creates the fund — the moment your gift can actually be invested.</li>
+                  <li>Your card is charged <span className="font-semibold">${pendingCapture.amount.toFixed(2)}</span> when {pendingCapture.kidFirstName}'s parent creates the fund, the moment your gift can actually be invested.</li>
                   <li><span className="font-semibold">If no fund is ever created, your card is never charged</span>, and we delete your saved card after 60 days.</li>
                   <li>If a charge doesn't go through (e.g. expired card), we'll email you and try again over the next 30 days. Your gift isn't complete until the charge succeeds.</li>
-                  <li>This is a <span className="font-semibold">one-time charge</span> for this gift — not a subscription.</li>
+                  <li>This is a <span className="font-semibold">one-time charge</span> for this gift, not a subscription.</li>
                 </ul>
                 <p className="text-xs text-muted-foreground pt-1">By continuing, you authorize this future one-time charge to your saved card.</p>
               </div>
@@ -195,7 +195,7 @@ export default function GiveAGift() {
                 Your card is saved.
               </h1>
               <p className="text-base text-foreground/80 leading-relaxed max-w-md mx-auto">
-                We won't charge it yet. When the parent sets up the child's fund, we'll charge your card and your gift becomes a real investment in the child's name. If they don't set it up, we won't charge you — and you can change your mind any time before then.
+                We won't charge it yet. When the parent sets up the child's fund, we'll charge your card and your gift becomes a real investment in the child's name. If they don't set it up, we won't charge you, and you can change your mind any time before then.
               </p>
               <div className="flex flex-col gap-3 max-w-xs mx-auto">
                 <Link href="/">
@@ -249,7 +249,7 @@ export default function GiveAGift() {
                     Copy reflects all three honestly so the gifter
                     isn't left wondering. */}
                 <p className="text-xs text-muted-foreground pt-2 leading-relaxed">
-                  We send one warm note to the parent, not a follow-up drip. The intent stays open for 60 days. If they haven't acted with about 10 days left, we'll email you a heads-up so you can nudge them yourself — Kiddo's role is the welcome, yours is the relationship.
+                  We send one warm note to the parent, not a follow-up drip. The intent stays open for 60 days. If they haven't acted with about 10 days left, we'll email you a heads-up so you can nudge them yourself. Kiddo's role is the welcome, yours is the relationship.
                 </p>
               </div>
               <div className="flex flex-col gap-3 max-w-xs mx-auto">

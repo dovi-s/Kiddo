@@ -563,7 +563,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
                             ))}
                           </select>
                           <p className="mt-1 text-[11px] text-muted-foreground">
-                            UTMA age of majority is set by state law — most states are 18, a few are 19 or 21.
+                            UTMA age of majority is set by state law. Most states are 18, a few are 19 or 21.
                           </p>
                           {/* Live "what this means" — turns the state pick
                               from an abstract dropdown into a concrete date.

@@ -88,7 +88,7 @@ export function ReportContentButton({
   if (submitted) {
     return (
       <div className="mt-2 rounded-lg bg-muted/40 px-3 py-2 text-[11px] text-muted-foreground">
-        Report sent. Thanks — an admin will review.
+        Report sent. Thanks, an admin will review.
       </div>
     );
   }

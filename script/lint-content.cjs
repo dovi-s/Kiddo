@@ -368,6 +368,57 @@ const BANNED_ICONS = ["Sparkles", "SparkleBurst", "Wand2"];
   }
 })("client/src");
 
+// ── Em-dash broad guard (added 2026-06-01) ──
+// The INCLUDED_PAGE_FILES allowlist above curates which files get the FULL
+// content rules (banned phrases, passive voice, sentence length). But the
+// em-dash ban (feedback_no_emdash.md) applies to ALL user-facing copy, and
+// files outside the allowlist were never scanned — App.tsx route-meta
+// (title/description, user-visible in search results), HowItWorks.tsx,
+// StoryPage.tsx, server/seoMeta.ts, and any component not individually
+// allowlisted. Em-dashes slipped into several of these during the 2026-06-01
+// copy sweep precisely because the allowlist didn't cover them. This broad
+// pass scans every client/src .tsx/.ts plus the route-meta source for U+2014
+// ONLY, reusing the same comment-stripping + string/JSX extraction so code
+// comments and non-copy code don't false-trip. Mirrors the banned-icon broad
+// scan below. Files already fully scanned above are skipped (no double-report).
+// Line-based em-dash detection. The segment-extraction approach (string/JSX
+// regexes) used by the main lint misses copy that spans nested tags or sits
+// next to {expr} interpolations (TaxDocuments "and — once live — the forms
+// {x}", GiftSuccess "Heads up — {name}", GifterDashboard "}— for your CPA").
+// After stripping comments, the ONLY thing that can carry an em-dash is copy
+// (string literal or JSX text) or a lone "—" empty-cell placeholder. So:
+// strip comments (preserving newlines for line numbers), drop lone-"—"
+// placeholder strings, then flag any line that still contains an em-dash.
+// Catches every prose em-dash regardless of JSX structure; the lone-placeholder
+// strip preserves the deliberate "single-char — cell marker is fine" choice.
+const emDashScanned = new Set(files.map((f) => path.normalize(f)));
+function scanForEmDashes(target) {
+  const stat = statSync(target);
+  if (stat.isDirectory()) {
+    for (const entry of readdirSync(target)) scanForEmDashes(path.join(target, entry));
+    return;
+  }
+  if (!/\.(tsx|ts)$/.test(target) || target.endsWith(".d.ts")) return;
+  const normalized = path.normalize(target);
+  if (emDashScanned.has(normalized)) return;
+  emDashScanned.add(normalized);
+  const codeOnly = readFileSync(target, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " ")) // keep newlines so line numbers stay aligned
+    .replace(/(^|\s)\/\/[^\n]*/g, "$1");
+  codeOnly.split(/\r?\n/).forEach((line, i) => {
+    const stripped = line.replace(/(["'`])—\1/g, ""); // drop lone "—" empty-value placeholders
+    if (stripped.includes("—")) {
+      allIssues.push({
+        file: `${target}:${i + 1}`,
+        issue: "Em-dash (—) in user-facing copy (broad scan)",
+        excerpt: line.trim().replace(/\s+/g, " ").slice(0, 160),
+      });
+    }
+  });
+}
+scanForEmDashes("client/src");
+scanForEmDashes(path.normalize("server/seoMeta.ts"));
+
 if (allIssues.length) {
   for (const entry of allIssues) {
     console.error(`\n[content-lint] ${entry.file}`);

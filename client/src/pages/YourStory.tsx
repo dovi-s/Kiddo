@@ -187,7 +187,7 @@ export default function YourStory() {
                 {childFirst ? <>This is what they built for you, {childFirst}.</> : <>This is what they built for you.</>}
               </h1>
               <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                Every gift. Every note. Year by year. Scroll through to see the people who showed up over time — and what they wrote when they did.
+                Every gift. Every note. Year by year. Scroll through to see the people who showed up over time, and what they wrote when they did.
               </p>
             </motion.section>
 

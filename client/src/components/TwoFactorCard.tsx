@@ -162,7 +162,7 @@ export function TwoFactorCard() {
             <div className="mt-4 rounded-xl border border-[hsl(var(--kiddo-gold)/0.4)] bg-[hsl(var(--kiddo-gold)/0.06)] p-4">
               <p className="text-xs font-bold text-foreground">Save your backup codes</p>
               <p className="mt-1 text-[11px] text-muted-foreground leading-relaxed">
-                Each works once if you lose your authenticator. Store them somewhere safe — you won't see them again.
+                Each works once if you lose your authenticator. Store them somewhere safe. You won't see them again.
               </p>
               <div className="mt-3 grid grid-cols-2 gap-1.5">
                 {backupCodes.map((c) => (

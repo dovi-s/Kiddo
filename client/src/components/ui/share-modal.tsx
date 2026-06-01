@@ -119,7 +119,7 @@ function getEventTone(recipientName: string, page: SharePage): EventTone {
     emoji: "🪔",
     shareLine: `Light up ${first}'s future this Diwali 🪔`,
     emailSubject: `A Diwali gift that grows for ${first} 🪔`,
-    emailOpening: `Diwali is coming up, and we'd love for you to add to ${first}'s investment fund — a gift that keeps lighting the way.`,
+    emailOpening: `Diwali is coming up, and we'd love for you to add to ${first}'s investment fund. A gift that keeps lighting the way.`,
   };
   if (label.includes("eid")) return {
     emoji: "🌙",
@@ -241,7 +241,7 @@ function getEventTone(recipientName: string, page: SharePage): EventTone {
     emoji: "✈️",
     shareLine: `${first} is saving for a gap year ✈️ Send them on their way.`,
     emailSubject: `Help ${first} save for travel ✈️`,
-    emailOpening: `${first} is saving for travel — a gap year, a trip, a memory. Every dollar helps.`,
+    emailOpening: `${first} is saving for travel: a gap year, a trip, a memory. Every dollar helps.`,
   };
   if (label.includes("business")) return {
     emoji: "💼",
@@ -251,9 +251,9 @@ function getEventTone(recipientName: string, page: SharePage): EventTone {
   };
   if (label.includes("emergency")) return {
     emoji: "🛡️",
-    shareLine: `Help build ${first}'s emergency fund — the safety net that changes everything 🛡️`,
+    shareLine: `Help build ${first}'s emergency fund, the safety net that changes everything 🛡️`,
     emailSubject: `Help build ${first}'s emergency fund 🛡️`,
-    emailOpening: `We're building an emergency fund for ${first} — the kind of safety net that changes everything when you need it.`,
+    emailOpening: `We're building an emergency fund for ${first}, the kind of safety net that changes everything when you need it.`,
   };
   if (page.isPermanent) return {
     emoji: "🌱",

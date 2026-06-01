@@ -648,7 +648,7 @@ export default function GifterDashboard() {
                 </h1>
                 <p className="mt-2 max-w-md text-sm leading-relaxed text-white/80">
                   {savedFundCount > 0
-                    ? `You've shown up for ${savedFundCount} ${savedFundCount === 1 ? "child" : "children"} — and what you gave keeps growing for them.`
+                    ? `You've shown up for ${savedFundCount} ${savedFundCount === 1 ? "child" : "children"}, and what you gave keeps growing for them.`
                     : "The funds you've gifted to, in one place."}
                 </p>
 
@@ -843,7 +843,7 @@ export default function GifterDashboard() {
                               </Button>
                             </div>
                             <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-                              New amount and cadence take effect next cycle — you won't be charged anything extra today.
+                              New amount and cadence take effect next cycle. You won't be charged anything extra today.
                             </p>
                           </div>
                         )}
@@ -857,10 +857,10 @@ export default function GifterDashboard() {
                               <p className="text-xs text-muted-foreground">Couldn't load history. Try again in a moment.</p>
                             ) : history.reminderOnly ? (
                               <p className="text-xs leading-snug text-muted-foreground">
-                                This is a gift reminder, not an automatic charge — nothing is billed to your card. You'll get an email each cycle so you can choose to give.
+                                This is a gift reminder, not an automatic charge. Nothing is billed to your card. You'll get an email each cycle so you can choose to give.
                               </p>
                             ) : history.count === 0 ? (
-                              <p className="text-xs text-muted-foreground">No charges yet — your first one will appear here.</p>
+                              <p className="text-xs text-muted-foreground">No charges yet. Your first one will appear here.</p>
                             ) : (
                               <>
                                 <p className="text-xs font-semibold text-foreground">
@@ -1406,7 +1406,7 @@ export default function GifterDashboard() {
                 >
                   Download your gift history (CSV)
                 </a>
-                {" "}— for your CPA or your records.
+                {" "}for your CPA or your records.
               </p>
             )}
           </div>

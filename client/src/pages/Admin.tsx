@@ -1984,7 +1984,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             value={pmfSurveyLoading ? "..." : fmtNum(pmfSurvey?.somewhatDisappointed || 0)}
             icon={MessageSquare}
             color="amber"
-            sub="Middle band — convertible if product gap closes"
+            sub="Middle band, convertible if product gap closes"
           />
           <StatCard
             label="Not Disappointed"

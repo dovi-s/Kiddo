@@ -101,7 +101,7 @@ export function DemoGiftMoment() {
             title: isRecurring
               ? `${sender}'s monthly gift to ${child} is on its way 🌱`
               : `${sender} added $${amount} to ${child}'s future 🌱`,
-            description: `Going into ${where} — the gift you just sent is landing in ${child}'s Memory Book.`,
+            description: `Going into ${where}. The gift you just sent is landing in ${child}'s Memory Book.`,
             duration: 9000, // a delight beat needs time to read both lines + tap View
             action: (
               <ToastAction
@@ -145,7 +145,7 @@ export function DemoGiftMoment() {
         haptic("success");
         toast({
           title: `${g.sender} added $${g.amount} to ${child}'s future 🌱`,
-          description: `Going into ${where} — a new moment in ${child}'s Memory Book.`,
+          description: `Going into ${where}. A new moment in ${child}'s Memory Book.`,
           duration: 9000, // a delight beat needs time to read both lines + tap View (vs the 4.5s default)
           action: (
             <ToastAction

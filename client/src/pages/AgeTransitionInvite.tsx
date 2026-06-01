@@ -637,7 +637,7 @@ export default function AgeTransitionInvite() {
               {data.gifters.map((gifter) => {
                 const childName = capFirst(data.fund.recipientFirstName) || "me";
                 const giftCount = parseFloat(gifter.totalGifted) > 0 ? formatMoney(gifter.totalGifted) : "";
-                const subject = `Thank you — your gift to ${childName}'s fund`;
+                const subject = `Thank you for your gift to ${childName}'s fund`;
                 const lines = [
                   `Hi ${gifter.name.split(" ")[0] || "there"},`,
                   "",
@@ -676,7 +676,7 @@ export default function AgeTransitionInvite() {
               })}
             </div>
             <p className="mt-4 text-[11px] text-muted-foreground">
-              Tapping opens your mail app with a pre-filled message — you can edit it before sending.
+              Tapping opens your mail app with a pre-filled message. You can edit it before sending.
             </p>
           </motion.section>
         )}

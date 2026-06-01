@@ -843,7 +843,7 @@ export default function GiftSuccess() {
             data-testid="banner-demo-gift"
           >
             <p className="text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-              Demo gift — no card was charged.
+              Demo gift. No card was charged.
             </p>
             <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--kiddo-evergreen))]/85">
               You're in the Dunphy demo. Everything below is illustrative; no real money moved and balances reset periodically.{" "}
@@ -1398,7 +1398,7 @@ export default function GiftSuccess() {
                 <div data-testid="section-note-prompt">
                   <p className="mb-3">
                     {attachmentLabel
-                      ? `Your ${attachmentLabel} is in ${childLabel} Memory Book. Add a note or more media — they read everything when they are older.`
+                      ? `Your ${attachmentLabel} is in ${childLabel} Memory Book. Add a note or more media. They read everything when they are older.`
                       : `This gift lives in ${childLabel} Memory Book forever. Add a note, photo, video, or voice memo. They read everything when they are older.`
                     }
                   </p>
@@ -1483,7 +1483,7 @@ export default function GiftSuccess() {
           </p>
           {senderName && !senderLooksGeneric && (
             <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
-              Heads up — your first name now appears in {childFirstName ? `${childFirstName}'s` : "the"} family Memory Book and on the gift page as a "who's already given" name. Full name stays private.
+              Heads up: your first name now appears in {childFirstName ? `${childFirstName}'s` : "the"} family Memory Book and on the gift page as a "who's already given" name. Full name stays private.
             </p>
           )}
           <div className="mt-4 space-y-3">

@@ -102,7 +102,7 @@ export default function AgeTransitionVerify() {
             </h1>
             <p className="mx-auto max-w-md text-sm leading-relaxed text-muted-foreground">
               {state.kind === "alreadyDone"
-                ? "You'd already confirmed this address. Nothing more to do — the claim link will reach you on your 18th birthday."
+                ? "You'd already confirmed this address. Nothing more to do. The claim link will reach you on your 18th birthday."
                 : "Thanks for confirming. The claim link for your Kiddo fund will reach you here automatically on your 18th birthday."}
             </p>
             <p className="mx-auto max-w-md font-serif italic text-foreground/85">

@@ -388,7 +388,7 @@ export default function TaxDocuments() {
             Tax documents{!isOwnerMode && activeFund?.recipientFirstName ? ` · ${capFirst(activeFund.recipientFirstName)}` : ""}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
-            Cost basis, unrealized gains, and — once investing is live — the tax forms our broker-dealer partner issues for {isOwnerMode ? "your fund" : activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s fund` : "this fund"}.
+            Cost basis, unrealized gains, and (once investing is live) the tax forms our broker-dealer partner issues for {isOwnerMode ? "your fund" : activeFund?.recipientFirstName ? `${capFirst(activeFund.recipientFirstName)}'s fund` : "this fund"}.
             {funds.length > 1 && " Switch funds from the sidebar."}
           </p>
         </div>
@@ -490,7 +490,7 @@ export default function TaxDocuments() {
                     wrongly implies a form is still coming — drop it. */}
                 <p className="text-sm font-bold text-foreground">No tax forms for {yearFilter}{Number(yearFilter) >= currentYear ? " yet" : ""}</p>
                 <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                  Once investing is live, our broker-dealer partner issues 1099-DIV (dividends &amp; distributions) and 1099-B (sales) the January after each tax year. Funds open part-way through a year may have nothing to report until the following January. Forms appear here automatically — no email needed.
+                  Once investing is live, our broker-dealer partner issues 1099-DIV (dividends &amp; distributions) and 1099-B (sales) the January after each tax year. Funds open part-way through a year may have nothing to report until the following January. Forms appear here automatically. No email needed.
                 </p>
                 <div className="mt-3 grid grid-cols-2 gap-2 max-w-md">
                   <div className="rounded-lg border border-[hsl(var(--kiddo-border))] bg-[hsl(var(--kiddo-cream-dark)/0.3)] p-2.5">
@@ -638,7 +638,7 @@ export default function TaxDocuments() {
             </div>
           )}
           <p className="mt-2 text-[11px] text-muted-foreground/80 leading-relaxed">
-            Cost basis is the total you've invested in each position. Gains are <span className="font-semibold">unrealized</span> until positions are sold — no tax is owed on growth alone. Actual tax treatment depends on the holding period{isOwnerMode ? "." : " and the kiddie tax rules below."}
+            Cost basis is the total you've invested in each position. Gains are <span className="font-semibold">unrealized</span> until positions are sold. No tax is owed on growth alone. Actual tax treatment depends on the holding period{isOwnerMode ? "." : " and the kiddie tax rules below."}
           </p>
         </section>
 
@@ -857,7 +857,7 @@ export default function TaxDocuments() {
           <p className="kiddo-section-label mb-2">Understanding the kiddie tax</p>
           <div className="kiddo-card p-5">
             <p className="text-sm text-foreground leading-relaxed">
-              For children under 19 (or full-time students under 24), <span className="font-semibold">unearned income</span> above the IRS thresholds is taxed at the parent's rate, not the child's. Only applies when positions are sold and gains are realized — growth alone isn't taxable.
+              For children under 19 (or full-time students under 24), <span className="font-semibold">unearned income</span> above the IRS thresholds is taxed at the parent's rate, not the child's. Only applies when positions are sold and gains are realized. Growth alone isn't taxable.
             </p>
             <div className="mt-4 rounded-xl bg-[hsl(var(--kiddo-cream-dark)/0.4)] p-4 space-y-2.5">
               <div className="flex items-baseline justify-between gap-3 pb-2 border-b border-[hsl(var(--kiddo-border-light))]">
