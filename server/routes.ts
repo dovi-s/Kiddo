@@ -22549,11 +22549,29 @@ export async function registerRoutes(
       } catch (collabErr) {
         console.warn("[funds-overview] getCollaboratedFunds skipped:", (collabErr as any)?.message || collabErr);
       }
+      // Funds this user HANDED OFF at majority (now previous_owner — not owner, not
+      // collaborator). The locked principle is that the parent's view of a transferred fund
+      // STAYS ("your part of the story"); the Dashboard switcher already shows them, so the
+      // household overview must too — as read-only "Transferred" rows (the client renders the
+      // pill + dims). Without this they vanished from "Your funds" at handoff. IMPORTANT: they
+      // appear in the LIST but are excluded from the money aggregate + gift stats below
+      // (transferredFundIds), because the balance/gifts are the now-adult owner's, not this
+      // parent's household.
+      let previouslyOwnedFunds: any[] = [];
+      try {
+        previouslyOwnedFunds = await storage.getPreviouslyOwnedFundsByUser(userId);
+      } catch (prevErr) {
+        console.warn("[funds-overview] getPreviouslyOwnedFundsByUser skipped:", (prevErr as any)?.message || prevErr);
+      }
       const seenIds = new Set<string>(ownedFunds.map(f => String(f.id)));
       const sharedFundsDeduped = collaboratedFunds.filter(f => !seenIds.has(String(f.id)));
+      sharedFundsDeduped.forEach(f => seenIds.add(String(f.id)));
+      const previouslyOwnedDeduped = previouslyOwnedFunds.filter(f => !seenIds.has(String(f.id)));
+      const transferredFundIds = new Set<string>(previouslyOwnedDeduped.map(f => String(f.id)));
       const allFunds = [
         ...ownedFunds.map(f => ({ ...f, accessRole: 'owner' as const })),
         ...sharedFundsDeduped,
+        ...previouslyOwnedDeduped.map(f => ({ ...f, accessRole: 'previous_owner' as const })),
       ];
 
       // Filter out closed funds — they shouldn't pollute the active
@@ -22581,14 +22599,19 @@ export async function registerRoutes(
       // horizons would be mathematical fiction (a 2-year-old's fund and
       // a 17-year-old's fund don't have a comparable time-weighted
       // return). Aggregate $ is honest; aggregate % is not.
-      const aggregateBalance = activeFunds.reduce((sum, f) => {
+      // Money aggregate + gift stats run over MANAGED funds only (exclude transferred): the
+      // balance + gifts belong to the now-adult owner, not this parent's household, so
+      // including them would overstate "Your funds". Transferred funds still appear in the
+      // LIST (returned as `funds` below) as read-only "Transferred" rows.
+      const managedFunds = activeFunds.filter(f => !transferredFundIds.has(String(f.id)));
+      const aggregateBalance = managedFunds.reduce((sum, f) => {
         return sum
           + parseFloat(String(f.balance || '0'))
           + parseFloat(String(f.pendingBalance || '0'))
           + parseFloat(String((f as any).cashBalance || '0'));
       }, 0);
 
-      const fundIds = activeFunds.map(f => f.id);
+      const fundIds = managedFunds.map(f => f.id);
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
       // Drizzle's sql template interpolates a JS array as a parameter
