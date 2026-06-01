@@ -30,7 +30,7 @@ const parentSteps = [
   {
     icon: TrendingUp,
     title: "Step 2: Set up your child's fund.",
-    body: "Enter your child's name and date of birth. Pick one default path for new gifts: a managed recurring-investment style, a specific default stock, or cash until you invest later. You can change it any time.",
+    body: "Enter your child's name and date of birth. Pick one default path for new gifts: a diversified managed mix, a specific default stock, or cash until you invest later. You can change it any time.",
   },
   {
     icon: QrCode,
@@ -212,7 +212,7 @@ export default function HowItWorks() {
                   What actually happens to the money.
                 </h2>
                 <p className="mb-4 leading-relaxed text-muted-foreground">
-                  When a gift is received, Kiddo follows the family's chosen default. For most funds that means a managed recurring-investment style. Some families set one default stock. Others keep gifts in cash until they invest later.
+                  When a gift is received, Kiddo follows the family's chosen default. For most funds that means a diversified managed mix. Some families set one default stock. Others keep gifts in cash until they invest later.
                 </p>
                 <p className="mb-4 leading-relaxed text-muted-foreground">
                   If a gift amount is smaller than the price of one full share, Kiddo purchases a fractional share when the gift is invested into a stock or ETF. A $25 gift can still buy a fraction of one share. Over time, those fractions add up.
@@ -225,7 +225,7 @@ export default function HowItWorks() {
                 <p className="mb-2 text-sm font-medium text-foreground">Gift flow</p>
                 <p className="text-sm leading-relaxed text-muted-foreground">Gift amount received</p>
                 <p className="text-sm leading-relaxed text-muted-foreground">Family default applied</p>
-                <p className="text-sm leading-relaxed text-muted-foreground">Stock, recurring-investment mix, or cash path used</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">Stock, managed mix, or cash path used</p>
                 <p className="mt-4 text-xs text-muted-foreground">
                   Simple for families. Real brokerage rails underneath.
                 </p>
