@@ -225,6 +225,39 @@ nothing.
   the hidden successor card), with the same human-review + broker-dealer
   integration discipline as the successor takeover flow.
 
+## Deceased beneficiary — the child dies before majority (the hardest case, currently UNHANDLED)
+
+The two cases above are the CUSTODIAN dying (→ successor custodian) and the post-handoff
+OWNER dying (→ beneficiary/TOD). Neither covers the most painful case: **the minor
+beneficiary dies before reaching majority.** Today this is entirely unhandled, and the
+default behavior is the cruelest possible — the fund keeps rendering "{child} turns 21 in N
+years", "on track for $X when {child} turns 21", projections, countdowns, and active-fund
+CTAs, to a grieving parent.
+
+**Legal (for counsel):** under UTMA, if the minor dies the custodial property passes to the
+**minor's estate** (then by will/intestacy — typically to the parents) via probate. Distinct
+from the successor path (custodian dies, fund continues) and the TOD path (adult owner dies):
+both the custodian's role and the disbursement path change.
+
+**What "all that's best" looks like (compassionate UX — to be built CAREFULLY, never blind):**
+- **Freeze every forward-looking surface.** Suppress all projections, "turns N" countdowns,
+  "on track for $X", age-glide, and active-management CTAs. None of that should ever render
+  for a fund whose beneficiary has passed.
+- **The Memory Book becomes the center** — now the most precious artifact in the product (the
+  gifts, notes, voices, photos). Reframe it from "for {child}'s 21st birthday" to a memorial
+  the family keeps. This is the one surface that should remain, gently.
+- **No self-serve "mark deceased" toggle.** Human-handled, compassion-first support channel,
+  not a flow. A half-built automated path here is worse than nothing — the successor-takeover
+  discipline at its highest stakes.
+- **Disbursement** follows the legal answer (to the estate/parents), handled by a human.
+
+**Status: UNHANDLED.** Pre-custody (no real assets) the financial exposure is limited, but the
+jarring-copy problem is live the moment a real fund has a deceased beneficiary. **Build
+trigger:** bundle the legal Qs into the same securities/fintech engagement
+(`COUNSEL_ENGAGEMENT.md`); the compassionate-UX build follows counsel and is the most carefully
+designed surface in the app. The first real (god-forbid) case is human-handled with compassion
+before any code ships.
+
 ## References
 
 - Internal: `AGE_18_HANDOFF_SPEC.md` failure-paths section

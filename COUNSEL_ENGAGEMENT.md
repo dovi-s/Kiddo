@@ -45,7 +45,7 @@ beneficiary KYC is needed and when; how does state variance apply; and — the l
 the owner names a *minor* beneficiary, can the asset route back into a new Kiddo UTMA rather
 than out to an external custodian? **Detail: `SUCCESSOR_CUSTODIAN_SPEC.md` → "Post-handoff:
 beneficiary / transfer-on-death" section.** (The pre-majority successor-custodian questions in
-the same doc are lower priority; flag them but Q1–Q3 are the gates.)
+the same doc are lower priority; flag them but Q1–Q3 are the gates.) **Same doc, same engagement — the deceased-minor-beneficiary case:** if a child dies before majority, UTMA passes the custodial property to the *minor's estate* (probate) — distinct from owner-TOD, currently unhandled in product, and we need the legal answer before the (carefully designed, compassion-first) UX is built.
 
 **Why bundle:** Q1 sets our regulatory posture (RIA vs broker-dealer-side), Q2 unblocks the
 acquisition loop, Q3 unblocks the owner account's persistence (the "not a cash-out terminal"
