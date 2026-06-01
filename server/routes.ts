@@ -10933,6 +10933,14 @@ export async function registerRoutes(
     try {
       const baseUrl = getAppBaseUrl(req);
       const userId = (req.user as any).id;
+      // Demo sandbox: a demo account must never create a real Stripe customer or
+      // checkout session. isAuthenticated lets demo users reach this; without
+      // the guard, "Upgrade to Family" creates a real customer (on the demo
+      // email) + a chargeable checkout. Mock success so the flow completes
+      // visually without touching payment rails.
+      if (await isDemoUser(userId)) {
+        return res.json(demoMockCheckoutResponse(`${baseUrl}/account?tab=plan&success=family&demo=1`));
+      }
       const userEmail = (req.user as any).email as string | undefined;
       const userName = [((req.user as any).firstName || ""), ((req.user as any).lastName || "")]
         .join(" ")
@@ -11018,6 +11026,11 @@ export async function registerRoutes(
     try {
       const baseUrl = getAppBaseUrl(req);
       const userId = (req.user as any).id;
+      // Demo sandbox — see family-plan above. No real customer / checkout for
+      // a demo account.
+      if (await isDemoUser(userId)) {
+        return res.json(demoMockCheckoutResponse(`${baseUrl}/account?tab=plan&success=legacy&demo=1`));
+      }
       const userEmail = (req.user as any).email as string | undefined;
       const userName = [((req.user as any).firstName || ""), ((req.user as any).lastName || "")]
         .join(" ")
@@ -11077,6 +11090,11 @@ export async function registerRoutes(
     try {
       const baseUrl = getAppBaseUrl(req);
       const userId = (req.user as any).id;
+      // Demo sandbox — see family-plan above. No real customer / checkout for
+      // a demo account.
+      if (await isDemoUser(userId)) {
+        return res.json(demoMockCheckoutResponse(`${baseUrl}/account?tab=plan&success=starter&demo=1`));
+      }
       const fundId = String(req.body?.fundId || "").trim();
       const userEmail = (req.user as any).email as string | undefined;
       const userName = [((req.user as any).firstName || ""), ((req.user as any).lastName || "")]
@@ -11178,6 +11196,12 @@ export async function registerRoutes(
     try {
       const baseUrl = getAppBaseUrl(req);
       const userId = (req.user as any).id;
+      // Demo sandbox: no real Stripe customer / checkout (nor a demo-data
+      // mutation via the Legacy-credit path below) for a demo account buying
+      // premium Occasion coverage. Mock success so the flow completes visually.
+      if (await isDemoUser(userId)) {
+        return res.json(demoMockCheckoutResponse(`${baseUrl}/events?success=occasion&demo=1`));
+      }
       const eventId = String(req.body?.eventId || "").trim();
       const userEmail = (req.user as any).email as string | undefined;
       const userName = [((req.user as any).firstName || ""), ((req.user as any).lastName || "")]
