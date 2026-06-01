@@ -8,6 +8,7 @@ import {
   getHighestEffectivePlan,
   getKiddoOccasionTier,
   hasEntitlementAtLeast,
+  hasEntitlementFromStatus,
   KIDDO_LEGACY_INCLUDED_OCCASION_CREDITS,
   KIDDO_LEGACY_YEARLY,
 } from "@shared/monetization";
@@ -65,6 +66,24 @@ function main() {
   assert.equal(hasEntitlementAtLeast("legacy", "starter"), true);
   assert.equal(hasEntitlementAtLeast("family", "legacy"), false);
   assert.equal(hasEntitlementAtLeast("free", "starter"), false);
+
+  // hasEntitlementFromStatus matrix. Locks the entitlement predicate, especially
+  // the deliberate "trialing is entitled" rule the seamless Family->Kiddo+
+  // downgrade relies on (regression guard so a future edit can't quietly revert it
+  // and reopen the coverage seam).
+  const future = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const past = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  assert.equal(hasEntitlementFromStatus("active"), true);
+  assert.equal(hasEntitlementFromStatus("trialing"), true, "trialing must be entitled (seamless downgrade depends on it)");
+  assert.equal(hasEntitlementFromStatus("TRIALING"), true, "status check is case-insensitive");
+  assert.equal(hasEntitlementFromStatus("canceled", future), true, "canceled but still in paid period stays entitled");
+  assert.equal(hasEntitlementFromStatus("canceled", past), false, "canceled past period end is not entitled");
+  assert.equal(hasEntitlementFromStatus("canceled", null), true, "canceled with no known period end stays entitled (no hard cutoff)");
+  assert.equal(hasEntitlementFromStatus("past_due"), false, "past_due is not entitled");
+  assert.equal(hasEntitlementFromStatus("incomplete"), false, "incomplete is not entitled");
+  assert.equal(hasEntitlementFromStatus("unpaid"), false, "unpaid is not entitled");
+  assert.equal(hasEntitlementFromStatus(null), false);
+  assert.equal(hasEntitlementFromStatus(undefined), false);
 
   console.log("Monetization tests passed.");
 }

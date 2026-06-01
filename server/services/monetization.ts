@@ -35,34 +35,20 @@ import {
   KIDDO_REVERSE_TRIAL_DAYS,
   KORA_FAMILY_MONTHLY,
   KORA_STARTER_MONTHLY,
+  hasEntitlementFromStatus,
   type FundCoverageState,
   type RecommendationState,
 } from "@shared/monetization";
 
 // ─── Entitlement predicate ──────────────────────────────────────────
 
-// "Active" or "canceled but currentPeriodEnd is still in the future."
-// The canceled-but-not-yet-expired branch is the one that catches
-// users who hit cancel mid-period — they keep entitlement until the
-// period actually ends. Without this branch, cancel would feel like
-// a hard cutoff and we'd be in dark-pattern territory the other way
-// (charging for a period the user can't use).
-export function hasEntitlementFromStatus(
-  status?: string | null,
-  currentPeriodEnd?: Date | string | null,
-): boolean {
-  const normalized = String(status || "").toLowerCase();
-  // "trialing" is entitled: a trial provides full access (it just hasn't billed
-  // yet). The ONLY flow that creates a Stripe trial is the seamless Family->Kiddo+
-  // downgrade (createCheckoutSession sets no trial), so this is safe to add and it
-  // closes the overlap seam — the Plus sub covers its fund continuously, with no
-  // window where Family has ended but the trial hasn't flipped to active yet.
-  if (normalized === "active" || normalized === "trialing") return true;
-  if (normalized !== "canceled") return false;
-  if (!currentPeriodEnd) return true;
-  const end = new Date(currentPeriodEnd);
-  return !Number.isNaN(end.getTime()) && end.getTime() > Date.now();
-}
+// Moved to @shared/monetization (pure, no DB deps) so it can be unit-tested
+// without the server's live-DB imports. Re-exported here so existing consumers
+// (routes.ts and the helpers below) keep importing it from this module.
+// Covers active / trialing / canceled-but-still-in-period. See shared for the
+// full rationale (incl. why trialing is entitled). Matrix-tested in
+// script/test-monetization.ts.
+export { hasEntitlementFromStatus };
 
 // ─── Subscription + membership reads ────────────────────────────────
 

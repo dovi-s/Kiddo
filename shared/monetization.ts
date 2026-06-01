@@ -137,6 +137,31 @@ export function hasEntitlementAtLeast(plan: EffectivePlan, required: EffectivePl
   return EFFECTIVE_PLAN_RANK[plan] >= EFFECTIVE_PLAN_RANK[required];
 }
 
+// Pure entitlement predicate for a Stripe subscription / fund-membership status.
+// Lives in shared (next to hasEntitlementAtLeast) so it is testable without the
+// server's DB imports; server/services/monetization.ts re-exports it for existing
+// consumers. True when:
+//  - "active" — obviously entitled.
+//  - "trialing" — a trial provides full access (it just hasn't billed yet). The
+//    ONLY flow that creates a Stripe trial is the seamless Family->Kiddo+ downgrade
+//    (createCheckoutSession sets no trial anywhere), so treating it as entitled is
+//    safe and closes that flow's coverage seam (no window where Family has ended
+//    but the deferred Plus trial hasn't flipped to active yet).
+//  - "canceled" but currentPeriodEnd is still in the future — catches users who
+//    hit cancel mid-period; they keep access until the period actually ends (no
+//    hard cutoff, which would be a dark pattern the other way).
+export function hasEntitlementFromStatus(
+  status?: string | null,
+  currentPeriodEnd?: Date | string | null,
+): boolean {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "active" || normalized === "trialing") return true;
+  if (normalized !== "canceled") return false;
+  if (!currentPeriodEnd) return true;
+  const end = new Date(currentPeriodEnd);
+  return !Number.isNaN(end.getTime()) && end.getTime() > Date.now();
+}
+
 export type ContributionFeeBreakdown = {
   total: number;
   flatComponent: number;
