@@ -46,6 +46,7 @@ import {
 import { eq, and, asc } from "drizzle-orm";
 import { promises as fsp } from "node:fs";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 // English ordinal for "{N}th Birthday" occasion names.
 function ordinal(n: number): string {
@@ -1113,7 +1114,49 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // Balance-crossing milestones, data-driven from the curve just generated.
   await seedMilestonesFromSnapshots(fund.id, kid.firstName);
 
+  // Pre-set Kid View so the parent surface shows a configured "{Kid}'s View ·
+  // Active · PIN protected" instead of "Not set up yet". Skip graduated kids:
+  // their fund is handed off (owner mode), so there's no parent-set PIN.
+  if (kid.ageYears < kid.majorityAge) {
+    await seedKidView(fund.id);
+  }
+
   return fund.id;
+}
+
+// Demo Kid View PIN. Self-revealing hint on purpose so a prospect exploring the
+// demo can actually open the kid-view link. Kid View settings live in a LOCAL
+// JSON store (.local/kid-view.json), keyed by fundId — the same store the routes
+// read/write (server/routes.ts). We merge (read-modify-write) so any non-demo
+// records survive. Hashed with bcryptjs; the server verifies with bcrypt and the
+// two produce interchangeable bcrypt hashes (the demo passwords already rely on
+// this). NOTE: this store is local/ephemeral per instance — same caveat as the
+// other .local file stores; fine for the demo.
+const DEMO_KID_VIEW_PIN = "1234";
+async function seedKidView(fundId: string): Promise<void> {
+  const kidViewPath = path.join(process.cwd(), ".local", "kid-view.json");
+  let store: { byFundId: Record<string, any>; accessTokens: Record<string, any> } = { byFundId: {}, accessTokens: {} };
+  try {
+    const parsed = JSON.parse(await fsp.readFile(kidViewPath, "utf8"));
+    store = {
+      byFundId: parsed?.byFundId && typeof parsed.byFundId === "object" ? parsed.byFundId : {},
+      accessTokens: parsed?.accessTokens && typeof parsed.accessTokens === "object" ? parsed.accessTokens : {},
+    };
+  } catch {
+    // No store file yet — start fresh.
+  }
+  store.byFundId[fundId] = {
+    fundId,
+    enabled: true,
+    shareToken: randomUUID(),
+    pinHash: await bcrypt.hash(DEMO_KID_VIEW_PIN, 10),
+    pinHint: `Demo PIN: ${DEMO_KID_VIEW_PIN}`,
+    allowTeenSuggestions: true,
+    suggestions: [],
+    updatedAt: new Date().toISOString(),
+  };
+  await fsp.mkdir(path.dirname(kidViewPath), { recursive: true });
+  await fsp.writeFile(kidViewPath, JSON.stringify(store, null, 2), "utf8");
 }
 
 // Stamp a "milestone" memory entry at the first date the fund's balance
