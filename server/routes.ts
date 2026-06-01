@@ -9007,6 +9007,36 @@ export async function registerRoutes(
 
       await storage.deleteFundCascade(fundId);
 
+      // Best-effort orphan sweep. Non-fatal: the fund is already gone from the
+      // DB, so a failure here just leaves a harmless file/JSON leftover — it
+      // must never turn a successful delete into a 500.
+      // 1) The fund's uploaded child-photo directory (uploads/child-photos/<id>).
+      try {
+        const safeFundId = String(fundId).replace(/[^a-zA-Z0-9_-]/g, "");
+        if (safeFundId) {
+          await fs.rm(path.resolve(process.cwd(), "uploads", "child-photos", safeFundId), { recursive: true, force: true });
+        }
+      } catch (err) {
+        console.warn('[delete-fund] child-photo cleanup failed:', err);
+      }
+      // 2) The fund's entries in the file-based gifter-notification store.
+      //    Almost always empty for a never-funded fund (no gifts → no
+      //    followers), but swept so nothing lingers keyed to a dead fund id.
+      try {
+        const store: any = await loadGifterNotificationStore();
+        let changed = false;
+        if (store?.subscribersByFund?.[fundId]) { delete store.subscribersByFund[fundId]; changed = true; }
+        if (store?.settingsByFund?.[fundId]) { delete store.settingsByFund[fundId]; changed = true; }
+        if (store?.memorySharesByToken) {
+          for (const token of Object.keys(store.memorySharesByToken)) {
+            if (String(store.memorySharesByToken[token]?.fundId) === fundId) { delete store.memorySharesByToken[token]; changed = true; }
+          }
+        }
+        if (changed) await saveGifterNotificationStore(store);
+      } catch (err) {
+        console.warn('[delete-fund] gifter-notification cleanup failed:', err);
+      }
+
       // Audit row (NOT fund-scoped — auditLogs survives the fund) for the
       // compliance trail. Same shape as the close-fund audit write above.
       try {
