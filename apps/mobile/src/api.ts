@@ -443,6 +443,13 @@ export async function apiGetPublicGiftDestination(identifier: string): Promise<P
   }
 
   const fundBody = await fundRes.json();
+  // Guard the shape: GifterFlowScreen reads destination.fund.investmentPreferences
+  // straight off this, so a 200 with a missing `fund` (server change / proxy /
+  // malformed body) would crash the gift-link screen with "undefined" instead of
+  // showing the screen's normal error state. Fail loud + clean here.
+  if (!fundBody?.fund) {
+    throw new Error(`Gift page not found: ${identifier}`);
+  }
   return {
     event: {
       id: "",
