@@ -272,7 +272,12 @@ function mapActivityTypeToCategory(type?: string | null): "gift" | "auto" | "gro
 //                        completion (sponsor expired, subscription canceled).
 const PALETTE = {
   GIFT:              { bg: "rgb(237,244,238)", color: "rgb(26,61,43)"   },
-  RECURRING:         { bg: "rgb(224,237,227)", color: "rgb(43,88,64)"   },
+  // True SAGE — a muted, grayer green, deliberately distinct from the deep
+  // evergreen GIFT palette above. Was rgb(43,88,64): a saturated forest green
+  // a hair off GIFT's rgb(26,61,43), so "your contribution" and "gift from
+  // others" read as the same color. The "sage palette (parent ongoing action)"
+  // the code always intended now actually looks sage. 2026-06-01.
+  RECURRING:         { bg: "rgb(234,239,233)", color: "rgb(96,124,104)" },
   GROWTH:            { bg: "rgb(232,242,255)", color: "rgb(30,80,170)"  },
   MEMORY:            { bg: "rgb(245,237,253)", color: "rgb(126,68,180)" },
   CELEBRATION_GOLD:  { bg: "rgb(253,248,236)", color: "rgb(122,92,30)"  },
@@ -2623,9 +2628,17 @@ export default function Activity() {
                           };
                         }
                         if (rowCategory === "auto") {
+                          // Parent contribution = the calm SAGE family, matching
+                          // its (now actually-sage) icon. Was evergreen/0.40 — a
+                          // near-twin of the gift border's evergreen/0.55, so the
+                          // two greens blurred. An explicit muted sage makes "from
+                          // you" read clearly distinct from "from others" (deep
+                          // evergreen) on a fast scroll, without adding a 6th
+                          // saturated hue. The green family is preserved; only the
+                          // shade separates.
                           return {
-                            borderLeft: "3px solid hsl(var(--kiddo-evergreen)/0.40)",
-                            background: "linear-gradient(to right, hsl(var(--kiddo-evergreen)/0.025) 0%, transparent 64%)",
+                            borderLeft: "3px solid rgb(150,176,158)",
+                            background: "linear-gradient(to right, rgba(150,176,158,0.07) 0%, transparent 64%)",
                           };
                         }
                         if (rowCategory === "growth") {
