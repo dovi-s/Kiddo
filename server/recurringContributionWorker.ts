@@ -122,6 +122,11 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
   });
 
   let charged = false;
+  // Tracks whether a parent_contribution_failed activity row has been written
+  // this cycle, so the no-charge email path below can write one ONLY when the
+  // charge-attempt paths didn't (avoids a double row when a charge was tried
+  // and declined). Drives the in-app "Last cycle failed" badge.
+  let failureRecorded = false;
 
   if (stripeCustomerId && parentEmail) {
     try {
@@ -270,12 +275,14 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
             } else {
               await storage.updateGift(gift.id, { status: 'failed' });
               await recordRecurringFailure(row, `Charge status: ${pi.status}`, reconcile, nextRunDate);
+              failureRecorded = true;
               log(`contribution ${row.id as string}: PI ${pi.id} status=${pi.status}, falling back to email`, WORKER_SOURCE);
             }
           } catch (piErr) {
             // PaymentIntent failed (e.g. card declined) - mark gift failed, fall through to email
             await storage.updateGift(gift.id, { status: 'failed' });
             await recordRecurringFailure(row, String(piErr), reconcile, nextRunDate);
+            failureRecorded = true;
             log(`contribution ${row.id as string}: Stripe charge failed: ${String(piErr)}`, WORKER_SOURCE);
           }
         }
@@ -286,6 +293,19 @@ async function processSingleParentContribution(row: Record<string, any>, log: Lo
   }
 
   if (!charged && parentEmail) {
+    // In-app failure signal for the "couldn't even attempt" cases. The charge-
+    // attempt paths above write a parent_contribution_failed row on decline,
+    // which drives the Scheduled-tab "Last cycle failed" badge. But when we
+    // couldn't attempt at all (no Stripe customer on file, or the customer has
+    // no default payment method) NO row was written, so the only signal was the
+    // email below — invisible in-app. A churned/grandfathered parent's silently
+    // stalled schedule then read "Active" forever. Write the row here (once) so
+    // hasRecentFailure surfaces it. nextRunDate was already advanced above; pass
+    // a null reconcile since we have no payment-method details in this path.
+    if (!failureRecorded) {
+      await recordRecurringFailure(row, 'Could not auto-charge (no payment method on file)', null, nextRunDate);
+      failureRecorded = true;
+    }
     // 72h cooldown gate. Stripe retries cluster across multiple worker
     // ticks; without the gate a dying card produced one email per tick.
     // We still record the activity row (already done above via
@@ -534,10 +554,21 @@ async function processParentContributions(log: LogFn): Promise<void> {
   //     they can't add new gifter recurring relationships without
   //     reactivating Plus
   //
-  // DO NOT add a `LEFT JOIN subscriptions ... WHERE s.plan IN (...)`
-  // gate to the SELECT below. The plan join is already present (line
-  // 526) but only to surface stripeCustomerId — it does NOT filter.
-  // Keep it that way.
+  // DO NOT add a `WHERE s.plan IN (...)` plan gate to the customer-id lookup
+  // below. The subscription is referenced ONLY to surface stripeCustomerId for
+  // the off-session charge; it must NOT filter WHICH contributions process.
+  //
+  // 2026-06-01 FIX — grandfathering was silently broken. The old form was
+  // `LEFT JOIN subscriptions s ON s.user_id = pc.user_id AND s.status='active'`,
+  // so a churned parent (status flipped to 'canceled' on downgrade; the row +
+  // customer id PERSIST — webhookHandlers never deletes the subscription) got a
+  // NULL customer id. The worker then couldn't charge, fell back to email, and
+  // the grandfathered schedule quietly stopped auto-charging — the exact
+  // opposite of the documented intent above. Now the customer id is sourced
+  // from ANY of the user's subscription rows (prefer active, else most recent
+  // with a non-null id) via a SCALAR SUBQUERY — scalar, not a JOIN, so a user
+  // with multiple subscription rows can never multiply the contribution row and
+  // double-charge.
 
   const result = await pool.query<Record<string, any>>(`
     SELECT
@@ -547,11 +578,15 @@ async function processParentContributions(log: LogFn): Promise<void> {
       pc.last_decline_email_at,
       f.name AS fund_name, f.slug AS fund_slug, f.recipient_first_name,
       u.email AS user_email, u.first_name AS user_first_name, u.last_name AS user_last_name,
-      s.stripe_customer_id
+      (SELECT cs.stripe_customer_id
+         FROM subscriptions cs
+        WHERE cs.user_id = pc.user_id
+          AND cs.stripe_customer_id IS NOT NULL
+        ORDER BY (cs.status = 'active') DESC, cs.created_at DESC
+        LIMIT 1) AS stripe_customer_id
     FROM parent_contributions pc
     JOIN funds f ON f.id = pc.fund_id
     JOIN users u ON u.id = pc.user_id
-    LEFT JOIN subscriptions s ON s.user_id = pc.user_id AND s.status = 'active'
     WHERE pc.status = 'active'
       AND pc.next_run_date IS NOT NULL
       AND pc.next_run_date <= NOW()
