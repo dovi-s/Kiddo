@@ -1240,7 +1240,7 @@ export default function Activity() {
         <AppHeader />
         <main className="kiddo-canvas px-4 py-5 md:py-6 space-y-4">
           <div style={{ height: 28, background: "rgba(26,23,16,0.06)", borderRadius: 8, width: 120 }} />
-          <div style={{ background: "white", borderRadius: 20, border: "1px solid rgba(26,23,16,0.09)", padding: "0 18px" }}>
+          <div className="kiddo-card" style={{ padding: "0 18px" }}>
             {[1, 2, 3, 4].map(i => <KiddoSkeleton key={i} variant="list-row" />)}
           </div>
         </main>
@@ -1922,10 +1922,8 @@ export default function Activity() {
         {hasActivity && (
           <EnlighteningReveal>
             <div
+              className="kiddo-card"
               style={{
-                background: "white", borderRadius: 16,
-                border: "1px solid rgba(26,23,16,0.09)",
-                boxShadow: "0 1px 4px rgba(26,23,16,0.05)",
                 padding: "16px 18px",
                 marginBottom: 20,
               }}
@@ -2215,7 +2213,8 @@ export default function Activity() {
             blocks. Five rows is the typical above-the-fold count. */}
         {feedLoading && (
           <div
-            style={{ background: "white", borderRadius: 20, border: "1px solid rgba(26,23,16,0.09)", padding: "16px 18px" }}
+            className="kiddo-card"
+            style={{ padding: "16px 18px" }}
             role="status"
             aria-label="Loading activity"
           >
@@ -2244,7 +2243,7 @@ export default function Activity() {
             ? `${cachedKidName}'s fund is safe.`
             : "Your fund is safe.";
           return (
-            <div style={{ background: "white", borderRadius: 20, border: "1px solid rgba(26,23,16,0.09)", padding: 20 }} data-testid="activity-error-state">
+            <div className="kiddo-card" style={{ padding: 20 }} data-testid="activity-error-state">
               <p style={{ fontSize: 14, fontWeight: 700, color: "rgb(26,67,50)", marginBottom: 4 }}>{safetyLine}</p>
               <p style={{ fontSize: 13, color: "rgb(140,130,122)", marginBottom: 12 }}>The activity feed couldn't load right now. Try again in a moment.</p>
               <Button variant="outline" size="sm" onClick={() => void refetch()} data-testid="button-retry-activity">
@@ -2390,10 +2389,7 @@ export default function Activity() {
               >
                 {group.label}
               </p>
-              <div style={{
-                background: "white", borderRadius: 20,
-                border: "1px solid rgba(26,23,16,0.09)",
-                boxShadow: "0 1px 6px rgba(26,23,16,0.05)",
+              <div className="kiddo-card" style={{
                 padding: "0 18px",
               }}>
                 {group.items.map((item, i) => {
@@ -3560,8 +3556,7 @@ export default function Activity() {
           >
             {pendingTotalCount === 0 ? (
               <EnlighteningReveal>
-                <div style={{
-                  background: "white", borderRadius: 20, border: "1px solid rgba(26,23,16,0.09)",
+                <div className="kiddo-card" style={{
                   padding: "48px 24px", textAlign: "center",
                 }}>
                   <div style={{
@@ -3589,10 +3584,7 @@ export default function Activity() {
                       <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgb(140,130,122)", marginBottom: 10 }}>
                         In transit
                       </p>
-                      <div style={{
-                        background: "white", borderRadius: 20,
-                        border: "1px solid rgba(26,23,16,0.09)",
-                        boxShadow: "0 1px 6px rgba(26,23,16,0.05)",
+                      <div className="kiddo-card" style={{
                         padding: "0 18px",
                       }}>
                         {pendingFromFeed.map((item, i) => {
@@ -3657,10 +3649,7 @@ export default function Activity() {
                       <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgb(140,130,122)", marginBottom: 10 }}>
                         Coming soon (next {PENDING_UPCOMING_DAYS} days)
                       </p>
-                      <div style={{
-                        background: "white", borderRadius: 20,
-                        border: "1px solid rgba(26,23,16,0.09)",
-                        boxShadow: "0 1px 6px rgba(26,23,16,0.05)",
+                      <div className="kiddo-card" style={{
                         padding: "0 18px",
                       }}>
                         {upcomingContribs.map((c: any, i: number) => {
@@ -3750,8 +3739,7 @@ export default function Activity() {
           >
             {scheduledTotalCount === 0 ? (
               <EnlighteningReveal>
-                <div style={{
-                  background: "white", borderRadius: 20, border: "1px solid rgba(26,23,16,0.09)",
+                <div className="kiddo-card" style={{
                   padding: "48px 24px", textAlign: "center",
                 }}>
                   <div style={{
@@ -3790,10 +3778,7 @@ export default function Activity() {
                       <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgb(140,130,122)", marginBottom: 10 }}>
                         Recurring investments
                       </p>
-                      <div style={{
-                        background: "white", borderRadius: 20,
-                        border: "1px solid rgba(26,23,16,0.09)",
-                        boxShadow: "0 1px 6px rgba(26,23,16,0.05)",
+                      <div className="kiddo-card" style={{
                         padding: "0 18px",
                       }}>
                         {scheduledContribs.map((c: any, i: number) => {
@@ -4217,10 +4202,7 @@ export default function Activity() {
                       <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase", color: "rgb(140,130,122)", marginBottom: 10 }}>
                         Gift reminders
                       </p>
-                      <div style={{
-                        background: "white", borderRadius: 20,
-                        border: "1px solid rgba(26,23,16,0.09)",
-                        boxShadow: "0 1px 6px rgba(26,23,16,0.05)",
+                      <div className="kiddo-card" style={{
                         padding: "0 18px",
                       }}>
                         {scheduledReminders.map((r: any, i: number) => {
