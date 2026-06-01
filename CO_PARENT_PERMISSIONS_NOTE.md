@@ -97,9 +97,9 @@ already 403s those). `primaryFundIsCoAdmin = accessRole === 'co-admin'`:
 - Co-parent keeps the day-to-day write (dashboard) + sees how it's invested on
   the dashboard. check (lint:content + tsc) green.
 
-REMAINING (small follow-up): the Child tab's "Invite co-parent" + "Close fund"
-buttons live inside the FundSettingsChildPanel sub-component (passed via
-onOpenInviteModal / onOpenCloseDialog), so gating them cleanly needs a prop on
-that panel. Lower stakes than the Money tab, and the banner already frames them
-as the owner's ("manages... fund settings"). Wire a `canManageStructure` prop
-when convenient.
+SHIPPED (follow-up, 2026-05-31): the Child tab's owner-only structural cards
+are now gated for a co-admin inside FundSettingsChildPanel — Invite-co-parent
+(CoParentAccessCard) and Close-fund (CloseFundCard) are hidden via a
+`fundIsCoAdmin` check (accessRole === 'co-admin'), mirroring the owner-held
+hiding already there. A co-parent keeps the day-to-day; only the owner sees
+invite / close.

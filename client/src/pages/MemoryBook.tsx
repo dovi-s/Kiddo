@@ -987,7 +987,7 @@ export default function MemoryBook() {
       }
       return data;
     },
-    enabled: !!fundId && isAuthenticated && !authLoading,
+    enabled: !!fundId && isAuthenticated && !authLoading && canModerateMemory,
     initialData: () => (fundId ? readLocalCache<any[]>(`${MEMORY_THANK_YOUS_CACHE_PREFIX}${fundId}`) : undefined),
     initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,
@@ -1010,7 +1010,8 @@ export default function MemoryBook() {
       if (fundId) writeLocalCache(`${MEMORY_GIFTER_NOTIF_CACHE_PREFIX}${fundId}`, data);
       return data;
     },
-    enabled: !!fundId && isAuthenticated && !authLoading,
+    enabled: !!fundId && isAuthenticated && !authLoading && canModerateMemory,
+    retry: false,
     initialData: () => (fundId ? readLocalCache<{ optedInCount: number; subscribers: Array<{ email: string; name?: string | null; unsubscribed?: boolean }>; settings?: { memoryBookSharesSentThisYear?: number } }>(`${MEMORY_GIFTER_NOTIF_CACHE_PREFIX}${fundId}`) : undefined),
     initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,
@@ -1052,7 +1053,7 @@ export default function MemoryBook() {
     // — without needing the modal to be open. Cheap query (≤4 rows).
     // initialData paints the badge instantly on return visits instead of
     // after a fresh round-trip (the "loads slow and last" anti-pattern).
-    enabled: !!fundId && isAuthenticated && !authLoading,
+    enabled: !!fundId && isAuthenticated && !authLoading && canModerateMemory,
     initialData: () => (fundId ? readLocalCache<{ shares: Array<{ token: string; message: string; photoUrl: string | null; recipientCount: number; createdAt: string; shareUrl: string }> }>(`${MEMORY_PAST_SHARES_CACHE_PREFIX}${fundId}`) : undefined),
     initialDataUpdatedAt: 0,
     staleTime: 5 * 60 * 1000,

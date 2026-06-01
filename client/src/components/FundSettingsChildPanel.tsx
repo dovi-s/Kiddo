@@ -85,6 +85,11 @@ export function FundSettingsChildPanel({
   // See project_adult_account_is_parent_2_0_onramp.
   const fundIsOwnerHeld =
     (fund as any)?.accessRole === "owner" && Boolean((fund as any)?.transferredAt);
+  // Co-parent (co-admin): inviting OTHER co-parents and closing the fund are
+  // owner-only structural actions (the server 403s a co-admin), so hide those
+  // cards instead of showing controls that fail. The co-parent still manages the
+  // day-to-day. Mirrors the owner-only Settings gating (CO_PARENT_PERMISSIONS_NOTE).
+  const fundIsCoAdmin = (fund as any)?.accessRole === "co-admin";
   return (
     <div className="space-y-4" data-testid="settings-child-panel">
       <ChildIdentityCard fund={fund} onEditChild={onEditFund} />
@@ -94,7 +99,7 @@ export function FundSettingsChildPanel({
           they later create). See project_adult_account_is_parent_2_0_onramp. */}
       {!fundIsOwnerHeld && <KidsViewCard fund={fund} enabled={kidViewQueryEnabled} />}
       <InvitationsToYouCard />
-      {!fundIsOwnerHeld && (
+      {!fundIsOwnerHeld && !fundIsCoAdmin && (
         <CoParentAccessCard
           fund={fund}
           user={user}
@@ -105,7 +110,7 @@ export function FundSettingsChildPanel({
       <FundDetailsCard fund={fund} onEditFund={onEditFund} />
       {!fundIsOwnerHeld && <SuccessorCustodianCard fund={fund} />}
       <LegalDocumentsCard />
-      <CloseFundCard fund={fund} onOpenCloseDialog={onOpenCloseDialog} />
+      {!fundIsCoAdmin && <CloseFundCard fund={fund} onOpenCloseDialog={onOpenCloseDialog} />}
     </div>
   );
 }
