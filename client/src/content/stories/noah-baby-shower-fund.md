@@ -9,6 +9,7 @@ ctaLabel: See how it works
 ctaHref: /how-it-works
 occasion: baby shower
 heroNote: Started before he was born. One link. One shower. A long runway for the gifts to grow.
+internalNote: Launch example, not a real customer story. Before any public campaign, replace the quote, occasion date, and contribution proof with verified customer details. (Frontmatter only; not rendered.)
 ---
 ## How it started
 
@@ -35,7 +36,3 @@ The fund gave people a way to show up without friction, and it gave the parents 
 ## Memory Book highlight
 
 > We cannot wait to watch this little one grow, and we love that this gift can grow too.
-
-## What this story still needs
-
-Use a real parent quote, a verified occasion date, and actual contribution proof before promoting this story widely.

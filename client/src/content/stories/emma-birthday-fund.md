@@ -9,6 +9,7 @@ ctaLabel: Start your child's fund
 ctaHref: /get-started
 occasion: 7th birthday
 heroNote: Started by Sarah, Emma's mom. Ohio.
+internalNote: Launch example, not a real customer story. Before any public campaign, replace the quote, occasion proof points, and contribution numbers with verified customer details. (Frontmatter only; not rendered.)
 ---
 ## How it started
 
@@ -39,7 +40,3 @@ It gave relatives a story to tell, not just a payment confirmation.
 ## Memory Book highlight
 
 > Happy birthday, Emma. We wanted to give you something that can grow with you.
-
-## What this story still needs
-
-This launch version is intentionally curated. Before using it in a bigger public campaign, replace the quote, the occasion proof points, and the contribution numbers with verified customer details.
