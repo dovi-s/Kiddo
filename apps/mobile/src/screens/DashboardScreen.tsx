@@ -227,6 +227,11 @@ function HomeTab({
     .slice(0, 2);
   const upcoming = activeFund ? yearsUntil18(activeFund.recipientBirthdate) : null;
   const hasStarted = balance > 0 || fundGifts.length > 0;
+  // Post-handoff: a transferred fund is owned by the now-adult recipient; the parent
+  // (accessRole 'previous_owner') has READ-ONLY access. Mirror the web's isReadOnlyFund
+  // gating — hide write CTAs (Share, New event) that would 403 / are a false affordance.
+  // 2026-05-31 launch audit (mobile parity gap with web).
+  const isReadOnly = (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
 
   const handleShare = async () => {
     if (!activeFund) return;
@@ -292,10 +297,12 @@ function HomeTab({
           ) : null}
 
           <View style={styles.actionRow}>
-            <Pressable onPress={handleShare} style={styles.primaryAction}>
-              <Ionicons name="share-social-outline" size={16} color="#38290A" style={{ marginRight: 6 }} />
-              <Text style={styles.primaryActionText}>Share link</Text>
-            </Pressable>
+            {!isReadOnly && (
+              <Pressable onPress={handleShare} style={styles.primaryAction}>
+                <Ionicons name="share-social-outline" size={16} color="#38290A" style={{ marginRight: 6 }} />
+                <Text style={styles.primaryActionText}>Share link</Text>
+              </Pressable>
+            )}
             <Pressable onPress={() => onSelectFund(activeFund)} style={styles.secondaryAction}>
               <Text style={styles.secondaryActionText}>View fund</Text>
             </Pressable>
@@ -328,10 +335,12 @@ function HomeTab({
                 <EventPreview key={event.id} event={event} />
               ))
             )}
-            <Pressable onPress={onCreateEvent} style={styles.textAction}>
-              <Ionicons name="add" size={14} color={colors.evergreen} />
-              <Text style={styles.textActionText}>New event</Text>
-            </Pressable>
+            {!isReadOnly && (
+              <Pressable onPress={onCreateEvent} style={styles.textAction}>
+                <Ionicons name="add" size={14} color={colors.evergreen} />
+                <Text style={styles.textActionText}>New event</Text>
+              </Pressable>
+            )}
           </Section>
 
           <Section title="Coming up">
@@ -445,6 +454,9 @@ function GiftTab({
   const childName = getChildName(activeFund);
   const giftUrl = activeFund ? `${WEB_BASE}/${activeFund.slug}` : "";
   const recentGifts = activeFund ? gifts.filter((g) => g.fundId === activeFund.id).slice(0, 3) : [];
+  // Post-handoff parent (previous_owner): read-only — they no longer own the fund, so the
+  // share/create-event CTAs are a false affordance. 2026-05-31 launch audit.
+  const isReadOnly = (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
 
   const handleShare = async () => {
     if (!activeFund) return;
@@ -470,13 +482,20 @@ function GiftTab({
             <View style={styles.giftUrlBox}>
               <Text style={styles.giftUrlText} numberOfLines={1}>{giftUrl}</Text>
             </View>
-            <Pressable onPress={handleShare} style={styles.giftPrimaryBtn}>
-              <Ionicons name="share-social" size={16} color="#3D2B09" style={{ marginRight: 6 }} />
-              <Text style={styles.giftPrimaryBtnText}>Share gift link</Text>
-            </Pressable>
-            <Pressable onPress={onCreateEvent} style={styles.giftSecondaryBtn}>
-              <Text style={styles.giftSecondaryBtnText}>Create birthday page</Text>
-            </Pressable>
+            {!isReadOnly && (
+              <>
+                <Pressable onPress={handleShare} style={styles.giftPrimaryBtn}>
+                  <Ionicons name="share-social" size={16} color="#3D2B09" style={{ marginRight: 6 }} />
+                  <Text style={styles.giftPrimaryBtnText}>Share gift link</Text>
+                </Pressable>
+                <Pressable onPress={onCreateEvent} style={styles.giftSecondaryBtn}>
+                  <Text style={styles.giftSecondaryBtnText}>Create birthday page</Text>
+                </Pressable>
+              </>
+            )}
+            {isReadOnly && (
+              <Text style={styles.giftBody}>This fund was transferred to {childName}. They manage gifting from here.</Text>
+            )}
           </View>
 
           <View style={styles.giftTrustStrip}>
