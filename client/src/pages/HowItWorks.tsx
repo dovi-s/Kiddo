@@ -227,7 +227,7 @@ export default function HowItWorks() {
                 <p className="text-sm leading-relaxed text-muted-foreground">Family default applied</p>
                 <p className="text-sm leading-relaxed text-muted-foreground">Stock, managed mix, or cash path used</p>
                 <p className="mt-4 text-xs text-muted-foreground">
-                  Simple for families. Real brokerage rails underneath.
+                  Simple for families. Real brokerage rails when investing is live.
                 </p>
               </div>
             </div>
