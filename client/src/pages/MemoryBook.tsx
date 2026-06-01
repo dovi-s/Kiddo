@@ -3411,16 +3411,19 @@ export default function MemoryBook() {
                   canonical surfaces: each piece of content has ONE
                   primary home; secondary surfaces show smaller versions
                   or are hidden for that audience. */}
-              {gifterRoster.length > 0 && !isOwner && !authLoading && (!isAuthenticated || !!fundData) && (
-                /* Ownership-resolved guard: `isOwner` (line ~2350) needs
-                   fundData loaded to be correct — until then it's falsy, so
-                   the owner briefly saw this "Who loves {child}" strip flash
-                   in and then vanish once fundData resolved and it computed
-                   `isOwner === true`. Only render once ownership is actually
-                   known: a public/unauthenticated viewer is never the owner
-                   (show immediately), but for an authenticated user we wait
-                   for fundData (and for auth itself to settle) before
-                   deciding. Eliminates the flash for the parent. */
+              {gifterRoster.length > 0 && !authLoading && (!isAuthenticated || !!fundData) && (
+                /* Shown to EVERY viewer, owner included. Founder call 2026-05-31:
+                   the "who gave / how much" roster is part of the Memory Book's
+                   village-and-story context and belongs on every fund's book, not
+                   just the public/gifter view. It's a RICHER cut than the
+                   dashboard's "Who loves" strip (this one carries the $ totals +
+                   gift counts), so the slight overlap is intentional, not
+                   redundant. Previously gated on `!isOwner` to avoid that overlap;
+                   removing the gate also kills the old owner-flash (it no longer
+                   appears-then-vanishes once ownership resolves — it just stays).
+                   The (!isAuthenticated || !!fundData) guard remains so an
+                   authenticated viewer never sees a half-built strip flash before
+                   fund data settles. */
                 <div className="border-b border-border/70 px-4 py-4" data-testid="memory-gifter-roster">
                   <p className="kiddo-section-label mb-3">{isOwnerMode ? "Who loves you" : childName ? `Who loves ${childName}` : "Who gave"}</p>
                   <div className="flex gap-4 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
