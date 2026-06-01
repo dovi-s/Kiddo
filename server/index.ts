@@ -351,6 +351,20 @@ app.get("/sitemap.xml", (req, res) => {
   for (const slug of COMPARE_SLUGS) {
     routes.push({ path: `/compare/${slug}`, changefreq: "monthly", priority: "0.7" });
   }
+  // Blog articles (the gifter-intent SEO clusters — see SEO_CLUSTERS_PLAN.md).
+  // Markdown-file-driven; the server bundle can't read the client glob, so keep
+  // this in sync with client/src/content/blog/*.md (add a slug when a post ships).
+  const BLOG_SLUGS = [
+    "best-way-to-invest-birthday-money-for-kids",
+    "how-to-ask-family-to-invest-instead-of-buying-toys",
+    "how-to-set-up-a-fund-before-your-baby-shower",
+    "gifts-for-a-kid-who-has-everything",
+    "utma-vs-529-for-family-gifting",
+    "earlybird-alternative",
+  ];
+  for (const slug of BLOG_SLUGS) {
+    routes.push({ path: `/blog/${slug}`, changefreq: "monthly", priority: "0.6" });
+  }
   const urlset = routes
     .map(
       (r) =>
