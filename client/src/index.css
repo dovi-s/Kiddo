@@ -178,6 +178,14 @@
   --card: 38 38% 99%;
   --card-foreground: 150 15% 12%;
 
+  /* Popover / dropdown surface. Was MISSING — bg-popover (the default
+     background for DropdownMenu, Select, Tooltip, Popover content) resolved
+     to hsl() of an undefined var → transparent, so the three-dots menus
+     rendered see-through and unreadable. Mirrors --card (a menu is a solid
+     raised surface). Added 2026-06-01. */
+  --popover: 38 38% 99%;
+  --popover-foreground: 150 15% 12%;
+
   /* Deep Evergreen - Primary Brand Color */
   --primary: 152 45% 18%;
   --primary-foreground: 40 30% 97%;
@@ -235,6 +243,10 @@
 
   --card: 150 18% 9%;
   --card-foreground: 40 20% 96%;
+
+  /* Popover / dropdown surface — see light-theme note above. */
+  --popover: 150 18% 9%;
+  --popover-foreground: 40 20% 96%;
 
   --primary: 152 50% 40%;
   --primary-foreground: 150 20% 6%;
