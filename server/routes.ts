@@ -8926,6 +8926,83 @@ export async function registerRoutes(
     }
   });
 
+  // Hard-delete a NEVER-FUNDED fund. Distinct from close (which pauses and
+  // preserves): this removes the fund + all its rows entirely. Allowed ONLY
+  // when the fund never held money — zero balance/cash/pending, no holdings,
+  // no gifts — i.e. an abandoned draft or a test fund. A fund that ever
+  // received a gift or held a position carries a beneficiary's contribution
+  // record + (eventually) tax history, so it can only be CLOSED, never
+  // deleted; we point those at the close flow. Owner-only (the legal
+  // custodian, not a co-admin) — deletion is more destructive than any
+  // mutation, so we require the literal fund.userId match, not just the
+  // 'owner' access role.
+  app.post('/api/funds/:id/delete', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+      const fundId = req.params.id;
+      const fund = await storage.getFund(fundId);
+      if (!fund) return res.status(404).json({ error: 'Fund not found' });
+      // Strict ownership: only the custodian who owns the fund can delete it.
+      if (fund.userId !== userId) return res.status(403).json({ error: 'Forbidden' });
+
+      // Eligibility: the fund must never have held money. Any non-zero
+      // balance slice, any holding, or any gift blocks deletion and routes
+      // the user to close instead.
+      const bal = parseFloat(String(fund.balance || '0'));
+      const cash = parseFloat(String((fund as any).cashBalance || '0'));
+      const pending = parseFloat(String(fund.pendingBalance || '0'));
+      const holdingsForFund = await storage.getHoldingsByFund(fundId);
+      const giftsForFund = await storage.getGiftsByFund(fundId);
+      const blockers: string[] = [];
+      if (bal > 0.005 || cash > 0.005 || pending > 0.005) blockers.push('it holds a balance');
+      if (holdingsForFund.length > 0) blockers.push('it has investment holdings');
+      if (giftsForFund.length > 0) blockers.push(`it has received ${giftsForFund.length} gift${giftsForFund.length === 1 ? '' : 's'}`);
+      if (blockers.length > 0) {
+        return res.status(409).json({
+          error: 'fund_not_deletable',
+          message: `This fund can't be deleted because ${blockers.join(' and ')}. Close it instead — that preserves the Memory Book and records while pausing the gift link.`,
+          blockers,
+        });
+      }
+
+      await storage.deleteFundCascade(fundId);
+
+      // Audit row (NOT fund-scoped — auditLogs survives the fund) for the
+      // compliance trail. Same shape as the close-fund audit write above.
+      try {
+        await db.insert(auditLogs).values({
+          userId,
+          action: 'fund_deleted',
+          resourceType: 'fund',
+          resourceId: fundId,
+          metadata: JSON.stringify({
+            recipientFirstName: fund.recipientFirstName || null,
+            status: fund.status || null,
+            reason: String(req.body?.reason || '').slice(0, 200).trim() || null,
+          }),
+          ipAddress: req.ip || (req.socket as any)?.remoteAddress || null,
+          userAgent: req.get('user-agent') || null,
+        });
+      } catch (err) {
+        console.warn('[delete-fund] audit write failed:', err);
+      }
+
+      recordEvent({
+        ...eventCtxFromReq(req),
+        name: 'fund_deleted',
+        userId,
+        fundId,
+        source: 'web',
+        props: { status: fund.status || null },
+      });
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error('Error deleting fund:', error);
+      res.status(500).json({ error: 'Failed to delete fund' });
+    }
+  });
+
   // Reopen a previously-closed fund. Anti-dark-pattern: closing is
   // reversible. The Memory Book and audit log are intact; recurring
   // contributions were canceled at close-time and must be set up again

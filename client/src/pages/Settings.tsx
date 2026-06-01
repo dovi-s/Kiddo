@@ -2792,6 +2792,7 @@ const [editFundName, setEditFundName] = useState("");
   const [closeFundReason, setCloseFundReason] = useState("");
   const [closingFund, setClosingFund] = useState(false);
   const [reopeningFund, setReopeningFund] = useState(false);
+  const [deletingFund, setDeletingFund] = useState(false);
 
   const handleCloseFund = async () => {
     if (!primaryFund?.id) return;
@@ -2842,6 +2843,60 @@ const [editFundName, setEditFundName] = useState("");
       toast({ title: "Couldn't reopen fund", description: "Try again in a moment.", variant: "destructive" });
     } finally {
       setReopeningFund(false);
+    }
+  };
+
+  // Hard-delete (vs close) — available ONLY for a never-funded fund: zero
+  // balance/cash/pending. This is the client heuristic that decides whether
+  // to even SHOW the action; the server re-checks authoritatively (incl.
+  // holdings + gifts) and 409s with a "close it instead" message otherwise.
+  const fundIsDeletable = (() => {
+    const f: any = primaryFund;
+    if (!f) return false;
+    const isZero = (v: any) => Math.abs(parseFloat(String(v ?? "0")) || 0) < 0.005;
+    return isZero(f.balance) && isZero(f.cashBalance) && isZero(f.pendingBalance);
+  })();
+
+  const handleDeleteFund = async () => {
+    if (!primaryFund?.id) return;
+    const name = recipientFirstNameDisplay || "this fund";
+    // Native confirm is deliberate: a permanent delete should make the user
+    // stop and read. Copy names the irreversibility AND the close alternative.
+    if (!window.confirm(
+      `Permanently delete ${name}? This removes the fund and everything in it, and can't be undone.\n\n(Only never-funded funds can be deleted. Anything that ever held money can be closed, not deleted.)`
+    )) return;
+    setDeletingFund(true);
+    try {
+      const res = await fetch(`/api/funds/${primaryFund.id}/delete`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (res.status === 409) {
+        const data = await res.json().catch(() => ({}));
+        haptic("error");
+        toast({
+          title: "This fund can't be deleted",
+          description: data?.message || "Close it instead — that preserves the Memory Book and records.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!res.ok) throw new Error("delete failed");
+      haptic("success");
+      toast({ title: `${name} deleted`, description: "The fund and its data were removed." });
+      // The active fund is gone — clear the cached selection so the next
+      // screen doesn't render against a now-deleted id, then leave Settings.
+      try { window.localStorage.removeItem("kiddo_active_fund_id"); } catch {}
+      setCloseFundOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+      navigate("/funds");
+    } catch {
+      haptic("error");
+      toast({ title: "Couldn't delete fund", description: "Try again in a moment.", variant: "destructive" });
+    } finally {
+      setDeletingFund(false);
     }
   };
 
@@ -4051,15 +4106,32 @@ const [editFundName, setEditFundName] = useState("");
                   Memory Book and history are preserved. The gift link is paused. Reopen any time.
                 </p>
               </div>
-              <Button
-                size="sm"
-                className="shrink-0 rounded-xl"
-                onClick={handleReopenFund}
-                disabled={reopeningFund}
-                data-testid="button-reopen-fund"
-              >
-                {reopeningFund ? "Reopening..." : "Reopen fund"}
-              </Button>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <Button
+                  size="sm"
+                  className="rounded-xl"
+                  onClick={handleReopenFund}
+                  disabled={reopeningFund || deletingFund}
+                  data-testid="button-reopen-fund"
+                >
+                  {reopeningFund ? "Reopening..." : "Reopen fund"}
+                </Button>
+                {/* Delete is offered only for a never-funded fund — an
+                    abandoned draft or a test fund with no money, no holdings,
+                    no gifts. Anything that ever held money stays close-only
+                    (the server enforces this regardless). */}
+                {fundIsDeletable && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteFund}
+                    disabled={deletingFund || reopeningFund}
+                    className="text-xs font-medium text-red-700 underline-offset-2 hover:underline disabled:opacity-50"
+                    data-testid="button-delete-fund"
+                  >
+                    {deletingFund ? "Deleting…" : "Delete permanently"}
+                  </button>
+                )}
+              </div>
             </div>
           </SectionCard>
         ) : null}
@@ -5353,6 +5425,28 @@ const [editFundName, setEditFundName] = useState("");
             </div>
 
           </div>
+
+          {/* Never-funded escape hatch: when a fund has no money/holdings/
+              gifts, closing just leaves clutter — offer a real delete. Hidden
+              for any fund that ever held money (close is the only option
+              there; the server enforces it regardless). */}
+          {fundIsDeletable && (
+            <div className="border-t border-border px-6 py-3">
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                This fund has never held money.{" "}
+                <button
+                  type="button"
+                  onClick={handleDeleteFund}
+                  disabled={deletingFund || closingFund}
+                  className="font-semibold text-red-700 underline-offset-2 hover:underline disabled:opacity-50"
+                  data-testid="button-delete-fund-from-close"
+                >
+                  {deletingFund ? "Deleting…" : "Delete it entirely instead"}
+                </button>{" "}
+                — removes it completely. Can't be undone.
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-col-reverse gap-2 border-t border-border px-6 py-4 sm:flex-row sm:justify-end">
             <Button

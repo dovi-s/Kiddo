@@ -34,6 +34,7 @@ export interface IStorage {
   createFund(fund: InsertFund): Promise<Fund>;
   updateFund(id: string, fund: Partial<InsertFund>): Promise<Fund | undefined>;
   deleteFund(id: string): Promise<void>;
+  deleteFundCascade(id: string): Promise<void>;
 
   getEvent(id: string): Promise<Event | undefined>;
   getEventBySlug(slug: string): Promise<Event | undefined>;
@@ -180,6 +181,46 @@ export class DatabaseStorage implements IStorage {
 
   async deleteFund(id: string): Promise<void> {
     await db.delete(funds).where(eq(funds.id, id));
+  }
+
+  // Hard-delete a fund AND its full dependency graph, in one transaction.
+  // deleteFund above is a bare DELETE that FK-errors the moment any child
+  // row exists (only memory_entries has ON DELETE CASCADE; the other ~20
+  // fund-referencing tables do not). This clears, in order:
+  //   1) rows referencing the fund's events/gifts via NON-cascading FKs
+  //      (e.g. referral_events.event_id -> events.id) — must precede the
+  //      events/gifts rows themselves,
+  //   2) every fund-scoped table (column fund_id),
+  //   3) the fund row.
+  // Table set is discovered from information_schema so a newly-added
+  // fund-scoped table can't be silently missed (a missed table would just
+  // FK-error and roll the whole thing back — safe, never partial). Intended
+  // for owner-initiated deletion of a never-funded fund; the route gates
+  // eligibility (zero balances, no holdings, no gifts). The fund id is
+  // always a bound parameter; only catalog-sourced identifiers are raw,
+  // and those are additionally regex-guarded.
+  async deleteFundCascade(id: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      for (const [col, parent] of [["event_id", "events"], ["gift_id", "gifts"]] as const) {
+        const refTables = await tx.execute(sql`
+          SELECT table_name FROM information_schema.columns
+          WHERE column_name = ${col} AND table_schema = 'public'`);
+        for (const row of (refTables.rows as any[])) {
+          const t = String(row.table_name);
+          if (!/^[a-z_]+$/.test(t)) continue;
+          await tx.execute(sql`DELETE FROM ${sql.raw(`"${t}"`)} WHERE ${sql.raw(col)} IN (SELECT id FROM ${sql.raw(parent)} WHERE fund_id = ${id})`);
+        }
+      }
+      const fundTables = await tx.execute(sql`
+        SELECT table_name FROM information_schema.columns
+        WHERE column_name = 'fund_id' AND table_schema = 'public' AND table_name <> 'funds'`);
+      for (const row of (fundTables.rows as any[])) {
+        const t = String(row.table_name);
+        if (!/^[a-z_]+$/.test(t)) continue;
+        await tx.execute(sql`DELETE FROM ${sql.raw(`"${t}"`)} WHERE fund_id = ${id}`);
+      }
+      await tx.delete(funds).where(eq(funds.id, id));
+    });
   }
 
   async getEvent(id: string): Promise<Event | undefined> {
