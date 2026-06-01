@@ -1265,7 +1265,7 @@ export default function GetStarted() {
                     exists to defer). */}
                 {created && subscription?.coverageByFund?.[created.id] === "trial_active" && (
                   <p className="mx-auto mt-5 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-4 py-1.5 text-xs font-medium text-[hsl(var(--kiddo-evergreen))]">
-                    You&apos;re on Kiddo Plus, free for 14 days. No card needed.
+                    You&apos;ve got Kiddo&apos;s premium features, free for 14 days. No card needed.
                   </p>
                 )}
               </AnimatedBlock>
