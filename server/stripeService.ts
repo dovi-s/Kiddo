@@ -580,6 +580,12 @@ export class StripeService {
     priceId: string;
     trialEndUnixSeconds: number;
     metadata?: Record<string, string>;
+    // Explicit PM so the trial-end charge actually fires. A subscription created
+    // via the API does NOT inherit a payment method from another of the customer's
+    // subs — without this it could land with no PM and silently cancel at trial end
+    // (missing_payment_method: 'cancel'). The downgrade endpoint passes the Family
+    // sub's saved card here.
+    defaultPaymentMethod?: string;
   }): Promise<Stripe.Subscription> {
     const stripe = await getUncachableStripeClient();
     return await stripe.subscriptions.create({
@@ -588,6 +594,7 @@ export class StripeService {
       trial_end: params.trialEndUnixSeconds,
       proration_behavior: "none",
       trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+      ...(params.defaultPaymentMethod ? { default_payment_method: params.defaultPaymentMethod } : {}),
       metadata: params.metadata || {},
     });
   }

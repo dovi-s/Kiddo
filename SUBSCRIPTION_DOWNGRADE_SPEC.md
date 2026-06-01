@@ -55,13 +55,20 @@ could not test from the agent shell:
   price lock honored. Did NOT need to touch the checkout-guard (this path uses
   `subscriptions.create` directly, not the blocked checkout). When the flag is **off**
   (default), the same endpoint falls back to cancel-Family-at-renewal (the shipped safe path).
-  **⚠️ Verify in Stripe TEST MODE before flipping `PLAN_DOWNGRADE_SEAMLESS=true`:** (a) the
-  trial-end invoice charges the saved PM; (b) Family cancels cleanly at the same boundary with
-  no uncovered gap; (c) `customer.subscription.updated` flips the membership `trialing→active`;
-  (d) the rollback path fires if the Family cancel throws; (e) `trialing` is not entitled in
-  `hasEntitlementFromStatus`, which is fine ONLY because Family covers during the overlap —
-  re-check there's no gap at the exact transition. Note: `trial_settings.missing_payment_method
-  = 'cancel'` means a customer with no saved card just gets no Plus (clean, no past_due).
+  **Two of the original risks are now hardened in code (2026-06-01):**
+  - **(a) trial-end charge** — the endpoint now carries the Family sub's saved card onto the
+    Plus sub (`default_payment_method`), so it can't land PM-less and silently cancel. Backstop:
+    `trial_settings.missing_payment_method = 'cancel'` (no past_due) if somehow there's no card.
+  - **(e) overlap seam** — `trialing` is now entitled in `hasEntitlementFromStatus` (safe:
+    `createCheckoutSession` sets no trial, so the seamless Plus sub is the only thing that's
+    ever `trialing`). The Plus sub now covers its fund continuously, so there's no window where
+    Family has ended but the trial hasn't flipped to active yet.
+
+  **⚠️ Still verify in Stripe TEST MODE before flipping `PLAN_DOWNGRADE_SEAMLESS=true`:**
+  (1) the trial-end invoice actually charges the carried-over card; (2) Family cancels cleanly
+  at the boundary; (3) `customer.subscription.updated` flips the membership `trialing→active`;
+  (4) the rollback path fires if the Family cancel throws (create Plus, force a cancel failure,
+  confirm the Plus sub is canceled + membership marked canceled).
 
 ## Placement #2 — at the handoff moment (SHIPPED 2026-06-01)
 The `planFit` nudge is now also surfaced on the **household "Your funds" overview**

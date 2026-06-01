@@ -72,6 +72,7 @@ import { ADMIN_ASSET_UNIVERSE, getMarketQuote, startMarketQuoteCacheRefresher } 
 import { insertFundSchema, insertEventSchema, insertGiftSchema, insertMemoryEntrySchema, insertBankAccountSchema, insertThankYouSchema, insertRecurringGiftSchema, insertParentContributionSchema, insertReferralEventSchema, users, funds, holdings, gifts, events, subscriptions, fundMemberships, transactions, bankAccounts, activities, thankYous, recurringGifts, parentContributions, memoryEntries, referralEvents, auditLogs, webhookEvents, fundCollaborators, fundSnapshots, giftIntents, trustedDevices, passkeys, foundingMembers } from "@shared/schema";
 import { toMonthlyEquivalent, sumMonthlyEquivalent } from "@shared/recurring-math";
 import { isReservedFundSlug } from "@shared/reserved-slugs";
+import { isAllowedStockPick } from "@shared/stock-picks";
 import { KIDDO_AUM_FEE_BASIS_POINTS, KIDDO_AUM_FEE_RATE, KIDDO_GIFT_ADD_ONS, KIDDO_LEGACY_INCLUDED_OCCASION_CREDITS, KIDDO_LEGACY_YEARLY, KIDDO_OCCASION_TIERS, KIDDO_REVERSE_TRIAL_DAYS, KORA_DEFAULT_FAMILY_YEARLY, KORA_FAMILY_MONTHLY, KORA_FAMILY_YEARLY_OPTIONS, KORA_FREE_GIFT_FEE, KORA_LARGE_GIFT_FLAT_FEE, KORA_LARGE_GIFT_THRESHOLD, KORA_STARTER_MONTHLY, KORA_STARTER_YEARLY, MONETIZATION_TRIGGER_IDS, calculateKoraContributionFee, estimateAnnualAumFee, getGiftAddOn, getKiddoOccasionTier, type FundCoverageState, type RecommendationState } from "@shared/monetization";
 
 type InvestmentUniverseRow = {
@@ -11874,6 +11875,16 @@ export async function registerRoutes(
         ? clientSource
         : 'web';
 
+      // Curation gate. A "pick" must target a stock from the canonical
+      // universe (shared/stock-picks.ts). The documented STOCK_ALLOWLIST was
+      // dead code — referenced nowhere — so the server stored ANY ticker a
+      // client posted. Enforce the real list so a malformed or hostile client
+      // can't route a child's fund into an arbitrary symbol. Non-pick flows
+      // (managed mix) carry no ticker and are unaffected.
+      if (executionModel === "pick" && !isAllowedStockPick(selectedTicker)) {
+        return res.status(400).json({ error: "That stock isn't available to pick. Choose one from the list." });
+      }
+
       // Demo-fund sandbox: if this is a Dunphy demo fund, return a mock
       // success response that completes the flow without hitting Stripe.
       // Per server/demoSandbox.ts + DUNPHY_DEMO_SPEC.md Phase 2. Real
@@ -22311,12 +22322,29 @@ export async function registerRoutes(
         if (!priceId) return res.status(404).json({ error: "Kiddo+ price not found in Stripe." });
         const customer = await stripeService.getOrCreateCustomer(userEmail, userName, userId);
         const trialEndUnix = Math.floor(periodEnd.getTime() / 1000);
+        // Carry the Family sub's saved card onto the Plus sub so the trial-end charge
+        // reliably fires (an API-created sub doesn't inherit a customer's PM). Fall
+        // back to the customer's invoice default; if neither exists the
+        // missing_payment_method:'cancel' backstop just drops Plus cleanly.
+        let defaultPaymentMethod: string | undefined;
+        try {
+          const familyStripeSub: any = await stripeService.getSubscription(subscription.stripeSubscriptionId!);
+          const subDpm = familyStripeSub?.default_payment_method;
+          defaultPaymentMethod = typeof subDpm === "string" ? subDpm : subDpm?.id;
+          if (!defaultPaymentMethod) {
+            const custDpm = (customer as any)?.invoice_settings?.default_payment_method;
+            defaultPaymentMethod = typeof custDpm === "string" ? custDpm : custDpm?.id;
+          }
+        } catch (pmErr) {
+          console.warn("[downgrade] could not resolve Family payment method; relying on trial_settings backstop:", pmErr);
+        }
         // Create Plus first; roll it back if the Family cancel fails so we never
         // leave a chargeable Plus sub alongside a still-renewing Family.
         const plusSub: any = await stripeService.createDeferredSubscription({
           customerId: customer.id,
           priceId,
           trialEndUnixSeconds: trialEndUnix,
+          defaultPaymentMethod,
           metadata: { userId: String(userId), fundId: String(fund.id), type: "starter_plan_downgrade" },
         });
         try {

@@ -52,7 +52,12 @@ export function hasEntitlementFromStatus(
   currentPeriodEnd?: Date | string | null,
 ): boolean {
   const normalized = String(status || "").toLowerCase();
-  if (normalized === "active") return true;
+  // "trialing" is entitled: a trial provides full access (it just hasn't billed
+  // yet). The ONLY flow that creates a Stripe trial is the seamless Family->Kiddo+
+  // downgrade (createCheckoutSession sets no trial), so this is safe to add and it
+  // closes the overlap seam — the Plus sub covers its fund continuously, with no
+  // window where Family has ended but the trial hasn't flipped to active yet.
+  if (normalized === "active" || normalized === "trialing") return true;
   if (normalized !== "canceled") return false;
   if (!currentPeriodEnd) return true;
   const end = new Date(currentPeriodEnd);
