@@ -107,9 +107,11 @@ three options below into one posture.*
    doesn't otherwise constitute "advice"?
 2. Does our surface constitute "investment advice" under the Advisers Act
    three-prong test? Inputs: parent picks from a **curated 17-stock universe** (we
-   surface, don't recommend a specific stock); we **project** future value at a 7%
-   historical assumption (disclaimed); we do **not** charge per-trade, execute
-   trades, or custody securities.
+   surface, don't recommend a specific stock), plus **user-selected broad-market ETF
+   mix presets** (growth / balanced / conservative — chosen by the user, never
+   auto-assigned by age; sharpened in the managed-allocation flags below); we
+   **project** future value at a 7% historical assumption (disclaimed); we do **not**
+   charge per-trade, execute trades, or custody securities.
 3. If Option B is viable, what contract terms with DriveWealth establish **them** as
    adviser of record vs. us? Have you seen this survive SEC scrutiny?
 4. **State-level** registration we'd miss focusing only on SEC?
@@ -120,9 +122,15 @@ three options below into one posture.*
 **Managed-allocation flags** (sharpen Q2 — these are our *highest-advice* surface;
 moot if we commit to the self-directed posture, but draw the line in case we keep
 an optional curated-basket menu):
-- **Sector tilt:** our growth default holds ~10% VGT (a tech-sector bet) vs pure
-  market-cap weight. Does a default sector tilt materially change the advice
-  analysis? (If yes, we drop VGT to clean market-cap weight pre-launch.)
+- **Sector tilt (already resolved — stated so counsel has the true state):** our
+  default mixes are **clean broad market-cap weight, no sector tilt.** Growth is
+  VTI 62 / VXUS 28 / BND 10; the old ~10% VGT tech sleeve was **removed 2026-05-28**
+  (folded into VTI/VXUS at the same US:International ratio) precisely because a
+  default sector bet is the hardest line to defend as non-advice. VGT now exists
+  only as an **optional ticker a user can affirmatively add by choice**, never in a
+  default basket. Question for counsel: does keeping VGT (and the other optional
+  ETFs) **available-but-never-defaulted** stay clean, and is broad market-cap
+  weighting confirmed as the defensible non-advice posture?
 - **Suitability:** we default everyone to growth-first on a disclosed long-horizon
   rationale, with **no suitability questionnaire**. Can we default to an aggressive
   allocation without suitability, or does that push us toward adviser status /
@@ -157,7 +165,7 @@ need a **written yes/no** on each:
 
 - **(A) Off-session conditional-charge classification.** Does charging a gifter's
   pre-authorized saved card **off-session, weeks later, on a trigger the gifter
-  did not directly initiate** (the parent's fund creation), **with a 14–30 day
+  did not directly initiate** (the parent's fund creation), **with a 30-day
   decline-retry loop**, trigger **FinCEN MSB / state money-transmission licensing /
   BSA-AML** — or does Stripe (a licensed acquirer) holding the token fully
   exonerate us? (Concern: regulators may define transmission/custody by **control
