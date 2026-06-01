@@ -420,19 +420,22 @@ function deriveMemoryHeaderStats(
     if (["test", "testing", "qqqqq", "tstgin", "tstng", "tester"].includes(lc)) return true;
     return false;
   };
-  // A parent's recurring auto-invest (parentContributionId) shows up as one
-  // gift_message per monthly cycle. Count the SCHEDULE once, not each cycle, so
-  // the "N gifts" headline isn't inflated by ~36 identical contributions.
-  const recurringScheduleIds = new Set<string>();
+  // Count every contribution honestly so the Memory Book reconciles with the
+  // Dashboard, the source of truth (Luke = 82 gifts / $9,275). A contribution
+  // is a gift_message OR the first-cycle parent_note that carries a recurring
+  // auto-invest gift (parentContributionId): the server stores cycle #1 as a
+  // note and backfills cycles #2..N as gift entries, so counting only
+  // gift_message dropped that one $75 cycle (the "$2,625 vs $2,700 / 35 vs 36"
+  // bug). We also no longer collapse the 36 identical monthly cycles to 1 — the
+  // Dashboard counts them in full, and a collapsed "47" beside the Dashboard's
+  // "82" was the core mismatch. Non-gift notes (Claire's, parent letters) still
+  // add their author to the people set without counting as a gift.
   for (const entry of entries || []) {
-    if (entry.type === "gift_message") {
-      const pcId = (entry.gift as any)?.parentContributionId;
-      if (pcId) {
-        recurringScheduleIds.add(String(pcId));
-      } else {
-        giftCount += 1;
-      }
-      const senderName = entry.gift?.senderName || "";
+    const isContribution = entry.type === "gift_message" ||
+      (entry.type === "parent_note" && Boolean((entry.gift as any)?.parentContributionId));
+    if (isContribution) {
+      giftCount += 1;
+      const senderName = entry.gift?.senderName || entry.authorName || "";
       if (isAnonName(senderName)) {
         people.add(`anon:${entry.id}`);
       } else {
@@ -442,7 +445,6 @@ function deriveMemoryHeaderStats(
       people.add(entry.authorName.trim().toLowerCase());
     }
   }
-  giftCount += recurringScheduleIds.size;
   const fundValue =
     parseFloat(fundData?.balance || "0") +
     parseFloat(fundData?.pendingBalance || "0") +
@@ -2331,20 +2333,17 @@ export default function MemoryBook() {
       if (n.toLowerCase() === "anonymous") return true;
       return false;
     };
-    const recurringScheduleIds = new Set<string>();
     for (const e of entries) {
-      if (e.type === "gift_message") {
-        // Count a parent's recurring auto-invest SCHEDULE once, not each cycle,
-        // so "N gifts" isn't inflated by ~36 identical contributions. giftTotal
-        // still sums every cycle's real dollars.
-        const pcId = (e.gift as any)?.parentContributionId;
-        if (pcId) {
-          recurringScheduleIds.add(String(pcId));
-        } else {
-          giftCount += 1;
-        }
+      // Same contribution rule as deriveMemoryHeaderStats: a gift_message OR the
+      // first-cycle parent_note carrying a recurring auto-invest gift. Counts in
+      // full (no schedule-collapse) and giftTotal sums every cycle's real
+      // dollars — so this reconciles with the Dashboard ($9,275 for Luke).
+      const isContribution = e.type === "gift_message" ||
+        (e.type === "parent_note" && Boolean((e.gift as any)?.parentContributionId));
+      if (isContribution) {
+        giftCount += 1;
         giftTotal += parseFloat(e.gift?.amount || "0");
-        const senderName = e.gift?.senderName || "";
+        const senderName = e.gift?.senderName || e.authorName || "";
         if (isAnonName(senderName)) {
           people.add(`anon:${e.id}`);
         } else {
@@ -2356,7 +2355,6 @@ export default function MemoryBook() {
       if (e.photoUrl || e.gift?.photoUrl) photos += 1;
       if (e.videoUrl) videos += 1;
     }
-    giftCount += recurringScheduleIds.size;
     return {
       total: entries.length,
       people: people.size,
@@ -2430,7 +2428,13 @@ export default function MemoryBook() {
     };
     const map = new Map<string, { name: string; giftCount: number; totalAmount: number; lastGiftDate: string; anonPeople: number; isAnon: boolean; isOwnerRow: boolean }>();
     for (const e of sortedEntries) {
-      if (e.type !== "gift_message" || !e.gift?.senderName) continue;
+      // A contribution = a gift_message OR the first-cycle parent_note that
+      // carries a recurring auto-invest gift. Including the latter restores the
+      // one $75 cycle the server stores as a note, so the parent's roster total
+      // matches the Dashboard ($2,700 / 36, not $2,625 / 35).
+      const isContribution = e.type === "gift_message" ||
+        (e.type === "parent_note" && Boolean((e.gift as any)?.parentContributionId));
+      if (!isContribution || !e.gift?.senderName) continue;
       // Status filter aligned with Dashboard's gifterRoster on 2026-05-15.
       // Failed or refunded gifts shouldn't pollute the per-gifter
       // total — the money never actually landed. Processing gifts
