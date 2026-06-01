@@ -312,12 +312,21 @@ export function registerFundReadRoutes(app: Express, deps: FundsRoutesDeps): voi
       const userId = (req.user as any).id;
       // Permit owner OR accepted collaborator. Same role discrimination
       // shape as the /api/funds list endpoint.
-      let accessRole: 'owner' | 'co-admin' | 'viewer' | null = null;
+      let accessRole: 'owner' | 'co-admin' | 'viewer' | 'previous_owner' | null = null;
       if (fund.userId === userId) {
         accessRole = 'owner';
       } else {
         const collab = await storage.getCollaboratorForFundAndUser(fund.id, userId);
         if (collab) accessRole = collab.role === 'co-admin' ? 'co-admin' : 'viewer';
+      }
+      // Previous custodian (the parent before the kid claimed at majority): grant
+      // READ-only access, consistent with the /api/funds LIST above + the per-fund
+      // namespace middleware (both already branch on previousOwnerId). Without it
+      // this single-fund GET 403'd the handed-off parent, and the Memory Book page
+      // flooded the console with retried 403s. Writes stay owner-gated (the
+      // ensure-writes below run only for accessRole === 'owner').
+      if (!accessRole && (fund as any).previousOwnerId === userId) {
+        accessRole = 'previous_owner';
       }
       if (!accessRole) {
         return res.status(403).json({ error: "Forbidden" });

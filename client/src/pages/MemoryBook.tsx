@@ -70,6 +70,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { readDemoLiveGiftsForFund } from "@/lib/demo-live-gifts";
 import { useSubscription } from "@/hooks/use-subscription";
+import { useFunds } from "@/hooks/use-funds";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { getEmbedVideoUrl } from "@/lib/media";
 import { getPronouns } from "@/lib/pronouns";
@@ -474,6 +475,14 @@ export default function MemoryBook() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const isDemoAccount = Boolean((user as any)?.isDemoAccount);
   const { data: subscription } = useSubscription();
+  // Viewer's role for THIS fund, from the cached /api/funds list (it includes
+  // previous-owners + collaborators with their accessRole). The owner-only
+  // Memory Book queries (pending-moderation tray, sealed letter) 403 for a
+  // previous-owner / viewer and, with refetchInterval, flooded the console.
+  // Gate them on a real moderator role so they never fire for those viewers.
+  const { data: memoryAccessFunds = [] } = useFunds();
+  const memoryFundAccessRole = (memoryAccessFunds.find((f: any) => String(f.id) === String(fundId)) as any)?.accessRole;
+  const canModerateMemory = memoryFundAccessRole === "owner" || memoryFundAccessRole === "co-admin";
   // Honor OS reduced-motion. When set, the heavy slides + zooms in
   // this page become quiet opacity fades. Modal sheets stop sliding
   // 100px from below; the book-page swap stops translating 96px
@@ -709,7 +718,8 @@ export default function MemoryBook() {
       if (!res.ok) throw new Error("Failed to fetch pending memories");
       return res.json();
     },
-    enabled: !!fundId && isAuthenticated && !authLoading,
+    enabled: !!fundId && isAuthenticated && !authLoading && canModerateMemory,
+    retry: false,
     staleTime: MEMORY_ACTIVE_STALE_MS,
     refetchInterval: MEMORY_LIVE_REFRESH_MS,
     refetchIntervalInBackground: false,
@@ -871,7 +881,8 @@ export default function MemoryBook() {
       if (!res.ok) return null;
       return res.json();
     },
-    enabled: !!fundId && isAuthenticated && !authLoading,
+    enabled: !!fundId && isAuthenticated && !authLoading && canModerateMemory,
+    retry: false,
     staleTime: 30_000,
   });
 
