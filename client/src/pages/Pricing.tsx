@@ -603,7 +603,7 @@ export default function Pricing() {
               What Kiddo refuses to charge for
             </h2>
             <p className="mb-8 text-sm leading-relaxed text-muted-foreground md:text-base">
-              Pricing decisions we have made and will not unmake. Each one is locked, with reasoning written down.
+              Deliberate commitments we won't reverse. Each one is a promise, not a placeholder.
             </p>
             <div className="space-y-5">
               <div>
