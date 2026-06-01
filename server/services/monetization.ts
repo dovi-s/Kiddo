@@ -307,11 +307,14 @@ export async function getFundCoverageState(
   if (sponsorship) {
     return sponsorship.tier === "family" ? "covered_family" : "covered_starter";
   }
-  if (trial) {
-    const expiresAt = new Date(trial.expiresAt);
-    if (!Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() > Date.now()) return "trial_active";
-    return "trial_expired";
-  }
+  // getTrialForFund already returns null for an expired trial (an expired trial
+  // behaves as no-trial → falls through to "uncovered"), so a trial present here
+  // is always active. The previous expiry re-check + "trial_expired" return was
+  // unreachable dead code that read as a live coverage state nothing handles — and
+  // if getTrialForFund ever slipped, "trial_active" (over-grant) is the safer
+  // failure than "trial_expired" (which used to wedge held-gift release). See
+  // getTrialForFund above.
+  if (trial) return "trial_active";
   return "uncovered";
 }
 

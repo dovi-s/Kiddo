@@ -100,12 +100,15 @@ export function getGiftAddOn(value: unknown) {
   return KIDDO_GIFT_ADD_ONS.none;
 }
 
+// Note: there is intentionally no "trial_expired" — an expired trial behaves as
+// no-trial and resolves to "uncovered" (getTrialForFund returns null for expired).
+// The old "trial_expired" state was unhandled by every consumer and wedged
+// held-gift release; don't reintroduce it.
 export type FundCoverageState =
   | "uncovered"
   | "covered_starter"
   | "covered_family"
-  | "trial_active"
-  | "trial_expired";
+  | "trial_active";
 
 export type RecommendationState =
   | "free"
