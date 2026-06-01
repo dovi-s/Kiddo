@@ -619,7 +619,12 @@ function DetailRow({ row, pendingMode }: { row: FeedActivity; pendingMode?: bool
             <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>{config.label}</span>
             {createdAt && (
               <span style={{ fontSize: 10.5, color: "rgb(175,164,156)" }}>
-                · {createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                {/* Drop the year for current-year rows, like the main Activity
+                    feed — "Nov 5" reads cleaner than "Nov 5, 2026"; prior years
+                    keep the year so the ledger stays unambiguous on scroll. */}
+                · {createdAt.toLocaleDateString("en-US", createdAt.getFullYear() === new Date().getFullYear()
+                    ? { month: "short", day: "numeric" }
+                    : { month: "short", day: "numeric", year: "numeric" })}
               </span>
             )}
           </div>
