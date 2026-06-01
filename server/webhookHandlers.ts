@@ -303,7 +303,12 @@ export class WebhookHandlers {
           : `Gift from ${gift.senderName}`,
         description: isParentContrib
           ? (gift.selectedTicker ? `Investing into ${String(gift.selectedTicker).toUpperCase()}` : 'Investing across the diversified mix')
-          : (gift.message ? `"${gift.message}"` : 'No note.'),
+          : (gift.message
+              ? `"${gift.message}"`
+              // No note: say something USEFUL (what the gift bought) instead of the dead
+              // "No note." filler that made the feed read templated/AI down a column of
+              // note-less gifts. Mirrors the parent-contribution description above.
+              : (gift.selectedTicker ? `Invested in ${String(gift.selectedTicker).toUpperCase()}` : 'Added across the diversified mix')),
         amount: gift.amount,
         metadata: JSON.stringify({
           giftId: gift.id,
