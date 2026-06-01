@@ -8853,6 +8853,25 @@ export default function Dashboard() {
                         : "The fund owner manages recurring investments for this fund."}
                     </p>
                   </div>
+                  {/* Keep-going path. Post-handoff the parent can't run a custodial
+                      recurring (the server ends it, money-safe), but they CAN keep
+                      showing up as a recurring GIFTER via the public gift page —
+                      the SAME offer the handoff activity row + conversion email
+                      already make (recurringContributionWorker
+                      autoPauseOwnershipMismatchedContributions). This puts that
+                      offer where the parent is actually looking. */}
+                  {isPreviousOwner && activeFund?.slug && (
+                    <div className="mt-auto pt-4">
+                      <Link
+                        href={`/${activeFund.slug}`}
+                        onClick={() => haptic("selection")}
+                        className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-[hsl(var(--kiddo-evergreen)/0.35)] bg-[hsl(var(--kiddo-evergreen)/0.04)] py-2.5 text-xs font-semibold text-[hsl(var(--kiddo-evergreen))] hover:bg-[hsl(var(--kiddo-evergreen)/0.08)] transition-colors"
+                        data-testid="link-previous-owner-recurring-gift"
+                      >
+                        Want to keep it going? Send a recurring gift →
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
 
