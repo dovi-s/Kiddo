@@ -217,14 +217,19 @@ async function loadMonetizationState(): Promise<MonetizationState> {
     const parsed = JSON.parse(raw || "{}");
     const safe = parsed && typeof parsed === "object" ? parsed : {};
     monetizationStateCache = {
-      reverseTrialEnabled: Boolean((safe as any).reverseTrialEnabled),
+      // Reverse trial is ON by default (founder decision 2026-05-31: every new account gets
+      // 14 days of Plus, matching the Pricing copy). Default-in-code rather than relying on a
+      // prod setReverseTrialEnabled() call, because the state file is local/ephemeral and a
+      // toggle wouldn't survive a redeploy. An admin can still disable by writing
+      // `reverseTrialEnabled: false` to the state file; absent or true → enabled.
+      reverseTrialEnabled: (safe as any).reverseTrialEnabled !== false,
       trials:
         (safe as any).trials && typeof (safe as any).trials === "object"
           ? (safe as any).trials
           : {},
     };
   } catch {
-    monetizationStateCache = { trials: {} };
+    monetizationStateCache = { reverseTrialEnabled: true, trials: {} };
   }
   return monetizationStateCache;
 }
