@@ -3177,27 +3177,65 @@ export default function Dashboard() {
   const lastSeenGiftIdRef = useRef<string | null>(null);
   const [newGiftFlash, setNewGiftFlash] = useState(false);
   const latestGiftId = recentGiftsFeed[0]?.id ?? null;
-  useEffect(() => {
-    if (!latestGiftId) return;
-    if (lastSeenGiftIdRef.current === null) {
-      lastSeenGiftIdRef.current = latestGiftId;
-      return;
-    }
-    if (latestGiftId === lastSeenGiftIdRef.current) return;
-    lastSeenGiftIdRef.current = latestGiftId;
-    setHeroGiftIdx(0);
-    setNewGiftFlash(true);
-    const t = setTimeout(() => setNewGiftFlash(false), 3800);
-    return () => clearTimeout(t);
-  }, [latestGiftId]);
 
-  // When the parent switches funds, reset the arrival baseline so the
-  // newly-active fund's index-0 gift doesn't read as a fresh arrival on
-  // the next render (it isn't — it's just a different fund being shown).
+  // The baseline (the gift id the parent has already SEEN acknowledged on the
+  // hero) persists per-fund in localStorage. Two reasons over a plain ref:
+  //   • A gift that lands while they're on another page or another tab is
+  //     remembered as "not yet seen," so its arrival cue plays when they come
+  //     BACK to the hero — instead of sitting there already-arrived with no
+  //     beat. Without this the cue is purely time-of-data-arrival: miss the
+  //     ~3.8s window and the "watch it land" moment is gone for good.
+  //   • It still suppresses a retro-celebration on first-ever load — the
+  //     stored ack distinguishes "arrived since I last looked" from "the most
+  //     recent existing gift, which I've already seen."
+  const HERO_ACK_PREFIX = "kiddo.hero-acked-gift:";
+
+  // Seed the baseline from the persisted ack on mount / fund switch (NOT null).
+  // Runs before the arrival effect below so the ref is seeded first.
   useEffect(() => {
-    lastSeenGiftIdRef.current = null;
+    if (!activeFundId) { lastSeenGiftIdRef.current = null; return; }
+    let acked: string | null = null;
+    try { acked = window.localStorage.getItem(`${HERO_ACK_PREFIX}${activeFundId}`); } catch { acked = null; }
+    lastSeenGiftIdRef.current = acked;
     setNewGiftFlash(false);
   }, [activeFundId]);
+
+  useEffect(() => {
+    if (!latestGiftId || !activeFundId) return;
+    const ackKey = `${HERO_ACK_PREFIX}${activeFundId}`;
+    const ack = (id: string) => {
+      lastSeenGiftIdRef.current = id;
+      try { window.localStorage.setItem(ackKey, id); } catch { /* ignore */ }
+    };
+    // First-ever look at this fund (no persisted ack): set the baseline and
+    // ack it silently — landing on the dashboard shouldn't retro-play whatever
+    // the newest existing gift happens to be.
+    if (lastSeenGiftIdRef.current === null) { ack(String(latestGiftId)); return; }
+    if (latestGiftId === lastSeenGiftIdRef.current) return;
+
+    // A genuinely new gift relative to what they last saw. Fire the cue only
+    // while the tab is actually visible; if it's hidden (another tab), defer
+    // until they return so the beat plays to their eyes, not an empty tab.
+    let flashTimer: ReturnType<typeof setTimeout> | undefined;
+    const fire = () => {
+      ack(String(latestGiftId));
+      setHeroGiftIdx(0);
+      setNewGiftFlash(true);
+      flashTimer = setTimeout(() => setNewGiftFlash(false), 3800);
+    };
+    if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+      const onVis = () => {
+        if (document.visibilityState === "visible") {
+          document.removeEventListener("visibilitychange", onVis);
+          fire();
+        }
+      };
+      document.addEventListener("visibilitychange", onVis);
+      return () => { document.removeEventListener("visibilitychange", onVis); if (flashTimer) clearTimeout(flashTimer); };
+    }
+    fire();
+    return () => { if (flashTimer) clearTimeout(flashTimer); };
+  }, [latestGiftId, activeFundId]);
 
   // Carousel container height: locks to the ACTIVE page's offsetHeight, with
   // a CSS `transition: height 0.22s ease` on the container animating between

@@ -64,16 +64,19 @@ export function DemoGiftMoment() {
     if (!isDemo || !onDashboard) return;
     if (typeof window === "undefined" || funds.length === 0) return;
 
-    const clear = () => {
-      if (timerRef.current != null) {
-        window.clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-    };
+    // Build the beat to fire — loop-closure if the prospect just role-played
+    // sending a gift, else the once-per-session generic beat — as a single
+    // `fire()` thunk plus its `delay`. We then arm it behind a visibility gate
+    // (below) so the beat plays to the prospect's EYES, not to a backgrounded
+    // tab. (Gift arrival is the product's signature "watch it land" moment; a
+    // fixed timer that elapses while they've tabbed away — then marks itself
+    // shown — is exactly how that moment gets silently missed.)
+    let fire: (() => void) | null = null;
+    let delay = DELAY_MS;
 
     // --- Beat 1: loop closure. Did the prospect just role-play SENDING a gift?
     // Replay it as the parent-side arrival of the exact gift they sent. The
-    // PENDING_KEY is consumed when the timer fires (not on read), so a bounce
+    // PENDING_KEY is consumed when the beat fires (not on read), so a bounce
     // away before it fires simply re-arms on return, and it can't double-fire.
     let pending: any = null;
     try {
@@ -90,7 +93,8 @@ export function DemoGiftMoment() {
         const amount = String(pending.amount || "").replace(/[^0-9.]/g, "") || "0";
         const where = TICKER_NAME[String(pending.ticker || "").toUpperCase()] || "the diversified mix";
         const isRecurring = !!pending.isRecurring;
-        timerRef.current = window.setTimeout(() => {
+        delay = JUST_SENT_DELAY_MS;
+        fire = () => {
           try { window.sessionStorage.removeItem(PENDING_KEY); } catch { /* ignore */ }
           haptic("success");
           toast({
@@ -114,49 +118,80 @@ export function DemoGiftMoment() {
           if (!isRecurring) {
             window.dispatchEvent(new CustomEvent("kiddo:demo-gift-landed", { detail: { fundId: fund.id, amount: Number(amount) } }));
           }
-        }, JUST_SENT_DELAY_MS);
-        return clear;
+        };
       }
     }
 
     // --- Beat 2: generic seeded beat. Once per session, ~15s after they settle.
-    // sessionStorage (set only when the timer fires) is the once-per-session
+    // sessionStorage (set only when the beat fires) is the once-per-session
     // guard, so a bounce away before it fires re-arms on return.
-    try {
-      if (window.sessionStorage.getItem(SESSION_KEY)) return; // already shown this session
-    } catch {
-      return; // sessionStorage blocked → skip rather than risk repeating
+    if (!fire) {
+      try {
+        if (window.sessionStorage.getItem(SESSION_KEY)) return; // already shown this session
+      } catch {
+        return; // sessionStorage blocked → skip rather than risk repeating
+      }
+
+      const activeId = getActiveFundId();
+      const fund = (funds.find((f) => f.id === activeId) ?? funds[0]) as any;
+      if (!fund) return;
+      const childRaw = String(fund.recipientFirstName || "");
+      const child = capFirst(childRaw) || "your child";
+      const g = DEMO_GIFTS[childRaw.toLowerCase()] || { sender: "Cameron Tucker", amount: "100", ticker: "DIS" };
+      const where = TICKER_NAME[g.ticker] || "the diversified mix";
+
+      fire = () => {
+        try { window.sessionStorage.setItem(SESSION_KEY, "1"); } catch { /* ignore */ }
+        haptic("success");
+        toast({
+          title: `${g.sender} added $${g.amount} to ${child}'s future 🌱`,
+          description: `Going into ${where} — a new moment in ${child}'s Memory Book.`,
+          duration: 9000, // a delight beat needs time to read both lines + tap View (vs the 4.5s default)
+          action: (
+            <ToastAction
+              altText={`View ${child}'s Memory Book`}
+              onClick={() => { haptic("selection"); navigate(`/memory/${fund.id}`); }}
+            >
+              View
+            </ToastAction>
+          ),
+        });
+        // Presentational hero-roll signal — Dashboard rolls the hero up by this
+        // amount, synced to the toast. No data mutated.
+        window.dispatchEvent(new CustomEvent("kiddo:demo-gift-landed", { detail: { fundId: fund.id, amount: Number(g.amount) } }));
+      };
     }
 
-    const activeId = getActiveFundId();
-    const fund = (funds.find((f) => f.id === activeId) ?? funds[0]) as any;
-    if (!fund) return;
-    const childRaw = String(fund.recipientFirstName || "");
-    const child = capFirst(childRaw) || "your child";
-    const g = DEMO_GIFTS[childRaw.toLowerCase()] || { sender: "Cameron Tucker", amount: "100", ticker: "DIS" };
-    const where = TICKER_NAME[g.ticker] || "the diversified mix";
+    if (!fire) return;
+    const fireOnce = fire;
 
-    timerRef.current = window.setTimeout(() => {
-      try { window.sessionStorage.setItem(SESSION_KEY, "1"); } catch { /* ignore */ }
-      haptic("success");
-      toast({
-        title: `${g.sender} added $${g.amount} to ${child}'s future 🌱`,
-        description: `Going into ${where} — a new moment in ${child}'s Memory Book.`,
-        duration: 9000, // a delight beat needs time to read both lines + tap View (vs the 4.5s default)
-        action: (
-          <ToastAction
-            altText={`View ${child}'s Memory Book`}
-            onClick={() => { haptic("selection"); navigate(`/memory/${fund.id}`); }}
-          >
-            View
-          </ToastAction>
-        ),
-      });
-      // Presentational hero-roll signal — Dashboard rolls the hero up by this
-      // amount, synced to the toast. No data mutated.
-      window.dispatchEvent(new CustomEvent("kiddo:demo-gift-landed", { detail: { fundId: fund.id, amount: Number(g.amount) } }));
-    }, DELAY_MS);
-    return clear;
+    // Visibility-gated arming. The beat counts down ONLY while the tab is
+    // actually visible, and (re)starts its full delay when the prospect
+    // returns to a backgrounded tab. So "15s after they settle in" means 15s
+    // of them actually looking — never 15s burned against a hidden tab that
+    // then marks the once-per-session beat shown having played to no one.
+    const clear = () => {
+      if (timerRef.current != null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+    const arm = () => {
+      if (timerRef.current != null) return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      timerRef.current = window.setTimeout(() => { timerRef.current = null; fireOnce(); }, delay);
+    };
+    const onVis = () => {
+      if (document.visibilityState === "visible") arm();
+      else clear(); // tabbed away mid-countdown → reset; re-arms fresh on return
+    };
+
+    arm();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clear();
+      document.removeEventListener("visibilitychange", onVis);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isDemo, onDashboard, funds.length]);
 
