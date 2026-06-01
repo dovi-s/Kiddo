@@ -470,6 +470,20 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
   const displayUrl = selected.url.replace(/^https?:\/\//, "");
   const firstName = recipientName.split(" ")[0];
 
+  // The code-entry rescue path for the OFFLINE artifacts (print flyer +
+  // story card). Those are exactly the moments a gifter can't tap a link —
+  // a printed flyer at a party, a Story screenshotted off someone else's
+  // phone — and if the QR won't scan there's otherwise no recovery. The
+  // on-screen modal already shows this (the "Enter at …/gift" block); these
+  // exports must carry it through so the artifact is self-rescuing. Mirrors
+  // the same resolution the on-screen block uses: per-page code first, then
+  // the fund-level code; lookup URL from the server, else the /gift route.
+  const exportGiftCode = selected.giftCode ?? giftCode?.code ?? null;
+  const codeLookupDisplay = (
+    giftCode?.lookupUrl ??
+    (typeof window !== "undefined" ? `${window.location.origin}/gift` : "kiddofund.com/gift")
+  ).replace(/^https?:\/\//, "");
+
   const getQrDataUrl = async (): Promise<string | null> => {
     if (!qrRef.current) return null;
     return svgElementToDataUrl(qrRef.current);
@@ -602,6 +616,15 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
       ctx.fillStyle = "rgba(255,255,255,0.55)";
       ctx.fillText(displayUrl, 540, 1480);
 
+      // Code-entry rescue — for the viewer who can't scan a Story (it's a
+      // screenshot, the camera won't focus, it's not their phone). A short
+      // typed code at /gift beats a long URL every time.
+      if (exportGiftCode) {
+        ctx.font = `500 36px ${font}`;
+        ctx.fillStyle = "rgba(255,255,255,0.42)";
+        ctx.fillText(`Can't scan? Enter ${exportGiftCode} at ${codeLookupDisplay}`, 540, 1555);
+      }
+
       // Bottom line
       ctx.font = `400 34px ${font}`;
       ctx.fillStyle = "rgba(255,255,255,0.30)";
@@ -677,6 +700,8 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
     .scan-cta { font-size: 22px; font-weight: 700; color: #111827; text-align: center; letter-spacing: -0.01em; }
     .scan-sub { font-size: 13px; color: #6b7280; text-align: center; max-width: 320px; line-height: 1.6; }
     .url-chip { background: #f3f4f6; border-radius: 100px; padding: 8px 18px; font-size: 12px; color: #374151; font-weight: 500; word-break: break-all; text-align: center; }
+    .code-line { font-size: 12.5px; color: #6b7280; text-align: center; line-height: 1.6; max-width: 340px; }
+    .code-line strong { color: #111827; font-weight: 700; letter-spacing: 0.08em; }
     .divider { width: 48px; height: 2px; background: #e5e7eb; border-radius: 2px; }
     .footer { padding: 24px 40px; border-top: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .footer-logo { font-size: 15px; font-weight: 700; color: #111827; }
@@ -698,6 +723,7 @@ export function ShareModal({ open, onClose, pages, recipientName, giftCode, snap
       <p class="scan-sub">Scan the QR code or visit the link below to send ${recipientName} a real stock investment. No account needed.</p>
       <div class="divider"></div>
       <p class="url-chip">${selected.url}</p>
+      ${exportGiftCode ? `<p class="code-line">No camera handy? Enter code <strong>${exportGiftCode}</strong> at ${codeLookupDisplay}</p>` : ""}
     </div>
     <div class="footer">
       <span class="footer-logo">Kiddo</span>
