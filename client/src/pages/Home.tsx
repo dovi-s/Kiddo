@@ -359,7 +359,16 @@ const comparisonRows = [
 
 export default function Home() {
   const reduceMotion = useReducedMotion();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+  // Demo accounts are exempt from the "authenticated → dashboard" redirect
+  // below. A real logged-in parent's home IS their dashboard, so "/" should
+  // bounce them there. But a DEMO visitor is a prospective user exploring the
+  // product — trapping them on the seeded dashboard with no way back to the
+  // marketing site is a conversion dead-end (founder-reported 2026-06-01:
+  // "I go to the demo, click back to the homepage, it keeps me in the demo").
+  // Letting "/" render the real marketing page for a demo session gives them
+  // the door back out (the DemoBanner also carries an explicit "Exit demo").
+  const isDemo = Boolean((user as any)?.isDemoAccount);
   const [, setLocation] = useLocation();
   // Fetch funds when authenticated so the redirect below can route
   // multi-fund parents to the household overview at /funds (Tier 2 scope per
@@ -370,7 +379,7 @@ export default function Home() {
   const { data: funds = [], isLoading: fundsLoading } = useFunds();
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated && !isDemo) {
       // Wait for funds to load before deciding destination — otherwise
       // multi-fund parents briefly land on /dashboard before the funds list
       // resolves, causing a double-navigation. The fundsLoading gate avoids
@@ -386,9 +395,11 @@ export default function Home() {
       const destination = funds.length >= 2 ? "/funds" : "/dashboard";
       setLocation(`${destination}${search || ""}`);
     }
-  }, [isAuthenticated, isLoading, fundsLoading, funds.length, setLocation]);
+  }, [isAuthenticated, isLoading, isDemo, fundsLoading, funds.length, setLocation]);
 
-  if (isAuthenticated) return null;
+  // Real authenticated users never see the marketing page (they're redirected
+  // above). Demo accounts DO render it — that's their way back to the site.
+  if (isAuthenticated && !isDemo) return null;
 
   return (
     <div className="kiddo-app-page">

@@ -32,7 +32,7 @@ const SESSION_DISMISS_KEY = "kora:demo-banner-dismissed";
 // column instead. Full-width (no offset) on mobile and on sidebar-less app
 // surfaces (/admin, /gifter, /my-gifts, /kid/*).
 export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean }) {
-  const { user } = useAuth();
+  const { user, logout, isLoggingOut } = useAuth();
   const [location] = useLocation();
   const [dismissed, setDismissed] = useState(false);
 
@@ -92,15 +92,32 @@ export function DemoBanner({ sidebarOffset = false }: { sidebarOffset?: boolean 
             Create your own fund →
           </Link>
         </p>
-        <button
-          type="button"
-          onClick={handleDismiss}
-          className="shrink-0 rounded-full p-1 text-[hsl(var(--kiddo-evergreen))] opacity-70 transition-opacity hover:opacity-100"
-          aria-label="Dismiss demo banner"
-          data-testid="demo-banner-dismiss"
-        >
-          <X size={14} />
-        </button>
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          {/* Explicit door out of the demo. A prospective user who wandered
+              into the seeded dashboard expects "home/back" to return them to
+              the marketing site, but in-app "Home" correctly means their
+              dashboard. This labeled control resolves that: logout() clears the
+              illustrative session and full-page-navigates to "/" (the real
+              homepage) as a fresh, logged-out visitor. Founder call 2026-06-01. */}
+          <button
+            type="button"
+            onClick={() => logout()}
+            disabled={isLoggingOut}
+            className="rounded-full border border-[hsl(var(--kiddo-evergreen)/0.35)] px-3 py-1 font-semibold text-[hsl(var(--kiddo-evergreen))] transition-opacity hover:opacity-80 disabled:opacity-50"
+            data-testid="demo-banner-exit"
+          >
+            {isLoggingOut ? "Exiting…" : "Exit demo"}
+          </button>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="rounded-full p-1 text-[hsl(var(--kiddo-evergreen))] opacity-70 transition-opacity hover:opacity-100"
+            aria-label="Dismiss demo banner"
+            data-testid="demo-banner-dismiss"
+          >
+            <X size={14} />
+          </button>
+        </div>
       </div>
     </div>
   );
