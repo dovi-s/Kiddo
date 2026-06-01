@@ -45,7 +45,10 @@ operator-status analysis. Please answer Parts 1 + 2 through this lens, and if th
 structure holds, state what the narrow opinion + the custodian agreement must say
 to support it. (Today, pre-custody, gifts route through Kiddo's Stripe only
 because there is no custodian to route to yet; the production target is
-out-of-the-flow.)
+out-of-the-flow.) **If the structure holds, it should also resolve geographic
+scope (Part 7): the same "platform, not a regulated entity" finding is what lets
+us launch nationally rather than state-by-state — so please answer Part 7 in the
+same pass.**
 
 ## Founder pre-send checklist (do this before sending)
 
@@ -297,6 +300,49 @@ wired:
   another broker or liquidate to the funding source). This is a trust gate that
   needs to be live on the FAQ at launch-with-custody — but cannot ship until the
   custodian name + ACAT mechanics are real.
+
+---
+
+# Part 7 — Geographic scope: can we launch nationally, or state-by-state? (Securities / Licensing)
+
+**Source:** `BUSINESS_STRUCTURE.md` (rent-the-rails) + this packet's structure
+question (Part 1 + "Preferred structure"). **Why it matters:** we need to know
+whether to launch nationally on day one or roll out state-by-state — and our
+read is that the rent-the-rails structure makes a state-by-state *licensing*
+rollout unnecessary, but we want that confirmed rather than assumed.
+
+**Our understanding (please confirm or correct):**
+- The per-state licensing regimes are either the **custodian's** burden (BD
+  registration, FINRA membership, state blue-sky BD notice filings, UTMA account
+  mechanics — already national for a FINRA-member custodian we rent) or
+  **structurally avoided** by our design: no Kiddo custody/control of funds →
+  no per-state **Money Transmitter Licenses**; self-directed platform, not an
+  adviser → no per-state **RIA** registration. (The MTL and RIA regimes are the
+  ones with the painful 50-state dimension.)
+- **UTMA is state law, but as *compliance*, not *approval*** — the differences
+  are mechanical (age of majority: 18 default, 19 AL/NE, 21 MS/PA, which we
+  already handle) and the custodian runs the account. We don't apply for
+  per-state permission to offer UTMA.
+- A **gifter** is just making a payment to the custodian/platform; gifting is
+  not a regulated act for the giver, so the gifter side is geographically
+  unconstrained (important — our growth loop is inherently cross-state).
+
+**The questions:**
+1. **Given the platform / self-directed / out-of-the-flow structure (Part 1 +
+   Preferred structure), can Kiddo offer accounts nationally from day one, or
+   are there specific state carve-outs we must exclude?** If carve-outs exist,
+   name the states and the reason (e.g., a state that treats the 0.10% fee or
+   the default mix as advice, or a state kids'-privacy act layered on COPPA per
+   Part 5).
+2. Does anything about offering in all 50 states change the answers to Part 1
+   (RIA) or Part 2 (holding gift money)?
+
+**Also a custodian question (not for counsel):** which states does the chosen
+custodian support for UTMA + personal accounts? That defines the real footprint;
+counsel's carve-out list narrows it further if needed. **Operational note:** any
+soft launch we do for support/loop-control reasons will be **cohort/invite-gated,
+not geo-gated** — geo-gating would break the cross-state gifter loop for no
+licensing benefit.
 
 ---
 
