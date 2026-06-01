@@ -46,6 +46,7 @@ import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-c
 import { PRONOUN_OPTIONS } from "@/lib/pronouns";
 import { toMonthlyEquivalent } from "@shared/recurring-math";
 import { getMajorityDate, getMajorityAgeForState, US_STATES } from "@shared/utma";
+import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { prefetchDashboard, prefetchMemoryBook, prefetchActivity, prefetchTaxDocuments, onIdle } from "@/lib/prefetch";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { FundTabs } from "@/components/layout/FundTabs";
@@ -1265,31 +1266,12 @@ function recommendedStrategyKey(yearsTo18: number | null): string | null {
   return null;
 }
 
-// Family-default stock picker on Settings → Gifting Defaults.
-// Synced 2026-05-25 with the server's canonical
-// ADMIN_ASSET_UNIVERSE source='stock_pick' set (17 stocks). Prior
-// list had only 4 — parents could only set their family default to
-// Disney, Apple, Nike, or Amazon even though the gifter picker
-// shows 17. Now matches what gifters see.
-const GIFTER_STOCK_OPTIONS = [
-  { ticker: "DIS", name: "Disney" },
-  { ticker: "AAPL", name: "Apple" },
-  { ticker: "NKE", name: "Nike" },
-  { ticker: "SBUX", name: "Starbucks" },
-  { ticker: "NFLX", name: "Netflix" },
-  { ticker: "AMZN", name: "Amazon" },
-  { ticker: "GOOGL", name: "Google" },
-  { ticker: "SPOT", name: "Spotify" },
-  { ticker: "RBLX", name: "Roblox" },
-  { ticker: "NTDOY", name: "Nintendo" },
-  { ticker: "DUOL", name: "Duolingo" },
-  { ticker: "DPZ", name: "Domino's" },
-  { ticker: "CHWY", name: "Chewy" },
-  { ticker: "ABNB", name: "Airbnb" },
-  { ticker: "ADBE", name: "Adobe" },
-  { ticker: "TGT", name: "Target" },
-  { ticker: "CMCSA", name: "Comcast" },
-];
+// Family-default stock picker on Settings → Gifting Defaults. Derived from the
+// canonical universe (shared/stock-picks.ts) so the parent's "Family default"
+// menu is the exact same list gifters, the parent picker, the cash-invest
+// modal, and onboarding all see. Was a hand-synced copy that had drifted
+// (Adobe/Comcast, no Tesla/Microsoft/McDonald's).
+const GIFTER_STOCK_OPTIONS = CANON_STOCK_PICKS.map((s) => ({ ticker: s.ticker, name: s.name }));
 
 // Managed-mix custom allocations are ETFs only. Individual stocks live in
 // the gifter pick list ("Chosen with Love"), never in the managed mix.

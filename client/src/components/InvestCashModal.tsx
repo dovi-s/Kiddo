@@ -6,32 +6,16 @@ import { Button } from "@/components/ui/button";
 import { TrendingUp, CheckCircle2, Info, Clock, Zap, Banknote } from "lucide-react";
 import { haptic } from "@/lib/haptics";
 import { useToast } from "@/hooks/use-toast";
+import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 
-// Stocks available in the server's ADMIN_ASSET_UNIVERSE (source='stock_pick').
-//
-// Synced 2026-05-25 with the canonical 17. Prior list had only 10
-// stocks AND included TSLA which is NOT in the server's picker
-// universe — server validation would have rejected (or silently
-// orphaned) Tesla picks made from this modal. Both issues fixed.
-const STOCK_CHOICES = [
-  { ticker: "DIS",  name: "Disney",    emoji: "🏰", tagline: "The magic factory" },
-  { ticker: "AAPL", name: "Apple",     emoji: "🍎", tagline: "Tech they'll grow up with" },
-  { ticker: "NKE",  name: "Nike",      emoji: "👟", tagline: "For the ones who go for it" },
-  { ticker: "SBUX", name: "Starbucks", emoji: "☕", tagline: "For the everyday wins" },
-  { ticker: "NFLX", name: "Netflix",   emoji: "🎬", tagline: "For the storytellers" },
-  { ticker: "AMZN", name: "Amazon",    emoji: "📦", tagline: "The everything engine" },
-  { ticker: "GOOGL", name: "Google",   emoji: "🔍", tagline: "For the curious ones" },
-  { ticker: "SPOT", name: "Spotify",   emoji: "🎵", tagline: "For the music lovers" },
-  { ticker: "RBLX", name: "Roblox",    emoji: "🎮", tagline: "For the gamers" },
-  { ticker: "NTDOY", name: "Nintendo", emoji: "🎮", tagline: "For the players" },
-  { ticker: "DUOL", name: "Duolingo",  emoji: "🦉", tagline: "For the learners" },
-  { ticker: "DPZ",  name: "Domino's",  emoji: "🍕", tagline: "For the pizza lovers" },
-  { ticker: "CHWY", name: "Chewy",     emoji: "🐾", tagline: "For the animal lovers" },
-  { ticker: "ABNB", name: "Airbnb",    emoji: "🌍", tagline: "For the adventurers" },
-  { ticker: "ADBE", name: "Adobe",     emoji: "🎨", tagline: "For the artists" },
-  { ticker: "TGT",  name: "Target",    emoji: "🎯", tagline: "For the everyday families" },
-  { ticker: "CMCSA", name: "Comcast",  emoji: "📺", tagline: "For the family movie nights" },
-];
+// Derived from the canonical universe (shared/stock-picks.ts) — the cash-invest
+// picker (adult / owner-mode) now reads the SAME list as the gift page, parent
+// recurring/one-time, and onboarding. Was a hand-synced copy that had already
+// drifted (Adobe/Comcast, no Tesla/Microsoft/McDonald's). Shape preserved
+// ({ticker,name,emoji,tagline}).
+const STOCK_CHOICES = CANON_STOCK_PICKS.map((s) => ({
+  ticker: s.ticker, name: s.name, emoji: s.emoji, tagline: s.tagline,
+}));
 
 function formatCurrency(value: number): string {
   return value.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });

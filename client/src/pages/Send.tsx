@@ -12,26 +12,12 @@ import { ThinkingOrb } from "@/components/ui/gemini";
 import { Mascot } from "@/components/ui/mascot";
 import { StockLogo } from "@/components/ui/stock-logo";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
+import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 
-const STOCKS = [
-  { symbol: "AAPL",  name: "Apple" },
-  { symbol: "DIS",   name: "Disney" },
-  { symbol: "AMZN",  name: "Amazon" },
-  { symbol: "GOOGL", name: "Google" },
-  { symbol: "NFLX",  name: "Netflix" },
-  { symbol: "NKE",   name: "Nike" },
-  { symbol: "SBUX",  name: "Starbucks" },
-  { symbol: "SPOT",  name: "Spotify" },
-  { symbol: "RBLX",  name: "Roblox" },
-  { symbol: "TGT",   name: "Target" },
-  { symbol: "CMCSA", name: "Comcast" },
-  { symbol: "DUOL",  name: "Duolingo" },
-  { symbol: "ABNB",  name: "Airbnb" },
-  { symbol: "NTDOY", name: "Nintendo" },
-  { symbol: "DPZ",   name: "Domino's" },
-  { symbol: "CHWY",  name: "Chewy" },
-  { symbol: "ADBE",  name: "Adobe" },
-] as const;
+// Derived from the canonical universe (shared/stock-picks.ts) — one list across
+// every stock-picking surface. Was its own {symbol,name} copy (Adobe/Comcast,
+// no Tesla/Microsoft/McDonald's).
+const STOCKS: { symbol: string; name: string }[] = CANON_STOCK_PICKS.map((s) => ({ symbol: s.ticker, name: s.name }));
 type SendStock = (typeof STOCKS)[number] & {
   price: number;
   isEstimate?: boolean;
