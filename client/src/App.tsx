@@ -270,7 +270,7 @@ function getSeoForPath(path: string): SeoConfig {
   }
   if (pathname === "/how-it-works") {
     return {
-      title: "How Kiddo Works | Real gifts. Real stocks. 60 seconds to give.",
+      title: "How Kiddo Works | Give a share of real stock in about 60 seconds",
       description: "See exactly how Kiddo works for parents and gifters. Create a fund, share a link, watch gifts get invested automatically. Takes 2 minutes to set up.",
       robots: "index, follow",
       ogType: "website",

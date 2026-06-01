@@ -411,7 +411,7 @@ export default function CalculatorAt18() {
                   <ShieldCheck className="h-6 w-6 text-[hsl(var(--kiddo-evergreen))]" />
                 </div>
                 <div>
-                  <p className="font-heading text-lg font-bold text-foreground">Real brokerage. Real protection.</p>
+                  <p className="font-heading text-lg font-bold text-foreground">This is a real brokerage account.</p>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                     When investing is live, Kiddo funds are held by our broker-dealer partner (Member FINRA/SIPC). Eligible accounts are then SIPC-protected up to $500,000 against broker-dealer failure, not market loss. Investments may lose value. Not FDIC insured.
                   </p>

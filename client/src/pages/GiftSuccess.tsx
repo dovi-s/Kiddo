@@ -1711,7 +1711,7 @@ export default function GiftSuccess() {
               the brokerage-failure-vs-market-loss distinction explicitly
               (was implicit in "Investing can go up or down" — too soft). */}
           <p className="text-[10px] text-muted-foreground/60 text-center px-4">
-            Real stocks, real accounts. When investing is live, assets are held by our broker-dealer partner (Member FINRA/SIPC), with SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.
+            These are real shares, held in a brokerage account. When investing is live, assets are held by our broker-dealer partner (Member FINRA/SIPC), with SIPC protection up to $500,000 against brokerage failure. SIPC does not protect against market losses.
           </p>
         </motion.div>
 

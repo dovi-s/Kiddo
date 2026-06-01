@@ -23,7 +23,7 @@ export default function Contact() {
             We respond to every message.
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-            Real people. Real responses. No bots. Here is exactly who to contact and what to expect.
+            A person reads every message and writes back — no bots. Here is exactly who to contact and what to expect.
           </p>
 
           <div className="mt-10 grid gap-4 md:grid-cols-3">

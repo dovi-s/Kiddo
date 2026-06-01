@@ -5025,7 +5025,7 @@ export default function Dashboard() {
                   <p className="text-sm text-foreground/90 leading-relaxed">
                     <span className="font-semibold text-foreground tabular-nums">${giftAmount.toFixed(2)}</span>
                     {destinationLabel ? <> in {destinationLabel}</> : null}.
-                    {" "}Real money, real stocks, in {childFirstName}&apos;s name.
+                    {" "}Actual shares of real companies, held in {childFirstName}&apos;s name.
                   </p>
                   {projectedAtMajority != null && (
                     <p className="text-sm text-muted-foreground leading-relaxed">
