@@ -2626,7 +2626,7 @@ export default function Activity() {
                       ? `You added $${(amtNum != null ? amtNum : 0).toFixed(2)}`
                       : rewriteLegacyAutoInvestTitle(item.title);
                   const effectiveDescription = overrideToParentContrib
-                    ? (ticker ? `Investing into ${ticker}` : "Investing across the diversified mix")
+                    ? (ticker ? `Investing into ${ticker}` : "Investing across the full mix")
                     : rewriteLegacyDescription(item.description);
                   // Hoisted kid-suggestion state so the Approve/Decline bar
                   // renders OUTSIDE the expanded panel (always visible on
@@ -3307,8 +3307,14 @@ export default function Activity() {
                                     custom:       { label: "Custom",       emoji: "🎯" },
                                   };
                                   if (normalizedType === "fund_strategy_changed") {
-                                    const prevKey = String((meta as any).previousStrategy || "").toLowerCase();
-                                    const nextKey = String((meta as any).newStrategy || "").toLowerCase();
+                                    // Accept both metadata shapes: the newer
+                                    // previousStrategy/newStrategy AND the
+                                    // from/to pair the strategy-evolution rows
+                                    // are written with — without the fallback,
+                                    // the pills rendered a literal "• Previous
+                                    // → • New" instead of "Growth → Balanced".
+                                    const prevKey = String((meta as any).previousStrategy || (meta as any).from || "").toLowerCase();
+                                    const nextKey = String((meta as any).newStrategy || (meta as any).to || "").toLowerCase();
                                     const prev = STRATEGY_LABELS[prevKey] || { label: prevKey || "Previous", emoji: "•" };
                                     const next = STRATEGY_LABELS[nextKey] || { label: nextKey || "New", emoji: "•" };
                                     return (
@@ -3608,13 +3614,16 @@ export default function Activity() {
                                   </p>
                                 )}
 
-                                {/* Date/time + action chips row. Date stays
-                                    full-form here because the collapsed row
-                                    only shows month/day. */}
+                                {/* Date + action chips row. Date stays full-form
+                                    here because the collapsed row only shows
+                                    month/day. The clock time was dropped: it's
+                                    noise on a financial ledger (the date is the
+                                    unit), and on backfilled history it printed a
+                                    fake-looking fixed "at 8:00 PM". */}
                                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" as const }}>
                                   <p style={{ fontSize: 11, color: "rgb(160,150,140)" }}>
                                     {createdAt
-                                      ? `${createdAt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })} at ${createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+                                      ? createdAt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })
                                       : "Date unavailable"}
                                   </p>
                                   {chips.length > 0 && (
@@ -3948,7 +3957,7 @@ export default function Activity() {
                                 // a Family-plan-specific distinction (shared
                                 // strategy across kids) that carries real
                                 // load-bearing information for Family parents.
-                                "into diversified mix";
+                                "into the full mix";
                           const isExpanded = expandedScheduledId === String(c.id);
                           const note = typeof c.note === "string" && c.note.trim() ? c.note.trim() : null;
                           const idStr = String(c.id);
@@ -4502,7 +4511,7 @@ export default function Activity() {
               : // See comment on the strategyLabel twin in this file
                 // (~line 3360) — "managed mix" unified to "diversified
                 // mix" 2026-05-20. Same reasoning applies here.
-                "into diversified mix";
+                "into the full mix";
           const isPaused = schedule.status === "paused";
           // Payment method + next-charge info now lands in the hero
           // (subtitle + stats grid) instead of a recursive Scheduled tab
@@ -4668,7 +4677,7 @@ export default function Activity() {
             ...row,
             type: "parent_contribution" as any,
             title: `You added ${amtStr}`,
-            description: ticker ? `Investing into ${ticker}` : "Investing across the diversified mix",
+            description: ticker ? `Investing into ${ticker}` : "Investing across the full mix",
           };
         };
         const allContribRows = allFeed.filter(isParentContribRow).map(applyParentContribDisplay);
