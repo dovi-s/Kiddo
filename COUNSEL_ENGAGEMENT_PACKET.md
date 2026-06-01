@@ -9,6 +9,13 @@ synthesis of the scattered sources listed at the bottom.
 > **Not legal advice.** This is a founder-prepared brief *for* counsel. Every
 > claim about custody/fees is stated as **pre-launch / intended**, because
 > custody is not yet wired — counsel needs the true current state.
+>
+> **DriveWealth = leading candidate, NOT finalized.** Wherever this packet names
+> DriveWealth (Option B, Part 1 Q3, the attachment list, the act-on-the-memo step),
+> read it as the *prospective / leading-candidate* broker-dealer. The custodian
+> vendor is **not yet selected or contracted** and no client is wired. No line
+> should imply a signed agreement or a locked vendor. **Confirm this before sending
+> — see the pre-send checklist.**
 
 ---
 
@@ -52,12 +59,18 @@ same pass.**
 
 ## Founder pre-send checklist (do this before sending)
 
-1. **Fix the DriveWealth contract-status line** in Part 1. If an integration
-   agreement is executed, say "signed integration agreement; DriveWealth is broker
-   of record." If not, say "in discussions." Option B's analysis hinges on this —
-   do not overstate it.
-2. Attach: product overview / deck, current TOS draft, pricing-page screenshot,
-   DriveWealth agreement (under NDA, on request).
+1. ⚠️ **Confirm the broker-dealer / DriveWealth status before sending — the one
+   founder fact this packet cannot verify for you.** The packet *defaults to the
+   safe, non-overstating framing*: DriveWealth is the **prospective / leading
+   candidate** BD, **no agreement executed, vendor not finalized**. So if you skip
+   this step, the packet still never overstates to counsel. **Upgrade the wording
+   ONLY if reality is further along:** if a BD is selected, say "selected BD:
+   {name}"; if an integration agreement is executed, say "signed integration
+   agreement; {name} is broker of record" (Part 1 Option B + Q3) and attach it.
+   Option B's whole analysis hinges on this — match it to the truth, never overstate.
+2. Attach: product overview / deck, current TOS draft, pricing-page screenshot, and
+   the executed custodian/BD agreement **if one exists** (under NDA, on request) —
+   omit it if no agreement is signed yet (the default; see item 1).
 3. Send to 3 firms in parallel; pick the one that comes back with a thoughtful
    scoping question, not just a fee quote.
 

@@ -71,6 +71,14 @@ launches without it. (See `project_custodian_split_unresolved`,
 **Done when:** custodian wired behind the `custodianService` interface (per
 CLAUDE.md provider rules) + lawyer's 2–3 page AUM memo received.
 
+**⚠️ Before sending the counsel packet (`COUNSEL_ENGAGEMENT_PACKET.md`) — don't
+forget:** confirm the broker-dealer / DriveWealth status. The packet now defaults to
+the safe framing ("prospective leading candidate, no agreement executed, vendor not
+finalized"), so forgetting can't overstate to counsel — but if a BD has actually been
+selected or an agreement executed, upgrade the wording per the packet's pre-send
+checklist item 1 (Option B + Q3 + the attachment). This is the **one founder fact the
+packet cannot self-verify**, so it lives here too.
+
 ---
 
 ## P1-3 — Don't credit/activate on an UNPAID session — ✅ SHIPPED 2026-05-29
