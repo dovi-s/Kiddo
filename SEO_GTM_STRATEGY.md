@@ -8,11 +8,22 @@ the prerender decision, so none of it gets re-litigated. Companions:
 ## The one principle
 
 **Go after the people who bring the parents — never the parents directly.**
-The gifter is our customer; everyone else's cost. Parent-direct paid acquisition
-is the EarlyBird trap ($200+ CAC, 20-25mo payback, $1 in = 30¢ out). Every
-channel below is judged by one metric: **does it feed funded-k (≥1)** — does a
-dollar/hour of effort produce a *funded* gift that pulls a parent in and seeds
-more gifters? Traffic that doesn't feed the loop is cost dressed as growth.
+The gifter is our customer; everyone else's cost. Parent-direct **paid**
+acquisition is the EarlyBird trap ($200+ CAC, 20-25mo payback, $1 in = 30¢ out).
+Every *paid* channel is judged by one metric: **does it feed funded-k (≥1)** —
+does a dollar/hour produce a *funded* gift that pulls a parent in and seeds more
+gifters? Traffic that doesn't feed the loop is cost dressed as growth.
+
+**The crucial scope (don't conflate the two cost structures):** "never parents
+direct" is a rule about **paid** acquisition, where CAC can exceed LTV. **Owned
+SEO / content is the opposite kind of cost** — near-zero marginal CAC, durable,
+compounding. So on the SEO surface we go after **every** audience — gifter,
+parent, education-seeker, the at-18 adult — because all of them feed the same
+loop + relationship at ~$0 incremental cost, and a parent who finds us
+*organically* (no CAC) then becomes a loop seed herself. Gifter-intent is where
+we **start and weight heaviest** (highest intent, lowest competition, cheapest
+loop seed), **not** the only target. "Heavy, deep SEO for all" is correct *as an
+owned-asset play*; it does not reopen the paid-CAC discipline.
 
 ## Channel priority stack (fastest payback first)
 
@@ -40,23 +51,38 @@ more gifters? Traffic that doesn't feed the loop is cost dressed as growth.
 - BUT ranking takes months, so we **seed the foundation now** and scale later.
   "Build the asset" ≠ "make it the engine."
 
-## Gifter-intent SEO — the cluster plan
+## The SEO cluster map — all audiences (built in this order)
 
-The win is intercepting the **gifter at the moment of intent** — the searches a
-grandparent/aunt/friend runs at gift-time. Three intent clusters, all pointing
-at a capture flow (`/give-a-gift`, the comparison/tool pages, the gift link):
+Owned content targets **every** audience, because each feeds the loop +
+relationship at ~$0 CAC. Build/weight in this order — by *intent value ×
+winnability*, not by audience importance:
 
-1. **Gift-occasion intent** (highest-intent, build first): "meaningful gift for
-   a 1-year-old", "gift for the kid who has everything", "investment gift for a
-   child", "how to give stock to a grandchild", "baby shower gift that lasts",
-   "alternative to toys". → gift-idea + how-to content → `/give-a-gift`.
-2. **Comparison / decision intent** (already started — `/compare/:slug`):
-   vs EarlyBird, Acorns Early, Greenlight, Stockpile, 529, savings account,
-   Fidelity UTMA. Keep expanding; this is bottom-funnel and we own the framing.
-3. **UTMA / education intent** (already started — programmatic + tools):
-   `/tools/utma-by-state/:code` (51 pages), at-18 calculator, Robux-vs-UTMA,
-   Trump-account-vs-UTMA (trend-jacking). Build out the "what is a custodial
-   account / kiddie tax / UTMA vs UGMA vs 529" topical cluster around them.
+1. **GIFTER intent** *(start here — highest intent, lowest competition, cheapest
+   loop seed)*. The searches a grandparent/aunt/friend runs at gift-time:
+   "meaningful gift for a 1-year-old", "gift for the kid who has everything",
+   "investment gift for a child", "how to give stock to a grandchild", "baby
+   shower gift that lasts", "alternative to toys". Almost no one targets this
+   well → ours to own. → gift-idea + how-to content → `/give-a-gift` + gift link.
+2. **PARENT intent** *(high volume, MORE competitive — win the long-tail + the
+   gift angle, not the head terms)*. "custodial account for kids", "best
+   investment account for a child", "how to invest for my child", "UTMA vs 529".
+   Head terms are brutal (Fidelity/Schwab/NerdWallet/529s) — don't fight them
+   head-on; win the **comparison + decision** sub-cluster (already started,
+   `/compare/:slug`: vs EarlyBird, Acorns Early, Greenlight, Stockpile, 529,
+   savings account, Fidelity UTMA) where we own the framing, plus the
+   gift-funded angle competitors don't have. Organic parents have no CAC and
+   become loop seeds — fully on-strategy.
+3. **EDUCATION / UTMA-mechanics** *(evergreen authority; feeds 1 + 2)*. "what is
+   a UTMA / UGMA", "kiddie tax", "age of majority by state". Already started:
+   programmatic `/tools/utma-by-state/:code` (51), at-18 calculator, the
+   Robux-vs-UTMA / Trump-account-vs-UTMA trend-jacks. Build the topical cluster
+   around them so we rank as the explainer, then route to the funnel.
+4. **AT-18 / kid-2.0 lifecycle** *(lower near-term priority; the future moat)*.
+   "I turned 18 with a custodial account", "what to do with a UTMA at 18", and
+   later Roth / banking. Captures the kid-2.0 lifetime relationship audience.
+
+Every cluster internally links toward a capture flow and is **measured by
+funded-k contribution, not sessions.**
 
 What we already have (don't rebuild): `/compare` + 7 comparison pages,
 `/tools/utma-by-state` + 51 state pages, at-18 calculator, the two
