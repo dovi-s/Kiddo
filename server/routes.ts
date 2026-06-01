@@ -512,9 +512,33 @@ export async function registerRoutes(
     await fs.writeFile(KID_VIEW_STATE_PATH, JSON.stringify(store, null, 2), "utf8");
   };
 
+  // Demo Kid View: present a ready-to-preview Kid View (PIN 1111, surfaced on the
+  // unlock screen via pinHint) for demo funds the parent hasn't set up — so
+  // prospects can actually explore the kid experience instead of hitting the
+  // empty "set up a PIN" form. Real funds are untouched; a demo parent who DOES
+  // set up Kid View overrides this (their stored enabled record wins below).
+  // Excludes transferred funds (Kid View 404s post-handoff). The Kid View store
+  // is a JSON file, not the DB seed, so this code path is the only place to
+  // inject it without a server-side file write.
+  const DEMO_KID_VIEW_PIN_HASH = "$2b$10$AdGFiPRs/jZfakGG0TpIkuA08IweExGgPHJ/lcmAVO2MZcsdVUAwe"; // bcrypt("1111")
+  const isDemoKidViewFund = async (fundId: string): Promise<boolean> => {
+    if (!(await isDemoFund(fundId))) return false;
+    const fund = await storage.getFund(fundId);
+    return Boolean(fund) && !(fund as any)?.transferredAt;
+  };
+  const buildDemoKidViewRecord = (fundId: string): KidViewFundRecord => ({
+    ...createEmptyKidViewRecord(fundId),
+    enabled: true,
+    shareToken: `demo-kid-${fundId}`,
+    pinHash: DEMO_KID_VIEW_PIN_HASH,
+    pinHint: "Demo PIN: 1111",
+  });
+
   const getKidViewRecordByFund = async (fundId: string) => {
     const store = await loadKidViewStore();
-    return normalizeKidViewRecord(fundId, store.byFundId[fundId]);
+    const record = normalizeKidViewRecord(fundId, store.byFundId[fundId]);
+    if (!record.enabled && (await isDemoKidViewFund(fundId))) return buildDemoKidViewRecord(fundId);
+    return record;
   };
 
   const patchKidViewRecordByFund = async (fundId: string, patch: Partial<KidViewFundRecord>) => {
@@ -559,7 +583,13 @@ export async function registerRoutes(
   const getKidViewRecordByShareToken = async (shareToken: string) => {
     const store = await loadKidViewStore();
     const entry = Object.values(store.byFundId).find((row) => row.shareToken === shareToken && row.enabled);
-    return entry ? normalizeKidViewRecord(entry.fundId, entry) : null;
+    if (entry) return normalizeKidViewRecord(entry.fundId, entry);
+    // Demo virtual share token (see buildDemoKidViewRecord): demo-kid-<fundId>.
+    if (shareToken.startsWith("demo-kid-")) {
+      const fundId = shareToken.slice("demo-kid-".length);
+      if (await isDemoKidViewFund(fundId)) return buildDemoKidViewRecord(fundId);
+    }
+    return null;
   };
 
   const createKidViewAccessToken = async (fundId: string, shareToken: string) => {
