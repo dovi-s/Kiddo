@@ -206,8 +206,8 @@ function getSeoForPath(path: string): SeoConfig {
   }
   if (pathname === "/stories") {
     return {
-      title: "Kiddo Stories | Real families. Real funds. Real growth.",
-      description: "See how real families are using Kiddo to turn birthdays, baby showers, and holidays into real investments for their children.",
+      title: "Kiddo Stories | How everyday occasions become lasting investments",
+      description: "Examples of how a birthday, baby shower, or holiday can become an investment that grows with a child — the kinds of stories Kiddo is built for.",
       robots: "index, follow",
       ogType: "website",
     };

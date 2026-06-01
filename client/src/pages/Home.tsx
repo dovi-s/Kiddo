@@ -76,7 +76,7 @@ function SignatureTrustCounter() {
         <FadeIn className="mx-auto max-w-5xl">
           <div className="rounded-3xl border border-border bg-card/60 p-8 md:p-12 shadow-premium-sm">
             <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Real funds, real horizons
+              Across Kiddo today
             </p>
             <div className="mt-6 grid gap-6 md:grid-cols-4">
               <div className="text-center">
