@@ -43,14 +43,14 @@ export const onboardingStockChoices: StockChoice[] = [
   { ticker: "SPOT", name: "Spotify" },
   { ticker: "RBLX", name: "Roblox" },
   { ticker: "TSLA", name: "Tesla" },
+  { ticker: "MSFT", name: "Microsoft" },
   { ticker: "NTDOY", name: "Nintendo" },
   { ticker: "DUOL", name: "Duolingo" },
   { ticker: "DPZ", name: "Domino's" },
   { ticker: "CHWY", name: "Chewy" },
   { ticker: "ABNB", name: "Airbnb" },
-  { ticker: "ADBE", name: "Adobe" },
   { ticker: "TGT", name: "Target" },
-  { ticker: "CMCSA", name: "Comcast" },
+  { ticker: "MCD", name: "McDonald's" },
 ];
 
 export const gifterLoopMetricsTargets = {

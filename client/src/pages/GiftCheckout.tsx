@@ -18,6 +18,7 @@ import { useScrollResetOnChange } from "@/lib/scroll-to-element";
 import { trackReferralEvent as trackAcquisitionEvent } from "@/lib/acquisition";
 import { getPronouns } from "@/lib/pronouns";
 import { KIDDO_GIFT_ADD_ONS, calculateKoraContributionFee, getGiftAddOn, type GiftAddOnId } from "@shared/monetization";
+import { FEATURED_STOCK_PICKS as CANON_FEATURED_STOCK_PICKS, ADDITIONAL_STOCK_PICKS as CANON_ADDITIONAL_STOCK_PICKS } from "@shared/stock-picks";
 import { projectFundValue } from "@shared/projection";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
 import { ReminderAndAskParentsCard } from "@/components/ReminderAndAskParentsCard";
@@ -46,28 +47,13 @@ const PAGE_MAX = "kiddo-canvas px-4 sm:px-5";
 //
 // Fallback prices are deliberately rough — they only render when the
 // live-quotes API fails. Real prices come via /api/market/quotes.
-const FEATURED_STOCK_PICKS = [
-  { symbol: "DIS", name: "Disney", price: 106.42, tagline: "for the magic" },
-  { symbol: "AAPL", name: "Apple", price: 214.38, tagline: "for the future" },
-  { symbol: "NKE", name: "Nike", price: 92.14, tagline: "for the ones who go for it" },
-  { symbol: "SBUX", name: "Starbucks", price: 89.63, tagline: "for the everyday wins" },
-  { symbol: "NFLX", name: "Netflix", price: 612.9, tagline: "for the storytellers" },
-  { symbol: "AMZN", name: "Amazon", price: 184.85, tagline: "for the builders" },
-  { symbol: "GOOGL", name: "Google", price: 172.63, tagline: "for the curious ones" },
-  { symbol: "SPOT", name: "Spotify", price: 618.92, tagline: "for the music lovers" },
-  { symbol: "RBLX", name: "Roblox", price: 37.44, tagline: "for the gamers" },
-] as const;
-const ADDITIONAL_STOCK_PICKS = [
-  { symbol: "NTDOY", name: "Nintendo", price: 13.40, tagline: "for the players" },
-  { symbol: "DUOL", name: "Duolingo", price: 200.00, tagline: "for the lifelong learners" },
-  { symbol: "DPZ", name: "Domino's", price: 470.00, tagline: "for the Friday night classic" },
-  { symbol: "CHWY", name: "Chewy", price: 30.00, tagline: "for the animal lovers" },
-  { symbol: "ABNB", name: "Airbnb", price: 130.00, tagline: "for the travelers" },
-  { symbol: "ADBE", name: "Adobe", price: 520.00, tagline: "for the makers" },
-  { symbol: "TGT", name: "Target", price: 150.00, tagline: "for the everyday family" },
-  { symbol: "CMCSA", name: "Comcast", price: 40.00, tagline: "for the family movie nights" },
-] as const;
-const STOCK_PICKS = [...FEATURED_STOCK_PICKS, ...ADDITIONAL_STOCK_PICKS] as const;
+// Derived from the canonical universe (shared/stock-picks.ts) — the single
+// source of truth across the gift page, the parent picker, and onboarding.
+// Mapped to this surface's {symbol,name,price,tagline} shape; the live-quotes
+// effect still fetches every symbol in STOCK_PICKS, so prices flow as before.
+const FEATURED_STOCK_PICKS = CANON_FEATURED_STOCK_PICKS.map((s) => ({ symbol: s.ticker, name: s.name, price: s.fallbackPrice, tagline: s.tagline }));
+const ADDITIONAL_STOCK_PICKS = CANON_ADDITIONAL_STOCK_PICKS.map((s) => ({ symbol: s.ticker, name: s.name, price: s.fallbackPrice, tagline: s.tagline }));
+const STOCK_PICKS = [...FEATURED_STOCK_PICKS, ...ADDITIONAL_STOCK_PICKS];
 type StockPick = Omit<(typeof STOCK_PICKS)[number], "price"> & {
   price: number;
   quoteSource?: string;

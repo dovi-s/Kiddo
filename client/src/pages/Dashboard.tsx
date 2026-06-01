@@ -174,6 +174,7 @@ import {
   type PaymentMethodPreference,
 } from "@shared/monetization";
 import { calculateDashboardMoneyMath } from "@shared/dashboard-money-math";
+import { STOCK_PICKS as CANON_STOCK_PICKS } from "@shared/stock-picks";
 import { sumMonthlyEquivalent, toMonthlyEquivalent } from "@shared/recurring-math";
 import { MONEY_CROSS_THRESHOLDS } from "@shared/milestones";
 import { prefetchMemoryBook, prefetchActivity, onIdle } from "@/lib/prefetch";
@@ -275,25 +276,13 @@ const CANONICAL_MANAGED_ETF_TICKERS: readonly string[] = [
   "VTI", "VXUS", "BND", "VGT", "VUG", "VYM", "SCHD", "QQQ",
 ];
 
-const AUTO_INVEST_STOCKS = [
-  { symbol: "DIS",   name: "Disney",    price: 106.42, tagline: "The magic factory",          emoji: "🏰" },
-  { symbol: "AAPL",  name: "Apple",     price: 214.38, tagline: "Tech they'll grow up with",  emoji: "🍎" },
-  { symbol: "NKE",   name: "Nike",      price: 92.14,  tagline: "For the ones who go for it", emoji: "👟" },
-  { symbol: "AMZN",  name: "Amazon",    price: 184.85, tagline: "The everything engine",      emoji: "📦" },
-  { symbol: "GOOGL", name: "Google",    price: 172.63, tagline: "For the curious ones",       emoji: "🔍" },
-  { symbol: "NFLX",  name: "Netflix",   price: 612.9,  tagline: "For the storytellers",       emoji: "🎬" },
-  { symbol: "SPOT",  name: "Spotify",   price: 618.92, tagline: "For the music lovers",       emoji: "🎵" },
-  { symbol: "RBLX",  name: "Roblox",    price: 37.44,  tagline: "For the gamers",             emoji: "🎮" },
-  { symbol: "SBUX",  name: "Starbucks", price: 89.63,  tagline: "For the everyday wins",      emoji: "☕" },
-  { symbol: "TGT",   name: "Target",    price: 152.20, tagline: "For the everyday families",  emoji: "🎯" },
-  { symbol: "CMCSA", name: "Comcast",   price: 41.18,  tagline: "For the entertainers",       emoji: "🎪" },
-  { symbol: "DUOL",  name: "Duolingo",  price: 198.55, tagline: "For the learners",           emoji: "🦉" },
-  { symbol: "ABNB",  name: "Airbnb",    price: 144.32, tagline: "For the adventurers",        emoji: "🌍" },
-  { symbol: "NTDOY", name: "Nintendo",  price: 12.85,  tagline: "For the playful",            emoji: "🎮" },
-  { symbol: "DPZ",   name: "Domino's",  price: 478.40, tagline: "For the pizza lovers",       emoji: "🍕" },
-  { symbol: "CHWY",  name: "Chewy",     price: 32.11,  tagline: "For the animal lovers",      emoji: "🐾" },
-  { symbol: "ADBE",  name: "Adobe",     price: 552.07, tagline: "For the artists",            emoji: "🎨" },
-] as const;
+// Derived from the canonical universe (shared/stock-picks.ts) — same list the
+// gift page and onboarding use, so the parent picker never drifts from them
+// again. Shape preserved ({symbol,name,price,tagline,emoji}); live quotes still
+// override price below.
+const AUTO_INVEST_STOCKS = CANON_STOCK_PICKS.map((s) => ({
+  symbol: s.ticker, name: s.name, price: s.fallbackPrice, tagline: s.tagline, emoji: s.emoji,
+}));
 
 // Tickers that USED to be in AUTO_INVEST_STOCKS but were removed from the picker (e.g.
 // Zillow — not warm enough for the approved list). Existing recurring schedules and gift

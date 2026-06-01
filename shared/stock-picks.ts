@@ -34,27 +34,33 @@ export interface StockPick {
   tagline: string;
   featured: boolean;
   fallbackPrice: number;
+  emoji: string;
 }
 
+// Roster 2026-06-01: added Microsoft (Minecraft + Xbox — the biggest miss for a
+// child-recognizable list) and McDonald's; dropped Adobe + Comcast (off-thesis
+// for "companies they know and love" — a kid doesn't feel anything about
+// Comcast or Adobe). Existing Adobe/Comcast holdings still display via
+// holding-logos + marketQuotes; they're just no longer offered for new picks.
 export const STOCK_PICKS: readonly StockPick[] = [
-  { ticker: "DIS",   name: "Disney",    tagline: "for the magic",                featured: true,  fallbackPrice: 106.42 },
-  { ticker: "AAPL",  name: "Apple",     tagline: "for the future",               featured: true,  fallbackPrice: 214.38 },
-  { ticker: "NKE",   name: "Nike",      tagline: "for the ones who go for it",   featured: true,  fallbackPrice: 92.14 },
-  { ticker: "SBUX",  name: "Starbucks", tagline: "for the everyday wins",        featured: true,  fallbackPrice: 89.63 },
-  { ticker: "NFLX",  name: "Netflix",   tagline: "for the storytellers",         featured: true,  fallbackPrice: 612.9 },
-  { ticker: "AMZN",  name: "Amazon",    tagline: "for the builders",             featured: true,  fallbackPrice: 184.85 },
-  { ticker: "GOOGL", name: "Google",    tagline: "for the curious ones",         featured: true,  fallbackPrice: 172.63 },
-  { ticker: "SPOT",  name: "Spotify",   tagline: "for the music lovers",         featured: true,  fallbackPrice: 618.92 },
-  { ticker: "RBLX",  name: "Roblox",    tagline: "for the gamers",               featured: true,  fallbackPrice: 37.44 },
-  { ticker: "TSLA",  name: "Tesla",     tagline: "for the road ahead",           featured: true,  fallbackPrice: 171.27 },
-  { ticker: "NTDOY", name: "Nintendo",  tagline: "for the players",              featured: false, fallbackPrice: 13.40 },
-  { ticker: "DUOL",  name: "Duolingo",  tagline: "for the lifelong learners",    featured: false, fallbackPrice: 200.00 },
-  { ticker: "DPZ",   name: "Domino's",  tagline: "for the Friday night classic", featured: false, fallbackPrice: 470.00 },
-  { ticker: "CHWY",  name: "Chewy",     tagline: "for the animal lovers",        featured: false, fallbackPrice: 30.00 },
-  { ticker: "ABNB",  name: "Airbnb",    tagline: "for the travelers",            featured: false, fallbackPrice: 130.00 },
-  { ticker: "ADBE",  name: "Adobe",     tagline: "for the makers",               featured: false, fallbackPrice: 520.00 },
-  { ticker: "TGT",   name: "Target",    tagline: "for the everyday family",      featured: false, fallbackPrice: 150.00 },
-  { ticker: "CMCSA", name: "Comcast",   tagline: "for the family movie nights",  featured: false, fallbackPrice: 40.00 },
+  { ticker: "DIS",   name: "Disney",     tagline: "for the magic",                featured: true,  fallbackPrice: 106.42, emoji: "🏰" },
+  { ticker: "AAPL",  name: "Apple",      tagline: "for the future",               featured: true,  fallbackPrice: 214.38, emoji: "🍎" },
+  { ticker: "NKE",   name: "Nike",       tagline: "for the ones who go for it",   featured: true,  fallbackPrice: 92.14,  emoji: "👟" },
+  { ticker: "SBUX",  name: "Starbucks",  tagline: "for the everyday wins",        featured: true,  fallbackPrice: 89.63,  emoji: "☕" },
+  { ticker: "NFLX",  name: "Netflix",    tagline: "for the storytellers",         featured: true,  fallbackPrice: 612.9,  emoji: "🎬" },
+  { ticker: "AMZN",  name: "Amazon",     tagline: "for the builders",             featured: true,  fallbackPrice: 184.85, emoji: "📦" },
+  { ticker: "GOOGL", name: "Google",     tagline: "for the curious ones",         featured: true,  fallbackPrice: 172.63, emoji: "🔍" },
+  { ticker: "SPOT",  name: "Spotify",    tagline: "for the music lovers",         featured: true,  fallbackPrice: 618.92, emoji: "🎵" },
+  { ticker: "RBLX",  name: "Roblox",     tagline: "for the gamers",               featured: true,  fallbackPrice: 37.44,  emoji: "🎮" },
+  { ticker: "TSLA",  name: "Tesla",      tagline: "for the road ahead",           featured: true,  fallbackPrice: 171.27, emoji: "🚗" },
+  { ticker: "MSFT",  name: "Microsoft",  tagline: "for the world-builders",       featured: true,  fallbackPrice: 415.00, emoji: "🧱" },
+  { ticker: "NTDOY", name: "Nintendo",   tagline: "for the players",              featured: false, fallbackPrice: 13.40,  emoji: "🎮" },
+  { ticker: "DUOL",  name: "Duolingo",   tagline: "for the lifelong learners",    featured: false, fallbackPrice: 200.00, emoji: "🦉" },
+  { ticker: "DPZ",   name: "Domino's",   tagline: "for the Friday night classic", featured: false, fallbackPrice: 470.00, emoji: "🍕" },
+  { ticker: "CHWY",  name: "Chewy",      tagline: "for the animal lovers",        featured: false, fallbackPrice: 30.00,  emoji: "🐾" },
+  { ticker: "ABNB",  name: "Airbnb",     tagline: "for the travelers",            featured: false, fallbackPrice: 130.00, emoji: "🌍" },
+  { ticker: "TGT",   name: "Target",     tagline: "for the everyday family",      featured: false, fallbackPrice: 150.00, emoji: "🎯" },
+  { ticker: "MCD",   name: "McDonald's", tagline: "for the little treats",        featured: false, fallbackPrice: 295.00, emoji: "🍟" },
 ] as const;
 
 export const FEATURED_STOCK_PICKS: readonly StockPick[] = STOCK_PICKS.filter((s) => s.featured);

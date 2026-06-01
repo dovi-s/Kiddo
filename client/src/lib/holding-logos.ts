@@ -30,6 +30,8 @@ export const TICKER_DOMAIN: Record<string, string> = {
   CHWY: "chewy.com",
   ADBE: "adobe.com",
   TSLA: "tesla.com",
+  MSFT: "microsoft.com",
+  MCD: "mcdonalds.com",
   Z: "zillow.com",
 
   // Common ETFs (issuer brand, not ticker name)

@@ -30,6 +30,8 @@ export const MARKET_QUOTE_ESTIMATES: Record<string, number> = {
   TSLA: 171.27,
   SPOT: 618.92,
   RBLX: 37.44,
+  MSFT: 415.00,
+  MCD: 295.00,
 };
 
 export const ADMIN_ASSET_UNIVERSE: Record<string, { name: string; type: "ETF" | "Stock"; source: "auto_invest" | "stock_pick" | "both" }> = {
@@ -52,6 +54,9 @@ export const ADMIN_ASSET_UNIVERSE: Record<string, { name: string; type: "ETF" | 
   AMZN:  { name: "Amazon",    type: "Stock", source: "stock_pick" },
   GOOGL: { name: "Google",    type: "Stock", source: "stock_pick" },
   SPOT:  { name: "Spotify",   type: "Stock", source: "stock_pick" },
+  TSLA:  { name: "Tesla",      type: "Stock", source: "stock_pick" },
+  MSFT:  { name: "Microsoft",  type: "Stock", source: "stock_pick" },
+  MCD:   { name: "McDonald's", type: "Stock", source: "stock_pick" },
   TGT:   { name: "Target",    type: "Stock", source: "stock_pick" },
   CMCSA: { name: "Comcast",   type: "Stock", source: "stock_pick" },
   DUOL:  { name: "Duolingo",  type: "Stock", source: "stock_pick" },
