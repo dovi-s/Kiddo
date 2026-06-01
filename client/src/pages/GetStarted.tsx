@@ -24,6 +24,7 @@ import { GiftIntentBanner } from "@/components/GiftIntentBanner";
 import { RothInterestOptIn } from "@/components/RothInterestOptIn";
 import { useAuth } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSubscription } from "@/hooks/use-subscription";
 import type {
   AuthProvidersStatus,
   OnboardingAccountType,
@@ -192,6 +193,10 @@ export default function GetStarted() {
   const registerReferralCode = isUserReferralCode(refCode) ? refCode?.trim().toUpperCase() : undefined;
   const { user, register, isAuthenticated, isRegistering } = useAuth();
   const queryClient = useQueryClient();
+  // Reverse-trial state for the success-screen transparency line. effectivePlan
+  // === "trial" only when the first-fund Plus trial actually granted, so the
+  // "free for 14 days" line never shows if an admin disabled the trial.
+  const { data: subscription } = useSubscription();
   // A Dunphy demo login is a REAL authenticated session (as phil@dunphyfamily.com
   // etc.). For onboarding that must NOT count as "signed in" — otherwise a
   // prospect who explored the demo and then clicked Get Started skips signup
@@ -649,6 +654,11 @@ export default function GetStarted() {
         name: String(fund.name || fund.recipientFirstName || name),
         recipientFirstName: String(fund.recipientFirstName || name || ""),
       });
+      // The first-fund reverse-trial is granted server-side during fund
+      // creation; refetch the subscription so the success screen can show the
+      // accurate "you're on Plus, free for 14 days" line (gated on the real
+      // effectivePlan, never assumed).
+      queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
       setStep("live");
       haptic("success");
     } catch (error) {
@@ -1243,6 +1253,17 @@ export default function GetStarted() {
                 </div>
                 <h1 className="mt-8 font-heading text-[2.4rem] font-semibold leading-tight text-foreground">{accountType === "personal" ? `${created.name} is live.` : `${childDisplayName}'s fund is live.`}</h1>
                 <p className="mx-auto mt-4 max-w-sm text-base leading-relaxed text-muted-foreground">Share the link and the first gift can happen today. When you are ready to open the real investment account, tap Activate Investing. It takes 2 minutes.</p>
+                {/* Reverse-trial transparency — a TELL, not a paywall choice.
+                    Shown only when the first-fund Plus trial actually granted
+                    (effectivePlan === "trial"), so it can never misrepresent the
+                    plan. Sets the expectation + primes the trial-end conversion
+                    without putting a Free-vs-Plus decision in the onboarding
+                    flow (which the reverse trial exists to defer). */}
+                {subscription?.effectivePlan === "trial" && (
+                  <p className="mx-auto mt-5 inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--kiddo-evergreen)/0.08)] px-4 py-1.5 text-xs font-medium text-[hsl(var(--kiddo-evergreen))]">
+                    You&apos;re on Kiddo Plus, free for 14 days. No card needed.
+                  </p>
+                )}
               </AnimatedBlock>
               <AnimatedBlock className="get-started-panel mt-8"><p className="text-sm font-semibold text-foreground">Your private fund link</p><div className="mt-3 rounded-2xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground break-all">{shareUrl}</div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">Text it, email it, or drop it into an invitation. Anyone with the link can gift; no account needed on their side.</p></AnimatedBlock>
               <AnimatedBlock className="mt-8 grid grid-cols-3 gap-2 sm:gap-3">
