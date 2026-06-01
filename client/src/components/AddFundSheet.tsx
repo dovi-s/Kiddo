@@ -696,7 +696,7 @@ export function AddFundSheet({ open, onClose, onSuccess }: AddFundSheetProps) {
 
                     <div className="rounded-xl border border-border/50 bg-muted/20 p-3">
                       <p className="text-xs leading-relaxed text-muted-foreground">
-                        New funds start simple. Gifts follow your family default unless you later allow people to choose a stock or send to cash.
+                        New funds keep it simple: gifts follow your family default, and anyone can also pick a specific stock. Cash gifts stay off until you allow them. You can change any of this in Settings.
                       </p>
                     </div>
 
