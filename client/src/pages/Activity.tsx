@@ -671,6 +671,108 @@ function groupByMonth(items: FeedActivity[]): { label: string; items: FeedActivi
   return Array.from(groups.entries()).map(([label, items]) => ({ label, items }));
 }
 
+// ── Recurring-run collapse ───────────────────────────────────────────────
+// A parent's monthly auto-invest fires one identical row per month. Over a
+// 13-year fund that's ~150 near-identical "You contributed $75 — Every month,
+// a little more. From Dad." rows that BURY the gifts people actually sent (the
+// emotional core of the ledger). We fold a maximal run of CONSECUTIVE recurring
+// contributions — nothing else between them in the feed — into one expandable
+// summary, so quiet stretches compress while eventful months (the ones with a
+// real gift) stay open. Runs shorter than MIN render normally. Only applied in
+// the default "all" browse (not when a filter/search is narrowing intent).
+// Mirrors the Memory Book's own recurring collapse.
+const RECURRING_RUN_TYPE = "__recurring_run__";
+const MIN_RECURRING_RUN = 3;
+
+function isRecurringContribItem(item: FeedActivity): boolean {
+  if (normalizeActivityType((item as any).type) === "parent_contribution") return true;
+  try {
+    const meta = parseMetadata((item as any).metadata);
+    if ((meta as any)?.isParentContribution === true) return true;
+  } catch { /* ignore */ }
+  return false;
+}
+
+function collapseRecurringRuns(items: FeedActivity[]): FeedActivity[] {
+  const out: FeedActivity[] = [];
+  let run: FeedActivity[] = [];
+  const flush = () => {
+    if (run.length >= MIN_RECURRING_RUN) {
+      const newest: any = run[0];                 // feed is newest-first
+      const oldest: any = run[run.length - 1];
+      const total = run.reduce((s, r) => s + (parseAmount((r as any).amount) || 0), 0);
+      out.push({
+        ...newest,
+        id: `recurring-run-${newest.id || newest.createdAt}`,
+        type: RECURRING_RUN_TYPE,
+        amount: String(total),
+        __run: { items: run.slice(), count: run.length, total, newestAt: newest.createdAt, oldestAt: oldest.createdAt },
+      } as any);
+    } else {
+      out.push(...run);
+    }
+    run = [];
+  };
+  for (const item of items) {
+    if (isRecurringContribItem(item)) run.push(item);
+    else { flush(); out.push(item); }
+  }
+  flush();
+  return out;
+}
+
+function RecurringRunRow({ run, isLast, expanded, onToggle }: { run: any; isLast: boolean; expanded: boolean; onToggle: () => void }) {
+  const items: any[] = run.__run?.items ?? [];
+  const count: number = run.__run?.count ?? items.length;
+  const total: number = run.__run?.total ?? 0;
+  const newest = parseSafeDate(run.__run?.newestAt);
+  const oldest = parseSafeDate(run.__run?.oldestAt);
+  const my = (d: Date | null) => (d ? d.toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "");
+  const range = oldest && newest ? `${my(oldest)} – ${my(newest)}` : "";
+  const amounts = items.map((it) => parseAmount(it.amount) || 0);
+  const uniform = amounts.length > 0 && amounts.every((a) => a === amounts[0]);
+  const note = (() => {
+    try { const m = parseMetadata(items[0]?.metadata); return typeof (m as any)?.message === "string" ? (m as any).message : null; } catch { return null; }
+  })();
+  return (
+    <div style={{ borderLeft: "3px solid rgb(150,176,158)", background: "linear-gradient(to right, rgba(150,176,158,0.07) 0%, transparent 64%)", borderRadius: 8, marginLeft: -3, paddingLeft: 8 }} data-testid={`activity-recurring-run-${run.id}`}>
+      <button type="button" onClick={onToggle} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "13px 0", borderBottom: (!isLast || expanded) ? "1px solid rgba(26,23,16,0.06)" : "none", width: "100%", textAlign: "left", background: "transparent", cursor: "pointer" }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: "rgb(234,239,233)", display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid rgba(96,124,104,0.16)" }}>
+          <Repeat size={16} style={{ color: "rgb(96,124,104)" }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+            <p style={{ fontSize: 13.5, fontWeight: 700, color: "rgb(26,23,16)", lineHeight: 1.3 }}>Monthly contributions</p>
+            <p className="font-heading" style={{ fontSize: 15, fontWeight: 700, color: "rgb(26,23,16)", whiteSpace: "nowrap" }}>+{formatCurrency(total)}</p>
+          </div>
+          <p style={{ fontSize: 12, color: "rgb(120,110,102)", marginTop: 2 }}>
+            {count} contributions · {range}{uniform ? ` · ${formatCurrency(amounts[0])} each` : ""}
+          </p>
+          {note ? <p style={{ fontSize: 12, fontStyle: "italic", color: "rgb(140,130,122)", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>&ldquo;{note}&rdquo;</p> : null}
+          <p style={{ fontSize: 11.5, fontWeight: 600, color: "rgb(96,124,104)", marginTop: 6, display: "inline-flex", alignItems: "center", gap: 4 }}>
+            {expanded ? "Hide" : "Show all"} {count}
+            <ChevronDown size={12} style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform .15s" }} />
+          </p>
+        </div>
+      </button>
+      {expanded ? (
+        <div style={{ paddingLeft: 48, paddingBottom: 10 }}>
+          {items.map((it, idx) => {
+            const d = parseSafeDate(it.createdAt);
+            const amt = parseAmount(it.amount) || 0;
+            return (
+              <div key={(it.id as string) || idx} style={{ display: "flex", justifyContent: "space-between", gap: 8, padding: "6px 0", fontSize: 12.5, color: "rgb(90,82,74)", borderTop: idx > 0 ? "1px solid rgba(26,23,16,0.04)" : "none" }}>
+                <span>{d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : ""}</span>
+                <span style={{ fontWeight: 600, color: "rgb(26,23,16)" }}>+{formatCurrency(amt)}</span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // `parent_contribution_failed` and `payment_failed` activity rows don't carry
 // an explicit `status` column (they're conceptually "this happened" rows, not
 // state transitions on a money object). The Failed pill needs to render anyway
@@ -1379,7 +1481,12 @@ export default function Activity() {
     return true;
   });
 
-  const grouped = groupByMonth(filtered);
+  // Collapse the recurring-contribution wall ONLY in the default browse — when
+  // the user is filtering ("auto" = show me my contributions) or searching,
+  // they want every row, so show them flat.
+  const grouped = groupByMonth(
+    filter === "all" && !search.trim() ? collapseRecurringRuns(filtered) : filtered,
+  );
 
   // CSV export — exports the currently FILTERED view (so the user can
   // narrow to gifts, search "googl", and export only that subset). Useful
@@ -2405,6 +2512,21 @@ export default function Activity() {
                 padding: "0 18px",
               }}>
                 {group.items.map((item, i) => {
+                  // Collapsed recurring run — a self-contained, expandable
+                  // summary that stands in for a stretch of identical monthly
+                  // contributions. Returns before the per-row machinery below.
+                  if ((item as any).type === RECURRING_RUN_TYPE) {
+                    const runId = String((item as any).id);
+                    return (
+                      <RecurringRunRow
+                        key={runId}
+                        run={item}
+                        isLast={i === group.items.length - 1}
+                        expanded={expandedId === runId}
+                        onToggle={() => { haptic("selection"); setExpandedId(expandedId === runId ? null : runId); }}
+                      />
+                    );
+                  }
                   const rowId = String(item?.id || `${item?.createdAt || "row"}-${item?.title || "activity"}`);
                   const isExpanded = expandedId === rowId;
                   const createdAt = parseSafeDate(item.createdAt);
