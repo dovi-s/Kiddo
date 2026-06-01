@@ -230,7 +230,17 @@ export async function getMarketQuote(symbol: string): Promise<MarketQuote | null
     return staleQuote;
   }
 
-  const fallbackPrice = MARKET_QUOTE_ESTIMATES[normalized] || 100;
+  // Last-resort estimate (provider + both caches missed). A configured per-ticker
+  // estimate is a sensible stand-in; a BARE $100 is not — once custody is live it
+  // would record the wrong share count for a real gift (dollars ÷ $100) and bake a
+  // fabricated gain when the position later re-prices. Pre-custody this only touches
+  // the local simulation, but surface the gap loudly so the estimate table is
+  // completed before it can mis-value real money. See REAL_VS_SIMULATED.md.
+  const configuredEstimate = MARKET_QUOTE_ESTIMATES[normalized];
+  if (configuredEstimate == null) {
+    console.warn(`[market-quotes] no estimate configured for universe ticker ${normalized}; valuing at the $100 placeholder. Add it to MARKET_QUOTE_ESTIMATES before custody goes live.`);
+  }
+  const fallbackPrice = configuredEstimate || 100;
   const quote: MarketQuote = {
     symbol: normalized,
     name: asset.name,
