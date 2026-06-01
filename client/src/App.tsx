@@ -207,7 +207,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/stories") {
     return {
       title: "Kiddo Stories | How everyday occasions become lasting investments",
-      description: "Examples of how a birthday, baby shower, or holiday can become an investment that grows with a child — the kinds of stories Kiddo is built for.",
+      description: "Examples of how a birthday, baby shower, or holiday can become an investment that grows with a child. The kinds of stories Kiddo is built for.",
       robots: "index, follow",
       ogType: "website",
     };
@@ -295,7 +295,7 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/tools/trump-account-vs-utma" || pathname === "/trump-account-vs-utma") {
     return {
       title: "Trump Account vs UTMA: which is for your kid? | Kiddo",
-      description: "Honest side-by-side of the new federal Trump Accounts and a custodial UTMA. The federal account is index-only, capped at $5,000/yr, and locked until 59½; a UTMA holds real companies, has no cap, and is fully theirs at 18. See which does which job — and why most families want both. 7% projection net of Kiddo's annual fee ($1/yr per $1,000 invested).",
+      description: "Honest side-by-side of the new federal Trump Accounts and a custodial UTMA. The federal account is index-only, capped at $5,000/yr, and locked until 59½; a UTMA holds real companies, has no cap, and is fully theirs at 18. See which does which job, and why most families want both. 7% projection net of Kiddo's annual fee ($1/yr per $1,000 invested).",
       robots: "index, follow",
       ogType: "website",
     };

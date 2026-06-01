@@ -98,7 +98,7 @@ export default function About() {
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/80">Kid View</p>
                 <h2 className="mt-2 font-heading text-2xl md:text-3xl font-bold text-foreground leading-tight">
-                  They watch it grow — in shares they actually own.
+                  They watch it grow, in shares they actually own.
                 </h2>
               </div>
             </div>

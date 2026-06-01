@@ -71,7 +71,7 @@ export default function StoryPage() {
                 Start with the fund, then let the story become real
               </div>
               <p className="text-muted-foreground mt-4">
-                The strongest version of this page is the one your family builds over time — the gifts, notes, and occasions you add along the way.
+                The strongest version of this page is the one your family builds over time, from the gifts, notes, and occasions you add along the way.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <a
