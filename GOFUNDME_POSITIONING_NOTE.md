@@ -111,3 +111,39 @@ gift costs you in trust.
 Keep it as a foil, not an attack: we win by being visibly the opposite, not by
 naming and shaming. Per `KORA_VOICE.md`, the register is calm and honest, not
 combative.
+
+## Audit result — gift page + gifter loop vs the GoFundMe redesign checklist (2026-05-31)
+
+Ran GiftCheckout + the gifter notification system against the trust/clarity
+checklist distilled from GoFundMe's 2025 fundraiser-page redesign (Baseman case
+study: who-made-this, verification, momentum, speed, and "donate / share /
+FOLLOW" as the three jobs). Result: **validated, no gap to fix.** Don't re-audit.
+
+Gift page (GiftCheckout) is trust-sound:
+- Who made this + relationship: "Created by {creator}" + FounderBadge (~line 1741);
+  the investing default is attributed to the creator (~2185). "Someone who loves
+  {kid} shared this" sets the warm frame.
+- Verification: TrustMicroStrip (SIPC up to $500k, Member FINRA/SIPC, "no hidden
+  charges") + the per-step fee breakdown ("100% of your gift reaches the fund",
+  ~2729).
+- Momentum: honest social-proof roster + counts (separately confirmed clean).
+- No dark patterns: no urgency, no goal inflation, no default tip.
+
+The "FOLLOW + rich updates" lever (the single highest-value steal from the
+GoFundMe analysis) is ALREADY fully built + honest in
+`server/gifterNotificationWorker.ts`:
+- post-gift "your gift is invested" (~1247)
+- birthday reminder with the repeat hook ("you gave {kid} before… still part of
+  their fund", ~467/535)
+- anniversary re-engagement ("a year ago today you gave {kid} {amount}", ~1306)
+- lifetime contribution summaries (~609/1038) + majority/handoff final note (~624)
+- fund-value milestone updates; full opt-in / queue / outbox / dedup system
+- Deliberately honest: "still compounding" / "now theirs", never raw performance
+  numbers or "you own this" (FAQ "gifter-updates" locks this) — the same
+  refuse-the-manipulation discipline as the no-tip stance.
+
+Optional, NOT built (flagged, low priority): a one-line preview on the gift
+LANDING that the gifter can follow along after giving. Left unbuilt on purpose —
+the opt-in lives correctly on GiftSuccess (post-gift), and a landing preview
+risks adding mid-flow noise for little gain. Revisit only if give->opt-in
+conversion data says otherwise.
