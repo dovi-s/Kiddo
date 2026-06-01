@@ -31,6 +31,22 @@ synthesis of the scattered sources listed at the bottom.
 child-PII / COPPA posture is confirmed (Parts 3 + 5). This is the only must-have
 that blocks launch and is **not** engineering work.
 
+## ⭐ Preferred structure to validate first (frames Parts 1 + 2)
+
+Kiddo's intended structure is a **pure software / experience layer** on a rented,
+registered custodian / broker-dealer (full picture in `BUSINESS_STRUCTURE.md`).
+The single question that most lowers cost + risk: **confirm Kiddo can operate so
+gift money flows gifter -> custodian directly and is never under Kiddo's custody
+or control** (e.g. a Stripe Connect destination charge to the custodian, or the
+custodian's own funding API), **and that the 0.10% is a platform / technology fee,
+not an advisory fee.** If counsel confirms this structure, the opinion needed is
+the *narrow* "Kiddo is a software vendor, not a regulated entity" — not a broad
+operator-status analysis. Please answer Parts 1 + 2 through this lens, and if the
+structure holds, state what the narrow opinion + the custodian agreement must say
+to support it. (Today, pre-custody, gifts route through Kiddo's Stripe only
+because there is no custodian to route to yet; the production target is
+out-of-the-flow.)
+
 ## Founder pre-send checklist (do this before sending)
 
 1. **Fix the DriveWealth contract-status line** in Part 1. If an integration

@@ -57,6 +57,17 @@ Use this when the question is:
 - why is it 7% (not the viral 10%/27x/3,800x), always disclaimed, real-first?
 - where does the compounding story live per surface, and what are the two cheap wins?
 
+Also see:
+- [BUSINESS_STRUCTURE.md](/abs/path/c:/Apps/Kora%20(newest)/BUSINESS_STRUCTURE.md)
+
+Use this when the question is:
+- what kind of company is Kiddo, legally + operationally? (software/experience
+  layer on a rented custodian/BD; own the relationship + data, rent the rails)
+- how does gift money flow + how does the 0.10% platform fee work, and what keeps
+  them cheap (out of the flow + self-directed)?
+- what are the two open gates (custodian conversation + one narrow legal opinion)?
+- can we graduate to our own BD/RIA later? (yes — preserved, at scale)
+
 ### 4. Platform Direction
 
 Then read:
