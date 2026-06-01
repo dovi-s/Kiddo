@@ -2569,7 +2569,7 @@ export default function Dashboard() {
     if (!activeFund?.slug) return [];
     const origin = window.location.origin;
     const pages: SharePage[] = [{
-      label: `${recipientFirstNameDisplay || activeFund.name}'s gift link`,
+      label: `${isOwnerMode ? "Your" : `${recipientFirstNameDisplay || activeFund.name}'s`} gift link`,
       description: "Always-on gift link",
       url: `${origin}/${activeFund.slug}`,
       giftCode: giftCodeData?.code,
@@ -2589,7 +2589,7 @@ export default function Dashboard() {
       });
     }
     return pages;
-  }, [activeFund?.name, recipientFirstNameDisplay, activeFund?.slug, events, giftCodeData?.code, dashboardSummary?.eventGiftCodes]);
+  }, [activeFund?.name, recipientFirstNameDisplay, activeFund?.slug, events, giftCodeData?.code, dashboardSummary?.eventGiftCodes, isOwnerMode]);
 
   useEffect(() => {
     if (!activeFundId) return;
@@ -5451,7 +5451,7 @@ export default function Dashboard() {
                         Ready for the first gift.
                       </p>
                       <p style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", lineHeight: 1.55, marginBottom: 22 }}>
-                        Share {recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "your child's"} gift link to get started.
+                        Share {isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "your child's"} gift link to get started.
                       </p>
                       {/* Acknowledge any scheduled recurring investment.
                           Without this, the empty state reads as "nothing
@@ -5931,7 +5931,7 @@ export default function Dashboard() {
                                 alignItems: "center",
                                 gap: 6,
                               }}
-                              title={`See ${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "their"} full potential on the projection page`}
+                              title={`See ${isOwnerMode ? "your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "their"} full potential on the projection page`}
                             >
                               <span style={{ fontWeight: 800, letterSpacing: "0.01em" }}>{formatted}</span>
                               <span style={{ opacity: 0.78, fontSize: 11.5, fontWeight: 600 }}>at 65</span>
@@ -6617,7 +6617,7 @@ export default function Dashboard() {
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {cashContext === "kyc_pending" && "Choose how much to invest now, or leave it in cash."}
                           {cashContext === "held_as_cash" && "You can invest some, all, or none of it today."}
-                          {cashContext === "gifts_settled" && `${recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} cash is ready. You choose the amount.`}
+                          {cashContext === "gifts_settled" && `${isOwnerMode ? "Your" : recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "The"} cash is ready. You choose the amount.`}
                         </p>
                       </div>
                     </div>
