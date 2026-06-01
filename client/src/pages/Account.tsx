@@ -307,6 +307,19 @@ export default function Account() {
             ? "Free"
             : "-";
 
+  // Plan-fit nudge (server-computed in GET /api/subscription, read-only): set when
+  // a Kiddo Family subscriber is paying for more than their current obligations need
+  // — exactly one minor fund left (e.g. a second child's fund handed off at majority)
+  // or none. Drives the honest "right-size your plan" card. The inverse of a dark
+  // pattern: we surface the cheaper option proactively. See SUBSCRIPTION_DOWNGRADE_SPEC.md.
+  const planFit = (subscription as any)?.planFit as
+    | { kind: "downgrade_to_plus" | "no_plan_needed"; fund: { id: string; name: string; childName: string | null } | null; renewalDate: string | null }
+    | null
+    | undefined;
+  const planFitRenewalLabel = planFit?.renewalDate
+    ? new Date(planFit.renewalDate).toLocaleDateString("en-US", { month: "long", day: "numeric" })
+    : null;
+
   const displayName = `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "";
   const initial = (user?.firstName || user?.email || "U").slice(0, 1).toUpperCase();
   // Account-deletion modal state. Modal handles the multi-step flow
@@ -363,6 +376,9 @@ export default function Account() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelStep, setCancelStep] = useState<"warn" | "confirm">("warn");
   const [canceling, setCanceling] = useState(false);
+  // Plan-fit downgrade (Family → Kiddo+ at renewal). Two-step inline confirm.
+  const [downgradeConfirm, setDowngradeConfirm] = useState(false);
+  const [downgrading, setDowngrading] = useState(false);
   // Reactivate flow — for users whose subscription is canceled but
   // still in the active-until-period-end window. The amber "your fund
   // stays safe" card surfaces this state with a one-tap reactivate
@@ -398,6 +414,48 @@ export default function Account() {
       toast({ title: "Could not cancel", description: "Please try again", variant: "destructive" });
     } finally {
       setCanceling(false);
+    }
+  };
+
+  // Family → Kiddo+ downgrade, taken at renewal. Reuses the proven
+  // cancel-at-period-end flow (POST /api/subscription/cancel with plan:'family'):
+  // Family rides out the period already paid for, then stops. The one remaining
+  // minor fund moves to Kiddo+ once Family lapses (the household-coverage guard
+  // clears, so the standard per-fund Plus path works). Fully reversible from the
+  // amber "Keep my plan" card that this flips into. The fully-seamless auto-start
+  // of Plus the instant Family ends is the flag-gated enhancement in the spec.
+  const handleDowngradeToPlus = async () => {
+    setDowngrading(true);
+    haptic("medium");
+    try {
+      const res = await fetch("/api/subscription/cancel", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: "family" }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        haptic("success");
+        const until = data?.activeUntil
+          ? new Date(data.activeUntil).toLocaleDateString("en-US", { month: "long", day: "numeric" })
+          : null;
+        toast({
+          title: "You're all set",
+          description: planFit?.kind === "no_plan_needed"
+            ? `Kiddo Family stays active${until ? ` until ${until}` : ""}, then stops. Your Memory Books stay safe.`
+            : `You'll keep Kiddo Family${until ? ` until ${until}` : ""}, then move to Kiddo+${planFit?.fund?.childName ? ` for ${planFit.fund.childName}` : ""}. Nothing to pay now.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/subscription"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/funds"] });
+        setDowngradeConfirm(false);
+      } else {
+        toast({ title: "Could not switch your plan", description: data.error || "Please try again", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Could not switch your plan", description: "Please try again", variant: "destructive" });
+    } finally {
+      setDowngrading(false);
     }
   };
 
@@ -1197,6 +1255,57 @@ export default function Account() {
                 </SectionCard>
               );
             })()}
+            {/* Plan-fit nudge. Proactively surface the cheaper plan when a Family
+                subscriber's needs have shrunk (one minor fund left after a handoff,
+                or none) — the inverse of burying the downgrade. Server-gated to the
+                unambiguously-safe case; the switch is taken at renewal so nothing
+                they paid for is lost. */}
+            {!subLoading && planFit && (
+              <SectionCard className="border-[hsl(var(--kiddo-gold)/0.45)] bg-[hsl(var(--kiddo-gold)/0.06)]">
+                <div className="p-5">
+                  <p className="text-sm font-bold text-[hsl(var(--kiddo-gold-ink))]">
+                    {planFit.kind === "no_plan_needed"
+                      ? "You don't need a paid plan right now"
+                      : "Your plan is bigger than your family needs right now"}
+                  </p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    {planFit.kind === "no_plan_needed"
+                      ? "You're on Kiddo Family but not actively managing any child's fund right now. No need to keep paying for it. Your Memory Books stay safe either way."
+                      : `You're on Kiddo Family but only managing ${planFit.fund?.childName ? `${planFit.fund.childName}'s` : "one child's"} fund right now. Kiddo+ covers one child for less ($${KORA_STARTER_MONTHLY.toFixed(2)}/mo vs $${KORA_FAMILY_MONTHLY.toFixed(2)}/mo). Switch whenever it suits you.`}
+                  </p>
+                  {!downgradeConfirm ? (
+                    <Button
+                      variant="outline"
+                      className="mt-4 rounded-xl border-[hsl(var(--kiddo-gold)/0.5)]"
+                      onClick={() => { haptic("selection"); setDowngradeConfirm(true); }}
+                      data-testid="button-account-planfit-start"
+                    >
+                      {planFit.kind === "no_plan_needed" ? "Stop Kiddo Family" : "Switch to Kiddo+"}
+                    </Button>
+                  ) : (
+                    <div className="mt-4 rounded-xl border border-[hsl(var(--kiddo-gold)/0.4)] bg-white/60 p-3">
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        {planFitRenewalLabel ? (
+                          <>You'll keep Kiddo Family until <strong>{planFitRenewalLabel}</strong> (already paid for). {planFit.kind === "no_plan_needed"
+                            ? "After that it stops, with nothing more to pay."
+                            : <>After that, {planFit.fund?.childName ? `${planFit.fund.childName}'s` : "your"} fund moves to Kiddo+ and we'll walk you through it.</>}</>
+                        ) : (
+                          <>Kiddo Family will end at your next renewal. {planFit.kind === "no_plan_needed" ? "Nothing more to pay after that." : "Your fund then moves to Kiddo+."}</>
+                        )}
+                      </p>
+                      <div className="mt-3 flex gap-2">
+                        <Button size="sm" className="rounded-xl" disabled={downgrading} onClick={handleDowngradeToPlus} data-testid="button-account-planfit-confirm">
+                          {downgrading ? "Saving..." : "Confirm"}
+                        </Button>
+                        <Button size="sm" variant="ghost" className="rounded-xl" disabled={downgrading} onClick={() => setDowngradeConfirm(false)} data-testid="button-account-planfit-cancel">
+                          Not now
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </SectionCard>
+            )}
             {subLoading ? (
               <div className="kiddo-card h-24 animate-pulse" />
             ) : subscription?.status === "canceled" && userPlan !== "free" && subscription?.currentPeriodEnd && new Date(subscription.currentPeriodEnd).getTime() > Date.now() ? (

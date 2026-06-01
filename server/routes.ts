@@ -10814,10 +10814,35 @@ export async function registerRoutes(
           ? "starter"
           : "free";
       const recommendationState = getRecommendationState(activeStarterCount, Boolean(householdPlan));
+      // Plan-fit nudge — the anti-dark-pattern "you're paying for more than you
+      // need right now" signal (the inverse of burying the downgrade). When a
+      // Family subscriber's active obligations have shrunk to fit a smaller plan —
+      // e.g. a second child's fund handed off at majority, leaving exactly one
+      // minor fund — surface an honest downgrade offer. READ-ONLY here; the action
+      // reuses the proven cancel-at-period-end flow (Family rides out the period
+      // already paid for, then the one remaining fund moves to Kiddo+). Gated to
+      // the unambiguously-safe case: Family active, not already canceling, no Plus
+      // already in play, and exactly 0 or 1 minor fund. A handed-off fund leaves
+      // getFundsByUser (ownership moves to the now-adult), and transferredAt-null
+      // is the belt-and-suspenders check. See SUBSCRIPTION_DOWNGRADE_SPEC.md.
+      let planFit:
+        | { kind: "downgrade_to_plus" | "no_plan_needed"; activeFundCount: number; fund: { id: string; name: string; childName: string | null } | null; renewalDate: string | null }
+        | null = null;
+      if (householdPlan && subscription.plan === "family" && subscription.status !== "canceled" && activeStarterCount === 0) {
+        const activeMinorFunds = userFunds.filter((f: any) => !f.transferredAt);
+        const renewalDate = subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toISOString() : null;
+        if (activeMinorFunds.length === 1) {
+          const f: any = activeMinorFunds[0];
+          planFit = { kind: "downgrade_to_plus", activeFundCount: 1, fund: { id: String(f.id), name: f.name, childName: f.recipientFirstName ?? null }, renewalDate };
+        } else if (activeMinorFunds.length === 0) {
+          planFit = { kind: "no_plan_needed", activeFundCount: 0, fund: null, renewalDate };
+        }
+      }
       res.json({
         ...subscription,
         effectivePlan,
         recommendationState,
+        planFit,
         starterFundCount: activeStarterCount,
         starterMemberships,
         starterByFund,
