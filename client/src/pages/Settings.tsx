@@ -25,6 +25,7 @@ import { CoParentAccessCard } from "@/components/CoParentAccessCard";
 import { KidsViewCard } from "@/components/KidsViewCard";
 import { FundSettingsChildPanel } from "@/components/FundSettingsChildPanel";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import {
   CreditCard, Shield, Eye, EyeOff, Check,
   ChevronRight, ChevronDown, Star, Lock, Crown, ArrowUpRight, Wallet, Plus, Minus, Loader2,
@@ -3010,24 +3011,38 @@ const [editFundName, setEditFundName] = useState("");
   // on !unsubscribed so they drop off. `email` carried for the optimistic-feel
   // pending state on the right row.
   const removeGifterSubscriber = useMutation({
-    mutationFn: async (email: string) => {
+    mutationFn: async (vars: { email: string; restore?: boolean }) => {
       const res = await fetch(`/api/funds/${selectedSettingsFundId}/gifter-notifications/remove`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: vars.email, restore: vars.restore === true }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Could not remove subscriber");
+      if (!res.ok) throw new Error(data?.error || "Could not update subscriber");
       return data;
     },
-    onSuccess: (_data, email) => {
+    onSuccess: (_data, vars) => {
       haptic("success");
-      toast({ title: "Removed", description: `${email} will no longer get updates for this fund.` });
       void queryClient.invalidateQueries({ queryKey: ["/api/funds", selectedSettingsFundId, "gifter-notifications"] });
+      if (vars.restore) {
+        toast({ title: "Added back", description: `${vars.email} will get updates again.` });
+      } else {
+        // One-tap remove with a brief Undo window — friendlier than a confirm
+        // gate, and fully recoverable since the record is only flagged off.
+        toast({
+          title: "Removed",
+          description: `${vars.email} will no longer get updates for this fund.`,
+          action: (
+            <ToastAction altText="Undo" onClick={() => removeGifterSubscriber.mutate({ email: vars.email, restore: true })}>
+              Undo
+            </ToastAction>
+          ),
+        });
+      }
     },
     onError: (error: any) => {
-      toast({ title: "Could not remove", description: error?.message || "Please try again.", variant: "destructive" });
+      toast({ title: "Could not update", description: error?.message || "Please try again.", variant: "destructive" });
     },
   });
 
@@ -5012,12 +5027,12 @@ const [editFundName, setEditFundName] = useState("");
                           <button
                             type="button"
                             disabled={removeGifterSubscriber.isPending}
-                            onClick={() => { haptic("selection"); removeGifterSubscriber.mutate(s.email); }}
+                            onClick={() => { haptic("selection"); removeGifterSubscriber.mutate({ email: s.email }); }}
                             className="shrink-0 rounded-lg px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-destructive disabled:opacity-50"
                             aria-label={`Remove ${s.name || s.email} from notifications`}
                             data-testid={`button-remove-gifter-subscriber-${s.email}`}
                           >
-                            {removeGifterSubscriber.isPending && removeGifterSubscriber.variables === s.email ? "Removing..." : "Remove"}
+                            {removeGifterSubscriber.isPending && removeGifterSubscriber.variables?.email === s.email && !removeGifterSubscriber.variables?.restore ? "Removing..." : "Remove"}
                           </button>
                         </div>
                       ))}

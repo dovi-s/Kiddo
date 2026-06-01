@@ -4764,6 +4764,10 @@ export async function registerRoutes(
       if (!fund) return res.status(404).json({ error: "Fund not found" });
       if (req.fundAccessRole !== 'owner') return res.status(403).json({ error: "Forbidden" });
       const email = String(req.body?.email || "").trim().toLowerCase();
+      // restore=true is the client's Undo path — flip the subscriber back on.
+      // Reuses this endpoint so removal stays a one-tap action with a brief undo
+      // window rather than a confirm gate.
+      const restore = req.body?.restore === true;
       if (!email) return res.status(400).json({ error: "email is required" });
       const store = await loadGifterNotificationStore();
       const fundSubs = store.subscribersByFund[fund.id] || {};
@@ -4773,13 +4777,11 @@ export async function registerRoutes(
       if (!subscriber || subscriber.isAnonymous) {
         return res.status(404).json({ error: "Subscriber not found" });
       }
-      store.subscribersByFund[fund.id][key!] = {
-        ...subscriber,
-        unsubscribed: true,
-        unsubscribedAt: new Date().toISOString(),
-      };
+      store.subscribersByFund[fund.id][key!] = restore
+        ? { ...subscriber, unsubscribed: false }
+        : { ...subscriber, unsubscribed: true, unsubscribedAt: new Date().toISOString() };
       await saveGifterNotificationStore(store);
-      res.json({ success: true, email: key });
+      res.json({ success: true, email: key, restored: restore });
     } catch (error) {
       console.error("Error removing gifter subscriber:", error);
       res.status(500).json({ error: "Failed to remove subscriber" });
