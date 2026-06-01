@@ -2878,7 +2878,7 @@ const [editFundName, setEditFundName] = useState("");
         haptic("error");
         toast({
           title: "This fund can't be deleted",
-          description: data?.message || "Close it instead — that preserves the Memory Book and records.",
+          description: data?.message || "Close it instead, which preserves the Memory Book and records.",
           variant: "destructive",
         });
         return;
