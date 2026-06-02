@@ -20,27 +20,51 @@ config.resolver.nodeModulesPaths = [
 ];
 
 // The @kora/* packages export TypeScript source files directly ("./src/index.ts").
-// Metro uses the "exports" field by default from Expo SDK 50+, but the file
-// extension must be resolvable. Ensure .ts / .tsx are in sourceExts.
 config.resolver.sourceExts = [
   ...new Set([...config.resolver.sourceExts, "ts", "tsx", "mts", "cts"]),
 ];
 
-// Disable package.json "exports" field resolution for workspace packages because
-// Metro cannot import raw .ts source from the exports map without the transformer.
-// Instead we let Metro fall through to the main / index file resolution.
-// Metro 0.80+ supports unstable_enablePackageExports. We turn it off here so the
-// resolver looks at the symlinked src files via nodeModulesPaths.
+// Let Metro fall through to main/index for workspace packages (raw .ts source).
 config.resolver.unstable_enablePackageExports = false;
 
-// Pin react and react-native to the mobile app's local copies so metro never
-// resolves the root workspace's React (19.2.0) when the mobile app needs 19.1.0.
-// Without this, packages in the monorepo root resolve a different React instance,
-// causing the "Invalid hook call / useContext of null" crash on web.
-config.resolver.extraNodeModules = {
-  "react": path.resolve(projectRoot, "node_modules/react"),
-  "react-native": path.resolve(projectRoot, "node_modules/react-native"),
+// ── Single-React enforcement (fixes "Invalid hook call / more than one copy of
+//    React") ──────────────────────────────────────────────────────────────────
+// The monorepo holds TWO reacts: apps/mobile/node_modules/react (19.1.0 — the
+// Expo SDK 54 version react-native 0.81.5 expects) and the web app's root react
+// (19.2.0). After `expo install` added react-navigation / @tanstack/react-query /
+// reanimated, those deps HOISTED to the repo root and resolve the root react
+// (19.2.0), while the app's own modules resolve the local 19.1.0 — two React
+// instances in one bundle, which React rejects with "Invalid hook call."
+//
+// extraNodeModules alone does NOT fix this: it's a *fallback*, only consulted when
+// normal resolution fails, so a root-hoisted dep that finds root/react fine never
+// hits it. We instead intercept EVERY import of react / react-dom / react-native
+// (and subpaths like "react/jsx-runtime") and redirect it to one canonical copy:
+// the app-local 19.1.0 react (correct for Expo 54 / RN 0.81.5) and the single root
+// react-native. After changing this, run `npm run mobile:reset` to clear the Metro
+// cache before `npm run mobile:dev`.
+const singletons = {
+  react: path.resolve(projectRoot, "node_modules/react"),
   "react-dom": path.resolve(projectRoot, "node_modules/react-dom"),
+  "react-native": path.resolve(repoRoot, "node_modules/react-native"),
+};
+
+const defaultResolveRequest = config.resolver.resolveRequest;
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  for (const pkg of Object.keys(singletons)) {
+    if (moduleName === pkg || moduleName.startsWith(pkg + "/")) {
+      const subpath = moduleName.slice(pkg.length); // "" or "/some/subpath"
+      return context.resolveRequest(context, singletons[pkg] + subpath, platform);
+    }
+  }
+  return (defaultResolveRequest || context.resolveRequest)(context, moduleName, platform);
+};
+
+// Belt-and-suspenders fallback (resolveRequest above is the primary mechanism).
+config.resolver.extraNodeModules = {
+  react: singletons.react,
+  "react-dom": singletons["react-dom"],
+  "react-native": singletons["react-native"],
 };
 
 module.exports = config;
