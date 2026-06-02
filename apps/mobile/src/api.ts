@@ -7,6 +7,7 @@
  */
 import Constants from "expo-constants";
 import { Platform } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import type { PublicGiftDestination } from "@kora/types";
 
 // Per-app client-source tag stamped on outgoing gift checkout payloads.
@@ -185,6 +186,49 @@ export async function apiGetMarketQuotes(symbols: string[]): Promise<MarketQuote
 let _sessionCookie: string | null = null;
 let _deviceId: string | null = null;
 
+// Mobile auth token (the primary auth on device — a physical phone has no
+// reliable browser cookie store, which is why cookie-only login showed
+// "unauthorized"). Issued by /api/auth/login + /register (mobileAuthToken in the
+// response), stored in SecureStore (Keychain/Keystore), and sent as
+// Authorization: Bearer on every request. The server's resolveRequestUser accepts
+// it alongside the web cookie session. See server/mobileAuthToken.ts.
+const AUTH_TOKEN_KEY = "kiddo.mobile.auth.token";
+let _authToken: string | null = null;
+let _authTokenLoaded = false;
+
+async function loadAuthToken(): Promise<string | null> {
+  if (_authTokenLoaded) return _authToken;
+  try {
+    _authToken = await SecureStore.getItemAsync(AUTH_TOKEN_KEY);
+  } catch {
+    _authToken = null; // SecureStore unavailable (web preview) — degrade quietly.
+  }
+  _authTokenLoaded = true;
+  return _authToken;
+}
+async function setAuthToken(token: string): Promise<void> {
+  _authToken = token;
+  _authTokenLoaded = true;
+  try {
+    await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
+  } catch {
+    // ignore — in-memory copy still works for this session
+  }
+}
+async function clearAuthToken(): Promise<void> {
+  _authToken = null;
+  _authTokenLoaded = true;
+  try {
+    await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
+  } catch {
+    // ignore
+  }
+}
+/** True if a stored token exists — lets the app skip the login screen on relaunch. */
+export async function hasStoredAuthToken(): Promise<boolean> {
+  return Boolean(await loadAuthToken());
+}
+
 // Cached stable per-install device id. Pulled lazily on first request
 // from biometric.ts (which manages the SecureStore key). Sent on every
 // request as X-Kiddo-Device-Id so the server can identify the device
@@ -211,6 +255,13 @@ async function apiFetch(path: string, options: RequestInit = {}): Promise<Respon
   // We also manually mirror the session cookie in headers for reliability on physical devices.
   if (_sessionCookie) {
     headers["Cookie"] = _sessionCookie;
+  }
+
+  // Primary auth: the SecureStore bearer token (cookie above is a best-effort
+  // fallback). The server authenticates this via resolveRequestUser.
+  const authToken = await loadAuthToken();
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
   }
 
   // Identify this device install for trusted-devices flows. Non-
@@ -255,7 +306,9 @@ export async function apiLogin(email: string, password: string): Promise<ApiUser
     method: "POST",
     body: JSON.stringify({ email, password }),
   });
-  return parseJson<ApiUser>(res);
+  const data = await parseJson<ApiUser & { mobileAuthToken?: string }>(res);
+  if (data.mobileAuthToken) await setAuthToken(data.mobileAuthToken);
+  return data;
 }
 
 export async function apiRegister(
@@ -268,12 +321,15 @@ export async function apiRegister(
     method: "POST",
     body: JSON.stringify({ email, password, firstName, lastName }),
   });
-  return parseJson<ApiUser>(res);
+  const data = await parseJson<ApiUser & { mobileAuthToken?: string }>(res);
+  if (data.mobileAuthToken) await setAuthToken(data.mobileAuthToken);
+  return data;
 }
 
 export async function apiLogout(): Promise<void> {
   await apiFetch("/api/auth/logout", { method: "POST" });
   _sessionCookie = null;
+  await clearAuthToken();
 }
 
 // ===== TRUSTED DEVICES (FACE_ID_SPEC.md) =====

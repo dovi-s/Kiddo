@@ -28,6 +28,7 @@ import {
   isEmailInAdminSet,
 } from "@shared/adminAccess";
 import { db } from "./db";
+import { mintMobileAuthToken, verifyMobileAuthToken, bearerFromAuthHeader } from "./mobileAuthToken";
 import { eq, sql, and, gt, isNull } from "drizzle-orm";
 import { storage } from "./storage";
 import { recordEvent, eventCtxFromReq } from "./analytics";
@@ -426,6 +427,28 @@ async function resolveRequestUser(req: Request): Promise<(User & { isSuperAdmin?
     }
     const resolved = canonical || sessionUser;
     return { ...resolved, ...getEffectiveAdminFlags(resolved, getSuperAdminEmails()) };
+  }
+
+  // Mobile bearer token. Only checked when there's no passport session — the web
+  // never sends an Authorization: Bearer header, so its cookie-session flow is
+  // completely untouched. The native app stores this signed token (from login)
+  // in SecureStore and sends it on every request. See server/mobileAuthToken.ts.
+  const bearerToken = bearerFromAuthHeader((req.headers as any)?.authorization);
+  if (bearerToken) {
+    const verified = verifyMobileAuthToken(bearerToken);
+    if (verified.ok) {
+      const tokenUser = await getUser(verified.userId);
+      if (tokenUser) {
+        let tokenCanonical: User | undefined;
+        try {
+          tokenCanonical = tokenUser.email ? await getUserByEmail(tokenUser.email) : undefined;
+        } catch {
+          // Transient DB error — fall back to the token-resolved user.
+        }
+        const resolvedToken = tokenCanonical || tokenUser;
+        return { ...resolvedToken, ...getEffectiveAdminFlags(resolvedToken, getSuperAdminEmails()) };
+      }
+    }
   }
 
   const devUserId = getDevHeaderUserId(req);
@@ -930,7 +953,9 @@ export function setupAuth(app: Express) {
             props: { hasReferral: !!referredBy },
           });
           return respondAfterSessionSave(req, res, () => {
-            res.status(201).json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email) });
+            // mobileAuthToken: ignored by the web (cookie session), stored by the
+            // native app for Bearer auth. See server/mobileAuthToken.ts.
+            res.status(201).json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email), mobileAuthToken: mintMobileAuthToken(user.id) });
           });
         });
       });
@@ -1309,7 +1334,9 @@ export function setupAuth(app: Express) {
           void trackLoginDevice(user.id, req);
           const { passwordHash: _, kycData: _kd, ...safeUser } = user;
           return respondAfterSessionSave(req, res, () => {
-            res.json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email) });
+            // mobileAuthToken: ignored by the web (cookie session), stored by the
+            // native app for Bearer auth. See server/mobileAuthToken.ts.
+            res.json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email), mobileAuthToken: mintMobileAuthToken(user.id) });
           });
         });
       });
