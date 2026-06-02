@@ -500,6 +500,7 @@ export default function KidView() {
       window.sessionStorage.setItem(`kid-view-access:${token}`, data.accessToken);
     } catch (error) {
       toast({ title: "Could not unlock Kid View", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+      setPin(""); // clear the pad on a wrong PIN (parity with the numpad auto-submit path)
     }
   };
 

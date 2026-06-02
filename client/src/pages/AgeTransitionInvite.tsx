@@ -216,7 +216,15 @@ export default function AgeTransitionInvite() {
     }
   };
 
-  if (isLoading || !data) return <div className="min-h-screen bg-background" />;
+  if (isLoading || !data) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
+          Loading...
+        </p>
+      </div>
+    );
+  }
 
   const alreadyClaimed = Boolean(data.child.claimedAt);
   const transferCompleted = Boolean(data.timeline.ownershipTransferredAt);
@@ -558,6 +566,8 @@ export default function AgeTransitionInvite() {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         placeholder="First name"
+                        aria-label="First name"
+                        autoComplete="given-name"
                         className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
                       />
                     ) : null}
@@ -568,6 +578,8 @@ export default function AgeTransitionInvite() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder={data.child.email || "you@example.com"}
+                        aria-label="Email"
+                        autoComplete="email"
                         className="h-12 w-full rounded-2xl border border-border bg-background pl-11 pr-4 text-sm"
                         required
                       />
@@ -577,6 +589,8 @@ export default function AgeTransitionInvite() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Password"
+                      aria-label="Password"
+                      autoComplete={authMode === "register" ? "new-password" : "current-password"}
                       className="h-12 w-full rounded-2xl border border-border bg-background px-4 text-sm"
                       required
                     />
