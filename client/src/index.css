@@ -1287,7 +1287,12 @@ input:focus:not(:disabled), textarea:focus:not(:disabled), select:focus:not(:dis
 
 .kiddo-canvas {
   width: 100%;
-  max-width: 960px;
+  /* App-wide content width. 960 -> 1120 (2026-06-02): 960 read narrow on the
+     data-dense Dashboard (a desktop gutter of dead space on 1440px+). 1120
+     gives the cards + chart room without going full-width (which hurts prose
+     line length and the focused single-column feel). One knob for every page.
+     Dial: too loose -> 1024, too tight -> 1200. */
+  max-width: 1120px;
   margin-inline: auto;
 }
 
