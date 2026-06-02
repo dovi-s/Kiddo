@@ -1081,6 +1081,11 @@ async function registerAndSeed(context: BrowserContext, seedKey = "primary") {
       slug: fundSlug,
       accountType: "UTMA",
       status: "active",
+      // Per-fund UTMA acknowledgment is the legal-floor gate for non-draft UTMA
+      // creation (routes.ts:3339). The real client (AddFundSheet) sends this when
+      // the parent checks the box; the fixture must mirror it or creation 400s.
+      // (Same requirement the dashboard-summary-refresh fixture already mirrors.)
+      utmaAcknowledgedAt: new Date().toISOString(),
       recipientFirstName: "Kid",
       recipientRelation: "parent",
       investmentStrategy: "auto_invest",
@@ -1189,6 +1194,8 @@ async function registerAndSeed(context: BrowserContext, seedKey = "primary") {
       slug: secondFundSlug,
       accountType: "UTMA",
       status: "active",
+      // Same UTMA legal-floor ack as the first fund create above.
+      utmaAcknowledgedAt: new Date().toISOString(),
       recipientFirstName: "Ava",
       recipientRelation: "parent",
       investmentStrategy: "auto_invest",
