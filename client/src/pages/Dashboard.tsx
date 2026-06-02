@@ -8525,6 +8525,24 @@ export default function Dashboard() {
                   return !!(t && LEGACY_PICK_META[t]);
                 };
                 const total = allContribs.length;
+                // Cold-load guard. Demo login clears caches, so on first paint
+                // dashboard-summary (and the contributions it primes) hasn't
+                // arrived yet — total is momentarily 0 even for a fund that DOES
+                // have active recurring, which flashed the "Kiddo+ · set up
+                // recurring" upsell before resolving to the real schedule. While
+                // the summary is still loading with no data, show a skeleton
+                // instead of guessing "empty" — once it settles we render the
+                // real deck (has schedules) or the genuine empty-state (none).
+                if (dashboardSummaryLoading && !dashboardSummary && total === 0) {
+                  return (
+                    <div className="kiddo-card p-5" data-testid="recurring-loading-skeleton">
+                      <div className="animate-pulse space-y-3">
+                        <div className="h-3.5 w-28 rounded bg-muted/50" />
+                        <div className="h-12 w-full rounded-xl bg-muted/40" />
+                      </div>
+                    </div>
+                  );
+                }
                 // (Removed: safeIndex / peekDepth / goTo — carousel internals
                 // for the deleted swipeable card deck. List view is the only
                 // view now; no carousel state needed.)
