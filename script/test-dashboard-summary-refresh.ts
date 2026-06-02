@@ -195,6 +195,15 @@ async function runChecks(api: APIRequestContext) {
   await db
     .update(fundsTable)
     .set({
+      // Activate the fund the way real activation does (POST /api/funds only
+      // auto-activates when the creating user is already KYC-approved; this QA
+      // user isn't, so the fund is created non-active and the intentional
+      // "Fund must be activated before investing" gate at routes.ts:9637 would
+      // 400 the auto-invest below). Set directly here, consistent with this
+      // fixture's existing direct-DB manipulation. NOT a product change — the
+      // gate is correct; the fixture just has to reach the activated state the
+      // real flow reaches before it can exercise the dashboard-summary refresh.
+      status: "active",
       pendingBalance: "25.00",
       cashBalance: "0.00",
       balance: "0.00",
