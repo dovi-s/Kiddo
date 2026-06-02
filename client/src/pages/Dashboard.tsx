@@ -3746,6 +3746,20 @@ export default function Dashboard() {
     const now = new Date();
     const createdTs = activeFund?.createdAt ? new Date(activeFund.createdAt).getTime() : NaN;
     const cutoff = getChartRangeCutoff(chartRange, now, Number.isFinite(createdTs) ? createdTs : null);
+    // Snapshot dates are stored date-only and parse as UTC midnight; format in UTC
+    // so users in negative UTC offsets don't see every label shifted back a day.
+    // Multi-year ranges (5Y, ALL) must carry the YEAR, or points in different years
+    // collapse to identical month-day labels (a 19-year fund rendered the x-axis as
+    // "Oct 31" repeated nine times). Month+year ("Oct 2019") disambiguates both
+    // across and within years; shorter ranges stay month-day (they live in ~1 year).
+    // Defined here (above the baseline helpers) so every label — data points AND the
+    // zero baseline — uses the same year-awareness.
+    const formatLabel = (date: Date) => {
+      const multiYear = chartRange === "ALL" || chartRange === "5Y";
+      return date.toLocaleDateString("en-US", multiYear
+        ? { month: "short", year: "numeric", timeZone: "UTC" }
+        : { month: "short", day: "numeric", timeZone: "UTC" });
+    };
     const addZeroBaseline = (rows: Array<{ ts: number; label: string; principal: number; value: number }>) => {
       if (rows.length === 0) return rows;
       const baselineTs =
@@ -3757,7 +3771,7 @@ export default function Dashboard() {
       return [
         {
           ts: baselineTs,
-          label: new Date(baselineTs).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          label: formatLabel(new Date(baselineTs)),
           principal: 0,
           value: 0,
         },
@@ -3778,11 +3792,6 @@ export default function Dashboard() {
       .sort((a, b) => a.ts - b.ts);
 
     const filtered = cutoff ? points.filter((p) => p.ts >= cutoff) : points;
-    // Snapshot dates are stored date-only and parse as UTC midnight; format in UTC
-    // so users in negative UTC offsets don't see every label shifted back a day.
-    const formatLabel = (date: Date) => {
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-    };
 
     if (filtered.length >= 2) {
       const earliestGift = [...gifts].sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())[0];
@@ -3828,7 +3837,7 @@ export default function Dashboard() {
       let cumulative = 0;
       const baselineTs = Number.isFinite(cutoff || NaN) ? (cutoff as number) : (Number.isFinite(createdTs) ? createdTs : NaN);
       const baselineRow = Number.isFinite(baselineTs) && baselineTs < filteredGiftPoints[0].ts
-        ? [{ ts: baselineTs, label: new Date(baselineTs).toLocaleDateString("en-US", { month: "short", day: "numeric" }), principal: 0, value: 0, event: undefined }]
+        ? [{ ts: baselineTs, label: formatLabel(new Date(baselineTs)), principal: 0, value: 0, event: undefined }]
         : [];
       const giftRows = filteredGiftPoints.map((g, i) => {
         cumulative += g.net;
@@ -3854,7 +3863,7 @@ export default function Dashboard() {
       const rows = [
         {
           ts: now.getTime(),
-          label: now.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          label: formatLabel(now),
           principal: principalBasis > 0 ? principalBasis : totalValue,
           value: totalValue,
         },
@@ -10544,7 +10553,7 @@ export default function Dashboard() {
                 transferredAt (the canonical "handed off" signal), which also covers
                 the owner case isOwnerMode used to cover alone. 2026-05-29 owner-mode;
                 extended to all transferred-fund viewers 2026-06-02. */}
-            {!isOwnerMode && !isMemorialized && !Boolean((activeFund as any)?.transferredAt) && (
+            {!isOwnerMode && !isPreviousOwner && !isMemorialized && !Boolean((activeFund as any)?.transferredAt) && (
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
