@@ -14,8 +14,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, radius, spacing } from "@kora/tokens";
+import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { slugify } from "@kora/utils";
+import { KText, KiddoCard, Button } from "../ui";
 import {
   apiCreateEvent,
   apiGetAllEvents,
@@ -248,113 +249,125 @@ function HomeTab({
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.evergreen} />
-          <Text style={styles.loadingText}>Opening your funds...</Text>
+          <KText variant="caption" style={{ marginTop: spacing.sm }}>Opening your funds...</KText>
         </View>
       ) : error ? (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Something did not load.</Text>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable onPress={onRefresh} style={styles.primarySmallBtn}>
-            <Text style={styles.primarySmallBtnText}>Try again</Text>
-          </Pressable>
-        </View>
+        <KiddoCard style={{ marginTop: spacing.md }}>
+          <KText variant="heading">Something didn't load.</KText>
+          <KText variant="caption" style={{ marginTop: spacing.xs, marginBottom: spacing.md }}>{error}</KText>
+          <Button label="Try again" onPress={onRefresh} variant="outline" />
+        </KiddoCard>
       ) : !activeFund ? (
-        <View style={styles.emptyHero}>
-          <Text style={styles.emptyTitle}>Every great fund starts here.</Text>
-          <Text style={styles.emptyBody}>Create one fund, share one link, and let the first gift change the screen.</Text>
-          <Pressable onPress={onAddFund} style={styles.primaryBtn}>
-            <Text style={styles.primaryBtnText}>Start a fund</Text>
-          </Pressable>
+        <View style={{ paddingTop: spacing.xl, gap: spacing.sm }}>
+          <KText variant="title">Every great fund starts here.</KText>
+          <KText variant="body" color={semanticColors.text.muted}>
+            Create one fund, share one link, and let the first gift change the screen.
+          </KText>
+          <Button label="Start a fund" onPress={onAddFund} size="lg" style={{ marginTop: spacing.sm }} />
         </View>
       ) : (
-        <>
-          <Pressable onPress={() => onSelectFund(activeFund)} style={styles.heroCard}>
-            <Text style={styles.heroLabel}>{childName}'s Fund</Text>
-            <Text style={styles.heroAmount}>{formatBalance(balance)}</Text>
-            <Text style={styles.heroGain}>
+        <View style={{ gap: spacing.md, paddingTop: spacing.md }}>
+          <KiddoCard variant="hero" onPress={() => onSelectFund(activeFund)}>
+            <KText variant="eyebrow" color="rgba(248,245,240,0.8)">{childName}'s Fund</KText>
+            <KText variant="display" color={semanticColors.text.inverse} tabular style={{ marginTop: spacing.xs }}>
+              {formatBalance(balance)}
+            </KText>
+            <KText variant="caption" color="rgba(248,245,240,0.82)" style={{ marginTop: spacing.xs }}>
               {!hasStarted
                 ? "Every great fund starts here"
                 : gain === 0
                   ? "Ready for the next gift"
                   : `${gain > 0 ? "+" : ""}${formatBalance(gain)} all time`}
-            </Text>
+            </KText>
             {upcoming ? (
-              <Text style={styles.heroSubline}>{childName} turns 18 in {upcoming}</Text>
+              <KText variant="caption" color="rgba(248,245,240,0.7)" style={{ marginTop: 2 }}>
+                {childName} turns 18 in {upcoming}
+              </KText>
             ) : null}
-          </Pressable>
+          </KiddoCard>
 
           {!hasStarted ? (
-            <View style={styles.nextStepCard}>
-              <Text style={styles.nextStepEyebrow}>Next step</Text>
-              <Text style={styles.nextStepTitle}>Share {childName}'s link.</Text>
-              <Text style={styles.nextStepBody}>
-                The first gift is the moment this becomes real. When it arrives, we will ask you to verify your identity so gifts can be invested.
-              </Text>
-              <Pressable onPress={handleShare} style={styles.primaryBtn}>
-                <Text style={styles.primaryBtnText}>Share {childName}'s link</Text>
-              </Pressable>
-            </View>
+            <KiddoCard>
+              <KText variant="eyebrow">Next step</KText>
+              <KText variant="heading" style={{ marginTop: 2 }}>Share {childName}'s link.</KText>
+              <KText variant="caption" style={{ marginTop: spacing.xs, marginBottom: spacing.md }}>
+                The first gift is the moment this becomes real. When it arrives, we'll ask you to verify your identity so gifts can be invested.
+              </KText>
+              <Button label={`Share ${childName}'s link`} onPress={handleShare} fullWidth />
+            </KiddoCard>
           ) : null}
 
-          <View style={styles.actionRow}>
-            {!isReadOnly && (
-              <Pressable onPress={handleShare} style={styles.primaryAction}>
-                <Ionicons name="share-social-outline" size={16} color="#38290A" style={{ marginRight: 6 }} />
-                <Text style={styles.primaryActionText}>Share link</Text>
-              </Pressable>
-            )}
-            <Pressable onPress={() => onSelectFund(activeFund)} style={styles.secondaryAction}>
-              <Text style={styles.secondaryActionText}>View fund</Text>
-            </Pressable>
+          <View style={{ flexDirection: "row", gap: spacing.sm }}>
+            {!isReadOnly ? <Button label="Share link" onPress={handleShare} variant="monetization" /> : null}
+            <Button label="View fund" onPress={() => onSelectFund(activeFund)} variant="outline" />
           </View>
 
-          <Section title="What is happening" cta={fundGifts.length > 2 ? "Latest 2" : undefined}>
+          <View style={{ gap: spacing.sm }}>
+            <KText variant="sectionLabel">What's happening</KText>
             {fundGifts.length === 0 ? (
-              <SoftCard
-                title="Share gift link"
-                body={`Share ${childName}'s gift link to start receiving investments for their future.`}
-              />
+              <KiddoCard>
+                <KText variant="bodyStrong">Share gift link</KText>
+                <KText variant="caption" style={{ marginTop: 2 }}>
+                  Share {childName}'s gift link to start receiving investments for their future.
+                </KText>
+              </KiddoCard>
             ) : (
               fundGifts.slice(0, 2).map((gift) => (
-                <ListRow
-                  key={gift.id}
-                  icon="gift-outline"
-                  title={`${gift.senderName || "Someone"} gave ${formatBalance(gift.amount)}`}
-                  body={`${gift.recipientName}'s fund${gift.message ? `: "${gift.message}"` : ""}`}
-                  right={formatShortDate(gift.createdAt) || ""}
-                />
+                <KiddoCard key={gift.id}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.sm }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <KText variant="bodyStrong">{gift.senderName || "Someone"} gave {formatBalance(gift.amount)}</KText>
+                      <KText variant="caption" style={{ marginTop: 2 }}>
+                        {gift.recipientName}'s fund{gift.message ? `: "${gift.message}"` : ""}
+                      </KText>
+                    </View>
+                    <KText variant="caption">{formatShortDate(gift.createdAt) || ""}</KText>
+                  </View>
+                </KiddoCard>
               ))
             )}
-          </Section>
+          </View>
 
-          <Section title="Events">
+          <View style={{ gap: spacing.sm }}>
+            <KText variant="sectionLabel">Occasions</KText>
             {activeEvents.length === 0 ? (
-              <SoftCard title="No event live" body="Create one for a birthday, baby shower, holiday, or just because." />
+              <KiddoCard>
+                <KText variant="bodyStrong">No occasion live</KText>
+                <KText variant="caption" style={{ marginTop: 2 }}>
+                  Create one for a birthday, baby shower, holiday, or just because.
+                </KText>
+              </KiddoCard>
             ) : (
               activeEvents.map((event) => (
-                <EventPreview key={event.id} event={event} />
+                <KiddoCard key={event.id}>
+                  <KText variant="bodyStrong">{event.name}</KText>
+                  <KText variant="caption" style={{ marginTop: 2 }}>
+                    {event.giftCount} {event.giftCount === 1 ? "gift" : "gifts"} · {formatBalance(event.totalRaised || "0")} raised
+                  </KText>
+                </KiddoCard>
               ))
             )}
-            {!isReadOnly && (
-              <Pressable onPress={onCreateEvent} style={styles.textAction}>
-                <Ionicons name="add" size={14} color={colors.evergreen} />
-                <Text style={styles.textActionText}>New event</Text>
+            {!isReadOnly ? (
+              <Pressable onPress={onCreateEvent} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: spacing.xs }}>
+                <Ionicons name="add" size={16} color={colors.evergreen} />
+                <KText variant="label" color={colors.evergreen}>New occasion</KText>
               </Pressable>
-            )}
-          </Section>
+            ) : null}
+          </View>
 
-          <Section title="Coming up">
-            <View style={styles.countdownCard}>
-              <Text style={styles.countdownLabel}>{childName}'s 18th birthday</Text>
-              <Text style={styles.countdownValue}>
+          <View style={{ gap: spacing.sm }}>
+            <KText variant="sectionLabel">Coming up</KText>
+            <KiddoCard>
+              <KText variant="bodyStrong">{childName}'s 18th birthday</KText>
+              <KText variant="caption" style={{ marginTop: 2 }}>
                 {upcoming ? `in ${upcoming}` : "Add a birthday to start the countdown"}
-              </Text>
-              <Text style={styles.countdownBody}>
+              </KText>
+              <KText variant="caption" style={{ marginTop: spacing.xs }}>
                 Memory Book first. Money second. This is what all of it is building toward.
-              </Text>
-            </View>
-          </Section>
-        </>
+              </KText>
+            </KiddoCard>
+          </View>
+        </View>
       )}
     </ScrollView>
   );
