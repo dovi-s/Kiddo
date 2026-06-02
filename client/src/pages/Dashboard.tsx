@@ -6016,7 +6016,7 @@ export default function Dashboard() {
                   <div className="min-w-0">
                     <p className="font-heading text-base font-semibold text-foreground">Your part of the story</p>
                     <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                      The name on the paperwork is {recipientFirstNameDisplay || "theirs"} now, but the part you built doesn't change hands. Every gift you gathered and every note in the Memory Book is the reason today exists. When you're ready, there may be someone else whose future you want to start. You already know how.
+                      The name on the paperwork is {recipientFirstNameDisplay || "theirs"} now, but what you built isn't on the paperwork: the gifts you gathered, the notes you left in the Memory Book. When you're ready to start one for someone else, you already know how.
                     </p>
                   </div>
                 </div>
