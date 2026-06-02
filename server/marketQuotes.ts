@@ -1,35 +1,45 @@
 import fs from "fs/promises";
 import path from "path";
 
+// Fallback prices used only when the live quote providers (Finnhub / Alpha
+// Vantage) are unavailable — e.g. local dev / the public demo with no API key.
+// They must stay roughly current, because surfaces that RECOMPUTE a position's
+// value from a live quote × shares (the dashboard one-time card, Memory Book
+// "now worth", etc.) use these when live fails. When they were stale (AAPL
+// $214 while it traded ~$306), a real gift showed a fake LOSS because the
+// holding was seeded at the true price but the card valued it at the stale one.
+// The demo-relevant tickers below are kept in sync with the committed price
+// fixture (script/data/historical-prices.json) so the demo is internally
+// consistent. Refreshed 2026-06-02.
 const AUTO_INVEST_PRICE_ESTIMATES: Record<string, number> = {
-  VTI: 285.42,
-  VXUS: 62.18,
-  BND: 71.35,
+  VTI: 373.40,
+  VXUS: 86.31,
+  BND: 73.18,
   VGT: 572.9,
-  DIS: 100,
-  AAPL: 220,
+  DIS: 102.85,
+  AAPL: 306.31,
   NKE: 80,
   TSLA: 250,
   NFLX: 700,
-  RBLX: 45,
+  RBLX: 47,
   SBUX: 85,
   AMZN: 200,
-  GOOGL: 180,
+  GOOGL: 376.37,
   SPOT: 380,
 };
 
 export const MARKET_QUOTE_ESTIMATES: Record<string, number> = {
   ...AUTO_INVEST_PRICE_ESTIMATES,
-  DIS: 106.42,
-  AAPL: 214.38,
+  DIS: 102.85,
+  AAPL: 306.31,
   NKE: 92.14,
   SBUX: 89.63,
   NFLX: 612.9,
   AMZN: 184.85,
-  GOOGL: 172.63,
+  GOOGL: 376.37,
   TSLA: 171.27,
   SPOT: 618.92,
-  RBLX: 37.44,
+  RBLX: 47,
   MSFT: 415.00,
   MCD: 295.00,
 };
