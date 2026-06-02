@@ -856,6 +856,7 @@ export default function Home() {
                 Your child&apos;s money is in safe hands.
               </h2>
               <div className="space-y-2 text-muted-foreground">
+                <p>Each child's fund is a custodial UTMA account, held in your child's name and fully theirs at adulthood.</p>
                 <p>When investing is live, securities are held by our broker-dealer partner (Member FINRA/SIPC), not by Kiddo.</p>
                 <p>Once accounts are open, eligible securities carry SIPC protection up to $500,000 against broker-dealer failure, not market loss.</p>
                 <p>Encrypted in transit and at rest.</p>
