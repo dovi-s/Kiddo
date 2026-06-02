@@ -11,7 +11,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { prefetchDashboard } from "@/lib/prefetch";
 import { PasskeySignInButton } from "@/components/PasskeySignInButton";
 import { getActiveFundId } from "@/hooks/use-active-fund";
-import brandMark from "@/assets/kiddo-logo-cropped.png";
 
 function getSafeRedirectTarget(value: string | null | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
@@ -178,23 +177,11 @@ export default function Login() {
           className="space-y-8"
         >
           <div className="text-center space-y-4">
-            {/* Decorative brand mark above the Logo wordmark below.
-                The <Logo showWordmark={true}> just below renders the
-                actual labeled brand for screen readers; this hero
-                image is illustrative only. Empty alt + aria-hidden
-                prevents the "Kiddo Kiddo Kiddo" triple-read flagged
-                in the Login chrome (1 large image + 1 Logo icon +
-                1 wordmark text). Fixed 2026-05-15. */}
-            <motion.img
-              src={brandMark}
-              alt=""
-              aria-hidden="true"
-              data-testid="img-brand-mark-login"
-              className="w-36 h-auto mx-auto drop-shadow-sm"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 20 }}
-            />
+            {/* Single brand lockup. A large illustrative brand-mark image used
+                to sit above this, but it imported the SAME asset the <Logo>
+                icon uses, so the mark rendered twice (big image + Logo icon +
+                wordmark) — reported as "the K and the logo." The canonical
+                <Logo> lockup is now the only brand mark, matching GetStarted. */}
             <div className="space-y-2">
               <div className="flex items-center justify-center">
                 <Logo size="lg" showWordmark={true} linkTo={null} />

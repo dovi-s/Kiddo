@@ -28,6 +28,7 @@ import {
   users,
   funds,
   gifts,
+  giftAllocations,
   holdings,
   memoryEntries,
   activities,
@@ -47,6 +48,39 @@ import { eq, and, asc } from "drizzle-orm";
 import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import {
+  loadPrices,
+  buildPortfolio,
+  allocateGift,
+  holdingsFromPositions,
+  totalValue,
+  portfolioValueAtDate,
+  type GiftInput,
+  type BuildResult,
+} from "./lib/demo-portfolio";
+import {
+  giftsForKid,
+  rebalancesForKid,
+  recurringNoteFor,
+  momNoteFor,
+  sealedLetterFor,
+  type KidStory,
+} from "./lib/demo-roster";
+
+// Real historical prices (committed fixture); every gift buys real shares at
+// the actual adjusted close on its month. Loaded once.
+const PRICES = loadPrices();
+
+// Display names for the tickers the demo uses (holdings.name).
+const TICKER_NAMES: Record<string, string> = {
+  AAPL: "Apple",
+  GOOGL: "Google",
+  DIS: "Disney",
+  RBLX: "Roblox",
+  VTI: "US Total Market",
+  VXUS: "International",
+  BND: "Bonds",
+};
 
 // English ordinal for "{N}th Birthday" occasion names.
 function ordinal(n: number): string {
@@ -55,64 +89,11 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
-// Real-shape monthly returns for the past ~17 years. NOT exact
-// historical S&P 500 month-by-month — that would be a 200-row table
-// I'd have to keep in sync. Instead: a deterministic shape that
-// produces the right visual story when rendered as a chart:
-//   - long-term upward drift around 7% annualized
-//   - normal monthly volatility around ±2%
-//   - identifiable real-world drawdown windows the user (a parent
-//     who lived through them) will recognize:
-//       Aug 2011 — US debt downgrade
-//       Aug 2015 — China-shock
-//       Dec 2018 — Q4 correction
-//       Mar 2020 — COVID crash, V-shape recovery
-//       Jun 2022 — bear market bottom
-//
-// Each kid's seeded balance is treated as the END of the curve; the
-// path is generated and then linearly scaled so the final snapshot
-// equals that balance. The SHAPE is real; the SCALE matches what
-// the dashboard's hero number currently shows. This is the
-// honest-math discipline applied to a demo: the chart can't
-// outright lie (fabricate gains), but the shape can be a stylized
-// representation of real market history.
-//
-// Sequence indexed by month-key (YYYY-MM). Anchors are hand-placed
-// drawdowns; everything else falls back to a deterministic
-// smooth-drift+noise via the monthKeyToReturn helper below.
-const MARKET_DRAWDOWN_ANCHORS: Record<string, number> = {
-  "2011-08": -0.062,
-  "2011-09": -0.072,
-  "2011-10": +0.105,
-  "2015-08": -0.061,
-  "2016-01": -0.050,
-  "2018-10": -0.069,
-  "2018-12": -0.091,
-  "2019-01": +0.080,
-  "2020-02": -0.085,
-  "2020-03": -0.128,
-  "2020-04": +0.127,
-  "2022-04": -0.088,
-  "2022-06": -0.082,
-  "2022-09": -0.092,
-  "2023-01": +0.063,
-};
-
-function monthKeyToReturn(year: number, month: number): number {
-  const key = `${year}-${String(month + 1).padStart(2, "0")}`;
-  if (key in MARKET_DRAWDOWN_ANCHORS) return MARKET_DRAWDOWN_ANCHORS[key];
-  // Deterministic noise around the +0.6% monthly drift (~7%/yr).
-  // Math.sin/Math.cos with mixed periods gives a smooth-but-varied
-  // shape; no Math.random so the chart reproduces identically on
-  // every reset (user wants the curve to look the same shape each
-  // time the demo is re-seeded).
-  const t = year * 12 + month;
-  const noise =
-    0.012 * Math.sin(t * 0.7) +
-    0.008 * Math.cos(t * 1.3 + 0.4) +
-    0.005 * Math.sin(t * 2.1 + 1.1);
-  return 0.0058 + noise; // 0.58% drift + ±~2% noise
-}
+// NOTE: the historical balance curve is now generated from REAL prices (the
+// committed fixture + buildPortfolio/portfolioValueAt), so the old synthetic
+// market-index model (MARKET_DRAWDOWN_ANCHORS + monthKeyToReturn + scale-to-
+// fit) was deleted. The chart's drawdowns (2008, 2020, 2022, ...) are now the
+// fund's actual market value over time, not a stylized representation.
 
 const DEMO_PASSWORD = "dunphyfamily";
 
@@ -162,351 +143,57 @@ function birthdateForAge(years: number, monthsBack = 0): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Holdings/balances are no longer hardcoded here — they're computed from the
+// real gift history × real historical prices (see seedKidFund + demo-roster +
+// demo-portfolio). Recurring amounts are tuned so the emergent balances land
+// at the aspirational targets (Luke ~$22k, Alex ~$52k, Haley ~$79k) via the
+// offline report (`npm run report:demo-portfolio`).
 const KIDS = [
   {
     firstName: "Haley",
     lastName: "Dunphy",
-    pronoun: "she",
+    pronoun: "she" as const,
     majorityAge: 21,
     ageYears: 22, // a year PAST CA majority (21) — graduated adult-account demo; sits clearly above Alex so they don't read as twins
     birthdate: birthdateForAge(22, 4), // ~22y4m, a year past the handoff
     state: "CA",
     slug: "haley-dunphy",
-    strategy: "conservative",
+    strategy: "conservative" as const,
     description: "Haley is 22, a year past majority. The fund is hers now — this is what graduating looks like.",
     // Recurring ended at the handoff: the parent's auto-invest stops once
     // ownership transfers. The fund still carries its full realized history
     // (see giftsForKid / seedKidFund); Haley controls it from here.
-    recurring: { amount: 50, status: "paused" },
-    holdings: [
-      { ticker: "AAPL",  shares: 12.45, costBasis: 2245.00, currentValue: 2503.20, name: "Apple" },
-      { ticker: "GOOGL", shares: 8.32,  costBasis: 1387.00, currentValue: 1498.40, name: "Google" },
-      { ticker: "DIS",   shares: 9.12,  costBasis: 821.00,  currentValue: 894.16,  name: "Disney" },
-      // Managed mix on the canonical VGT-free conservative target after the
-      // 2026-05-28 self-directed pivot: VTI 42 / VXUS 18 / BND 40 (~60% equity).
-      // Broad market-cap weight only, no sector tilt (ACCOUNT_MODEL.md §2b). The
-      // old VGT sleeve was folded into VTI/VXUS at the same US:Intl ratio so the
-      // fund's total value + gain are unchanged; only the composition is clean.
-      { ticker: "VTI",   shares: 11.79, costBasis: 3041.00, currentValue: 3360.00, name: "US Total Market" },
-      { ticker: "VXUS",  shares: 22.15, costBasis: 1302.00, currentValue: 1440.00, name: "International" },
-      { ticker: "BND",   shares: 44.44, costBasis: 3300.00, currentValue: 3200.00, name: "Bonds" },
-    ],
+    recurring: { amount: 85, status: "paused" },
   },
   {
     firstName: "Alex",
     lastName: "Dunphy",
-    pronoun: "she",
+    pronoun: "she" as const,
     majorityAge: 21,
     ageYears: 20, // ~30 days from CA majority (21) — the approaching-handoff demo
     birthdate: birthdateForAge(20, 11), // ~30 days from age 21 (handoff demo)
     state: "CA",
     slug: "alex-dunphy",
-    strategy: "balanced",
+    strategy: "balanced" as const,
     description: "Alex is weeks from 21. This is where the handoff begins.",
     // Recurring winds down as the handoff nears (the worker auto-pauses near
     // majority); the fund still carries years of realized history.
     recurring: { amount: 50, status: "paused" },
-    holdings: [
-      { ticker: "AAPL",  shares: 4.20,  costBasis: 770.00,  currentValue: 844.20, name: "Apple" },
-      { ticker: "GOOGL", shares: 3.10,  costBasis: 520.00,  currentValue: 558.40, name: "Google" },
-      { ticker: "DIS",   shares: 6.50,  costBasis: 585.00,  currentValue: 637.00, name: "Disney" },
-      // Managed mix on the canonical VGT-free balanced target after the
-      // 2026-05-28 self-directed pivot: VTI 50 / VXUS 25 / BND 25. Broad
-      // market-cap weight only, no sector tilt (ACCOUNT_MODEL.md §2b). The old
-      // VGT sleeve was folded into VTI/VXUS so the fund total is unchanged.
-      { ticker: "VTI",   shares: 10.53, costBasis: 2717.00, currentValue: 3000.00, name: "US Total Market" },
-      { ticker: "VXUS",  shares: 23.08, costBasis: 1356.00, currentValue: 1500.00, name: "International" },
-      { ticker: "BND",   shares: 20.83, costBasis: 1545.00, currentValue: 1500.00, name: "Bonds" },
-    ],
   },
   {
     firstName: "Luke",
     lastName: "Dunphy",
-    pronoun: "he",
+    pronoun: "he" as const,
     majorityAge: 21,
     ageYears: 13,
     birthdate: birthdateForAge(13, 7),
     state: "CA",
     slug: "luke-dunphy",
-    strategy: "growth",
+    strategy: "growth" as const,
     description: "Luke's fund has the longest runway. Growth mix all the way.",
-    recurring: { amount: 75, status: "active" },
-    holdings: [
-      { ticker: "AAPL",  shares: 2.10,  costBasis: 385.00,  currentValue: 422.10, name: "Apple" },
-      { ticker: "GOOGL", shares: 1.50,  costBasis: 252.00,  currentValue: 270.30, name: "Google" },
-      { ticker: "DIS",   shares: 4.20,  costBasis: 378.00,  currentValue: 411.60, name: "Disney" },
-      { ticker: "RBLX",  shares: 8.50,  costBasis: 425.00,  currentValue: 467.50, name: "Roblox" },
-      // Managed mix on the canonical VGT-free growth target after the 2026-05-28
-      // self-directed pivot: VTI 62 / VXUS 28 / BND 10 (~90% equity, the
-      // up-and-to-the-right default for a lifelong horizon). Broad market-cap
-      // weight only, no sector tilt (ACCOUNT_MODEL.md §2b). Old VGT sleeve folded
-      // into VTI/VXUS so the fund total is unchanged.
-      { ticker: "VTI",   shares: 4.35,  costBasis: 1121.00, currentValue: 1240.00, name: "US Total Market" },
-      { ticker: "VXUS",  shares: 8.62,  costBasis: 507.00,  currentValue: 560.00,  name: "International" },
-      { ticker: "BND",   shares: 2.78,  costBasis: 206.00,  currentValue: 200.00,  name: "Bonds" },
-    ],
+    recurring: { amount: 100, status: "active" },
   },
 ];
-
-// Gift histories per kid, scaled by age so the Memory Book reads like
-// a real 16-year saga for Haley, a 12-year build for Alex, and a
-// shorter early-years record for Luke. Each entry produces both a
-// `gifts` row AND a `memory_entries` gift_message row (matching what
-// the production webhook does after a successful Stripe gift). The
-// demo centerpiece on Age18Plan counts these to surface "N voice
-// memos / M contributors / K gifts with a note" — empty seed → empty
-// centerpiece, so the history needs real depth.
-//
-// Persona shapes (locked per DUNPHY_DEMO_SPEC.md):
-//   • Jay (grandpa)    — big-gift Google every ~3 years
-//   • Gloria (grandma) — annual DIS birthday with a voice memo
-//   • Mitchell (uncle) — recurring annual AAPL birthday gift
-//   • Cameron (uncle)  — annual DIS "love-mark" with a rotating quip
-//   • Manny (step-uncle, young) — small RBLX gift (recent only — Manny is young)
-//   • Phil (dad)       — quarterly add note (the "I show up" parent)
-//   • Claire (mom)     — occasional add note
-//
-// Output count target: Haley ≈ 50 gifts, Alex ≈ 30, Luke ≈ 22.
-function giftsForKid(kid: { firstName: string; ageYears: number; birthdate: string; recurringAmount: number; recurringPaused: boolean }) {
-  const N = (yearsAgo: number, monthsAgo = 0): string => {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() - yearsAgo);
-    d.setMonth(d.getMonth() - monthsAgo);
-    return d.toISOString();
-  };
-  // Birth month (0-11), parsed straight off the YYYY-MM-DD string so a
-  // timezone offset can't shift it across a month boundary.
-  const birthMonth = Number(kid.birthdate.slice(5, 7)) - 1;
-  // Pin an occasion gift to a specific calendar month `yearsAgo` years
-  // back (e.g. birthday gifts → birth month, Christmas → December),
-  // instead of the old fixed "N months before today" offset that
-  // decoupled the date from the occasion — that's how a "Merry
-  // Christmas" note ended up dated in April and birthday gifts landed
-  // nowhere near the kid's actual birthday. Guarantees a past date: if
-  // pinning to this year's month would land in the future (birthday
-  // hasn't happened yet this year), step back one more year. `day`
-  // varies per gifter so same-month birthday gifts get distinct,
-  // deterministically-ordered timestamps.
-  const onMonth = (yearsAgo: number, month: number, day = 15): string => {
-    const now = new Date();
-    // Anchor to the most recent year in which this month/day has ALREADY
-    // occurred: if the target date this year is still in the future, the
-    // latest past occurrence was last year. Then step back whole years.
-    // Computing the anchor ONCE (rather than subtracting yearsAgo first and
-    // stepping back per-call) keeps consecutive yearsAgo values on distinct
-    // years — otherwise yearsAgo 0 and 1 both collapse onto last year for a
-    // kid whose birthday hasn't happened yet this year, doubling that year's
-    // birthday gifts in the Memory Book.
-    const thisYear = new Date(Date.UTC(now.getFullYear(), month, day, 12, 0, 0));
-    const anchorYear = thisYear.getTime() > now.getTime() ? now.getFullYear() - 1 : now.getFullYear();
-    return new Date(Date.UTC(anchorYear - yearsAgo, month, day, 12, 0, 0)).toISOString();
-  };
-  const list: Array<{
-    senderName: string;
-    senderEmail: string;
-    amount: number;
-    selectedTicker?: string;
-    message?: string;
-    hasAudio?: boolean;
-    createdAt: string;
-    // "recurring" marks a Phil auto-invest cycle so seedKidFund can link
-    // it to the parent_contribution + apply the production worker's
-    // memory-stamp-once rule. Absent on ordinary gifts.
-    kind?: "recurring";
-  }> = [];
-
-  const age = kid.ageYears;
-
-  // Gloria — annual birthday gift from age 4 onwards. Voice memo on
-  // every one. Bilingual notes rotate so the Memory Book reads varied
-  // when scrolled.
-  const gloriaNotes = [
-    `Mi amor, never forget your familia. Te amo, ${kid.firstName}.`,
-    `Para ti, ${kid.firstName}. Con todo mi amor. — Abuela`,
-    `Feliz cumpleaños, ${kid.firstName}. You are my heart.`,
-    `Que Dios te bendiga, ${kid.firstName}. Always.`,
-    `${kid.firstName}, you are getting so big. Abuela loves you.`,
-  ];
-  for (let agoYears = 0; agoYears < Math.max(0, age - 3); agoYears++) {
-    list.push({
-      senderName: "Gloria Pritchett",
-      senderEmail: "gloria@dunphyfamily.com",
-      amount: agoYears < 5 ? 75 : agoYears < 10 ? 150 : 200,
-      selectedTicker: "DIS",
-      message: gloriaNotes[agoYears % gloriaNotes.length],
-      hasAudio: true,
-      createdAt: onMonth(agoYears, birthMonth, 12),
-    });
-  }
-
-  // Cam — annual Disney birthday from age 4 onwards. THE love-mark
-  // detail per the locked spec. Quips rotate so the kid sees a
-  // different one-liner each year scrolling back.
-  const camNotes = [
-    "Because magic is always a good investment. — Cam",
-    `For ${kid.firstName} — one day you'll work for Disney, kid. Or own it. — Cam`,
-    `Every kid deserves a stake in the Magic Kingdom. — Uncle Cam`,
-    `${kid.firstName}, Cam says: never sell Disney. — Cam`,
-    `Same gift, every year. Tradition. — Cam`,
-    `Mickey, meet your new shareholder. — Cam`,
-  ];
-  for (let agoYears = 0; agoYears < Math.max(0, age - 3); agoYears++) {
-    list.push({
-      senderName: "Cameron Tucker",
-      senderEmail: "cameron@dunphyfamily.com",
-      amount: agoYears < 5 ? 100 : 200,
-      selectedTicker: "DIS",
-      message: camNotes[agoYears % camNotes.length],
-      createdAt: onMonth(agoYears, birthMonth, 20),
-    });
-  }
-
-  // Mitchell — annual Apple birthday from age 5 onwards. The
-  // set-it-and-forget-it gifter; copy is brief because Mitchell is
-  // brief.
-  const mitchNotes = [
-    `Happy birthday, ${kid.firstName}.`,
-    `Happy birthday, ${kid.firstName}. — Uncle Mitch`,
-    `Happy birthday!`,
-    `Hope this is a great year. — Mitch`,
-    `Another year, another share of Apple. — Mitch`,
-  ];
-  for (let agoYears = 0; agoYears < Math.max(0, age - 4); agoYears++) {
-    list.push({
-      senderName: "Mitchell Pritchett",
-      senderEmail: "mitchell@dunphyfamily.com",
-      amount: 100,
-      selectedTicker: "AAPL",
-      message: mitchNotes[agoYears % mitchNotes.length],
-      createdAt: onMonth(agoYears, birthMonth, 5),
-    });
-  }
-
-  // Jay — big-gift Google every ~3 years (birthday or Christmas).
-  // Spread across years to look spontaneous, not formulaic.
-  const jayNotes = [
-    `Happy birthday, ${kid.firstName}. From your Grandpa Jay.`,
-    `Merry Christmas, ${kid.firstName}.`,
-    `Use this for college, ${kid.firstName}. Grandpa.`,
-    `Big year. Big gift. — Grandpa Jay`,
-    `For ${kid.firstName}'s future. — Jay`,
-  ];
-  for (let agoYears = 0; agoYears < age; agoYears += 3) {
-    const jayIdx = (agoYears / 3) % jayNotes.length;
-    // jayNotes[1] is the "Merry Christmas" note — date it in December so
-    // the message and the month agree. Every other note is a
-    // birthday/"big year"/"for your future" beat → birth month.
-    const isChristmas = jayIdx === 1;
-    list.push({
-      senderName: "Jay Pritchett",
-      senderEmail: "jay@dunphyfamily.com",
-      amount: agoYears < 6 ? 250 : 500,
-      selectedTicker: "GOOGL",
-      message: jayNotes[jayIdx],
-      createdAt: isChristmas ? onMonth(agoYears, 11, 22) : onMonth(agoYears, birthMonth, 25),
-    });
-  }
-
-  // Manny — only past 2-3 years (Manny is ~14 in the show; he didn't
-  // start gifting until recently).
-  if (age >= 10) {
-    list.push({
-      senderName: "Manny Delgado",
-      senderEmail: "manny@dunphyfamily.com",
-      amount: 50,
-      selectedTicker: "RBLX",
-      message: `From Manny. I bought you Roblox. You're welcome.`,
-      createdAt: N(0, 2),
-    });
-    if (age >= 12) {
-      list.push({
-        senderName: "Manny Delgado",
-        senderEmail: "manny@dunphyfamily.com",
-        amount: 50,
-        selectedTicker: "RBLX",
-        message: `${kid.firstName}: spend it wisely. — Manny`,
-        createdAt: N(1, 6),
-      });
-    }
-  }
-
-  // Phil — the recurring auto-investor ("the parent who shows up every
-  // month"). Modeled EXACTLY as the production recurring worker writes a
-  // cycle (recurringContributionWorker.ts): one gift per monthly charge,
-  // at the schedule's amount, carrying the parent's recurring note as the
-  // message, linked to the schedule (parentContributionId stamped in
-  // seedKidFund). Mirroring prod is what makes this honest paper-trading:
-  //   • the recurring detail shows real cycles + a real total invested
-  //   • the dashboard breakdown counts them as "recurring investments"
-  //     (the row keys off parentContributionId), not "one-time additions"
-  //   • the balance absorbs them through the same gift-sizing every other
-  //     gift flows through — no desync
-  //   • exactly ONE (the first/oldest) becomes a Memory Book parent_note
-  //     in seedKidFund; the worker stamps memory once on the first cycle
-  //     and never again, so 3 years of auto-investing never floods the
-  //     timeline.
-  // 36 cycles ≈ 3 years of showing up. Active schedules ran through last
-  // month (next charge upcoming); the paused one (Haley, winding down near
-  // majority) stopped a few months back.
-  const recurringNote = `Every month, a little more for ${kid.firstName}. From Dad.`;
-  const recurringStartOffset = kid.recurringPaused ? 3 : 1;
-  for (let i = 0; i < 36; i++) {
-    list.push({
-      senderName: "Phil Dunphy",
-      senderEmail: "phil@dunphyfamily.com",
-      amount: kid.recurringAmount,
-      selectedTicker: undefined,
-      message: recurringNote,
-      createdAt: N(0, recurringStartOffset + i),
-      kind: "recurring",
-    });
-  }
-
-  // Claire — occasional. One every 18 months feels right for the
-  // co-parent who's mostly handing off the financial mechanics to
-  // Phil but adds her own touch.
-  for (let agoMonths = 5; agoMonths < age * 12; agoMonths += 18) {
-    list.push({
-      senderName: "Claire Dunphy",
-      senderEmail: "claire@dunphyfamily.com",
-      amount: 100,
-      selectedTicker: undefined,
-      message: `From Mom. ❤`,
-      createdAt: N(Math.floor(agoMonths / 12), agoMonths % 12),
-    });
-  }
-
-  // A FRESH gift, a couple of days ago. Without this the newest activity is
-  // ~2 months old (Manny at N(0,2)) for EVERY kid, so the dashboard's "Last
-  // 30 days" summary reads all $0 and a living fund looks abandoned. This also
-  // gives the "a gift just came in" notification (client DemoGiftMoment) a
-  // REAL, top-of-feed entry that matches it — keyed to the same gifter /
-  // amount / ticker the toast announces for each child, so the moment is
-  // coherent the instant a prospect taps "View". Dated ~2 days back (not
-  // "now") so it sits robustly inside the 30-day window and reads "this week"
-  // even if a dev DB isn't reseeded for a day or two (prod reseeds nightly).
-  const recentGift: Record<string, { senderName: string; senderEmail: string; amount: number; ticker: string; message: string; hasAudio?: boolean }> = {
-    Haley: { senderName: "Gloria Pritchett", senderEmail: "gloria@dunphyfamily.com", amount: 75, ticker: "DIS", message: `Thinking of you today, mi amor. A little more for your future. Te amo. — Abuela`, hasAudio: true },
-    Alex: { senderName: "Jay Pritchett", senderEmail: "jay@dunphyfamily.com", amount: 250, ticker: "GOOGL", message: `Proud of you, Alex. Put this toward something that lasts. — Grandpa Jay` },
-    Luke: { senderName: "Manny Delgado", senderEmail: "manny@dunphyfamily.com", amount: 50, ticker: "RBLX", message: `Saw a stock I liked and thought of you, Luke. — Manny` },
-  };
-  const fresh = recentGift[kid.firstName];
-  if (fresh) {
-    const d = new Date();
-    d.setDate(d.getDate() - 2);
-    list.push({
-      senderName: fresh.senderName,
-      senderEmail: fresh.senderEmail,
-      amount: fresh.amount,
-      selectedTicker: fresh.ticker,
-      message: fresh.message,
-      hasAudio: fresh.hasAudio,
-      createdAt: d.toISOString(),
-    });
-  }
-
-  return list;
-}
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
@@ -563,10 +250,11 @@ const GIFTER_NOTIF_PATH = path.join(process.cwd(), ".local", "gifter-notificatio
 
 async function seedGifterNotifications(
   fundId: string,
-  externalGifts: Array<{ senderName: string; senderEmail: string; amount: number; createdAt: Date }>,
+  externalGifts: Array<{ senderName: string; senderEmail?: string; amount: number; createdAt: Date }>,
 ): Promise<number> {
   const byEmail = new Map<string, { name: string; count: number; total: number; first: number; last: number }>();
   for (const g of externalGifts) {
+    if (!g.senderEmail) continue; // long-tail / anonymous givers have no account to follow along
     const email = g.senderEmail.toLowerCase();
     if (!OPT_IN_GIFTER_EMAILS.has(email)) continue;
     const t = g.createdAt.getTime();
@@ -632,24 +320,32 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     return existing.id;
   }
 
-  // Compute gift sum FIRST so we can size the holdings to reflect
-  // realistic compound growth on top of contributed capital. Without
-  // this, the seeded holdings ($3,629 for Luke vs $7,325 in gifts)
-  // surfaced as a 50% LOSS on the dashboard, with the chart's basis
-  // line above the value line — the worst possible demo state. Now
-  // each kid's holdings.currentValue is scaled so the fund shows
-  // age-appropriate positive growth:
-  //   Haley (16-year fund) → 1.50× gift sum (~50% gain, realistic
-  //     for a near-handoff fund that's seen one full market cycle)
-  //   Alex (14-year fund)  → 1.40× gift sum (~40% gain)
-  //   Luke (9-year fund)   → 1.25× gift sum (~25% gain — younger
-  //     fund hasn't compounded as long)
-  // costBasis also scales but at 0.92× of the value scale so the
-  // displayed per-holding gain reads positive (currentValue > costBasis).
-  // Locked 2026-05-21 after the chart audit revealed underwater
-  // funds for two of three demo kids.
-  const giftListForSizing = giftsForKid({ firstName: kid.firstName, ageYears: kid.ageYears, birthdate: kid.birthdate, recurringAmount: kid.recurring.amount, recurringPaused: kid.recurring.status === "paused" });
-  const giftSum = giftListForSizing.reduce((sum, g) => sum + g.amount, 0);
+  // Build the REAL portfolio. Every gift buys shares at the ACTUAL historical
+  // price on its month (committed fixture), and the product's age-based glide-
+  // path automatically de-risks the managed index sleeve as the child nears
+  // majority (the ONLY position changes after a buy — not discretionary
+  // trading). Holdings, balance, and the chart are all emergent from honest
+  // market math — no hand-picked balance, no scale-to-fit. The gift schedule
+  // is tuned so the emergent totals land on the aspirational targets; verify
+  // offline with `npm run report:demo-portfolio`.
+  const kidStory: KidStory = {
+    firstName: kid.firstName,
+    ageYears: kid.ageYears,
+    birthdate: kid.birthdate,
+    recurringAmount: kid.recurring.amount,
+    recurringPaused: kid.recurring.status === "paused",
+    pronoun: kid.pronoun,
+    majorityAge: kid.majorityAge,
+    strategy: kid.strategy,
+  };
+  const giftList = giftsForKid(kidStory);
+  const giftSum = giftList.reduce((sum, g) => sum + g.amount, 0);
+  const giftInputs: GiftInput[] = giftList.map((g) => ({ date: g.createdAt, amount: g.amount, ticker: g.selectedTicker }));
+  const rebalances = rebalancesForKid(kidStory);
+  const portfolio = buildPortfolio(PRICES, giftInputs, rebalances);
+  const computedHoldings = holdingsFromPositions(PRICES, portfolio.positions);
+  const investedValue = totalValue(computedHoldings);
+  const costBasis = computedHoldings.reduce((sum, h) => sum + h.costBasis, 0);
   // Backdate the fund's creation to just before its earliest gift. The
   // funds table defaults createdAt=now, but the seed's gifts span YEARS
   // into the past — and the Dashboard "{Kid}'s fund so far" breakdown
@@ -662,42 +358,12 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // attributes correctly, and makes "Growing for {Kid} since {year}"
   // honest (a fund with 2014 gifts was not created in 2026). Locked
   // 2026-05-26 with the demo-breakdown audit.
-  const earliestGiftMs = giftListForSizing.reduce((min, g) => {
+  const earliestGiftMs = giftList.reduce((min, g) => {
     const t = new Date(g.createdAt).getTime();
     return Number.isFinite(t) && t < min ? t : min;
   }, Date.now());
   // One day before the first gift — the fund exists, THEN gifts arrive.
   const fundCreatedAt = new Date(earliestGiftMs - 24 * 60 * 60 * 1000);
-  const growthFactor =
-    kid.firstName === "Haley" ? 1.55   // graduated: the longest, fullest history
-    : kid.firstName === "Alex" ? 1.50  // near majority: mature, well-grown fund
-    : 1.25;                            // Luke: younger, shorter runway so far
-  const targetValue = giftSum * growthFactor;
-  const rawHoldingsValueSum = kid.holdings.reduce((sum, h) => sum + h.currentValue, 0);
-  const rawHoldingsBasisSum = kid.holdings.reduce((sum, h) => sum + h.costBasis, 0);
-  const valueScale = rawHoldingsValueSum > 0 ? targetValue / rawHoldingsValueSum : 1;
-  // Cost basis is tied to ACTUAL CONTRIBUTIONS, not a cosmetic fraction of
-  // value. sum(costBasis) === giftSum (every dollar contributed bought
-  // holdings; cashBalance is 0), so the holdings-based fund gain works out
-  // to exactly growthFactor − 1 (25% / 40% / 50%) — which MATCHES the
-  // contributions-vs-value "market growth" the dashboard breakdown shows.
-  // The old `valueScale * 0.92` heuristic floated cost basis ABOVE total
-  // contributions (e.g. Haley basis $16,178 > $13,325 ever contributed —
-  // impossible) and made the two growth readings disagree (23.5% vs 50%).
-  // Per-holding variety is preserved (each keeps its own value/basis ratio);
-  // they're just renormalized so the fund total is honest. As a bonus the
-  // historical basis line in generateHistoricalSnapshots becomes the real
-  // cumulative-contributions curve (basisScaleFactor → 1), so the chart's
-  // value line only dips below basis during genuine market drawdowns.
-  const basisScale = rawHoldingsBasisSum > 0 ? giftSum / rawHoldingsBasisSum : valueScale;
-  // Build scaled holdings (used below for both DB insert + balance).
-  const scaledHoldings = kid.holdings.map((h) => ({
-    ...h,
-    currentValue: h.currentValue * valueScale,
-    costBasis: h.costBasis * basisScale,
-  }));
-  const investedValue = scaledHoldings.reduce((sum, h) => sum + h.currentValue, 0);
-  const costBasis = scaledHoldings.reduce((sum, h) => sum + h.costBasis, 0);
 
   const [fund] = await db.insert(funds).values({
     userId: parentUserId,
@@ -746,19 +412,19 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     recipientSsnLast4: "1234",
   } as any).returning();
 
-  // Seed holdings using the scaledHoldings array (see growth-factor
-  // sizing above). Shares scale alongside value so price-per-share
-  // stays stable (no $1000 shares of Apple etc.). Locked 2026-05-21.
-  for (const h of scaledHoldings) {
-    const scaledShares = h.shares * valueScale;
+  // Seed holdings from the REAL computed positions: shares bought at historical
+  // prices, valued at the current price. No scaling — these ARE the real
+  // numbers, and the server's self-heal (balance = SUM(holdings.current_value))
+  // will agree with the fund balance exactly.
+  for (const h of computedHoldings) {
     await db.insert(holdings).values({
       fundId: fund.id,
       ticker: h.ticker,
-      name: h.name,
-      shares: scaledShares.toFixed(6),
+      name: TICKER_NAMES[h.ticker] ?? h.ticker,
+      shares: h.shares.toFixed(6),
       costBasis: h.costBasis.toFixed(2),
       currentValue: h.currentValue.toFixed(2),
-      gain: (h.currentValue - h.costBasis).toFixed(2),
+      gain: h.gain.toFixed(2),
     } as any);
   }
 
@@ -775,11 +441,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // Seed gifts + one gift_message memory entry per gift. Matches
   // production behavior: the Stripe webhook creates a memory_entry
   // (type "gift_message") for every successful gift, so the demo
-  // seed mirrors that pattern. Type was previously "gift" — wrong;
-  // MemoryBook.tsx filters specifically for "gift_message" + "milestone"
-  // + "photo" + "note", so the old entries silently fell through and
-  // the Memory Book read empty regardless of how many gifts existed.
-  const giftList = giftsForKid({ firstName: kid.firstName, ageYears: kid.ageYears, birthdate: kid.birthdate, recurringAmount: kid.recurring.amount, recurringPaused: kid.recurring.status === "paused" });
+  // seed mirrors that pattern. (giftList computed above with the portfolio.)
   const sendersSeen = new Set<string>();
 
   // Phil's recurring schedule (parent_contribution). Created BEFORE the
@@ -793,7 +455,9 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // treatment renders correctly in the demo. Pre-majority paused funds keep
   // "user" (a plain manual pause).
   const recurringEndedAtHandoff = recurringPaused && kid.ageYears >= kid.majorityAge;
-  const recurringChargeNote = giftList.find((g) => g.kind === "recurring")?.message ?? null;
+  // The single Memory Book note stamped on the first recurring cycle (varies
+  // per kid). The cycle gift rows themselves carry no message.
+  const recurringChargeNote = recurringNoteFor(kid);
   const recurringNextRun = (() => { const d = new Date(); d.setDate(d.getDate() + 14); return d; })();
   const [philContribution] = await db.insert(parentContributions).values({
     fundId: fund.id,
@@ -814,19 +478,33 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // thank-yous after the loop (so the demo shows the "Thanked" state, not only
   // the auto-backfilled "awaiting" drafts). Phil's recurring cycles are excluded
   // — the Memory Book renders those as "from you", never thankable.
-  const externalGifts: Array<{ giftId: string; senderName: string; senderEmail: string; amount: number; createdAt: Date }> = [];
+  const externalGifts: Array<{ giftId: string; senderName: string; senderEmail?: string; amount: number; createdAt: Date }> = [];
   for (const g of giftList) {
     const isRecurring = g.kind === "recurring";
+    // A parent ONE-TIME top-up (Phil's own money, not an external gift): counts
+    // as "Your one-time additions", shows on the dashboard's one-time card, and
+    // never gets a self-thank-you / gifter follow-along.
+    const isParentOneTime = g.kind === "parent_one_time";
+    const isParentContrib = isRecurring || isParentOneTime;
     const giftAudioUrl = g.hasAudio ? gloriaAudioUrl : null;
+    // Real share lots for THIS gift at its month's historical price (pick =
+    // single ticker; otherwise the diversified managed mix).
+    const processed = allocateGift(PRICES, { date: g.createdAt, amount: g.amount, ticker: g.selectedTicker });
     const giftRow: InsertGift = {
       fundId: fund.id,
       senderName: g.senderName,
-      senderEmail: g.senderEmail,
+      senderEmail: g.senderEmail ?? null,
       amount: g.amount.toFixed(2),
       netAmount: g.amount.toFixed(2),
       status: "invested",
       message: g.message ?? null,
+      executionModel: g.selectedTicker ? "pick" : "auto_invest",
       selectedTicker: g.selectedTicker ?? null,
+      // Real settlement fields (normally written by the invest pipeline).
+      sharesAcquired: processed.sharesAcquired.toFixed(6),
+      priceAtPurchase: processed.priceAtPurchase.toFixed(4),
+      // Explicit anonymous flag (privacy choice — never inferred from name).
+      isAnonymous: g.isAnonymous ?? false,
       audioUrl: giftAudioUrl,
       // Recurring cycles link to Phil's schedule + carry the worker's
       // source tag, exactly as recurringContributionWorker stamps them.
@@ -837,7 +515,21 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       createdAt: new Date(g.createdAt),
     } as any;
     const [insertedGift] = await db.insert(gifts).values(giftRow as any).returning();
-    sendersSeen.add(g.senderEmail.toLowerCase());
+    // gift_allocations ledger: exactly which ticker(s) this gift's money funded
+    // (the exact attribution the holding-detail sheet reads).
+    for (const a of processed.allocations) {
+      await db.insert(giftAllocations).values({
+        giftId: insertedGift.id,
+        fundId: fund.id,
+        ticker: a.ticker,
+        costBasis: a.costBasis.toFixed(2),
+        shares: a.shares.toFixed(6),
+        source: g.selectedTicker ? "pick" : "auto",
+      } as any);
+    }
+    // Unique contributors: prefer email, fall back to name (long-tail / one-off
+    // givers have no account, so no email).
+    sendersSeen.add((g.senderEmail ?? g.senderName).toLowerCase());
 
     // Activity-ledger row, mirroring the "arrival" activity production
     // writes in completeGiftPostPayment (webhookHandlers.ts:241):
@@ -852,11 +544,13 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     await db.insert(activities).values({
       userId: parentUserId,
       fundId: fund.id,
-      type: isRecurring ? "parent_contribution" : "gift_received",
+      type: isParentContrib ? "parent_contribution" : "gift_received",
       title: isRecurring
         ? `You contributed $${g.amount.toFixed(2)}`
-        : `Gift from ${g.senderName}`,
-      description: isRecurring
+        : isParentOneTime
+          ? `You invested $${g.amount.toFixed(2)}`
+          : `Gift from ${g.senderName}`,
+      description: isParentContrib
         ? (g.selectedTicker ? `Investing into ${String(g.selectedTicker).toUpperCase()}` : "Investing across the diversified mix")
         : (g.message ? `"${g.message}"` : "No note."),
       amount: g.amount.toFixed(2),
@@ -864,19 +558,37 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
         giftId: insertedGift.id,
         ticker: g.selectedTicker || null,
         message: g.message || null,
-        executionModel: isRecurring ? "auto_invest" : null,
+        executionModel: isRecurring ? "auto_invest" : (isParentOneTime ? "pick" : null),
         senderEmail: g.senderEmail || null,
         senderName: g.senderName || null,
         // How the family refers to the custodian who made this contribution
         // ("Dad"). Lets the post-handoff owner view credit "Dad added $X"
-        // instead of the custodial-era "You contributed". Only on recurring
-        // (parent) contributions; external gifts carry their own senderName.
-        contributorName: isRecurring ? parentDisplayName : null,
-        isParentContribution: isRecurring,
+        // instead of the custodial-era "You contributed". On any parent
+        // contribution (recurring or one-time); external gifts carry their own.
+        contributorName: isParentContrib ? parentDisplayName : null,
+        isParentContribution: isParentContrib,
+        // Only recurring cycles link to the schedule; one-time additions don't.
         parentContributionId: isRecurring ? philContribution.id : null,
       }),
       createdAt: new Date(g.createdAt),
     } as any);
+
+    if (isParentOneTime) {
+      // Parent's own one-time addition: a gift_message memory (so it shows in
+      // the Memory Book, authored by the parent) — but NOT an external gift, so
+      // no self-thank-you and no gifter follow-along.
+      await db.insert(memoryEntries).values({
+        fundId: fund.id,
+        giftId: insertedGift.id,
+        type: "gift_message",
+        content: g.message ?? "",
+        authorRole: "parent",
+        authorName: g.senderName,
+        visibility: "kid_now",
+        createdAt: new Date(g.createdAt),
+      } as any);
+      continue;
+    }
 
     if (isRecurring) {
       // Money + schedule bookkeeping for the cycle. The Memory Book gets
@@ -964,6 +676,10 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   for (const eg of externalGifts) {
     const age = nowMs - eg.createdAt.getTime();
     if (age < thankMinAgeMs) continue; // recent gifts stay awaiting (actionable)
+    // Skip the email-less long-tail / anonymous one-off givers — you can't
+    // really thank "Anonymous" or a random one-off, so they stay "awaiting,"
+    // which reads as a realistic backlog rather than a perfectly-cleared book.
+    if (!eg.senderEmail) continue;
     const first = eg.senderName.split(" ")[0];
     const amt = eg.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const willRead = kid.pronoun === "she" ? "she's" : kid.pronoun === "he" ? "he's" : "they're";
@@ -989,7 +705,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   if (kid.firstName === "Haley" || kid.firstName === "Alex") {
     await db.insert(memoryEntries).values({
       fundId: fund.id,
-      content: `${kid.firstName}. The day you read this is the day this is yours. We started this fund when you were small because we knew this moment was coming. Not the money, the moment: you owning something we built together over years. Whatever you do with it, do it on purpose. We love you. Always, Dad`,
+      content: sealedLetterFor(kid),
       type: "parent_letter",
       authorRole: "parent",
       authorName: "Phil Dunphy",
@@ -1012,7 +728,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     await db.insert(memoryEntries).values({
       fundId: fund.id,
       type: "parent_note",
-      content: `Watching you grow up, ${kid.firstName}. Every name in here is someone who loves you. I add my own notes too, so when you read this one day you'll know your mom was paying attention the whole time. — Mom`,
+      content: momNoteFor(kid),
       authorRole: "parent",
       authorName: "Claire Dunphy",
       visibility: "kid_now",
@@ -1033,12 +749,12 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     createdAt: fundCreatedAt,
   } as any);
 
-  // ── Lived-in lifecycle: strategy evolution + real occasions ──
-  // Strategy evolution. A real UTMA shifts allocation as the child ages
-  // toward majority (the product itself nudges this). kid.strategy is the
-  // CURRENT/latest mix; backfill the earlier shifts as dated activity rows so
-  // the Activity timeline shows the fund being managed across the years
-  // (Growth → Balanced → Conservative).
+  // ── Lived-in lifecycle: glide-path de-risking + real occasions ──
+  // The product AUTOMATICALLY shifts the managed index sleeve toward a steadier
+  // mix as the child nears majority (protection, not trading). These activity
+  // rows narrate that on the timeline; the matching SHARE moves were executed by
+  // buildPortfolio (rebalancesForKid) at the same dates against real prices —
+  // so the story and the numbers agree. kid.strategy is the CURRENT/latest mix.
   const bday = new Date(kid.birthdate);
   const atAge = (years: number) => { const d = new Date(bday); d.setFullYear(d.getFullYear() + years); return d; };
   const STRATEGY_LABEL: Record<string, string> = { growth: "Growth Mix", balanced: "Steady & Balanced", conservative: "Conservative Mix" };
@@ -1047,16 +763,16 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   for (const s of [{ at: 13, from: "growth", to: "balanced" }, { at: 16, from: "balanced", to: "conservative" }]) {
     // Emit a shift only if the kid has reached that age AND their current
     // strategy is at-or-past the shift's target (so the history leads to the
-    // present mix, not past it).
+    // present mix, not past it). Matches rebalancesForKid's conditions/dates.
     if (kid.ageYears >= s.at && currentOrder >= STRATEGY_ORDER[s.to]) {
       await db.insert(activities).values({
         userId: parentUserId,
         fundId: fund.id,
         type: "fund_strategy_changed",
-        title: "Strategy changed",
-        description: `${STRATEGY_LABEL[s.from]} → ${STRATEGY_LABEL[s.to]}`,
+        title: `Automatically moved to a steadier mix as ${kid.firstName} turned ${s.at}`,
+        description: `${STRATEGY_LABEL[s.from]} → ${STRATEGY_LABEL[s.to]} · protecting the fund as ${kid.pronoun} nears 18`,
         createdAt: atAge(s.at),
-        metadata: JSON.stringify({ from: s.from, to: s.to, reason: "age_band" }),
+        metadata: JSON.stringify({ from: s.from, to: s.to, reason: "age_band", automatic: true }),
       } as any);
     }
   }
@@ -1097,19 +813,15 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     } as any);
   }
 
-  // Generate the historical balance curve. Walks month-by-month from
-  // the first gift date to today, applying real-shape monthly returns
-  // (smooth drift + hand-placed crisis-window dips) and stepping up
-  // at each gift date. Final value is then linearly scaled so the
-  // last snapshot matches the seeded balance — keeps the chart honest
-  // about the shape of the past 16 years while making the displayed
-  // hero number consistent with the chart's right edge.
+  // Generate the historical balance curve from the REAL portfolio value
+  // month-by-month (replays buys + glide-path rebalances against actual
+  // historical prices). The drawdowns (2008, 2020, 2022, ...) are the fund's
+  // genuine market value over time, not a synthetic shape — today's edge equals
+  // the real hero balance.
   //
-  // Locked 2026-05-21 — the dashboard's growth chart was rendering a
-  // straight line from $0 today because no fund_snapshots existed for
-  // demo funds. The kid-at-18 narrative depends on the chart showing
-  // a multi-year story; without snapshots there's no story.
-  await generateHistoricalSnapshots(fund.id, giftList, investedValue, costBasis);
+  // (Demo funds need fund_snapshots or the dashboard chart renders a flat line
+  // from $0 — the kid-at-18 narrative depends on the multi-year story.)
+  await generateHistoricalSnapshots(fund.id, portfolio.events, investedValue, costBasis);
 
   // Balance-crossing milestones, data-driven from the curve just generated.
   await seedMilestonesFromSnapshots(fund.id, kid.firstName);
@@ -1192,111 +904,37 @@ async function seedMilestonesFromSnapshots(fundId: string, childFirst: string): 
   }
 }
 
-// Generate monthly fund_snapshots from the first gift to today,
-// producing a believable historical-balance curve with real-shape
-// market movement scaled to land at `finalInvestedValue`.
+// Generate fund_snapshots from the REAL portfolio value month-by-month: replays
+// the gift buys + glide-path rebalances against actual historical prices, so
+// the curve's drawdowns (2008, 2020, 2022, ...) are the fund's genuine market
+// value over time. Today is hard-anchored to the real hero balance.
 async function generateHistoricalSnapshots(
   fundId: string,
-  giftList: ReturnType<typeof giftsForKid>,
+  events: BuildResult["events"],
   finalInvestedValue: number,
   finalCostBasis: number,
 ): Promise<void> {
-  if (giftList.length === 0) return;
-  // Sort gifts ascending. Earliest gift sets the curve's start month.
-  const sortedGifts = [...giftList].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  );
-  const startDate = new Date(sortedGifts[0].createdAt);
+  if (events.length === 0) return;
+  // events are already chronological (buildPortfolio sorts them). The earliest
+  // event sets the curve's start month.
+  const startDate = new Date(events[0].date);
   startDate.setDate(1); // snap to month start
   const today = new Date();
-  // STOP the monthly loop at the END of the previous complete month.
-  // Walking into the current month stamps a future-dated end-of-
-  // month snapshot (e.g. on May 21 it'd write a "May 31 23:59"
-  // snapshot, which is in the future). That future date then
-  // pollutes the aggregate sparkline query that filters by
-  // "last 30 days" — landed as a $48k double-count when both the
-  // daily loop and the monthly loop wrote near-today rows. Locked
+  // STOP the monthly loop at the END of the previous complete month. Walking
+  // into the current month stamps a future-dated end-of-month snapshot that
+  // pollutes the "last 30 days" aggregate (a $48k double-count). Locked
   // 2026-05-21 with the aggregate-double-count fix.
   const monthlyEnd = new Date(today.getFullYear(), today.getMonth(), 0); // last day of PREVIOUS month
   monthlyEnd.setDate(1); // snap back to month-start for the loop check below
 
-  // Value model: ONE calendar-driven market index shared by every fund, with
-  // each contribution compounding from its own date. The market % over any
-  // period is then identical across kids (only the lifetime total differs,
-  // because older funds compounded longer). This replaces the old "scale a
-  // gift-inclusive monthly path" approach, which smeared mid-month gifts across
-  // the interpolation, baked phantom growth onto just-arrived gifts, and let
-  // the per-fund market drift apart (one fund could show a negative 30-day
-  // market while another showed positive over the SAME period). Now:
-  //   value(t) = scale x sum over gifts landed by t of [gift x M(t) / M(date)]
-  //   basis(t) = (cumulative contributions by t) x finalCostBasis / total gifts
-  // so value = stepped contributions + compounding market, a gift adds ~its
-  // face value on its date (no phantom growth), and the market arc is uniform.
-
-  // Cumulative monthly market index from the first gift's month to now (M = 1
-  // at the start). Calendar-keyed, so it's the SAME curve for every fund.
-  const startMonthIdx = startDate.getFullYear() * 12 + startDate.getMonth();
-  const nowMonthIdx = today.getFullYear() * 12 + today.getMonth();
-  const indexByMonth = new Map<number, number>();
-  indexByMonth.set(startMonthIdx, 1);
-  let marketAcc = 1;
-  for (let m = startMonthIdx + 1; m <= nowMonthIdx; m++) {
-    marketAcc *= 1 + monthKeyToReturn(Math.floor(m / 12), m % 12);
-    indexByMonth.set(m, marketAcc);
-  }
-  // Market index at any date, prorated linearly within its month.
-  const marketIndexAt = (d: Date): number => {
-    const mIdx = d.getFullYear() * 12 + d.getMonth();
-    if (mIdx <= startMonthIdx) return 1;
-    const prev = indexByMonth.get(mIdx - 1) ?? marketAcc;
-    const cur = indexByMonth.get(mIdx) ?? marketAcc;
-    const dim = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    return prev + (cur - prev) * ((d.getDate() - 1) / dim);
-  };
-
-  // Pre-resolve each gift's amount + the market index at its date (ascending).
-  const giftCompounding = sortedGifts.map((g) => {
-    const gd = new Date(g.createdAt);
-    return { t: gd.getTime(), amount: g.amount, idxAtGift: Math.max(marketIndexAt(gd), 1e-9) };
-  });
-  const totalRawGifts = giftCompounding.reduce((s, g) => s + g.amount, 0);
-
-  // Raw compounded value: each gift grows by the market-index ratio from its
-  // date to t. Raw cumulative basis: sum of gift face amounts landed by t.
-  const rawValueAt = (t: number): number => {
-    const mNow = marketIndexAt(new Date(t));
-    let v = 0;
-    for (const g of giftCompounding) {
-      if (g.t <= t) v += g.amount * (mNow / g.idxAtGift);
-      else break;
-    }
-    return v;
-  };
-  const rawBasisAt = (t: number): number => {
-    let c = 0;
-    for (const g of giftCompounding) {
-      if (g.t <= t) c += g.amount;
-      else break;
-    }
-    return c;
-  };
-
-  // Scale so today lands exactly on the seeded balance (one multiplier, so the
-  // market shape is preserved); basis scales independently to finalCostBasis.
-  const rawNow = rawValueAt(today.getTime());
-  const valueScale = rawNow > 0 ? finalInvestedValue / rawNow : 1;
-  const basisFactor = totalRawGifts > 0 ? finalCostBasis / totalRawGifts : 1;
-
-  // One snapshot at any date. Deterministic daily wobble (no Math.random, so it
-  // reproduces on every reset) applied to the GAIN only, so contributions never
-  // wobble and value stays >= basis whenever the fund is genuinely up.
+  // One snapshot at any date: the REAL portfolio market value for that date —
+  // valued at the actual DAILY close when the date is within the daily window
+  // (last ~400 days, so the 1W/1M/1Y chart tabs move day-to-day), otherwise the
+  // month's close. Deep-history points are one-per-month (distinct), recent
+  // points are real dailies, so nothing is dead-flat and nothing is synthetic.
   const snapshotAt = (d: Date): { date: Date; total: number; basis: number } => {
-    const t = d.getTime();
-    const basis = rawBasisAt(t) * basisFactor;
-    const gain = rawValueAt(t) * valueScale - basis;
-    const dayIdx = Math.floor(t / 86_400_000);
-    const wobble = 0.004 * Math.sin(dayIdx * 0.41) + 0.0025 * Math.cos(dayIdx * 1.13);
-    return { date: new Date(d), total: basis + gain * (1 + wobble), basis };
+    const { invested, basis } = portfolioValueAtDate(PRICES, events, d);
+    return { date: new Date(d), total: invested, basis };
   };
 
   // Variable resolution so each chart toggle has enough points: monthly

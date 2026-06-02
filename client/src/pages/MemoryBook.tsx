@@ -4850,13 +4850,15 @@ export default function MemoryBook() {
                                       already shows it; Memory Book should too
                                       because grandparents read THIS surface.
                                       Shows "now worth ~$Y" when the gift has
-                                      been invested for long enough to have any
-                                      visible growth + when there's a real
-                                      createdAt. Skips silently otherwise — no
-                                      misleading $X = $X line. Routes through
-                                      the canonical projectFundValue (7% net of
-                                      fee, monthly compounded) so the number
-                                      matches every other surface. */}
+                                      been invested long enough to have visible
+                                      growth. Prefers the REAL value (the gift's
+                                      actual shares × the live price of its
+                                      stock) for single-ticker gifts — so a $50
+                                      2009 Apple gift shows its true ~$3k, not a
+                                      flat 7% estimate. Falls back to the
+                                      canonical projectFundValue only for
+                                      diversified-mix gifts, where the client
+                                      doesn't have the per-sleeve breakdown. */}
                                   {(() => {
                                     const giftAmount = parseFloat(String(entry.gift.amount || "0"));
                                     if (!Number.isFinite(giftAmount) || giftAmount <= 0) return null;
@@ -4864,11 +4866,17 @@ export default function MemoryBook() {
                                     if (!giftDate || !Number.isFinite(giftDate.getTime())) return null;
                                     const yearsInvested = (Date.now() - giftDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
                                     if (yearsInvested < 0.08) return null; // < ~1 month, no meaningful growth yet
-                                    const nowValue = projectFundValue({
-                                      startingValue: giftAmount,
-                                      monthlyContribution: 0,
-                                      yearsAhead: yearsInvested,
-                                    });
+                                    // REAL value for single-ticker gifts: actual shares × live price.
+                                    const nvTicker = entry.gift.selectedTicker?.toUpperCase() ?? null;
+                                    const nvShares = entry.gift.sharesAcquired ? parseFloat(entry.gift.sharesAcquired) : null;
+                                    const nvPrice = nvTicker ? giftPriceByTicker.get(nvTicker) : null;
+                                    const nowValue = (nvShares && nvShares > 0 && nvPrice && nvPrice > 0)
+                                      ? nvShares * nvPrice
+                                      : projectFundValue({
+                                          startingValue: giftAmount,
+                                          monthlyContribution: 0,
+                                          yearsAhead: yearsInvested,
+                                        });
                                     const gain = nowValue - giftAmount;
                                     if (gain < 0.5) return null; // < 50 cents, not worth surfacing
                                     return (

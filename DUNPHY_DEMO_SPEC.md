@@ -7,7 +7,40 @@
 > universal recognition, multi-generational, and ranges from newborn-
 > ish to college-aged in one household.
 >
-> Last updated: 2026-05-13
+> Last updated: 2026-06-01
+
+---
+
+## Financial realism (2026-06-01) — REAL historical prices, emergent balances
+
+The demo's money is no longer synthetic. The whole financial layer was rebuilt
+so balances, holdings, the growth chart, and per-gift "now worth" are all
+emergent from **real historical market prices**, not hand-picked numbers.
+
+- **Price fixture:** `script/data/historical-prices.json` — real monthly
+  adjusted-close (split + dividend adjusted = true total return) + current price
+  for AAPL/GOOGL/DIS/RBLX/VTI/VXUS/BND. Refresh with
+  `npm run fetch:historical-prices` (one-time Yahoo fetch; committed so the seed
+  stays deterministic + offline).
+- **Pure engine:** `script/lib/demo-portfolio.ts` — every gift buys real shares
+  at its month's price (`allocateGift`); positions roll up to holdings; balance
+  = Σ(shares × current price). No `growthFactor`/scale-to-fit. The product's
+  age-based glide-path (`rebalancesForKid`) de-risks the managed index sleeve at
+  13/16 — the ONLY position changes after a buy (protection, not trading).
+- **Story data:** `script/lib/demo-roster.ts` — casting + notes (short, mostly
+  unsigned, ~80% no note; an anonymous long tail; varied per kid).
+- **Verify offline (no DB):** `npm run report:demo-portfolio` prints emergent
+  balances, holdings, a real-drawdown chart check (2020 COVID dip is visible),
+  and sample "$60 Apple in 2009 → ~$6,900 today" wow lines.
+- **Tuned targets (emergent, not fudged):** Luke ~$22k · Alex ~$52k · Haley
+  ~$79k — an ascending "time machine" arc driven by real returns + small,
+  realistic gifts (tune via the recurring/birthday amounts in `demo-roster.ts`).
+- **Gift rows** now carry real `sharesAcquired` + `priceAtPurchase` and write
+  `gift_allocations` ledger rows; the Memory Book "now ~$X" uses real shares ×
+  live price for single-ticker gifts.
+
+To re-seed with the new data: `npm run reset:dunphys` then
+`npm run seed:dunphys`.
 
 ---
 

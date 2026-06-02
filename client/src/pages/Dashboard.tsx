@@ -1321,8 +1321,16 @@ export default function Dashboard() {
   // Helper to deep-link from a summary row to a Dashboard section.
   // Single source of truth so all three summary rows behave identically.
   const summaryScrollTo = useCallback((target: "recurring" | "onetime" | "cash") => {
+    // Read-only views (previous owner / viewer of a handed-off fund) render a
+    // DIFFERENT recurring card ("recurring-readonly") than the writable deck
+    // ("recurring-list-view"). Target whichever is actually on the page, or the
+    // "Your recurring investments" breakdown row jumps to a tag that isn't there
+    // and nothing scrolls. Resolved at click time via the live DOM.
+    const recurringTestId = (typeof document !== "undefined" && document.querySelector('[data-testid="recurring-list-view"]'))
+      ? "recurring-list-view"
+      : "recurring-readonly";
     const testIdByTarget: Record<typeof target, string> = {
-      recurring: "recurring-list-view",
+      recurring: recurringTestId,
       onetime: "card-one-time-contribution-v2",
       cash: "button-invest-cash",
     };
@@ -5493,7 +5501,7 @@ export default function Dashboard() {
                           </p>
                         );
                       })()}
-                      {age18Transition && (
+                      {age18Transition && age18Transition.daysUntil18 > 0 && (
                         <p style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 14, marginBottom: 18 }}>
                           {recipientFirstNameDisplay || "Your child"} turns {age18Transition.majorityAge} on {formatAgeTransitionDate(age18Transition.eighteenthBirthday)} · {age18Transition.countdownLabel}
                         </p>
@@ -5880,6 +5888,17 @@ export default function Dashboard() {
                         );
                       })()}
 
+                      {/* Gift-graph recruitment hook — the loop angle Acorns
+                          structurally can't copy (no social graph). Turns the
+                          emotional hero into a recruiting surface: the number of
+                          people already in is the social proof, "invite one more"
+                          is the ask. The gold Share button right below is the
+                          action. Parent (non-read-only) only. */}
+                      {!isReadOnlyFund && contributorCount > 0 && (
+                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", lineHeight: 1.4, marginBottom: 10 }} data-testid="text-hero-invite-one-more">
+                          {contributorCount} {contributorCount === 1 ? "person has" : "people have"} gifted to {recipientFirstNameDisplay || "the fund"}. Invite one more →
+                        </p>
+                      )}
                       {/* CTA row. Share button hidden for read-only roles
                           (viewers + previous owners post-handoff). For a
                           previous owner, the gift link is the kid's now;
@@ -6017,6 +6036,55 @@ export default function Dashboard() {
               </div>
             )}
 
+            {/* Glanceable recurring-status chip — "what's on" without scrolling
+                to the recurring card. Tap to manage (jumps + halos the recurring
+                section). Reflects the VIEWER'S OWN schedules (a graduated owner
+                sees their own, not the parent's handed-off plan), so the empty
+                state reads as an invitation to start their own. Hidden for
+                read-only viewers (previous owner / viewer) — they can't manage. */}
+            {!isReadOnlyFund && activeFund && totalValue >= 0 && (() => {
+              const mine = (parentContributions || []).filter(
+                (c: any) => c?.userId === (user as any)?.id && c?.pauseReason !== "majority_handoff",
+              );
+              const active = mine.filter((c: any) => String(c?.status || "").toLowerCase() === "active");
+              const paused = mine.filter((c: any) => String(c?.status || "").toLowerCase() === "paused");
+              let icon = <Repeat size={14} />;
+              let label: string;
+              let toneClass: string;
+              let onClick: () => void;
+              if (active.length > 0) {
+                const monthly = sumMonthlyEquivalent(active as any[]);
+                const nextTs = active
+                  .map((c: any) => (c?.nextRunDate ? new Date(c.nextRunDate).getTime() : 0))
+                  .filter((t: number) => t > 0)
+                  .sort((a: number, b: number) => a - b)[0];
+                const nextLabel = nextTs ? new Date(nextTs).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
+                label = `${formatMoneyFriendly(monthly)}/mo recurring${active.length > 1 ? ` · ${active.length} active` : ""}${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                toneClass = "text-[hsl(var(--kiddo-evergreen))] border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)]";
+                onClick = () => summaryScrollTo("recurring");
+              } else if (paused.length > 0) {
+                label = "Recurring paused · tap to resume";
+                toneClass = "text-amber-700 border-amber-300/60 bg-amber-50";
+                onClick = () => summaryScrollTo("recurring");
+              } else {
+                label = isOwnerMode ? "Start your own recurring" : "Set up recurring";
+                toneClass = "text-[hsl(var(--kiddo-evergreen))] border-dashed border-[hsl(var(--kiddo-evergreen)/0.4)] bg-[hsl(var(--kiddo-evergreen)/0.04)]";
+                onClick = () => { setEditingContribId(null); setAutoInvestStep("amount"); setAutoInvestModalOpen(true); };
+              }
+              return (
+                <button
+                  type="button"
+                  onClick={() => { haptic("selection"); onClick(); }}
+                  data-testid="chip-recurring-status"
+                  className={`mt-3 w-full flex items-center gap-2 rounded-2xl border px-3.5 py-2.5 text-left text-[13px] font-semibold transition-colors ${toneClass}`}
+                >
+                  <span className="shrink-0">{icon}</span>
+                  <span className="flex-1 min-w-0 truncate">{label}</span>
+                  <ChevronRight size={15} className="shrink-0 opacity-60" aria-hidden />
+                </button>
+              );
+            })()}
+
             {/* SSN nudge — placed AFTER the hero card so the parent gets
                 their warm balance + chart + share CTA first, then sees this
                 as one of several setup tasks. Previously above the hero,
@@ -6133,6 +6201,28 @@ export default function Dashboard() {
               const investedByParentsTotal = sumAmt(accountHolderContribRows.filter((g) => senderOf(g) !== ownerEmail));
               const yourAdditionsTotal = sumAmt(accountHolderContribRows.filter((g) => senderOf(g) === ownerEmail));
               const accountHolderContribTotal = sumAmt(accountHolderContribRows);
+              // The OWNER's own recurring (post-handoff): recurring rows the owner
+              // themselves set up. Zero until a graduated owner starts their own —
+              // the empty row then reads as an invitation, not a void.
+              const ownRecurringTotal = sumAmt(recurringRows.filter((g) => senderOf(g) === ownerEmail));
+              // OWNER VIEW FOLD: from the graduated owner's seat, everything Mom &
+              // Dad put in (recurring + one-time) was love given to them — so it
+              // folds into "Gifts from people who love you", and "Your recurring /
+              // one-time" reset to the owner's OWN money (chapter one of their own
+              // story). Pure display relabel: the sums are unchanged, so market
+              // growth + "worth today" still reconcile. The parental magnitude is
+              // recognized in the sub-line below (not erased).
+              const giftsRowTotal = isOwnerMode ? giftsFromOthersTotal + investedByParentsTotal : giftsFromOthersTotal;
+              const yourRecurringRowTotal = isOwnerMode ? ownRecurringTotal : yourAutoInvestTotal;
+              // Span of the custodian parents' contributions, for the recognition
+              // line ("$X from Dad over N years"). Rounded whole years.
+              const parentContribTimes = accountHolderContribRows
+                .filter((g) => senderOf(g) !== ownerEmail)
+                .map((g) => (g.createdAt ? new Date(String(g.createdAt)).getTime() : 0))
+                .filter((t) => t > 0);
+              const parentContribYears = parentContribTimes.length >= 2
+                ? Math.max(1, Math.round((Math.max(...parentContribTimes) - Math.min(...parentContribTimes)) / (365.25 * 24 * 60 * 60 * 1000)))
+                : 0;
               // Credit the custodian by how the family refers to them ("Dad") when
               // there's a single one; else neutral "your parents". Uses the
               // server-enriched preferredName on the recurring gift rows.
@@ -6293,61 +6383,56 @@ export default function Dashboard() {
                         </span>
                         <span className="inline-flex items-center gap-1.5">
                           <span className="text-sm font-semibold text-foreground tabular-nums">
-                            {fmtRow(giftsFromOthersTotal)}
+                            {fmtRow(giftsRowTotal)}
                           </span>
                           <ChevronRight size={14} className="text-muted-foreground/50 flex-shrink-0" aria-hidden />
                         </span>
                       </button>
-                      {!isOwnerMode ? (
-                        <>
+                      {/* Recognition beat (owner view): folding Mom & Dad's years of
+                          contributions into "people who love you" must NOT quietly
+                          erase how much they specifically did. This sub-line keeps the
+                          gratitude — once, where the fold happens. */}
+                      {isOwnerMode && investedByParentsTotal > 0 && parentContribYears >= 1 && (
+                        <p className="px-2 -mt-0.5 mb-0.5 text-[11px] text-muted-foreground/70" data-testid="text-parent-recognition">
+                          including {fmtRow(investedByParentsTotal)} from {custodianLabel} over {parentContribYears} years 💚
+                        </p>
+                      )}
+                      {/* Your recurring + your one-time. Both viewers see the same
+                          two rows; only the attribution differs. A custodian parent
+                          sees their own schedule/adds. A graduated owner sees THEIR
+                          own money — $0 until they start (their parents' years fold
+                          into "people who love you" above), so the empty row reads as
+                          an invitation to begin their own chapter, not a void. */}
                       <button
                         type="button"
-                        // Deep-link to the Dashboard's own "Recurring investments"
-                        // section with gold halo, rather than routing to
-                        // /activity?filter=auto (which mixed recurring + one-time
-                        // together — the same destination both rows shared
-                        // before this fix). The recurring-investments section
-                        // lives on this page; intra-page scroll keeps the user
-                        // in context and lands them right on the schedule list
-                        // they manage. Locked pattern per
-                        // project_deep_link_scroll_pattern.md.
                         onClick={() => summaryScrollTo("recurring")}
                         className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                         data-testid="last30-row-auto"
                       >
                         <span className="text-sm text-muted-foreground">
                           Your recurring investments
-                          {/* When the 30-day total is zero AND there's a scheduled run
-                              queued, append "starts {date}" so the bare $0 doesn't look
-                              like a bug to a parent looking at 3 active schedules below.
-                              The recurring worker hasn't fired the first run yet — this
-                              line tells them when it will. */}
-                          {yourAutoInvestTotal === 0 && nextScheduled && (
+                          {/* Parent, no money yet but a schedule queued → "starts {date}". */}
+                          {yourRecurringRowTotal === 0 && !isOwnerMode && nextScheduled && (
                             <span className="text-[11px] text-muted-foreground/70">
                               {" · starts "}{fmtNextDate(nextScheduled.nextTs)}
                             </span>
                           )}
+                          {/* Graduated owner, hasn't started their own yet → invitation. */}
+                          {yourRecurringRowTotal === 0 && isOwnerMode && (
+                            <span className="text-[11px] font-medium text-[hsl(var(--kiddo-evergreen))]">
+                              {" · start your own →"}
+                            </span>
+                          )}
                         </span>
-                        {/* Invisible ChevronRight reserves the layout space the
-                            navigate-away rows (Gifts / Market growth / Withdrawals)
-                            spend on their visible chevron — so all dollar values
-                            column-align across the card regardless of whether the
-                            row navigates away or scrolls within the page. */}
                         <span className="inline-flex items-center gap-1.5">
                           <span className="text-sm font-semibold text-foreground tabular-nums">
-                            {fmtRow(yourAutoInvestTotal)}
+                            {fmtRow(yourRecurringRowTotal)}
                           </span>
                           <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
                         </span>
                       </button>
                       <button
                         type="button"
-                        // Deep-link to the Dashboard's "One-time investment"
-                        // card with gold halo. Pairs with the recurring row
-                        // above; each row drills into the matching section on
-                        // the same page rather than dumping both into the same
-                        // Activity-filter URL (which was a real bug — both
-                        // routed to /activity?filter=auto).
                         onClick={() => summaryScrollTo("onetime")}
                         className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
                         data-testid="last30-row-onetime"
@@ -6360,48 +6445,6 @@ export default function Dashboard() {
                           <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
                         </span>
                       </button>
-                        </>
-                      ) : (
-                        <>
-                          {/* Owner (post-handoff) view: the historical recurring +
-                              one-time were put in by the custodian parent(s) — NOT
-                              by the owner viewing now — so credit them ("Invested by
-                              Dad"), and reserve "Your additions" for money the owner
-                              adds herself (0 today; row appears when she does). */}
-                          {investedByParentsTotal > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => summaryScrollTo("recurring")}
-                              className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
-                              data-testid="lifetime-row-parent-invested"
-                            >
-                              <span className="text-sm text-muted-foreground">Invested by {custodianLabel}</span>
-                              <span className="inline-flex items-center gap-1.5">
-                                <span className="text-sm font-semibold text-foreground tabular-nums">
-                                  {fmtRow(investedByParentsTotal)}
-                                </span>
-                                <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
-                              </span>
-                            </button>
-                          )}
-                          {yourAdditionsTotal > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => summaryScrollTo("onetime")}
-                              className="w-full flex items-baseline justify-between py-1.5 hover:bg-muted/30 rounded-lg px-2 -mx-2 transition-colors text-left"
-                              data-testid="lifetime-row-your-additions"
-                            >
-                              <span className="text-sm text-muted-foreground">Your additions</span>
-                              <span className="inline-flex items-center gap-1.5">
-                                <span className="text-sm font-semibold text-foreground tabular-nums">
-                                  {fmtRow(yourAdditionsTotal)}
-                                </span>
-                                <ChevronRight size={14} className="invisible flex-shrink-0" aria-hidden />
-                              </span>
-                            </button>
-                          )}
-                        </>
-                      )}
                       {marketGrowth30 != null && (
                         <button
                           type="button"
@@ -8926,7 +8969,7 @@ export default function Dashboard() {
                   owner's actual schedule history lives in "View past
                   investments" on the one-time card next to this. */}
               {isReadOnlyFund && (
-                <div className="kiddo-card p-5 flex flex-col flex-1" data-testid="recurring-readonly">
+                <div className="kiddo-card p-5 flex flex-col flex-1" style={getDeepLinkHighlightCardStyle(summaryHaloTarget === "recurring")} data-testid="recurring-readonly">
                   <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground/65 mb-3">
                     Recurring investments
                   </p>
@@ -9422,11 +9465,19 @@ export default function Dashboard() {
                   });
                 }
 
-                // Age-gated (13+) - graduation, first car, college fund
-                if (childAgeNow !== null && childAgeNow >= 13) {
-                  if (!activeEvents.some(e => e.eventType === "graduation")) {
-                    const gradYear = childBirthdate ? childBirthdate.getFullYear() + 18 : new Date().getFullYear() + 4;
-                    const yearsUntil = gradYear - new Date().getFullYear();
+                // Age-gated (13+) - graduation, first car, college fund. Skipped
+                // once the fund is transferred: an adult owner (or the previous
+                // owner viewing the handed-off fund) shouldn't be pitched their
+                // "first car / college / graduation" — those are a minor's
+                // milestones and read as stale on a grown, handed-off account.
+                if (childAgeNow !== null && childAgeNow >= 13 && !Boolean((activeFund as any)?.transferredAt)) {
+                  const gradYear = childBirthdate ? childBirthdate.getFullYear() + 18 : new Date().getFullYear() + 4;
+                  const yearsUntilGrad = gradYear - new Date().getFullYear();
+                  // Never suggest a graduation that already happened (a 20-year-old
+                  // not-yet-transferred fund would otherwise get "Class of 2023 ·
+                  // This year").
+                  if (yearsUntilGrad >= 0 && !activeEvents.some(e => e.eventType === "graduation")) {
+                    const yearsUntil = yearsUntilGrad;
                     const gradDateMs = new Date(gradYear, 5, 1).getTime();
                     suggestions.push({
                       key: "sug-grad", emoji: "🎓",
@@ -10528,10 +10579,15 @@ export default function Dashboard() {
 
             {/* At-majority handoff-prep section (countdown to majority, the parent's
                 letter editor, "what happens at majority"). All future-tense and
-                parent-facing, and moot once the handoff has happened — hide it for the
-                post-handoff owner, where it would read as past-tense nonsense ("you
-                turn 21 / the day it becomes yours"). 2026-05-29 owner-mode. */}
-            {!isOwnerMode && !isMemorialized && (
+                parent-facing, and moot once the handoff has happened. Hide it for
+                ANY viewer of an already-transferred fund — not just the owner: a
+                previous owner (Phil viewing Haley's handed-off fund) or a co-parent
+                would otherwise see a future "turns 21 / the day it becomes theirs"
+                countdown to an event that already happened. Gate on the fund's
+                transferredAt (the canonical "handed off" signal), which also covers
+                the owner case isOwnerMode used to cover alone. 2026-05-29 owner-mode;
+                extended to all transferred-fund viewers 2026-06-02. */}
+            {!isOwnerMode && !isMemorialized && !Boolean((activeFund as any)?.transferredAt) && (
             <motion.section
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}

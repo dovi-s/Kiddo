@@ -753,13 +753,18 @@ export default function GetStarted() {
                   GIFTER_LED_ACQUISITION_SPEC.md. */}
               <GiftIntentBanner />
               <AnimatedBlock className="text-center">
-                <Logo size="lg" className="mx-auto text-primary" linkTo={null} />
+                {/* No hero logo here — the sticky Shell header already shows the
+                    Kiddo brand mark on this step (it has no progress bar). A
+                    second large logo above the headline was a visible duplicate
+                    (reported: "kiddo logo twice, top of page and middle"). Every
+                    other onboarding step shows only the header mark; welcome now
+                    matches. */}
                 {/* Headline: emotional brand promise condensed. The contrast
                     structure ("X disappear. Y last.") names the alternative
                     (cash) and the upgrade (a permanent record of investments)
                     in 6 words. Functional headlines like "Set up the gift
                     link first" don't make that case — they describe a task. */}
-                <h1 className="mt-8 font-heading text-[2.5rem] font-semibold leading-[1.02] text-foreground">
+                <h1 className="font-heading text-[2.5rem] font-semibold leading-[1.02] text-foreground">
                   Cash gifts disappear.
                   <br />
                   Kiddo gifts last.
@@ -829,6 +834,17 @@ export default function GetStarted() {
                   </div>
                 )}
               </AnimatedBlock>
+              {/* Trust strip lives in the scrollable flow, NOT the fixed Dock.
+                  It's a tall card (multi-line SIPC + fee disclaimer); when it
+                  sat inside the position:fixed Dock alongside the button, the
+                  Dock grew taller than its reserved bottom space and pushed the
+                  "Continue with email" button off the top of the screen with no
+                  way to scroll to it (reported: "the email thing is cut off and
+                  can't scroll"). Keeping the Dock to just the button + sign-in
+                  line keeps it short and always reachable. */}
+              <AnimatedBlock className="mt-6">
+                <TrustMicroStrip />
+              </AnimatedBlock>
               <Dock
                 primary={
                   <Button onClick={() => void handleContinue()} disabled={!canContinue || isRegistering} className="h-14 w-full rounded-2xl text-base btn-action" data-testid="button-welcome-continue">
@@ -837,10 +853,7 @@ export default function GetStarted() {
                   </Button>
                 }
                 secondary={
-                  <>
-                    <TrustMicroStrip />
-                    <p className="text-center text-sm text-muted-foreground">Already have an account? <Link href="/login"><span className="font-medium text-foreground underline">Sign in</span></Link></p>
-                  </>
+                  <p className="text-center text-sm text-muted-foreground">Already have an account? <Link href="/login"><span className="font-medium text-foreground underline">Sign in</span></Link></p>
                 }
               />
             </div>
