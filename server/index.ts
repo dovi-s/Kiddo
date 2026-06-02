@@ -365,6 +365,16 @@ app.get("/sitemap.xml", (req, res) => {
   for (const slug of BLOG_SLUGS) {
     routes.push({ path: `/blog/${slug}`, changefreq: "monthly", priority: "0.6" });
   }
+  // Story entries (the occasion-narrative SEO surface). Same markdown-driven,
+  // server-can't-read-the-client-glob constraint as BLOG_SLUGS above: keep in
+  // sync with client/src/content/stories/*.md (one entry per file; add a slug
+  // when a story ships). The /stories hub is listed above; these are its
+  // indexable children — both are index,follow in client getSeoForPath, so they
+  // belong in the sitemap too (they were previously omitted).
+  const STORY_SLUGS = ["emma-birthday-fund", "noah-baby-shower-fund"];
+  for (const slug of STORY_SLUGS) {
+    routes.push({ path: `/stories/${slug}`, changefreq: "monthly", priority: "0.5" });
+  }
   const urlset = routes
     .map(
       (r) =>

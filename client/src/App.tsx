@@ -276,6 +276,18 @@ function getSeoForPath(path: string): SeoConfig {
       ogType: "website",
     };
   }
+  // /give-a-gift is a PUBLIC, indexable funnel page (it's in sitemap.xml and has
+  // an SSR head in server/seoMeta.ts). Without this explicit case it fell through
+  // to the single-segment generic branch below and rendered noindex — contradicting
+  // the sitemap. Title/description mirror seoMeta.ts so pre/post-hydration heads agree.
+  if (pathname === "/give-a-gift") {
+    return {
+      title: "Give a gift that lasts | Kiddo",
+      description: "Start a Kiddo gift for a child whose parents haven't set up a fund yet. We'll send them a warm note.",
+      robots: "index, follow",
+      ogType: "website",
+    };
+  }
   if (pathname === "/tools/at-18-calculator") {
     return {
       title: "UTMA Calculator: What investing for a kid becomes by 18 | Kiddo",
@@ -331,10 +343,13 @@ function getSeoForPath(path: string): SeoConfig {
   if (pathname === "/activate") return { ...genericPrivate, title: "Activate Investing | Kiddo", description: "Complete investing activation for your fund." };
   if (pathname === "/gift/success") return { ...genericPrivate, title: "Gift Complete | Kiddo", description: "Gift checkout confirmation." };
   if (pathname === "/gift") {
+    // Thin utility: a gift-code entry form with no standalone search value, and
+    // not in sitemap.xml. noindex (keep `follow` so it still passes link equity)
+    // rather than letting an empty form page get indexed as thin content.
     return {
       title: "Find a Fund | Kiddo",
       description: "Enter a child's Kiddo gift code to open their private gift page. No public search. No account required to give.",
-      robots: "index, follow",
+      robots: "noindex, follow",
       ogType: "website",
     };
   }
@@ -389,6 +404,17 @@ function upsertCanonical(href: string) {
   tag.setAttribute("href", href);
 }
 
+// Indexable alias routes whose content is identical to a canonical /tools/ URL
+// (the SEO satellites are sometimes linked without the /tools/ prefix — see the
+// Route aliases in Router). The alias stays index,follow so inbound links
+// resolve, but its <link rel="canonical"> points at the original so search
+// engines consolidate ranking signals onto one URL instead of treating the two
+// paths as duplicate content. Keep in sync with the alias <Route>s below.
+const CANONICAL_OVERRIDES: Record<string, string> = {
+  "/robux-vs-utma": "/tools/robux-vs-utma",
+  "/trump-account-vs-utma": "/tools/trump-account-vs-utma",
+};
+
 function SeoManager() {
   const [location] = useLocation();
 
@@ -396,7 +422,7 @@ function SeoManager() {
     const pathname = normalizePath(location);
     const seo = getSeoForPath(pathname);
     const baseUrl = window.location.origin;
-    const canonical = `${baseUrl}${pathname}`;
+    const canonical = `${baseUrl}${CANONICAL_OVERRIDES[pathname] ?? pathname}`;
     const existingOgImage =
       (document.head.querySelector('meta[property="og:image"]') as HTMLMetaElement | null)?.content ||
       "/kiddo-og-image.png";
