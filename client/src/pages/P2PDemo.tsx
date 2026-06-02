@@ -35,7 +35,8 @@ type SendMode = "cash" | "stock";
 const STOCKS = FEATURED_STOCK_PICKS.map((s) => ({ ticker: s.ticker, name: s.name }));
 
 const AMOUNT = 30;
-const GROW_YEARS = 30;
+const GROW_YEARS = 30; // Maya is a thirty-something adult, so 30 years is a fair runway.
+const KID_YEARS = 60;  // A newborn gets a whole lifetime -> the "start early" payoff.
 
 function grow(amount: number, years: number, rate = 0.07): number {
   return amount * Math.pow(1 + rate, years);
@@ -90,6 +91,7 @@ export default function P2PDemo() {
   };
 
   const futureVal = grow(AMOUNT, GROW_YEARS);
+  const kidVal = grow(AMOUNT, KID_YEARS);
 
   return (
     <div className="min-h-screen bg-background">
@@ -312,8 +314,16 @@ export default function P2PDemo() {
                   You just felt the whole idea.
                 </h2>
                 <p className="mx-auto mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
-                  A gift that outlives the moment. Start it on day one for a kid you love,
-                  and let everyone who loves them add to it for the next eighteen years.
+                  For Maya, thirty years turned that $30 into {usd0(futureVal)}. Start the same $30
+                  for a newborn instead of a thirty-something and it has a whole lifetime to
+                  compound: closer to {usd0(kidVal)}. The head start is the entire trick.
+                </p>
+                <p className="mx-auto mt-4 max-w-md text-base leading-relaxed text-muted-foreground">
+                  Start it for a kid you love, and let everyone who loves them add to it for the
+                  next eighteen years.
+                </p>
+                <p className="mx-auto mt-3 max-w-md text-xs text-muted-foreground/70">
+                  Same 7 percent illustration. Not a guarantee.
                 </p>
                 <div className="mt-8 flex flex-col items-center gap-3">
                   <Button size="lg" onClick={() => { haptic("medium"); setLocation("/get-started"); }} data-testid="button-p2p-start-fund">
