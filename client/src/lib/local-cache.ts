@@ -33,10 +33,42 @@ export function readLocalCache<T>(key: string, ttlMs: number = DEFAULT_TTL_MS): 
 
 export function writeLocalCache(key: string, value: unknown) {
   if (typeof window === "undefined") return;
+  // Route through safeLocalSet so the cache write path self-heals on a full
+  // store (evict rebuildable keys + retry) instead of silently giving up.
+  // writeLocalCache runs on nearly every page, so this is what frees a wedged
+  // localStorage early, regardless of which page the user landed on. Cache is a
+  // speed hint only — live queries remain the source of truth.
+  safeLocalSet(key, JSON.stringify({ savedAt: new Date().toISOString(), value }));
+}
+
+// Best-effort localStorage write that SELF-HEALS on quota exhaustion. An
+// unguarded setItem against a full store throws QuotaExceededError, and when a
+// caller didn't wrap it that uncaught throw crashes the page — which is exactly
+// how a 1-byte lifecycle-signal flag ("1") took down the whole dashboard
+// ("Setting the value of 'kora_signal_no_gift_14d_…' exceeded the quota").
+// On quota error we evict our OWN disposable keys — the kiddo.* speed caches
+// (rebuildable from live queries) and the kora* signal flags / latches /
+// dismissals — then retry once. Returns whether the value was ultimately
+// stored; callers can ignore the result. The contract is: NEVER throw.
+export function safeLocalSet(key: string, value: string): boolean {
+  if (typeof window === "undefined") return false;
+  const ls = window.localStorage;
   try {
-    window.localStorage.setItem(key, JSON.stringify({ savedAt: new Date().toISOString(), value }));
+    ls.setItem(key, value);
+    return true;
   } catch {
-    // Cache is a speed hint only. Live queries remain the source of truth.
+    try {
+      for (let i = ls.length - 1; i >= 0; i -= 1) {
+        const k = ls.key(i);
+        if (k && k !== key && (k.startsWith("kiddo.") || k.startsWith("kora"))) {
+          ls.removeItem(k);
+        }
+      }
+      ls.setItem(key, value);
+      return true;
+    } catch {
+      return false; // give up silently — a cache/flag write must never crash the app
+    }
   }
 }
 

@@ -161,7 +161,7 @@ import { RecurringRequestsNudge } from "@/components/RecurringRequestsNudge";
 import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
 import { buildSellDollarQuickAmountOptions } from "@/lib/sell-quick-amounts";
-import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix } from "@/lib/local-cache";
+import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, removeLocalCache, removeLocalCachePrefix, safeLocalSet } from "@/lib/local-cache";
 import { projectFundValue } from "@shared/projection";
 import type { Fund, Holding, Gift as GiftType, Event, RecurringGift } from "@shared/schema";
 import {
@@ -673,7 +673,7 @@ function readSsnLatched(fundId: string): boolean {
 function writeSsnLatched(fundId: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(SSN_LATCH_PREFIX + fundId, new Date().toISOString());
+    safeLocalSet(SSN_LATCH_PREFIX + fundId, new Date().toISOString());
   } catch {
     // ignore (private mode, quota, etc.) — server-side flag still wins on next refetch
   }
@@ -702,7 +702,7 @@ function isSsnSnoozed(fundId: string): boolean {
 function snoozeSsn(fundId: string): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(SSN_SNOOZE_PREFIX + fundId, new Date().toISOString());
+    safeLocalSet(SSN_SNOOZE_PREFIX + fundId, new Date().toISOString());
   } catch {
     // ignore
   }
@@ -3022,7 +3022,7 @@ export default function Dashboard() {
     if (window.localStorage.getItem(storageKey) === "shown") return;
     const timer = window.setTimeout(() => {
       setShowCoverageUpgradeModal(true);
-      window.localStorage.setItem(storageKey, "shown");
+      safeLocalSet(storageKey, "shown");
     }, 900);
     return () => window.clearTimeout(timer);
   }, [activeFundId, recentGiftForToast, isFundCovered]);
@@ -3508,7 +3508,7 @@ export default function Dashboard() {
     const cumulativeGainPct = displayGainPct;
     if (cumulativeGainPct >= 9 && currentProjection && doubledProjection && monthlyAmt > 0) {
       setSmartNudge({ scenario: "outperforming", returnPct: Math.round(cumulativeGainPct * 10) / 10, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
-      localStorage.setItem(NUDGE_KEY, String(now));
+      safeLocalSet(NUDGE_KEY, String(now));
       return;
     }
 
@@ -3517,7 +3517,7 @@ export default function Dashboard() {
     const monthsRunning = createdAt ? Math.floor((now - createdAt) / (30 * 24 * 60 * 60 * 1000)) : 0;
     if (monthsRunning >= 3 && currentProjection && doubledProjection && monthlyAmt > 0 && cumulativeGainPct >= 0) {
       setSmartNudge({ scenario: "consistent", streakMonths: monthsRunning, currentMonthlyAmt: monthlyAmt, doubledAmt: monthlyAmt * 2, currentProjection, doubledProjection });
-      localStorage.setItem(NUDGE_KEY, String(now));
+      safeLocalSet(NUDGE_KEY, String(now));
       return;
     }
 
@@ -3603,7 +3603,7 @@ export default function Dashboard() {
         // the "At $X/mo, in N months" trailing copy.
         monthsDoubled: monthsDoubled && monthsDoubled > 0 ? monthsDoubled : undefined,
       });
-      localStorage.setItem(NUDGE_KEY, String(now));
+      safeLocalSet(NUDGE_KEY, String(now));
     }
   }, [activeFundId, fundHistory, activeAutoInvest, totalValue, age18Transition, hasAutoInvestAccess, activeFund?.createdAt, isReadOnlyFund]);
 
@@ -4119,7 +4119,7 @@ export default function Dashboard() {
         gifts: gifts.length,
         hoursToFirstGift: hoursToFirstGift !== null ? Number(hoursToFirstGift.toFixed(2)) : null,
       });
-      window.localStorage.setItem(firstGiftKey, "1");
+      safeLocalSet(firstGiftKey, "1");
     } else if (hasAnyGift && gifts.length > 2 && !window.localStorage.getItem(firstGiftKey)) {
       // Fund has been receiving gifts long enough that we missed the
       // first-gift moment for this device. Set the localStorage flag
@@ -4127,7 +4127,7 @@ export default function Dashboard() {
       // dashboard mount. The flag's job here is "do not send the
       // signal again from this device," and we honor it by also
       // suppressing future re-evaluations.
-      window.localStorage.setItem(firstGiftKey, "1");
+      safeLocalSet(firstGiftKey, "1");
     }
 
     if (hasAnyEvent && !hasAnyGift) {
@@ -4140,21 +4140,21 @@ export default function Dashboard() {
           events: events.length,
           oldestEventHours: Number(((now - oldestEventTs) / (1000 * 60 * 60)).toFixed(1)),
         });
-        window.localStorage.setItem(event1hKey, "1");
+        safeLocalSet(event1hKey, "1");
       }
       if (oldestEventTs && now - oldestEventTs >= 24 * 60 * 60 * 1000 && !window.localStorage.getItem(event24Key)) {
         trackLifecycleSignal("event_created_no_share_24h", {
           events: events.length,
           oldestEventHours: Number(((now - oldestEventTs) / (1000 * 60 * 60)).toFixed(1)),
         });
-        window.localStorage.setItem(event24Key, "1");
+        safeLocalSet(event24Key, "1");
       }
       if (oldestEventTs && now - oldestEventTs >= 48 * 60 * 60 * 1000 && !window.localStorage.getItem(share48Key)) {
         trackLifecycleSignal("share_no_checkout_48h", {
           events: events.length,
           oldestEventHours: Number(((now - oldestEventTs) / (1000 * 60 * 60)).toFixed(1)),
         });
-        window.localStorage.setItem(share48Key, "1");
+        safeLocalSet(share48Key, "1");
       }
     }
 
@@ -4163,7 +4163,7 @@ export default function Dashboard() {
         fundAgeDays: Number(((now - fundCreatedTs) / (1000 * 60 * 60 * 24)).toFixed(1)),
         events: events.length,
       });
-      window.localStorage.setItem(noGift14Key, "1");
+      safeLocalSet(noGift14Key, "1");
     }
   }, [activeFundId, activeFund?.createdAt, activeFund?.slug, events, gifts]);
 
