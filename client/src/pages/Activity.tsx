@@ -685,12 +685,21 @@ const RECURRING_RUN_TYPE = "__recurring_run__";
 const MIN_RECURRING_RUN = 3;
 
 function isRecurringContribItem(item: FeedActivity): boolean {
-  if (normalizeActivityType((item as any).type) === "parent_contribution") return true;
+  // Collapse only TRUE recurring cycles — those linked to a recurring schedule
+  // via parentContributionId (the webhook + seed both stamp it into the activity
+  // metadata for worker-fired cycles). A parent ONE-TIME addition is also a
+  // "parent_contribution" with isParentContribution=true, but carries NO
+  // parentContributionId — it must stay its own row (often a pick with its own
+  // ticker + note), not get absorbed into the "Monthly contributions" run where
+  // it would mislabel the group ("13 contributions · $1,350", no "$100 each")
+  // and lose its detail.
   try {
     const meta = parseMetadata((item as any).metadata);
-    if ((meta as any)?.isParentContribution === true) return true;
-  } catch { /* ignore */ }
-  return false;
+    const pcId = (meta as any)?.parentContributionId;
+    return typeof pcId === "string" && pcId.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 function collapseRecurringRuns(items: FeedActivity[]): FeedActivity[] {
