@@ -12,6 +12,7 @@ import React, { useRef } from "react";
 import {
   Animated,
   Pressable,
+  Platform,
   View,
   StyleSheet,
   AccessibilityInfo,
@@ -34,13 +35,19 @@ export function KiddoCard({ children, variant = "default", onPress, style, padde
   const hero = variant === "hero";
   const r = hero ? radius.hero : radius.card;
 
+  // Native uses RN shadow props; web uses boxShadow (react-native-web deprecates
+  // shadow*). Same visual weight, no console warning on either platform.
+  const shadowStyle = (Platform.OS === "web"
+    ? { boxShadow: hero ? "0 16px 30px rgba(14,37,24,0.18)" : "0 4px 12px rgba(26,23,16,0.10)" }
+    : hero ? shadows.hero : shadows.card) as ViewStyle;
+
   const base: ViewStyle = {
     borderRadius: r,
     backgroundColor: hero ? colors.evergreen : semanticColors.surface.card,
     borderWidth: hero ? 0 : 1,
     borderColor: semanticColors.surface.muted,
     padding: padded ? spacing.md : 0,
-    ...(hero ? shadows.hero : shadows.card),
+    ...shadowStyle,
   };
 
   const inner = (
@@ -48,10 +55,7 @@ export function KiddoCard({ children, variant = "default", onPress, style, padde
       {/* Glass edge — faint top highlight that catches light. Skipped on hero
           (its gradient owns the top). Clipped to the rounded top corners. */}
       {!hero && (
-        <View
-          pointerEvents="none"
-          style={[styles.glassEdge, { borderTopLeftRadius: r, borderTopRightRadius: r }]}
-        />
+        <View style={[styles.glassEdge, { borderTopLeftRadius: r, borderTopRightRadius: r, pointerEvents: "none" }]} />
       )}
       {children}
     </>
@@ -79,7 +83,7 @@ function PressableCard({
 
   const spring = (to: number) => {
     if (reduceMotion.current) return;
-    Animated.spring(scale, { toValue: to, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
+    Animated.spring(scale, { toValue: to, useNativeDriver: Platform.OS !== "web", speed: 50, bounciness: 0 }).start();
   };
 
   return (
