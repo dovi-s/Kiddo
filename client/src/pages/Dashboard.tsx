@@ -5888,17 +5888,6 @@ export default function Dashboard() {
                         );
                       })()}
 
-                      {/* Gift-graph recruitment hook — the loop angle Acorns
-                          structurally can't copy (no social graph). Turns the
-                          emotional hero into a recruiting surface: the number of
-                          people already in is the social proof, "invite one more"
-                          is the ask. The gold Share button right below is the
-                          action. Parent (non-read-only) only. */}
-                      {!isReadOnlyFund && contributorCount > 0 && (
-                        <p style={{ fontSize: 12, color: "rgba(255,255,255,0.62)", lineHeight: 1.4, marginBottom: 10 }} data-testid="text-hero-invite-one-more">
-                          {contributorCount} {contributorCount === 1 ? "person has" : "people have"} gifted to {recipientFirstNameDisplay || "the fund"}. Invite one more →
-                        </p>
-                      )}
                       {/* CTA row. Share button hidden for read-only roles
                           (viewers + previous owners post-handoff). For a
                           previous owner, the gift link is the kid's now;
