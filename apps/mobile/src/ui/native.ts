@@ -36,6 +36,42 @@ export function headingFontFamily(): string | undefined {
   return fontsLoaded ? typography.family.heading : undefined;
 }
 
+// ── Elevation ────────────────────────────────────────────────────────────
+// Platform-correct shadow. react-native-web deprecates the shadow* style props
+// (it warns once per offending StyleSheet) in favor of CSS boxShadow; native
+// ignores boxShadow and needs the RN shadow* props + Android elevation. Spread
+// this into a StyleSheet entry instead of hand-rolling shadows — one source of
+// truth, zero web console noise. Mirrors KiddoCard's own platform split.
+//
+//   card: { ...elevate({ y: 14, blur: 24, opacity: 0.12 }) }
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace("#", "");
+  const full = clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean;
+  const r = parseInt(full.slice(0, 2), 16) || 0;
+  const g = parseInt(full.slice(2, 4), 16) || 0;
+  const b = parseInt(full.slice(4, 6), 16) || 0;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export function elevate(opts: {
+  y?: number;
+  blur?: number;
+  opacity?: number;
+  color?: string;
+}): object {
+  const { y = 4, blur = 12, opacity = 0.1, color = "#1A1710" } = opts;
+  if (Platform.OS === "web") {
+    return { boxShadow: `0px ${y}px ${blur}px ${hexToRgba(color, opacity)}` };
+  }
+  return {
+    shadowColor: color,
+    shadowOffset: { width: 0, height: y },
+    shadowRadius: blur,
+    shadowOpacity: opacity,
+    elevation: Math.max(2, Math.round(blur / 2)),
+  };
+}
+
 // ── Haptics ────────────────────────────────────────────────────────────
 export type HapticIntent = keyof typeof HAPTIC_PATTERNS;
 

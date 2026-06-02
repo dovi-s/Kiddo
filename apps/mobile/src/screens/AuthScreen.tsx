@@ -10,7 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { apiLogin, apiRegister, type ApiUser } from "../api";
-import { KText, KiddoCard, KInput, Button, haptic } from "../ui";
+import { KText, KiddoCard, KInput, Button, haptic, elevate } from "../ui";
 
 interface AuthScreenProps {
   onAuth: (user: ApiUser) => void;
@@ -194,11 +194,7 @@ const styles = StyleSheet.create({
   tab: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.control - 3, alignItems: "center" },
   tabActive: {
     backgroundColor: semanticColors.surface.card,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 2,
+    ...elevate({ y: 1, blur: 4, opacity: 0.08, color: colors.ink }),
   },
   errorBox: {
     backgroundColor: semanticColors.danger.background,

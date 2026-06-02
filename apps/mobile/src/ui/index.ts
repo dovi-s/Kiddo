@@ -26,5 +26,5 @@ export type { PillProps } from "./Pill";
 export { Skeleton } from "./Skeleton";
 export type { SkeletonProps } from "./Skeleton";
 
-export { haptic, markFontsLoaded, areFontsLoaded } from "./native";
+export { haptic, markFontsLoaded, areFontsLoaded, elevate } from "./native";
 export type { HapticIntent } from "./native";

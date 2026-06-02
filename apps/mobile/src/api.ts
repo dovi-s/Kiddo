@@ -160,6 +160,100 @@ export interface ApiEvent {
   createdAt: string;
 }
 
+// ─── Dashboard summary (the consolidated fund-page payload) ─────────────────
+//
+// Mirrors GET /api/funds/:fundId/dashboard-summary (server/routes.ts). This is
+// the ONE endpoint the web Dashboard is built on — the rich fund page (hero,
+// 30-day summary, growth chart, holdings split, recurring, who-loves) all read
+// off it. The mobile Home tab now consumes the same payload so it mirrors the
+// web fund page instead of re-deriving a thinner view from /holdings + /gifts.
+//
+// Fund IDENTITY (name, balance, recipientFirstName, accessRole, transferredAt)
+// is NOT in this payload — it lives on the ApiFund row from apiGetFunds(). The
+// Home tab combines the active ApiFund + this summary.
+
+/** A point on the fund's value history (one row per captured snapshot). */
+export interface DashboardHistoryPoint {
+  snapshotDate: string;
+  investedValue: string;
+  cashValue: string;
+  totalValue: string;
+  /** Cost basis (sum of settled gift principal) — the chart's "principal" line. */
+  principalBasis: string;
+}
+
+/** A richer gift row than ApiGift — the dashboard-summary returns full gift records. */
+export interface DashboardGift {
+  id: string;
+  amount: string;
+  netAmount?: string | null;
+  senderName: string | null;
+  senderEmail?: string | null;
+  isAnonymous?: boolean;
+  message: string | null;
+  status: string;
+  selectedTicker?: string | null;
+  executionModel?: string | null;
+  eventId?: string | null;
+  createdAt: string;
+  settledAt?: string | null;
+}
+
+/** A parent's recurring investment schedule (free across all tiers). */
+export interface ParentContribution {
+  id: string;
+  amount: string;
+  frequency: string; // "weekly" | "monthly" | "yearly" | "daily"
+  status: string; // "active" | "paused" | ...
+  nextRunDate?: string | null;
+  selectedTicker?: string | null;
+  executionModel?: string | null;
+  pauseReason?: string | null;
+  createdAt?: string;
+}
+
+/** Per-gift, per-ticker cost-basis allocation (drives holdings provenance). */
+export interface GiftAllocation {
+  id: string;
+  giftId: string;
+  ticker: string;
+  costBasis: string;
+  shares: string;
+  source?: string; // "pick" | "auto" | "rebalance"
+}
+
+export interface DashboardTransaction {
+  id: string;
+  type: string;
+  amount: string;
+  status: string;
+  description: string | null;
+  giftId: string | null;
+  eventId: string | null;
+  fundId: string;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export interface DashboardSummary {
+  fundId: string;
+  /** Whether recurring is unlocked for this fund (Plus/Family/trial/demo/owner). */
+  recurringEnabled: boolean;
+  holdings: ApiHolding[];
+  gifts: DashboardGift[];
+  events: ApiEvent[];
+  history: DashboardHistoryPoint[];
+  investmentPreferences: any;
+  giftCode: { code: string; lookupUrl: string; createdAt?: string; updatedAt?: string };
+  parentContributions: ParentContribution[];
+  transactions: DashboardTransaction[];
+  giftAllocations: GiftAllocation[];
+  /** Set only when the viewer is the kid who claimed within the last 60 days. */
+  kidClaimedAt: string | null;
+  coparentAcceptance: { collaboratorId: string; name: string; acceptedAt: string } | null;
+  plusFirstMediaAt: string | null;
+}
+
 export interface MobilePushPreferences {
   enabled: boolean;
   deviceCount: number;
@@ -401,6 +495,16 @@ export async function apiGetFundHoldings(fundId: string): Promise<ApiHolding[]> 
 export async function apiGetFundGifts(fundId: string): Promise<ApiGift[]> {
   const res = await apiFetch(`/api/funds/${fundId}/gifts`);
   return parseJson<ApiGift[]>(res);
+}
+
+/**
+ * The consolidated fund-page payload. ONE round-trip for the rich Home tab —
+ * the same endpoint the web Dashboard is built on. Combine with the active
+ * ApiFund (from apiGetFunds) for identity/balance.
+ */
+export async function apiGetDashboardSummary(fundId: string): Promise<DashboardSummary> {
+  const res = await apiFetch(`/api/funds/${fundId}/dashboard-summary`);
+  return parseJson<DashboardSummary>(res);
 }
 
 export async function apiCreateFund(data: {

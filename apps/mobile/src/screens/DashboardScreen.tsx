@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -16,10 +16,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { slugify } from "@kora/utils";
-import { KText, KiddoCard, Button } from "../ui";
+import { KText, KiddoCard, Button, elevate } from "../ui";
 import {
   apiCreateEvent,
   apiGetAllEvents,
+  apiGetDashboardSummary,
   apiGetFundGifts,
   apiGetFunds,
   apiGetMobilePushPreferences,
@@ -32,8 +33,10 @@ import {
   type ApiFund,
   type ApiGift,
   type ApiUser,
+  type DashboardSummary,
   WEB_BASE,
 } from "../api";
+import { FundHomeTab } from "./FundHomeTab";
 import { registerForPushNotificationsAsync } from "../push";
 import {
   authenticate as authenticateBiometric,
@@ -196,182 +199,10 @@ function TabBar({ active, onPress }: { active: Tab; onPress: (tab: Tab) => void 
 
 // ─── Home Tab ───────────────────────────────────────────────────────────────
 
-function HomeTab({
-  activeFund,
-  events,
-  gifts,
-  loading,
-  refreshing,
-  error,
-  onRefresh,
-  onSelectFund,
-  onAddFund,
-  onCreateEvent,
-}: {
-  activeFund: ApiFund | null;
-  events: ApiEvent[];
-  gifts: GiftWithFund[];
-  loading: boolean;
-  refreshing: boolean;
-  error: string | null;
-  onRefresh: () => void;
-  onSelectFund: (fund: ApiFund) => void;
-  onAddFund: () => void;
-  onCreateEvent: () => void;
-}) {
-  const childName = getChildName(activeFund);
-  const balance = activeFund ? parseFloat(String(activeFund.balance || "0")) : 0;
-  const gain = activeFund ? parseFloat(String(activeFund.totalGain || "0")) : 0;
-  const fundGifts = activeFund ? gifts.filter((g) => g.fundId === activeFund.id) : [];
-  const activeEvents = events
-    .filter((e) => e.status === "active" && (!activeFund || String(e.fundId) === String(activeFund?.id)))
-    .slice(0, 2);
-  const upcoming = activeFund ? yearsUntil18(activeFund.recipientBirthdate) : null;
-  const hasStarted = balance > 0 || fundGifts.length > 0;
-  // Post-handoff: a transferred fund is owned by the now-adult recipient; the parent
-  // (accessRole 'previous_owner') has READ-ONLY access. Mirror the web's isReadOnlyFund
-  // gating — hide write CTAs (Share, New event) that would 403 / are a false affordance.
-  // 2026-05-31 launch audit (mobile parity gap with web).
-  const isReadOnly = (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
-
-  const handleShare = async () => {
-    if (!activeFund) return;
-    try { await shareFund(activeFund); } catch {}
-  };
-
-  return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.scrollContent}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.evergreen} />}
-      showsVerticalScrollIndicator={false}
-    >
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.evergreen} />
-          <KText variant="caption" style={{ marginTop: spacing.sm }}>Opening your funds...</KText>
-        </View>
-      ) : error ? (
-        <KiddoCard style={{ marginTop: spacing.md }}>
-          <KText variant="heading">Something didn't load.</KText>
-          <KText variant="caption" style={{ marginTop: spacing.xs, marginBottom: spacing.md }}>{error}</KText>
-          <Button label="Try again" onPress={onRefresh} variant="outline" />
-        </KiddoCard>
-      ) : !activeFund ? (
-        <View style={{ paddingTop: spacing.xl, gap: spacing.sm }}>
-          <KText variant="title">Every great fund starts here.</KText>
-          <KText variant="body" color={semanticColors.text.muted}>
-            Create one fund, share one link, and let the first gift change the screen.
-          </KText>
-          <Button label="Start a fund" onPress={onAddFund} size="lg" style={{ marginTop: spacing.sm }} />
-        </View>
-      ) : (
-        <View style={{ gap: spacing.md, paddingTop: spacing.md }}>
-          <KiddoCard variant="hero" onPress={() => onSelectFund(activeFund)}>
-            <KText variant="eyebrow" color="rgba(248,245,240,0.8)">{childName}'s Fund</KText>
-            <KText variant="display" color={semanticColors.text.inverse} tabular style={{ marginTop: spacing.xs }}>
-              {formatBalance(balance)}
-            </KText>
-            <KText variant="caption" color="rgba(248,245,240,0.82)" style={{ marginTop: spacing.xs }}>
-              {!hasStarted
-                ? "Every great fund starts here"
-                : gain === 0
-                  ? "Ready for the next gift"
-                  : `${gain > 0 ? "+" : ""}${formatBalance(gain)} all time`}
-            </KText>
-            {upcoming ? (
-              <KText variant="caption" color="rgba(248,245,240,0.7)" style={{ marginTop: 2 }}>
-                {childName} turns 18 in {upcoming}
-              </KText>
-            ) : null}
-          </KiddoCard>
-
-          {!hasStarted ? (
-            <KiddoCard>
-              <KText variant="eyebrow">Next step</KText>
-              <KText variant="heading" style={{ marginTop: 2 }}>Share {childName}'s link.</KText>
-              <KText variant="caption" style={{ marginTop: spacing.xs, marginBottom: spacing.md }}>
-                The first gift is the moment this becomes real. When it arrives, we'll ask you to verify your identity so gifts can be invested.
-              </KText>
-              <Button label={`Share ${childName}'s link`} onPress={handleShare} fullWidth />
-            </KiddoCard>
-          ) : null}
-
-          <View style={{ flexDirection: "row", gap: spacing.sm }}>
-            {!isReadOnly ? <Button label="Share link" onPress={handleShare} variant="monetization" /> : null}
-            <Button label="View fund" onPress={() => onSelectFund(activeFund)} variant="outline" />
-          </View>
-
-          <View style={{ gap: spacing.sm }}>
-            <KText variant="sectionLabel">What's happening</KText>
-            {fundGifts.length === 0 ? (
-              <KiddoCard>
-                <KText variant="bodyStrong">Share gift link</KText>
-                <KText variant="caption" style={{ marginTop: 2 }}>
-                  Share {childName}'s gift link to start receiving investments for their future.
-                </KText>
-              </KiddoCard>
-            ) : (
-              fundGifts.slice(0, 2).map((gift) => (
-                <KiddoCard key={gift.id}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", gap: spacing.sm }}>
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <KText variant="bodyStrong">{gift.senderName || "Someone"} gave {formatBalance(gift.amount)}</KText>
-                      <KText variant="caption" style={{ marginTop: 2 }}>
-                        {gift.recipientName}'s fund{gift.message ? `: "${gift.message}"` : ""}
-                      </KText>
-                    </View>
-                    <KText variant="caption">{formatShortDate(gift.createdAt) || ""}</KText>
-                  </View>
-                </KiddoCard>
-              ))
-            )}
-          </View>
-
-          <View style={{ gap: spacing.sm }}>
-            <KText variant="sectionLabel">Occasions</KText>
-            {activeEvents.length === 0 ? (
-              <KiddoCard>
-                <KText variant="bodyStrong">No occasion live</KText>
-                <KText variant="caption" style={{ marginTop: 2 }}>
-                  Create one for a birthday, baby shower, holiday, or just because.
-                </KText>
-              </KiddoCard>
-            ) : (
-              activeEvents.map((event) => (
-                <KiddoCard key={event.id}>
-                  <KText variant="bodyStrong">{event.name}</KText>
-                  <KText variant="caption" style={{ marginTop: 2 }}>
-                    {event.giftCount} {event.giftCount === 1 ? "gift" : "gifts"} · {formatBalance(event.totalRaised || "0")} raised
-                  </KText>
-                </KiddoCard>
-              ))
-            )}
-            {!isReadOnly ? (
-              <Pressable onPress={onCreateEvent} style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: spacing.xs }}>
-                <Ionicons name="add" size={16} color={colors.evergreen} />
-                <KText variant="label" color={colors.evergreen}>New occasion</KText>
-              </Pressable>
-            ) : null}
-          </View>
-
-          <View style={{ gap: spacing.sm }}>
-            <KText variant="sectionLabel">Coming up</KText>
-            <KiddoCard>
-              <KText variant="bodyStrong">{childName}'s 18th birthday</KText>
-              <KText variant="caption" style={{ marginTop: 2 }}>
-                {upcoming ? `in ${upcoming}` : "Add a birthday to start the countdown"}
-              </KText>
-              <KText variant="caption" style={{ marginTop: spacing.xs }}>
-                Memory Book first. Money second. This is what all of it is building toward.
-              </KText>
-            </KiddoCard>
-          </View>
-        </View>
-      )}
-    </ScrollView>
-  );
-}
+// HomeTab was a thin /funds-only sketch; it's been replaced by FundHomeTab
+// (./FundHomeTab.tsx), a faithful mirror of the web Dashboard arc fed by the
+// consolidated dashboard-summary payload. DashboardScreen renders FundHomeTab
+// directly and supplies the summary it fetches.
 
 // ─── Memory Tab ─────────────────────────────────────────────────────────────
 
@@ -1068,11 +899,44 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The consolidated fund-page payload for the active fund (the same endpoint
+  // the web Dashboard is built on). Drives the rich FundHomeTab.
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   const activeFund = useMemo(
     () => (selectedFundId ? funds.find((f) => f.id === selectedFundId) : null) ?? funds[0] ?? null,
     [selectedFundId, funds],
   );
+
+  // Fetch the dashboard-summary for whichever fund is active. A request ref
+  // guards against a fast fund-switch resolving out of order (last-requested
+  // wins). Refetched on pull-to-refresh via loadSummary in handleRefresh.
+  const summaryReqRef = useRef<string | undefined>(undefined);
+  const loadSummary = useCallback(async (fundId: string | undefined) => {
+    summaryReqRef.current = fundId;
+    if (!fundId) {
+      setSummary(null);
+      setSummaryLoading(false);
+      return;
+    }
+    setSummaryLoading(true);
+    try {
+      const next = await apiGetDashboardSummary(fundId);
+      if (summaryReqRef.current === fundId) setSummary(next);
+    } catch {
+      if (summaryReqRef.current === fundId) setSummary(null);
+    } finally {
+      if (summaryReqRef.current === fundId) setSummaryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Clear stale data immediately on switch so the new fund never shows the
+    // previous fund's holdings/gifts for a frame.
+    setSummary(null);
+    loadSummary(activeFund?.id);
+  }, [activeFund?.id, loadSummary]);
 
   const loadDashboard = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -1108,7 +972,7 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
 
   useEffect(() => { loadDashboard(); }, [loadDashboard]);
 
-  const handleRefresh = () => { setRefreshing(true); loadDashboard(true); };
+  const handleRefresh = () => { setRefreshing(true); loadDashboard(true); loadSummary(activeFund?.id); };
 
   const childName = getChildName(activeFund);
 
@@ -1166,10 +1030,11 @@ export function DashboardScreen({ user, onLogout, onSelectFund, onAddFund }: Das
 
       {/* Tabs */}
       {tab === "home" && (
-        <HomeTab
+        <FundHomeTab
           activeFund={activeFund}
+          summary={summary}
+          summaryLoading={summaryLoading}
           events={events}
-          gifts={gifts}
           loading={loading}
           refreshing={refreshing}
           error={error}
@@ -1306,11 +1171,7 @@ const switcher = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     gap: 4,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.14,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: -8 },
-    elevation: 10,
+    ...elevate({ y: -8, blur: 24, opacity: 0.14, color: colors.ink }),
   },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: "#DDD8D0", alignSelf: "center", marginBottom: spacing.sm },
   heading: { color: colors.ink, fontSize: 17, fontWeight: "800", marginBottom: spacing.sm },
@@ -1363,11 +1224,7 @@ const tabStyles = StyleSheet.create({
     height: 44,
     borderRadius: 14,
     backgroundColor: colors.gold,
-    shadowColor: "#3D2B09",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 4,
+    ...elevate({ y: 5, blur: 10, opacity: 0.2, color: "#3D2B09" }),
   },
   tabLabel: { fontSize: 10, fontWeight: "600", color: "#8B948C" },
   tabLabelActive: { color: colors.evergreen, fontWeight: "800" },
@@ -1413,11 +1270,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     padding: spacing.xl,
     gap: 6,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 5,
+    ...elevate({ y: 14, blur: 24, opacity: 0.12, color: colors.ink }),
   },
   heroLabel: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: "700" },
   heroAmount: { color: "#FFFFFF", fontSize: 44, lineHeight: 50, fontWeight: "900" },
@@ -1515,11 +1368,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     padding: spacing.xl,
     gap: spacing.md,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 5,
+    ...elevate({ y: 14, blur: 24, opacity: 0.12, color: colors.ink }),
   },
   giftEyebrow: { color: "#F8D889", fontSize: 12, fontWeight: "900", textTransform: "uppercase" },
   giftTitle: { color: "#FFF7E8", fontSize: 28, lineHeight: 33, fontWeight: "900" },
