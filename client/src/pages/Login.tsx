@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Lock, Mail, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { ThinkingOrb } from "@/components/ui/gemini";
@@ -47,6 +47,11 @@ export default function Login() {
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const { login, isLoggingIn, loginError, verifyTwoFactor, isVerifyingTwoFactor, verifyTwoFactorError } = useAuth();
   const queryClient = useQueryClient();
+  // Respect prefers-reduced-motion (parity with the other animated pages, e.g.
+  // Home's FadeIn). Without this, the entrance/tap/pulse animations fire for
+  // vestibular-sensitive users on the login surface while the rest of the app
+  // correctly honors the OS setting.
+  const shouldReduceMotion = useReducedMotion();
   const url = typeof window !== "undefined" ? new URL(window.location.href) : null;
   const oauthErrorParam = url?.searchParams.get("error");
   const oauthProviderParam = url?.searchParams.get("oauth");
@@ -172,7 +177,7 @@ export default function Login() {
     <div className="kiddo-app-page relative overflow-hidden">
       <main className="max-w-lg md:max-w-xl mx-auto px-4 py-16 md:py-20">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="space-y-8"
         >
@@ -193,7 +198,7 @@ export default function Login() {
 
           {friendlyLoginError && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-sm text-destructive text-center"
               data-testid="text-login-error"
@@ -204,7 +209,7 @@ export default function Login() {
 
           {oauthError && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-destructive/10 border border-destructive/20 rounded-xl p-3 text-sm text-destructive text-center"
               data-testid="text-oauth-error"
@@ -380,15 +385,15 @@ export default function Login() {
               type="submit"
               disabled={!email || !password || isLoggingIn}
               data-testid="button-login"
-              whileTap={{ scale: 0.97 }}
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
               className="kiddo-gold-button w-full h-14 text-base font-semibold rounded-2xl transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-[0.97]"
             >
               {isLoggingIn ? (
                 <motion.div className="flex items-center gap-3">
                   <ThinkingOrb size={20} variant="processing" />
                   <motion.span
-                    animate={{ opacity: [0.7, 1, 0.7] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                    animate={shouldReduceMotion ? undefined : { opacity: [0.7, 1, 0.7] }}
+                    transition={shouldReduceMotion ? undefined : { duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
                   >
                     Signing in...
                   </motion.span>
