@@ -6566,42 +6566,10 @@ export default function Dashboard() {
                       )}
                     </div>
 
-                    {/* Next scheduled — preview at the bottom. Only when there's an
-                        upcoming active run. Tappable: drops into Activity → Scheduled. */}
-                    {nextScheduled && (() => {
-                      const nextAmt = parseFloat(String(nextScheduled.amount || "0"));
-                      const nextDate = fmtNextDate(nextScheduled.nextTs);
-                      const nextTicker = nextScheduled.selectedTicker;
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            haptic("selection");
-                            // Land on the Scheduled tab with this specific
-                            // contribution highlighted + scrolled into view.
-                            // Activity.tsx parses ?tab + ?highlight on mount.
-                            const sid = String(nextScheduled?.id || "");
-                            const target = sid
-                              ? `/activity?tab=scheduled&highlight=${encodeURIComponent(sid)}`
-                              : `/activity?tab=scheduled`;
-                            setLocation(target);
-                          }}
-                          className="mt-3 w-full flex items-center justify-between gap-2 rounded-lg bg-[hsl(var(--kiddo-evergreen)/0.06)] border border-[hsl(var(--kiddo-evergreen)/0.18)] px-3 py-2 hover:bg-[hsl(var(--kiddo-evergreen)/0.10)] transition-colors text-left"
-                          data-testid="last30-next-scheduled"
-                        >
-                          <span className="text-[12px] text-foreground">
-                            <span className="font-semibold">Next:</span>{" "}
-                            <span className="text-muted-foreground">
-                              {Number.isFinite(nextAmt) ? formatCurrency(nextAmt) : ""} recurring investment
-                              {nextTicker ? ` → ${nextTicker}` : ""} · {nextDate}
-                            </span>
-                          </span>
-                          <span className="text-[11px] font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                            View →
-                          </span>
-                        </button>
-                      );
-                    })()}
+                    {/* (The "Next: $X recurring · {date}" preview that used to live
+                        here was removed 2026-06-02 — it duplicated the glanceable
+                        recurring-status chip under the hero, which already shows
+                        "$X/mo recurring · next {date}" and taps into management.) */}
 
                     {/* Last-30-days handoff to Activity. The section is
                         permanently lifetime-mode now; parents who want
