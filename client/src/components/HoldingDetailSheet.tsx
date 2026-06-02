@@ -276,7 +276,7 @@ function StockPriceChart({ ticker, gifts }: { ticker: string; gifts: Gift[] }) {
       {buyMarkers.length > 0 && !loading && !error && data.length >= 2 && (
         <p className="text-[10px] text-muted-foreground/80 leading-snug px-1">
           <span className="inline-block h-2 w-2 rounded-full mr-1.5" style={{ background: "hsl(43, 75%, 55%)", verticalAlign: "middle" }} />
-          {buyMarkers.length === 1 ? "Gold dot marks when this gift was made." : `Gold dots mark when each of the ${buyMarkers.reduce((s, m) => s + m.count, 0)} gifts to ${ticker} was made.`}
+          {buyMarkers.length === 1 ? "Gold dot marks when this gift was made." : `Gold dots mark when gifts to ${ticker} were made.`}
         </p>
       )}
     </div>
@@ -685,14 +685,23 @@ function HoldingDetailSheetBody({
   };
 
   if (useExactAllocations) {
-    // Real per-gift allocation rows. Sum cost basis by sender and scale to current value
-    // so we present current dollar share, not just historical cost.
+    // Real per-gift allocation rows. Value each gift by its ACTUAL share count ×
+    // the current price (i.e. distribute current value by SHARE proportion), not
+    // by cost proportion — otherwise every gift to a holding shows the same
+    // blended % and an early gift (which bought far more shares per dollar)
+    // looks identical to a recent one. Share-based reflects the true compounding:
+    // a $60 2009 Apple gift is worth dramatically more than a $60 2024 one.
+    // Falls back to cost proportion only if a row is missing its share count.
+    const totalAllocShares = exactAllocations.reduce((s, a) => s + Math.max(0, parseFloat(a.shares || "0")), 0);
     const totalAllocCost = exactAllocations.reduce((s, a) => s + Math.max(0, parseFloat(a.costBasis || "0")), 0);
     for (const alloc of exactAllocations) {
       const gift = giftById.get(String(alloc.giftId));
       if (!gift) continue;
       const allocCost = Math.max(0, parseFloat(alloc.costBasis || "0"));
-      const proportion = totalAllocCost > 0 ? allocCost / totalAllocCost : 0;
+      const allocShares = Math.max(0, parseFloat(alloc.shares || "0"));
+      const proportion = totalAllocShares > 0
+        ? allocShares / totalAllocShares
+        : (totalAllocCost > 0 ? allocCost / totalAllocCost : 0);
       const amt = currentValue > 0 ? proportion * currentValue : allocCost;
       accumulateGift(gift, amt, allocCost);
     }
@@ -746,6 +755,14 @@ function HoldingDetailSheetBody({
   const giftDetailsByContributor = useMemo(() => {
     const map = new Map<string, GiftDetailRow[]>();
     if (!useExactAllocations) return map;
+    // Value each gift by its ACTUAL shares (share proportion of current value),
+    // not cost proportion — so each gift's "today" value + % reflects WHEN it
+    // bought in. An early gift bought more shares per dollar and is worth far
+    // more now; cost proportion wrongly flattens every gift to one blended %.
+    const totalAllocShares = exactAllocations.reduce(
+      (s, a) => s + Math.max(0, parseFloat(a.shares || "0")),
+      0,
+    );
     const totalAllocCost = exactAllocations.reduce(
       (s, a) => s + Math.max(0, parseFloat(a.costBasis || "0")),
       0,
@@ -754,7 +771,10 @@ function HoldingDetailSheetBody({
       const gift = giftById.get(String(alloc.giftId));
       if (!gift) continue;
       const original = Math.max(0, parseFloat(alloc.costBasis || "0"));
-      const proportion = totalAllocCost > 0 ? original / totalAllocCost : 0;
+      const allocShares = Math.max(0, parseFloat(alloc.shares || "0"));
+      const proportion = totalAllocShares > 0
+        ? allocShares / totalAllocShares
+        : (totalAllocCost > 0 ? original / totalAllocCost : 0);
       const todayVal = currentValue > 0 ? proportion * currentValue : original;
       const delta = todayVal - original;
       const pct = original > 0 ? (delta / original) * 100 : 0;
