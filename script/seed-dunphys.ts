@@ -478,7 +478,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // thank-yous after the loop (so the demo shows the "Thanked" state, not only
   // the auto-backfilled "awaiting" drafts). Phil's recurring cycles are excluded
   // — the Memory Book renders those as "from you", never thankable.
-  const externalGifts: Array<{ giftId: string; senderName: string; senderEmail?: string; amount: number; createdAt: Date }> = [];
+  const externalGifts: Array<{ giftId: string; senderName: string; senderEmail?: string; amount: number; createdAt: Date; occasion?: string }> = [];
   for (const g of giftList) {
     const isRecurring = g.kind === "recurring";
     // A parent ONE-TIME top-up (Phil's own money, not an external gift): counts
@@ -638,7 +638,7 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
         : null,
       createdAt: new Date(g.createdAt),
     } as any);
-    externalGifts.push({ giftId: insertedGift.id, senderName: g.senderName, senderEmail: g.senderEmail, amount: g.amount, createdAt: new Date(g.createdAt) });
+    externalGifts.push({ giftId: insertedGift.id, senderName: g.senderName, senderEmail: g.senderEmail, amount: g.amount, createdAt: new Date(g.createdAt), occasion: g.occasion });
   }
 
   // Backfill the schedule's realized totals from the cycles just written —
@@ -794,25 +794,29 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   // majority kids keep the familiar "College Fund" framing gifters relate to.
   const isGraduated = kid.ageYears >= kid.majorityAge;
   const occasions: Array<{ name: string; slug: string; eventType: string; eventDate: Date | null; goalAmount: number | null }> = [
-    { name: `${kid.firstName}'s ${ordinal(nextBirthdayAge)} Birthday`, slug: `${kid.slug}-bday-${nextBirthday.getUTCFullYear()}`, eventType: "birthday", eventDate: nextBirthday, goalAmount: null },
+    // Generic "Birthday" (not "14th Birthday") so the Memory Book can group ALL
+    // years of birthday gifts under it without the ordinal reading wrong on an
+    // old gift. The dashboard still uses eventDate for the next-birthday countdown.
+    { name: `${kid.firstName}'s Birthday`, slug: `${kid.slug}-bday-${nextBirthday.getUTCFullYear()}`, eventType: "birthday", eventDate: nextBirthday, goalAmount: null },
     { name: isGraduated ? `${kid.firstName}'s Fund` : `${kid.firstName}'s College Fund`, slug: isGraduated ? `${kid.slug}-fund` : `${kid.slug}-college`, eventType: "general", eventDate: null, goalAmount: kid.ageYears >= 18 ? 30000 : 40000 },
   ];
   if (kid.ageYears < 18) {
     occasions.push({ name: `${kid.firstName}'s Graduation`, slug: `${kid.slug}-graduation`, eventType: "graduation", eventDate: new Date(Date.UTC(bday.getUTCFullYear() + 18, 5, 1, 12)), goalAmount: null });
   }
-  // Attribute Grandpa Jay's "for college / for your future" gifts to the
-  // College Fund (general) occasion, so the Memory Book's occasions strip shows
-  // a real populated group ("College Fund · N gifts · $X raised") next to the
-  // catch-all "Gift anytime" — otherwise every gift is untagged and only
-  // "Gift anytime" ever appears. Clean to attribute to a multi-year savings
-  // goal (no date-mismatch a one-day birthday occasion would have). The events
-  // table stores giftCount/giftVolume as COUNTERS (storage increments them at
-  // gift time, not a JOIN), so we set them on the event row AND stamp eventId
-  // on the gifts — both are required for the occasion to surface.
-  const collegeGifts = externalGifts.filter((g) => (g.senderEmail || "").toLowerCase() === "jay@dunphyfamily.com");
-  const collegeGiftVolume = collegeGifts.reduce((s, g) => s + g.amount, 0);
+  // Attribute the annual BIRTHDAY gifts (Gloria/Cam/Mitchell) to the Birthday
+  // occasion so the Memory Book's occasions strip shows a real, NATURAL group
+  // ("{kid}'s Birthday · N gifts · $X raised") next to the catch-all "Gift
+  // anytime". Birthday is a true gifting occasion with NO dollar goal on the
+  // dashboard, so its gift total can't clash with a goal-progress number — the
+  // mistake the earlier College-Fund attribution made ($600 of tagged gifts vs
+  // the dashboard's $22k whole-fund goal progress, same name, two numbers).
+  // College Fund / Graduation stay pure dashboard GOALS, not gift buckets. The
+  // events table stores giftCount/giftVolume as counters (not a JOIN), so we set
+  // them on the event row AND stamp eventId on the gifts.
+  const birthdayGifts = externalGifts.filter((g) => g.occasion === "birthday");
+  const birthdayGiftVolume = birthdayGifts.reduce((s, g) => s + g.amount, 0);
   for (const o of occasions) {
-    const isCollegeOccasion = o.eventType === "general";
+    const isBirthdayOccasion = o.eventType === "birthday";
     const [insertedEvent] = await db.insert(events).values({
       fundId: fund.id,
       userId: parentUserId,
@@ -822,13 +826,13 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       eventDate: o.eventDate,
       goalAmount: o.goalAmount != null ? o.goalAmount.toFixed(2) : null,
       status: "active",
-      giftCount: isCollegeOccasion ? collegeGifts.length : 0,
-      giftVolume: isCollegeOccasion ? collegeGiftVolume.toFixed(2) : "0.00",
+      giftCount: isBirthdayOccasion ? birthdayGifts.length : 0,
+      giftVolume: isBirthdayOccasion ? birthdayGiftVolume.toFixed(2) : "0.00",
     } as any).returning();
-    if (isCollegeOccasion && collegeGifts.length > 0) {
+    if (isBirthdayOccasion && birthdayGifts.length > 0) {
       await db.update(gifts)
         .set({ eventId: insertedEvent.id })
-        .where(inArray(gifts.id, collegeGifts.map((g) => g.giftId)));
+        .where(inArray(gifts.id, birthdayGifts.map((g) => g.giftId)));
     }
   }
 

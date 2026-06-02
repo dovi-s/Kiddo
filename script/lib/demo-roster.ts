@@ -33,6 +33,11 @@ export type GiftSpec = {
   // top-up (his own money, NOT an external gift — no self-thank-you).
   kind?: "recurring" | "parent_one_time";
   isAnonymous?: boolean; // explicit privacy flag (never inferred from name)
+  // Tags the gift to a gifting occasion so the Memory Book's occasions strip
+  // groups it (e.g. "Birthday · N gifts"). Only true GIFTING occasions —
+  // NOT fund savings-goals like College Fund, whose dashboard progress is the
+  // whole fund and would clash with a gift-attribution total.
+  occasion?: "birthday";
 };
 
 export type KidStory = {
@@ -111,6 +116,7 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
       selectedTicker: "DIS",
       message: rotate(gloriaNotes, a, off) || undefined,
       hasAudio: true,
+      occasion: "birthday",
       createdAt: onMonth(a, birthMonth, 12),
     });
   }
@@ -134,6 +140,7 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
       amount: a < 6 ? 75 : 100,
       selectedTicker: "DIS",
       message: rotate(camNotes, a, off) || undefined,
+      occasion: "birthday",
       createdAt: onMonth(a, birthMonth, 20),
     });
   }
@@ -150,6 +157,7 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
       amount: 60,
       selectedTicker: "AAPL",
       message: rotate(mitchNotes, a, off) || undefined,
+      occasion: "birthday",
       createdAt: onMonth(a, birthMonth, 6),
     });
   }
