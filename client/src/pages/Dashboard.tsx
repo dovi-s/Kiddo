@@ -987,6 +987,32 @@ function stripStockSuffix(name?: string | null): string {
   return String(name || "").replace(/\s+stock$/i, "").trim();
 }
 
+// Compact label for the gifter roster (the name span is capped at ~56px, so it
+// fits one short word). A gifter's name is free text, and the first word alone
+// is useless when it's a title/article/possessive: "Coach Mike" -> "Coach",
+// "Aunt Sarah" -> "Aunt", "The Johnsons" -> "The", "Phil's coworker" -> "Phil's".
+// Instead, show the first word that actually carries IDENTITY by skipping leading
+// weak tokens: "Coach Mike" -> "Mike", "Aunt Sarah" -> "Sarah", "The Johnsons" ->
+// "Johnsons", "Phil's coworker" -> "coworker". A plain first name isn't weak, so
+// "Gloria Pritchett" -> "Gloria" exactly as before.
+const WEAK_NAME_LEADERS = new Set([
+  "the", "a", "an", "my", "our", "big", "little", "great", "old", "young",
+  "aunt", "auntie", "uncle", "unc", "grandpa", "grandma", "granny", "gran", "nana",
+  "papa", "gramps", "cousin", "cuz", "godmother", "godfather", "ninang", "ninong",
+  "coach", "mr", "mrs", "ms", "miss", "mx", "dr", "doc", "sir", "prof", "professor",
+  "pastor", "father", "fr", "sister", "rabbi", "reverend", "rev", "senor", "senora",
+]);
+function gifterShortName(name?: string | null): string {
+  const trimmed = String(name || "").trim();
+  if (!trimmed) return trimmed;
+  const words = trimmed.split(/\s+/);
+  for (const w of words) {
+    const lc = w.toLowerCase().replace(/[.,]/g, "");
+    if (!WEAK_NAME_LEADERS.has(lc) && !/['’]s$/.test(w)) return w;
+  }
+  return words[0]; // all tokens were weak/possessive — fall back to the first
+}
+
 type GifterProfile = {
   name: string;
   initials: string;
@@ -7943,7 +7969,7 @@ export default function Dashboard() {
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                       {visibleGifters.map(gifter => {
                         const color = GIFTER_AVATAR_COLORS[gifter.colorIdx];
-                        const firstName = gifter.name.split(" ")[0];
+                        const firstName = gifterShortName(gifter.name);
                         // Show how the family refers to this person ("Dad",
                         // "Mom", "Cam") when their account sets a preferred name;
                         // else the first name. The viewer's own row stays "You".
@@ -12706,7 +12732,7 @@ export default function Dashboard() {
                       }}
                       data-testid="button-gifter-modal-memory-book"
                     >
-                      See {selectedGifter.name.split(" ")[0]}'s story in Memory Book →
+                      See {gifterShortName(selectedGifter.name)}'s story in Memory Book →
                     </button>
                   )}
                   {!isReadOnlyFund && (
