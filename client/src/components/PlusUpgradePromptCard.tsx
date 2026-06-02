@@ -37,6 +37,7 @@
 // dismissals.
 
 import { useState } from "react";
+import { safeLocalSet } from "@/lib/local-cache";
 import { Camera, Gift, TrendingUp, Crown, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FeatureWallModal } from "@/components/FeatureWallModal";
@@ -133,7 +134,7 @@ export function PlusUpgradePromptCard({
 
   const handleDismiss = () => {
     try {
-      window.localStorage.setItem(dismissKey, new Date().toISOString());
+      safeLocalSet(dismissKey, new Date().toISOString());
     } catch {
       // best-effort
     }

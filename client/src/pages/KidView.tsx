@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { safeLocalSet } from "@/lib/local-cache";
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -563,7 +564,7 @@ export default function KidView() {
   });
   const markSuggestionSeen = (suggestionId: string) => {
     try {
-      window.localStorage.setItem(`${SEEN_KEY_PREFIX}${suggestionId}`, new Date().toISOString());
+      safeLocalSet(`${SEEN_KEY_PREFIX}${suggestionId}`, new Date().toISOString());
     } catch {
       // best-effort
     }

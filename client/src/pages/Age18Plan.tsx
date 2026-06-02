@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { safeLocalSet } from "@/lib/local-cache";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, ChevronDown, ChevronUp, Mic, Image as ImageIcon, Users, Mail } from "lucide-react";
@@ -477,7 +478,7 @@ export default function Age18Plan() {
 
   useEffect(() => {
     if (!activeFund?.id) return;
-    try { localStorage.setItem(checklistKey, JSON.stringify(Array.from(checked))); } catch {}
+    try { safeLocalSet(checklistKey, JSON.stringify(Array.from(checked))); } catch {}
   }, [checked, checklistKey]);
 
   const toggle = useCallback((id: string) => {

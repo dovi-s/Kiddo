@@ -19,6 +19,7 @@
 // Ships Tier-2 deferred item #2 (locked 2026-05-23).
 
 import { motion } from "framer-motion";
+import { safeLocalSet } from "@/lib/local-cache";
 import { Camera } from "lucide-react";
 import { ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 
@@ -46,7 +47,7 @@ export function PlusFirstMediaCelebrationBanner({
 
   const dismissBanner = () => {
     try {
-      window.localStorage.setItem(DISMISS_KEY, new Date().toISOString());
+      safeLocalSet(DISMISS_KEY, new Date().toISOString());
     } catch {
       // best-effort
     }

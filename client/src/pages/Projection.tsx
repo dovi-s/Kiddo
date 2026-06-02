@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { safeLocalSet } from "@/lib/local-cache";
 import { useLocation, useRoute } from "wouter";
 import { motion } from "framer-motion";
 import { ArrowRight, Share2, Info } from "lucide-react";
@@ -117,7 +118,7 @@ export default function Projection() {
     try {
       const key = "kora:projection-view-count";
       const next = (parseInt(window.localStorage.getItem(key) || "0", 10) || 0) + 1;
-      window.localStorage.setItem(key, String(next));
+      safeLocalSet(key, String(next));
       setProjectionViewCount(next);
     } catch {
       setProjectionViewCount(0);

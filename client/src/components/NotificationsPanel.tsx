@@ -8,7 +8,7 @@ import { useRealtimeEvents } from "@/lib/realtime-context";
 import { Link, useLocation } from "wouter";
 import { shouldSuppressFundChrome } from "@/lib/page-scope";
 import type { Activity, Fund } from "@shared/schema";
-import { LOCAL_CACHE_KEYS, readLocalCache } from "@/lib/local-cache";
+import { LOCAL_CACHE_KEYS, readLocalCache, safeLocalSet } from "@/lib/local-cache";
 import { useAuth } from "@/hooks/use-auth";
 import { getActiveFundId, setActiveFundId, ACTIVE_FUND_CHANGE_EVENT } from "@/hooks/use-active-fund";
 import { useActionItems } from "@/hooks/use-action-items";
@@ -73,7 +73,7 @@ export function markNotificationsRead(latestActivityTime?: number): void {
     : 0;
   const lastRead = Math.max(clientNow, fromLatest);
   try {
-    localStorage.setItem(NOTIF_LAST_READ_KEY, String(lastRead));
+    safeLocalSet(NOTIF_LAST_READ_KEY, String(lastRead));
     saveReadIds(new Set());
     // Also clear explicit unreadIds — visiting the Activity page is
     // a comprehensive "I've seen everything" signal. Same reasoning
@@ -264,7 +264,7 @@ function loadReadIds(): Set<string> {
   } catch { return new Set(); }
 }
 function saveReadIds(ids: Set<string>) {
-  try { localStorage.setItem(NOTIF_READ_IDS_KEY, JSON.stringify(Array.from(ids))); } catch {}
+  try { safeLocalSet(NOTIF_READ_IDS_KEY, JSON.stringify(Array.from(ids))); } catch {}
 }
 function loadUnreadIds(): Set<string> {
   try {
@@ -273,7 +273,7 @@ function loadUnreadIds(): Set<string> {
   } catch { return new Set(); }
 }
 function saveUnreadIds(ids: Set<string>) {
-  try { localStorage.setItem(NOTIF_UNREAD_IDS_KEY, JSON.stringify(Array.from(ids))); } catch {}
+  try { safeLocalSet(NOTIF_UNREAD_IDS_KEY, JSON.stringify(Array.from(ids))); } catch {}
 }
 
 type FeedActivity = Activity & { fundName?: string | null; recipientFirstName?: string | null };
@@ -861,7 +861,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
       return Number.isFinite(t) && t > max ? t : max;
     }, 0);
     const lastRead = Math.max(clientNow, latestVisibleTime + 1);
-    localStorage.setItem(NOTIF_LAST_READ_KEY, String(lastRead));
+    safeLocalSet(NOTIF_LAST_READ_KEY, String(lastRead));
     saveReadIds(new Set());
     // Clear unreadIds too — Mark-all-read is a global "I've seen
     // everything" stamp; explicit unread markers shouldn't out-vote
@@ -971,7 +971,7 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
       // Mark-all-read undo: restore all three pieces of state to the
       // snapshot captured at the moment Mark-all-read fired. Items
       // become unread again exactly as they were before the tap.
-      localStorage.setItem(NOTIF_LAST_READ_KEY, String(recentlyMarkedRead.prevLastReadAt));
+      safeLocalSet(NOTIF_LAST_READ_KEY, String(recentlyMarkedRead.prevLastReadAt));
       saveReadIds(recentlyMarkedRead.prevReadIds);
       saveUnreadIds(recentlyMarkedRead.prevUnreadIds);
     }

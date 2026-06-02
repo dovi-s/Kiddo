@@ -1,3 +1,4 @@
+import { safeLocalSet } from "@/lib/local-cache";
 // Dismissed-gift-toast set. Tracks which gift ids the parent has
 // already dismissed (or let auto-dismiss) so the same toast doesn't
 // pop up again on refresh, fund switch, new tab, or next session.
@@ -51,7 +52,7 @@ function persist(set: Set<string>): void {
     // order, so slicing tail-end keeps the most recent dismissals.
     const arr = Array.from(set);
     const trimmed = arr.length > MAX_TRACKED ? arr.slice(arr.length - MAX_TRACKED) : arr;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+    safeLocalSet(STORAGE_KEY, JSON.stringify(trimmed));
   } catch {
     // localStorage quota exceeded or disabled — fail silently. The
     // worst case is a toast re-appearing on next refresh; not the

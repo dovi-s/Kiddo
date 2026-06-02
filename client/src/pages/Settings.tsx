@@ -42,7 +42,7 @@ import { SetupProgressNudge, TrustMicroStrip } from "@/components/ui/ux-foundati
 import { WhoControlsDrawer } from "@/components/ui/trust-elements";
 import { buildSetupProgress } from "@/lib/setup-progress";
 import { formatAgeTransitionDate, getAge18Transition } from "@/lib/age-transition";
-import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { LOCAL_CACHE_KEYS, readLocalCache, writeLocalCache, safeLocalSet } from "@/lib/local-cache";
 import { PRONOUN_OPTIONS } from "@/lib/pronouns";
 import { toMonthlyEquivalent } from "@shared/recurring-math";
 import { getMajorityDate, getMajorityAgeForState, US_STATES } from "@shared/utma";
@@ -3358,7 +3358,7 @@ const [editFundName, setEditFundName] = useState("");
   const updateParentLifecycleSetting = (key: keyof typeof parentLifecycleSettings, value: boolean) => {
     setParentLifecycleSettings((current) => {
       const next = { ...current, [key]: value };
-      window.localStorage.setItem("kiddo-parent-lifecycle-settings", JSON.stringify(next));
+      safeLocalSet("kiddo-parent-lifecycle-settings", JSON.stringify(next));
       return next;
     });
   };

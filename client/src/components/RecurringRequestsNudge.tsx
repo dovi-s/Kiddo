@@ -26,6 +26,7 @@
 //     the other 4 proactive Plus prompts shipped 2026-05-23)
 
 import { useState, useMemo } from "react";
+import { safeLocalSet } from "@/lib/local-cache";
 import { useQuery } from "@tanstack/react-query";
 import { BellRing, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -126,7 +127,7 @@ export function RecurringRequestsNudge({
 
   const handleDismiss = () => {
     try {
-      window.localStorage.setItem(dismissKey, new Date().toISOString());
+      safeLocalSet(dismissKey, new Date().toISOString());
     } catch {
       // best-effort
     }

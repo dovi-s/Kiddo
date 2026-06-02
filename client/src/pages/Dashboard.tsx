@@ -1510,7 +1510,7 @@ export default function Dashboard() {
   });
   const dismissNudge = (nudgeKey: string) => {
     setDismissedNudges(prev => { const n = new Set(prev); n.add(nudgeKey); return n; });
-    try { localStorage.setItem(`kora:dismissed:gentle-nudge:${nudgeKey}`, new Date().toISOString()); } catch { /* storage unavailable */ }
+    try { safeLocalSet(`kora:dismissed:gentle-nudge:${nudgeKey}`, new Date().toISOString()); } catch { /* storage unavailable */ }
   };
 
   // Highlight a specific ticker's recurring rows briefly when the parent taps
@@ -3286,7 +3286,7 @@ export default function Dashboard() {
     // the newest existing gift happens to be.
     if (lastSeenGiftIdRef.current === null) {
       lastSeenGiftIdRef.current = String(latestGiftId);
-      try { window.localStorage.setItem(`${HERO_ACK_PREFIX}${activeFundId}`, String(latestGiftId)); } catch { /* ignore */ }
+      try { safeLocalSet(`${HERO_ACK_PREFIX}${activeFundId}`, String(latestGiftId)); } catch { /* ignore */ }
       return;
     }
     if (latestGiftId === lastSeenGiftIdRef.current) return;
@@ -3298,7 +3298,7 @@ export default function Dashboard() {
     if (!pendingFlashId || !activeFundId) return;
     if (!heroTabVisible || !heroInView) return;
     lastSeenGiftIdRef.current = pendingFlashId;
-    try { window.localStorage.setItem(`${HERO_ACK_PREFIX}${activeFundId}`, pendingFlashId); } catch { /* ignore */ }
+    try { safeLocalSet(`${HERO_ACK_PREFIX}${activeFundId}`, pendingFlashId); } catch { /* ignore */ }
     setHeroGiftIdx(0);
     setNewGiftFlash(true);
     setPendingFlashId(null);
@@ -4971,7 +4971,7 @@ export default function Dashboard() {
           // set the storage flag so they never see one either.
           const daysOld = (Date.now() - firstGiftTs) / (24 * 60 * 60 * 1000);
           if (daysOld > 30) {
-            try { window.localStorage.setItem(STORAGE_KEY, new Date().toISOString()); } catch {}
+            try { safeLocalSet(STORAGE_KEY, new Date().toISOString()); } catch {}
             return null;
           }
           const isAnonymousGift = Boolean((firstGift as any)?.isAnonymous);
@@ -5008,7 +5008,7 @@ export default function Dashboard() {
           }
           const dismiss = () => {
             haptic("light");
-            try { window.localStorage.setItem(STORAGE_KEY, new Date().toISOString()); } catch {}
+            try { safeLocalSet(STORAGE_KEY, new Date().toISOString()); } catch {}
             // Force re-render via state tick. invalidateQueries alone
             // isn't reliable here — if the funds query data hasn't
             // changed (just-fetched + cached), refetch returns the

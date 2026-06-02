@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { safeLocalSet } from "@/lib/local-cache";
 import { Link, useSearch, useLocation } from "wouter"
 import { motion } from "framer-motion"
 import { useQuery } from "@tanstack/react-query"
@@ -607,7 +608,7 @@ export default function GiftSuccess() {
         haptic("success")
         toast({ title: "Reminder saved", description: `We'll email ${reminderEmail} when it's time to gift ${fundName} again.` })
         trackGiftEvent("cta_click", { target: "gift_reminder_confirmed", amount: recurringAmount, frequency }, "gift_success_reminder")
-        try { localStorage.setItem("kora:dismissed:reminder-nudge", "1"); } catch {}
+        try { safeLocalSet("kora:dismissed:reminder-nudge", "1"); } catch {}
         setRecurringModalOpen(false)
         setShowRecurringNudge(false)
       } else {
@@ -1672,7 +1673,7 @@ export default function GiftSuccess() {
               }}
               onDismiss={() => {
                 trackGiftEvent("cta_click", { target: "gift_reminder_dismiss" }, "gift_success_reminder")
-                try { localStorage.setItem("kora:dismissed:reminder-nudge", "1"); } catch {}
+                try { safeLocalSet("kora:dismissed:reminder-nudge", "1"); } catch {}
                 setShowRecurringNudge(false)
               }}
             />

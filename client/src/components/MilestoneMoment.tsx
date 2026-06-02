@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { safeLocalSet } from "@/lib/local-cache";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 // Sprout (brand mark) replaces Sparkles 2026-05-12 — sparkle iconography is
 // banned per feedback_no_ai_slop.md (Robinhood-precedent territory for
@@ -43,7 +44,7 @@ function getCelebratedThreshold(fundId: string): number {
 }
 function setCelebratedThreshold(fundId: string, threshold: number): void {
   try {
-    localStorage.setItem(`${MILESTONE_CELEBRATED_PREFIX}${fundId || "default"}`, String(threshold));
+    safeLocalSet(`${MILESTONE_CELEBRATED_PREFIX}${fundId || "default"}`, String(threshold));
   } catch {
     // localStorage unavailable (private mode / quota). Non-fatal — worst case
     // the card may re-fire, which is just the pre-fix behavior, not a new bug.

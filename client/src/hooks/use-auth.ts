@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 import { getDefaultSuperAdminEmails, getEffectiveAdminFlags } from "@shared/adminAccess";
-import { LOCAL_CACHE_KEYS, readLocalCache, removeLocalCache, removeLocalCachePrefix, writeLocalCache } from "@/lib/local-cache";
+import { LOCAL_CACHE_KEYS, readLocalCache, removeLocalCache, removeLocalCachePrefix, writeLocalCache, safeLocalSet } from "@/lib/local-cache";
 
 type SafeUser = Omit<User, "passwordHash">;
 type SafeUserWithFlags = SafeUser & { isSuperAdmin?: boolean };
@@ -19,7 +19,7 @@ function normalizeUser(raw: any): SafeUserWithFlags {
 function persistDevUserId(user: SafeUserWithFlags | null) {
   if (typeof window === "undefined") return;
   if (user?.id) {
-    window.localStorage.setItem(DEV_USER_ID_KEY, String(user.id));
+    safeLocalSet(DEV_USER_ID_KEY, String(user.id));
   } else {
     window.localStorage.removeItem(DEV_USER_ID_KEY);
   }

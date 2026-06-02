@@ -1,3 +1,4 @@
+import { safeLocalSet } from "@/lib/local-cache";
 const STORAGE_KEY = "kiddo_active_fund_id";
 export const ACTIVE_FUND_CHANGE_EVENT = "kiddo:active-fund-change";
 export const ADD_FUND_EVENT = "kiddo:add-fund";
@@ -13,7 +14,7 @@ export function getActiveFundId(): string {
 export function setActiveFundId(id: string): void {
   try {
     if (id) {
-      localStorage.setItem(STORAGE_KEY, id);
+      safeLocalSet(STORAGE_KEY, id);
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }

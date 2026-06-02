@@ -28,7 +28,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { readLocalCache, writeLocalCache, safeLocalSet } from "@/lib/local-cache";
 
 // Per-user plan-benefits-usage cache. Same readLocalCache /
 // writeLocalCache pattern as funds / activities / events queries.
@@ -91,7 +91,7 @@ function readDismissedNudges(): Set<string> {
 function persistDismissedNudges(set: Set<string>): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(NUDGE_STORAGE_KEY, JSON.stringify(Array.from(set)));
+    safeLocalSet(NUDGE_STORAGE_KEY, JSON.stringify(Array.from(set)));
   } catch {
     // localStorage quota / disabled — fail silently. Worst case the
     // nudge re-surfaces next visit.

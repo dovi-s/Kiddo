@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { safeLocalSet } from "@/lib/local-cache";
 
 export interface Holding {
   ticker: string;
@@ -161,7 +162,7 @@ export function KoraProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    safeLocalSet(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
   const setUser = (user: User | null) => {
