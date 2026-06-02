@@ -4866,17 +4866,18 @@ export default function MemoryBook() {
                                     if (!giftDate || !Number.isFinite(giftDate.getTime())) return null;
                                     const yearsInvested = (Date.now() - giftDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
                                     if (yearsInvested < 0.08) return null; // < ~1 month, no meaningful growth yet
-                                    // REAL value for single-ticker gifts: actual shares × live price.
-                                    const nvTicker = entry.gift.selectedTicker?.toUpperCase() ?? null;
-                                    const nvShares = entry.gift.sharesAcquired ? parseFloat(entry.gift.sharesAcquired) : null;
-                                    const nvPrice = nvTicker ? giftPriceByTicker.get(nvTicker) : null;
-                                    const nowValue = (nvShares && nvShares > 0 && nvPrice && nvPrice > 0)
-                                      ? nvShares * nvPrice
-                                      : projectFundValue({
-                                          startingValue: giftAmount,
-                                          monthlyContribution: 0,
-                                          yearsAhead: yearsInvested,
-                                        });
+                                    // Single-ticker gifts are valued by the richer "Now worth $X (±$Y)"
+                                    // investment block below (real shares × live price, with the gain
+                                    // delta). Render this terse estimate ONLY for the diversified MIX,
+                                    // where that block can't compute a per-sleeve value — otherwise the
+                                    // same gift shows its current value twice (e.g. "now ~$69.70" AND
+                                    // "Now worth $69.70 (+$9.70)").
+                                    if (entry.gift.selectedTicker) return null;
+                                    const nowValue = projectFundValue({
+                                      startingValue: giftAmount,
+                                      monthlyContribution: 0,
+                                      yearsAhead: yearsInvested,
+                                    });
                                     const gain = nowValue - giftAmount;
                                     if (gain < 0.5) return null; // < 50 cents, not worth surfacing
                                     return (
