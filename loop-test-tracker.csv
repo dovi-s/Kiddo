@@ -1,0 +1,18 @@
+family,setup_done,shared_link,gifters_who_saw,gifters_who_paid,dollars_total,repeat_gifts,new_families_spawned,notes
+# EXAMPLE ROW (delete) — Aunt Sara set up for Mia; shared in the family chat; 6 saw the link, 3 actually paid; one gifter (Grandpa) gave twice; one of those gifters (cousin) then started a fund for HER kid = 1 new family,yes,yes,6,3,150,1,1,"cousin Dana started one after seeing it = true loop signal"
+Mia (Sara),,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+,,,,,,,,
+# WEEKLY METRICS (compute by hand): setup_rate = setup_done / families_pitched | share_rate = shared_link / setup_done | GIFTER CONVERSION = gifters_who_paid / gifters_who_saw (the make-or-break number) | funded-k = sum(new_families_spawned) / families_who_ran_the_loop,,,,,,,,
+# KILL LINE: after ~15 families if gifter_conversion < 25% AND ~no repeats AND zero new families beyond your own circle -> stop (clean no in 60 days = a win),,,,,,,,
