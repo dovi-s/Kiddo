@@ -440,6 +440,42 @@ advisors build inside it.
 
 ---
 
+# Part 9 — Pre-custody marketing claims: can we word investing in the present tense? ⭐ (Securities / Advertising)
+
+**Source:** the marketing-site audit (2026-06-01). **Why it gates launch copy:**
+the site describes investing in the **present tense** ("your gift is invested,"
+"gifts get invested," "Kiddo purchases a fractional share," "real brokerage rails
+underneath," comparison table "Invests automatically: Yes") — but **investing is
+not live yet** (gifts are captured pre-custody; holdings are simulated; the
+custodian is not wired). The footer + some sections already hedge with "when
+investing is live" and "screen images are simulated/illustrative," so the site
+currently **straddles**. The founder's intent is to **word it as though investing
+is live** ahead of custody going live.
+
+**The questions:**
+1. **Can the marketing site state investing in the present tense before custody
+   is wired** (gifts captured, not yet invested), relying on the "simulated /
+   illustrative" + "when investing is live" disclaimers? Or must the
+   money-movement/securities claims be future-conditional until a real brokerage
+   account exists and a real order is placed?
+2. Which specific claims are safe vs. not, given securities-advertising standards
+   (SEC/FINRA marketing rules, FTC) are stricter than ordinary "coming soon"
+   startup copy? Draw the line between **acceptable** (the product identity,
+   gifting/fund-creation that works today, the experience) and **not yet
+   acceptable** (asserting a customer's specific money is invested in real
+   securities held at a broker-dealer right now).
+3. What disclaimer placement/proximity makes present-tense framing defensible, if
+   it's allowed at all?
+
+**Why it matters:** a not-yet-live investment product worded as live is the
+textbook misrepresentation-of-a-securities-product risk. "It's gonna be" is not a
+defense. This is the one thing standing between the founder's "word it as live"
+goal and shipping it safely — a clear counsel answer unlocks it. Until then the
+site keeps the disclaimers and the few hard money-mechanics claims stay honest
+(e.g., "real brokerage rails when investing is live").
+
+---
+
 # Engagement logistics
 
 **Firm type (in order):** SEC-RIA specialist boutiques (Hardin Compliance, ACA
