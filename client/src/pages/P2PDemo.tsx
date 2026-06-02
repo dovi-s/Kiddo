@@ -20,20 +20,19 @@ import { usePageSeo } from "@/lib/seo";
 import { haptic } from "@/lib/haptics";
 import { ArrowRight, Check, Wallet, TrendingUp, Eye, RotateCcw } from "lucide-react";
 import { StockLogo } from "@/components/ui/stock-logo";
+import { FEATURED_STOCK_PICKS } from "@shared/stock-picks";
 
 type Step = "intro" | "send" | "sent" | "claim" | "grow" | "convert";
 type SendMode = "cash" | "stock";
 
-// Real brand logos via <StockLogo> (same component the dashboard holdings use),
-// not emoji stand-ins. StockLogo carries its own letter-circle fallback.
-const STOCKS = [
-  { ticker: "DIS", name: "Disney" },
-  { ticker: "AAPL", name: "Apple" },
-  { ticker: "RBLX", name: "Roblox" },
-  { ticker: "NKE", name: "Nike" },
-  { ticker: "NFLX", name: "Netflix" },
-  { ticker: "SPOT", name: "Spotify" },
-];
+// The pickable companies come from the CANONICAL pick list
+// (shared/stock-picks.ts) — the same featured tier every real "choose a stock"
+// surface uses (gift checkout, parent auto-invest, onboarding, mobile) — so this
+// concept preview stays in sync with the product instead of drifting as its own
+// hardcoded island (it used to show a stale 6 that omitted Tesla/Microsoft/
+// Amazon/Google/Starbucks). Logos via <StockLogo>, which carries its own
+// letter-circle fallback.
+const STOCKS = FEATURED_STOCK_PICKS.map((s) => ({ ticker: s.ticker, name: s.name }));
 
 const AMOUNT = 30;
 const GROW_YEARS = 30;
