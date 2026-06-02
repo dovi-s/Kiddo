@@ -73,6 +73,9 @@ export default function P2PDemo() {
   const [mode, setMode] = useState<SendMode>("stock");
   const [stock, setStock] = useState(STOCKS[0]);
   const [note, setNote] = useState("For dinner the other night. Next one's on me.");
+  // Tracks Maya's claim choice so the payoff reads as celebration (she kept it)
+  // vs the road not taken (she cashed out), instead of always assuming she kept.
+  const [kept, setKept] = useState(true);
 
   const go = (next: Step) => {
     haptic("light");
@@ -82,6 +85,7 @@ export default function P2PDemo() {
     haptic("selection");
     setMode("stock");
     setStock(STOCKS[0]);
+    setKept(true);
     setStep("intro");
   };
 
@@ -250,14 +254,14 @@ export default function P2PDemo() {
                   <div className="mt-3 flex flex-col gap-3">
                     <Button
                       size="lg"
-                      onClick={() => go("grow")}
+                      onClick={() => { setKept(true); go("grow"); }}
                       data-testid="button-p2p-keep"
                     >
                       {mode === "stock" ? `Keep it as ${stock.name} and watch it grow` : "Invest it and watch it grow"}
                     </Button>
                     <button
                       type="button"
-                      onClick={() => go("grow")}
+                      onClick={() => { setKept(false); go("grow"); }}
                       data-testid="button-p2p-cashout"
                       className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                     >
@@ -276,14 +280,17 @@ export default function P2PDemo() {
             {step === "grow" && (
               <motion.div key="grow" {...fade} className="text-center">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">
-                  If she keeps it
+                  {kept ? "If she keeps it" : "The road not taken"}
                 </p>
                 <h2 className="mt-4 font-heading text-3xl font-bold text-foreground md:text-4xl">
-                  That $30 dinner could become {usd0(futureVal)}.
+                  That $30 dinner could {kept ? "become" : "have become"} {usd0(futureVal)}.
                 </h2>
                 <p className="mx-auto mt-5 max-w-md text-lg leading-relaxed text-muted-foreground">
-                  Left alone for {GROW_YEARS} years at about 7 percent a year. The dinner is
-                  forgotten by next week. This is still growing on her birthday in {GROW_YEARS} years.
+                  {kept ? (
+                    <>Left alone for {GROW_YEARS} years at about 7 percent a year. The dinner is forgotten by next week. This is still growing on her birthday in {GROW_YEARS} years.</>
+                  ) : (
+                    <>Cash is spent by Friday. Kept instead, at about 7 percent a year, that $30 would still be growing on her birthday in {GROW_YEARS} years.</>
+                  )}
                 </p>
                 <p className="mx-auto mt-4 max-w-md text-xs text-muted-foreground/70">
                   Illustrative only, not a guarantee. Investments can lose value as well as gain.
