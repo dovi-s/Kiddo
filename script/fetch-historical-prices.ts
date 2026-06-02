@@ -20,9 +20,16 @@ import { promises as fsp } from "node:fs";
 import path from "node:path";
 
 // Tickers the demo uses: single-stock picks + the diversified-mix sleeves.
-//   AAPL (Mitchell), GOOGL (Jay), DIS (Gloria/Cam), RBLX (Manny),
-//   VTI/VXUS/BND (the auto-invest managed mix: Phil recurring, Claire, etc.)
-const TICKERS = ["AAPL", "GOOGL", "DIS", "RBLX", "VTI", "VXUS", "BND"] as const;
+//   Family signatures (same stock to every grandkid):
+//     AAPL (Mitchell), GOOGL (Jay), DIS (Gloria/Cam), RBLX (Manny)
+//   Per-kid personality picks (giftsForKid in lib/demo-roster.ts):
+//     Luke  → NTDOY, MCD        (the gamer)
+//     Alex  → AMZN, NFLX, DUOL  (ambitious; DUOL IPO'd Jul 2021)
+//     Haley → NKE, SBUX, SPOT   (graduated; SPOT IPO'd Apr 2018)
+//   VTI/VXUS/BND: the auto-invest managed mix (Phil recurring, Claire, etc.)
+// IPO-constrained tickers have shorter history; the seed dates those gifts
+// recent so a real price always exists (allocateGift throws otherwise).
+const TICKERS = ["AAPL", "GOOGL", "DIS", "RBLX", "NTDOY", "MCD", "AMZN", "NFLX", "NKE", "SBUX", "DUOL", "SPOT", "VTI", "VXUS", "BND"] as const;
 
 type TickerHistory = {
   current: number;

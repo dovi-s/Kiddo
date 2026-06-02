@@ -19,17 +19,20 @@ import { Button } from "@/components/ui/button";
 import { usePageSeo } from "@/lib/seo";
 import { haptic } from "@/lib/haptics";
 import { ArrowRight, Check, Wallet, TrendingUp, Eye, RotateCcw } from "lucide-react";
+import { StockLogo } from "@/components/ui/stock-logo";
 
 type Step = "intro" | "send" | "sent" | "claim" | "grow" | "convert";
 type SendMode = "cash" | "stock";
 
+// Real brand logos via <StockLogo> (same component the dashboard holdings use),
+// not emoji stand-ins. StockLogo carries its own letter-circle fallback.
 const STOCKS = [
-  { ticker: "DIS", name: "Disney", emoji: "🏰" },
-  { ticker: "AAPL", name: "Apple", emoji: "📱" },
-  { ticker: "RBLX", name: "Roblox", emoji: "🎮" },
-  { ticker: "NKE", name: "Nike", emoji: "👟" },
-  { ticker: "NFLX", name: "Netflix", emoji: "🎬" },
-  { ticker: "SPOT", name: "Spotify", emoji: "🎵" },
+  { ticker: "DIS", name: "Disney" },
+  { ticker: "AAPL", name: "Apple" },
+  { ticker: "RBLX", name: "Roblox" },
+  { ticker: "NKE", name: "Nike" },
+  { ticker: "NFLX", name: "Netflix" },
+  { ticker: "SPOT", name: "Spotify" },
 ];
 
 const AMOUNT = 30;
@@ -70,7 +73,7 @@ export default function P2PDemo() {
   const [step, setStep] = useState<Step>("intro");
   const [mode, setMode] = useState<SendMode>("stock");
   const [stock, setStock] = useState(STOCKS[0]);
-  const [note, setNote] = useState("Dinner was on me next time. Enjoy a little Disney.");
+  const [note, setNote] = useState("For dinner the other night. Next one's on me.");
 
   const go = (next: Step) => {
     haptic("light");
@@ -178,7 +181,7 @@ export default function P2PDemo() {
                                   : "border-border hover:border-primary/40"
                               }`}
                             >
-                              <span className="text-2xl">{s.emoji}</span>
+                              <StockLogo ticker={s.ticker} size={28} />
                               <span className="mt-1 text-xs font-medium text-foreground">{s.name}</span>
                             </button>
                           ))}
@@ -232,7 +235,7 @@ export default function P2PDemo() {
             {step === "claim" && (
               <motion.div key="claim" {...fade}>
                 <div className="rounded-[28px] border border-border bg-card p-7 text-center shadow-premium-sm md:p-9">
-                  <div className="text-5xl">{mode === "stock" ? stock.emoji : "💵"}</div>
+                  <div className="flex justify-center">{mode === "stock" ? <StockLogo ticker={stock.ticker} size={56} /> : <Wallet className="h-12 w-12 text-foreground" />}</div>
                   <h2 className="mt-5 font-heading text-2xl font-bold text-foreground md:text-3xl">
                     {mode === "stock"
                       ? `Your friend sent you $30 of ${stock.name} stock.`
@@ -251,7 +254,7 @@ export default function P2PDemo() {
                       onClick={() => go("grow")}
                       data-testid="button-p2p-keep"
                     >
-                      Keep it as {mode === "stock" ? stock.name : "stock"} and watch it grow
+                      {mode === "stock" ? `Keep it as ${stock.name} and watch it grow` : "Invest it and watch it grow"}
                     </Button>
                     <button
                       type="button"
@@ -259,7 +262,7 @@ export default function P2PDemo() {
                       data-testid="button-p2p-cashout"
                       className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                     >
-                      Take the $30 in cash instead
+                      {mode === "stock" ? "Take the $30 in cash instead" : "Keep the $30 as cash"}
                     </button>
                   </div>
                   <p className="mt-5 text-xs text-muted-foreground/70">

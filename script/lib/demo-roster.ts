@@ -262,6 +262,48 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
     });
   }
 
+  // ── Per-kid personality picks ──────────────────────────────────────────
+  // The family gifters above give their SIGNATURE stock to every grandkid
+  // (Gloria/Cam → Disney, Mitchell → Apple, Jay → Google, Manny → Roblox), so
+  // without this every fund's "What {kid} owns" looks identical. These are the
+  // picks that make each kid's holdings feel like THEM, drawn from the wider
+  // catalog (shared/stock-picks.ts): Phil's own one-time buys in the thing each
+  // kid is into. IPO-constrained tickers are dated RECENT so the seed always
+  // finds a real price (allocateGift throws on a pre-IPO date) — DUOL IPO'd
+  // Jul 2021, SPOT Apr 2018; NTDOY/MCD/AMZN/NFLX/NKE/SBUX have deep history.
+  // Every ticker is a pickable single stock, never an index ETF.
+  const personalityPicks: Array<{ amount: number; ticker: string; message?: string; yearsAgo: number; monthsAgo: number }> =
+    kid.firstName === "Luke" // the gamer
+      ? [
+          { amount: 100, ticker: "NTDOY", message: "you basically live on this thing, might as well own a piece. dad", yearsAgo: 8, monthsAgo: 0 },
+          { amount: 50, ticker: "MCD", yearsAgo: 4, monthsAgo: 1 },
+        ]
+      : kid.firstName === "Alex" // ambitious, college-bound
+        ? [
+            { amount: 150, ticker: "AMZN", message: "for the future business major. dad", yearsAgo: 5, monthsAgo: 2 },
+            { amount: 100, ticker: "NFLX", yearsAgo: 7, monthsAgo: 0 },
+            { amount: 75, ticker: "DUOL", message: "your spanish streak inspired this one. dad", yearsAgo: 4, monthsAgo: 0 },
+          ]
+        : kid.firstName === "Haley" // graduated, her own taste
+          ? [
+              { amount: 150, ticker: "NKE", yearsAgo: 14, monthsAgo: 0 },
+              { amount: 100, ticker: "SBUX", message: "your second home. dad", yearsAgo: 9, monthsAgo: 0 },
+              { amount: 100, ticker: "SPOT", yearsAgo: 2, monthsAgo: 4 },
+            ]
+          : [];
+  for (const p of personalityPicks) {
+    if (p.yearsAgo > fundAge) continue; // never predate the fund
+    list.push({
+      senderName: "Phil Dunphy",
+      senderEmail: "phil@dunphyfamily.com",
+      amount: p.amount,
+      selectedTicker: p.ticker,
+      message: p.message,
+      createdAt: isoYearsMonthsAgo(p.yearsAgo, p.monthsAgo),
+      kind: "parent_one_time",
+    });
+  }
+
   // Claire (Mom) — occasional managed-mix add, short or blank, never signed.
   const claireNotes = ["❤", "", "love you sweetheart", "", "miss you!"];
   let cIdx = 0;

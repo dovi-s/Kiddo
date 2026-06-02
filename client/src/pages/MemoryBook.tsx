@@ -74,7 +74,7 @@ import { useFunds } from "@/hooks/use-funds";
 import { useCachedFirstNumber } from "@/hooks/use-cached-first-number";
 import { getEmbedVideoUrl } from "@/lib/media";
 import { getPronouns } from "@/lib/pronouns";
-import { readLocalCache, writeLocalCache } from "@/lib/local-cache";
+import { readLocalCache, writeLocalCache, safeLocalSet } from "@/lib/local-cache";
 import { filterMemoryEntries, getVisibleMemoryEntries, validateMemoryMedia } from "./memoryBookUtils";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { projectFundValue } from "@shared/projection";
@@ -2227,7 +2227,7 @@ export default function MemoryBook() {
   useEffect(() => {
     if (!fundId || entries.length === 0) return;
     try {
-      localStorage.setItem(`${MEMORY_LAST_READ_PREFIX}${fundId}`, String(Date.now()));
+      safeLocalSet(`${MEMORY_LAST_READ_PREFIX}${fundId}`, String(Date.now()));
       window.dispatchEvent(new CustomEvent(MEMORY_READ_EVENT));
     } catch {
       // localStorage may throw in private-mode Safari; the dot just

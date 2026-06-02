@@ -77,6 +77,16 @@ const TICKER_NAMES: Record<string, string> = {
   GOOGL: "Google",
   DIS: "Disney",
   RBLX: "Roblox",
+  // Per-kid personality picks (giftsForKid in demo-roster.ts). Names match
+  // shared/stock-picks.ts so demo holdings read identically to the real product.
+  NTDOY: "Nintendo",
+  MCD: "McDonald's",
+  AMZN: "Amazon",
+  NFLX: "Netflix",
+  NKE: "Nike",
+  SBUX: "Starbucks",
+  DUOL: "Duolingo",
+  SPOT: "Spotify",
   VTI: "US Total Market",
   VXUS: "International",
   BND: "Bonds",
