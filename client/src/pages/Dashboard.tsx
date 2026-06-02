@@ -5597,6 +5597,32 @@ export default function Dashboard() {
                             : `🤝 Shared with you${isViewerOnly ? " · view-only" : ""}`}
                         </div>
                       )}
+                      {/* Owner-side ownership record — the symmetric counterpart to
+                          the previous owner's "Transferred to X · view only" badge.
+                          The at-18 welcome banner is one-time (~60d after claim), so
+                          a settled adult owner otherwise had no persistent marker that
+                          this account became theirs. Derived from transferredAt. */}
+                      {isOwnerMode && (activeFund as any)?.transferredAt && (
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "3px 10px",
+                            marginBottom: 8,
+                            borderRadius: 9999,
+                            background: "rgba(255,255,255,0.12)",
+                            border: "1px solid rgba(255,255,255,0.18)",
+                            fontSize: 10.5,
+                            fontWeight: 600,
+                            color: "rgba(255,255,255,0.78)",
+                            letterSpacing: "0.03em",
+                          }}
+                          data-testid="badge-owner-took-ownership"
+                        >
+                          📦 You took ownership · {new Date((activeFund as any).transferredAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                        </div>
+                      )}
                       {/* Balance — uses brand serif via .font-heading instead of
                           a hardcoded Lora override. The flash color uses the
                           --kiddo-gold-light token for the freshening cue.
