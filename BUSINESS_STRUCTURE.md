@@ -71,6 +71,44 @@ It's a routing config, not a re-architecture. (Verified 2026-05-31: the gift
 Everything else (the product) is built. These two answers lock the structure; the
 Stripe re-point that follows is small and AI-doable.
 
+## Cost model — the cheapest legit way to go live
+
+Two buckets. Your instinct ("pay % only when revenue comes") is right for one and
+not the other. The whole point of rent-the-rails: you **skip the ~$1M+** that
+owning a broker-dealer costs (net capital, FINRA membership, compliance staff).
+The custodian carries the regulated infrastructure; you pay them per use.
+
+| Bucket | What | Cost | Deferrable to revenue? |
+|---|---|---|---|
+| **Legal** | The one narrow "software, not a regulated entity" opinion (`COUNSEL_ENGAGEMENT_PACKET`, Parts 1-9) | **~$5-15k, one-time** (core call+memo ~$3-5k; more if it spans all parts) | **No** — it's the gate that lets you operate. But one-time + cheap. |
+| **Custodian / BD** | A registered custodian (Member FINRA/SIPC) carrying custody, trades, KYC | **Minimal upfront if you pick right; then usage-based** (per-account + per-trade + maybe a few bps), scaling with the book | **Mostly yes** — costs scale with funded accounts, i.e. roughly "% as rev comes." Negotiate the monthly minimum down/away early. |
+| **Engineering** | The product | **~$0** — built (AI). | n/a |
+
+**All-in to flip the switch: low five figures one-time (legal) + usage-based
+custody that grows only as you do.** Not $1M (own BD). Not free-but-fake (a bare
+Fidelity UTMA with no loop / Memory Book / relationship — the thing we *compete
+against*, not build).
+
+**Custodian pick for cheap + deferred:** **Alpaca** is the canonical API-first /
+startup-tier choice (low-or-no minimums, usage-based). DriveWealth (the repo
+scaffold) is the fractional-share specialist but tends more enterprise/minimums;
+Apex is most enterprise. Lean Alpaca-tier unless a DriveWealth capability
+(fractional, embedded) is decisive.
+
+**Negotiation checklist — ask EACH custodian (put in `CUSTODIAN_OUTREACH.md`):**
+1. Setup / integration fee? One-time or recurring?
+2. Monthly platform **minimum** — and **can it waive until we hit X funded
+   accounts** (a startup tier)? This is the lever that makes it "pay as rev comes."
+3. Per-account fee (open + annual)? Per-trade / fractional-trade cost?
+4. Any bps on AUM they charge us (vs. our 0.10%)? Confirm our 0.10% nets out
+   *above* their cost so the unit economics are positive from account #1.
+5. Do they support **gifter-pays-them-directly** (so Kiddo stays out of the flow)
+   and **collecting + remitting our 0.10%**? (The structure question from gate #1.)
+6. KYC/identity-verification cost (per check)?
+
+Exact numbers aren't public and shift — the custodian conversation is where the
+ranges above become quotes. Walk in with this checklist.
+
 ## Graduating later — the option is preserved
 
 You can become a "big guy" (own BD and/or RIA) later; rent-the-rails is the
