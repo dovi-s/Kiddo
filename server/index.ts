@@ -505,7 +505,12 @@ if (process.env.NODE_ENV !== "production") {
       res.header("Vary", "Origin");
     }
     res.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization,Cookie,X-Requested-With");
+    // X-Kiddo-Device-Id: the mobile app (and its web preview) sends this on every
+    // request for trusted-device pairing; without it in the allowlist the CORS
+    // preflight rejects EVERY request ("x-kiddo-device-id is not allowed") → no
+    // data, no auth on the web preview. Authorization is already allowed (the
+    // mobile Bearer token). 2026-06-02.
+    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization,Cookie,X-Requested-With,X-Kiddo-Device-Id");
     if (req.method === "OPTIONS") {
       return res.sendStatus(200);
     }
