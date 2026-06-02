@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import { ActivityIndicator, AppState, AppStateStatus, Linking, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { colors, radius, spacing } from "@kora/tokens";
+import { elevate } from "./src/ui";
 import { appCopy } from "@kora/content";
 import type { OnboardingAccountType, OnboardingInvestmentChoice, OnboardingStep, PublicGiftDestination } from "@kora/types";
 
@@ -683,11 +684,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.container,
     padding: spacing.lg,
     gap: spacing.lg,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
+    ...elevate({ y: 10, blur: 24, opacity: 0.08, color: colors.ink }),
   },
   stack: { gap: spacing.md },
   miniGrid: { flexDirection: "row", gap: spacing.sm },

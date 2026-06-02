@@ -1202,9 +1202,9 @@ const switcher = StyleSheet.create({
 const tabStyles = StyleSheet.create({
   bar: {
     flexDirection: "row",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: semanticColors.surface.card,
     borderTopWidth: 1,
-    borderTopColor: "#EEE8DD",
+    borderTopColor: semanticColors.surface.muted,
     paddingTop: 8,
   },
   tabBtn: { flex: 1, alignItems: "center", gap: 3, paddingTop: 2 },
@@ -1232,18 +1232,18 @@ const tabStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FAF8F4" },
+  screen: { flex: 1, backgroundColor: colors.cream },
   scroll: { flex: 1 },
-  memoryScroll: { backgroundColor: "#F5F0E8" },
+  memoryScroll: { backgroundColor: colors.creamDark },
   scrollContent: { padding: spacing.md, gap: spacing.md, paddingBottom: 28 },
 
   // Header
   header: {
-    backgroundColor: "#FAF8F4",
+    backgroundColor: colors.cream,
     paddingHorizontal: spacing.lg,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#EEE8DD",
+    borderBottomColor: semanticColors.surface.muted,
   },
   headerRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
   headerLeft: { gap: 1 },

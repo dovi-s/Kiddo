@@ -3,7 +3,7 @@
 // reduced). Mirrors the web KiddoSkeleton register.
 
 import React, { useEffect, useRef } from "react";
-import { Animated, AccessibilityInfo, type ViewStyle, type DimensionValue } from "react-native";
+import { Animated, AccessibilityInfo, Platform, type ViewStyle, type DimensionValue } from "react-native";
 import { semanticColors, radius } from "@kora/tokens";
 
 export interface SkeletonProps {
@@ -24,8 +24,8 @@ export function Skeleton({ width = "100%", height = 14, rounded = radius.control
         if (cancelled || reduced) return;
         loop = Animated.loop(
           Animated.sequence([
-            Animated.timing(pulse, { toValue: 0.85, duration: 800, useNativeDriver: true }),
-            Animated.timing(pulse, { toValue: 0.55, duration: 800, useNativeDriver: true }),
+            Animated.timing(pulse, { toValue: 0.85, duration: 800, useNativeDriver: Platform.OS !== "web" }),
+            Animated.timing(pulse, { toValue: 0.55, duration: 800, useNativeDriver: Platform.OS !== "web" }),
           ]),
         );
         loop.start();
