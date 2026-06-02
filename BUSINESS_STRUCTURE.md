@@ -89,6 +89,18 @@ custody that grows only as you do.** Not $1M (own BD). Not free-but-fake (a bare
 Fidelity UTMA with no loop / Memory Book / relationship — the thing we *compete
 against*, not build).
 
+**Honest budget (don't anchor on the floor):** **plan $10-25k one-time, target
+~$10k.** $10k is achievable *if* the legal stays narrow (~$3-5k), the custodian
+waives its minimum on a startup tier, you already have an entity, and eng is done
+(it is). What pushes it past $10k: a broader opinion (Parts 1-9 span RIA +
+capture + COPPA + marketing-claims → can run $10-15k); a custodian setup fee or
+monthly minimum; likely-small extras (E&O / cyber insurance, a KYC-vendor
+per-check, entity formation if not done). **It's also not just money — it's
+time + process:** custodian onboarding/approval is typically weeks-to-months and
+may require compliance docs from you (a basic AML program, a named compliance
+contact). The two quotes — legal + custodian — turn this range into a real
+number; until then, budget $10-25k and treat $10k as the optimistic end.
+
 **Custodian pick for cheap + deferred:** **Alpaca** is the canonical API-first /
 startup-tier choice (low-or-no minimums, usage-based). DriveWealth (the repo
 scaffold) is the fractional-share specialist but tends more enterprise/minimums;
