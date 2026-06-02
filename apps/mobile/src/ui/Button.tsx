@@ -7,6 +7,7 @@ import React, { useRef } from "react";
 import {
   Animated,
   Pressable,
+  Platform,
   ActivityIndicator,
   View,
   StyleSheet,
@@ -64,7 +65,7 @@ export function Button({
 
   const spring = (to: number) => {
     if (reduceMotion.current) return;
-    Animated.spring(scale, { toValue: to, useNativeDriver: true, speed: 50, bounciness: 0 }).start();
+    Animated.spring(scale, { toValue: to, useNativeDriver: Platform.OS !== "web", speed: 50, bounciness: 0 }).start();
   };
 
   const container: ViewStyle = {
