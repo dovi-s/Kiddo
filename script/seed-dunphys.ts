@@ -44,7 +44,7 @@ import {
   type InsertGift,
   type InsertMemoryEntry,
 } from "../shared/schema";
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and, asc, inArray } from "drizzle-orm";
 import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -800,8 +800,20 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
   if (kid.ageYears < 18) {
     occasions.push({ name: `${kid.firstName}'s Graduation`, slug: `${kid.slug}-graduation`, eventType: "graduation", eventDate: new Date(Date.UTC(bday.getUTCFullYear() + 18, 5, 1, 12)), goalAmount: null });
   }
+  // Attribute Grandpa Jay's "for college / for your future" gifts to the
+  // College Fund (general) occasion, so the Memory Book's occasions strip shows
+  // a real populated group ("College Fund · N gifts · $X raised") next to the
+  // catch-all "Gift anytime" — otherwise every gift is untagged and only
+  // "Gift anytime" ever appears. Clean to attribute to a multi-year savings
+  // goal (no date-mismatch a one-day birthday occasion would have). The events
+  // table stores giftCount/giftVolume as COUNTERS (storage increments them at
+  // gift time, not a JOIN), so we set them on the event row AND stamp eventId
+  // on the gifts — both are required for the occasion to surface.
+  const collegeGifts = externalGifts.filter((g) => (g.senderEmail || "").toLowerCase() === "jay@dunphyfamily.com");
+  const collegeGiftVolume = collegeGifts.reduce((s, g) => s + g.amount, 0);
   for (const o of occasions) {
-    await db.insert(events).values({
+    const isCollegeOccasion = o.eventType === "general";
+    const [insertedEvent] = await db.insert(events).values({
       fundId: fund.id,
       userId: parentUserId,
       name: o.name,
@@ -810,7 +822,14 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
       eventDate: o.eventDate,
       goalAmount: o.goalAmount != null ? o.goalAmount.toFixed(2) : null,
       status: "active",
-    } as any);
+      giftCount: isCollegeOccasion ? collegeGifts.length : 0,
+      giftVolume: isCollegeOccasion ? collegeGiftVolume.toFixed(2) : "0.00",
+    } as any).returning();
+    if (isCollegeOccasion && collegeGifts.length > 0) {
+      await db.update(gifts)
+        .set({ eventId: insertedEvent.id })
+        .where(inArray(gifts.id, collegeGifts.map((g) => g.giftId)));
+    }
   }
 
   // Generate the historical balance curve from the REAL portfolio value
