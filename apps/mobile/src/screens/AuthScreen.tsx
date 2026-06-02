@@ -5,13 +5,12 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   View,
-  ActivityIndicator,
 } from "react-native";
-import { colors, radius, spacing } from "@kora/tokens";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { apiLogin, apiRegister, type ApiUser } from "../api";
+import { KText, KiddoCard, KInput, Button, haptic } from "../ui";
 
 interface AuthScreenProps {
   onAuth: (user: ApiUser) => void;
@@ -19,7 +18,11 @@ interface AuthScreenProps {
 
 type AuthMode = "login" | "register";
 
+// Refactored onto the design-system kit (2026-06-02) — the first screen migrated
+// off ad-hoc grey hardcodes to the brand tokens + primitives. Logic unchanged;
+// only presentation. The proof surface for the native build (see DESIGN.md).
 export function AuthScreen({ onAuth }: AuthScreenProps) {
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,137 +55,119 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
     }
   };
 
-  const toggle = () => {
-    setMode((m) => (m === "login" ? "register" : "login"));
+  const setModeReset = (m: AuthMode) => {
+    haptic("selection");
+    setMode(m);
     setError(null);
   };
+  const toggle = () => setModeReset(mode === "login" ? "register" : "login");
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <ScrollView
-        style={styles.screen}
-        contentContainerStyle={styles.content}
+        style={{ flex: 1, backgroundColor: semanticColors.surface.app }}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg },
+        ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.card}>
-          {/* Logo / wordmark */}
+        <KiddoCard padded={false} style={styles.card}>
           <View style={styles.logoRow}>
-            <Text style={styles.logoText}>Kiddo</Text>
-            <Text style={styles.logoSub}>Investment gifting</Text>
+            <KText variant="display" color={colors.evergreen}>Kiddo</KText>
+            <KText variant="caption">Investment gifting</KText>
           </View>
 
-          {/* Tab toggle */}
+          {/* Segmented sign-in / register toggle */}
           <View style={styles.tabRow}>
-            <Pressable
-              style={[styles.tab, mode === "login" && styles.tabActive]}
-              onPress={() => { setMode("login"); setError(null); }}
-            >
-              <Text style={[styles.tabText, mode === "login" && styles.tabTextActive]}>Sign in</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.tab, mode === "register" && styles.tabActive]}
-              onPress={() => { setMode("register"); setError(null); }}
-            >
-              <Text style={[styles.tabText, mode === "register" && styles.tabTextActive]}>Create account</Text>
-            </Pressable>
+            {(["login", "register"] as const).map((m) => {
+              const active = mode === m;
+              return (
+                <Pressable
+                  key={m}
+                  style={[styles.tab, active && styles.tabActive]}
+                  onPress={() => setModeReset(m)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                >
+                  <KText variant="label" color={active ? semanticColors.text.primary : semanticColors.text.muted}>
+                    {m === "login" ? "Sign in" : "Create account"}
+                  </KText>
+                </Pressable>
+              );
+            })}
           </View>
 
-          {/* Error */}
-          {error && (
+          {error ? (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
+              <KText variant="caption" color={semanticColors.danger.text}>{error}</KText>
             </View>
-          )}
+          ) : null}
 
-          {/* Fields */}
           <View style={styles.fields}>
-            {mode === "register" && (
+            {mode === "register" ? (
               <View style={styles.row}>
-                <View style={[styles.fieldWrap, { flex: 1, marginRight: spacing.xs }]}>
-                  <Text style={styles.label}>First name</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={firstName}
-                    onChangeText={setFirstName}
-                    placeholder="Jane"
-                    placeholderTextColor="#9CA3AF"
-                    autoCapitalize="words"
-                    returnKeyType="next"
-                  />
-                </View>
-                <View style={[styles.fieldWrap, { flex: 1 }]}>
-                  <Text style={styles.label}>Last name</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={lastName}
-                    onChangeText={setLastName}
-                    placeholder="Doe"
-                    placeholderTextColor="#9CA3AF"
-                    autoCapitalize="words"
-                    returnKeyType="next"
-                  />
-                </View>
+                <KInput
+                  containerStyle={styles.halfLeft}
+                  label="First name"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  placeholder="Jane"
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                />
+                <KInput
+                  containerStyle={styles.half}
+                  label="Last name"
+                  value={lastName}
+                  onChangeText={setLastName}
+                  placeholder="Doe"
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                />
               </View>
-            )}
+            ) : null}
 
-            <View style={styles.fieldWrap}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor="#9CA3AF"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="next"
-              />
-            </View>
-
-            <View style={styles.fieldWrap}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder={mode === "register" ? "Min 8 characters" : "Your password"}
-                placeholderTextColor="#9CA3AF"
-                secureTextEntry
-                returnKeyType="done"
-                onSubmitEditing={handleSubmit}
-              />
-            </View>
+            <KInput
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="next"
+            />
+            <KInput
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              placeholder={mode === "register" ? "Min 8 characters" : "Your password"}
+              secureTextEntry
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
+            />
           </View>
 
-          {/* Submit */}
-          <Pressable
-            style={[styles.btn, loading && styles.btnDisabled]}
+          <Button
+            label={mode === "login" ? "Sign in" : "Create account"}
             onPress={handleSubmit}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.btnText}>
-                {mode === "login" ? "Sign in" : "Create account"}
-              </Text>
-            )}
-          </Pressable>
+            loading={loading}
+            fullWidth
+            size="lg"
+            hapticIntent="medium"
+          />
 
-          {/* Toggle */}
-          <Pressable onPress={toggle} style={styles.toggleRow}>
-            <Text style={styles.toggleText}>
+          <Pressable onPress={toggle} style={styles.toggleRow} accessibilityRole="button">
+            <KText variant="caption" center>
               {mode === "login" ? "No account? " : "Already have one? "}
-              <Text style={styles.toggleLink}>
+              <KText variant="caption" color={colors.evergreen}>
                 {mode === "login" ? "Create one" : "Sign in"}
-              </Text>
-            </Text>
+              </KText>
+            </KText>
           </Pressable>
-        </View>
+        </KiddoCard>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -190,72 +175,41 @@ export function AuthScreen({ onAuth }: AuthScreenProps) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  screen: { flex: 1, backgroundColor: colors.cream },
-  content: { padding: spacing.lg, minHeight: "100%", justifyContent: "center" },
+  content: { paddingHorizontal: spacing.lg, flexGrow: 1, justifyContent: "center" },
   card: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: radius.container,
-    padding: spacing.lg,
-    gap: spacing.md,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
     maxWidth: 430,
     width: "100%",
     alignSelf: "center",
+    padding: spacing.lg,
+    gap: spacing.md,
   },
-  logoRow: { alignItems: "center", gap: 2 },
-  logoText: { fontSize: 28, fontWeight: "700", color: colors.evergreen },
-  logoSub: { fontSize: 13, color: "#6B7280" },
+  logoRow: { alignItems: "center", gap: 2, marginBottom: spacing.xs },
   tabRow: {
     flexDirection: "row",
-    backgroundColor: "#F3F4F6",
+    backgroundColor: semanticColors.surface.muted,
     borderRadius: radius.control,
     padding: 3,
+    gap: 3,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: radius.control - 2,
-    alignItems: "center",
+  tab: { flex: 1, paddingVertical: spacing.sm, borderRadius: radius.control - 3, alignItems: "center" },
+  tabActive: {
+    backgroundColor: semanticColors.surface.card,
+    shadowColor: colors.ink,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
-  tabActive: { backgroundColor: "#FFFFFF", shadowColor: "#000", shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 },
-  tabText: { fontSize: 14, fontWeight: "500", color: "#6B7280" },
-  tabTextActive: { color: colors.ink },
   errorBox: {
-    backgroundColor: "#FEF2F2",
+    backgroundColor: semanticColors.danger.background,
     borderRadius: radius.inner,
     borderWidth: 1,
-    borderColor: "#FECACA",
+    borderColor: semanticColors.danger.border,
     padding: spacing.sm,
   },
-  errorText: { color: "#DC2626", fontSize: 13 },
   fields: { gap: spacing.sm },
   row: { flexDirection: "row" },
-  fieldWrap: { gap: 4 },
-  label: { fontSize: 13, fontWeight: "500", color: colors.ink },
-  input: {
-    height: 46,
-    borderWidth: 1.5,
-    borderColor: "#D1D5DB",
-    borderRadius: radius.control,
-    paddingHorizontal: spacing.md,
-    fontSize: 15,
-    color: colors.ink,
-    backgroundColor: "#FAFAFA",
-  },
-  btn: {
-    height: 50,
-    backgroundColor: colors.evergreen,
-    borderRadius: radius.control,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  btnDisabled: { opacity: 0.6 },
-  btnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 16 },
-  toggleRow: { alignItems: "center" },
-  toggleText: { fontSize: 14, color: "#6B7280" },
-  toggleLink: { color: colors.evergreen, fontWeight: "600" },
+  half: { flex: 1 },
+  halfLeft: { flex: 1, marginRight: spacing.sm },
+  toggleRow: { alignItems: "center", paddingTop: spacing.xs },
 });

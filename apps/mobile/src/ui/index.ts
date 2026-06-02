@@ -17,6 +17,9 @@ export type { KiddoCardProps } from "./KiddoCard";
 export { Button } from "./Button";
 export type { ButtonProps } from "./Button";
 
+export { KInput } from "./Input";
+export type { KInputProps } from "./Input";
+
 export { Pill } from "./Pill";
 export type { PillProps } from "./Pill";
 
