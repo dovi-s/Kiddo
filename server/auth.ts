@@ -1319,24 +1319,47 @@ export function setupAuth(app: Express) {
       // victim's browser pre-login must not keep an authenticated session
       // after the victim logs in. Nothing useful lives in the pre-login
       // session on this endpoint, so regenerating loses nothing.
+      // The native app authenticates with the HMAC bearer token below, which
+      // does NOT depend on the cookie session. So a session-store hiccup (e.g.
+      // Postgres/Supabase connection pressure on the separate session pool)
+      // must not hard-fail login: log the real error and still issue the token.
+      // Web cookie auth is degraded until the store recovers, but the password
+      // was verified and the token is legitimately the user's — far better than
+      // a blanket 500 that locks every client out. Previously this returned
+      // 500 "Failed to create session" and blocked mobile login entirely.
+      const issueTokenResponse = () => {
+        const { passwordHash: _t, kycData: _ktd, ...safeUser } = user;
+        res.json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email), mobileAuthToken: mintMobileAuthToken(user.id) });
+      };
       req.session.regenerate((regenErr) => {
         if (regenErr) {
-          return res.status(500).json({ message: "Failed to create session" });
+          console.error("[auth] session.regenerate failed during login; issuing bearer token without a cookie session:", regenErr);
+          void trackLoginDevice(user.id, req);
+          return issueTokenResponse();
         }
         req.login(user, (err) => {
           if (err) {
-            return res.status(500).json({ message: "Failed to create session" });
+            console.error("[auth] req.login failed during login; issuing bearer token without a cookie session:", err);
+            void trackLoginDevice(user.id, req);
+            return issueTokenResponse();
           }
           applySessionDuration(req, rememberMe);
           // Fire-and-forget new-device tracking. Sends an alert email
           // when the fingerprint is novel for this user (after the
           // first-ever login). Locked 2026-05-15.
           void trackLoginDevice(user.id, req);
-          const { passwordHash: _, kycData: _kd, ...safeUser } = user;
-          return respondAfterSessionSave(req, res, () => {
+          // Persist the session, but don't hard-fail the login if the final
+          // store write errors — same reasoning as above (the bearer token
+          // carries mobile auth regardless). respondAfterSessionSave's 500
+          // path ("Failed to persist session") would otherwise re-block the
+          // exact clients this resilience is meant to unblock.
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              console.error("[auth] session.save failed during login; issuing bearer token anyway:", saveErr);
+            }
             // mobileAuthToken: ignored by the web (cookie session), stored by the
             // native app for Bearer auth. See server/mobileAuthToken.ts.
-            res.json({ ...safeUser, isSuperAdmin: isSuperAdminEmail(user.email), mobileAuthToken: mintMobileAuthToken(user.id) });
+            issueTokenResponse();
           });
         });
       });
