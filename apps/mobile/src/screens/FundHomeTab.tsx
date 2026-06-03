@@ -16,6 +16,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Image,
   Linking,
   Platform,
   Pressable,
@@ -942,6 +943,42 @@ function QuickLink({
   );
 }
 
+// Real stock/ETF logo from the same source the web uses (Parqet), with a clean
+// ticker fallback when a logo is missing (ETFs, delisted, network). Mirrors
+// client/src/components/ui/stock-logo.tsx.
+function StockLogo({ ticker, size = 38 }: { ticker: string; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  const upper = String(ticker || "").trim().toUpperCase() || "STK";
+  // Ticker letters sit underneath; the (opaque jpg) logo paints on top when it
+  // loads and covers them. So while loading OR on error we show clean letters
+  // instead of a blank white box — no network-dependent empty state.
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: 12,
+        overflow: "hidden",
+        backgroundColor: colors.evergreen + "12",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <KText variant="label" color={colors.evergreen} style={{ fontSize: upper.length > 3 ? 10 : 12 }}>
+        {upper.length > 4 ? upper.slice(0, 4) : upper}
+      </KText>
+      {!failed ? (
+        <Image
+          source={{ uri: `https://assets.parqet.com/logos/symbol/${upper}?format=jpg` }}
+          style={{ position: "absolute", top: 0, left: 0, width: size, height: size }}
+          resizeMode="cover"
+          onError={() => setFailed(true)}
+        />
+      ) : null}
+    </View>
+  );
+}
+
 function HoldingRow({
   holding,
   total,
@@ -968,20 +1005,7 @@ function HoldingRow({
         padding: spacing.md,
       }}
     >
-      <View
-        style={{
-          width: 38,
-          height: 38,
-          borderRadius: 12,
-          backgroundColor: colors.evergreen + "12",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <KText variant="label" color={colors.evergreen}>
-          {holding.ticker.slice(0, 2).toUpperCase()}
-        </KText>
-      </View>
+      <StockLogo ticker={holding.ticker} />
       <View style={{ flex: 1, minWidth: 0 }}>
         <KText variant="bodyStrong" numberOfLines={1}>
           {holding.name || holding.ticker}
