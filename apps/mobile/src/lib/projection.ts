@@ -54,10 +54,12 @@ export function projectFundValue(input: {
   return Math.max(0, Math.round(valueAtPhase1End * Math.pow(1 + monthlyRate, compoundOnlyMonths)));
 }
 
-/** Current age in (fractional) years from a birthdate, or null. */
+/** Current age in (fractional) years from a birthdate, or null. Accepts a bare
+ *  "YYYY-MM-DD" (anchored noon UTC) or a full ISO timestamp. */
 export function ageFromBirthdate(birthdate?: string | null): number | null {
   if (!birthdate) return null;
-  const b = new Date(`${birthdate}T12:00:00.000Z`);
+  const s = /^\d{4}-\d{2}-\d{2}$/.test(birthdate) ? `${birthdate}T12:00:00.000Z` : birthdate;
+  const b = new Date(s);
   if (Number.isNaN(b.getTime())) return null;
   return (Date.now() - b.getTime()) / (365.25 * 86_400_000);
 }

@@ -63,11 +63,21 @@ function shortDate(value?: string | null): string | null {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// Parse a recipient birthdate robustly: a bare "YYYY-MM-DD" gets anchored to
+// noon UTC (avoids timezone-off-by-one); a full ISO timestamp is used as-is.
+// (Appending "T12:00:00.000Z" to an already-ISO string produced an invalid date,
+// which silently nulled the at-18 card / handoff banner / projection age.)
+function parseBirthdate(birthdate?: string | null): Date | null {
+  if (!birthdate) return null;
+  const s = /^\d{4}-\d{2}-\d{2}$/.test(birthdate) ? `${birthdate}T12:00:00.000Z` : birthdate;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
 /** The calendar date the recipient turns 18, e.g. "Nov 1, 2033". */
 function eighteenthDateLabel(birthdate?: string | null): string | null {
-  if (!birthdate) return null;
-  const birth = new Date(`${birthdate}T12:00:00.000Z`);
-  if (Number.isNaN(birth.getTime())) return null;
+  const birth = parseBirthdate(birthdate);
+  if (!birth) return null;
   const d = new Date(birth);
   d.setFullYear(d.getFullYear() + 18);
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -75,9 +85,8 @@ function eighteenthDateLabel(birthdate?: string | null): string | null {
 
 /** Whole days until the recipient turns 18 (null if past or unknown). */
 function daysUntil18(birthdate?: string | null): number | null {
-  if (!birthdate) return null;
-  const birth = new Date(`${birthdate}T12:00:00.000Z`);
-  if (Number.isNaN(birth.getTime())) return null;
+  const birth = parseBirthdate(birthdate);
+  if (!birth) return null;
   const eighteen = new Date(birth);
   eighteen.setFullYear(eighteen.getFullYear() + 18);
   const days = Math.ceil((eighteen.getTime() - Date.now()) / 86_400_000);
@@ -86,9 +95,8 @@ function daysUntil18(birthdate?: string | null): number | null {
 
 /** "in 3 years" / "in 8 months" until the recipient turns 18. */
 function countdownTo18(birthdate?: string | null): string | null {
-  if (!birthdate) return null;
-  const birth = new Date(`${birthdate}T12:00:00.000Z`);
-  if (Number.isNaN(birth.getTime())) return null;
+  const birth = parseBirthdate(birthdate);
+  if (!birth) return null;
   const eighteen = new Date(birth);
   eighteen.setFullYear(eighteen.getFullYear() + 18);
   const days = Math.ceil((eighteen.getTime() - Date.now()) / 86_400_000);
@@ -246,6 +254,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
   // the web's per-holding depth surface, instead of navigating away.
   const [selectedHolding, setSelectedHolding] = useState<ApiHolding | null>(null);
   const [projectionOpen, setProjectionOpen] = useState(false);
+  const [age18Open, setAge18Open] = useState(false);
 
   const handleShare = async () => {
     if (!activeFund) return;
@@ -426,7 +435,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
         if (!days || days > 90 || isReadOnly) return null;
         return (
           <Pressable
-            onPress={() => onSelectFund(activeFund)}
+            onPress={() => setAge18Open(true)}
             style={{
               flexDirection: "row",
               alignItems: "center",
@@ -866,7 +875,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
 
       {/* ── the day it becomes theirs (mirrors web at-18 anchor card) ────────── */}
       {eighteenthDate && !isReadOnly && !isOwnerMode ? (
-        <KiddoCard variant="hero">
+        <KiddoCard variant="hero" onPress={() => setAge18Open(true)}>
           <KText variant="eyebrow" color="#F8D889">The day it all becomes {childName}'s</KText>
           <KText variant="title" color="#FFF7E8" style={{ marginTop: 4 }}>
             {eighteenthDate}
@@ -875,6 +884,10 @@ export function FundHomeTab(props: FundHomeTabProps) {
             {childName} gets full control at 18. Until then, every gift and note you add is part of the story
             that's waiting for them.
           </KText>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: spacing.sm }}>
+            <KText variant="label" color="#F8D889">See the handoff plan</KText>
+            <Ionicons name="arrow-forward" size={15} color="#F8D889" />
+          </View>
         </KiddoCard>
       ) : null}
 
@@ -913,7 +926,124 @@ export function FundHomeTab(props: FundHomeTabProps) {
           onClose={() => setProjectionOpen(false)}
         />
       ) : null}
+
+      {age18Open && activeFund ? (
+        <Age18PlanSheet
+          childName={childName}
+          birthdate={activeFund.recipientBirthdate}
+          startingValue={d.totalValue}
+          monthly={d.monthlyRecurring}
+          onClose={() => setAge18Open(false)}
+        />
+      ) : null}
     </>
+  );
+}
+
+// Age-18 handoff plan — what changes at majority + the projected number + the
+// honest "the money conversation doesn't start at 18" framing. Mirrors the web
+// Age18Plan page's spine.
+function Age18PlanSheet({
+  childName,
+  birthdate,
+  startingValue,
+  monthly,
+  onClose,
+}: {
+  childName: string;
+  birthdate?: string | null;
+  startingValue: number;
+  monthly: number;
+  onClose: () => void;
+}) {
+  const date = eighteenthDateLabel(birthdate);
+  const days = daysUntil18(birthdate);
+  const currentAge = ageFromBirthdate(birthdate) ?? 5;
+  const projectedAt18 = projectFundValue({
+    startingValue,
+    monthlyContribution: monthly,
+    yearsAhead: Math.max(0, 18 - currentAge),
+    contributionYears: Math.max(0, 18 - currentAge),
+  });
+
+  const changes = [
+    { icon: "key-outline", title: "Full control transfers to them", body: `${childName} becomes the legal owner and decides what happens next.` },
+    { icon: "shield-checkmark-outline", title: "Nothing is sold automatically", body: "The investments stay invested. No forced sale, no taxable event at the handoff." },
+    { icon: "book-outline", title: "The Memory Book is theirs", body: "Every gift, note, and photo — the whole story — goes with them." },
+    { icon: "pricetag-outline", title: "Pricing simplifies", body: "The per-fund Plus subscription ends; only the 0.10% AUM line remains." },
+  ];
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(14,37,24,0.4)" }} onPress={onClose} />
+      <ScrollView
+        style={{ maxHeight: "88%", backgroundColor: colors.cream, borderTopLeftRadius: radius.container, borderTopRightRadius: radius.container }}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: semanticColors.surface.muted, alignSelf: "center", marginBottom: spacing.md }} />
+        <KText variant="sectionLabel" color={semanticColors.text.muted}>The handoff</KText>
+        <KText variant="title" style={{ marginTop: 4 }}>
+          {childName} turns 18{date ? ` on ${date}` : ""}.
+        </KText>
+        {days ? (
+          <KText variant="body" color={semanticColors.text.muted} style={{ marginTop: 2 }}>
+            {days} {days === 1 ? "day" : "days"} away. Here's what changes — and what doesn't.
+          </KText>
+        ) : null}
+
+        {/* projected number */}
+        {projectedAt18 > startingValue ? (
+          <KiddoCard variant="hero" style={{ marginTop: spacing.md }}>
+            <KText variant="eyebrow" color="#F8D889">Could be worth around</KText>
+            <KText variant="display" color="#FFF7E8" tabular style={{ fontSize: 40, lineHeight: 46, marginTop: 2 }}>
+              {formatBalance(projectedAt18)}
+            </KText>
+            <KText variant="caption" color="rgba(255,247,232,0.78)" style={{ marginTop: 2 }}>
+              at 18, at a 7% average annual return after our 0.10% fee. A projection, not a promise.
+            </KText>
+          </KiddoCard>
+        ) : null}
+
+        {/* what changes */}
+        <KText variant="sectionLabel" color={semanticColors.text.muted} style={{ marginTop: spacing.lg, marginBottom: spacing.xs }}>
+          What changes at 18
+        </KText>
+        <KiddoCard>
+          {changes.map((c, i) => (
+            <View
+              key={c.title}
+              style={{
+                flexDirection: "row",
+                gap: spacing.sm,
+                paddingVertical: 10,
+                borderTopWidth: i === 0 ? 0 : 1,
+                borderTopColor: semanticColors.surface.muted,
+              }}
+            >
+              <View style={{ width: 34, height: 34, borderRadius: 11, backgroundColor: colors.evergreen + "14", alignItems: "center", justifyContent: "center" }}>
+                <Ionicons name={c.icon as any} size={17} color={colors.evergreen} />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <KText variant="bodyStrong">{c.title}</KText>
+                <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: 2 }}>{c.body}</KText>
+              </View>
+            </View>
+          ))}
+        </KiddoCard>
+
+        {/* after the handoff */}
+        <KiddoCard style={{ marginTop: spacing.md }}>
+          <KText variant="bodyStrong">The money conversation doesn't start at 18.</KText>
+          <KText variant="caption" color={semanticColors.text.muted} style={{ marginTop: spacing.xs }}>
+            The years of gifts and notes are the head start. The handoff is a moment to talk about what it
+            took to build, and what they might do with it — not a finish line.
+          </KText>
+        </KiddoCard>
+
+        <Button label="Done" onPress={onClose} fullWidth style={{ marginTop: spacing.md }} />
+      </ScrollView>
+    </Modal>
   );
 }
 
