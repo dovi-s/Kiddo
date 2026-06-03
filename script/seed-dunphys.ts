@@ -388,7 +388,15 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     // Convert to a Date before passing. Locked 2026-05-21 after this
     // crashed every seed run and left every demo user with zero funds,
     // which made /demo → Dashboard → /get-started for every visitor.
-    recipientBirthdate: new Date(kid.birthdate),
+    //
+    // Anchor at NOON UTC, not midnight. The client formats the handoff
+    // date ("{kid} turns 21 on...") via toLocaleDateString in LOCAL time;
+    // a midnight-UTC birthdate renders as the PREVIOUS day west of UTC
+    // (Nov 2 birthdate showed "Nov 1" handoff in US timezones), one day
+    // off from the birthday OCCASION, which already anchors noon UTC
+    // (Date.UTC(..., 12) below). Noon keeps the calendar day stable
+    // across every US timezone so both surfaces read the same date.
+    recipientBirthdate: new Date(`${kid.birthdate}T12:00:00Z`),
     pronoun: kid.pronoun,
     // Schema column is recipientState (recipient_state); a bare `state`
     // key wrote to nothing, leaving recipientState NULL on every demo fund
