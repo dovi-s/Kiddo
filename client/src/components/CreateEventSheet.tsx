@@ -224,10 +224,16 @@ export function CreateEventSheet({
   const isSavingsEdit = editEvent?.eventCategory === "savings_goal";
 
   const [step, setStep] = useState<Step>(() => {
-    if (!editEvent) return "category";
+    // New occasions open straight on the type picker. The old "category" chooser
+    // had two options (occasion / savings goal); with goals retired it collapsed
+    // to ONE option ("What are you creating? → An occasion"), which reads as an
+    // unfinished one-choice modal. Skip it and go right to "What's the occasion?".
+    if (!editEvent) return "type";
     return isSavingsEdit ? "goal-details" : "details";
   });
-  const [category, setCategory] = useState<"gifting_occasion" | "savings_goal" | null>(null);
+  const [category, setCategory] = useState<"gifting_occasion" | "savings_goal" | null>(
+    editEvent ? (isSavingsEdit ? "savings_goal" : "gifting_occasion") : "gifting_occasion",
+  );
 
   const [eventType, setEventType] = useState(editEvent?.eventType || "");
   const [name, setName] = useState(editEvent?.name || "");
@@ -315,7 +321,7 @@ export function CreateEventSheet({
   }, [open, editEvent?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function resetAll() {
-    setStep("category"); setCategory(null);
+    setStep("type"); setCategory("gifting_occasion"); // skip the one-option chooser
     setEventType(""); setName(""); setDescription(""); setDate("");
     setGoalPreset(""); setCustomGoal("");
     setGoalType(""); setGoalName(""); setGoalDescription(""); setSavingsPreset(""); setSavingsCustomGoal("");
@@ -523,7 +529,7 @@ export function CreateEventSheet({
   const showBack =
     step === "preview" ||
     (isEditing && (step === "type" || step === "goal-type")) ||
-    (!isEditing && step !== "category" && step !== "done");
+    (!isEditing && step !== "category" && step !== "type" && step !== "done");
 
   const headerContent = () => {
     if (step === "category") return { title: "New occasion", sub: (fundName && !isOwnerMode) ? `A moment for ${fundName} that people can gift around.` : "A moment people can gift around." };
