@@ -7692,7 +7692,7 @@ export default function Dashboard() {
                                   {hasBothSections && (
                                     <div className="flex items-center justify-between px-1 pb-0.5">
                                       <div className="flex items-center gap-1.5">
-                                        <p className="text-[12px] font-semibold text-muted-foreground/85">Chosen with love</p>
+                                        <p className="text-[12px] font-semibold text-muted-foreground/85">{isOwnerMode ? "Picked just for you" : recipientFirstNameDisplay ? `Picked just for ${recipientFirstNameDisplay}` : "Hand-picked"}</p>
                                         <span className="text-[11px]">💚</span>
                                       </div>
                                       {!isReadOnlyFund && (
@@ -8356,11 +8356,16 @@ export default function Dashboard() {
                         const anonCount = anonEntry?.giftCount ?? 0;
                         const peopleCount = namedCount + anonCount;
                         if (peopleCount === 0) return null;
+                        // "have given to" not "love": quantifying love overclaims
+                        // (a $20 anonymous office gift isn't love), and the warm
+                        // "Who loves" header above already carries the sentiment —
+                        // so the count stays factual. Also aligns with the gift
+                        // page's deliberately transactional "X people have gifted".
                         const peopleLabel = isOwnerMode
-                          ? (peopleCount === 1 ? "1 person loves you" : `${peopleCount} people love you`)
+                          ? (peopleCount === 1 ? "1 person has given to your fund" : `${peopleCount} people have given to your fund`)
                           : peopleCount === 1
-                            ? `1 person loves ${childName || "them"}`
-                            : `${peopleCount} people love ${childName || "them"}`;
+                            ? `1 person has given to ${childName || "them"}`
+                            : `${peopleCount} people have given to ${childName || "them"}`;
                         const breakdown = (() => {
                           if (namedCount > 0 && anonCount > 0) {
                             return `${namedCount} named, ${anonCount} anonymous`;
