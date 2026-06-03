@@ -476,6 +476,46 @@ site keeps the disclaimers and the few hard money-mechanics claims stay honest
 
 ---
 
+# Part 10 — Paying institutions per funded account (referral / solicitor rules) — NOT launch-gating, forward-looking (Securities / Consumer)
+
+**Source:** the institutional-aggregator channel plan
+(`memory/project_babylist_integration_plan.md`). **Not a launch blocker** — Act-2
+distribution, gated behind the proven loop like every partner channel. Mapped now
+because it shares the Advisers Act / referral-compensation analysis with Parts 1
+and 8, so it costs ~nothing to answer on the same call.
+
+**The plan.** Trusted institutions (churches/synagogues, hospital-adjacent vendors,
+registries like Babylist) promote Kiddo at life moments (baptisms, namings, b'nai
+mitzvah, new-baby registries). The proposed Tier-1 arrangement is a
+**per-funded-account bounty paid as a charitable donation** to the institution's
+foundation or ministry — "Kiddo donates $X to your foundation for every funded
+account started through your community." Gifters themselves are never paid and
+never pay (that discipline is locked); the institution never holds or routes money.
+
+**The questions:**
+1. Does a per-funded-account payment to an institution (or its 501(c)(3)) for
+   promoting a platform that opens brokerage accounts trigger **solicitor/promoter
+   rules** — Advisers Act marketing rule (presumably moot if Part 1 lands on
+   no-RIA), FINRA referral-compensation rules via the BD, or state-level analogs?
+   Does our self-directed-platform posture keep this in ordinary
+   **affiliate-marketing** territory?
+2. Does paying the bounty **as a donation to a 501(c)(3)** rather than cash
+   compensation change the analysis — better (not "compensation" to a solicitor)
+   or worse (charitable-solicitation registration, the institution's own
+   disclosure duties to its community, private-benefit issues on their side)?
+3. What **disclosure at the point of referral** is required or prudent ("[Church]
+   receives a donation when an account is opened through this link")?
+4. Same analysis for **commercial partners** (registry affiliates, hospital
+   welcome-kit vendors): is a flat placement fee structurally cleaner than a
+   per-funded-account bounty, or are both fine under the same conditions?
+
+**Note the symmetry with Part 8 Q2** — that part asks whether Kiddo can earn a fee
+referring users *out* to RIAs; this part is the reverse direction: institutions
+compensated for referring *into* Kiddo. Same compensation-for-referral family;
+please answer both in one pass and state whether the direction changes anything.
+
+---
+
 # Engagement logistics
 
 **Firm type (in order):** SEC-RIA specialist boutiques (Hardin Compliance, ACA
@@ -532,3 +572,5 @@ Form ADV / sign DriveWealth amendment / rewrite TOS, per chosen option).
 - `LAUNCH_CHECKLIST.md` — where Part 2 (capture-at-intent, P0-1) is tracked.
 - `P0-1_SPEC_CAPTURE_AT_INTENT.md` / `P0-1_ADVISORY_PANEL_DECISION.md` — the built
   capture-at-intent design the Part 2 answer unblocks.
+- `memory/project_babylist_integration_plan.md` (institutional-aggregators section) —
+  Part 10 (full channel plan + arrangement ladder).

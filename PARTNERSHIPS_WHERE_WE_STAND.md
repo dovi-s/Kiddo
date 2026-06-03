@@ -26,7 +26,8 @@ root cause: **the loop isn't live and proven yet.**
 | **Schools pilot** | Stage 3 | A signed pilot champion, school-specific landing/code flow, cohort reporting, pilot support workflow — **none exist**. Three gates away | No | No |
 | **Employer benefits** | Stage 4 | 1 employer design partner, cohort attribution + reporting, support that absorbs spikes | No | No |
 | **Brand partnerships** | Stage 5 | Strong landing conversion, partnership CTA/offer, reliable cross-partner attribution, spike-proof conversion | No | No |
-| **Hospitals** | — | **Not a tracked channel.** No plan, no doc, no code. An idea only — if pursued, it would slot near schools (trusted, parent-dense, local) and inherit the same gates | No | No |
+| **Churches / faith communities** | post Stage 1 | Strongest institutional aggregator (they own the occasions: baptisms, namings, b'nai mitzvah). Tier 0 = free occasion kit, no contract; Tier 1 mission-bounty needs counsel (`COUNSEL_ENGAGEMENT_PACKET.md` Part 10). Same gates as registries: custody + memo + `partnerSource`. Plan: institutional-aggregators section of the Babylist plan (memory) | No | No |
+| **Hospitals** | post Stage 1 | Plan now exists (same doc): enter via the **vendor shelf** (welcome-kit/gift-bag vendors, newborn photographers, birthing classes), NOT hospital BD (12-month legal cycles). Paid placement judged by funded-k. Inherits the same gates + `partnerSource` | No | No |
 
 `Partners.tsx` exists but is a **marketing/landing page**, not an integration or a
 signed partner.
