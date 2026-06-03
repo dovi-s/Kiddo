@@ -81,7 +81,7 @@ export const ADMIN_ASSET_UNIVERSE: Record<string, { name: string; type: "ETF" | 
   // ticker is no longer offered for new investments.
 };
 
-export type MarketQuoteSource = "finnhub" | "alpha_vantage" | "cache" | "estimate";
+export type MarketQuoteSource = "finnhub" | "alpha_vantage" | "yahoo" | "cache" | "estimate";
 
 export type MarketQuote = {
   symbol: string;
@@ -204,12 +204,46 @@ async function getStaleCachedQuote(symbol: string): Promise<MarketQuote | null> 
   };
 }
 
+// Keyless fallback via Yahoo's public chart endpoint (the same one
+// /api/stock-price already uses for charts). The chart meta carries the live
+// price AND the prior close, so we get a real daily change with no API key.
+// This is what keeps quotes (and the holding sheet's "Today" tile) populated
+// in dev and anywhere the keyed providers are missing or rate-limited.
+async function fetchYahooQuote(symbol: string): Promise<{ price: number; change?: number; changePercent?: number } | null> {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=1d`;
+    const response = await fetch(url, { signal: AbortSignal.timeout(2500) });
+    if (!response.ok) return null;
+    const data = await response.json() as {
+      chart?: { result?: Array<{ meta?: { regularMarketPrice?: number; chartPreviousClose?: number; previousClose?: number } }> };
+    };
+    const meta = data?.chart?.result?.[0]?.meta;
+    const price = Number(meta?.regularMarketPrice);
+    if (!isValidPrice(price)) return null;
+    const result: { price: number; change?: number; changePercent?: number } = { price };
+    const prevClose = Number(meta?.chartPreviousClose ?? meta?.previousClose);
+    if (Number.isFinite(prevClose) && prevClose > 0) {
+      result.change = Math.round((price - prevClose) * 100) / 100;
+      result.changePercent = Math.round(((price - prevClose) / prevClose) * 10000) / 100;
+    }
+    return result;
+  } catch (error) {
+    console.warn("[market-quotes] Yahoo quote unavailable:", symbol, (error as Error)?.message || error);
+    return null;
+  }
+}
+
 async function fetchProviderQuote(symbol: string): Promise<{ price: number; change?: number; changePercent?: number; source: Exclude<MarketQuoteSource, "cache" | "estimate"> } | null> {
   const finnhub = await fetchFinnhubQuote(symbol);
   if (finnhub) return { ...finnhub, source: "finnhub" };
 
   const alpha = await fetchAlphaVantageQuote(symbol);
   if (alpha) return { ...alpha, source: "alpha_vantage" };
+
+  // Universal keyless fallback before the static estimate, so a missing key
+  // never silently degrades a real quote to a flat placeholder.
+  const yahoo = await fetchYahooQuote(symbol);
+  if (yahoo) return { ...yahoo, source: "yahoo" };
 
   return null;
 }
