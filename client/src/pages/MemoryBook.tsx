@@ -3288,9 +3288,21 @@ export default function MemoryBook() {
                             <p style={{ fontSize: 12.5, fontWeight: 700, color: "hsl(var(--kiddo-ink))", lineHeight: 1.25, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                               {evt.name}
                             </p>
-                            {eventDateLabel && (
-                              <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.45)", marginBottom: 5 }}>{eventDateLabel}</p>
-                            )}
+                            {/* The date line ALWAYS renders to reserve its
+                                height — the permanent "Gift anytime" card has no
+                                date, and without this placeholder its body is
+                                shorter than a dated occasion (e.g. "Birthday ·
+                                Feb 2027"). In the flex strip (align-items
+                                stretch) that shorter card gets stretched to the
+                                tallest sibling, leaving an uneven white band the
+                                dated cards don't have. Reserving the slot makes
+                                every card body identical height. */}
+                            <p
+                              aria-hidden={eventDateLabel ? undefined : true}
+                              style={{ fontSize: 10.5, color: "rgba(26,23,16,0.45)", marginBottom: 5, visibility: eventDateLabel ? undefined : "hidden" }}
+                            >
+                              {eventDateLabel || " "}
+                            </p>
                             {evt.description && stripHtml(evt.description) && (
                               <p style={{ fontSize: 10.5, color: "rgba(26,23,16,0.55)", lineHeight: 1.4, marginBottom: 5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                                 {stripHtml(evt.description)}
