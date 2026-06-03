@@ -303,7 +303,7 @@ export default function ActivityDetail() {
                 <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
                   If this ${giftProjection.amount.toLocaleString()} stays invested for the next{" "}
                   {giftProjection.yearsAhead < 2
-                    ? `${Math.round(giftProjection.yearsAhead * 12)} months`
+                    ? `${Math.round(giftProjection.yearsAhead * 12)} month${Math.round(giftProjection.yearsAhead * 12) === 1 ? "" : "s"}`
                     : `${giftProjection.yearsAhead.toFixed(1)} years`}
                   {" "}until {giftProjection.childName} turns {giftProjection.majorityAge}.
                 </p>
