@@ -6126,13 +6126,29 @@ export default function Dashboard() {
               let toneClass: string;
               let onClick: () => void;
               if (active.length > 0) {
-                const monthly = sumMonthlyEquivalent(active as any[]);
                 const nextTs = active
                   .map((c: any) => (c?.nextRunDate ? new Date(c.nextRunDate).getTime() : 0))
                   .filter((t: number) => t > 0)
                   .sort((a: number, b: number) => a - b)[0];
                 const nextLabel = nextTs ? new Date(nextTs).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null;
-                label = `${formatMoneyFriendly(monthly)}/mo recurring${active.length > 1 ? ` · ${active.length} active` : ""}${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                if (active.length === 1) {
+                  // Single schedule: show its NATIVE cadence ("$25/day"), not a
+                  // monthly-equivalent. Converting a daily schedule to "/mo" gave
+                  // a random-looking "$760.94/mo" that didn't match the "$25/day"
+                  // shown in the recurring card just below.
+                  const only = active[0] as any;
+                  const amt = parseFloat(String(only?.amount || "0"));
+                  const per = only?.frequency === "daily" ? "day"
+                    : only?.frequency === "weekly" ? "week"
+                    : only?.frequency === "yearly" ? "year"
+                    : "month";
+                  label = `${formatMoneyFriendly(amt)}/${per} recurring${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                } else {
+                  // Multiple schedules (possibly mixed cadences): a combined
+                  // monthly-equivalent total + the count is the right summary.
+                  const monthly = sumMonthlyEquivalent(active as any[]);
+                  label = `${formatMoneyFriendly(monthly)}/mo recurring · ${active.length} active${nextLabel ? ` · next ${nextLabel}` : ""}`;
+                }
                 toneClass = "text-[hsl(var(--kiddo-evergreen))] border-[hsl(var(--kiddo-evergreen)/0.25)] bg-[hsl(var(--kiddo-evergreen)/0.06)]";
                 onClick = () => summaryScrollTo("recurring");
               } else if (paused.length > 0) {
