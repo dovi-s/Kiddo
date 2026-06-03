@@ -71,6 +71,17 @@ function eighteenthDateLabel(birthdate?: string | null): string | null {
   return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
 
+/** Whole days until the recipient turns 18 (null if past or unknown). */
+function daysUntil18(birthdate?: string | null): number | null {
+  if (!birthdate) return null;
+  const birth = new Date(`${birthdate}T12:00:00.000Z`);
+  if (Number.isNaN(birth.getTime())) return null;
+  const eighteen = new Date(birth);
+  eighteen.setFullYear(eighteen.getFullYear() + 18);
+  const days = Math.ceil((eighteen.getTime() - Date.now()) / 86_400_000);
+  return days > 0 ? days : null;
+}
+
 /** "in 3 years" / "in 8 months" until the recipient turns 18. */
 function countdownTo18(birthdate?: string | null): string | null {
   if (!birthdate) return null;
@@ -402,6 +413,38 @@ export function FundHomeTab(props: FundHomeTabProps) {
       showsVerticalScrollIndicator={false}
       refreshControl={refresh}
     >
+      {/* ── approaching-handoff banner (within 90 days of turning 18) ──────── */}
+      {(() => {
+        const days = daysUntil18(activeFund?.recipientBirthdate);
+        if (!days || days > 90 || isReadOnly) return null;
+        return (
+          <Pressable
+            onPress={() => onSelectFund(activeFund)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: spacing.sm,
+              backgroundColor: colors.evergreen + "12",
+              borderRadius: radius.inner,
+              borderWidth: 1,
+              borderColor: colors.evergreen + "30",
+              padding: spacing.md,
+            }}
+          >
+            <Ionicons name="time-outline" size={20} color={colors.evergreen} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <KText variant="bodyStrong" color={colors.evergreen}>
+                Handoff in {days} {days === 1 ? "day" : "days"}
+              </KText>
+              <KText variant="caption" color={semanticColors.text.muted}>
+                {childName} turns 18 on {eighteenthDateLabel(activeFund?.recipientBirthdate)}. Here's what changes.
+              </KText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={semanticColors.text.muted} />
+          </Pressable>
+        );
+      })()}
+
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
       <KiddoCard variant="hero">
         {/* identity row */}
