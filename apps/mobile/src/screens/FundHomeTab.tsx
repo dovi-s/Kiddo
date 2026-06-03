@@ -650,6 +650,58 @@ export function FundHomeTab(props: FundHomeTabProps) {
         <Skeleton height={120} rounded={radius.card} />
       ) : null}
 
+      {/* ── your part of the story (recurring schedules) ───────────────────── */}
+      {!isReadOnly && (d.activeRecurring.length > 0 || d.pausedRecurring.length > 0) ? (
+        <View>
+          <SectionLabel>{isOwnerMode ? "Your contributions" : `Your part of ${childName}'s story`}</SectionLabel>
+          <KiddoCard>
+            {[...d.activeRecurring, ...d.pausedRecurring].map((c, i) => {
+              const paused = String(c.status).toLowerCase() === "paused";
+              const freq = String(c.frequency || "").toLowerCase();
+              const unit = freq === "weekly" ? "/wk" : freq === "yearly" ? "/yr" : freq === "daily" ? "/day" : "/mo";
+              const next = c.nextRunDate
+                ? new Date(c.nextRunDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                : null;
+              return (
+                <View
+                  key={c.id}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: spacing.sm,
+                    paddingVertical: 8,
+                    borderTopWidth: i === 0 ? 0 : 1,
+                    borderTopColor: semanticColors.surface.muted,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 11,
+                      backgroundColor: (paused ? colors.gold : colors.evergreen) + "16",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name={paused ? "pause" : "repeat"} size={16} color={paused ? colors.goldInk : colors.evergreen} />
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <KText variant="bodyStrong">
+                      {formatBalance(c.amount)}{unit}
+                      {c.selectedTicker ? ` · ${c.selectedTicker}` : ""}
+                    </KText>
+                    <KText variant="caption" color={semanticColors.text.muted}>
+                      {paused ? "Paused" : next ? `Next on ${next}` : "Active"}
+                    </KText>
+                  </View>
+                </View>
+              );
+            })}
+          </KiddoCard>
+        </View>
+      ) : null}
+
       {/* ── who loves {child} ──────────────────────────────────────────────── */}
       {d.peopleCount > 0 ? (
         <View>
