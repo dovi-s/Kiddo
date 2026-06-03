@@ -6,6 +6,7 @@ import { sendEmail } from "./emailDelivery";
 import { renderKiddoEmail } from "./templates/baseTemplate";
 import { getMarketQuote } from "./marketQuotes";
 import { MONEY_CROSS_COPY } from "@shared/milestones";
+import { GIFT_TAX_EXCLUSION_LABEL } from "@shared/legal-copy";
 
 const GIFTER_NOTIFICATION_STATE_PATH = path.join(process.cwd(), ".local", "gifter-notifications.json");
 const GIFTER_NOTIFICATION_QUEUE_PATH = path.join(process.cwd(), ".local", "gifter-notification-queue.jsonl");
@@ -796,11 +797,11 @@ function renderGiftReceiptFollowup(entry: QueueEntry): RenderedEmail | null {
   //   (c) Kiddie-tax rules apply at the recipient level above the
   //       inflation-adjusted threshold (currently $2,700/yr for 2025)
   //   (d) Form 709 may apply if THIS gifter's total annual gifts to
-  //       this recipient exceed the IRS annual exclusion (currently
-  //       $18,000 for 2024, rising with inflation)
+  //       this recipient exceed the IRS annual exclusion (GIFT_TAX_EXCLUSION_LABEL
+  //       in @shared/legal-copy, rising with inflation)
   // Kept brief; the gifter's CPA fills in the rest.
   const taxLine = amount >= 500
-    ? `Tax note: gifts to a UTMA are not deductible to the gifter and create no tax liability for you. ${childName}'s parent receives the annual 1099-DIV / 1099-B from our broker-dealer partner. If your total gifts to ${childName} across the calendar year exceed the IRS annual gift-tax exclusion (\$18,000 for 2024, adjusted yearly), you may need to file Form 709. Your CPA can confirm.`
+    ? `Tax note: gifts to a UTMA are not deductible to the gifter and create no tax liability for you. ${childName}'s parent receives the annual 1099-DIV / 1099-B from our broker-dealer partner. If your total gifts to ${childName} across the calendar year exceed the IRS annual gift-tax exclusion (${GIFT_TAX_EXCLUSION_LABEL} per recipient, adjusted yearly), you may need to file Form 709. Your CPA can confirm.`
     : "";
 
   return {

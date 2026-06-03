@@ -32,3 +32,27 @@ export const KIDDIE_TAX_NOTE =
 
 export const PROJECTION_DISCLAIMER =
   "Assumes a 7% average annual return, net of Kiddo's annual fee ($1/yr per $1,000 invested). Markets vary; returns are never guaranteed.";
+
+// RULE - gift-tax exclusion: the IRS annual gift-tax exclusion changes most
+// years with inflation ($17,000 in 2023, $18,000 in 2024, $19,000 in 2025). It
+// was hardcoded across ~7 surfaces (gift-checkout, education tooltips, Legal,
+// gifter emails) and DRIFTED: some still said "$18,000 for 2024" while others
+// said $19,000. Reference these constants everywhere instead of a literal, and
+// update the ONE value each January when the IRS publishes the new figure. Keep
+// copy year-agnostic ("$19,000 per recipient") rather than "for 2025", so a
+// missed update reads as merely outdated, not wrong-for-the-stated-year.
+export const GIFT_TAX_EXCLUSION = 19000;
+export const GIFT_TAX_EXCLUSION_LABEL = "$19,000";
+
+// The kiddie-tax unearned-income threshold (the amount of a child's unearned
+// income above which the parent's rate can kick in). Also inflation-adjusted
+// yearly ($2,600 in 2024, $2,700 in 2025) and it had drifted too: education.tsx
+// said $2,600 while FAQ / Legal / gifter emails said $2,700.
+export const KIDDIE_TAX_UNEARNED_THRESHOLD = 2700;
+export const KIDDIE_TAX_UNEARNED_THRESHOLD_LABEL = "$2,700";
+
+// Surfaces that hardcode these yearly figures (sweep them when the IRS updates):
+//   gift exclusion: education.tsx, GiftCheckout, Legal, gifterNotificationWorker,
+//                   gifterYearEndSummary.
+//   kiddie threshold: education.tsx, FAQ, Legal, gifterNotificationWorker.
+//   lifetime exemption ($13.99M 2025): education.tsx only (single source today).

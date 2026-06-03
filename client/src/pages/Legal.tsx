@@ -188,7 +188,7 @@ export default function Legal() {
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Tax Information</h3>
-                  <p>Gifts of securities may have tax implications. The annual gift tax exclusion is $19,000 per recipient (2025). Gifts over this amount may require filing a gift tax return. Investment gains in UTMA accounts may be subject to the kiddie tax if unearned income exceeds $2,700. Consult a tax professional for advice specific to your situation.</p>
+                  <p>Gifts of securities may have tax implications. The annual gift tax exclusion is $19,000 per recipient. Gifts over this amount may require filing a gift tax return. Investment gains in UTMA accounts may be subject to the kiddie tax if unearned income exceeds $2,700. Consult a tax professional for advice specific to your situation.</p>
                 </div>
                 <div>
                   <h3 className="font-medium text-foreground mb-2">Regulatory Information</h3>

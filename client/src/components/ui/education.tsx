@@ -165,7 +165,7 @@ export const educationContent = {
   },
   kiddieTax: {
     title: "What is the kiddie tax?",
-    content: "For children under 19 (or under 24 if a full-time student), unearned income over $2,600 per year may be taxed at the parent's tax rate instead of the child's. The first $1,300 is tax-free, and the next $1,300 is taxed at the child's rate. This only applies when investments are sold at a gain or when dividends exceed these thresholds. Most custodial accounts stay well below these limits.",
+    content: "For children under 19 (or under 24 if a full-time student), unearned income over $2,700 per year may be taxed at the parent's tax rate instead of the child's. The first $1,350 is tax-free, and the next $1,350 is taxed at the child's rate. This only applies when investments are sold at a gain or when dividends exceed these thresholds. Most custodial accounts stay well below these limits.",
   },
   costBasisGifted: {
     title: "How is cost basis handled for gifted stock?",

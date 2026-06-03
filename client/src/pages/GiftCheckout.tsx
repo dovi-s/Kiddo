@@ -2143,7 +2143,7 @@ export default function GiftCheckout() {
                       </div>
                     )}
                     <p className="text-[10px] text-muted-foreground/70 leading-snug">
-                      Recurring gifts count toward the IRS annual gift exclusion ($18,000 per recipient per year). Most family contributions are well under this.
+                      Recurring gifts count toward the IRS annual gift exclusion ($19,000 per recipient per year). Most family contributions are well under this.
                     </p>
                   </div>
                 )}
