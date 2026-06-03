@@ -19,6 +19,7 @@ import {
   Dimensions,
   Image,
   Linking,
+  Modal,
   Platform,
   Pressable,
   RefreshControl,
@@ -240,6 +241,9 @@ export function FundHomeTab(props: FundHomeTabProps) {
   const isReadOnly =
     (activeFund as any)?.accessRole === "previous_owner" && Boolean((activeFund as any)?.transferredAt);
   const isOwnerMode = Boolean((activeFund as any)?.transferredAt) && (activeFund as any)?.accessRole === "owner";
+  // Tapping a holding opens a detail sheet (cost basis, % of fund, who picked it) —
+  // the web's per-holding depth surface, instead of navigating away.
+  const [selectedHolding, setSelectedHolding] = useState<ApiHolding | null>(null);
 
   const handleShare = async () => {
     if (!activeFund) return;
@@ -407,6 +411,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
   }
 
   return (
+    <>
     <ScrollView
       style={{ flex: 1 }}
       contentContainerStyle={{ padding: spacing.md, gap: spacing.lg, paddingBottom: 32 }}
@@ -671,7 +676,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
                   Chosen with love 💚
                 </KText>
                 {d.chosen.map((h) => (
-                  <HoldingRow key={h.id} holding={h} total={d.holdingsTotal} onPress={() => onSelectFund(activeFund)} />
+                  <HoldingRow key={h.id} holding={h} total={d.holdingsTotal} onPress={() => setSelectedHolding(h)} />
                 ))}
               </>
             ) : null}
@@ -683,7 +688,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
                   </KText>
                 ) : null}
                 {d.managed.map((h) => (
-                  <HoldingRow key={h.id} holding={h} total={d.holdingsTotal} onPress={() => onSelectFund(activeFund)} />
+                  <HoldingRow key={h.id} holding={h} total={d.holdingsTotal} onPress={() => setSelectedHolding(h)} />
                 ))}
               </>
             ) : null}
@@ -861,11 +866,136 @@ export function FundHomeTab(props: FundHomeTabProps) {
           <Button label="Start a fund" onPress={onAddFund} />
         </KiddoCard>
       ) : null}
-    </ScrollView>
+      </ScrollView>
+
+      {selectedHolding ? (
+        <HoldingDetailSheet
+          holding={selectedHolding}
+          total={d.holdingsTotal}
+          allocations={summary?.giftAllocations ?? []}
+          gifts={d.gifts}
+          childName={childName}
+          isOwnerMode={isOwnerMode}
+          onClose={() => setSelectedHolding(null)}
+        />
+      ) : null}
+    </>
   );
 }
 
 // ─── sub-components ───────────────────────────────────────────────────────────
+
+// Per-holding detail sheet — value, gain, shares, % of fund, cost basis, and the
+// people who picked it. Mirrors the web HoldingDetailSheet's depth (a deliberate
+// dual-audience feature for sophisticated parents).
+function HoldingDetailSheet({
+  holding,
+  total,
+  allocations,
+  gifts,
+  childName,
+  isOwnerMode,
+  onClose,
+}: {
+  holding: ApiHolding;
+  total: number;
+  allocations: { giftId: string; ticker: string; costBasis: string; shares: string; source?: string }[];
+  gifts: DashboardGift[];
+  childName: string;
+  isOwnerMode: boolean;
+  onClose: () => void;
+}) {
+  const ticker = holding.ticker.toUpperCase();
+  const value = num(holding.currentValue);
+  const gain = num(holding.gain);
+  const shares = num(holding.shares);
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  const allocs = allocations.filter((a) => a.ticker.toUpperCase() === ticker);
+  const costBasis = allocs.reduce((s, a) => s + num(a.costBasis), 0);
+  const pickedGiftIds = new Set(allocs.filter((a) => String(a.source || "").toLowerCase() === "pick").map((a) => a.giftId));
+  const contributors = new Map<string, number>();
+  for (const g of gifts) {
+    if (!pickedGiftIds.has(g.id)) continue;
+    const name = (g.senderName || "").trim();
+    if (!name || g.isAnonymous) continue;
+    contributors.set(name, (contributors.get(name) || 0) + num(g.netAmount ?? g.amount));
+  }
+  const people = Array.from(contributors.entries()).sort((a, b) => b[1] - a[1]);
+
+  const Stat = ({ label, val, color }: { label: string; val: string; color?: string }) => (
+    <View style={{ flexBasis: "48%", paddingVertical: 8 }}>
+      <KText variant="caption" color={semanticColors.text.muted}>{label}</KText>
+      <KText variant="bodyStrong" tabular color={color} style={{ marginTop: 2 }}>{val}</KText>
+    </View>
+  );
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: "rgba(14,37,24,0.4)" }} onPress={onClose} />
+      <View
+        style={{
+          backgroundColor: colors.cream,
+          borderTopLeftRadius: radius.container,
+          borderTopRightRadius: radius.container,
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.md,
+          paddingBottom: 40,
+        }}
+      >
+        <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: semanticColors.surface.muted, alignSelf: "center", marginBottom: spacing.md }} />
+        {/* identity */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+          <StockLogo ticker={holding.ticker} size={48} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <KText variant="heading" numberOfLines={1}>{holding.name || ticker}</KText>
+            <KText variant="caption" color={semanticColors.text.muted}>{ticker}</KText>
+          </View>
+        </View>
+        {/* value + gain */}
+        <KText variant="display" tabular style={{ fontSize: 38, lineHeight: 44, marginTop: spacing.md }}>
+          {formatBalance(value)}
+        </KText>
+        {Math.abs(gain) >= 0.01 ? (
+          <KText variant="bodyStrong" tabular color={gain >= 0 ? "#1A7F47" : "#C0392B"} style={{ marginTop: 2 }}>
+            {gain >= 0 ? "+" : "−"}{formatBalance(Math.abs(gain))} since first gift
+          </KText>
+        ) : null}
+        {/* stats */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginTop: spacing.md, borderTopWidth: 1, borderTopColor: semanticColors.surface.muted, paddingTop: spacing.sm }}>
+          <Stat label="Shares" val={shares.toFixed(shares < 1 ? 4 : 2)} />
+          <Stat label="% of fund" val={`${pct}%`} />
+          {costBasis > 0 ? <Stat label="Invested" val={formatBalance(costBasis)} /> : null}
+          {costBasis > 0 ? (
+            <Stat
+              label="Gain"
+              val={`${gain >= 0 ? "+" : "−"}${Math.abs(costBasis ? (gain / costBasis) * 100 : 0).toFixed(1)}%`}
+              color={gain >= 0 ? "#1A7F47" : "#C0392B"}
+            />
+          ) : null}
+        </View>
+        {/* contributors */}
+        {people.length > 0 ? (
+          <View style={{ marginTop: spacing.md, borderTopWidth: 1, borderTopColor: semanticColors.surface.muted, paddingTop: spacing.sm }}>
+            <KText variant="sectionLabel" color={semanticColors.text.muted} style={{ marginBottom: spacing.xs }}>
+              {people.length === 1 ? `1 person chose ${ticker}` : `${people.length} people chose ${ticker}`}
+              {isOwnerMode ? " for you" : ` for ${childName}`}
+            </KText>
+            {people.slice(0, 6).map(([name, amt]) => (
+              <View key={name} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 5 }}>
+                <KText variant="body">{name}</KText>
+                <KText variant="body" tabular color={semanticColors.text.muted}>{formatBalance(amt)}</KText>
+              </View>
+            ))}
+          </View>
+        ) : null}
+        <Button label="Done" onPress={onClose} fullWidth style={{ marginTop: spacing.md }} />
+        <KText variant="caption" color={semanticColors.text.muted} center style={{ marginTop: spacing.sm }}>
+          Prices via market data; may be delayed. Share counts are estimates.
+        </KText>
+      </View>
+    </Modal>
+  );
+}
 
 function GiftCarousel({ gifts, childName }: { gifts: DashboardGift[]; childName: string }) {
   const [idx, setIdx] = useState(0);
