@@ -212,7 +212,12 @@ export function giftsForKid(kid: KidStory): GiftSpec[] {
   // The mix backbone: Phil auto-invested for years. Active funds run through
   // last month; paused ones (near/after handoff) stopped a few months back.
   // Note varies per kid (the seed supplies the single first-cycle note).
-  const recurringStartOffset = kid.recurringPaused ? 3 : 1;
+  // Active funds start at offset 0 (most recent cycle = CURRENT month) so a
+  // freshly-seeded demo's default "Last 30 days" money summary actually shows
+  // "You added" — at offset 1 the latest contribution landed ~31 days back,
+  // just outside the window, and an active monthly contributor read as $0.
+  // Paused/handed-off funds stay at offset 3 (stopped a few months back).
+  const recurringStartOffset = kid.recurringPaused ? 3 : 0;
   const recurringCycles = (kid.recurringPaused ? Math.min(fundAge, 14) : Math.min(fundAge, 7)) * 12;
   for (let i = 0; i < recurringCycles; i++) {
     list.push({
