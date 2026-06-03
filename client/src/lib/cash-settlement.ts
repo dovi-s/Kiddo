@@ -54,18 +54,39 @@ export function cashAfterLabel(tradeDate: Date | string | null | undefined, now?
   return settled ? "Cash · settled" : `Cash · settles ${fmtShort(settlesOn)}`;
 }
 
-// Swap the baked-in static settlement sentence in a stored description for a
-// date-aware one. No-op on descriptions that don't contain it (every non-sell
-// row), so it's safe to apply to the row description unconditionally.
+// Swap the baked-in static timing sentences in a stored description for
+// date-aware ones. Covers both money movements the activity feed bakes a stale
+// window into:
+//   - Sell  -> "Cash will settle / Cash settles in 1 to 2 business days" (T+2).
+//   - Withdrawal -> "Expect 1 to 3 business days" (T+3).
+// No-op on any description that doesn't contain one of these (every other row),
+// so it's safe to apply to the row description unconditionally.
 export function rewriteSettlementSentence(
   desc: string | null | undefined,
   tradeDate: Date | string | null | undefined,
-  now?: Date,
+  now: Date = new Date(),
 ): string {
-  const text = String(desc || "");
-  if (!text) return text;
-  const { settled, settlesOn } = cashSettlement(tradeDate, now);
-  if (!settlesOn) return text;
-  const replacement = settled ? `Cash settled ${fmtShort(settlesOn)}.` : `Cash settles ${fmtShort(settlesOn)}.`;
-  return text.replace(/Cash will settle in 1[\s-]*(?:to[\s-]*)?2 business days\.?/i, replacement);
+  let text = String(desc || "");
+  const start = tradeDate instanceof Date ? tradeDate : tradeDate ? new Date(tradeDate) : null;
+  if (!text || !start || Number.isNaN(start.getTime())) return text;
+
+  // Sell cash settlement, T+2. Matches both "will settle in" and "settles in".
+  const settles = addBusinessDays(start, 2);
+  const settled = now.getTime() >= settles.getTime();
+  text = text.replace(
+    /Cash (?:will settle|settles) in 1[\s-]*(?:to[\s-]*)?2 business days\.?/i,
+    settled ? `Cash settled ${fmtShort(settles)}.` : `Cash settles ${fmtShort(settles)}.`,
+  );
+
+  // Withdrawal bank transfer, ~T+3. Once past the window the "sent to {bank}"
+  // clause stands on its own and we can't confirm bank-side arrival, so drop
+  // the expectation rather than keep a stale "Expect 1 to 3 business days".
+  const arrives = addBusinessDays(start, 3);
+  const arrived = now.getTime() >= arrives.getTime();
+  text = text.replace(
+    /\s*Expect 1[\s-]*(?:to[\s-]*)?3 business days\.?/i,
+    arrived ? "" : ` Arriving by ${fmtShort(arrives)}.`,
+  );
+
+  return text;
 }
