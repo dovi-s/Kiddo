@@ -1598,7 +1598,7 @@ export default function GiftCheckout() {
                     <p className="text-center text-xs text-muted-foreground">No account needed. Takes 60 seconds.</p>
                     {isOccasionEvent && (
                       <p className="text-center text-xs text-muted-foreground/70 leading-relaxed">
-                        Your gift goes directly into {recipientName}&apos;s fund. The {eventData?.event?.name?.toLowerCase() || "occasion"} is just how we&apos;re celebrating it. 🌱
+                        Your gift goes directly into {recipientName}&apos;s fund. The {(eventData?.event?.name || "occasion").replace(/^\S+['’]s?\s+/, "").toLowerCase().trim() || "occasion"} is just how we&apos;re celebrating it. 🌱
                       </p>
                     )}
                   </div>
