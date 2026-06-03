@@ -58,6 +58,16 @@ function shortDate(value?: string | null): string | null {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+/** The calendar date the recipient turns 18, e.g. "Nov 1, 2033". */
+function eighteenthDateLabel(birthdate?: string | null): string | null {
+  if (!birthdate) return null;
+  const birth = new Date(`${birthdate}T12:00:00.000Z`);
+  if (Number.isNaN(birth.getTime())) return null;
+  const d = new Date(birth);
+  d.setFullYear(d.getFullYear() + 18);
+  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+}
+
 /** "in 3 years" / "in 8 months" until the recipient turns 18. */
 function countdownTo18(birthdate?: string | null): string | null {
   if (!birthdate) return null;
@@ -72,6 +82,17 @@ function countdownTo18(birthdate?: string | null): string | null {
   if (years <= 0) return `${months} month${months === 1 ? "" : "s"}`;
   if (months <= 0) return `${years} year${years === 1 ? "" : "s"}`;
   return `${years} yr${years === 1 ? "" : "s"} ${months} mo`;
+}
+
+// Per-occasion emoji + soft pastel tile (mirrors the web colored occasion cards).
+function occasionPresentation(type?: string | null): { emoji: string; bg: string; border: string } {
+  const t = String(type || "").toLowerCase();
+  if (t.includes("birthday")) return { emoji: "🎂", bg: "#FBF1DD", border: "#EFD9A8" };
+  if (t.includes("grad")) return { emoji: "🎓", bg: "#E7F0EA", border: "#C4DDCB" };
+  if (t.includes("holiday") || t.includes("christmas")) return { emoji: "🎄", bg: "#EAF1EC", border: "#CADCCF" };
+  if (t.includes("welcome") || t.includes("baby") || t.includes("shower")) return { emoji: "👶", bg: "#FBEEF0", border: "#EFCDD4" };
+  if (t.includes("college") || t.includes("school")) return { emoji: "🎓", bg: "#ECEFF8", border: "#CDD6EE" };
+  return { emoji: "🎁", bg: "#FAF1E4", border: "#EBD7B6" };
 }
 
 // Deterministic warm avatar tint per name (mirrors the web roster palette).
@@ -315,9 +336,11 @@ export function FundHomeTab(props: FundHomeTabProps) {
 
   const hasStarted = d.totalValue > 0 || d.gifts.length > 0;
   const countdown = countdownTo18(activeFund?.recipientBirthdate);
-  const activeEvent = events.find(
+  const eighteenthDate = eighteenthDateLabel(activeFund?.recipientBirthdate);
+  const activeEvents = events.filter(
     (e) => e.status === "active" && !e.isPermanent && (!activeFund || String(e.fundId) === String(activeFund.id)),
   );
+  const activeEvent = activeEvents[0];
 
   // ── loading / error / empty wrappers ───────────────────────────────────────
   const refresh = (
@@ -656,6 +679,57 @@ export function FundHomeTab(props: FundHomeTabProps) {
             </KText>
           </KiddoCard>
         </View>
+      ) : null}
+
+      {/* ── occasions & goals (mirrors web "Occasions and Goals") ──────────── */}
+      {activeEvents.length > 0 && !isReadOnly ? (
+        <View>
+          <SectionLabel>{isOwnerMode ? "Your occasions and goals" : `${childName}'s occasions and goals`}</SectionLabel>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.md }}
+          >
+            {activeEvents.slice(0, 6).map((e) => {
+              const o = occasionPresentation(e.eventType);
+              return (
+                <Pressable
+                  key={e.id}
+                  onPress={onCreateEvent}
+                  style={{
+                    width: 150,
+                    borderRadius: radius.inner,
+                    padding: spacing.md,
+                    backgroundColor: o.bg,
+                    borderWidth: 1,
+                    borderColor: o.border,
+                    gap: 6,
+                  }}
+                >
+                  <KText variant="title" style={{ fontSize: 24 }}>{o.emoji}</KText>
+                  <KText variant="bodyStrong" numberOfLines={2}>{e.name}</KText>
+                  <KText variant="caption" color={semanticColors.text.muted}>
+                    {e.giftCount > 0 ? `${formatBalance(e.totalRaised || "0")} raised` : "Ready for gifts"}
+                  </KText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {/* ── the day it becomes theirs (mirrors web at-18 anchor card) ────────── */}
+      {eighteenthDate && !isReadOnly && !isOwnerMode ? (
+        <KiddoCard variant="hero">
+          <KText variant="eyebrow" color="#F8D889">The day it all becomes {childName}'s</KText>
+          <KText variant="title" color="#FFF7E8" style={{ marginTop: 4 }}>
+            {eighteenthDate}
+          </KText>
+          <KText variant="body" color="rgba(255,247,232,0.82)" style={{ marginTop: spacing.xs }}>
+            {childName} gets full control at 18. Until then, every gift and note you add is part of the story
+            that's waiting for them.
+          </KText>
+        </KiddoCard>
       ) : null}
 
       {/* ── owner doorway (post-handoff) ───────────────────────────────────── */}
