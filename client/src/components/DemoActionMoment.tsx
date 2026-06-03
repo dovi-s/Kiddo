@@ -29,7 +29,7 @@ const COPY: Record<string, (amt: string, child: string) => { title: string; desc
   recurring: (amt, child) => ({
     title: `${amt ? `$${amt}/mo for ${child}` : "Recurring set up"} 🌱`,
     description:
-      "That's the real flow. In the demo we keep it pristine for the next visitor, so it won't save here, but it's exactly what you'd set up for a kid you love.",
+      "This won't save here (the demo resets for each visitor), but that's exactly how you'd set it up for real.",
   }),
   // Future: one_time, sell, buy, gift — add a builder + dispatch from its handler.
 };
