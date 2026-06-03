@@ -564,6 +564,24 @@ export async function apiGetMemory(fundId: string): Promise<MemoryEntry[]> {
   return parseJson<MemoryEntry[]>(res);
 }
 
+/**
+ * Write a parent text note onto the Memory Book timeline. Mirrors the web
+ * composer's POST /api/funds/:fundId/memory. `visibility` is the audience
+ * sidecar (who sees it on the gift page); notes default to "family". Server
+ * stamps the author from the session.
+ */
+export async function apiCreateMemoryNote(
+  fundId: string,
+  content: string,
+  visibility: "public" | "family" | "private" = "family",
+): Promise<MemoryEntry> {
+  const res = await apiFetch(`/api/funds/${fundId}/memory`, {
+    method: "POST",
+    body: JSON.stringify({ type: "note", content: content.trim(), visibility, kidVisibility: "kid_now" }),
+  });
+  return parseJson<MemoryEntry>(res);
+}
+
 export async function apiCreateFund(data: {
   name: string;
   slug: string;
