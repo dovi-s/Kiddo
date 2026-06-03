@@ -806,17 +806,18 @@ async function seedKidFund(parentUserId: string, kid: typeof KIDS[number], paren
     return d;
   })();
   const nextBirthdayAge = nextBirthday.getUTCFullYear() - bday.getUTCFullYear();
-  // Post-handoff (graduated) kids own a self-directed account now, so a
-  // "College Fund" general page reads as stale (and Kiddo isn't college-
-  // restricted regardless). Name their general page "{name}'s Fund"; pre-
-  // majority kids keep the familiar "College Fund" framing gifters relate to.
-  const isGraduated = kid.ageYears >= kid.majorityAge;
+  // Fund-level dollar GOALS are retired (they don't compose on a fungible pot
+  // and imply an earmark a UTMA can't keep — 529 turf we don't compete on). The
+  // old "College Fund" / "{name}'s Fund" general event existed ONLY to carry a
+  // dashboard goal: it was giftVolume 0, never a gift bucket ("pure dashboard
+  // GOAL"), so it's removed. The catch-all "Gift anytime" permanent event stays
+  // the main page; real per-occasion gift tracking (how much + who gave) lives
+  // on actual OCCASIONS like Birthday, which is exactly what a parent wants.
   const occasions: Array<{ name: string; slug: string; eventType: string; eventDate: Date | null; goalAmount: number | null }> = [
     // Generic "Birthday" (not "14th Birthday") so the Memory Book can group ALL
     // years of birthday gifts under it without the ordinal reading wrong on an
     // old gift. The dashboard still uses eventDate for the next-birthday countdown.
     { name: `${kid.firstName}'s Birthday`, slug: `${kid.slug}-bday-${nextBirthday.getUTCFullYear()}`, eventType: "birthday", eventDate: nextBirthday, goalAmount: null },
-    { name: isGraduated ? `${kid.firstName}'s Fund` : `${kid.firstName}'s College Fund`, slug: isGraduated ? `${kid.slug}-fund` : `${kid.slug}-college`, eventType: "general", eventDate: null, goalAmount: kid.ageYears >= 18 ? 30000 : 40000 },
   ];
   if (kid.ageYears < 18) {
     occasions.push({ name: `${kid.firstName}'s Graduation`, slug: `${kid.slug}-graduation`, eventType: "graduation", eventDate: new Date(Date.UTC(bday.getUTCFullYear() + 18, 5, 1, 12)), goalAmount: null });
