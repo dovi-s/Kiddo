@@ -53,7 +53,7 @@ export function PrivacyOverlay() {
   if (!visible) return null;
 
   return (
-    <View style={styles.overlay} pointerEvents="auto">
+    <View style={styles.overlay}>
       <Text style={styles.logo}>Kiddo</Text>
       <Text style={styles.tagline}>Gifts that last.</Text>
     </View>
@@ -72,6 +72,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 9999,
     elevation: 9999,
+    pointerEvents: "auto",
   },
   logo: { fontSize: 44, fontWeight: "800", color: colors.evergreen },
   tagline: { fontSize: 16, color: "#6B7280", marginTop: 8 },
