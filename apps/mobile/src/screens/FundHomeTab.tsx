@@ -16,6 +16,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Dimensions,
   Image,
   Linking,
   Platform,
@@ -26,6 +27,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Svg, { Path, Defs, LinearGradient, Stop, Circle } from "react-native-svg";
 import { colors, semanticColors, radius, spacing } from "@kora/tokens";
 import { KText, KiddoCard, Button, Skeleton, haptic } from "../ui";
 import {
@@ -147,36 +149,38 @@ function CountUp({
 
 // ─── column sparkline (no react-native-svg dependency) ────────────────────────
 //
-// A clean column sparkline built from Views — honest, brand-colored, and
-// dependency-free. Renders the fund's total-value history; flat/empty history
-// renders a calm baseline so the card never looks broken.
+// A real area+line growth chart (react-native-svg), mirroring the web's smooth
+// trend chart: evergreen line, soft gradient fill, gold dot on the latest point.
+// Renders the fund's total-value history; flat/empty history renders a calm
+// near-baseline so the card never looks broken.
 
-function Sparkline({ points, tint }: { points: number[]; tint: string }) {
-  const data = points.length >= 2 ? points : [0, 0];
-  const max = Math.max(...data, 1);
-  const min = Math.min(...data, 0);
+function GrowthChart({ points }: { points: number[] }) {
+  // Card inner width = screen − screen padding (16·2) − card padding (16·2).
+  const width = Math.max(220, Dimensions.get("window").width - 64);
+  const height = 96;
+  const data = points.length >= 2 ? points : [0, 0, 0];
+  const max = Math.max(...data);
+  const min = Math.min(...data);
   const span = Math.max(max - min, 1);
-  // cap bars so a long history stays legible
-  const step = Math.max(1, Math.ceil(data.length / 40));
-  const bars = data.filter((_, i) => i % step === 0);
+  const n = data.length;
+  const px = (i: number) => (n <= 1 ? 0 : (i / (n - 1)) * width);
+  const py = (v: number) => height - 6 - ((v - min) / span) * (height - 12);
+  const line = data.map((v, i) => `${i === 0 ? "M" : "L"}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join(" ");
+  const area = `${line} L${width.toFixed(1)},${height} L0,${height} Z`;
+  const lastX = px(n - 1);
+  const lastY = py(data[n - 1]);
   return (
-    <View style={{ height: 84, flexDirection: "row", alignItems: "flex-end", gap: 2 }}>
-      {bars.map((v, i) => {
-        const pct = (v - min) / span;
-        return (
-          <View
-            key={i}
-            style={{
-              flex: 1,
-              height: Math.max(3, pct * 84),
-              backgroundColor: i === bars.length - 1 ? colors.gold : tint,
-              opacity: i === bars.length - 1 ? 1 : 0.28 + pct * 0.5,
-              borderRadius: 2,
-            }}
-          />
-        );
-      })}
-    </View>
+    <Svg width={width} height={height}>
+      <Defs>
+        <LinearGradient id="growthFill" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor={colors.evergreen} stopOpacity={0.22} />
+          <Stop offset="1" stopColor={colors.evergreen} stopOpacity={0} />
+        </LinearGradient>
+      </Defs>
+      <Path d={area} fill="url(#growthFill)" />
+      <Path d={line} stroke={colors.evergreen} strokeWidth={2.5} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+      <Circle cx={lastX} cy={lastY} r={4} fill={colors.gold} />
+    </Svg>
   );
 }
 
@@ -580,7 +584,7 @@ export function FundHomeTab(props: FundHomeTabProps) {
         <View>
           <SectionLabel>{isOwnerMode ? "Your growth" : `${childName}'s growth`}</SectionLabel>
           <KiddoCard>
-            <Sparkline points={d.history} tint={colors.evergreen} />
+            <GrowthChart points={d.history} />
             <View
               style={{
                 flexDirection: "row",
