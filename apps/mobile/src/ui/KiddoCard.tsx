@@ -34,19 +34,35 @@ export interface KiddoCardProps {
 export function KiddoCard({ children, variant = "default", onPress, style, padded = true }: KiddoCardProps) {
   const hero = variant === "hero";
   const r = hero ? radius.hero : radius.card;
+  const isWeb = Platform.OS === "web";
 
-  // Native uses RN shadow props; web uses boxShadow (react-native-web deprecates
-  // shadow*). Same visual weight, no console warning on either platform.
-  const shadowStyle = (Platform.OS === "web"
-    ? { boxShadow: hero ? "0 16px 30px rgba(14,37,24,0.18)" : "0 4px 12px rgba(26,23,16,0.10)" }
-    : hero ? shadows.hero : shadows.card) as ViewStyle;
+  // Match the web .kiddo-card box-shadow EXACTLY on web (incl. the inset glass
+  // edge); use the RN shadow objects on native (which deprecate boxShadow).
+  const shadowStyle = (isWeb
+    ? {
+        boxShadow: hero
+          ? "0 2px 8px rgba(26,23,16,0.10), 0 18px 38px rgba(27,58,45,0.20)"
+          : "inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 3px rgba(26,23,16,0.06), 0 4px 16px rgba(26,23,16,0.06)",
+      }
+    : hero
+      ? shadows.hero
+      : shadows.card) as ViewStyle;
+
+  // The web hero is a 145deg evergreen→deep gradient (index.css:1355), not a flat
+  // block. On web we reproduce it via backgroundImage; on native we fall back to
+  // the deep evergreen solid (expo-linear-gradient is the device upgrade path).
+  const heroBg: ViewStyle = hero
+    ? isWeb
+      ? ({ backgroundImage: `linear-gradient(145deg, ${colors.evergreen} 0%, #0E2618 100%)` } as unknown as ViewStyle)
+      : { backgroundColor: colors.evergreen }
+    : { backgroundColor: semanticColors.surface.card };
 
   const base: ViewStyle = {
     borderRadius: r,
-    backgroundColor: hero ? colors.evergreen : semanticColors.surface.card,
     borderWidth: hero ? 0 : 1,
     borderColor: semanticColors.surface.muted,
     padding: padded ? spacing.md : 0,
+    ...heroBg,
     ...shadowStyle,
   };
 
