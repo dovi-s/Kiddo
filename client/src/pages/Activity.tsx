@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
 import { STRATEGY_SHORT, STRATEGY_EMOJI } from "@/lib/strategy";
+import { cashAfterLabel, rewriteSettlementSentence } from "@/lib/cash-settlement";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { TrustMicroStrip } from "@/components/ui/ux-foundations";
 import { EnlighteningReveal } from "@/components/ui/gemini";
@@ -2637,7 +2638,7 @@ export default function Activity() {
                       : rewriteLegacyAutoInvestTitle(item.title);
                   const effectiveDescription = overrideToParentContrib
                     ? (ticker ? `Investing into ${ticker}` : "Investing across the full mix")
-                    : rewriteLegacyDescription(item.description);
+                    : rewriteSettlementSentence(rewriteLegacyDescription(item.description), item.createdAt);
                   // Hoisted kid-suggestion state so the Approve/Decline bar
                   // renders OUTSIDE the expanded panel (always visible on
                   // suggestion rows), not buried behind a tap. Same fields
@@ -3432,7 +3433,7 @@ export default function Activity() {
                                         : "Holding")
                                     : "Fund cash";
                                   const afterLabel = isSell
-                                    ? "Cash (1–2 days)"
+                                    ? cashAfterLabel(item.createdAt)
                                     : bankName && bankLast4
                                       ? `${bankName} ···${bankLast4}${withdrawalDelivered ? "" : " (queued)"}`
                                       : withdrawalDelivered
