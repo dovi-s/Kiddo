@@ -10296,10 +10296,11 @@ export default function Dashboard() {
                                   // so trusting them inflates "today's pace" projections by money
                                   // that never arrives. Parent contributions don't have this
                                   // problem since they fire via the off-session worker.
-                                  const M = sumMonthlyEquivalent([
+                                  const activeRecurring = [
                                     ...parentContributions.filter((c) => String(c.status || "").toLowerCase() === "active"),
                                     ...recurringGifts.filter((rg) => String(rg.status || "").toLowerCase() === "active" && !!rg.stripeSubscriptionId),
-                                  ]);
+                                  ];
+                                  const M = sumMonthlyEquivalent(activeRecurring);
 
                                   const r_m = Math.pow(1 + (0.07 - KIDDO_AUM_FEE_RATE), 1 / 12) - 1; // net fee, effective monthly
                                   let monthsToGoal: number | null = null;
@@ -10352,6 +10353,20 @@ export default function Dashboard() {
                                   const arrivalLabel = goalDate.toLocaleDateString("en-US", { month: "short", year: "numeric" });
                                   const childFirst = recipientFirstNameDisplay ? `${recipientFirstNameDisplay}'s` : "the";
                                   const monthlyDisplay = M > 0 ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Math.round(M)) : null;
+                                  // Show a single schedule's native cadence ("$25/day"), not the
+                                  // monthly-equivalent, mirroring the hero. M (the monthly rate) still
+                                  // drives the projection math above; only the label changes.
+                                  const rateLabel = activeRecurring.length === 1
+                                    ? (() => {
+                                        const c = activeRecurring[0] as any;
+                                        const amt = parseFloat(String(c?.amount || "0"));
+                                        const per = c?.frequency === "daily" ? "day"
+                                          : c?.frequency === "weekly" ? "week"
+                                          : c?.frequency === "yearly" ? "year"
+                                          : "month";
+                                        return `${formatMoneyFriendly(amt)}/${per}`;
+                                      })()
+                                    : (monthlyDisplay ? `${monthlyDisplay}/mo` : null);
                                   return (
                                     <div style={{ borderRadius: 10, background: "rgba(26,67,50,0.05)", border: "1px solid rgba(26,67,50,0.15)", padding: "10px 12px" }}>
                                       <p style={{ fontSize: 11.5, fontWeight: 600, color: "rgb(26,67,50)", lineHeight: 1.5 }}>
@@ -10368,7 +10383,7 @@ export default function Dashboard() {
                                         {childFirst} fund is on pace for {fmtC(G)} in {horizonText} ({arrivalLabel}).
                                       </p>
                                       <p style={{ fontSize: 10.5, color: "rgba(26,67,50,0.7)", lineHeight: 1.5, marginTop: 3 }}>
-                                        {monthlyDisplay ? `${monthlyDisplay}/mo recurring · ` : ""}7% growth assumed.
+                                        {rateLabel ? `${rateLabel} recurring · ` : ""}7% growth assumed.
                                       </p>
                                     </div>
                                   );
