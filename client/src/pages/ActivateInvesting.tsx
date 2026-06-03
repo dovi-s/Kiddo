@@ -1220,7 +1220,7 @@ export default function ActivateInvesting() {
                   </div>
                   <div className="flex items-start gap-2">
                     <Gift size={13} className="text-primary shrink-0 mt-0.5" />
-                    <p><span className="font-medium text-foreground">If a giver picks a specific stock</span> (like $50 of Disney), that gift goes exactly where they chose. Your default isn't used.</p>
+                    <p><span className="font-medium text-foreground">If a gifter picks a specific stock</span> (like $50 of Disney), that gift goes exactly where they chose. Your default isn't used.</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <User size={13} className="text-primary shrink-0 mt-0.5" />

@@ -10624,7 +10624,7 @@ export async function registerRoutes(
     }
   });
 
-  // Create gift (public, for gift givers)
+  // Create gift (public, for gifters)
   app.post('/api/public/gifts', async (req, res) => {
     try {
       // SECURITY: real gifts are created only by the Stripe webhook after a

@@ -615,7 +615,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                   {renderTable("Recent Gifts", data?.gifts || [], [
                     { key: "created_at", label: "Date", render: (r: any) => fmtDateTime(r.created_at) },
                     { key: "fund_name", label: "Fund" },
-                    { key: "sender_name", label: "Giver" },
+                    { key: "sender_name", label: "Gifter" },
                     { key: "status", label: "Status", render: (r: any) => <StatusBadge status={String(r.status || "")} /> },
                     { key: "net_amount", label: "Net", render: (r: any) => fmt(r.net_amount) },
                   ])}
@@ -703,7 +703,7 @@ function AdminDetailModal({ title, endpoint, onClose }: { title: string; endpoin
                   </div>
                   {renderTable("Recent Gifts", data?.gifts || [], [
                     { key: "created_at", label: "Date", render: (r: any) => fmtDateTime(r.created_at) },
-                    { key: "sender_name", label: "Giver" },
+                    { key: "sender_name", label: "Gifter" },
                     { key: "status", label: "Status", render: (r: any) => <StatusBadge status={String(r.status || "")} /> },
                     { key: "execution_model", label: "Model" },
                     { key: "net_amount", label: "Net", render: (r: any) => fmt(r.net_amount) },
@@ -2114,7 +2114,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             <div>
               <p className="text-xs text-muted-foreground mb-1">Total Charged</p>
               <p className="text-xl font-bold">{fmt(chargedForDisplay)}</p>
-              <p className="text-xs text-muted-foreground">to givers</p>
+              <p className="text-xs text-muted-foreground">to gifters</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground mb-1">Gift Amounts</p>
@@ -2139,7 +2139,7 @@ function OverviewTab({ goTab }: { goTab: (tab: Tab, extra?: Record<string, strin
             <div>
               <p className="text-xs text-muted-foreground mb-1">Avg Gift Size</p>
               <p className="text-xl font-bold">{fmt(g.avg_gift_size)}</p>
-              <p className="text-xs text-muted-foreground">{fmtNum(g.unique_givers)} unique givers</p>
+              <p className="text-xs text-muted-foreground">{fmtNum(g.unique_givers)} unique gifters</p>
             </div>
           </div>
         </div>
@@ -4596,7 +4596,7 @@ function GiftsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
   };
 
   const baseColumns = [
-    { key: "sender_name", label: "Giver", render: (r: any) => (
+    { key: "sender_name", label: "Gifter", render: (r: any) => (
       <div>
         <p className="font-medium text-sm">{r.sender_name}</p>
         <p className="text-xs text-muted-foreground">{r.sender_email || ""}</p>
@@ -4693,7 +4693,7 @@ function GiftsTab({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         </div>
       )}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total Charged" value={fmt(totalCharged)} icon={CreditCard} color="primary" sub="What givers paid" />
+        <StatCard label="Total Charged" value={fmt(totalCharged)} icon={CreditCard} color="primary" sub="What gifters paid" />
         <StatCard label="Processing Fees" value={fmt(totalProcessing)} icon={CreditCard} color="red" sub="Goes to Stripe" />
         <StatCard label="Kiddo Fees" value={fmt(totalKoraFees)} icon={TrendingUp} color="green" sub="Large gift premiums and services" />
         <StatCard label="Net to Recipients" value={fmt(totalNet)} icon={Gift} color="blue" sub="Invested for kids" />

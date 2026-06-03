@@ -141,7 +141,7 @@ export const educationContent = {
   },
   fees: {
     title: "How do fees work?",
-    content: "There are two parts. First, payment processing on gifts (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at 0.8% max $5), paid by the gift-giver. Kiddo does not charge a platform fee on gifts: $50 from grandma is $50 to the fund. Second, Kiddo's annual fee on invested assets: $1/yr per $1,000 invested (about $10/yr on a $10,000 fund). Same rate on Free, Kiddo+, and Kiddo Family. Cash and pending gifts are not charged. All fees are shown before checkout.",
+    content: "There are two parts. First, payment processing on gifts (card/Apple Pay/Google Pay at ~2.9% + $0.30, or bank transfer at 0.8% max $5), paid by the gifter. Kiddo does not charge a platform fee on gifts: $50 from grandma is $50 to the fund. Second, Kiddo's annual fee on invested assets: $1/yr per $1,000 invested (about $10/yr on a $10,000 fund). Same rate on Free, Kiddo+, and Kiddo Family. Cash and pending gifts are not charged. All fees are shown before checkout.",
   },
   pendingCash: {
     title: "What does 'pending' mean?",
@@ -149,7 +149,7 @@ export const educationContent = {
   },
   costBasis: {
     title: "What about taxes on gifts?",
-    content: "Most gifts are well under the $19,000 annual gift tax exclusion, so there's no gift tax to worry about. When investments are eventually sold, capital gains taxes apply based on the original cost basis. The recipient inherits the giver's cost basis and holding period, not the value at the time of the gift.",
+    content: "Most gifts are well under the $19,000 annual gift tax exclusion, so there's no gift tax to worry about. When investments are eventually sold, capital gains taxes apply based on the original cost basis. The recipient inherits the gifter's cost basis and holding period, not the value at the time of the gift.",
   },
   giftGrowth: {
     title: "How much can gifts grow?",
@@ -161,7 +161,7 @@ export const educationContent = {
   },
   paymentMethods: {
     title: "What payment methods are accepted?",
-    content: "Gift-givers can pay with Apple Pay, Google Pay, any major credit or debit card, or a bank transfer (ACH). Apple Pay and Google Pay are the fastest. Bank transfers have lower processing fees, which is great for larger gifts.",
+    content: "Gifters can pay with Apple Pay, Google Pay, any major credit or debit card, or a bank transfer (ACH). Apple Pay and Google Pay are the fastest. Bank transfers have lower processing fees, which is great for larger gifts.",
   },
   kiddieTax: {
     title: "What is the kiddie tax?",
@@ -169,7 +169,7 @@ export const educationContent = {
   },
   costBasisGifted: {
     title: "How is cost basis handled for gifted stock?",
-    content: "When you receive stock as a gift, you inherit the giver's original cost basis and their holding period. This means when you eventually sell, your capital gains (or losses) are calculated from what the giver originally paid, not what the stock was worth when you received it. If the stock has gone up since the giver bought it, you will owe taxes on the full gain when you sell.",
+    content: "When you receive stock as a gift, you inherit the gifter's original cost basis and their holding period. This means when you eventually sell, your capital gains (or losses) are calculated from what the gifter originally paid, not what the stock was worth when you received it. If the stock has gone up since the gifter bought it, you will owe taxes on the full gain when you sell.",
   },
   giftTaxExclusion: {
     title: "Is there a limit on tax-free gifts?",
