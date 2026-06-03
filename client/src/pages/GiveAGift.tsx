@@ -103,7 +103,7 @@ export default function GiveAGift() {
         return;
       }
       // P0-1 capture-at-intent (Option C): if the server vaulted a card path
-      // (flag on), it returns a hosted setup-Checkout URL — redirect so the
+      // (flag on), it returns a hosted setup-Checkout URL; redirect so the
       // gifter can save their card. Absent → warm-promise confirmation, as before.
       if (data.captureCheckoutUrl) {
         haptic("success");
@@ -400,6 +400,7 @@ export default function GiveAGift() {
                   <button
                     key={preset}
                     type="button"
+                    aria-pressed={amount === preset && !customAmount}
                     onClick={() => { setAmount(preset); setCustomAmount(""); }}
                     className={`rounded-xl border-2 py-3 text-sm font-semibold transition-colors ${
                       amount === preset && !customAmount
@@ -490,7 +491,7 @@ export default function GiveAGift() {
 
           {/* (Removed 2026-05-15: a duplicate "Already have a gift link"
               hint used to live here too. The single banner above the
-              hero is enough — repeating it after the form reads as
+              hero is enough; repeating it after the form reads as
               the page second-guessing the user's choice.) */}
         </div>
       </main>
