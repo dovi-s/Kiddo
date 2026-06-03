@@ -51,12 +51,16 @@ interface CreateEventSheetProps {
 }
 
 const GIFTING_TYPES = [
-  { id: "birthday",     label: "Birthday",     emoji: "🎂", tint: "rgb(255,247,237)" },
-  { id: "holiday",      label: "Holiday",       emoji: "🎄", tint: "rgb(240,253,244)" },
-  { id: "graduation",   label: "Graduation",    emoji: "🎓", tint: "rgb(245,243,255)" },
-  { id: "baby_shower",  label: "Baby Shower",   emoji: "🍼", tint: "rgb(240,249,255)" },
-  { id: "just_because", label: "Just Because",  emoji: "💚", tint: "rgb(240,253,244)" },
-  { id: "custom",       label: "Custom",        emoji: "✨", tint: "rgb(255,251,235)" },
+  // One cohesive warm treatment for every tile (applied at render) instead of a
+  // per-type pastel rainbow (peach / mint / lavender / blue) that read as an
+  // inconsistent, default-y mix against the warm brand. The emoji carries the
+  // identity; the tile chrome stays consistent (matches the card placeholders).
+  { id: "birthday",     label: "Birthday",     emoji: "🎂" },
+  { id: "holiday",      label: "Holiday",       emoji: "🎄" },
+  { id: "graduation",   label: "Graduation",    emoji: "🎓" },
+  { id: "baby_shower",  label: "Baby Shower",   emoji: "🍼" },
+  { id: "just_because", label: "Just Because",  emoji: "💚" },
+  { id: "custom",       label: "Custom",        emoji: "✨" },
 ];
 
 const GOAL_TYPES = [
@@ -751,7 +755,7 @@ export function CreateEventSheet({
                 {GIFTING_TYPES.map((type) => (
                   <button key={type.id} type="button" onClick={() => handleSelectGiftingType(type.id)}
                     style={{
-                      background: type.tint,
+                      background: "rgba(184,121,26,0.07)", // one warm gold wash (kiddo gold @ 7%) for every tile
                       border: "1.5px solid transparent",
                       borderRadius: 20, padding: "22px 14px 18px",
                       cursor: "pointer", textAlign: "center",
