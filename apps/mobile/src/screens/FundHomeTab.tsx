@@ -335,6 +335,11 @@ export function FundHomeTab(props: FundHomeTabProps) {
   }, [summary, activeFund]);
 
   const hasStarted = d.totalValue > 0 || d.gifts.length > 0;
+  // The summary streams in after the fund row. While it's still pending we must
+  // NOT render its derived numbers (gifts total, growth, holdings) — they'd read
+  // a misleading $0 / "+balance growth" next to a real Worth-today. Skeleton instead.
+  const summaryReady = !!summary;
+  const summaryPending = summaryLoading && !summary;
   const countdown = countdownTo18(activeFund?.recipientBirthdate);
   const eighteenthDate = eighteenthDateLabel(activeFund?.recipientBirthdate);
   const activeEvents = events.filter(
@@ -416,13 +421,10 @@ export function FundHomeTab(props: FundHomeTabProps) {
           ) : null}
         </View>
 
-        {/* balance */}
+        {/* balance — always from the fund row (loaded before the summary), so it
+            shows instantly instead of skeletoning while the summary streams in. */}
         <View style={{ marginTop: spacing.sm }}>
-          {summaryLoading && !summary ? (
-            <Skeleton height={50} width={200} rounded={12} />
-          ) : (
-            <CountUp value={d.totalValue} color={semanticColors.text.inverse} />
-          )}
+          <CountUp value={d.totalValue} color={semanticColors.text.inverse} />
         </View>
 
         {/* substat */}
@@ -491,23 +493,34 @@ export function FundHomeTab(props: FundHomeTabProps) {
         <View>
           <SectionLabel>{isOwnerMode ? "Your fund so far" : `${childName}'s fund so far`} 🌱</SectionLabel>
           <KiddoCard>
-            <SummaryRow
-              label={isOwnerMode ? "Gifts from people who love you" : `Gifts from people who love ${childName}`}
-              value={formatBalance(d.giftsTotal)}
-            />
-            {d.activeRecurring.length > 0 ? (
-              <SummaryRow
-                label="Your recurring investments"
-                value={`${formatBalance(d.monthlyRecurring)}/mo`}
-              />
-            ) : null}
-            {Math.abs(d.growth) >= 1 ? (
-              <SummaryRow
-                label={d.growth >= 0 ? "Market growth" : "Market change"}
-                value={`${d.growth >= 0 ? "+" : "−"}${formatBalance(Math.abs(d.growth))}`}
-                valueColor={d.growth >= 0 ? "#1A7F47" : "#C0392B"}
-              />
-            ) : null}
+            {!summaryReady ? (
+              summaryPending ? (
+                <View style={{ gap: 12, paddingVertical: 4 }}>
+                  <Skeleton height={16} width="80%" />
+                  <Skeleton height={16} width="60%" />
+                </View>
+              ) : null
+            ) : (
+              <>
+                <SummaryRow
+                  label={isOwnerMode ? "Gifts from people who love you" : `Gifts from people who love ${childName}`}
+                  value={formatBalance(d.giftsTotal)}
+                />
+                {d.activeRecurring.length > 0 ? (
+                  <SummaryRow
+                    label="Your recurring investments"
+                    value={`${formatBalance(d.monthlyRecurring)}/mo`}
+                  />
+                ) : null}
+                {Math.abs(d.growth) >= 1 ? (
+                  <SummaryRow
+                    label={d.growth >= 0 ? "Market growth" : "Market change"}
+                    value={`${d.growth >= 0 ? "+" : "−"}${formatBalance(Math.abs(d.growth))}`}
+                    valueColor={d.growth >= 0 ? "#1A7F47" : "#C0392B"}
+                  />
+                ) : null}
+              </>
+            )}
             <View
               style={{
                 borderTopWidth: 1,
@@ -561,8 +574,8 @@ export function FundHomeTab(props: FundHomeTabProps) {
         ) : null}
       </View>
 
-      {/* ── growth chart ───────────────────────────────────────────────────── */}
-      {hasStarted ? (
+      {/* ── growth chart (only with real summary data; skeleton while pending) ── */}
+      {hasStarted && summaryReady ? (
         <View>
           <SectionLabel>{isOwnerMode ? "Your growth" : `${childName}'s growth`}</SectionLabel>
           <KiddoCard>
@@ -591,6 +604,11 @@ export function FundHomeTab(props: FundHomeTabProps) {
               />
             </View>
           </KiddoCard>
+        </View>
+      ) : hasStarted && summaryPending ? (
+        <View>
+          <SectionLabel>{isOwnerMode ? "Your growth" : `${childName}'s growth`}</SectionLabel>
+          <Skeleton height={130} rounded={radius.card} />
         </View>
       ) : null}
 
