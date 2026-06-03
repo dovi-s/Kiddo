@@ -155,6 +155,7 @@ import { KIDDO_AUM_FEE_RATE } from "@shared/monetization";
 import { MemoryMediaPicker, EMPTY_MEMORY_MEDIA, type MemoryMediaValue } from "@/components/MemoryMediaPicker";
 import { KidAt18WelcomeBanner } from "@/components/dashboard/KidAt18WelcomeBanner";
 import { CoparentAcceptedBanner } from "@/components/dashboard/CoparentAcceptedBanner";
+import { gifterShortName } from "@/lib/gifter-name";
 import { PlusFirstMediaCelebrationBanner } from "@/components/dashboard/PlusFirstMediaCelebrationBanner";
 import { PlusUpgradePromptCard, pickDashboardPlusPrompt } from "@/components/PlusUpgradePromptCard";
 import { RecurringRequestsNudge } from "@/components/RecurringRequestsNudge";
@@ -987,31 +988,10 @@ function stripStockSuffix(name?: string | null): string {
   return String(name || "").replace(/\s+stock$/i, "").trim();
 }
 
-// Compact label for the gifter roster (the name span is capped at ~56px, so it
-// fits one short word). A gifter's name is free text, and the first word alone
-// is useless when it's a title/article/possessive: "Coach Mike" -> "Coach",
-// "Aunt Sarah" -> "Aunt", "The Johnsons" -> "The", "Phil's coworker" -> "Phil's".
-// Instead, show the first word that actually carries IDENTITY by skipping leading
-// weak tokens: "Coach Mike" -> "Mike", "Aunt Sarah" -> "Sarah", "The Johnsons" ->
-// "Johnsons", "Phil's coworker" -> "coworker". A plain first name isn't weak, so
-// "Gloria Pritchett" -> "Gloria" exactly as before.
-const WEAK_NAME_LEADERS = new Set([
-  "the", "a", "an", "my", "our", "big", "little", "great", "old", "young",
-  "aunt", "auntie", "uncle", "unc", "grandpa", "grandma", "granny", "gran", "nana",
-  "papa", "gramps", "cousin", "cuz", "godmother", "godfather", "ninang", "ninong",
-  "coach", "mr", "mrs", "ms", "miss", "mx", "dr", "doc", "sir", "prof", "professor",
-  "pastor", "father", "fr", "sister", "rabbi", "reverend", "rev", "senor", "senora",
-]);
-function gifterShortName(name?: string | null): string {
-  const trimmed = String(name || "").trim();
-  if (!trimmed) return trimmed;
-  const words = trimmed.split(/\s+/);
-  for (const w of words) {
-    const lc = w.toLowerCase().replace(/[.,]/g, "");
-    if (!WEAK_NAME_LEADERS.has(lc) && !/['’]s$/.test(w)) return w;
-  }
-  return words[0]; // all tokens were weak/possessive — fall back to the first
-}
+// gifterShortName + WEAK_NAME_LEADERS now live in @/lib/gifter-name (imported
+// above) so the Memory Book shares the exact same rule — it previously used a
+// naive name.split(" ")[0] and rendered the broken "Uncle / Aunt / The / Phil's"
+// the Dashboard never showed.
 
 type GifterProfile = {
   name: string;
@@ -10046,8 +10026,8 @@ export default function Dashboard() {
 
                     {/* ── "All in the same fund" clarity note ── */}
                     {activeEvents.length > 0 && (
-                      <p style={{ fontSize: 11, color: "rgba(26,23,16,0.38)", marginTop: 8, lineHeight: 1.5, letterSpacing: "0.01em" }}>
-                        All occasions and goals go into the same fund. 🌱
+                      <p style={{ fontSize: 12, fontWeight: 500, color: "rgba(26,23,16,0.62)", marginTop: 10, lineHeight: 1.5, letterSpacing: "0.01em" }}>
+                        Every occasion and goal is the same one fund. Nothing is set aside. 🌱
                       </p>
                     )}
 

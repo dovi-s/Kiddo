@@ -61,6 +61,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EnlighteningReveal } from "@/components/ui/gemini";
 import { haptic } from "@/lib/haptics";
 import { capFirst } from "@/lib/format-name";
+import { gifterShortName } from "@/lib/gifter-name";
 import { prefetchDashboard, prefetchActivity, onIdle } from "@/lib/prefetch";
 import { scrollToTestId } from "@/lib/scroll-to-element";
 import { getDeepLinkHighlightStyle, getDeepLinkHighlightCardStyle, hasActiveDeepLink, HIGHLIGHT_HOLD_MS } from "@/lib/deep-link-highlight";
@@ -3490,7 +3491,11 @@ export default function MemoryBook() {
                       // consistency the moment a parent contributed.
                       const ownerProfileImageUrl = gifter.isOwnerRow ? (user as any)?.profileImageUrl || null : null;
                       const ownerPreferredName = gifter.isOwnerRow ? (user as any)?.preferredName || null : null;
-                      const firstName = gifter.name.split(" ")[0];
+                      // Shared rule (same as Dashboard): skips weak leaders so
+                      // "Aunt Sarah" -> "Sarah", "The Johnsons" -> "Johnsons",
+                      // "Phil's office" -> "office" — not the broken "Aunt / The /
+                      // Phil's" the old name.split(" ")[0] produced here.
+                      const firstName = gifterShortName(gifter.name);
                       const labelName = gifter.isAnon
                         ? (gifter.anonPeople > 1 ? `${gifter.anonPeople} anon` : "Anon")
                         : (gifter.isOwnerRow && ownerPreferredName)
@@ -3785,7 +3790,7 @@ export default function MemoryBook() {
             {gifterFilter && (
               <div className="mb-4 flex items-center gap-2 rounded-xl border border-[hsl(var(--kiddo-evergreen)/0.2)] bg-[hsl(var(--kiddo-evergreen)/0.06)] px-4 py-2.5">
                 <span className="flex-1 text-sm font-semibold text-[hsl(var(--kiddo-evergreen))]">
-                  Showing {gifterFilter.split(" ")[0]}'s gifts
+                  Showing {gifterShortName(gifterFilter)}'s gifts
                 </span>
                 <button
                   type="button"
@@ -3826,7 +3831,7 @@ export default function MemoryBook() {
                 createdAt: ty.createdAt ?? null,
               }));
               const totalAmount = pendingGifts.reduce((sum: number, g: any) => sum + (parseFloat(String(g.amount || "0")) || 0), 0);
-              const senderFirst = gifterFilter.split(" ")[0];
+              const senderFirst = gifterShortName(gifterFilter);
               const ids = matchingRows.map((r: any) => r.id);
               return (
                 <div
@@ -3936,7 +3941,7 @@ export default function MemoryBook() {
                   };
                 }
                 if (gifterFilter) {
-                  const name = gifterFilter.toLowerCase() === "anonymous" ? "anonymous gifters" : gifterFilter.split(" ")[0];
+                  const name = gifterFilter.toLowerCase() === "anonymous" ? "anonymous gifters" : gifterShortName(gifterFilter);
                   return {
                     icon: "🌱",
                     title: `Nothing from ${name} matches.`,
@@ -5320,7 +5325,7 @@ export default function MemoryBook() {
                                                 data-testid={`button-send-thank-you-${entry.id}`}
                                               >
                                                 <Send size={12} />
-                                                {sendingThankYou ? "Sending..." : hasEmail ? `Send to ${senderName.split(" ")[0]}` : "Copy message"}
+                                                {sendingThankYou ? "Sending..." : hasEmail ? `Send to ${gifterShortName(senderName)}` : "Copy message"}
                                               </button>
                                               <button
                                                 type="button"
