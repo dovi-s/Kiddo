@@ -4416,6 +4416,13 @@ export default function Dashboard() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "Could not save recurring investment.");
       haptic("success");
+      // Demo convert-the-intent: a demo visitor who just set up recurring is at
+      // peak intent, but the sandbox won't persist it — so instead of a dead-end
+      // we fire DemoActionMoment (a "start your own fund" conversion toast). New
+      // plans only; editing an existing one isn't a fresh intent signal.
+      if (!isEditing && (user as any)?.isDemoAccount) {
+        try { window.dispatchEvent(new CustomEvent("kiddo:demo-action", { detail: { action: "recurring", amount: amt, childName: recipientFirstNameDisplay } })); } catch { /* ignore */ }
+      }
       // Capture the saved plan id so the next step ("note") can PATCH the note
       // column onto THIS schedule. Edits already have editingContribId; creates
       // get the id from the POST response.

@@ -10,6 +10,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { RealtimeProvider } from "@/lib/realtime-context";
 import { Toaster } from "@/components/ui/toaster";
 import { DemoGiftMoment } from "@/components/DemoGiftMoment";
+import { DemoActionMoment } from "@/components/DemoActionMoment";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { KoraProvider } from "./lib/KoraContext";
 import { MobileNav } from "@/components/layout/MobileNav";
@@ -919,6 +920,11 @@ function App() {
                   parent lands on their dashboard, so a prospect feels the
                   gifter-loop payoff. Headless; no-op for non-demo accounts. */}
               <DemoGiftMoment />
+              {/* Converts the peak-intent moment when a demo visitor completes a
+                  money-flow action (e.g. sets up recurring) — a "start your own
+                  fund" toast instead of a sandbox dead-end. Demo-only, no-op
+                  otherwise. Listens for `kiddo:demo-action`. */}
+              <DemoActionMoment />
               {!hideGlobalNav && <DesktopSidebar />}
               {/* Demo banner lives at the shell (not inside Router) so its
                   desktop left-offset can mirror the sidebar's presence via the
