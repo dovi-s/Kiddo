@@ -44,6 +44,7 @@ import { FundHomeTab } from "./FundHomeTab";
 import { MemoryTab } from "./MemoryTab";
 import { GiftTab } from "./GiftTab";
 import { ActivityTab } from "./ActivityTab";
+import { CoParentSection, KidViewSection } from "./FamilySettings";
 import { registerForPushNotificationsAsync } from "../push";
 import {
   authenticate as authenticateBiometric,
@@ -406,10 +407,8 @@ function AccountTab({
         <SettingsRow title="Hold as cash" value="Available before investing" />
       </Section>
 
-      <Section title="Family">
-        <SettingsRow title="Co-parent" value="Invite" />
-        <SettingsRow title="Kid View" value="PIN protected" />
-      </Section>
+      <CoParentSection activeFund={activeFund} />
+      <KidViewSection activeFund={activeFund} />
 
       <Section title={`When ${childName} turns 18`}>
         <View style={styles.planCard}>

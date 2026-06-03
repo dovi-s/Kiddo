@@ -633,6 +633,64 @@ export async function apiCreateEvent(data: {
   return parseJson<ApiEvent>(res);
 }
 
+// ─── Collaborators (co-parent invites) ─────────────────────────────────────
+export interface Collaborator {
+  id: string;
+  fundId: string;
+  email: string;
+  role: "viewer" | "co-admin";
+  status: "pending" | "accepted" | "declined";
+  token?: string;
+  acceptedAt?: string | null;
+  lastNotifiedAt?: string | null;
+}
+
+export async function apiGetCollaborators(fundId: string): Promise<Collaborator[]> {
+  const res = await apiFetch(`/api/funds/${fundId}/collaborators`);
+  if (res.status === 403) return []; // not owner / gated — caller shows the right state
+  return parseJson<Collaborator[]>(res);
+}
+
+/** Invite a co-parent. Throws with the server message on 400/403 (e.g. plan gate). */
+export async function apiInviteCollaborator(
+  fundId: string,
+  email: string,
+  role: "viewer" | "co-admin" = "co-admin",
+): Promise<Collaborator> {
+  const res = await apiFetch(`/api/funds/${fundId}/collaborators`, {
+    method: "POST",
+    body: JSON.stringify({ email: email.trim().toLowerCase(), role }),
+  });
+  return parseJson<Collaborator>(res);
+}
+
+// ─── Kid View (PIN-gated child view) ────────────────────────────────────────
+export interface KidViewSettings {
+  enabled: boolean;
+  hasPin: boolean;
+  pinHint?: string | null;
+  allowTeenSuggestions?: boolean;
+  shareLink?: string | null;
+  age?: number | null;
+  phase?: string | null;
+}
+
+export async function apiGetKidViewSettings(fundId: string): Promise<KidViewSettings> {
+  const res = await apiFetch(`/api/funds/${fundId}/kid-view-settings`);
+  return parseJson<KidViewSettings>(res);
+}
+
+export async function apiUpdateKidViewSettings(
+  fundId: string,
+  patch: { enabled?: boolean; pin?: string; pinHint?: string; allowTeenSuggestions?: boolean },
+): Promise<KidViewSettings> {
+  const res = await apiFetch(`/api/funds/${fundId}/kid-view-settings`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+  return parseJson<KidViewSettings>(res);
+}
+
 export async function apiGetMobilePushPreferences(): Promise<MobilePushPreferences> {
   const res = await apiFetch("/api/mobile-push/preferences");
   return parseJson<MobilePushPreferences>(res);
