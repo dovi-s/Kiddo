@@ -14877,14 +14877,20 @@ export async function registerRoutes(
       // Stripe subscription. Rows where setup completed to "ready" but the
       // subscription create failed silently never charge — surfacing them in
       // the Scheduled tab would lie to the parent about upcoming activity.
+      // EXCEPTION: demo funds never touch Stripe, so their seeded gifter
+      // recurring carries no subscription id — the guard would wrongly hide it.
+      // Demo money is illustrative anyway, so show it (e.g. Mitchell's annual
+      // birthday gift lands in the demo's Scheduled tab).
+      const userIsDemo = await isDemoUser(userId);
+      const reminderConds = [
+        inArray(recurringGifts.fundId, fundIds),
+        eq(recurringGifts.status, "active"),
+      ];
+      if (!userIsDemo) reminderConds.push(isNotNull(recurringGifts.stripeSubscriptionId));
       const reminderRows = await db
         .select()
         .from(recurringGifts)
-        .where(and(
-          inArray(recurringGifts.fundId, fundIds),
-          eq(recurringGifts.status, "active"),
-          isNotNull(recurringGifts.stripeSubscriptionId),
-        ));
+        .where(and(...reminderConds));
 
       // Recent failure detection. The recurring worker writes
       // `parent_contribution_failed` activity rows on Stripe declines /
