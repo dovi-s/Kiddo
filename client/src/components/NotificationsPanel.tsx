@@ -723,7 +723,17 @@ export function NotificationsPanel({ isOpen, onClose }: NotificationsPanelProps)
   const scopedActionItems = actionItems.filter((a) => fundFilter === "all" || a.fundId === fundFilter);
   const actionItemCount = scopedActionItems.length;
 
-  const { data: activitiesRaw = [] } = useActivities(40, isAuthenticated);
+  // Fund-scope the feed to match fundFilter so the panel pulls THIS fund's
+  // own 40-row window rather than a global 40 it then filters down. That
+  // global window let other funds' rows crowd out the active fund's on a
+  // busy multi-fund account, so the list (and badge) under-counted. Keeps the
+  // bell badge, the panel list, the Activity-tab dot, and /activity in
+  // agreement. "all" pages (account/funds) stay global by passing null.
+  const { data: activitiesRaw = [] } = useActivities(
+    40,
+    isAuthenticated,
+    fundFilter === "all" ? null : fundFilter,
+  );
   // Apply gift-pair dedupe before any downstream rendering / filtering.
   // Cuts notification noise roughly in half on every settled gift since
   // we no longer surface both halves of each gift event.
@@ -1866,17 +1876,24 @@ export function useNotificationUnreadCount(scope: "active" | "all" = "active"): 
 export function useBellUnreadCount(scope: "active" | "all" = "active"): number {
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
-  const { data: activitiesRaw = [] } = useActivities(40, isAuthenticated);
-  const activities = useMemo(
-    () => dedupeGiftPairs(activitiesRaw as Activity[]),
-    [activitiesRaw],
-  );
   const [activeFundId, setActiveFundIdState] = useState<string>(() => getActiveFundId());
   useEffect(() => {
     const handler = () => setActiveFundIdState(getActiveFundId());
     window.addEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
     return () => window.removeEventListener(ACTIVE_FUND_CHANGE_EVENT, handler);
   }, []);
+  // Fund-scope the feed on a fund page so the badge counts THIS fund's own
+  // 40-row window, not a global 40 shared across every fund then narrowed.
+  // On a busy multi-fund account the shared window let other funds' rows
+  // crowd out the active fund's, so the bell under-reported (e.g. read "6"
+  // while the fund-scoped Activity-tab dot correctly read "9+"). Mirrors
+  // useScopedNotifActivities' query scoping so all four surfaces agree.
+  const scopedFundId = scope === "active" ? (activeFundId || null) : null;
+  const { data: activitiesRaw = [] } = useActivities(40, isAuthenticated, scopedFundId);
+  const activities = useMemo(
+    () => dedupeGiftPairs(activitiesRaw as Activity[]),
+    [activitiesRaw],
+  );
 
   // Cross-fund realtime nudge. The activities query (and the fund list)
   // both contribute to the bell badge — on any new gift across any of
