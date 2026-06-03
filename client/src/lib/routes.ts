@@ -42,6 +42,14 @@ export function isMarketingRoute(path: string): boolean {
     pathname === "/about" ||
     pathname === "/personal-funds" ||
     pathname === "/contact" ||
+    pathname === "/partners" ||
+    // Self-contained public pages that render their own Nav/Footer. Both
+    // previously hid the global nav + got the marketing skeleton only by
+    // accident (isPublicGiftRoute mis-classified them as /:fund gift pages,
+    // which also fired a spurious /api/public/funds/<slug> 404 prefetch).
+    // Now reserved slugs, so listed here explicitly to keep their chrome
+    // intentional and net-neutral. /p2p-preview is the fenced P2P concept demo.
+    pathname === "/p2p-preview" ||
     pathname === "/legal" ||
     pathname === "/tools/at-18-calculator" ||
     pathname === "/tools/robux-vs-utma" ||

@@ -26,7 +26,8 @@ export const RESERVED_FUND_SLUGS: ReadonlySet<string> = new Set([
   // Marketing / content / SEO
   "faq", "how-it-works", "about", "legal", "pricing", "compare", "blog",
   "stories", "security", "updates", "contact", "age-18", "age-18-plan",
-  "demo", "tools", "robux-vs-utma", "trump-account-vs-utma",
+  "demo", "tools", "robux-vs-utma", "trump-account-vs-utma", "partners",
+  "p2p-preview",
   // Common infra/well-known segments a fund slug must never shadow
   "api", "assets", "static", "uploads", "public", "app", "www", "robots.txt",
   "sitemap.xml", "favicon.ico", "manifest.json", "health",
