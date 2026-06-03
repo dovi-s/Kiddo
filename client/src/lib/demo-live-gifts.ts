@@ -23,6 +23,10 @@ export type DemoLiveGift = {
   senderName: string;
   amount: string;
   ticker?: string;
+  // "cash" = held as uninvested cash (a one-time "add cash"); anything else
+  // (auto/pick/undefined) invests into a holding. Drives whether the gift lands
+  // in a holding or in the cash bucket.
+  executionModel?: string | null;
   message?: string;
   createdAt: string; // ISO
 };
@@ -216,6 +220,9 @@ export function applyDemoLiveGiftsToHoldings<T extends HoldingLike>(
   for (const g of live) {
     const amt = parseFloat(String(g.amount).replace(/[^0-9.]/g, "")) || 0;
     if (amt <= 0) continue;
+    // A "cash" gift (one-time add-cash) stays as cash — it credits cashBalance
+    // via readDemoCashDelta instead of bumping a holding.
+    if (String(g.executionModel || "").toLowerCase() === "cash") continue;
     const want = String(g.ticker || "").toUpperCase();
 
     let idx = want ? result.findIndex((h) => tickerOf(h) === want) : -1;
@@ -412,7 +419,11 @@ export function readDemoCashDelta(fundId: string | null | undefined, enabled: bo
   const fromBuys = readRawBuys()
     .filter((b) => b.fundId === fundId)
     .reduce((sum, b) => sum + (parseFloat(String(b.amount).replace(/[^0-9.]/g, "")) || 0), 0);
-  return fromSells - fromBuys;
+  // "cash" gifts (one-time add-cash) land here instead of a holding.
+  const fromCashGifts = readRaw()
+    .filter((g) => g.fundId === fundId && String(g.executionModel || "").toLowerCase() === "cash")
+    .reduce((sum, g) => sum + (parseFloat(String(g.amount).replace(/[^0-9.]/g, "")) || 0), 0);
+  return fromSells + fromCashGifts - fromBuys;
 }
 
 function sellToActivity(s: DemoSell): Activity {

@@ -11984,6 +11984,9 @@ export async function registerRoutes(
         if (demoName) demoQs.set("senderName", demoName);
         if (demoTicker) demoQs.set("ticker", demoTicker);
         if (demoMessage) demoQs.set("message", demoMessage);
+        // Carry the execution model so a one-time "add cash" lands in the demo's
+        // cash bucket instead of being invested into a holding on return.
+        if (typeof executionModel === "string" && executionModel) demoQs.set("execModel", executionModel);
         // Carry which media the gifter attached at checkout so the success page
         // reflects it instead of re-prompting "add a photo/video/voice".
         if (photoUrl) demoQs.set("hasPhoto", "1");

@@ -235,6 +235,8 @@ export default function GiftSuccess() {
       senderName: senderNameParam,
       amount: amountParam,
       ticker: tickerParam || undefined,
+      // "cash" (a one-time add-cash) lands in cash, not a holding.
+      executionModel: params.get("execModel") || undefined,
       message: params.get("message") || undefined,
     })
   }, [isDemoGift, isDemoAccount, fundId, senderNameParam, amountParam, tickerParam, isRecurringSetup, params])
